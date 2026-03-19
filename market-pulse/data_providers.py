@@ -2,6 +2,7 @@
 import os, json, time, logging
 from datetime import datetime, timedelta
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 import yfinance as yf
 
@@ -180,20 +181,32 @@ def _fetch_series(fred, series_id: str, start: str = "2016-01-01") -> dict | Non
         return None
 
 
+def _fetch_batch(fred, series_map: dict, start: str = "2016-01-01") -> dict:
+    """Fetch multiple FRED series in parallel using threads."""
+    result = {}
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(_fetch_series, fred, sid, start): name for name, sid in series_map.items()}
+        for future in as_completed(futures):
+            name = futures[future]
+            try:
+                data = future.result()
+                if data:
+                    result[name] = data
+            except Exception:
+                pass
+    return result
+
+
 def get_national_data(api_key: str | None) -> dict:
     """Fetch all national-level macro indicators."""
-    cached = _read_cache("national", max_age_hours=12)
+    cached = _read_cache("national", max_age_hours=24)
     if cached:
         return cached
     if not api_key:
         return {"error": "FRED_API_KEY not set"}
     from fredapi import Fred
     fred = Fred(api_key=api_key)
-    result = {}
-    for name, series_id in NATIONAL_SERIES.items():
-        data = _fetch_series(fred, series_id)
-        if data:
-            result[name] = data
+    result = _fetch_batch(fred, NATIONAL_SERIES)
     _write_cache("national", result)
     return result
 
@@ -201,7 +214,7 @@ def get_national_data(api_key: str | None) -> dict:
 def get_county_data(api_key: str | None, state_code: str, fips: str) -> dict:
     """Fetch all available FRED series for a specific county."""
     cache_key = f"county_{fips}"
-    cached = _read_cache(cache_key, max_age_hours=12)
+    cached = _read_cache(cache_key, max_age_hours=24)
     if cached:
         return cached
     if not api_key:
@@ -215,31 +228,28 @@ def get_county_data(api_key: str | None, state_code: str, fips: str) -> dict:
         "state": state_code,
     }
 
-    # Realtor.com county metrics
+    # Build all series to fetch in parallel
+    all_series = {}
     for name, pattern in COUNTY_SERIES.items():
-        series_id = pattern.format(fips=fips)
-        data = _fetch_series(fred, series_id)
-        if data:
-            result[name] = data
+        all_series[name] = pattern.format(fips=fips)
 
-    # Extra county metrics (padded FIPS for some series)
     fips_padded = fips.zfill(5)
+    extra_series = {}
     for name, pattern in COUNTY_SERIES_EXTRA.items():
-        series_id = pattern.format(fips_padded=fips_padded)
-        data = _fetch_series(fred, series_id, start="2010-01-01")
-        if data:
-            result[name] = data
+        extra_series[name] = pattern.format(fips_padded=fips_padded)
 
-    # Compute buy signals
+    # Fetch all in parallel
+    result.update(_fetch_batch(fred, all_series))
+    result.update(_fetch_batch(fred, extra_series, start="2010-01-01"))
+
     result["signals"] = compute_buy_signals(result)
-
     _write_cache(cache_key, result)
     return result
 
 
 def get_all_state_data(api_key: str | None) -> dict:
-    """Fetch summary data for all states + national."""
-    cached = _read_cache("all_states", max_age_hours=12)
+    """Fetch summary data for all states + national — parallelized."""
+    cached = _read_cache("all_states", max_age_hours=24)
     if cached:
         return cached
     if not api_key:
@@ -249,21 +259,16 @@ def get_all_state_data(api_key: str | None) -> dict:
 
     result = {"states": {}, "national": {}}
 
-    # National indicators
-    for name, series_id in NATIONAL_SERIES.items():
-        data = _fetch_series(fred, series_id)
-        if data:
-            result["national"][name] = data
+    # Build ALL series across national + 4 states into one big batch
+    all_to_fetch = {}
+    # National
+    for name, sid in NATIONAL_SERIES.items():
+        all_to_fetch[f"national__{name}"] = sid
 
-    # State-level summaries (use state FIPS with 2-letter suffix patterns)
+    # States
     state_suffix = {"CA": "CA", "NV": "NV", "RI": "RI", "AZ": "AZ"}
-    state_fips_2digit = {"CA": "06", "NV": "32", "RI": "44", "AZ": "04"}
-
-    for code, info in STATES.items():
+    for code in STATES:
         suffix = state_suffix[code]
-        state_data = {"code": code, "name": info["name"], "counties": list(COUNTIES.get(code, {}).keys())}
-
-        # State-level Realtor.com series (use state abbreviation suffix)
         state_series = {
             "median_list_price": f"MEDLISPRI{suffix}",
             "active_listings": f"ACTLISCOU{suffix}",
@@ -271,31 +276,34 @@ def get_all_state_data(api_key: str | None) -> dict:
             "new_listings": f"NEWLISCOU{suffix}",
             "pending_ratio": f"PENRAT{suffix}",
             "price_reduced_count": f"PRIREDCOU{suffix}",
+            "median_sale_price": f"MEDSFHP{suffix}",
+            "median_income": f"MEHOINUS{suffix}A672N",
         }
-        for name, series_id in state_series.items():
-            data = _fetch_series(fred, series_id)
-            if data:
-                state_data[name] = data
+        for name, sid in state_series.items():
+            all_to_fetch[f"{code}__{name}"] = sid
 
-        # State median sale price (Census/HUD)
-        sale_price_id = f"MEDSFHP{suffix}"
-        data = _fetch_series(fred, sale_price_id, start="2010-01-01")
-        if data:
-            state_data["median_sale_price"] = data
+    # Fetch everything in parallel (10 threads)
+    fetched = _fetch_batch(fred, all_to_fetch)
 
-        # State median income
-        fips2 = state_fips_2digit[code]
-        income_series = [
-            f"MEHOINUS{suffix}A672N",  # common pattern
-        ]
-        for sid in income_series:
-            data = _fetch_series(fred, sid, start="2010-01-01")
-            if data:
-                state_data["median_income"] = data
-                break
+    # Sort results into national vs state buckets
+    for key, data in fetched.items():
+        parts = key.split("__", 1)
+        if parts[0] == "national":
+            result["national"][parts[1]] = data
+        else:
+            state_code = parts[0]
+            metric = parts[1]
+            if state_code not in result["states"]:
+                result["states"][state_code] = {
+                    "code": state_code,
+                    "name": STATES[state_code]["name"],
+                    "counties": list(COUNTIES.get(state_code, {}).keys()),
+                }
+            result["states"][state_code][metric] = data
 
-        state_data["signals"] = compute_buy_signals(state_data)
-        result["states"][code] = state_data
+    # Compute signals for each state
+    for code in result["states"]:
+        result["states"][code]["signals"] = compute_buy_signals(result["states"][code])
 
     _write_cache("all_states", result)
     return result
