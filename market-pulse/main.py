@@ -26,7 +26,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Market Pulse", lifespan=lifespan)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+static_dir = os.path.join(os.path.dirname(__file__) or ".", "static")
+if os.path.isdir(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
 templates = Jinja2Templates(directory="templates")
 
 
