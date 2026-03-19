@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Portfolio Builder — Market Pulse{% endblock %}
+{% block content %}
+<h1>Net-Net Portfolio Builder</h1>
+<p class="subtitle">$50K capital, 25 equal-weight positions. Auto-selected from SEC EDGAR net-net screen with liquidity, quality, and sector filters applied.</p>
+
+<div id="loading" class="loading">
+    <div class="spinner"></div>
+    <div>Building portfolio from SEC EDGAR data... first load may take 60-90 seconds.</div>
+</div>
+
+<div id="portfolio" style="display:none;">
+    <!-- Portfolio Summary -->
+    <div class="grid-4" style="margin-bottom:1rem;">
+        <div class="card metric-card" style="border-color:var(--accent);">
+            <div class="label">Capital</div>
+            <div class="value" id="totalCapital">—</div>
+        </div>
+        <div class="card metric-card">
+            <div class="label">Positions</div>
+            <div class="value" id="numPositions">—</div>
+            <div class="change" id="positionSize"></div>
+        </div>
+        <div class="card metric-card">
+            <div class="label">True Net-Nets</div>
+            <div class="value" style="color:var(--accent);" id="numNetNets">—</div>
+            <div class="change" style="color:var(--accent);">P/NCAV &lt; 1.0</div>
+        </div>
+        <div class="card metric-card">
+            <div class="label">Avg P/NCAV</div>
+            <div class="value" id="avgNcav">—</div>
+        </div>
+    </div>
+
+    <div class="grid-3" style="margin-bottom:1rem;">
+        <div class="card metric-card">
+            <div class="label">Total Invested</div>
+            <div class="value" id="totalInvested">—</div>
+        </div>
+        <div class="card metric-card">
+            <div class="label">Cash Remaining</div>
+            <div class="value" id="cashRemaining">—</div>
+        </div>
+        <div class="card metric-card">
+            <div class="label">Profitable Positions</div>
+            <div class="value" id="numProfitable">—</div>
+            <div class="change">positive net income</div>
+        </div>
+    </div>
+
+    <!-- Filters Applied -->
+    <div class="card" style="margin-bottom:1rem; padding:0.75rem 1.25rem; font-size:0.8rem; color:var(--text-dim); border-left: 3px solid var(--accent2);">
+        <strong style="color:var(--text);">Filters:</strong>
+        <span id="filtersApplied"></span>
+        <span style="float:right; color:var(--text-dim);" id="screenedCount"></span>
+    </div>
+
+    <!-- Positions Table -->
+    <div class="card" style="overflow-x:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:30px;">#</th>
+                    <th>Ticker</th>
+                    <th>Company</th>
+                    <th>Sector</th>
+                    <th>Cap</th>
+                    <th style="text-align:right;">Price</th>
+                    <th style="text-align:right;">NCAV/Sh</th>
+                    <th style="text-align:right;">P/NCAV</th>
+                    <th style="text-align:right;">Shares</th>
+                    <th style="text-align:right;">Cost</th>
+                    <th style="text-align:right;">Weight</th>
+                    <th style="text-align:right;">P/E</th>
+                    <th style="text-align:right;">Margin</th>
+                    <th style="text-align:right;">Curr Ratio</th>
+                </tr>
+            </thead>
+            <tbody id="positionsBody"></tbody>
+        </table>
+    </div>
+
+    <!-- Data source -->
+    <div class="card" style="font-size:0.75rem; color:var(--text-dim); margin-top:1rem;">
+        <strong>Strategy:</strong> Ben Graham net-net — buy stocks trading below liquidation value (NCAV), equal-weight, hold 1 year, rebalance. Historical CAGR ~20% (per Leaven Partners 2010-2024 study). This is a screening tool, not financial advice. Do your own due diligence on each position.
+    </div>
+</div>
+
+<div id="errorMsg" class="card" style="display:none; border-color: var(--red); padding:2rem; text-align:center;">
+    <p style="color:var(--red); font-weight:600;" id="errorText"></p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function fmtMoney(v) { return '$' + v.toLocaleString('en-US', {maximumFractionDigits: 0}); }
+
+fetch('/api/finance/portfolio')
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('loading').style.display = 'none';
+        if (data.error) {
+            document.getElementById('errorMsg').style.display = 'block';
+            document.getElementById('errorText').textContent = data.error;
+            return;
+        }
+        document.getElementById('portfolio').style.display = 'block';
+
+        const p = data.portfolio;
+        document.getElementById('totalCapital').textContent = fmtMoney(p.capital);
+        document.getElementById('numPositions').textContent = p.num_positions;
+        document.getElementById('positionSize').textContent = fmtMoney(p.position_size) + ' each';
+        document.getElementById('numNetNets').textContent = p.num_net_nets;
+        document.getElementById('avgNcav').textContent = p.avg_ncav_ratio + 'x';
+        document.getElementById('totalInvested').textContent = fmtMoney(p.total_invested);
+        document.getElementById('cashRemaining').textContent = fmtMoney(p.cash_remaining);
+        document.getElementById('numProfitable').textContent = p.num_profitable + ' / ' + p.num_positions;
+        document.getElementById('screenedCount').textContent = `Screened ${p.total_candidates_screened.toLocaleString()} companies → ${p.passed_filters} passed filters`;
+
+        const f = data.filters_applied;
+        document.getElementById('filtersApplied').textContent =
+            `P/NCAV < ${f.max_ncav_ratio} · Mkt Cap > ${f.min_market_cap} · Current Ratio > ${f.min_current_ratio} · Price > ${f.min_price} · Daily Vol > ${f.min_daily_dollar_volume} · Excl: ${f.excluded_sectors}`;
+
+        const body = document.getElementById('positionsBody');
+        data.positions.forEach(s => {
+            const ncavClass = s.is_net_net ? 'up' : 'neutral';
+            const marginStr = s.net_margin !== null && s.net_margin !== undefined ? s.net_margin + '%' : 'N/A';
+            const marginClass = s.net_margin !== null ? (s.net_margin > 0 ? 'up' : 'down') : '';
+            const peStr = s.pe_ratio ? s.pe_ratio.toFixed(1) + 'x' : 'N/A';
+            const crStr = s.current_ratio ? s.current_ratio.toFixed(1) + 'x' : 'N/A';
+            const capBadge = {'Mega':'🔵','Large':'🟢','Mid':'🟡','Small':'🟠','Micro':'🔴'}[s.cap_category] || '';
+            body.innerHTML += `<tr>
+                <td style="color:var(--text-dim);">${s.rank}</td>
+                <td><strong><a href="https://finance.yahoo.com/quote/${s.ticker}" target="_blank">${s.ticker}</a></strong></td>
+                <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis;">${s.name}</td>
+                <td style="font-size:0.75rem; color:var(--text-dim);">${s.sector}</td>
+                <td style="font-size:0.8rem;">${capBadge} ${s.cap_category}</td>
+                <td style="text-align:right;">$${s.price.toFixed(2)}</td>
+                <td style="text-align:right;">$${s.ncav_per_share.toFixed(2)}</td>
+                <td style="text-align:right;" class="${ncavClass}"><strong>${s.ncav_ratio.toFixed(2)}x</strong></td>
+                <td style="text-align:right;">${s.shares_to_buy.toLocaleString()}</td>
+                <td style="text-align:right;">${fmtMoney(s.actual_cost)}</td>
+                <td style="text-align:right;">${s.weight_pct}%</td>
+                <td style="text-align:right;">${peStr}</td>
+                <td style="text-align:right;" class="${marginClass}">${marginStr}</td>
+                <td style="text-align:right;">${crStr}</td>
+            </tr>`;
+        });
+    })
+    .catch(err => {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('errorMsg').style.display = 'block';
+        document.getElementById('errorText').textContent = 'Failed to load: ' + err.message;
+    });
+</script>
+{% endblock %}
