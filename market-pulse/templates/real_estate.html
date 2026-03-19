@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Real Estate — Market Pulse{% endblock %}
+{% block content %}
+<h1>Real Estate Market Dashboard</h1>
+<p class="subtitle">Market timing signals for California, Nevada, Rhode Island &amp; Arizona &mdash; powered by Federal Reserve (FRED) data.</p>
+
+<div class="state-tabs" id="stateTabs">
+    <div class="state-tab active" data-state="CA">California</div>
+    <div class="state-tab" data-state="NV">Nevada</div>
+    <div class="state-tab" data-state="RI">Rhode Island</div>
+    <div class="state-tab" data-state="AZ">Arizona</div>
+</div>
+
+<div id="loading" class="loading">
+    <div class="spinner"></div>
+    <div>Loading market data from FRED...</div>
+</div>
+
+<div id="dashboard" style="display:none;">
+    <!-- Signal Banner -->
+    <div class="card" id="signalBanner" style="margin-bottom:1rem; display:flex; align-items:center; justify-content:space-between;">
+        <div>
+            <div style="font-size:0.8rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Buy Signal</div>
+            <div id="signalRating" style="font-size:1.5rem; font-weight:700; margin-top:0.25rem;"></div>
+        </div>
+        <div id="signalScore" style="text-align:right; color:var(--text-dim); font-size:0.85rem;"></div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="grid-4" style="margin-bottom:1rem;">
+        <div class="card metric-card">
+            <div class="label">Median List Price</div>
+            <div class="value" id="metricPrice">—</div>
+            <div class="change" id="metricPriceChange"></div>
+        </div>
+        <div class="card metric-card">
+            <div class="label">Days on Market</div>
+            <div class="value" id="metricDOM">—</div>
+            <div class="change" id="metricDOMChange"></div>
+        </div>
+        <div class="card metric-card">
+            <div class="label">Active Listings</div>
+            <div class="value" id="metricListings">—</div>
+            <div class="change" id="metricListingsChange"></div>
+        </div>
+        <div class="card metric-card">
+            <div class="label">30-Yr Mortgage Rate</div>
+            <div class="value" id="metricMortgage">—</div>
+            <div class="change" id="metricMortgageChange"></div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid-2" style="margin-bottom:1rem;">
+        <div class="card">
+            <h2>Median Listing Price</h2>
+            <div class="chart-container"><canvas id="priceChart"></canvas></div>
+        </div>
+        <div class="card">
+            <h2>Active Listings (Inventory)</h2>
+            <div class="chart-container"><canvas id="inventoryChart"></canvas></div>
+        </div>
+    </div>
+    <div class="grid-2" style="margin-bottom:1rem;">
+        <div class="card">
+            <h2>Median Days on Market</h2>
+            <div class="chart-container"><canvas id="domChart"></canvas></div>
+        </div>
+        <div class="card">
+            <h2>30-Year Mortgage Rate (National)</h2>
+            <div class="chart-container"><canvas id="mortgageChart"></canvas></div>
+        </div>
+    </div>
+
+    <!-- Signal Factors -->
+    <div class="card" style="margin-bottom:1rem;">
+        <h2>Buy Signal Breakdown</h2>
+        <ul class="signals-list" id="signalsList"></ul>
+    </div>
+</div>
+
+<div id="errorMsg" class="card" style="display:none; border-color: var(--red); padding:2rem; text-align:center;">
+    <p style="color:var(--red); font-weight:600;" id="errorText"></p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allData = null;
+let charts = {};
+const chartDefaults = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+        x: { grid: { color: 'rgba(45,48,68,0.5)' }, ticks: { color: '#9ca3af', maxTicksLimit: 8, font: { size: 11 } } },
+        y: { grid: { color: 'rgba(45,48,68,0.5)' }, ticks: { color: '#9ca3af', font: { size: 11 } } },
+    },
+};
+
+function fmtMoney(v) { return '$' + v.toLocaleString('en-US', { maximumFractionDigits: 0 }); }
+function fmtNum(v) { return v.toLocaleString('en-US', { maximumFractionDigits: 0 }); }
+function fmtPct(v) { return (v > 0 ? '+' : '') + v.toFixed(1) + '%'; }
+
+function makeChart(canvasId, labels, data, color, yFmt) {
+    if (charts[canvasId]) charts[canvasId].destroy();
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    const cfg = JSON.parse(JSON.stringify(chartDefaults));
+    if (yFmt === 'money') cfg.scales.y.ticks.callback = v => fmtMoney(v);
+    if (yFmt === 'pct') cfg.scales.y.ticks.callback = v => v.toFixed(1) + '%';
+    charts[canvasId] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels.map(d => { const dt = new Date(d); return dt.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }); }),
+            datasets: [{ data, borderColor: color, backgroundColor: color + '22', fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 }],
+        },
+        options: cfg,
+    });
+}
+
+function renderState(stateCode) {
+    if (!allData || !allData.states || !allData.states[stateCode]) return;
+    const s = allData.states[stateCode];
+
+    // Metrics
+    if (s.median_list_price) {
+        document.getElementById('metricPrice').textContent = fmtMoney(s.median_list_price.current);
+        if (s.median_list_price.yoy_change !== undefined) {
+            const el = document.getElementById('metricPriceChange');
+            el.textContent = fmtPct(s.median_list_price.yoy_change) + ' YoY';
+            el.className = 'change ' + (s.median_list_price.yoy_change > 0 ? 'up' : 'down');
+        }
+        makeChart('priceChart', s.median_list_price.dates, s.median_list_price.values, '#3b82f6', 'money');
+    }
+    if (s.days_on_market) {
+        document.getElementById('metricDOM').textContent = s.days_on_market.current + ' days';
+        if (s.days_on_market.yoy_change !== undefined) {
+            const el = document.getElementById('metricDOMChange');
+            el.textContent = fmtPct(s.days_on_market.yoy_change) + ' YoY';
+            el.className = 'change ' + (s.days_on_market.yoy_change > 0 ? 'up' : 'down');
+        }
+        makeChart('domChart', s.days_on_market.dates, s.days_on_market.values, '#f97316', 'num');
+    }
+    if (s.active_listings) {
+        document.getElementById('metricListings').textContent = fmtNum(s.active_listings.current);
+        if (s.active_listings.yoy_change !== undefined) {
+            const el = document.getElementById('metricListingsChange');
+            el.textContent = fmtPct(s.active_listings.yoy_change) + ' YoY';
+            el.className = 'change ' + (s.active_listings.yoy_change > 0 ? 'up' : 'down');
+        }
+        makeChart('inventoryChart', s.active_listings.dates, s.active_listings.values, '#22c55e', 'num');
+    }
+    if (allData.mortgage_rate) {
+        document.getElementById('metricMortgage').textContent = allData.mortgage_rate.current + '%';
+        makeChart('mortgageChart', allData.mortgage_rate.dates, allData.mortgage_rate.values, '#ef4444', 'pct');
+    }
+
+    // Signal banner
+    if (s.signals) {
+        const rating = s.signals.rating;
+        const el = document.getElementById('signalRating');
+        el.textContent = rating;
+        const cls = rating.includes('BUY') ? 'signal-buy' : rating === 'WAIT' ? 'signal-wait' : 'signal-neutral';
+        el.innerHTML = `<span class="signal-badge ${cls}">${rating}</span>`;
+        document.getElementById('signalScore').textContent = `Score: ${s.signals.score} / ${s.signals.max_score}`;
+
+        const list = document.getElementById('signalsList');
+        list.innerHTML = '';
+        s.signals.factors.forEach(f => {
+            const sigCls = f.signal.includes('BUY') ? 'signal-buy' : f.signal === 'WAIT' || f.signal === "SELLER'S MARKET" ? 'signal-wait' : f.signal === 'EXPENSIVE' ? 'signal-expensive' : 'signal-neutral';
+            list.innerHTML += `<li><span>${f.name}: <strong>${f.value}</strong></span><span class="signal-badge ${sigCls}">${f.signal}</span></li>`;
+        });
+    }
+}
+
+// Tab switching
+document.querySelectorAll('.state-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.state-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        renderState(tab.dataset.state);
+    });
+});
+
+// Fetch data
+fetch('/api/real-estate')
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('loading').style.display = 'none';
+        if (data.error) {
+            document.getElementById('errorMsg').style.display = 'block';
+            document.getElementById('errorText').textContent = data.error;
+            return;
+        }
+        allData = data;
+        document.getElementById('dashboard').style.display = 'block';
+        renderState('CA');
+    })
+    .catch(err => {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('errorMsg').style.display = 'block';
+        document.getElementById('errorText').textContent = 'Failed to load data: ' + err.message;
+    });
+</script>
+{% endblock %}
