@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Finance Screener — Market Pulse{% endblock %}
+{% block content %}
+<h1>High-Margin Stock Screener</h1>
+<p class="subtitle">S&amp;P 500 companies with net profit margins above 20% &mdash; powered by Yahoo Finance data.</p>
+
+<div id="loading" class="loading">
+    <div class="spinner"></div>
+    <div>Loading stock data... this may take 30-60 seconds on first load.</div>
+</div>
+
+<div id="screener" style="display:none;">
+    <!-- Summary cards -->
+    <div class="grid-3" style="margin-bottom:1rem;">
+        <div class="card metric-card">
+            <div class="label">Companies Found</div>
+            <div class="value" id="totalCount">—</div>
+        </div>
+        <div class="card metric-card">
+            <div class="label">Avg Net Margin</div>
+            <div class="value" id="avgMargin">—</div>
+        </div>
+        <div class="card metric-card">
+            <div class="label">Below 200 DMA</div>
+            <div class="value" id="belowDMA">—</div>
+            <div class="change" style="color:var(--accent);">potential value</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card" style="margin-bottom:1rem;">
+        <div class="filter-row">
+            <input type="text" class="search-bar" id="searchInput" placeholder="Search ticker or name...">
+            <select id="sectorFilter">
+                <option value="">All Sectors</option>
+            </select>
+            <select id="marginFilter">
+                <option value="20">Net Margin &gt; 20%</option>
+                <option value="30">Net Margin &gt; 30%</option>
+                <option value="40">Net Margin &gt; 40%</option>
+                <option value="50">Net Margin &gt; 50%</option>
+            </select>
+            <select id="dmaFilter">
+                <option value="">All (vs 200 DMA)</option>
+                <option value="below">Below 200 DMA only</option>
+                <option value="above">Above 200 DMA only</option>
+            </select>
+            <select id="capFilter">
+                <option value="">All Cap Sizes</option>
+                <option value="Mega">Mega Cap ($200B+)</option>
+                <option value="Large">Large Cap ($10-200B)</option>
+                <option value="Mid">Mid Cap ($2-10B)</option>
+                <option value="Small">Small Cap ($300M-2B)</option>
+                <option value="Micro">Micro Cap (&lt;$300M)</option>
+            </select>
+            <span style="color:var(--text-dim); font-size:0.8rem;" id="filterCount"></span>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card" style="overflow-x:auto;">
+        <table id="stockTable">
+            <thead>
+                <tr>
+                    <th data-col="ticker">Ticker</th>
+                    <th data-col="name">Company</th>
+                    <th data-col="sector">Sector</th>
+                    <th data-col="cap_category">Cap</th>
+                    <th data-col="price" style="text-align:right;">Price</th>
+                    <th data-col="market_cap" style="text-align:right;">Mkt Cap</th>
+                    <th data-col="net_margin" style="text-align:right;">Net Margin</th>
+                    <th data-col="revenue_growth" style="text-align:right;">Rev Growth</th>
+                    <th data-col="pe_ratio" style="text-align:right;">P/E</th>
+                    <th data-col="dma_distance" style="text-align:right;">vs 200 DMA</th>
+                    <th data-col="high_distance" style="text-align:right;">vs 52w High</th>
+                </tr>
+            </thead>
+            <tbody id="stockBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<div id="errorMsg" class="card" style="display:none; border-color: var(--red); padding:2rem; text-align:center;">
+    <p style="color:var(--red); font-weight:600;" id="errorText"></p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allStocks = [];
+let sortCol = 'net_margin';
+let sortDir = 'desc';
+
+function renderTable(data) {
+    const body = document.getElementById('stockBody');
+    body.innerHTML = '';
+    data.forEach(s => {
+        const dmaClass = s.dma_distance < 0 ? 'down' : 'up';
+        const highClass = s.high_distance < 0 ? 'down' : 'up';
+        const growthStr = s.revenue_growth !== null && s.revenue_growth !== undefined ? (s.revenue_growth > 0 ? '+' : '') + s.revenue_growth + '%' : 'N/A';
+        const growthClass = s.revenue_growth !== null && s.revenue_growth !== undefined ? (s.revenue_growth > 0 ? 'up' : 'down') : '';
+        const peStr = s.pe_ratio ? s.pe_ratio.toFixed(1) + 'x' : 'N/A';
+        const capBadge = {'Mega':'🔵','Large':'🟢','Mid':'🟡','Small':'🟠','Micro':'🔴'}[s.cap_category] || '';
+        body.innerHTML += `<tr>
+            <td><strong><a href="https://finance.yahoo.com/quote/${s.ticker}" target="_blank">${s.ticker}</a></strong></td>
+            <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis;">${s.name}</td>
+            <td style="font-size:0.8rem; color:var(--text-dim);">${s.sector}</td>
+            <td style="font-size:0.8rem; text-align:center;">${capBadge} ${s.cap_category || 'N/A'}</td>
+            <td style="text-align:right;">$${s.price ? s.price.toLocaleString('en-US', {minimumFractionDigits:2}) : '0'}</td>
+            <td style="text-align:right;">${s.market_cap_fmt}</td>
+            <td style="text-align:right;"><strong style="color:var(--accent);">${s.net_margin}%</strong></td>
+            <td style="text-align:right;" class="${growthClass}">${growthStr}</td>
+            <td style="text-align:right;">${peStr}</td>
+            <td style="text-align:right;" class="${dmaClass}">${s.dma_distance > 0 ? '+' : ''}${s.dma_distance}%</td>
+            <td style="text-align:right;" class="${highClass}">${s.high_distance > 0 ? '+' : ''}${s.high_distance}%</td>
+        </tr>`;
+    });
+    document.getElementById('filterCount').textContent = `Showing ${data.length} of ${allStocks.length}`;
+}
+
+function applyFilters() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const sector = document.getElementById('sectorFilter').value;
+    const minMargin = parseInt(document.getElementById('marginFilter').value);
+    const dmaFilter = document.getElementById('dmaFilter').value;
+    const capFilter = document.getElementById('capFilter').value;
+
+    let filtered = allStocks.filter(s => {
+        if (search && !s.ticker.toLowerCase().includes(search) && !s.name.toLowerCase().includes(search)) return false;
+        if (sector && s.sector !== sector) return false;
+        if (s.net_margin < minMargin) return false;
+        if (dmaFilter === 'below' && s.dma_distance >= 0) return false;
+        if (dmaFilter === 'above' && s.dma_distance < 0) return false;
+        if (capFilter && s.cap_category !== capFilter) return false;
+        return true;
+    });
+
+    filtered.sort((a, b) => {
+        let va = a[sortCol], vb = b[sortCol];
+        if (va === null || va === undefined) va = -Infinity;
+        if (vb === null || vb === undefined) vb = -Infinity;
+        if (typeof va === 'string') { va = va.toLowerCase(); vb = (vb || '').toLowerCase(); }
+        return sortDir === 'asc' ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
+    });
+
+    renderTable(filtered);
+}
+
+// Sorting
+document.querySelectorAll('thead th').forEach(th => {
+    th.addEventListener('click', () => {
+        const col = th.dataset.col;
+        if (sortCol === col) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
+        else { sortCol = col; sortDir = 'desc'; }
+        document.querySelectorAll('thead th').forEach(t => t.classList.remove('sorted-asc', 'sorted-desc'));
+        th.classList.add(sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+        applyFilters();
+    });
+});
+
+// Filters
+['searchInput', 'sectorFilter', 'marginFilter', 'dmaFilter', 'capFilter'].forEach(id => {
+    document.getElementById(id).addEventListener(id === 'searchInput' ? 'input' : 'change', applyFilters);
+});
+
+// Fetch
+fetch('/api/finance/screener')
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('loading').style.display = 'none';
+        if (!Array.isArray(data)) {
+            document.getElementById('errorMsg').style.display = 'block';
+            document.getElementById('errorText').textContent = 'Unexpected response format.';
+            return;
+        }
+        allStocks = data;
+        document.getElementById('screener').style.display = 'block';
+        document.getElementById('totalCount').textContent = data.length;
+
+        const avgM = data.reduce((s, d) => s + d.net_margin, 0) / data.length;
+        document.getElementById('avgMargin').textContent = avgM.toFixed(1) + '%';
+        const below = data.filter(d => d.dma_distance < 0).length;
+        document.getElementById('belowDMA').textContent = below;
+
+        // Populate sector dropdown
+        const sectors = [...new Set(data.map(d => d.sector))].sort();
+        const sel = document.getElementById('sectorFilter');
+        sectors.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o); });
+
+        // Mark default sort column
+        document.querySelector('th[data-col="net_margin"]').classList.add('sorted-desc');
+        applyFilters();
+    })
+    .catch(err => {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('errorMsg').style.display = 'block';
+        document.getElementById('errorText').textContent = 'Failed to load data: ' + err.message;
+    });
+</script>
+{% endblock %}
