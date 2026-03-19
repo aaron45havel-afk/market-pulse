@@ -10,6 +10,10 @@ logger = logging.getLogger(__name__)
 CACHE_DIR = Path("/tmp/market_pulse_cache")
 CACHE_DIR.mkdir(exist_ok=True)
 
+# ═══════════════════════════════════════════════════
+# GEOGRAPHY: States → Counties (FIPS codes)
+# ═══════════════════════════════════════════════════
+
 STATES = {
     "CA": {"name": "California", "fips": "06"},
     "NV": {"name": "Nevada", "fips": "32"},
@@ -17,51 +21,111 @@ STATES = {
     "AZ": {"name": "Arizona", "fips": "04"},
 }
 
-# FRED series IDs per state
-# Median listing price, active listings, median days on market
-FRED_SERIES = {
-    "mortgage_30yr": "MORTGAGE30US",
+COUNTIES = {
     "CA": {
-        "median_list_price": "MEDLISPRI06",
-        "median_sale_price": "MEDSFHPCA",
-        "active_listings": "ACTLISCOU06",
-        "days_on_market": "MEDDAYONMAR06",
-        "median_income": "MEHOINUSCAA672N",
-        "new_listings": "NEWLISCOU06",
+        "6001":  "Alameda County",
+        "6013":  "Contra Costa County",
+        "6075":  "San Francisco County",
+        "6081":  "San Mateo County",
+        "6085":  "Santa Clara County",
+        "6037":  "Los Angeles County",
+        "6059":  "Orange County",
+        "6073":  "San Diego County",
+        "6067":  "Sacramento County",
+        "6077":  "San Joaquin County",
+        "6019":  "Fresno County",
+        "6029":  "Kern County",
+        "6071":  "San Bernardino County",
+        "6065":  "Riverside County",
+        "6097":  "Sonoma County",
+        "6055":  "Napa County",
+        "6041":  "Marin County",
+        "6095":  "Solano County",
+        "6113":  "Yolo County",
+        "6061":  "Placer County",
     },
     "NV": {
-        "median_list_price": "MEDLISPRI32",
-        "median_sale_price": "MEDSFHPNV",
-        "active_listings": "ACTLISCOU32",
-        "days_on_market": "MEDDAYONMAR32",
-        "median_income": "MEHOINUSNVA672N",
-        "new_listings": "NEWLISCOU32",
+        "32003": "Clark County",
+        "32031": "Washoe County",
+        "32510": "Carson City",
+        "32007": "Elko County",
+        "32019": "Lyon County",
+        "32029": "Storey County",
+        "32005": "Douglas County",
     },
     "RI": {
-        "median_list_price": "MEDLISPRI44",
-        "median_sale_price": "MEDSFHPRI",
-        "active_listings": "ACTLISCOU44",
-        "days_on_market": "MEDDAYONMAR44",
-        "median_income": "MEHOINUSRIA672N",
-        "new_listings": "NEWLISCOU44",
+        "44007": "Providence County",
+        "44003": "Kent County",
+        "44009": "Washington County",
+        "44005": "Newport County",
+        "44001": "Bristol County",
     },
     "AZ": {
-        "median_list_price": "MEDLISPRI04",
-        "median_sale_price": "MEDSFHPAZ",
-        "active_listings": "ACTLISCOU04",
-        "days_on_market": "MEDDAYONMAR04",
-        "median_income": "MEHOINUSAZA672N",
-        "new_listings": "NEWLISCOU04",
+        "4013":  "Maricopa County",
+        "4019":  "Pima County",
+        "4021":  "Pinal County",
+        "4025":  "Yavapai County",
+        "4005":  "Coconino County",
+        "4015":  "Mohave County",
+        "4027":  "Yuma County",
+        "4003":  "Cochise County",
+        "4017":  "Navajo County",
     },
 }
 
-# S&P 500 tickers for screening — we'll fetch a broad set
+# ═══════════════════════════════════════════════════
+# FRED SERIES PATTERNS (county-level, using FIPS)
+# ═══════════════════════════════════════════════════
+# All sourced from Realtor.com via FRED — monthly, updated through ~Feb 2026
+
+COUNTY_SERIES = {
+    # Realtor.com Housing Inventory Core Metrics
+    "median_list_price":      "MEDLISPRI{fips}",        # Median listing price ($)
+    "median_list_price_mom":  "MEDLISPRIMM{fips}",      # Median listing price MoM change (%)
+    "active_listings":        "ACTLISCOU{fips}",        # Active listing count
+    "new_listings":           "NEWLISCOU{fips}",        # New listing count
+    "days_on_market":         "MEDDAYONMAR{fips}",      # Median days on market
+    "pending_ratio":          "PENRAT{fips}",           # Pending listing ratio (%)
+    "price_reduced_count":    "PRIREDCOU{fips}",        # Price reduced listing count
+    "median_sqft":            "MEDSQUFEE{fips}",        # Median home size (sq ft)
+    "price_per_sqft":         "MEDLISPRIPERSQUFEE{fips}",# Median listing price per sq ft
+    "median_list_price_yoy":  "MEDLISPRYY{fips}",       # Median listing price YoY change (%)
+}
+
+# Additional county-level series from other sources
+COUNTY_SERIES_EXTRA = {
+    "house_price_index":      "ATNHPIUS{fips_padded}A",         # FHFA All-Transactions HPI (annual)
+    "median_income":          "MHICA{fips_padded}A052NCEN",     # Census median household income (annual)
+    "homeownership_rate":     "HOWNRATEACS0{fips_padded}",      # ACS homeownership rate (annual)
+}
+
+# National series
+NATIONAL_SERIES = {
+    "mortgage_30yr":          "MORTGAGE30US",            # 30-year fixed mortgage rate (weekly)
+    "mortgage_15yr":          "MORTGAGE15US",            # 15-year fixed mortgage rate (weekly)
+    "mortgage_5yr_arm":       "MORTGAGE5US",             # 5/1 ARM rate (weekly)
+    "fed_funds_rate":         "FEDFUNDS",               # Federal funds effective rate (monthly)
+    "cpi_shelter":            "CUSR0000SAH1",           # CPI: Shelter (monthly, for rent inflation)
+    "housing_starts":         "HOUST",                  # New housing starts (monthly, national)
+    "building_permits":       "PERMIT",                 # Building permits (monthly, national)
+    "consumer_sentiment":     "UMCSENT",                # U of Michigan consumer sentiment
+    "national_hpi":           "USSTHPI",                # National house price index (FHFA)
+    "us_median_list_price":   "MEDLISPRIUS",            # National median listing price
+    "us_active_listings":     "ACTLISCOUUS",            # National active listing count
+    "us_days_on_market":      "MEDDAYONMARUS",          # National median DOM
+    "us_new_listings":        "NEWLISCOUUS",            # National new listing count
+    "us_pending_ratio":       "PENRATUS",               # National pending ratio
+}
+
 SP500_URL = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
 
 
+# ═══════════════════════════════════════════════════
+# CACHING
+# ═══════════════════════════════════════════════════
+
 def _cache_path(key: str) -> Path:
     return CACHE_DIR / f"{key}.json"
-
 
 def _read_cache(key: str, max_age_hours: int = 6):
     p = _cache_path(key)
@@ -71,160 +135,390 @@ def _read_cache(key: str, max_age_hours: int = 6):
             return json.loads(p.read_text())
     return None
 
-
 def _write_cache(key: str, data):
     _cache_path(key).write_text(json.dumps(data, default=str))
 
 
-def get_fred_data(api_key: str | None) -> dict:
-    """Fetch real estate data from FRED for all 4 states."""
-    cached = _read_cache("fred_all", max_age_hours=12)
+# ═══════════════════════════════════════════════════
+# FRED DATA FETCHING
+# ═══════════════════════════════════════════════════
+
+def _fetch_series(fred, series_id: str, start: str = "2016-01-01") -> dict | None:
+    """Fetch a single FRED series, return dict with dates/values or None."""
+    try:
+        s = fred.get_series(series_id, observation_start=start)
+        s = s.dropna()
+        if len(s) == 0:
+            return None
+        values = [round(float(v), 2) for v in s.values]
+        dates = [d.strftime("%Y-%m-%d") for d in s.index]
+        result = {
+            "dates": dates,
+            "values": values,
+            "current": values[-1],
+            "series_id": series_id,
+        }
+        # YoY change (compare to ~12 months ago)
+        if len(values) >= 13:
+            old_val = values[-13]
+            if old_val != 0:
+                result["yoy_change"] = round((values[-1] - old_val) / abs(old_val) * 100, 1)
+        # Peak and trough in last 24 months
+        recent = values[-min(24, len(values)):]
+        result["peak_24m"] = max(recent)
+        result["trough_24m"] = min(recent)
+        result["pct_from_peak"] = round((values[-1] - result["peak_24m"]) / result["peak_24m"] * 100, 1) if result["peak_24m"] != 0 else 0
+        # 6-month trend (avg of last 3 vs avg of prior 3)
+        if len(values) >= 6:
+            recent_avg = sum(values[-3:]) / 3
+            prior_avg = sum(values[-6:-3]) / 3
+            if prior_avg != 0:
+                result["trend_6m"] = round((recent_avg - prior_avg) / abs(prior_avg) * 100, 1)
+        return result
+    except Exception as e:
+        logger.debug(f"Could not fetch {series_id}: {e}")
+        return None
+
+
+def get_national_data(api_key: str | None) -> dict:
+    """Fetch all national-level macro indicators."""
+    cached = _read_cache("national", max_age_hours=12)
     if cached:
         return cached
-
     if not api_key:
-        return {"error": "FRED_API_KEY not set. Get a free key at https://fred.stlouisfed.org/docs/api/api_key.html"}
-
+        return {"error": "FRED_API_KEY not set"}
     from fredapi import Fred
     fred = Fred(api_key=api_key)
-
-    result = {"states": {}, "mortgage_rate": {}}
-
-    # Mortgage rate (national)
-    try:
-        s = fred.get_series("MORTGAGE30US", observation_start="2015-01-01")
-        s = s.dropna()
-        result["mortgage_rate"] = {
-            "dates": [d.strftime("%Y-%m-%d") for d in s.index],
-            "values": [round(float(v), 2) for v in s.values],
-            "current": round(float(s.iloc[-1]), 2),
-        }
-    except Exception as e:
-        logger.warning(f"Failed to fetch mortgage rate: {e}")
-
-    for state_code, series_map in FRED_SERIES.items():
-        if state_code == "mortgage_30yr":
-            continue
-        state_data = {"code": state_code, "name": STATES[state_code]["name"]}
-
-        for metric_name, series_id in series_map.items():
-            try:
-                s = fred.get_series(series_id, observation_start="2015-01-01")
-                s = s.dropna()
-                if len(s) == 0:
-                    continue
-                state_data[metric_name] = {
-                    "dates": [d.strftime("%Y-%m-%d") for d in s.index],
-                    "values": [round(float(v), 2) for v in s.values],
-                    "current": round(float(s.iloc[-1]), 2),
-                }
-                # Calculate YoY change
-                if len(s) >= 12:
-                    current_val = float(s.iloc[-1])
-                    year_ago = float(s.iloc[-12]) if "month" in str(s.index.freq) else float(s.iloc[-4])
-                    if year_ago != 0:
-                        state_data[metric_name]["yoy_change"] = round((current_val - year_ago) / year_ago * 100, 1)
-            except Exception as e:
-                logger.warning(f"Failed to fetch {series_id} for {state_code}: {e}")
-
-        # Compute buy signals
-        signals = compute_buy_signals(state_data)
-        state_data["signals"] = signals
-        result["states"][state_code] = state_data
-
-    _write_cache("fred_all", result)
+    result = {}
+    for name, series_id in NATIONAL_SERIES.items():
+        data = _fetch_series(fred, series_id)
+        if data:
+            result[name] = data
+    _write_cache("national", result)
     return result
 
 
-def compute_buy_signals(state_data: dict) -> dict:
-    """Compute buy/sell/hold signals based on market indicators."""
-    signals = {"factors": [], "score": 0, "rating": "NEUTRAL"}
-    max_score = 0
+def get_county_data(api_key: str | None, state_code: str, fips: str) -> dict:
+    """Fetch all available FRED series for a specific county."""
+    cache_key = f"county_{fips}"
+    cached = _read_cache(cache_key, max_age_hours=12)
+    if cached:
+        return cached
+    if not api_key:
+        return {"error": "FRED_API_KEY not set"}
+    from fredapi import Fred
+    fred = Fred(api_key=api_key)
 
-    # 1. Price trend: Are prices declining from peak?
-    if "median_list_price" in state_data:
-        prices = state_data["median_list_price"]["values"]
-        if len(prices) >= 6:
-            max_score += 2
-            recent = prices[-1]
-            peak = max(prices[-24:]) if len(prices) >= 24 else max(prices)
-            pct_from_peak = (recent - peak) / peak * 100
-            if pct_from_peak < -10:
-                signals["factors"].append({"name": "Price below peak", "value": f"{pct_from_peak:.1f}%", "signal": "BUY", "points": 2})
+    result = {
+        "fips": fips,
+        "county_name": COUNTIES.get(state_code, {}).get(fips, f"FIPS {fips}"),
+        "state": state_code,
+    }
+
+    # Realtor.com county metrics
+    for name, pattern in COUNTY_SERIES.items():
+        series_id = pattern.format(fips=fips)
+        data = _fetch_series(fred, series_id)
+        if data:
+            result[name] = data
+
+    # Extra county metrics (padded FIPS for some series)
+    fips_padded = fips.zfill(5)
+    for name, pattern in COUNTY_SERIES_EXTRA.items():
+        series_id = pattern.format(fips_padded=fips_padded)
+        data = _fetch_series(fred, series_id, start="2010-01-01")
+        if data:
+            result[name] = data
+
+    # Compute buy signals
+    result["signals"] = compute_buy_signals(result)
+
+    _write_cache(cache_key, result)
+    return result
+
+
+def get_all_state_data(api_key: str | None) -> dict:
+    """Fetch summary data for all states + national."""
+    cached = _read_cache("all_states", max_age_hours=12)
+    if cached:
+        return cached
+    if not api_key:
+        return {"error": "FRED_API_KEY not set. Get a free key at https://fred.stlouisfed.org/docs/api/api_key.html"}
+    from fredapi import Fred
+    fred = Fred(api_key=api_key)
+
+    result = {"states": {}, "national": {}}
+
+    # National indicators
+    for name, series_id in NATIONAL_SERIES.items():
+        data = _fetch_series(fred, series_id)
+        if data:
+            result["national"][name] = data
+
+    # State-level summaries (use state FIPS with 2-letter suffix patterns)
+    state_suffix = {"CA": "CA", "NV": "NV", "RI": "RI", "AZ": "AZ"}
+    state_fips_2digit = {"CA": "06", "NV": "32", "RI": "44", "AZ": "04"}
+
+    for code, info in STATES.items():
+        suffix = state_suffix[code]
+        state_data = {"code": code, "name": info["name"], "counties": list(COUNTIES.get(code, {}).keys())}
+
+        # State-level Realtor.com series (use state abbreviation suffix)
+        state_series = {
+            "median_list_price": f"MEDLISPRI{suffix}",
+            "active_listings": f"ACTLISCOU{suffix}",
+            "days_on_market": f"MEDDAYONMAR{suffix}",
+            "new_listings": f"NEWLISCOU{suffix}",
+            "pending_ratio": f"PENRAT{suffix}",
+            "price_reduced_count": f"PRIREDCOU{suffix}",
+        }
+        for name, series_id in state_series.items():
+            data = _fetch_series(fred, series_id)
+            if data:
+                state_data[name] = data
+
+        # State median sale price (Census/HUD)
+        sale_price_id = f"MEDSFHP{suffix}"
+        data = _fetch_series(fred, sale_price_id, start="2010-01-01")
+        if data:
+            state_data["median_sale_price"] = data
+
+        # State median income
+        fips2 = state_fips_2digit[code]
+        income_series = [
+            f"MEHOINUS{suffix}A672N",  # common pattern
+        ]
+        for sid in income_series:
+            data = _fetch_series(fred, sid, start="2010-01-01")
+            if data:
+                state_data["median_income"] = data
+                break
+
+        state_data["signals"] = compute_buy_signals(state_data)
+        result["states"][code] = state_data
+
+    _write_cache("all_states", result)
+    return result
+
+
+# ═══════════════════════════════════════════════════
+# BUY SIGNAL SCORING
+# ═══════════════════════════════════════════════════
+
+def compute_buy_signals(data: dict) -> dict:
+    """
+    Compute buy/hold/wait signals based on all available market indicators.
+    Each factor scores 0-2 points. More factors = more robust signal.
+
+    Factors:
+    1. Price vs 24-month peak (are prices correcting?)
+    2. Days on market trend (is buyer leverage increasing?)
+    3. Inventory / active listings vs historical avg
+    4. New listings trend (is supply expanding?)
+    5. Price reduced count (are sellers cutting prices?)
+    6. Pending ratio (is demand slowing?)
+    7. Affordability: price-to-income ratio
+    8. Price per sq ft trend
+    9. Mortgage rate environment
+    """
+    signals = {"factors": [], "score": 0, "max_score": 0}
+
+    # ── Factor 1: Price vs Peak ──
+    if "median_list_price" in data:
+        d = data["median_list_price"]
+        signals["max_score"] += 2
+        pct = d.get("pct_from_peak", 0)
+        if pct < -10:
+            signals["factors"].append({"name": "Price correction from peak", "value": f"{pct:.1f}%", "signal": "BUY", "points": 2, "detail": "Prices have dropped significantly from recent highs"})
+            signals["score"] += 2
+        elif pct < -5:
+            signals["factors"].append({"name": "Price softening from peak", "value": f"{pct:.1f}%", "signal": "LEAN BUY", "points": 1, "detail": "Prices are cooling but haven't dropped sharply"})
+            signals["score"] += 1
+        elif pct < -2:
+            signals["factors"].append({"name": "Price plateau near peak", "value": f"{pct:.1f}%", "signal": "NEUTRAL", "points": 0.5, "detail": "Prices are flat to slightly down"})
+            signals["score"] += 0.5
+        else:
+            signals["factors"].append({"name": "Prices at or near peak", "value": f"{pct:.1f}%", "signal": "WAIT", "points": 0, "detail": "Market is at peak pricing — less room for upside"})
+
+    # ── Factor 2: Days on Market ──
+    if "days_on_market" in data:
+        d = data["days_on_market"]
+        signals["max_score"] += 2
+        vals = d["values"]
+        if len(vals) >= 12:
+            current = vals[-1]
+            avg_12m = sum(vals[-12:]) / 12
+            ratio = current / avg_12m if avg_12m > 0 else 1
+            if ratio > 1.25:
+                signals["factors"].append({"name": "Days on market elevated", "value": f"{current:.0f} days (avg {avg_12m:.0f})", "signal": "BUY", "points": 2, "detail": "Homes sitting longer = more negotiation leverage"})
                 signals["score"] += 2
-            elif pct_from_peak < -5:
-                signals["factors"].append({"name": "Price cooling from peak", "value": f"{pct_from_peak:.1f}%", "signal": "LEAN BUY", "points": 1})
+            elif ratio > 1.05:
+                signals["factors"].append({"name": "Days on market rising", "value": f"{current:.0f} days (avg {avg_12m:.0f})", "signal": "LEAN BUY", "points": 1, "detail": "Market slowing slightly, some buyer leverage"})
                 signals["score"] += 1
             else:
-                signals["factors"].append({"name": "Price near/at peak", "value": f"{pct_from_peak:.1f}%", "signal": "WAIT", "points": 0})
+                signals["factors"].append({"name": "Days on market low/normal", "value": f"{current:.0f} days (avg {avg_12m:.0f})", "signal": "SELLER'S MKT", "points": 0, "detail": "Homes selling quickly — competitive market"})
 
-    # 2. Days on market increasing = buyer leverage
-    if "days_on_market" in state_data:
-        dom = state_data["days_on_market"]["values"]
-        if len(dom) >= 6:
-            max_score += 2
-            recent_dom = dom[-1]
-            avg_dom = sum(dom[-12:]) / min(len(dom), 12)
-            if recent_dom > avg_dom * 1.2:
-                signals["factors"].append({"name": "Days on market rising", "value": f"{recent_dom:.0f} days", "signal": "BUY", "points": 2})
+    # ── Factor 3: Active Inventory ──
+    if "active_listings" in data:
+        d = data["active_listings"]
+        signals["max_score"] += 2
+        vals = d["values"]
+        if len(vals) >= 12:
+            current = vals[-1]
+            avg_24m = sum(vals[-min(24,len(vals)):]) / min(24, len(vals))
+            ratio = current / avg_24m if avg_24m > 0 else 1
+            if ratio > 1.3:
+                signals["factors"].append({"name": "Inventory well above average", "value": f"{current:,.0f} (avg {avg_24m:,.0f})", "signal": "BUY", "points": 2, "detail": "Lots of homes to choose from = buyer's market"})
                 signals["score"] += 2
-            elif recent_dom > avg_dom:
-                signals["factors"].append({"name": "Days on market above avg", "value": f"{recent_dom:.0f} days", "signal": "LEAN BUY", "points": 1})
+            elif ratio > 1.1:
+                signals["factors"].append({"name": "Inventory above average", "value": f"{current:,.0f} (avg {avg_24m:,.0f})", "signal": "LEAN BUY", "points": 1, "detail": "Supply is building, shifting toward buyers"})
                 signals["score"] += 1
             else:
-                signals["factors"].append({"name": "Days on market low", "value": f"{recent_dom:.0f} days", "signal": "SELLER'S MARKET", "points": 0})
+                signals["factors"].append({"name": "Inventory tight", "value": f"{current:,.0f} (avg {avg_24m:,.0f})", "signal": "LOW SUPPLY", "points": 0, "detail": "Limited inventory = competitive bidding likely"})
 
-    # 3. Inventory levels
-    if "active_listings" in state_data:
-        listings = state_data["active_listings"]["values"]
-        if len(listings) >= 12:
-            max_score += 2
-            recent_inv = listings[-1]
-            avg_inv = sum(listings[-24:]) / min(len(listings), 24)
-            if recent_inv > avg_inv * 1.2:
-                signals["factors"].append({"name": "Inventory above average", "value": f"{recent_inv:,.0f}", "signal": "BUY", "points": 2})
+    # ── Factor 4: New Listings Trend ──
+    if "new_listings" in data:
+        d = data["new_listings"]
+        signals["max_score"] += 1
+        trend = d.get("trend_6m")
+        if trend is not None:
+            if trend > 10:
+                signals["factors"].append({"name": "New listings surging", "value": f"+{trend:.1f}% (6mo trend)", "signal": "BUY", "points": 1, "detail": "Fresh supply hitting market — more options coming"})
+                signals["score"] += 1
+            elif trend > 0:
+                signals["factors"].append({"name": "New listings increasing", "value": f"+{trend:.1f}% (6mo trend)", "signal": "LEAN BUY", "points": 0.5, "detail": "Supply gradually improving"})
+                signals["score"] += 0.5
+            else:
+                signals["factors"].append({"name": "New listings declining", "value": f"{trend:.1f}% (6mo trend)", "signal": "TIGHT", "points": 0, "detail": "Fewer new homes coming to market"})
+
+    # ── Factor 5: Price Reductions ──
+    if "price_reduced_count" in data:
+        d = data["price_reduced_count"]
+        signals["max_score"] += 2
+        vals = d["values"]
+        if len(vals) >= 6:
+            trend = d.get("trend_6m")
+            if trend is not None and trend > 20:
+                signals["factors"].append({"name": "Price cuts accelerating", "value": f"+{trend:.1f}% (6mo trend)", "signal": "BUY", "points": 2, "detail": "Sellers are capitulating — strong negotiation position"})
                 signals["score"] += 2
-            elif recent_inv > avg_inv:
-                signals["factors"].append({"name": "Inventory normalizing", "value": f"{recent_inv:,.0f}", "signal": "LEAN BUY", "points": 1})
+            elif trend is not None and trend > 5:
+                signals["factors"].append({"name": "Price cuts increasing", "value": f"+{trend:.1f}% (6mo trend)", "signal": "LEAN BUY", "points": 1, "detail": "More sellers willing to negotiate"})
                 signals["score"] += 1
             else:
-                signals["factors"].append({"name": "Inventory tight", "value": f"{recent_inv:,.0f}", "signal": "WAIT", "points": 0})
+                val_str = f"{trend:.1f}%" if trend is not None else "stable"
+                signals["factors"].append({"name": "Price cuts stable/declining", "value": val_str, "signal": "NEUTRAL", "points": 0, "detail": "Sellers holding firm on pricing"})
 
-    # 4. Mortgage rate trend
-    # (passed separately, handled in the view)
+    # ── Factor 6: Pending Ratio (demand indicator) ──
+    if "pending_ratio" in data:
+        d = data["pending_ratio"]
+        signals["max_score"] += 1
+        vals = d["values"]
+        if len(vals) >= 6:
+            current = vals[-1]
+            # Pending ratio: higher = more demand. Lower = less demand (good for buyers)
+            avg = sum(vals[-12:]) / min(12, len(vals))
+            if current < avg * 0.85:
+                signals["factors"].append({"name": "Demand weakening (pending ratio)", "value": f"{current:.1f}% (avg {avg:.1f}%)", "signal": "BUY", "points": 1, "detail": "Fewer homes going under contract — less competition"})
+                signals["score"] += 1
+            elif current < avg:
+                signals["factors"].append({"name": "Demand softening", "value": f"{current:.1f}% (avg {avg:.1f}%)", "signal": "LEAN BUY", "points": 0.5, "detail": "Slightly fewer pending sales than normal"})
+                signals["score"] += 0.5
+            else:
+                signals["factors"].append({"name": "Demand strong (pending ratio)", "value": f"{current:.1f}% (avg {avg:.1f}%)", "signal": "HOT", "points": 0, "detail": "High pending rate = competitive market"})
 
-    # 5. Affordability: price to income ratio
-    if "median_sale_price" in state_data and "median_income" in state_data:
-        max_score += 2
-        price = state_data["median_sale_price"]["current"]
-        income = state_data["median_income"]["current"]
+    # ── Factor 7: Affordability (price-to-income) ──
+    if "median_sale_price" in data and "median_income" in data:
+        signals["max_score"] += 2
+        price = data["median_sale_price"]["current"]
+        income = data["median_income"]["current"]
         if income > 0:
             ratio = price / income
-            # Historical norm ~3-4x, stretched markets 5-7x+
-            if ratio < 4.5:
-                signals["factors"].append({"name": "Price-to-income ratio", "value": f"{ratio:.1f}x", "signal": "BUY", "points": 2})
+            if ratio < 4:
+                signals["factors"].append({"name": "Highly affordable (price/income)", "value": f"{ratio:.1f}x", "signal": "BUY", "points": 2, "detail": "Homes priced below 4x median income — historically affordable"})
                 signals["score"] += 2
-            elif ratio < 6:
-                signals["factors"].append({"name": "Price-to-income ratio", "value": f"{ratio:.1f}x", "signal": "NEUTRAL", "points": 1})
+            elif ratio < 5.5:
+                signals["factors"].append({"name": "Moderately affordable", "value": f"{ratio:.1f}x", "signal": "LEAN BUY", "points": 1, "detail": "Near historical norms for affordability"})
+                signals["score"] += 1
+            elif ratio < 7:
+                signals["factors"].append({"name": "Affordability stretched", "value": f"{ratio:.1f}x", "signal": "STRETCHED", "points": 0.5, "detail": "Prices outpacing incomes — watch for correction"})
+                signals["score"] += 0.5
+            else:
+                signals["factors"].append({"name": "Severely unaffordable", "value": f"{ratio:.1f}x", "signal": "EXPENSIVE", "points": 0, "detail": "Prices far exceed income — high risk of correction"})
+    elif "median_list_price" in data and "median_income" in data:
+        signals["max_score"] += 2
+        price = data["median_list_price"]["current"]
+        income = data["median_income"]["current"]
+        if income > 0:
+            ratio = price / income
+            if ratio < 5:
+                signals["factors"].append({"name": "Affordable (list price/income)", "value": f"{ratio:.1f}x", "signal": "BUY", "points": 2})
+                signals["score"] += 2
+            elif ratio < 7:
+                signals["factors"].append({"name": "Moderate affordability", "value": f"{ratio:.1f}x", "signal": "NEUTRAL", "points": 1})
                 signals["score"] += 1
             else:
-                signals["factors"].append({"name": "Price-to-income stretched", "value": f"{ratio:.1f}x", "signal": "EXPENSIVE", "points": 0})
+                signals["factors"].append({"name": "Unaffordable", "value": f"{ratio:.1f}x", "signal": "EXPENSIVE", "points": 0})
 
-    # Final rating
-    if max_score > 0:
-        pct = signals["score"] / max_score
-        if pct >= 0.7:
+    # ── Factor 8: Price per Sq Ft trend ──
+    if "price_per_sqft" in data:
+        d = data["price_per_sqft"]
+        signals["max_score"] += 1
+        trend = d.get("trend_6m")
+        if trend is not None:
+            if trend < -5:
+                signals["factors"].append({"name": "Price/sqft declining", "value": f"{trend:.1f}% (6mo)", "signal": "BUY", "points": 1, "detail": "Value improving — getting more for your money"})
+                signals["score"] += 1
+            elif trend < 0:
+                signals["factors"].append({"name": "Price/sqft flat to down", "value": f"{trend:.1f}% (6mo)", "signal": "LEAN BUY", "points": 0.5})
+                signals["score"] += 0.5
+            else:
+                signals["factors"].append({"name": "Price/sqft rising", "value": f"+{trend:.1f}% (6mo)", "signal": "RISING", "points": 0})
+
+    # ── Factor 9: YoY Price Change (from FRED if available) ──
+    if "median_list_price_yoy" in data:
+        d = data["median_list_price_yoy"]
+        signals["max_score"] += 1
+        current = d["current"]
+        if current < -5:
+            signals["factors"].append({"name": "Prices down YoY (FRED)", "value": f"{current:.1f}%", "signal": "BUY", "points": 1})
+            signals["score"] += 1
+        elif current < 0:
+            signals["factors"].append({"name": "Prices slightly down YoY", "value": f"{current:.1f}%", "signal": "LEAN BUY", "points": 0.5})
+            signals["score"] += 0.5
+        else:
+            signals["factors"].append({"name": "Prices up YoY", "value": f"+{current:.1f}%", "signal": "RISING", "points": 0})
+
+    # ── Final Rating ──
+    max_s = signals["max_score"]
+    if max_s > 0:
+        pct = signals["score"] / max_s
+        if pct >= 0.70:
+            signals["rating"] = "STRONG BUY"
+            signals["rating_detail"] = "Multiple indicators favor buyers — compelling entry point"
+        elif pct >= 0.55:
             signals["rating"] = "BUY"
-        elif pct >= 0.5:
+            signals["rating_detail"] = "Most indicators are favorable for buyers"
+        elif pct >= 0.40:
             signals["rating"] = "LEAN BUY"
-        elif pct >= 0.3:
+            signals["rating_detail"] = "Some positive signals but mixed overall"
+        elif pct >= 0.25:
             signals["rating"] = "NEUTRAL"
+            signals["rating_detail"] = "Market is balanced — neither strongly favoring buyers or sellers"
         else:
             signals["rating"] = "WAIT"
-    signals["max_score"] = max_score
+            signals["rating_detail"] = "Seller's market — consider waiting for better conditions"
+        signals["score_pct"] = round(pct * 100)
+    else:
+        signals["rating"] = "INSUFFICIENT DATA"
+        signals["rating_detail"] = "Not enough data to generate a signal"
+        signals["score_pct"] = 0
 
     return signals
 
+
+# ═══════════════════════════════════════════════════
+# STOCK SCREENER
+# ═══════════════════════════════════════════════════
 
 def get_stock_screener_data() -> list[dict]:
     """Fetch stock data and filter for net profit margin > 20%."""
@@ -232,7 +526,6 @@ def get_stock_screener_data() -> list[dict]:
     if cached:
         return cached
 
-    # Get a broad list of tickers — S&P 500 + some extras
     try:
         tables = pd.read_html(SP500_URL)
         sp500 = tables[0]
@@ -240,7 +533,6 @@ def get_stock_screener_data() -> list[dict]:
         sectors = dict(zip(sp500["Symbol"].str.replace(".", "-", regex=False), sp500["GICS Sector"]))
         sub_industries = dict(zip(sp500["Symbol"].str.replace(".", "-", regex=False), sp500["GICS Sub-Industry"]))
     except Exception:
-        # Fallback to a hardcoded list of well-known tickers
         tickers = ["AAPL","MSFT","GOOGL","META","NVDA","AMZN","TSLA","V","MA","AVGO",
                     "JPM","UNH","JNJ","PG","HD","ABBV","MRK","PEP","KO","COST",
                     "ADBE","CRM","NFLX","AMD","INTC","QCOM","TXN","NOW","AMAT","LRCX"]
@@ -252,9 +544,9 @@ def get_stock_screener_data() -> list[dict]:
     for i in range(0, len(tickers), batch_size):
         batch = tickers[i:i + batch_size]
         try:
-            data = yf.download(batch, period="1y", group_by="ticker", progress=False, threads=True)
+            yf.download(batch, period="1d", group_by="ticker", progress=False, threads=True)
         except Exception:
-            continue
+            pass
 
         for ticker in batch:
             try:
@@ -263,7 +555,6 @@ def get_stock_screener_data() -> list[dict]:
                 net_margin = info.get("profitMargins")
                 if net_margin is None or net_margin < 0.20:
                     continue
-
                 revenue_growth = info.get("revenueGrowth")
                 market_cap = info.get("marketCap", 0)
                 current_price = info.get("currentPrice") or info.get("regularMarketPrice", 0)
@@ -271,16 +562,8 @@ def get_stock_screener_data() -> list[dict]:
                 fifty_two_low = info.get("fiftyTwoWeekLow", 0)
                 two_hundred_dma = info.get("twoHundredDayAverage", 0)
                 name = info.get("shortName", ticker)
-
-                # Distance from 200 DMA
-                dma_distance = 0
-                if two_hundred_dma and current_price:
-                    dma_distance = (current_price - two_hundred_dma) / two_hundred_dma * 100
-
-                # Distance from 52w high
-                high_distance = 0
-                if fifty_two_high and current_price:
-                    high_distance = (current_price - fifty_two_high) / fifty_two_high * 100
+                dma_distance = ((current_price - two_hundred_dma) / two_hundred_dma * 100) if two_hundred_dma and current_price else 0
+                high_distance = ((current_price - fifty_two_high) / fifty_two_high * 100) if fifty_two_high and current_price else 0
 
                 results.append({
                     "ticker": ticker,
@@ -298,8 +581,7 @@ def get_stock_screener_data() -> list[dict]:
                     "high_distance": round(high_distance, 1),
                     "fifty_two_low": round(fifty_two_low, 2) if fifty_two_low else None,
                 })
-            except Exception as e:
-                logger.debug(f"Skipping {ticker}: {e}")
+            except Exception:
                 continue
 
     results.sort(key=lambda x: x["net_margin"], reverse=True)

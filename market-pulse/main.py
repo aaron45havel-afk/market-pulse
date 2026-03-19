@@ -6,7 +6,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
-from data_providers import get_fred_data, get_stock_screener_data, STATES
+from data_providers import (
+    get_all_state_data, get_county_data, get_national_data,
+    get_stock_screener_data, STATES, COUNTIES
+)
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -37,13 +40,36 @@ async def real_estate(request: Request):
     return templates.TemplateResponse("real_estate.html", {
         "request": request,
         "states": STATES,
+        "counties": COUNTIES,
     })
 
 
 @app.get("/api/real-estate")
 async def api_real_estate():
-    data = get_fred_data(FRED_API_KEY)
+    """State-level overview + national indicators."""
+    data = get_all_state_data(FRED_API_KEY)
     return JSONResponse(data)
+
+
+@app.get("/api/real-estate/county/{state}/{fips}")
+async def api_county(state: str, fips: str):
+    """County-level deep dive — all available FRED series."""
+    data = get_county_data(FRED_API_KEY, state.upper(), fips)
+    return JSONResponse(data)
+
+
+@app.get("/api/real-estate/national")
+async def api_national():
+    """National macro indicators only."""
+    data = get_national_data(FRED_API_KEY)
+    return JSONResponse(data)
+
+
+@app.get("/api/counties/{state}")
+async def api_counties(state: str):
+    """List available counties for a state."""
+    state = state.upper()
+    return JSONResponse(COUNTIES.get(state, {}))
 
 
 @app.get("/finance")
@@ -59,7 +85,6 @@ async def api_screener():
 
 @app.get("/api/finance/refresh")
 async def api_refresh():
-    """Force refresh screener cache."""
     from pathlib import Path
     cache_file = Path("/tmp/market_pulse_cache/screener.json")
     if cache_file.exists():

@@ -2,13 +2,23 @@
 {% block title %}Real Estate — Market Pulse{% endblock %}
 {% block content %}
 <h1>Real Estate Market Dashboard</h1>
-<p class="subtitle">Market timing signals for California, Nevada, Rhode Island &amp; Arizona &mdash; powered by Federal Reserve (FRED) data.</p>
+<p class="subtitle">County-level market timing signals for CA, NV, RI &amp; AZ &mdash; 10+ indicators per county from FRED / Realtor.com data.</p>
 
+<!-- State Tabs -->
 <div class="state-tabs" id="stateTabs">
     <div class="state-tab active" data-state="CA">California</div>
     <div class="state-tab" data-state="NV">Nevada</div>
     <div class="state-tab" data-state="RI">Rhode Island</div>
     <div class="state-tab" data-state="AZ">Arizona</div>
+</div>
+
+<!-- County Selector -->
+<div style="margin-bottom:1rem; display:flex; align-items:center; gap:1rem;">
+    <label style="color:var(--text-dim); font-size:0.85rem; font-weight:600;">COUNTY:</label>
+    <select id="countySelect" class="search-bar" style="width:300px;">
+        <option value="">— State Overview —</option>
+    </select>
+    <span id="dataSource" style="color:var(--text-dim); font-size:0.75rem;"></span>
 </div>
 
 <div id="loading" class="loading">
@@ -18,15 +28,21 @@
 
 <div id="dashboard" style="display:none;">
     <!-- Signal Banner -->
-    <div class="card" id="signalBanner" style="margin-bottom:1rem; display:flex; align-items:center; justify-content:space-between;">
+    <div class="card" id="signalBanner" style="margin-bottom:1rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
         <div>
-            <div style="font-size:0.8rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Buy Signal</div>
+            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Market Signal</div>
             <div id="signalRating" style="font-size:1.5rem; font-weight:700; margin-top:0.25rem;"></div>
+            <div id="signalDetail" style="color:var(--text-dim); font-size:0.8rem; margin-top:0.25rem;"></div>
         </div>
-        <div id="signalScore" style="text-align:right; color:var(--text-dim); font-size:0.85rem;"></div>
+        <div style="text-align:right;">
+            <div id="signalScore" style="color:var(--text-dim); font-size:0.85rem;"></div>
+            <div id="signalBar" style="width:200px; height:8px; background:var(--border); border-radius:4px; margin-top:0.5rem; overflow:hidden;">
+                <div id="signalBarFill" style="height:100%; border-radius:4px; transition:width 0.5s;"></div>
+            </div>
+        </div>
     </div>
 
-    <!-- Key Metrics -->
+    <!-- Key Metrics Row 1 -->
     <div class="grid-4" style="margin-bottom:1rem;">
         <div class="card metric-card">
             <div class="label">Median List Price</div>
@@ -44,13 +60,37 @@
             <div class="change" id="metricListingsChange"></div>
         </div>
         <div class="card metric-card">
-            <div class="label">30-Yr Mortgage Rate</div>
+            <div class="label">30-Yr Mortgage</div>
             <div class="value" id="metricMortgage">—</div>
             <div class="change" id="metricMortgageChange"></div>
         </div>
     </div>
 
-    <!-- Charts -->
+    <!-- Key Metrics Row 2 -->
+    <div class="grid-4" style="margin-bottom:1rem;">
+        <div class="card metric-card">
+            <div class="label">New Listings</div>
+            <div class="value" id="metricNew">—</div>
+            <div class="change" id="metricNewChange"></div>
+        </div>
+        <div class="card metric-card">
+            <div class="label">Price Reduced</div>
+            <div class="value" id="metricReduced">—</div>
+            <div class="change" id="metricReducedChange"></div>
+        </div>
+        <div class="card metric-card">
+            <div class="label">Pending Ratio</div>
+            <div class="value" id="metricPending">—</div>
+            <div class="change" id="metricPendingChange"></div>
+        </div>
+        <div class="card metric-card">
+            <div class="label">Price / Sq Ft</div>
+            <div class="value" id="metricPSF">—</div>
+            <div class="change" id="metricPSFChange"></div>
+        </div>
+    </div>
+
+    <!-- Charts Row 1 -->
     <div class="grid-2" style="margin-bottom:1rem;">
         <div class="card">
             <h2>Median Listing Price</h2>
@@ -61,10 +101,22 @@
             <div class="chart-container"><canvas id="inventoryChart"></canvas></div>
         </div>
     </div>
+    <!-- Charts Row 2 -->
     <div class="grid-2" style="margin-bottom:1rem;">
         <div class="card">
             <h2>Median Days on Market</h2>
             <div class="chart-container"><canvas id="domChart"></canvas></div>
+        </div>
+        <div class="card">
+            <h2>Price Reductions Count</h2>
+            <div class="chart-container"><canvas id="reducedChart"></canvas></div>
+        </div>
+    </div>
+    <!-- Charts Row 3 -->
+    <div class="grid-2" style="margin-bottom:1rem;">
+        <div class="card">
+            <h2>New Listings</h2>
+            <div class="chart-container"><canvas id="newListChart"></canvas></div>
         </div>
         <div class="card">
             <h2>30-Year Mortgage Rate (National)</h2>
@@ -72,10 +124,15 @@
         </div>
     </div>
 
-    <!-- Signal Factors -->
+    <!-- Signal Breakdown -->
     <div class="card" style="margin-bottom:1rem;">
-        <h2>Buy Signal Breakdown</h2>
+        <h2>Buy Signal Breakdown — <span id="signalFactorCount"></span> factors analyzed</h2>
         <ul class="signals-list" id="signalsList"></ul>
+    </div>
+
+    <!-- Data Sources -->
+    <div class="card" style="font-size:0.75rem; color:var(--text-dim);">
+        <strong>Data Sources:</strong> Federal Reserve Economic Data (FRED) via Realtor.com Housing Inventory Core Metrics, FHFA House Price Index, U.S. Census Bureau (ACS), Freddie Mac Primary Mortgage Market Survey. Updated monthly (housing) / weekly (mortgage rates).
     </div>
 </div>
 
@@ -86,14 +143,17 @@
 
 {% block scripts %}
 <script>
-let allData = null;
+const COUNTIES = {{ counties | tojson }};
+let stateData = null;
+let nationalData = null;
+let currentState = 'CA';
 let charts = {};
+
 const chartDefaults = {
-    responsive: true,
-    maintainAspectRatio: false,
+    responsive: true, maintainAspectRatio: false,
     plugins: { legend: { display: false } },
     scales: {
-        x: { grid: { color: 'rgba(45,48,68,0.5)' }, ticks: { color: '#9ca3af', maxTicksLimit: 8, font: { size: 11 } } },
+        x: { grid: { color: 'rgba(45,48,68,0.5)' }, ticks: { color: '#9ca3af', maxTicksLimit: 10, font: { size: 11 } } },
         y: { grid: { color: 'rgba(45,48,68,0.5)' }, ticks: { color: '#9ca3af', font: { size: 11 } } },
     },
 };
@@ -102,87 +162,156 @@ function fmtMoney(v) { return '$' + v.toLocaleString('en-US', { maximumFractionD
 function fmtNum(v) { return v.toLocaleString('en-US', { maximumFractionDigits: 0 }); }
 function fmtPct(v) { return (v > 0 ? '+' : '') + v.toFixed(1) + '%'; }
 
-function makeChart(canvasId, labels, data, color, yFmt) {
-    if (charts[canvasId]) charts[canvasId].destroy();
-    const ctx = document.getElementById(canvasId).getContext('2d');
+function makeChart(id, labels, data, color, yFmt) {
+    if (charts[id]) charts[id].destroy();
+    const ctx = document.getElementById(id);
+    if (!ctx) return;
     const cfg = JSON.parse(JSON.stringify(chartDefaults));
     if (yFmt === 'money') cfg.scales.y.ticks.callback = v => fmtMoney(v);
     if (yFmt === 'pct') cfg.scales.y.ticks.callback = v => v.toFixed(1) + '%';
-    charts[canvasId] = new Chart(ctx, {
+    charts[id] = new Chart(ctx.getContext('2d'), {
         type: 'line',
         data: {
-            labels: labels.map(d => { const dt = new Date(d); return dt.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }); }),
+            labels: labels.map(d => new Date(d).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })),
             datasets: [{ data, borderColor: color, backgroundColor: color + '22', fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 }],
         },
         options: cfg,
     });
 }
 
-function renderState(stateCode) {
-    if (!allData || !allData.states || !allData.states[stateCode]) return;
-    const s = allData.states[stateCode];
+function setMetric(id, value, changeId, changeVal, isInverse) {
+    document.getElementById(id).textContent = value || '—';
+    if (changeId && changeVal !== undefined && changeVal !== null) {
+        const el = document.getElementById(changeId);
+        el.textContent = fmtPct(changeVal) + ' YoY';
+        el.className = 'change ' + (isInverse ? (changeVal > 0 ? 'down' : 'up') : (changeVal > 0 ? 'up' : 'down'));
+    }
+}
 
+function renderData(d, national) {
     // Metrics
-    if (s.median_list_price) {
-        document.getElementById('metricPrice').textContent = fmtMoney(s.median_list_price.current);
-        if (s.median_list_price.yoy_change !== undefined) {
-            const el = document.getElementById('metricPriceChange');
-            el.textContent = fmtPct(s.median_list_price.yoy_change) + ' YoY';
-            el.className = 'change ' + (s.median_list_price.yoy_change > 0 ? 'up' : 'down');
-        }
-        makeChart('priceChart', s.median_list_price.dates, s.median_list_price.values, '#3b82f6', 'money');
-    }
-    if (s.days_on_market) {
-        document.getElementById('metricDOM').textContent = s.days_on_market.current + ' days';
-        if (s.days_on_market.yoy_change !== undefined) {
-            const el = document.getElementById('metricDOMChange');
-            el.textContent = fmtPct(s.days_on_market.yoy_change) + ' YoY';
-            el.className = 'change ' + (s.days_on_market.yoy_change > 0 ? 'up' : 'down');
-        }
-        makeChart('domChart', s.days_on_market.dates, s.days_on_market.values, '#f97316', 'num');
-    }
-    if (s.active_listings) {
-        document.getElementById('metricListings').textContent = fmtNum(s.active_listings.current);
-        if (s.active_listings.yoy_change !== undefined) {
-            const el = document.getElementById('metricListingsChange');
-            el.textContent = fmtPct(s.active_listings.yoy_change) + ' YoY';
-            el.className = 'change ' + (s.active_listings.yoy_change > 0 ? 'up' : 'down');
-        }
-        makeChart('inventoryChart', s.active_listings.dates, s.active_listings.values, '#22c55e', 'num');
-    }
-    if (allData.mortgage_rate) {
-        document.getElementById('metricMortgage').textContent = allData.mortgage_rate.current + '%';
-        makeChart('mortgageChart', allData.mortgage_rate.dates, allData.mortgage_rate.values, '#ef4444', 'pct');
+    if (d.median_list_price) setMetric('metricPrice', fmtMoney(d.median_list_price.current), 'metricPriceChange', d.median_list_price.yoy_change);
+    else document.getElementById('metricPrice').textContent = '—';
+
+    if (d.days_on_market) setMetric('metricDOM', d.days_on_market.current + ' days', 'metricDOMChange', d.days_on_market.yoy_change, true);
+    else document.getElementById('metricDOM').textContent = '—';
+
+    if (d.active_listings) setMetric('metricListings', fmtNum(d.active_listings.current), 'metricListingsChange', d.active_listings.yoy_change);
+    else document.getElementById('metricListings').textContent = '—';
+
+    if (d.new_listings) setMetric('metricNew', fmtNum(d.new_listings.current), 'metricNewChange', d.new_listings.yoy_change);
+    else document.getElementById('metricNew').textContent = '—';
+
+    if (d.price_reduced_count) setMetric('metricReduced', fmtNum(d.price_reduced_count.current), 'metricReducedChange', d.price_reduced_count.yoy_change);
+    else document.getElementById('metricReduced').textContent = '—';
+
+    if (d.pending_ratio) setMetric('metricPending', d.pending_ratio.current + '%', 'metricPendingChange', d.pending_ratio.yoy_change, true);
+    else document.getElementById('metricPending').textContent = '—';
+
+    if (d.price_per_sqft) setMetric('metricPSF', fmtMoney(d.price_per_sqft.current), 'metricPSFChange', d.price_per_sqft.yoy_change);
+    else document.getElementById('metricPSF').textContent = '—';
+
+    // Mortgage from national data
+    const mort = national && national.mortgage_30yr;
+    if (mort) {
+        document.getElementById('metricMortgage').textContent = mort.current + '%';
+        makeChart('mortgageChart', mort.dates, mort.values, '#ef4444', 'pct');
     }
 
-    // Signal banner
-    if (s.signals) {
-        const rating = s.signals.rating;
+    // Charts
+    if (d.median_list_price) makeChart('priceChart', d.median_list_price.dates, d.median_list_price.values, '#3b82f6', 'money');
+    if (d.active_listings) makeChart('inventoryChart', d.active_listings.dates, d.active_listings.values, '#22c55e', 'num');
+    if (d.days_on_market) makeChart('domChart', d.days_on_market.dates, d.days_on_market.values, '#f97316', 'num');
+    if (d.price_reduced_count) makeChart('reducedChart', d.price_reduced_count.dates, d.price_reduced_count.values, '#a855f7', 'num');
+    if (d.new_listings) makeChart('newListChart', d.new_listings.dates, d.new_listings.values, '#06b6d4', 'num');
+
+    // Signals
+    if (d.signals) {
+        const s = d.signals;
         const el = document.getElementById('signalRating');
-        el.textContent = rating;
-        const cls = rating.includes('BUY') ? 'signal-buy' : rating === 'WAIT' ? 'signal-wait' : 'signal-neutral';
-        el.innerHTML = `<span class="signal-badge ${cls}">${rating}</span>`;
-        document.getElementById('signalScore').textContent = `Score: ${s.signals.score} / ${s.signals.max_score}`;
+        const cls = s.rating.includes('BUY') ? 'signal-buy' : s.rating === 'WAIT' ? 'signal-wait' : s.rating === 'EXPENSIVE' ? 'signal-expensive' : 'signal-neutral';
+        el.innerHTML = `<span class="signal-badge ${cls}">${s.rating}</span>`;
+        document.getElementById('signalDetail').textContent = s.rating_detail || '';
+        document.getElementById('signalScore').textContent = `Score: ${s.score} / ${s.max_score} (${s.score_pct || 0}%)`;
 
+        const fill = document.getElementById('signalBarFill');
+        fill.style.width = (s.score_pct || 0) + '%';
+        fill.style.background = s.score_pct >= 60 ? '#22c55e' : s.score_pct >= 35 ? '#eab308' : '#ef4444';
+
+        document.getElementById('signalFactorCount').textContent = s.factors.length;
         const list = document.getElementById('signalsList');
         list.innerHTML = '';
-        s.signals.factors.forEach(f => {
-            const sigCls = f.signal.includes('BUY') ? 'signal-buy' : f.signal === 'WAIT' || f.signal === "SELLER'S MARKET" ? 'signal-wait' : f.signal === 'EXPENSIVE' ? 'signal-expensive' : 'signal-neutral';
-            list.innerHTML += `<li><span>${f.name}: <strong>${f.value}</strong></span><span class="signal-badge ${sigCls}">${f.signal}</span></li>`;
+        s.factors.forEach(f => {
+            const sigCls = f.signal.includes('BUY') ? 'signal-buy' : (f.signal === 'WAIT' || f.signal.includes('SELLER') || f.signal === 'TIGHT' || f.signal === 'LOW SUPPLY') ? 'signal-wait' : (f.signal === 'EXPENSIVE' || f.signal === 'HOT') ? 'signal-expensive' : 'signal-neutral';
+            const detail = f.detail ? `<div style="font-size:0.75rem; color:var(--text-dim); margin-top:0.15rem;">${f.detail}</div>` : '';
+            list.innerHTML += `<li style="flex-wrap:wrap;"><div><span>${f.name}: <strong>${f.value}</strong></span>${detail}</div><span class="signal-badge ${sigCls}">${f.signal}</span></li>`;
         });
     }
 }
 
-// Tab switching
+function populateCounties(state) {
+    const sel = document.getElementById('countySelect');
+    sel.innerHTML = '<option value="">— State Overview —</option>';
+    const counties = COUNTIES[state] || {};
+    Object.entries(counties).sort((a,b) => a[1].localeCompare(b[1])).forEach(([fips, name]) => {
+        sel.innerHTML += `<option value="${fips}">${name}</option>`;
+    });
+}
+
+function renderStateOverview(state) {
+    if (!stateData || !stateData.states || !stateData.states[state]) return;
+    renderData(stateData.states[state], stateData.national);
+    document.getElementById('dataSource').textContent = `Source: FRED (state-level Realtor.com data)`;
+}
+
+async function loadCounty(state, fips) {
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('loading').querySelector('div:last-child').textContent = `Loading county data from FRED (${COUNTIES[state][fips]})...`;
+    try {
+        const r = await fetch(`/api/real-estate/county/${state}/${fips}`);
+        const data = await r.json();
+        if (data.error) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('errorMsg').style.display = 'block';
+            document.getElementById('errorText').textContent = data.error;
+            return;
+        }
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        renderData(data, stateData ? stateData.national : null);
+        document.getElementById('dataSource').textContent = `Source: FRED county FIPS ${fips} (Realtor.com + Census + FHFA)`;
+    } catch (e) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('errorMsg').style.display = 'block';
+        document.getElementById('errorText').textContent = 'Failed to load county data: ' + e.message;
+    }
+}
+
+// State tab switching
 document.querySelectorAll('.state-tab').forEach(tab => {
     tab.addEventListener('click', () => {
         document.querySelectorAll('.state-tab').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
-        renderState(tab.dataset.state);
+        currentState = tab.dataset.state;
+        populateCounties(currentState);
+        document.getElementById('countySelect').value = '';
+        renderStateOverview(currentState);
     });
 });
 
-// Fetch data
+// County selector
+document.getElementById('countySelect').addEventListener('change', function() {
+    const fips = this.value;
+    if (!fips) {
+        renderStateOverview(currentState);
+    } else {
+        loadCounty(currentState, fips);
+    }
+});
+
+// Initial load
+populateCounties('CA');
 fetch('/api/real-estate')
     .then(r => r.json())
     .then(data => {
@@ -192,14 +321,14 @@ fetch('/api/real-estate')
             document.getElementById('errorText').textContent = data.error;
             return;
         }
-        allData = data;
+        stateData = data;
         document.getElementById('dashboard').style.display = 'block';
-        renderState('CA');
+        renderStateOverview('CA');
     })
     .catch(err => {
         document.getElementById('loading').style.display = 'none';
         document.getElementById('errorMsg').style.display = 'block';
-        document.getElementById('errorText').textContent = 'Failed to load data: ' + err.message;
+        document.getElementById('errorText').textContent = 'Failed to load: ' + err.message;
     });
 </script>
 {% endblock %}
