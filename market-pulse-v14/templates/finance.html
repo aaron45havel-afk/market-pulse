@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block title %}Net-Net Screener — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+    .price-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 0.3rem 0.5rem; color: var(--text); font-size: 0.85rem; width: 80px; text-align: right; outline: none; }
+    .price-input:focus { border-color: var(--accent2); }
+    .price-input.net-net { border-color: var(--accent); background: rgba(34,197,94,0.1); }
+    .price-input.graham { border-color: var(--yellow); background: rgba(234,179,8,0.1); }
+    .pncav-cell { min-width: 90px; }
+    .verdict { font-size: 0.7rem; font-weight: 700; margin-top: 2px; }
+    .verdict.buy { color: var(--accent); }
+    .verdict.graham { color: var(--yellow); }
+    .verdict.expensive { color: var(--text-dim); }
+</style>
+{% endblock %}
+{% block content %}
+<h1>Net-Net Screener</h1>
+<p class="subtitle">Type in stock prices from Yahoo Finance — the screener instantly tells you which are net-nets (Price &lt; NCAV) and Graham bargains (Price/NCAV ≤ 0.67).</p>
+
+<div id="loading" class="loading">
+    <div class="spinner"></div>
+    <div>Loading SEC EDGAR data...</div>
+</div>
+
+<div id="screener" style="display:none;">
+    <div class="grid-4" style="margin-bottom:1rem;">
+        <div class="card metric-card" style="border-color:var(--accent);">
+            <div class="label">Net-Nets Confirmed</div>
+            <div class="value" style="color:var(--accent);" id="netNetCount">0</div>
+            <div class="change" style="color:var(--accent);">Price &lt; NCAV</div>
+        </div>
+        <div class="card metric-card" style="border-color:var(--yellow);">
+            <div class="label">Graham Bargains</div>
+            <div class="value" style="color:var(--yellow);" id="grahamCount">0</div>
+            <div class="change" style="color:var(--yellow);">P/NCAV ≤ 0.67</div>
+        </div>
+        <div class="card metric-card">
+            <div class="label">Prices Entered</div>
+            <div class="value" id="pricedCount">0</div>
+        </div>
+        <div class="card metric-card">
+            <div class="label">Total Candidates</div>
+            <div class="value" id="totalCount">—</div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1rem; padding:0.75rem 1.25rem; font-size:0.85rem; border-left:3px solid var(--accent);">
+        <strong>How to use:</strong> Click a ticker to open Yahoo Finance. Copy the stock price and paste it into the "Enter Price" box. The screener instantly calculates P/NCAV and tells you if it's a net-net. Work down the list — the smallest NCAV companies are most likely to be trading below liquidation value.
+    </div>
+
+    <div class="card" style="margin-bottom:1rem;">
+        <div class="filter-row">
+            <input type="text" class="search-bar" id="searchInput" placeholder="Search ticker or name...">
+            <select id="statusFilter">
+                <option value="all">All Candidates</option>
+                <option value="confirmed">Confirmed Net-Nets Only</option>
+                <option value="graham">Graham Bargains Only</option>
+                <option value="priced">With Price Entered</option>
+            </select>
+            <select id="burnFilter">
+                <option value="">All Burn Rates</option>
+                <option value="ok">OK / Building Only</option>
+                <option value="no-critical">Exclude Critical</option>
+            </select>
+            <button onclick="exportNetNets()" style="background:var(--accent2); color:white; border:none; padding:0.4rem 1rem; border-radius:6px; cursor:pointer; font-size:0.8rem;">Export Net-Nets</button>
+            <span style="color:var(--text-dim); font-size:0.8rem;" id="filterCount"></span>
+        </div>
+    </div>
+
+    <div class="card" style="overflow-x:auto;">
+        <table id="stockTable">
+            <thead>
+                <tr>
+                    <th data-col="ticker">Ticker</th>
+                    <th data-col="name">Company</th>
+                    <th>Enter Price</th>
+                    <th data-col="ncav_per_share" style="text-align:right;">NCAV/Sh</th>
+                    <th class="pncav-cell" style="text-align:right;">P/NCAV</th>
+                    <th data-col="net_cash_per_share" style="text-align:right;">Net Cash/Sh</th>
+                    <th data-col="current_ratio" style="text-align:right;">Curr Ratio</th>
+                    <th data-col="debt_to_equity" style="text-align:right;">D/E</th>
+                    <th data-col="net_margin" style="text-align:right;">Margin</th>
+                    <th data-col="burn_severity">Burn</th>
+                    <th data-col="revenue" style="text-align:right;">Revenue</th>
+                </tr>
+            </thead>
+            <tbody id="stockBody"></tbody>
+        </table>
+    </div>
+
+    <div class="card" style="font-size:0.75rem; color:var(--text-dim); margin-top:1rem;">
+        <strong>Data:</strong> Balance sheet from SEC EDGAR XBRL (quarterly). Prices entered manually. NCAV = (Current Assets − Total Liabilities − Preferred Stock) ÷ Shares. P/NCAV &lt; 1.0 = net-net. P/NCAV ≤ 0.67 = Graham bargain. Not financial advice.
+    </div>
+</div>
+
+<div id="errorMsg" class="card" style="display:none; border-color:var(--red); padding:2rem; text-align:center;">
+    <p style="color:var(--red); font-weight:600;" id="errorText"></p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allStocks = [];
+let userPrices = JSON.parse(localStorage.getItem('mp_prices') || '{}');
+let sortCol = 'ncav_per_share';
+let sortDir = 'desc';
+
+function savePrices() {
+    try { localStorage.setItem('mp_prices', JSON.stringify(userPrices)); } catch(e) {}
+}
+
+function updateCounts() {
+    let nn = 0, gr = 0, pr = 0;
+    allStocks.forEach(s => {
+        const price = userPrices[s.ticker] || s.price;
+        if (price && price > 0 && s.ncav_per_share > 0) {
+            pr++;
+            const pncav = price / s.ncav_per_share;
+            if (pncav <= 1.0) nn++;
+            if (pncav <= 0.67) gr++;
+        }
+    });
+    document.getElementById('netNetCount').textContent = nn;
+    document.getElementById('grahamCount').textContent = gr;
+    document.getElementById('pricedCount').textContent = pr;
+}
+
+function onPriceInput(ticker, ncav, inputEl) {
+    const val = parseFloat(inputEl.value);
+    const verdictEl = inputEl.parentElement.querySelector('.verdict');
+    const pncavEl = inputEl.closest('tr').querySelector('.pncav-val');
+
+    if (!val || val <= 0 || !ncav || ncav <= 0) {
+        inputEl.className = 'price-input';
+        if (verdictEl) verdictEl.textContent = '';
+        if (pncavEl) pncavEl.innerHTML = '—';
+        delete userPrices[ticker];
+        savePrices(); updateCounts();
+        return;
+    }
+
+    userPrices[ticker] = val;
+    savePrices();
+
+    const pncav = val / ncav;
+    if (pncavEl) {
+        pncavEl.innerHTML = `<strong>${pncav.toFixed(2)}x</strong>`;
+        pncavEl.className = 'pncav-val ' + (pncav <= 0.67 ? 'up' : pncav <= 1.0 ? 'up' : '');
+    }
+
+    if (pncav <= 0.67) {
+        inputEl.className = 'price-input graham';
+        if (verdictEl) { verdictEl.textContent = 'GRAHAM ★'; verdictEl.className = 'verdict graham'; }
+    } else if (pncav <= 1.0) {
+        inputEl.className = 'price-input net-net';
+        if (verdictEl) { verdictEl.textContent = 'NET-NET ✓'; verdictEl.className = 'verdict buy'; }
+    } else if (pncav <= 1.5) {
+        inputEl.className = 'price-input';
+        if (verdictEl) { verdictEl.textContent = 'Close (' + pncav.toFixed(2) + 'x)'; verdictEl.className = 'verdict'; }
+    } else {
+        inputEl.className = 'price-input';
+        if (verdictEl) { verdictEl.textContent = 'Too expensive'; verdictEl.className = 'verdict expensive'; }
+    }
+    updateCounts();
+}
+
+function renderTable(data) {
+    const body = document.getElementById('stockBody');
+    body.innerHTML = '';
+    data.slice(0, 500).forEach(s => {
+        const savedPrice = userPrices[s.ticker] || s.price || '';
+        const marginStr = s.net_margin !== null && s.net_margin !== undefined ? s.net_margin + '%' : 'N/A';
+        const marginClass = s.net_margin !== null ? (s.net_margin > 0 ? 'up' : 'down') : '';
+        const crStr = s.current_ratio ? s.current_ratio.toFixed(1) + 'x' : 'N/A';
+        const deStr = s.debt_to_equity !== null && s.debt_to_equity !== undefined ? s.debt_to_equity.toFixed(2) : 'N/A';
+        const ncStr = s.net_cash_per_share !== null ? '$' + s.net_cash_per_share.toFixed(2) : 'N/A';
+        const ncClass = s.net_cash_per_share > 0 ? 'up' : s.net_cash_per_share < 0 ? 'down' : '';
+        const burnBadge = s.burn_severity === 'CRITICAL' ? '<span class="signal-badge signal-expensive">CRIT</span>' :
+                          s.burn_severity === 'WARNING' ? '<span class="signal-badge signal-wait">WARN</span>' :
+                          s.cash_trend === 'Building' ? '<span class="signal-badge signal-buy">OK</span>' :
+                          '<span class="signal-badge signal-neutral">OK</span>';
+
+        // Calculate P/NCAV if we have a price
+        let pncavHtml = '—';
+        let inputClass = 'price-input';
+        let verdictText = '';
+        let verdictClass = 'verdict';
+        if (savedPrice && savedPrice > 0 && s.ncav_per_share > 0) {
+            const pncav = savedPrice / s.ncav_per_share;
+            pncavHtml = `<strong>${pncav.toFixed(2)}x</strong>`;
+            if (pncav <= 0.67) { inputClass = 'price-input graham'; verdictText = 'GRAHAM ★'; verdictClass = 'verdict graham'; }
+            else if (pncav <= 1.0) { inputClass = 'price-input net-net'; verdictText = 'NET-NET ✓'; verdictClass = 'verdict buy'; }
+            else if (pncav <= 1.5) { verdictText = 'Close'; }
+        }
+
+        body.innerHTML += `<tr>
+            <td><strong><a href="https://finance.yahoo.com/quote/${s.ticker}" target="_blank">${s.ticker}</a></strong></td>
+            <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis;">${s.name}</td>
+            <td>
+                <input type="number" step="0.01" class="${inputClass}" value="${savedPrice || ''}" placeholder="$0.00"
+                    oninput="onPriceInput('${s.ticker}', ${s.ncav_per_share}, this)">
+                <div class="${verdictClass}">${verdictText}</div>
+            </td>
+            <td style="text-align:right;"><strong style="color:var(--accent);">$${s.ncav_per_share.toFixed(2)}</strong></td>
+            <td style="text-align:right;" class="pncav-cell"><span class="pncav-val">${pncavHtml}</span></td>
+            <td style="text-align:right;" class="${ncClass}">${ncStr}</td>
+            <td style="text-align:right;">${crStr}</td>
+            <td style="text-align:right;">${deStr}</td>
+            <td style="text-align:right;" class="${marginClass}">${marginStr}</td>
+            <td style="text-align:center;">${burnBadge}</td>
+            <td style="text-align:right;">${s.revenue_fmt || 'N/A'}</td>
+        </tr>`;
+    });
+    document.getElementById('filterCount').textContent = `Showing ${Math.min(data.length, 500)}`;
+    updateCounts();
+}
+
+function applyFilters() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value;
+    const burnFilter = document.getElementById('burnFilter').value;
+
+    let filtered = allStocks.filter(s => {
+        if (search && !s.ticker.toLowerCase().includes(search) && !s.name.toLowerCase().includes(search)) return false;
+        if (burnFilter === 'ok' && s.burn_severity !== 'OK') return false;
+        if (burnFilter === 'no-critical' && s.burn_severity === 'CRITICAL') return false;
+
+        const price = userPrices[s.ticker] || s.price;
+        if (statusFilter === 'priced' && !price) return false;
+        if (statusFilter === 'confirmed') {
+            if (!price || !s.ncav_per_share || s.ncav_per_share <= 0) return false;
+            if (price / s.ncav_per_share > 1.0) return false;
+        }
+        if (statusFilter === 'graham') {
+            if (!price || !s.ncav_per_share || s.ncav_per_share <= 0) return false;
+            if (price / s.ncav_per_share > 0.67) return false;
+        }
+        return true;
+    });
+
+    filtered.sort((a, b) => {
+        let va = a[sortCol], vb = b[sortCol];
+        if (va === null || va === undefined) va = sortDir === 'asc' ? Infinity : -Infinity;
+        if (vb === null || vb === undefined) vb = sortDir === 'asc' ? Infinity : -Infinity;
+        return sortDir === 'asc' ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
+    });
+    renderTable(filtered);
+}
+
+function exportNetNets() {
+    let csv = 'Ticker,Company,Price,NCAV/Share,P/NCAV,Net Cash/Share,Current Ratio,D/E,Net Margin,Burn,Revenue\n';
+    allStocks.forEach(s => {
+        const price = userPrices[s.ticker] || s.price;
+        if (price && s.ncav_per_share > 0 && price / s.ncav_per_share <= 1.0) {
+            csv += `${s.ticker},"${s.name}",${price},${s.ncav_per_share},${(price/s.ncav_per_share).toFixed(2)},${s.net_cash_per_share||0},${s.current_ratio||''},${s.debt_to_equity||''},${s.net_margin||''},${s.burn_severity},${s.revenue_fmt||''}\n`;
+        }
+    });
+    const blob = new Blob([csv], {type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'net_nets_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+}
+
+document.querySelectorAll('thead th').forEach(th => {
+    th.addEventListener('click', () => {
+        const col = th.dataset.col;
+        if (!col) return;
+        if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        else { sortCol = col; sortDir = col === 'debt_to_equity' ? 'asc' : 'asc'; }
+        document.querySelectorAll('thead th').forEach(t => t.classList.remove('sorted-asc', 'sorted-desc'));
+        th.classList.add(sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+        applyFilters();
+    });
+});
+
+['searchInput', 'statusFilter', 'burnFilter'].forEach(id => {
+    document.getElementById(id).addEventListener(id === 'searchInput' ? 'input' : 'change', applyFilters);
+});
+
+fetch('/api/finance/screener')
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('loading').style.display = 'none';
+        if (!Array.isArray(data) || (data.length === 1 && data[0].error)) {
+            document.getElementById('errorMsg').style.display = 'block';
+            document.getElementById('errorText').textContent = data[0]?.error || 'Failed';
+            return;
+        }
+        allStocks = data;
+        document.getElementById('screener').style.display = 'block';
+        document.getElementById('totalCount').textContent = data.length.toLocaleString();
+        document.querySelector('th[data-col="ncav_per_share"]').classList.add('sorted-desc');
+        applyFilters();
+    })
+    .catch(err => {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('errorMsg').style.display = 'block';
+        document.getElementById('errorText').textContent = 'Failed: ' + err.message;
+    });
+</script>
+{% endblock %}
