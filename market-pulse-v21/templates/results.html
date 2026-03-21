@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% block title %}Results — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+    .port-card { border-left: 3px solid var(--accent2); }
+    .port-card.active { border-left-color: var(--accent); }
+    .port-card.closed { border-left-color: var(--text-dim); }
+    .port-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; }
+    .port-title { font-size:1.1rem; font-weight:700; }
+    .port-status { font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:4px; }
+    .port-status.active { background:rgba(34,197,94,0.15); color:var(--accent); }
+    .port-status.closed { background:rgba(156,163,175,0.15); color:var(--text-dim); }
+    .return-big { font-size:1.5rem; font-weight:700; }
+    .update-input { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.3rem 0.5rem; color:var(--text); font-size:0.85rem; width:85px; text-align:right; outline:none; }
+    .lock-form { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:1rem; margin-bottom:1rem; }
+    .lock-form input, .lock-form button { margin:0.25rem; }
+</style>
+{% endblock %}
+{% block content %}
+<h1>Paper Portfolio Results</h1>
+<p class="subtitle">Track net-net portfolio performance vs Russell 2000 (IWM). Lock a portfolio each quarter, update prices monthly, auto-close after 12 months.</p>
+
+<div id="loading" class="loading" style="display:none;">
+    <div class="spinner"></div><div>Loading portfolios...</div>
+</div>
+
+<!-- Lock New Portfolio -->
+<div class="card lock-form">
+    <h2 style="margin-bottom:0.75rem;">Lock New Portfolio</h2>
+    <p style="font-size:0.8rem; color:var(--text-dim); margin-bottom:0.75rem;">
+        This locks all confirmed net-nets from the Value Screener as a new quarterly portfolio. Enter the current IWM price as the benchmark.
+    </p>
+    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+        <input type="text" id="portfolioName" placeholder="e.g. Q2-2026" style="background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.6rem; color:var(--text); width:120px; outline:none;">
+        <input type="number" step="0.01" id="iwmEntry" placeholder="IWM price" class="update-input">
+        <button onclick="lockPortfolio()" style="background:var(--accent); color:white; border:none; padding:0.4rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem;">Lock Portfolio</button>
+        <span id="lockStatus" style="font-size:0.8rem; color:var(--text-dim);"></span>
+    </div>
+</div>
+
+<!-- Portfolios -->
+<div id="portfolios"></div>
+
+<div class="card" style="font-size:0.7rem; color:var(--text-dim); margin-top:1rem;">
+    <strong>Disclaimer:</strong> This is a paper portfolio for tracking purposes only. Not investment advice. Past performance does not guarantee future results. Do your own due diligence before investing.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allPortfolios = [];
+
+function fmt(v) { return v !== null && v !== undefined ? v.toFixed(2) + '%' : '—'; }
+function fmtMoney(v) { return '$' + (v||0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+async function lockPortfolio() {
+    const name = document.getElementById('portfolioName').value.trim();
+    const iwm = parseFloat(document.getElementById('iwmEntry').value);
+    if (!name || !iwm) { alert('Enter portfolio name and IWM price'); return; }
+
+    // Get confirmed net-nets from the screener
+    const statusEl = document.getElementById('lockStatus');
+    statusEl.textContent = 'Fetching net-nets from screener...';
+
+    try {
+        // Get user prices
+        const pricesResp = await fetch('/api/prices');
+        const savedPrices = await pricesResp.json();
+        const localPrices = JSON.parse(localStorage.getItem('mp_prices') || '{}');
+        const allPrices = {...localPrices};
+        Object.entries(savedPrices).forEach(([t,d]) => { if (!allPrices[t]) allPrices[t] = d.price; });
+
+        // Get screener data
+        const screenResp = await fetch('/api/finance/screener');
+        const stocks = await screenResp.json();
+
+        // Find confirmed net-nets (price < NCAV)
+        const holdings = [];
+        stocks.forEach(s => {
+            const price = allPrices[s.ticker];
+            if (price && price > 0 && s.ncav_per_share > 0) {
+                const pncav = price / s.ncav_per_share;
+                if (pncav <= 1.0) {
+                    holdings.push({
+                        ticker: s.ticker,
+                        entry_price: price,
+                        ncav_per_share: s.ncav_per_share,
+                        p_ncav: Math.round(pncav * 100) / 100,
+                        net_cash_per_share: s.net_cash_per_share,
+                        current_ratio: s.current_ratio,
+                        debt_to_equity: s.debt_to_equity,
+                        net_margin: s.net_margin,
+                        burn_severity: s.burn_severity,
+                    });
+                }
+            }
+        });
+
+        if (holdings.length === 0) { statusEl.textContent = 'No confirmed net-nets found. Enter prices on the Value Screener first.'; return; }
+
+        const resp = await fetch('/api/portfolios/lock', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ name, holdings, iwm_price: iwm })
+        });
+        const result = await resp.json();
+        if (result.error) { statusEl.textContent = 'Error: ' + result.error; return; }
+        statusEl.textContent = `Locked ${result.holdings} holdings in ${name}`;
+        loadPortfolios();
+    } catch(e) { statusEl.textContent = 'Error: ' + e.message; }
+}
+
+async function submitUpdate(portfolioName) {
+    const inputs = document.querySelectorAll(`[data-portfolio="${portfolioName}"][data-ticker]`);
+    const iwmInput = document.querySelector(`[data-portfolio="${portfolioName}"].iwm-update`);
+    const iwm = parseFloat(iwmInput?.value || 0);
+    if (!iwm) { alert('Enter current IWM price'); return; }
+
+    const prices = {};
+    inputs.forEach(inp => {
+        const v = parseFloat(inp.value);
+        if (v > 0) prices[inp.dataset.ticker] = v;
+    });
+
+    if (Object.keys(prices).length === 0) { alert('Enter at least one price'); return; }
+
+    const resp = await fetch('/api/portfolios/update', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name: portfolioName, prices, iwm_price: iwm })
+    });
+    const result = await resp.json();
+    alert(result.error || `Updated ${result.updated} prices`);
+    loadPortfolios();
+}
+
+async function exitStock(portfolioName, ticker) {
+    const price = prompt(`Exit price for ${ticker}:`);
+    if (!price) return;
+    const reason = prompt('Reason (held to maturity, acquired, delisted, sold early):') || 'held to maturity';
+    await fetch('/api/portfolios/exit', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ portfolio_name: portfolioName, ticker, exit_price: parseFloat(price), reason })
+    });
+    loadPortfolios();
+}
+
+async function closePortfolio(name) {
+    const iwm = prompt('Enter current IWM price to close this portfolio:');
+    if (!iwm) return;
+    if (!confirm(`Close portfolio ${name}? This will calculate final returns.`)) return;
+    const resp = await fetch('/api/portfolios/close', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name, iwm_exit_price: parseFloat(iwm) })
+    });
+    const result = await resp.json();
+    if (result.error) alert('Error: ' + result.error);
+    else alert(`Portfolio ${name} closed. Return: ${result.total_return}% vs Benchmark: ${result.benchmark_return}% (Excess: ${result.excess}%)`);
+    loadPortfolios();
+}
+
+function renderPortfolios(portfolios) {
+    const container = document.getElementById('portfolios');
+    if (portfolios.length === 0) {
+        container.innerHTML = '<div class="card" style="text-align:center; padding:2rem; color:var(--text-dim);">No portfolios yet. Lock your first one above.</div>';
+        return;
+    }
+
+    let html = '';
+    portfolios.forEach(p => {
+        const isActive = p.status === 'active';
+        const latestUpdate = p.updates.length > 0 ? p.updates[p.updates.length - 1] : null;
+        const currentReturn = latestUpdate ? latestUpdate.portfolio_return : (p.total_return || 0);
+        const currentBench = latestUpdate ? latestUpdate.benchmark_return : (p.benchmark_return || 0);
+        const excess = currentReturn - currentBench;
+        const retClass = currentReturn > 0 ? 'up' : currentReturn < 0 ? 'down' : '';
+        const exClass = excess > 0 ? 'up' : excess < 0 ? 'down' : '';
+
+        html += `<div class="card port-card ${p.status}" style="margin-bottom:1rem;">`;
+        html += `<div class="port-header">
+            <div>
+                <span class="port-title">${p.name}</span>
+                <span class="port-status ${p.status}">${isActive ? 'ACTIVE' : 'CLOSED'}</span>
+                <span style="font-size:0.75rem; color:var(--text-dim); margin-left:0.5rem;">Locked: ${p.lock_date} · ${p.holdings.length} holdings</span>
+            </div>
+            <div style="text-align:right;">
+                <div class="return-big ${retClass}">${fmt(currentReturn)}</div>
+                <div style="font-size:0.75rem;">vs IWM: ${fmt(currentBench)} · <span class="${exClass}">Excess: ${fmt(excess)}</span></div>
+            </div>
+        </div>`;
+
+        // Holdings table
+        html += `<table style="width:100%; margin-bottom:0.75rem;">
+            <thead><tr>
+                <th>Ticker</th><th style="text-align:right;">Entry</th><th style="text-align:right;">NCAV/Sh</th>
+                <th style="text-align:right;">P/NCAV</th><th style="text-align:right;">${isActive ? 'Current' : 'Exit'}</th>
+                <th style="text-align:right;">Return</th><th>${isActive ? 'Action' : 'Reason'}</th>
+            </tr></thead><tbody>`;
+
+        p.holdings.forEach(h => {
+            const latestPrice = latestUpdate ? latestUpdate.prices[h.ticker] : null;
+            const currentPrice = h.exit_price || latestPrice;
+            const ret = currentPrice && h.entry_price ? ((currentPrice - h.entry_price) / h.entry_price * 100) : h.stock_return;
+            const retStr = ret !== null && ret !== undefined ? (ret > 0 ? '+' : '') + ret.toFixed(1) + '%' : '—';
+            const rc = ret > 0 ? 'up' : ret < 0 ? 'down' : '';
+
+            if (isActive) {
+                html += `<tr>
+                    <td><strong>${h.ticker}</strong></td>
+                    <td style="text-align:right;">${fmtMoney(h.entry_price)}</td>
+                    <td style="text-align:right;">${fmtMoney(h.ncav_per_share)}</td>
+                    <td style="text-align:right;">${h.p_ncav ? h.p_ncav.toFixed(2)+'x' : '—'}</td>
+                    <td style="text-align:right;"><input type="number" step="0.01" class="update-input"
+                        data-portfolio="${p.name}" data-ticker="${h.ticker}" value="${currentPrice||''}" placeholder="$0.00"></td>
+                    <td style="text-align:right;" class="${rc}">${retStr}</td>
+                    <td>${h.exit_price ? h.exit_reason : '<button onclick="exitStock(\''+p.name+'\',\''+h.ticker+'\')" style="font-size:0.7rem; background:var(--surface2); border:1px solid var(--border); border-radius:4px; padding:2px 6px; color:var(--text); cursor:pointer;">Exit</button>'}</td>
+                </tr>`;
+            } else {
+                html += `<tr>
+                    <td><strong>${h.ticker}</strong></td>
+                    <td style="text-align:right;">${fmtMoney(h.entry_price)}</td>
+                    <td style="text-align:right;">${fmtMoney(h.ncav_per_share)}</td>
+                    <td style="text-align:right;">${h.p_ncav ? h.p_ncav.toFixed(2)+'x' : '—'}</td>
+                    <td style="text-align:right;">${fmtMoney(h.exit_price)}</td>
+                    <td style="text-align:right;" class="${rc}">${retStr}</td>
+                    <td style="font-size:0.75rem; color:var(--text-dim);">${h.exit_reason || '—'}</td>
+                </tr>`;
+            }
+        });
+        html += '</tbody></table>';
+
+        // Active portfolio: update form + close button
+        if (isActive) {
+            html += `<div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-top:0.5rem;">
+                <input type="number" step="0.01" class="update-input iwm-update" data-portfolio="${p.name}" placeholder="IWM price">
+                <button onclick="submitUpdate('${p.name}')" style="background:var(--accent2); color:white; border:none; padding:0.35rem 0.75rem; border-radius:6px; cursor:pointer; font-size:0.8rem;">Save Monthly Update</button>
+                <button onclick="closePortfolio('${p.name}')" style="background:var(--surface2); color:var(--red); border:1px solid var(--red); padding:0.35rem 0.75rem; border-radius:6px; cursor:pointer; font-size:0.8rem;">Close Portfolio (12mo)</button>
+            </div>`;
+        }
+
+        // Performance history
+        if (p.updates.length > 0) {
+            html += `<details style="margin-top:0.75rem;"><summary style="font-size:0.8rem; cursor:pointer; color:var(--text-dim);">Monthly Updates (${p.updates.length})</summary>
+            <table style="width:100%; margin-top:0.5rem; font-size:0.8rem;">
+                <thead><tr><th>Date</th><th style="text-align:right;">Portfolio</th><th style="text-align:right;">IWM</th><th style="text-align:right;">Excess</th></tr></thead><tbody>`;
+            p.updates.forEach(u => {
+                const ec = u.excess > 0 ? 'up' : u.excess < 0 ? 'down' : '';
+                html += `<tr><td>${u.date}</td><td style="text-align:right;" class="${u.portfolio_return > 0 ? 'up' : 'down'}">${fmt(u.portfolio_return)}</td>
+                    <td style="text-align:right;">${fmt(u.benchmark_return)}</td><td style="text-align:right;" class="${ec}">${fmt(u.excess)}</td></tr>`;
+            });
+            html += '</tbody></table></details>';
+        }
+
+        html += '</div>';
+    });
+
+    container.innerHTML = html;
+}
+
+async function loadPortfolios() {
+    const resp = await fetch('/api/portfolios');
+    allPortfolios = await resp.json();
+    renderPortfolios(allPortfolios);
+}
+
+loadPortfolios();
+</script>
+{% endblock %}
