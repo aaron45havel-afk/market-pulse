@@ -272,7 +272,10 @@ function renderData(d, national) {
         const cls = s.rating.includes('BUY') ? 'signal-buy' : s.rating === 'WAIT' ? 'signal-wait' : s.rating === 'EXPENSIVE' ? 'signal-expensive' : 'signal-neutral';
         el.innerHTML = `<span class="signal-badge ${cls}">${s.rating}</span>`;
         document.getElementById('signalDetail').textContent = s.rating_detail || '';
-        document.getElementById('signalScore').textContent = `Score: ${s.score} / ${s.max_score} (${s.score_pct || 0}%)`;
+        const scoreStr = (typeof s.score === 'number' ? s.score.toFixed(1) : s.score);
+        const maxStr = (typeof s.max_score === 'number' ? s.max_score.toFixed(1) : s.max_score);
+        const pctStr = (typeof s.score_pct === 'number' ? s.score_pct.toFixed(1) : (s.score_pct || 0));
+        document.getElementById('signalScore').textContent = `Score: ${scoreStr} / ${maxStr} (${pctStr}%)`;
 
         const fill = document.getElementById('signalBarFill');
         fill.style.width = (s.score_pct || 0) + '%';
@@ -282,9 +285,16 @@ function renderData(d, national) {
         const list = document.getElementById('signalsList');
         list.innerHTML = '';
         s.factors.forEach(f => {
-            const sigCls = f.signal.includes('BUY') ? 'signal-buy' : (f.signal === 'WAIT' || f.signal.includes('SELLER') || f.signal === 'TIGHT' || f.signal === 'LOW SUPPLY') ? 'signal-wait' : (f.signal === 'EXPENSIVE' || f.signal === 'HOT') ? 'signal-expensive' : 'signal-neutral';
+            const sigCls = f.signal.includes('BUY') ? 'signal-buy'
+                : (f.signal === 'WAIT' || f.signal === 'LEAN WAIT' || f.signal.includes('SELLER') || f.signal === 'TIGHT' || f.signal === 'LOW SUPPLY') ? 'signal-wait'
+                : (f.signal === 'EXPENSIVE' || f.signal === 'HOT') ? 'signal-expensive'
+                : (f.signal === 'NO DATA') ? 'signal-neutral'
+                : 'signal-neutral';
             const detail = f.detail ? `<div style="font-size:0.75rem; color:var(--text-dim); margin-top:0.15rem;">${f.detail}</div>` : '';
-            list.innerHTML += `<li style="flex-wrap:wrap;"><div><span>${f.name}: <strong>${f.value}</strong></span>${detail}</div><span class="signal-badge ${sigCls}">${f.signal}</span></li>`;
+            const pts = (typeof f.points === 'number' && typeof f.max_points === 'number')
+                ? `<span style="font-size:0.7rem; color:var(--text-dim); margin-left:0.5rem;">${f.points.toFixed(1)} / ${f.max_points.toFixed(1)} pts</span>`
+                : '';
+            list.innerHTML += `<li style="flex-wrap:wrap;"><div><span>${f.name}: <strong>${f.value}</strong>${pts}</span>${detail}</div><span class="signal-badge ${sigCls}">${f.signal}</span></li>`;
         });
     }
 }

@@ -313,7 +313,9 @@ def get_county_data(api_key: str | None, state_code: str, fips: str) -> dict:
     result.update(_fetch_batch(fred, all_series))
     result.update(_fetch_batch(fred, extra_series, start="2010-01-01"))
 
-    result["signals"] = compute_buy_signals(result)
+    # County signals: also pass national context (mortgage rate)
+    national_ctx = get_national_data(api_key) or {}
+    result["signals"] = compute_buy_signals(result, national=national_ctx)
     _write_cache(cache_key, result)
     return result
 
@@ -375,9 +377,11 @@ def get_all_state_data(api_key: str | None) -> dict:
                 }
             result["states"][state_code][metric] = data
 
-    # Compute signals for each state
+    # Compute signals for each state (pass national so mortgage-rate factor can score)
     for code in result["states"]:
-        result["states"][code]["signals"] = compute_buy_signals(result["states"][code])
+        result["states"][code]["signals"] = compute_buy_signals(
+            result["states"][code], national=result.get("national", {})
+        )
 
     _write_cache("all_states", result)
     return result
@@ -387,215 +391,321 @@ def get_all_state_data(api_key: str | None) -> dict:
 # BUY SIGNAL SCORING
 # ═══════════════════════════════════════════════════
 
-def compute_buy_signals(data: dict) -> dict:
-    """
-    Compute buy/hold/wait signals based on all available market indicators.
-    Each factor scores 0-2 points. More factors = more robust signal.
+def _lerp_score(value, breakpoints):
+    """Piecewise-linear scoring: breakpoints = sorted list of (x, score) tuples.
+    Values outside the endpoints clamp to the nearest endpoint score. Gives
+    smooth continuous scores rather than step-function bins, so a 0.01 change
+    in the input doesn't flip a bucket."""
+    if value is None or not breakpoints:
+        return 0.0
+    bps = sorted(breakpoints, key=lambda x: x[0])
+    if value <= bps[0][0]:
+        return float(bps[0][1])
+    if value >= bps[-1][0]:
+        return float(bps[-1][1])
+    for i in range(len(bps) - 1):
+        x0, y0 = bps[i]
+        x1, y1 = bps[i + 1]
+        if x0 <= value <= x1:
+            if x1 == x0:
+                return float(y0)
+            t = (value - x0) / (x1 - x0)
+            return float(y0 + t * (y1 - y0))
+    return 0.0
 
-    Factors:
-    1. Price vs 24-month peak (are prices correcting?)
-    2. Days on market trend (is buyer leverage increasing?)
-    3. Inventory / active listings vs historical avg
-    4. New listings trend (is supply expanding?)
-    5. Price reduced count (are sellers cutting prices?)
-    6. Pending ratio (is demand slowing?)
-    7. Affordability: price-to-income ratio
-    8. Price per sq ft trend
-    9. Mortgage rate environment
-    """
-    signals = {"factors": [], "score": 0, "max_score": 0}
 
-    # ── Factor 1: Price vs Peak ──
+def _signal_label(points, max_points):
+    """Map a sub-score fraction to a display badge."""
+    if max_points <= 0:
+        return "NEUTRAL"
+    pct = points / max_points
+    if pct >= 0.75:
+        return "BUY"
+    if pct >= 0.50:
+        return "LEAN BUY"
+    if pct >= 0.30:
+        return "NEUTRAL"
+    if pct >= 0.10:
+        return "LEAN WAIT"
+    return "WAIT"
+
+
+def _monthly_mortgage_payment(principal, annual_rate_pct, years=30):
+    """Standard amortizing-mortgage monthly payment."""
+    if principal <= 0 or annual_rate_pct is None:
+        return None
+    r = (annual_rate_pct / 100.0) / 12.0
+    n = years * 12
+    if r == 0:
+        return principal / n
+    return principal * (r * (1 + r) ** n) / ((1 + r) ** n - 1)
+
+
+def compute_buy_signals(data: dict, national: dict | None = None) -> dict:
+    """
+    Compute a buy/hold/wait market-timing signal from available indicators.
+
+    Key design choices (vs. earlier versions):
+      • Fixed 14-point scale with neutral filler for missing factors, so scores
+        are comparable across states that differ in FRED data coverage.
+      • Continuous (piecewise-linear) scoring — no step-function buckets.
+      • Price direction is a single composite (peak / YoY / price-per-sqft) to
+        prevent triple-counting the same underlying signal.
+      • Affordability is payment-to-income (uses the actual 30-yr mortgage),
+        not raw price-to-income — so the score responds to rate changes.
+      • Mortgage-rate environment is its own factor (level vs 10-yr avg +
+        recent trend), replacing the docstring-ghost factor in v1.
+      • DOM / inventory / pending all benchmark against the longest available
+        history (up to 10 years) rather than a rolling 24-month window, so
+        "bad-but-normal-bad" markets can't baseline their way into WAIT.
+
+    Factor weights (sum to 14.0):
+      1. Price direction composite ........... 3.0
+      2. Days on market ...................... 2.0
+      3. Active inventory .................... 2.0
+      4. New listings trend .................. 1.0
+      5. Price reductions .................... 1.0
+      6. Pending ratio ....................... 1.0
+      7. Affordability (payment/income) ...... 2.0
+      8. Mortgage-rate environment ........... 2.0
+    """
+    national = national or {}
+    factors = []
+    score = 0.0
+    MAX = 14.0
+    # neutral filler (used when a factor is missing — keeps 14pt denominator
+    # so state/county scores remain comparable)
+    NEUTRAL_FRACTION = 0.4  # treat missing factors as mildly "WAIT" neutral
+
+    def add_factor(name, value_str, points, weight, detail=""):
+        nonlocal score
+        pts = max(0.0, min(weight, round(points, 2)))
+        factors.append({
+            "name": name,
+            "value": value_str,
+            "signal": _signal_label(pts, weight),
+            "points": pts,
+            "max_points": weight,
+            "detail": detail,
+        })
+        score += pts
+
+    def add_missing(name, weight, reason=""):
+        nonlocal score
+        pts = NEUTRAL_FRACTION * weight
+        factors.append({
+            "name": name + " (no data)",
+            "value": "—",
+            "signal": "NO DATA",
+            "points": round(pts, 2),
+            "max_points": weight,
+            "detail": reason or "Series unavailable — neutral filler applied.",
+        })
+        score += pts
+
+    # ─────────── Factor 1: Price Direction Composite (3 pts) ───────────
+    # Blends three correlated-but-useful views of the same signal so the
+    # total influence of "price direction" is capped at 3 pts (not the 4
+    # it used to get across 3 separate factors).
+    w1 = 3.0
+    price_subs = []  # list of (label, sub_points, sub_weight)
     if "median_list_price" in data:
-        d = data["median_list_price"]
-        signals["max_score"] += 2
-        pct = d.get("pct_from_peak", 0)
-        if pct < -10:
-            signals["factors"].append({"name": "Price correction from peak", "value": f"{pct:.1f}%", "signal": "BUY", "points": 2, "detail": "Prices have dropped significantly from recent highs"})
-            signals["score"] += 2
-        elif pct < -5:
-            signals["factors"].append({"name": "Price softening from peak", "value": f"{pct:.1f}%", "signal": "LEAN BUY", "points": 1, "detail": "Prices are cooling but haven't dropped sharply"})
-            signals["score"] += 1
-        elif pct < -2:
-            signals["factors"].append({"name": "Price plateau near peak", "value": f"{pct:.1f}%", "signal": "NEUTRAL", "points": 0.5, "detail": "Prices are flat to slightly down"})
-            signals["score"] += 0.5
-        else:
-            signals["factors"].append({"name": "Prices at or near peak", "value": f"{pct:.1f}%", "signal": "WAIT", "points": 0, "detail": "Market is at peak pricing — less room for upside"})
-
-    # ── Factor 2: Days on Market ──
-    if "days_on_market" in data:
-        d = data["days_on_market"]
-        signals["max_score"] += 2
-        vals = d["values"]
-        if len(vals) >= 12:
-            current = vals[-1]
-            avg_12m = sum(vals[-12:]) / 12
-            ratio = current / avg_12m if avg_12m > 0 else 1
-            if ratio > 1.25:
-                signals["factors"].append({"name": "Days on market elevated", "value": f"{current:.0f} days (avg {avg_12m:.0f})", "signal": "BUY", "points": 2, "detail": "Homes sitting longer = more negotiation leverage"})
-                signals["score"] += 2
-            elif ratio > 1.05:
-                signals["factors"].append({"name": "Days on market rising", "value": f"{current:.0f} days (avg {avg_12m:.0f})", "signal": "LEAN BUY", "points": 1, "detail": "Market slowing slightly, some buyer leverage"})
-                signals["score"] += 1
-            else:
-                signals["factors"].append({"name": "Days on market low/normal", "value": f"{current:.0f} days (avg {avg_12m:.0f})", "signal": "SELLER'S MKT", "points": 0, "detail": "Homes selling quickly — competitive market"})
-
-    # ── Factor 3: Active Inventory ──
-    if "active_listings" in data:
-        d = data["active_listings"]
-        signals["max_score"] += 2
-        vals = d["values"]
-        if len(vals) >= 12:
-            current = vals[-1]
-            avg_24m = sum(vals[-min(24,len(vals)):]) / min(24, len(vals))
-            ratio = current / avg_24m if avg_24m > 0 else 1
-            if ratio > 1.3:
-                signals["factors"].append({"name": "Inventory well above average", "value": f"{current:,.0f} (avg {avg_24m:,.0f})", "signal": "BUY", "points": 2, "detail": "Lots of homes to choose from = buyer's market"})
-                signals["score"] += 2
-            elif ratio > 1.1:
-                signals["factors"].append({"name": "Inventory above average", "value": f"{current:,.0f} (avg {avg_24m:,.0f})", "signal": "LEAN BUY", "points": 1, "detail": "Supply is building, shifting toward buyers"})
-                signals["score"] += 1
-            else:
-                signals["factors"].append({"name": "Inventory tight", "value": f"{current:,.0f} (avg {avg_24m:,.0f})", "signal": "LOW SUPPLY", "points": 0, "detail": "Limited inventory = competitive bidding likely"})
-
-    # ── Factor 4: New Listings Trend ──
-    if "new_listings" in data:
-        d = data["new_listings"]
-        signals["max_score"] += 1
-        trend = d.get("trend_6m")
-        if trend is not None:
-            if trend > 10:
-                signals["factors"].append({"name": "New listings surging", "value": f"+{trend:.1f}% (6mo trend)", "signal": "BUY", "points": 1, "detail": "Fresh supply hitting market — more options coming"})
-                signals["score"] += 1
-            elif trend > 0:
-                signals["factors"].append({"name": "New listings increasing", "value": f"+{trend:.1f}% (6mo trend)", "signal": "LEAN BUY", "points": 0.5, "detail": "Supply gradually improving"})
-                signals["score"] += 0.5
-            else:
-                signals["factors"].append({"name": "New listings declining", "value": f"{trend:.1f}% (6mo trend)", "signal": "TIGHT", "points": 0, "detail": "Fewer new homes coming to market"})
-
-    # ── Factor 5: Price Reductions ──
-    if "price_reduced_count" in data:
-        d = data["price_reduced_count"]
-        signals["max_score"] += 2
-        vals = d["values"]
-        if len(vals) >= 6:
-            trend = d.get("trend_6m")
-            if trend is not None and trend > 20:
-                signals["factors"].append({"name": "Price cuts accelerating", "value": f"+{trend:.1f}% (6mo trend)", "signal": "BUY", "points": 2, "detail": "Sellers are capitulating — strong negotiation position"})
-                signals["score"] += 2
-            elif trend is not None and trend > 5:
-                signals["factors"].append({"name": "Price cuts increasing", "value": f"+{trend:.1f}% (6mo trend)", "signal": "LEAN BUY", "points": 1, "detail": "More sellers willing to negotiate"})
-                signals["score"] += 1
-            else:
-                val_str = f"{trend:.1f}%" if trend is not None else "stable"
-                signals["factors"].append({"name": "Price cuts stable/declining", "value": val_str, "signal": "NEUTRAL", "points": 0, "detail": "Sellers holding firm on pricing"})
-
-    # ── Factor 6: Pending Ratio (demand indicator) ──
-    if "pending_ratio" in data:
-        d = data["pending_ratio"]
-        signals["max_score"] += 1
-        vals = d["values"]
-        if len(vals) >= 6:
-            current = vals[-1]
-            # Pending ratio: higher = more demand. Lower = less demand (good for buyers)
-            avg = sum(vals[-12:]) / min(12, len(vals))
-            if current < avg * 0.85:
-                signals["factors"].append({"name": "Demand weakening (pending ratio)", "value": f"{current:.1f}% (avg {avg:.1f}%)", "signal": "BUY", "points": 1, "detail": "Fewer homes going under contract — less competition"})
-                signals["score"] += 1
-            elif current < avg:
-                signals["factors"].append({"name": "Demand softening", "value": f"{current:.1f}% (avg {avg:.1f}%)", "signal": "LEAN BUY", "points": 0.5, "detail": "Slightly fewer pending sales than normal"})
-                signals["score"] += 0.5
-            else:
-                signals["factors"].append({"name": "Demand strong (pending ratio)", "value": f"{current:.1f}% (avg {avg:.1f}%)", "signal": "HOT", "points": 0, "detail": "High pending rate = competitive market"})
-
-    # ── Factor 7: Affordability (price-to-income) ──
-    if "median_sale_price" in data and "median_income" in data:
-        signals["max_score"] += 2
-        price = data["median_sale_price"]["current"]
-        income = data["median_income"]["current"]
-        if income > 0:
-            ratio = price / income
-            if ratio < 4:
-                signals["factors"].append({"name": "Highly affordable (price/income)", "value": f"{ratio:.1f}x", "signal": "BUY", "points": 2, "detail": "Homes priced below 4x median income — historically affordable"})
-                signals["score"] += 2
-            elif ratio < 5.5:
-                signals["factors"].append({"name": "Moderately affordable", "value": f"{ratio:.1f}x", "signal": "LEAN BUY", "points": 1, "detail": "Near historical norms for affordability"})
-                signals["score"] += 1
-            elif ratio < 7:
-                signals["factors"].append({"name": "Affordability stretched", "value": f"{ratio:.1f}x", "signal": "STRETCHED", "points": 0.5, "detail": "Prices outpacing incomes — watch for correction"})
-                signals["score"] += 0.5
-            else:
-                signals["factors"].append({"name": "Severely unaffordable", "value": f"{ratio:.1f}x", "signal": "EXPENSIVE", "points": 0, "detail": "Prices far exceed income — high risk of correction"})
-    elif "median_list_price" in data and "median_income" in data:
-        signals["max_score"] += 2
-        price = data["median_list_price"]["current"]
-        income = data["median_income"]["current"]
-        if income > 0:
-            ratio = price / income
-            if ratio < 5:
-                signals["factors"].append({"name": "Affordable (list price/income)", "value": f"{ratio:.1f}x", "signal": "BUY", "points": 2})
-                signals["score"] += 2
-            elif ratio < 7:
-                signals["factors"].append({"name": "Moderate affordability", "value": f"{ratio:.1f}x", "signal": "NEUTRAL", "points": 1})
-                signals["score"] += 1
-            else:
-                signals["factors"].append({"name": "Unaffordable", "value": f"{ratio:.1f}x", "signal": "EXPENSIVE", "points": 0})
-
-    # ── Factor 8: Price per Sq Ft trend ──
-    if "price_per_sqft" in data:
-        d = data["price_per_sqft"]
-        signals["max_score"] += 1
-        trend = d.get("trend_6m")
-        if trend is not None:
-            if trend < -5:
-                signals["factors"].append({"name": "Price/sqft declining", "value": f"{trend:.1f}% (6mo)", "signal": "BUY", "points": 1, "detail": "Value improving — getting more for your money"})
-                signals["score"] += 1
-            elif trend < 0:
-                signals["factors"].append({"name": "Price/sqft flat to down", "value": f"{trend:.1f}% (6mo)", "signal": "LEAN BUY", "points": 0.5})
-                signals["score"] += 0.5
-            else:
-                signals["factors"].append({"name": "Price/sqft rising", "value": f"+{trend:.1f}% (6mo)", "signal": "RISING", "points": 0})
-
-    # ── Factor 9: YoY Price Change (from FRED if available) ──
+        pct_from_peak = data["median_list_price"].get("pct_from_peak", 0) or 0
+        # -15% -> 1.5, -10% -> 1.2, -5% -> 0.6, 0% -> 0.0
+        sp = _lerp_score(pct_from_peak, [(-15, 1.5), (-10, 1.2), (-5, 0.6), (-2, 0.3), (0, 0.0)])
+        price_subs.append(("peak", sp, 1.5, f"{pct_from_peak:.1f}% vs 24-mo peak"))
     if "median_list_price_yoy" in data:
-        d = data["median_list_price_yoy"]
-        signals["max_score"] += 1
-        current = d["current"]
-        if current < -5:
-            signals["factors"].append({"name": "Prices down YoY (FRED)", "value": f"{current:.1f}%", "signal": "BUY", "points": 1})
-            signals["score"] += 1
-        elif current < 0:
-            signals["factors"].append({"name": "Prices slightly down YoY", "value": f"{current:.1f}%", "signal": "LEAN BUY", "points": 0.5})
-            signals["score"] += 0.5
-        else:
-            signals["factors"].append({"name": "Prices up YoY", "value": f"+{current:.1f}%", "signal": "RISING", "points": 0})
-
-    # ── Final Rating ──
-    max_s = signals["max_score"]
-    if max_s > 0:
-        pct = signals["score"] / max_s
-        if pct >= 0.70:
-            signals["rating"] = "STRONG BUY"
-            signals["rating_detail"] = "Multiple indicators favor buyers — compelling entry point"
-        elif pct >= 0.55:
-            signals["rating"] = "BUY"
-            signals["rating_detail"] = "Most indicators are favorable for buyers"
-        elif pct >= 0.40:
-            signals["rating"] = "LEAN BUY"
-            signals["rating_detail"] = "Some positive signals but mixed overall"
-        elif pct >= 0.25:
-            signals["rating"] = "NEUTRAL"
-            signals["rating_detail"] = "Market is balanced — neither strongly favoring buyers or sellers"
-        else:
-            signals["rating"] = "WAIT"
-            signals["rating_detail"] = "Seller's market — consider waiting for better conditions"
-        signals["score_pct"] = round(pct * 100)
+        yoy = data["median_list_price_yoy"].get("current", 0) or 0
+        sp = _lerp_score(yoy, [(-10, 0.75), (-5, 0.6), (0, 0.35), (3, 0.1), (8, 0.0)])
+        price_subs.append(("yoy", sp, 0.75, f"YoY {yoy:+.1f}%"))
+    elif "median_list_price" in data:
+        yoy = data["median_list_price"].get("yoy_change")
+        if yoy is not None:
+            sp = _lerp_score(yoy, [(-10, 0.75), (-5, 0.6), (0, 0.35), (3, 0.1), (8, 0.0)])
+            price_subs.append(("yoy", sp, 0.75, f"YoY {yoy:+.1f}%"))
+    if "price_per_sqft" in data:
+        t = data["price_per_sqft"].get("trend_6m")
+        if t is not None:
+            sp = _lerp_score(t, [(-8, 0.75), (-4, 0.55), (0, 0.3), (4, 0.0)])
+            price_subs.append(("psf", sp, 0.75, f"$/sqft 6-mo {t:+.1f}%"))
+    if price_subs:
+        pts = sum(sub[1] for sub in price_subs)
+        # Normalise to the 3-pt weight regardless of how many sub-signals existed
+        available_weight = sum(sub[2] for sub in price_subs)
+        pts_scaled = pts * (w1 / available_weight) if available_weight > 0 else 0
+        detail_str = " · ".join(sub[3] for sub in price_subs)
+        add_factor("Price direction (composite)", detail_str, pts_scaled, w1,
+                   "Blends price-vs-peak, YoY, and $/sqft 6-mo trend so price direction isn't triple-counted.")
     else:
-        signals["rating"] = "INSUFFICIENT DATA"
-        signals["rating_detail"] = "Not enough data to generate a signal"
-        signals["score_pct"] = 0
+        add_missing("Price direction", w1)
 
-    return signals
+    # ─────────── Factor 2: Days on Market (2 pts) ───────────
+    w2 = 2.0
+    if "days_on_market" in data and len(data["days_on_market"]["values"]) >= 12:
+        vals = data["days_on_market"]["values"]
+        current = vals[-1]
+        # Benchmark against longest-available history (up to 10 yrs / 120 months)
+        window = min(120, len(vals))
+        hist_avg = sum(vals[-window:]) / window
+        ratio = current / hist_avg if hist_avg > 0 else 1.0
+        # 1.0 ratio = neutral (1 pt). >1.3 = BUY (2 pts). <0.85 = seller's mkt (0).
+        pts = _lerp_score(ratio, [(0.80, 0.0), (0.95, 0.5), (1.05, 1.1), (1.25, 1.8), (1.40, 2.0)])
+        add_factor("Days on market vs history",
+                   f"{current:.0f} days (hist avg {hist_avg:.0f}, {ratio:.2f}×)",
+                   pts, w2,
+                   "Higher = more buyer negotiation leverage. Benchmarked vs longest available history, not a rolling window.")
+    else:
+        add_missing("Days on market", w2)
+
+    # ─────────── Factor 3: Active Inventory (2 pts) ───────────
+    w3 = 2.0
+    if "active_listings" in data and len(data["active_listings"]["values"]) >= 12:
+        vals = data["active_listings"]["values"]
+        current = vals[-1]
+        window = min(120, len(vals))
+        hist_avg = sum(vals[-window:]) / window
+        ratio = current / hist_avg if hist_avg > 0 else 1.0
+        pts = _lerp_score(ratio, [(0.70, 0.0), (0.90, 0.4), (1.00, 0.9), (1.15, 1.4), (1.30, 1.8), (1.50, 2.0)])
+        add_factor("Active inventory vs history",
+                   f"{current:,.0f} (hist avg {hist_avg:,.0f}, {ratio:.2f}×)",
+                   pts, w3,
+                   "More inventory = more buyer choice. Benchmarked against longest available history.")
+    else:
+        add_missing("Active inventory", w3)
+
+    # ─────────── Factor 4: New Listings Trend (1 pt) ───────────
+    w4 = 1.0
+    if "new_listings" in data:
+        t = data["new_listings"].get("trend_6m")
+        if t is not None:
+            pts = _lerp_score(t, [(-10, 0.0), (-3, 0.2), (0, 0.4), (5, 0.7), (15, 1.0)])
+            add_factor("New listings 6-mo trend", f"{t:+.1f}%", pts, w4,
+                       "Rising supply pipeline = better buyer conditions ahead.")
+        else:
+            add_missing("New listings trend", w4)
+    else:
+        add_missing("New listings trend", w4)
+
+    # ─────────── Factor 5: Price Reductions (1 pt) ───────────
+    w5 = 1.0
+    if "price_reduced_count" in data:
+        t = data["price_reduced_count"].get("trend_6m")
+        if t is not None:
+            pts = _lerp_score(t, [(-20, 0.0), (-5, 0.25), (5, 0.5), (20, 0.9), (40, 1.0)])
+            add_factor("Price-cut activity (6-mo trend)", f"{t:+.1f}%", pts, w5,
+                       "Accelerating cuts = seller capitulation, stronger buyer negotiation.")
+        else:
+            add_missing("Price cuts", w5)
+    else:
+        add_missing("Price cuts", w5)
+
+    # ─────────── Factor 6: Pending Ratio (1 pt) ───────────
+    w6 = 1.0
+    if "pending_ratio" in data and len(data["pending_ratio"]["values"]) >= 6:
+        vals = data["pending_ratio"]["values"]
+        current = vals[-1]
+        window = min(60, len(vals))
+        hist_avg = sum(vals[-window:]) / window
+        ratio = current / hist_avg if hist_avg > 0 else 1.0
+        # Lower pending ratio = weaker demand = better for buyer
+        pts = _lerp_score(ratio, [(0.70, 1.0), (0.85, 0.75), (0.95, 0.5), (1.05, 0.25), (1.20, 0.0)])
+        add_factor("Pending ratio vs history",
+                   f"{current:.1f}% (hist avg {hist_avg:.1f}%, {ratio:.2f}×)",
+                   pts, w6,
+                   "Low ratio = fewer deals under contract = less buyer competition.")
+    else:
+        add_missing("Pending ratio", w6)
+
+    # ─────────── Factor 7: Affordability — Payment/Income (2 pts) ───────────
+    # Major upgrade: uses actual 30-yr mortgage rate + 20% down + 30-yr term,
+    # computes amortizing monthly payment, compares to monthly median income.
+    # Responds to rate changes (unlike naive price/income).
+    w7 = 2.0
+    mortgage = (national or {}).get("mortgage_30yr", {})
+    mort_rate = mortgage.get("current") if isinstance(mortgage, dict) else None
+    price = None
+    price_src = None
+    if "median_sale_price" in data:
+        price = data["median_sale_price"].get("current")
+        price_src = "sale"
+    elif "median_list_price" in data:
+        price = data["median_list_price"].get("current")
+        price_src = "list"
+    income = data.get("median_income", {}).get("current") if "median_income" in data else None
+
+    if price and income and income > 0 and mort_rate:
+        # 20% down, 30-yr amortization at the current 30-yr rate
+        principal = price * 0.80
+        monthly_pmt = _monthly_mortgage_payment(principal, mort_rate, years=30)
+        if monthly_pmt:
+            monthly_income = income / 12.0
+            pti = monthly_pmt / monthly_income  # payment-to-income ratio
+            # Classic: <28% healthy, 28-36% borderline, 36-43% stretched, >43% distress
+            pts = _lerp_score(pti, [(0.18, 2.0), (0.25, 1.6), (0.30, 1.1), (0.35, 0.7), (0.43, 0.25), (0.55, 0.0)])
+            add_factor("Affordability (payment/income)",
+                       f"{pti*100:.0f}% of income (${monthly_pmt:,.0f}/mo at {mort_rate:.2f}%)",
+                       pts, w7,
+                       f"Monthly P&I payment on 80% LTV {price_src} price ÷ monthly median income. "
+                       "Factors in actual mortgage rate so the signal reacts to rate changes.")
+        else:
+            add_missing("Affordability", w7, "Could not compute mortgage payment.")
+    elif price and income and income > 0:
+        # Fallback — rate unavailable, degrade to price/income
+        ratio = price / income
+        pts = _lerp_score(ratio, [(3.0, 2.0), (4.5, 1.2), (6.0, 0.6), (8.0, 0.2), (10.0, 0.0)])
+        add_factor("Affordability (price/income, fallback)",
+                   f"{ratio:.1f}× income (rate unavailable)", pts, w7,
+                   "Rate data missing — using raw price/income as a rough fallback.")
+    else:
+        add_missing("Affordability", w7, "Need price, income, and mortgage-rate data.")
+
+    # ─────────── Factor 8: Mortgage-Rate Environment (2 pts) ───────────
+    w8 = 2.0
+    if isinstance(mortgage, dict) and mortgage.get("values"):
+        vals = mortgage["values"]
+        current = vals[-1]
+        # ~10-yr avg if available (weekly series → 520 obs); else all-history
+        window = min(520, len(vals))
+        hist_avg = sum(vals[-window:]) / window
+        trend_6m = mortgage.get("trend_6m", 0) or 0
+        # Two sub-signals, each up to 1 pt:
+        # 8a) Rate direction (falling = BUY — refi optionality + easing payment)
+        sp_trend = _lerp_score(trend_6m, [(-15, 1.0), (-5, 0.8), (0, 0.4), (5, 0.2), (15, 0.0)])
+        # 8b) Rate level (elevated = less buyer competition, room for future refi)
+        level_pct = (current - hist_avg) / hist_avg * 100 if hist_avg > 0 else 0
+        sp_level = _lerp_score(level_pct, [(-25, 0.2), (-10, 0.4), (0, 0.6), (15, 0.8), (30, 1.0)])
+        pts = sp_trend + sp_level
+        add_factor("Mortgage-rate environment",
+                   f"{current:.2f}% ({level_pct:+.0f}% vs hist avg, 6-mo trend {trend_6m:+.1f}%)",
+                   pts, w8,
+                   "Falling rates improve payment + refi optionality. Elevated rates reduce buyer competition.")
+    else:
+        add_missing("Mortgage-rate environment", w8, "30-yr mortgage data unavailable.")
+
+    # ─────────── Final Rating ───────────
+    score = round(score, 2)
+    pct = score / MAX
+    if pct >= 0.70:
+        rating, detail = "STRONG BUY", "Multiple indicators favor buyers — compelling entry point."
+    elif pct >= 0.55:
+        rating, detail = "BUY", "Most indicators favor buyers."
+    elif pct >= 0.42:
+        rating, detail = "LEAN BUY", "Tilting buyer-friendly with mixed signals."
+    elif pct >= 0.30:
+        rating, detail = "NEUTRAL", "Balanced market — no strong buyer or seller edge."
+    elif pct >= 0.18:
+        rating, detail = "LEAN WAIT", "Seller-tilted with some softening — consider waiting for clearer entry."
+    else:
+        rating, detail = "WAIT", "Seller's market — conditions favor waiting for better entry."
+
+    return {
+        "factors": factors,
+        "score": score,
+        "max_score": MAX,
+        "score_pct": round(pct * 100, 1),
+        "rating": rating,
+        "rating_detail": detail,
+    }
 
 
 # ═══════════════════════════════════════════════════
