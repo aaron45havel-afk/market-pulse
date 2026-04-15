@@ -297,6 +297,16 @@ def _fetch_series(fred, series_id: str, start: str = "2016-01-01") -> dict | Non
         if len(s) == 0:
             return None
         values = [round(float(v), 2) for v in s.values]
+        # Normalize pending-ratio units: FRED's county-level PENRAT{fips}
+        # series often publishes as a decimal ratio (0.0-1.0) while the
+        # state/national versions (PENRATUS, PENRATCA, etc.) publish as
+        # percent (0-100). Rescale the decimal form to percent so UI
+        # labels ("X%") and scoring thresholds are consistent across
+        # levels. A max-value < 3 is a safe decimal-vs-percent signature
+        # for pending ratio, which realistically always sits 10-90% when
+        # expressed as a percentage.
+        if series_id.startswith("PENRAT") and values and max(values) < 3:
+            values = [round(v * 100, 2) for v in values]
         dates = [d.strftime("%Y-%m-%d") for d in s.index]
         result = {
             "dates": dates,
