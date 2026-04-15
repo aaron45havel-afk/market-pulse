@@ -56,8 +56,19 @@
             </div>
             <div id="cycleFallenCount" style="color:var(--text-dim); font-size:0.8rem;"></div>
         </div>
-        <div id="cycleDominos" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:0.5rem; margin-top:1rem;"></div>
-        <div id="cycleNarrative" style="color:var(--text-dim); font-size:0.8rem; margin-top:0.75rem; line-height:1.45;"></div>
+        <!-- Responsive: 5 columns on wide, wraps automatically on narrow screens -->
+        <div id="cycleDominos" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:0.5rem; margin-top:1rem;"></div>
+        <!-- Plain-English interpretation (deliberately prominent — this is the payoff) -->
+        <div style="margin-top:0.9rem; padding:0.75rem 0.9rem; border-left:3px solid var(--accent, #6366f1); background:rgba(99,102,241,0.06); border-radius:4px;">
+            <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; margin-bottom:0.35rem;">What this means</div>
+            <div id="cycleNarrative" style="font-size:0.92rem; line-height:1.5; color:var(--text, #e5e7eb);"></div>
+        </div>
+        <!-- Methodology footnote: clarifies YoY vs peak distinction so users
+             aren't confused when a metric card shows +YoY while the cycle
+             domino shows 'fallen'. -->
+        <div style="font-size:0.68rem; color:var(--text-dim); margin-top:0.65rem; line-height:1.4; opacity:0.8;">
+            <strong>How status is measured:</strong> a domino is marked <span style="color:#ef4444;">○ fallen</span> when the indicator is ≥3% below its 18-month peak <em>and</em> its 6-month trend is negative (both conditions required — level + direction, per the EPB "wait for confirmation" rule). <span style="color:#eab308;">◐ declining</span> = one condition met. <span style="color:#22c55e;">● intact</span> = neither. This differs from the YoY numbers shown on the forward-indicator cards below (which compare to 12 months ago), so a domino can be "fallen" even if YoY is positive — e.g. if it peaked recently and has since rolled over.
+        </div>
     </div>
 
     <!-- Key Metrics Row 1 -->
@@ -293,11 +304,15 @@ function renderData(d, national) {
         setMetric('metricPSF', fmtMoney(d.price_per_sqft.current), 'metricPSFChange', d.price_per_sqft.yoy_change);
     else clearMetric('metricPSF', 'metricPSFChange', 'try a county');
 
-    // Mortgage from national data
+    // Mortgage from national data — now shows YoY change like other cards.
+    // Rising rates = bad for buyer (inverse = true in setMetric), so the
+    // color coding matches the other inverse metrics (DOM, Pending).
     const mort = national && national.mortgage_30yr;
     if (mort) {
-        document.getElementById('metricMortgage').textContent = mort.current + '%';
+        setMetric('metricMortgage', mort.current + '%', 'metricMortgageChange', mort.yoy_change, true);
         makeChart('mortgageChart', mort.dates, mort.values, '#ef4444', 'pct');
+    } else {
+        clearMetric('metricMortgage', 'metricMortgageChange');
     }
 
     // ═══════════════════ EPB Forward-Looking Supply Indicators ═══════════════════
