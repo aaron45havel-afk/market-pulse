@@ -175,15 +175,16 @@ NATIONAL_SERIES = {
     "us_pending_ratio":       "PENRATUS",               # National pending ratio
 }
 
-# MBA Mortgage Application Purchase Index — a weekly real-time buyer-demand
-# leading indicator from the Mortgage Bankers Association. It suggests where
-# closed sales are heading over the next several months.
+# National buyer-demand leading indicator (surfaced on the dashboard as the
+# "New Home Sales" / "Buyer Demand" card + chart).
 #
-# MBA's proprietary feed isn't on FRED's free tier, so the series ID is
-# configurable via env var MBA_PURCHASE_SERIES. When set, it is added to the
-# national fetch and surfaces as `mba_purchase_index` on the dashboard. When
-# unset, the metric card gracefully shows "—" rather than displaying a
-# misleading proxy.
+# Ideally this would be the MBA Weekly Mortgage Application Purchase Index —
+# a weekly real-time leading indicator that suggests where closed sales are
+# headed over the next several months. MBA's feed isn't on FRED's free tier,
+# so we accept any FRED series ID via env var MBA_PURCHASE_SERIES.
+# Recommended default: HSN1F (New One-Family Houses Sold, SAAR thousands,
+# monthly — U.S. Census Bureau). Swap to an MBA series ID if you have a
+# Haver/Bloomberg/MBA feed plugged into FRED. Unset → card shows "—".
 MBA_PURCHASE_SERIES = os.environ.get("MBA_PURCHASE_SERIES", "").strip()
 if MBA_PURCHASE_SERIES:
     NATIONAL_SERIES["mba_purchase_index"] = MBA_PURCHASE_SERIES

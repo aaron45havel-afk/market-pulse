@@ -2,7 +2,7 @@
 {% block title %}Real Estate — Market Pulse{% endblock %}
 {% block content %}
 <h1>Real Estate Market Dashboard</h1>
-<p class="subtitle">County-level market timing signals for CA, NV, RI, AZ, WA, UT, TN &amp; TX &mdash; 10+ indicators per county from FRED / Realtor.com data, plus MBA buyer-demand tracking.</p>
+<p class="subtitle">County-level market timing signals for CA, NV, RI, AZ, WA, UT, TN &amp; TX &mdash; 10+ indicators per county from FRED / Realtor.com data, plus a national buyer-demand leading indicator.</p>
 
 <!-- State Tabs -->
 <div class="state-tabs" id="stateTabs">
@@ -96,8 +96,8 @@
 
     <!-- Key Metrics Row 3: Leading Indicators -->
     <div class="grid-4" style="margin-bottom:1rem;">
-        <div class="card metric-card" title="MBA Mortgage Application Purchase Index — weekly leading indicator of buyer demand; suggests where closed sales are headed over the next several months.">
-            <div class="label">MBA Purchase Apps <span style="font-size:0.65rem; color:var(--text-dim); font-weight:500;">(leading)</span></div>
+        <div class="card metric-card" title="New One-Family Houses Sold (FRED: HSN1F). Seasonally-adjusted annual rate in thousands of units, reported monthly by the U.S. Census Bureau. A leading indicator of buyer demand — changes here tend to precede moves in prices and existing-home sales.">
+            <div class="label">New Home Sales <span style="font-size:0.65rem; color:var(--text-dim); font-weight:500;">(leading, SAAR 000s)</span></div>
             <div class="value" id="metricMBA">—</div>
             <div class="change" id="metricMBAChange"></div>
         </div>
@@ -139,7 +139,7 @@
     <!-- Charts Row 4: Leading Indicators -->
     <div class="grid-2" style="margin-bottom:1rem;">
         <div class="card">
-            <h2>MBA Mortgage Purchase Applications <span style="font-size:0.7rem; color:var(--text-dim); font-weight:500;">— weekly buyer demand (leading indicator)</span></h2>
+            <h2>New Home Sales <span style="font-size:0.7rem; color:var(--text-dim); font-weight:500;">— monthly buyer demand (leading indicator, SAAR thousands)</span></h2>
             <div class="chart-container"><canvas id="mbaChart"></canvas></div>
         </div>
         <div class="card">
@@ -156,7 +156,7 @@
 
     <!-- Data Sources -->
     <div class="card" style="font-size:0.75rem; color:var(--text-dim);">
-        <strong>Data Sources:</strong> Federal Reserve Economic Data (FRED) via Realtor.com Housing Inventory Core Metrics, FHFA House Price Index, U.S. Census Bureau (ACS), Freddie Mac Primary Mortgage Market Survey, and Mortgage Bankers Association (MBA) Weekly Application Survey. Updated monthly (housing) / weekly (mortgage rates &amp; MBA applications).
+        <strong>Data Sources:</strong> Federal Reserve Economic Data (FRED) via Realtor.com Housing Inventory Core Metrics, FHFA House Price Index, U.S. Census Bureau (ACS &amp; New Residential Sales — HSN1F as buyer-demand leading indicator), and Freddie Mac Primary Mortgage Market Survey. Updated monthly (housing &amp; new home sales) / weekly (mortgage rates).
     </div>
 </div>
 
@@ -242,15 +242,16 @@ function renderData(d, national) {
         makeChart('mortgageChart', mort.dates, mort.values, '#ef4444', 'pct');
     }
 
-    // MBA Mortgage Application Purchase Index (weekly leading indicator)
+    // National buyer-demand leading indicator (FRED series configured via
+    // MBA_PURCHASE_SERIES env var — default suggestion: HSN1F = New Home Sales).
     const mba = national && national.mba_purchase_index;
     if (mba) {
-        setMetric('metricMBA', fmtNum(mba.current), 'metricMBAChange', mba.yoy_change);
+        setMetric('metricMBA', fmtNum(mba.current) + 'K', 'metricMBAChange', mba.yoy_change);
         makeChart('mbaChart', mba.dates, mba.values, '#8b5cf6', 'num');
     } else {
         document.getElementById('metricMBA').textContent = '—';
         const mbaChangeEl = document.getElementById('metricMBAChange');
-        if (mbaChangeEl) mbaChangeEl.textContent = 'Set MBA_PURCHASE_SERIES env var';
+        if (mbaChangeEl) mbaChangeEl.textContent = 'Set MBA_PURCHASE_SERIES env var (e.g. HSN1F)';
     }
 
     // National pending ratio chart (buyer-demand companion to MBA)
