@@ -2,7 +2,7 @@
 {% block title %}Real Estate — Market Pulse{% endblock %}
 {% block content %}
 <h1>Real Estate Market Dashboard</h1>
-<p class="subtitle">County-level market timing signals for CA, NV, RI &amp; AZ &mdash; 10+ indicators per county from FRED / Realtor.com data.</p>
+<p class="subtitle">County-level market timing signals for CA, NV, RI, AZ, WA, UT, TN &amp; TX &mdash; 10+ indicators per county from FRED / Realtor.com data, plus MBA buyer-demand tracking.</p>
 
 <!-- State Tabs -->
 <div class="state-tabs" id="stateTabs">
@@ -10,6 +10,10 @@
     <div class="state-tab" data-state="NV">Nevada</div>
     <div class="state-tab" data-state="RI">Rhode Island</div>
     <div class="state-tab" data-state="AZ">Arizona</div>
+    <div class="state-tab" data-state="WA">Washington</div>
+    <div class="state-tab" data-state="UT">Utah</div>
+    <div class="state-tab" data-state="TN">Tennessee</div>
+    <div class="state-tab" data-state="TX">Texas</div>
 </div>
 
 <!-- County Selector -->
@@ -90,6 +94,15 @@
         </div>
     </div>
 
+    <!-- Key Metrics Row 3: Leading Indicators -->
+    <div class="grid-4" style="margin-bottom:1rem;">
+        <div class="card metric-card" title="MBA Mortgage Application Purchase Index — weekly leading indicator of buyer demand; suggests where closed sales are headed over the next several months.">
+            <div class="label">MBA Purchase Apps <span style="font-size:0.65rem; color:var(--text-dim); font-weight:500;">(leading)</span></div>
+            <div class="value" id="metricMBA">—</div>
+            <div class="change" id="metricMBAChange"></div>
+        </div>
+    </div>
+
     <!-- Charts Row 1 -->
     <div class="grid-2" style="margin-bottom:1rem;">
         <div class="card">
@@ -123,6 +136,17 @@
             <div class="chart-container"><canvas id="mortgageChart"></canvas></div>
         </div>
     </div>
+    <!-- Charts Row 4: Leading Indicators -->
+    <div class="grid-2" style="margin-bottom:1rem;">
+        <div class="card">
+            <h2>MBA Mortgage Purchase Applications <span style="font-size:0.7rem; color:var(--text-dim); font-weight:500;">— weekly buyer demand (leading indicator)</span></h2>
+            <div class="chart-container"><canvas id="mbaChart"></canvas></div>
+        </div>
+        <div class="card">
+            <h2>Pending Sales Ratio (National)</h2>
+            <div class="chart-container"><canvas id="pendingChart"></canvas></div>
+        </div>
+    </div>
 
     <!-- Signal Breakdown -->
     <div class="card" style="margin-bottom:1rem;">
@@ -132,7 +156,7 @@
 
     <!-- Data Sources -->
     <div class="card" style="font-size:0.75rem; color:var(--text-dim);">
-        <strong>Data Sources:</strong> Federal Reserve Economic Data (FRED) via Realtor.com Housing Inventory Core Metrics, FHFA House Price Index, U.S. Census Bureau (ACS), Freddie Mac Primary Mortgage Market Survey. Updated monthly (housing) / weekly (mortgage rates).
+        <strong>Data Sources:</strong> Federal Reserve Economic Data (FRED) via Realtor.com Housing Inventory Core Metrics, FHFA House Price Index, U.S. Census Bureau (ACS), Freddie Mac Primary Mortgage Market Survey, and Mortgage Bankers Association (MBA) Weekly Application Survey. Updated monthly (housing) / weekly (mortgage rates &amp; MBA applications).
     </div>
 </div>
 
@@ -217,6 +241,21 @@ function renderData(d, national) {
         document.getElementById('metricMortgage').textContent = mort.current + '%';
         makeChart('mortgageChart', mort.dates, mort.values, '#ef4444', 'pct');
     }
+
+    // MBA Mortgage Application Purchase Index (weekly leading indicator)
+    const mba = national && national.mba_purchase_index;
+    if (mba) {
+        setMetric('metricMBA', fmtNum(mba.current), 'metricMBAChange', mba.yoy_change);
+        makeChart('mbaChart', mba.dates, mba.values, '#8b5cf6', 'num');
+    } else {
+        document.getElementById('metricMBA').textContent = '—';
+        const mbaChangeEl = document.getElementById('metricMBAChange');
+        if (mbaChangeEl) mbaChangeEl.textContent = 'Set MBA_PURCHASE_SERIES env var';
+    }
+
+    // National pending ratio chart (buyer-demand companion to MBA)
+    const pend = national && national.us_pending_ratio;
+    if (pend) makeChart('pendingChart', pend.dates, pend.values, '#14b8a6', 'pct');
 
     // Charts
     if (d.median_list_price) makeChart('priceChart', d.median_list_price.dates, d.median_list_price.values, '#3b82f6', 'money');

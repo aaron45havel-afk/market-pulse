@@ -20,6 +20,10 @@ STATES = {
     "NV": {"name": "Nevada", "fips": "32"},
     "RI": {"name": "Rhode Island", "fips": "44"},
     "AZ": {"name": "Arizona", "fips": "04"},
+    "WA": {"name": "Washington", "fips": "53"},
+    "UT": {"name": "Utah", "fips": "49"},
+    "TN": {"name": "Tennessee", "fips": "47"},
+    "TX": {"name": "Texas", "fips": "48"},
 }
 
 COUNTIES = {
@@ -72,6 +76,59 @@ COUNTIES = {
         "4003":  "Cochise County",
         "4017":  "Navajo County",
     },
+    "WA": {
+        "53033": "King County",
+        "53053": "Pierce County",
+        "53061": "Snohomish County",
+        "53063": "Spokane County",
+        "53067": "Thurston County",
+        "53035": "Kitsap County",
+        "53011": "Clark County",
+        "53073": "Whatcom County",
+        "53077": "Yakima County",
+        "53057": "Skagit County",
+    },
+    "UT": {
+        "49035": "Salt Lake County",
+        "49049": "Utah County",
+        "49011": "Davis County",
+        "49057": "Weber County",
+        "49043": "Summit County",
+        "49053": "Washington County",
+        "49045": "Tooele County",
+        "49051": "Wasatch County",
+        "49005": "Cache County",
+        "49029": "Morgan County",
+    },
+    "TN": {
+        "47037": "Davidson County",
+        "47157": "Shelby County",
+        "47065": "Hamilton County",
+        "47093": "Knox County",
+        "47149": "Rutherford County",
+        "47187": "Williamson County",
+        "47189": "Wilson County",
+        "47125": "Montgomery County",
+        "47165": "Sumner County",
+        "47147": "Robertson County",
+    },
+    "TX": {
+        "48201": "Harris County",
+        "48113": "Dallas County",
+        "48453": "Travis County",
+        "48029": "Bexar County",
+        "48439": "Tarrant County",
+        "48085": "Collin County",
+        "48121": "Denton County",
+        "48157": "Fort Bend County",
+        "48491": "Williamson County",
+        "48339": "Montgomery County",
+        "48215": "Hidalgo County",
+        "48141": "El Paso County",
+        "48027": "Bell County",
+        "48355": "Nueces County",
+        "48061": "Cameron County",
+    },
 }
 
 # ═══════════════════════════════════════════════════
@@ -117,6 +174,19 @@ NATIONAL_SERIES = {
     "us_new_listings":        "NEWLISCOUUS",            # National new listing count
     "us_pending_ratio":       "PENRATUS",               # National pending ratio
 }
+
+# MBA Mortgage Application Purchase Index — a weekly real-time buyer-demand
+# leading indicator from the Mortgage Bankers Association. It suggests where
+# closed sales are heading over the next several months.
+#
+# MBA's proprietary feed isn't on FRED's free tier, so the series ID is
+# configurable via env var MBA_PURCHASE_SERIES. When set, it is added to the
+# national fetch and surfaces as `mba_purchase_index` on the dashboard. When
+# unset, the metric card gracefully shows "—" rather than displaying a
+# misleading proxy.
+MBA_PURCHASE_SERIES = os.environ.get("MBA_PURCHASE_SERIES", "").strip()
+if MBA_PURCHASE_SERIES:
+    NATIONAL_SERIES["mba_purchase_index"] = MBA_PURCHASE_SERIES
 
 SP500_URL = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
 
@@ -266,7 +336,10 @@ def get_all_state_data(api_key: str | None) -> dict:
         all_to_fetch[f"national__{name}"] = sid
 
     # States
-    state_suffix = {"CA": "CA", "NV": "NV", "RI": "RI", "AZ": "AZ"}
+    state_suffix = {
+        "CA": "CA", "NV": "NV", "RI": "RI", "AZ": "AZ",
+        "WA": "WA", "UT": "UT", "TN": "TN", "TX": "TX",
+    }
     for code in STATES:
         suffix = state_suffix[code]
         state_series = {
