@@ -232,6 +232,21 @@ STATE_HOMESTEAD_EXEMPTION = {
     "TX": 100000,
 }
 
+# Median household income by state — U.S. Census Bureau ACS 2023 1-year
+# estimates. Used as a fallback when FRED's state-level series
+# (MEHOINUS{suffix}A672N) fails to fetch or is unavailable. Income moves
+# ~3-5%/yr, so bump these annually when the next ACS release lands.
+STATE_MEDIAN_INCOME_FALLBACK = {
+    "CA": 96334,
+    "NV": 76364,
+    "RI": 86658,
+    "AZ": 77315,
+    "WA": 94605,
+    "UT": 93421,
+    "TN": 67097,
+    "TX": 76292,
+}
+
 
 # ═══════════════════════════════════════════════════
 # CACHING
@@ -687,6 +702,15 @@ def compute_buy_signals(data: dict, national: dict | None = None) -> dict:
     # State code can come from either path (get_all_state_data sets "code",
     # get_county_data sets "state"). Fall back to data["state"] for county.
     state_code = data.get("code") or data.get("state")
+    # Income fallback — FRED state-level series lag and occasionally fail to
+    # resolve. Fall back to the hardcoded Census ACS 2023 figure so the
+    # affordability factor always has an income baseline.
+    income_source = "FRED state series"
+    if not income or income <= 0:
+        fallback = STATE_MEDIAN_INCOME_FALLBACK.get(state_code)
+        if fallback:
+            income = fallback
+            income_source = "Census ACS 2023 (fallback)"
 
     if price and income and income > 0 and mort_rate:
         principal = price * 0.80  # 20% down
@@ -723,7 +747,8 @@ def compute_buy_signals(data: dict, national: dict | None = None) -> dict:
                  f"P&I ${monthly_pi:,.0f} + tax ${monthly_tax:,.0f} + ins ${monthly_ins:,.0f}"),
                 pts, w7,
                 (f"Full PITI on 80% LTV {price_src} price at {mort_rate:.2f}% vs monthly "
-                 f"median income. Uses {state_code or 'state'} property-tax rate "
+                 f"median income (${income:,.0f}/yr · {income_source}). "
+                 f"Uses {state_code or 'state'} property-tax rate "
                  f"{tax_rate*100:.2f}%{exempt_note} and ~${annual_ins:,.0f}/yr insurance. "
                  "Scored against the canonical 28% front-end DTI underwriting standard."),
             )
