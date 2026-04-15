@@ -395,6 +395,10 @@ def get_all_state_data(api_key: str | None) -> dict:
             "price_reduced_count": f"PRIREDCOU{suffix}",
             "median_sale_price": f"MEDSFHP{suffix}",
             "median_income": f"MEHOINUS{suffix}A672N",
+            # Realtor.com publishes $/sqft at the state level too; not all state
+            # suffixes have it on FRED, but the parallel fetcher silently drops
+            # missing series so it's safe to request.
+            "price_per_sqft": f"MEDLISPRIPERSQUFEE{suffix}",
         }
         for name, sid in state_series.items():
             all_to_fetch[f"{code}__{name}"] = sid

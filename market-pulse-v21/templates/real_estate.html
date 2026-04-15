@@ -212,28 +212,48 @@ function setMetric(id, value, changeId, changeVal, isInverse) {
     }
 }
 
+function clearMetric(id, changeId, placeholder) {
+    // Reset both the value and the YoY change so stale data from a previous
+    // state/county doesn't bleed into cards whose metric is unavailable.
+    document.getElementById(id).textContent = '—';
+    if (changeId) {
+        const el = document.getElementById(changeId);
+        if (el) {
+            el.textContent = placeholder || 'no state data';
+            el.className = 'change';
+        }
+    }
+}
+
 function renderData(d, national) {
-    // Metrics
-    if (d.median_list_price) setMetric('metricPrice', fmtMoney(d.median_list_price.current), 'metricPriceChange', d.median_list_price.yoy_change);
-    else document.getElementById('metricPrice').textContent = '—';
+    // Metrics — each card either populates both value + YoY or clears both.
+    if (d.median_list_price && d.median_list_price.current != null)
+        setMetric('metricPrice', fmtMoney(d.median_list_price.current), 'metricPriceChange', d.median_list_price.yoy_change);
+    else clearMetric('metricPrice', 'metricPriceChange');
 
-    if (d.days_on_market) setMetric('metricDOM', d.days_on_market.current + ' days', 'metricDOMChange', d.days_on_market.yoy_change, true);
-    else document.getElementById('metricDOM').textContent = '—';
+    if (d.days_on_market && d.days_on_market.current != null)
+        setMetric('metricDOM', d.days_on_market.current + ' days', 'metricDOMChange', d.days_on_market.yoy_change, true);
+    else clearMetric('metricDOM', 'metricDOMChange');
 
-    if (d.active_listings) setMetric('metricListings', fmtNum(d.active_listings.current), 'metricListingsChange', d.active_listings.yoy_change);
-    else document.getElementById('metricListings').textContent = '—';
+    if (d.active_listings && d.active_listings.current != null)
+        setMetric('metricListings', fmtNum(d.active_listings.current), 'metricListingsChange', d.active_listings.yoy_change);
+    else clearMetric('metricListings', 'metricListingsChange');
 
-    if (d.new_listings) setMetric('metricNew', fmtNum(d.new_listings.current), 'metricNewChange', d.new_listings.yoy_change);
-    else document.getElementById('metricNew').textContent = '—';
+    if (d.new_listings && d.new_listings.current != null)
+        setMetric('metricNew', fmtNum(d.new_listings.current), 'metricNewChange', d.new_listings.yoy_change);
+    else clearMetric('metricNew', 'metricNewChange');
 
-    if (d.price_reduced_count) setMetric('metricReduced', fmtNum(d.price_reduced_count.current), 'metricReducedChange', d.price_reduced_count.yoy_change);
-    else document.getElementById('metricReduced').textContent = '—';
+    if (d.price_reduced_count && d.price_reduced_count.current != null)
+        setMetric('metricReduced', fmtNum(d.price_reduced_count.current), 'metricReducedChange', d.price_reduced_count.yoy_change);
+    else clearMetric('metricReduced', 'metricReducedChange');
 
-    if (d.pending_ratio) setMetric('metricPending', d.pending_ratio.current + '%', 'metricPendingChange', d.pending_ratio.yoy_change, true);
-    else document.getElementById('metricPending').textContent = '—';
+    if (d.pending_ratio && d.pending_ratio.current != null)
+        setMetric('metricPending', d.pending_ratio.current + '%', 'metricPendingChange', d.pending_ratio.yoy_change, true);
+    else clearMetric('metricPending', 'metricPendingChange', 'try a county');
 
-    if (d.price_per_sqft) setMetric('metricPSF', fmtMoney(d.price_per_sqft.current), 'metricPSFChange', d.price_per_sqft.yoy_change);
-    else document.getElementById('metricPSF').textContent = '—';
+    if (d.price_per_sqft && d.price_per_sqft.current != null)
+        setMetric('metricPSF', fmtMoney(d.price_per_sqft.current), 'metricPSFChange', d.price_per_sqft.yoy_change);
+    else clearMetric('metricPSF', 'metricPSFChange', 'try a county');
 
     // Mortgage from national data
     const mort = national && national.mortgage_30yr;
