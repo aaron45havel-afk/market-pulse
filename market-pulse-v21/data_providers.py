@@ -193,6 +193,47 @@ SP500_URL = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
 
 
 # ═══════════════════════════════════════════════════
+# STATE COST-OF-OWNERSHIP TABLES
+# ═══════════════════════════════════════════════════
+# Effective residential property tax rates (as % of market value) — sourced
+# from the Tax Foundation / ATTOM Data Solutions 2024 effective-rate tables.
+# These are state averages; individual metros can vary ±40% (e.g. Austin,
+# Memphis, and parts of RI are meaningfully higher than their state means).
+# Used by the affordability factor to compute true PITI vs. raw P&I.
+STATE_PROPERTY_TAX_RATE = {
+    "CA": 0.0075,   # Prop 13 keeps state avg low; resets to purchase price on sale
+    "NV": 0.0059,
+    "RI": 0.0140,
+    "AZ": 0.0063,
+    "WA": 0.0087,
+    "UT": 0.0058,
+    "TN": 0.0067,
+    "TX": 0.0180,   # High rates offset the no-income-tax advantage
+}
+
+# Rough average annual homeowners insurance premium ($/yr) on a median home.
+# Big state differentiator because of hurricane / hail / wildfire exposure.
+# Sources: NAIC Homeowners Insurance Report, Insurance Information Institute.
+STATE_INSURANCE_ANNUAL = {
+    "CA": 1500,   # Higher in wildfire zones but state avg is moderate
+    "NV": 1100,
+    "RI": 1700,
+    "AZ": 1400,
+    "WA": 1100,
+    "UT": 1000,
+    "TN": 1500,
+    "TX": 3900,   # Hurricane + hail belt — structurally high
+}
+
+# TX homestead exemption: ~$100K off taxable value for owner-occupied homes
+# (passed in 2023). Other states have smaller or income-linked exemptions
+# that are less material — modeled only for TX for now.
+STATE_HOMESTEAD_EXEMPTION = {
+    "TX": 100000,
+}
+
+
+# ═══════════════════════════════════════════════════
 # CACHING
 # ═══════════════════════════════════════════════════
 
@@ -616,10 +657,17 @@ def compute_buy_signals(data: dict, national: dict | None = None) -> dict:
     else:
         add_missing("Pending ratio", w6)
 
-    # ─────────── Factor 7: Affordability — Payment/Income (2 pts) ───────────
-    # Major upgrade: uses actual 30-yr mortgage rate + 20% down + 30-yr term,
-    # computes amortizing monthly payment, compares to monthly median income.
-    # Responds to rate changes (unlike naive price/income).
+    # ─────────── Factor 7: Affordability — True PITI/Income (2 pts) ───────────
+    # Upgrade: computes full PITI (Principal + Interest + Tax + Insurance)
+    # rather than raw P&I. Uses state-specific property-tax effective rates
+    # and homeowners-insurance premiums, plus the TX homestead exemption.
+    # Breakpoints recalibrated to the canonical 28% front-end DTI standard
+    # (which is defined on PITI, not P&I).
+    #
+    # Why this matters: TX has no state income tax but ~1.8% property-tax
+    # rates + high insurance, which offsets much of its apparent
+    # affordability edge. CA has low property-tax rates (Prop 13) so its
+    # affordability penalty is almost entirely from price/income/rate.
     w7 = 2.0
     mortgage = (national or {}).get("mortgage_30yr", {})
     mort_rate = mortgage.get("current") if isinstance(mortgage, dict) else None
@@ -632,29 +680,57 @@ def compute_buy_signals(data: dict, national: dict | None = None) -> dict:
         price = data["median_list_price"].get("current")
         price_src = "list"
     income = data.get("median_income", {}).get("current") if "median_income" in data else None
+    # State code can come from either path (get_all_state_data sets "code",
+    # get_county_data sets "state"). Fall back to data["state"] for county.
+    state_code = data.get("code") or data.get("state")
 
     if price and income and income > 0 and mort_rate:
-        # 20% down, 30-yr amortization at the current 30-yr rate
-        principal = price * 0.80
-        monthly_pmt = _monthly_mortgage_payment(principal, mort_rate, years=30)
-        if monthly_pmt:
+        principal = price * 0.80  # 20% down
+        monthly_pi = _monthly_mortgage_payment(principal, mort_rate, years=30)
+        if monthly_pi:
+            # Property tax (apply TX homestead exemption where relevant)
+            tax_rate = STATE_PROPERTY_TAX_RATE.get(state_code, 0.011)  # ~1.1% fallback ≈ US avg
+            exemption = STATE_HOMESTEAD_EXEMPTION.get(state_code, 0)
+            taxable_value = max(0, price - exemption)
+            annual_tax = taxable_value * tax_rate
+            monthly_tax = annual_tax / 12.0
+            # Home insurance
+            annual_ins = STATE_INSURANCE_ANNUAL.get(state_code, 1800)  # ~US avg fallback
+            monthly_ins = annual_ins / 12.0
+            # Full PITI
+            monthly_piti = monthly_pi + monthly_tax + monthly_ins
             monthly_income = income / 12.0
-            pti = monthly_pmt / monthly_income  # payment-to-income ratio
-            # Classic: <28% healthy, 28-36% borderline, 36-43% stretched, >43% distress
-            pts = _lerp_score(pti, [(0.18, 2.0), (0.25, 1.6), (0.30, 1.1), (0.35, 0.7), (0.43, 0.25), (0.55, 0.0)])
-            add_factor("Affordability (payment/income)",
-                       f"{pti*100:.0f}% of income (${monthly_pmt:,.0f}/mo at {mort_rate:.2f}%)",
-                       pts, w7,
-                       f"Monthly P&I payment on 80% LTV {price_src} price ÷ monthly median income. "
-                       "Factors in actual mortgage rate so the signal reacts to rate changes.")
+            piti_pct = monthly_piti / monthly_income
+            # Underwriting standard: 28% front-end DTI (PITI/income) is the
+            # canonical "healthy" threshold. 36% = borderline, 43% = distress.
+            pts = _lerp_score(piti_pct, [
+                (0.20, 2.0),   # excellent
+                (0.28, 1.6),   # healthy (classic 28% rule)
+                (0.33, 1.0),   # borderline
+                (0.40, 0.5),   # stretched
+                (0.48, 0.2),   # distress
+                (0.55, 0.0),   # unaffordable
+            ])
+            exempt_note = f" minus ${exemption:,.0f} homestead exemption" if exemption else ""
+            add_factor(
+                "Affordability (PITI/income)",
+                (f"{piti_pct*100:.0f}% of income · "
+                 f"PITI ${monthly_piti:,.0f}/mo = "
+                 f"P&I ${monthly_pi:,.0f} + tax ${monthly_tax:,.0f} + ins ${monthly_ins:,.0f}"),
+                pts, w7,
+                (f"Full PITI on 80% LTV {price_src} price at {mort_rate:.2f}% vs monthly "
+                 f"median income. Uses {state_code or 'state'} property-tax rate "
+                 f"{tax_rate*100:.2f}%{exempt_note} and ~${annual_ins:,.0f}/yr insurance. "
+                 "Scored against the canonical 28% front-end DTI underwriting standard."),
+            )
         else:
             add_missing("Affordability", w7, "Could not compute mortgage payment.")
     elif price and income and income > 0:
-        # Fallback — rate unavailable, degrade to price/income
+        # Fallback — rate unavailable, degrade to price/income (no PITI possible)
         ratio = price / income
         pts = _lerp_score(ratio, [(3.0, 2.0), (4.5, 1.2), (6.0, 0.6), (8.0, 0.2), (10.0, 0.0)])
         add_factor("Affordability (price/income, fallback)",
-                   f"{ratio:.1f}× income (rate unavailable)", pts, w7,
+                   f"{ratio:.1f}× income (rate unavailable — PITI not computed)", pts, w7,
                    "Rate data missing — using raw price/income as a rough fallback.")
     else:
         add_missing("Affordability", w7, "Need price, income, and mortgage-rate data.")
