@@ -47,6 +47,19 @@
         </div>
     </div>
 
+    <!-- EPB Five-Step Housing Cycle Cascade — national, applies to all states -->
+    <div class="card" id="cycleCard" style="margin-bottom:1rem;">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+            <div>
+                <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">U.S. Housing Cycle Stage <span style="font-size:0.65rem; font-weight:500; opacity:0.75;">(EPB framework — national sequence)</span></div>
+                <div id="cycleStage" style="font-size:1.25rem; font-weight:700; margin-top:0.25rem;"></div>
+            </div>
+            <div id="cycleFallenCount" style="color:var(--text-dim); font-size:0.8rem;"></div>
+        </div>
+        <div id="cycleDominos" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:0.5rem; margin-top:1rem;"></div>
+        <div id="cycleNarrative" style="color:var(--text-dim); font-size:0.8rem; margin-top:0.75rem; line-height:1.45;"></div>
+    </div>
+
     <!-- Key Metrics Row 1 -->
     <div class="grid-4" style="margin-bottom:1rem;">
         <div class="card metric-card">
@@ -95,13 +108,37 @@
         </div>
     </div>
 
-    <!-- Key Metrics Row 3: Leading Indicators -->
+    <!-- Key Metrics Row 3: EPB Forward-Looking Supply Indicators (national) -->
+    <h2 style="font-size:0.9rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Forward-Looking Supply Pipeline <span style="font-size:0.7rem; font-weight:500; opacity:0.75;">(national — sequence leads prices by 12-36 months)</span></h2>
     <div class="grid-4" style="margin-bottom:1rem;">
-        <div class="card metric-card" title="New One-Family Houses Sold (FRED: HSN1F). Seasonally-adjusted annual rate in thousands of units, reported monthly by the U.S. Census Bureau. A leading indicator of buyer demand — changes here tend to precede moves in prices and existing-home sales.">
-            <div class="label">New Home Sales <span style="font-size:0.65rem; color:var(--text-dim); font-weight:500;">(leading, SAAR 000s)</span></div>
+        <div class="card metric-card" title="Domino 1 in the EPB cycle. New One-Family Houses Sold (FRED: HSN1F). Seasonally-adjusted annual rate, thousands. Reported monthly by the U.S. Census Bureau. First-mover signal in the cascade — responds fastest to rate changes.">
+            <div class="label">① New Home Sales <span style="font-size:0.65rem; color:var(--text-dim); font-weight:500;">(SAAR 000s)</span></div>
             <div class="value" id="metricMBA">—</div>
             <div class="change" id="metricMBAChange"></div>
         </div>
+        <div class="card metric-card" title="Domino 2 in the EPB cycle. New Privately-Owned Housing Units Authorized by Building Permits (FRED: PERMIT). Seasonally-adjusted annual rate, thousands. The canonical leading indicator — a permit today becomes a completed home in ~9 months.">
+            <div class="label">② Building Permits <span style="font-size:0.65rem; color:var(--text-dim); font-weight:500;">(national, SAAR 000s)</span></div>
+            <div class="value" id="metricPermits">—</div>
+            <div class="change" id="metricPermitsChange"></div>
+        </div>
+        <div class="card metric-card" title="Domino 3 in the EPB cycle. Privately-Owned Housing Units Under Construction, Total (FRED: UNDCONTSA). Seasonally-adjusted annual rate, thousands. The size of the supply pipeline currently in flight — peaks after permits, before completions.">
+            <div class="label">③ Units Under Construction <span style="font-size:0.65rem; color:var(--text-dim); font-weight:500;">(SAAR 000s)</span></div>
+            <div class="value" id="metricUnderCon">—</div>
+            <div class="change" id="metricUnderConChange"></div>
+        </div>
+        <div class="card metric-card" title="Domino 4 in the EPB cycle. All Employees, Residential Building Construction (FRED: CES2023610001). Thousands of workers. When builders slow hiring or cut staff, starts and completions follow with a 3-6 month lag.">
+            <div class="label">④ Residential Bldg Employment <span style="font-size:0.65rem; color:var(--text-dim); font-weight:500;">(thousands)</span></div>
+            <div class="value" id="metricResEmp">—</div>
+            <div class="change" id="metricResEmpChange"></div>
+        </div>
+    </div>
+
+    <!-- State-level building permits context — sets LOCAL magnitude of the national cycle -->
+    <div class="card metric-card" id="statePermitsCard" style="margin-bottom:1rem; display:none;">
+        <div class="label">State Building Permits <span style="font-size:0.65rem; color:var(--text-dim); font-weight:500;">— local magnitude modifier for the national cycle</span></div>
+        <div class="value" id="metricStatePermits">—</div>
+        <div class="change" id="metricStatePermitsChange"></div>
+        <div style="font-size:0.7rem; color:var(--text-dim); margin-top:0.25rem;" id="metricStatePermitsDetail"></div>
     </div>
 
     <!-- Charts Row 1 -->
@@ -263,19 +300,58 @@ function renderData(d, national) {
         makeChart('mortgageChart', mort.dates, mort.values, '#ef4444', 'pct');
     }
 
-    // National buyer-demand leading indicator (FRED series configured via
-    // MBA_PURCHASE_SERIES env var — default suggestion: HSN1F = New Home Sales).
-    const mba = national && national.mba_purchase_index;
-    if (mba) {
-        setMetric('metricMBA', fmtNum(mba.current) + 'K', 'metricMBAChange', mba.yoy_change);
-        makeChart('mbaChart', mba.dates, mba.values, '#8b5cf6', 'num');
+    // ═══════════════════ EPB Forward-Looking Supply Indicators ═══════════════════
+    // Domino 1: New Home Sales (prefer the dedicated HSN1F series, fall back to
+    // user-configured MBA_PURCHASE_SERIES for backwards compatibility).
+    const nhs = national && (national.new_home_sales || national.mba_purchase_index);
+    if (nhs) {
+        setMetric('metricMBA', fmtNum(nhs.current) + 'K', 'metricMBAChange', nhs.yoy_change);
+        makeChart('mbaChart', nhs.dates, nhs.values, '#8b5cf6', 'num');
     } else {
-        document.getElementById('metricMBA').textContent = '—';
-        const mbaChangeEl = document.getElementById('metricMBAChange');
-        if (mbaChangeEl) mbaChangeEl.textContent = 'Set MBA_PURCHASE_SERIES env var (e.g. HSN1F)';
+        clearMetric('metricMBA', 'metricMBAChange', 'HSN1F not available');
+    }
+    // Domino 2: Building Permits (national)
+    const permits = national && national.building_permits;
+    if (permits) {
+        setMetric('metricPermits', fmtNum(permits.current) + 'K', 'metricPermitsChange', permits.yoy_change);
+    } else {
+        clearMetric('metricPermits', 'metricPermitsChange');
+    }
+    // Domino 3: Units Under Construction
+    const undercon = national && national.under_construction;
+    if (undercon) {
+        setMetric('metricUnderCon', fmtNum(undercon.current) + 'K', 'metricUnderConChange', undercon.yoy_change);
+    } else {
+        clearMetric('metricUnderCon', 'metricUnderConChange');
+    }
+    // Domino 4: Residential Building Employment
+    const resemp = national && national.residential_employment;
+    if (resemp) {
+        setMetric('metricResEmp', fmtNum(resemp.current) + 'K', 'metricResEmpChange', resemp.yoy_change);
+    } else {
+        clearMetric('metricResEmp', 'metricResEmpChange');
+    }
+    // State-level building permits: shown only on state views (not counties),
+    // as context for MAGNITUDE of any supply wave relative to national trend.
+    const sp = d.building_permits_state;
+    const spCard = document.getElementById('statePermitsCard');
+    if (sp && sp.current != null) {
+        spCard.style.display = '';
+        setMetric('metricStatePermits', fmtNum(sp.current) + ' permits', 'metricStatePermitsChange', sp.yoy_change);
+        // Compare state to national permit trend to tell "local magnitude"
+        let detailText = '';
+        if (permits && permits.trend_6m != null && sp.trend_6m != null) {
+            const delta = sp.trend_6m - permits.trend_6m;
+            if (delta > 3) detailText = `State permits outpacing national by ${delta.toFixed(1)} pts (6-mo) — bigger supply wave coming locally.`;
+            else if (delta < -3) detailText = `State permits lagging national by ${(-delta).toFixed(1)} pts (6-mo) — local supply drying up faster than U.S.`;
+            else detailText = `State permit trend tracks national (${sp.trend_6m > 0 ? '+' : ''}${sp.trend_6m.toFixed(1)}% vs national ${permits.trend_6m > 0 ? '+' : ''}${permits.trend_6m.toFixed(1)}%).`;
+        }
+        document.getElementById('metricStatePermitsDetail').textContent = detailText;
+    } else {
+        spCard.style.display = 'none';
     }
 
-    // National pending ratio chart (buyer-demand companion to MBA)
+    // National pending ratio chart (buyer-demand companion signal)
     const pend = national && national.us_pending_ratio;
     if (pend) makeChart('pendingChart', pend.dates, pend.values, '#14b8a6', 'pct');
 
@@ -329,9 +405,60 @@ function populateCounties(state) {
     });
 }
 
+function renderCycleCascade(cycle) {
+    const stageEl = document.getElementById('cycleStage');
+    const dominosEl = document.getElementById('cycleDominos');
+    const narrativeEl = document.getElementById('cycleNarrative');
+    const countEl = document.getElementById('cycleFallenCount');
+    if (!cycle || !cycle.dominos || !stageEl) return;
+
+    // Stage banner — color coded by buyer-friendliness
+    const stage = cycle.stage || 'INSUFFICIENT DATA';
+    const colorByStage = {
+        'EXPANSION':              '#ef4444',   // red — prices at peak, bad for buyers
+        'EARLY WARNING':          '#f97316',   // orange
+        'CONFIRMED CONTRACTION':  '#eab308',   // yellow
+        'LATE CYCLE':             '#84cc16',   // lime
+        'PRICE CORRECTION ACTIVE':'#22c55e',   // green — buyers win
+        'INSUFFICIENT DATA':      '#9ca3af',
+    };
+    stageEl.textContent = stage;
+    stageEl.style.color = colorByStage[stage] || '#9ca3af';
+
+    const fallen = cycle.dominos.filter(d => d.status === 'fallen').length;
+    const declining = cycle.dominos.filter(d => d.status === 'declining').length;
+    const intact = cycle.dominos.filter(d => d.status === 'intact').length;
+    countEl.textContent = `${fallen} fallen · ${declining} declining · ${intact} intact`;
+
+    // Per-domino cascade row
+    const dominoColor = {
+        'intact':    { bg: 'rgba(34,197,94,0.12)',  border: '#22c55e', text: '#22c55e', icon: '●' },
+        'declining': { bg: 'rgba(234,179,8,0.12)',  border: '#eab308', text: '#eab308', icon: '◐' },
+        'fallen':    { bg: 'rgba(239,68,68,0.15)',  border: '#ef4444', text: '#ef4444', icon: '○' },
+        'unknown':   { bg: 'rgba(156,163,175,0.1)', border: '#4b5563', text: '#9ca3af', icon: '?' },
+    };
+    dominosEl.innerHTML = '';
+    cycle.dominos.forEach((d, i) => {
+        const c = dominoColor[d.status] || dominoColor.unknown;
+        const pct = d.pct_from_peak != null ? `${d.pct_from_peak > 0 ? '+' : ''}${d.pct_from_peak.toFixed(1)}% vs peak` : '—';
+        const trend = d.trend_6m != null ? `6-mo ${d.trend_6m > 0 ? '+' : ''}${d.trend_6m.toFixed(1)}%` : '';
+        dominosEl.innerHTML += `
+            <div style="background:${c.bg}; border:1px solid ${c.border}; border-radius:6px; padding:0.6rem; text-align:center;">
+                <div style="font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.04em;">Domino ${i + 1}</div>
+                <div style="font-size:1.2rem; color:${c.text}; margin:0.15rem 0;">${c.icon}</div>
+                <div style="font-size:0.75rem; font-weight:600; line-height:1.2;">${d.label}</div>
+                <div style="font-size:0.65rem; color:var(--text-dim); margin-top:0.25rem;">${pct}</div>
+                <div style="font-size:0.65rem; color:var(--text-dim);">${trend}</div>
+            </div>`;
+    });
+
+    narrativeEl.textContent = cycle.narrative || '';
+}
+
 function renderStateOverview(state) {
     if (!stateData || !stateData.states || !stateData.states[state]) return;
     renderData(stateData.states[state], stateData.national);
+    renderCycleCascade(stateData.cycle);
     document.getElementById('dataSource').textContent = `Source: FRED (state-level Realtor.com data)`;
 }
 
@@ -350,7 +477,11 @@ async function loadCounty(state, fips) {
         }
         document.getElementById('loading').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
-        renderData(data, stateData ? stateData.national : null);
+        // Prefer the county's own national payload (freshly fetched) but fall
+        // back to the state-wide bundle's cached national data if absent.
+        const nationalCtx = data.national || (stateData && stateData.national) || null;
+        renderData(data, nationalCtx);
+        renderCycleCascade(data.cycle || (stateData && stateData.cycle));
         document.getElementById('dataSource').textContent = `Source: FRED county FIPS ${fips} (Realtor.com + Census + FHFA)`;
     } catch (e) {
         document.getElementById('loading').style.display = 'none';

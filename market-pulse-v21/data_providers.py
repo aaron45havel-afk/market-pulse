@@ -188,6 +188,18 @@ NATIONAL_SERIES = {
     "us_days_on_market":      "MEDDAYONMARUS",          # National median DOM
     "us_new_listings":        "NEWLISCOUUS",            # National new listing count
     "us_pending_ratio":       "PENRATUS",               # National pending ratio
+    # ───────── EPB Five-Step Housing Cycle dominos (leading → lagging) ─────────
+    # These are the canonical indicators from Eric Basmajian's EPB Research
+    # residential-construction-cycle framework. The sequence is always the same:
+    #   1. New Home Sales (leads)
+    #   2. Building Permits (already above as 'building_permits')
+    #   3. Units Under Construction (cyclical)
+    #   4. Residential Construction Employment (cyclical)
+    #   5. Home Prices (lags by 12-36 months — already above as 'national_hpi')
+    # Home prices are REGIONAL (varies by state) but the SEQUENCE is NATIONAL.
+    "new_home_sales":         "HSN1F",                  # New 1-family houses sold (Census, SAAR thousands)
+    "under_construction":     "UNDCONTSA",              # Privately-owned housing units under construction, total (SAAR thousands)
+    "residential_employment": "CES2023610001",          # All employees, residential building construction (BLS, thousands)
 }
 
 # National buyer-demand leading indicator (surfaced on the dashboard as the
@@ -400,6 +412,10 @@ def get_county_data(api_key: str | None, state_code: str, fips: str) -> dict:
     # County signals: also pass national context (mortgage rate)
     national_ctx = get_national_data(api_key) or {}
     result["signals"] = compute_buy_signals(result, national=national_ctx)
+    # Attach cycle info + national data needed by the UI cascade widget so
+    # county views render the same EPB cycle card as state views.
+    result["cycle"] = compute_cycle_stage(national_ctx)
+    result["national"] = national_ctx
     _write_cache(cache_key, result)
     return result
 
@@ -443,6 +459,10 @@ def get_all_state_data(api_key: str | None) -> dict:
             # suffixes have it on FRED, but the parallel fetcher silently drops
             # missing series so it's safe to request.
             "price_per_sqft": f"MEDLISPRIPERSQUFEE{suffix}",
+            # State-level building permits: context for the EPB cycle-stage
+            # factor. The national sequence sets TIMING; state permits set
+            # local MAGNITUDE of any coming supply wave.
+            "building_permits_state": f"{suffix}BPPRIV",
         }
         for name, sid in state_series.items():
             all_to_fetch[f"{code}__{name}"] = sid
@@ -465,6 +485,11 @@ def get_all_state_data(api_key: str | None) -> dict:
                     "counties": list(COUNTIES.get(state_code, {}).keys()),
                 }
             result["states"][state_code][metric] = data
+
+    # Compute the national housing cycle stage once (it's a national concept
+    # per the EPB framework) and attach it alongside the national series so
+    # the UI can render the 5-domino cascade widget on every state view.
+    result["cycle"] = compute_cycle_stage(result.get("national", {}))
 
     # Compute signals for each state (pass national so mortgage-rate factor can score)
     for code in result["states"]:
@@ -530,6 +555,169 @@ def _monthly_mortgage_payment(principal, annual_rate_pct, years=30):
     return principal * (r * (1 + r) ** n) / ((1 + r) ** n - 1)
 
 
+def _domino_status(series: dict | None, peak_window_months: int = 18,
+                   pct_below_peak_threshold: float = 3.0) -> dict:
+    """
+    Classify a single EPB cycle-cascade domino as 'intact', 'declining', or 'fallen'.
+
+    A domino is:
+      • INTACT   if current is within `pct_below_peak_threshold`% of its
+        recent peak and the 6-month trend is not strongly negative.
+      • DECLINING if it's sliding but hasn't definitively rolled over
+        (below peak but not by much, or 6-mo trend turning negative).
+      • FALLEN   if it is clearly below its cycle peak AND the 6-mo
+        trend is negative — the two conditions EPB says confirm a
+        rollover (not just noise).
+
+    This matches the framing in the EPB 'Five-Step Housing Sequence':
+    you wait for both level AND trend to confirm, because a single month
+    of noise isn't a rollover.
+    """
+    if not series or not series.get("values"):
+        return {"status": "unknown", "pct_from_peak": None, "trend_6m": None}
+    values = series["values"]
+    current = values[-1]
+    window = values[-min(peak_window_months, len(values)):]
+    peak = max(window)
+    pct_from_peak = (current - peak) / peak * 100 if peak else 0
+    trend_6m = series.get("trend_6m")
+
+    # Hard-fallen: clearly below peak AND trend is negative
+    if pct_from_peak <= -pct_below_peak_threshold and (trend_6m or 0) < 0:
+        status = "fallen"
+    # Declining: below peak OR trend is clearly negative
+    elif pct_from_peak <= -1.5 or (trend_6m or 0) < -3:
+        status = "declining"
+    else:
+        status = "intact"
+    return {
+        "status": status,
+        "pct_from_peak": round(pct_from_peak, 1),
+        "trend_6m": round(trend_6m, 1) if trend_6m is not None else None,
+        "current": current,
+        "peak": round(peak, 2),
+    }
+
+
+# EPB Five-Step Housing Cycle: ordered list of (domino_name, national_series_key,
+# human_label). Order matters — this is the canonical sequence EPB says plays
+# out every cycle, so the UI and the scoring both walk it in order.
+CYCLE_DOMINOS = [
+    ("new_home_sales",         "new_home_sales",         "New Home Sales"),
+    ("building_permits",       "building_permits",       "Building Permits"),
+    ("under_construction",     "under_construction",     "Units Under Construction"),
+    ("residential_employment", "residential_employment", "Residential Building Employment"),
+    ("home_prices",            "national_hpi",           "Home Prices (FHFA HPI)"),
+]
+
+
+def compute_cycle_stage(national: dict | None) -> dict:
+    """
+    Classify where the U.S. housing cycle sits in EPB's 5-step sequence.
+
+    Counts how many of the 5 dominos have "fallen" (see _domino_status).
+    A domino in 'declining' status counts as half-fallen. Integer ceiling
+    of the sum picks the stage.
+
+    The sequence is always the same — permits & new home sales roll first,
+    then under construction, then employment, then prices. Home prices
+    typically don't move for 12-36 months after the first domino falls.
+
+    Returns:
+      {
+        "stage": "EXPANSION" | "EARLY WARNING" | "CONFIRMED CONTRACTION"
+                 | "LATE CYCLE" | "PRICE CORRECTION ACTIVE" | "INSUFFICIENT DATA",
+        "stage_index": 0..4,
+        "narrative": str,
+        "dominos": [
+           {"key": ..., "label": ..., "status": "intact"|"declining"|"fallen",
+            "pct_from_peak": float, "trend_6m": float, ...},
+           ...
+        ],
+        "buyer_pts": float,  # contribution to Factor 9 (out of 2 pts)
+      }
+    """
+    national = national or {}
+    dominos = []
+    for key, series_key, label in CYCLE_DOMINOS:
+        ds = _domino_status(national.get(series_key))
+        ds["key"] = key
+        ds["label"] = label
+        dominos.append(ds)
+
+    # Count fallen (full weight) + declining (half weight)
+    known = [d for d in dominos if d["status"] != "unknown"]
+    if len(known) < 3:
+        return {
+            "stage": "INSUFFICIENT DATA",
+            "stage_index": -1,
+            "narrative": "Not enough national indicators available to classify the cycle stage.",
+            "dominos": dominos,
+            "buyer_pts": 0.8,  # neutral-leaning default
+        }
+    fallen_weight = sum(
+        1.0 if d["status"] == "fallen" else (0.5 if d["status"] == "declining" else 0.0)
+        for d in dominos
+    )
+    # The PRICE CORRECTION ACTIVE stage specifically requires the home-prices
+    # domino itself to have rolled over — it's the last domino in the EPB
+    # sequence and defines this stage by definition. Without it, even 4/5
+    # dominos down is LATE CYCLE, not price correction.
+    prices_domino = next((d for d in dominos if d["key"] == "home_prices"), None)
+    prices_fallen = prices_domino and prices_domino.get("status") == "fallen"
+
+    # Map the weighted count to a stage (5 dominos, weights 0-5)
+    if fallen_weight < 0.5:
+        stage, idx = "EXPANSION", 0
+        narrative = ("All five cycle dominos are intact — housing is in expansion. "
+                     "Seller's market at or near cycle peak. Historically, no price "
+                     "correction follows until the first dominos fall.")
+        buyer_pts = 0.0
+    elif fallen_weight < 1.75:
+        stage, idx = "EARLY WARNING", 1
+        narrative = ("One or two leading dominos (new home sales / permits) are "
+                     "rolling over. Per the EPB framework, prices typically don't "
+                     "move for 12-36 months after this first signal. Still seller's "
+                     "market in the short term.")
+        buyer_pts = 0.75
+    elif fallen_weight < 3.0:
+        stage, idx = "CONFIRMED CONTRACTION", 2
+        narrative = ("Construction activity is joining the leading indicators in "
+                     "their decline — a confirmed supply contraction is underway. "
+                     "Supply glut building through the pipeline; softening in "
+                     "prices is likely in the next 6-18 months.")
+        buyer_pts = 1.25
+    elif prices_fallen:
+        # If home prices specifically have rolled over, that's the definitive
+        # PRICE CORRECTION ACTIVE stage regardless of exact fallen_weight.
+        stage, idx = "PRICE CORRECTION ACTIVE", 4
+        narrative = ("Home prices have rolled over — the final EPB domino has "
+                     "fallen. This is the part of the cycle where buyer leverage "
+                     "is maximum; the correction is priced in rather than priced "
+                     "for. Remember: prices are regional, so state-level impact "
+                     "varies by local supply/demand magnitude.")
+        buyer_pts = 2.0
+    else:
+        # 4 dominos have fallen but home prices haven't yet — the chain has
+        # reached the broader economy but sellers are still holding the line.
+        stage, idx = "LATE CYCLE", 3
+        narrative = ("Four dominos down, including residential construction "
+                     "employment, but sellers are still holding the line on "
+                     "prices. The chain has reached the broader economy; price "
+                     "correction is typically weeks-to-months away at this "
+                     "point — real buyer leverage is forming.")
+        buyer_pts = 1.75
+
+    return {
+        "stage": stage,
+        "stage_index": idx,
+        "narrative": narrative,
+        "dominos": dominos,
+        "buyer_pts": buyer_pts,
+        "fallen_weight": round(fallen_weight, 2),
+    }
+
+
 def compute_buy_signals(data: dict, national: dict | None = None) -> dict:
     """
     Compute a buy/hold/wait market-timing signal from available indicators.
@@ -548,20 +736,21 @@ def compute_buy_signals(data: dict, national: dict | None = None) -> dict:
         history (up to 10 years) rather than a rolling 24-month window, so
         "bad-but-normal-bad" markets can't baseline their way into WAIT.
 
-    Factor weights (sum to 14.0):
+    Factor weights (sum to 15.0):
       1. Price direction composite ........... 3.0
-      2. Days on market ...................... 2.0
-      3. Active inventory .................... 2.0
+      2. Days on market ...................... 1.5   (was 2.0; rebalanced — overlaps w/ Factor 9)
+      3. Active inventory .................... 1.5   (was 2.0; rebalanced — overlaps w/ Factor 9)
       4. New listings trend .................. 1.0
       5. Price reductions .................... 1.0
       6. Pending ratio ....................... 1.0
-      7. Affordability (payment/income) ...... 2.0
+      7. Affordability (PITI/income) ......... 2.0
       8. Mortgage-rate environment ........... 2.0
+      9. Housing cycle stage (EPB framework).. 2.0   (NEW — forward-looking supply pipeline)
     """
     national = national or {}
     factors = []
     score = 0.0
-    MAX = 14.0
+    MAX = 15.0  # 8 original factors (13 pts after DOM/Inv rebalance) + Factor 9 (2 pts)
     # neutral filler (used when a factor is missing — keeps 14pt denominator
     # so state/county scores remain comparable)
     NEUTRAL_FRACTION = 0.4  # treat missing factors as mildly "WAIT" neutral
@@ -628,8 +817,11 @@ def compute_buy_signals(data: dict, national: dict | None = None) -> dict:
     else:
         add_missing("Price direction", w1)
 
-    # ─────────── Factor 2: Days on Market (2 pts) ───────────
-    w2 = 2.0
+    # ─────────── Factor 2: Days on Market (1.5 pts) ───────────
+    # Reduced from 2.0 -> 1.5 to make room for the new Factor 9 cycle-stage
+    # pipeline signal, which overlaps conceptually (both measure supply
+    # pressure, at different time horizons).
+    w2 = 1.5
     if "days_on_market" in data and len(data["days_on_market"]["values"]) >= 12:
         vals = data["days_on_market"]["values"]
         current = vals[-1]
@@ -637,8 +829,8 @@ def compute_buy_signals(data: dict, national: dict | None = None) -> dict:
         window = min(120, len(vals))
         hist_avg = sum(vals[-window:]) / window
         ratio = current / hist_avg if hist_avg > 0 else 1.0
-        # 1.0 ratio = neutral (1 pt). >1.3 = BUY (2 pts). <0.85 = seller's mkt (0).
-        pts = _lerp_score(ratio, [(0.80, 0.0), (0.95, 0.5), (1.05, 1.1), (1.25, 1.8), (1.40, 2.0)])
+        # Breakpoints rescaled to 1.5 ceiling
+        pts = _lerp_score(ratio, [(0.80, 0.0), (0.95, 0.38), (1.05, 0.83), (1.25, 1.35), (1.40, 1.5)])
         add_factor("Days on market vs history",
                    f"{current:.0f} days (hist avg {hist_avg:.0f}, {ratio:.2f}×)",
                    pts, w2,
@@ -646,15 +838,16 @@ def compute_buy_signals(data: dict, national: dict | None = None) -> dict:
     else:
         add_missing("Days on market", w2)
 
-    # ─────────── Factor 3: Active Inventory (2 pts) ───────────
-    w3 = 2.0
+    # ─────────── Factor 3: Active Inventory (1.5 pts) ───────────
+    # Reduced from 2.0 -> 1.5 along with Factor 2.
+    w3 = 1.5
     if "active_listings" in data and len(data["active_listings"]["values"]) >= 12:
         vals = data["active_listings"]["values"]
         current = vals[-1]
         window = min(120, len(vals))
         hist_avg = sum(vals[-window:]) / window
         ratio = current / hist_avg if hist_avg > 0 else 1.0
-        pts = _lerp_score(ratio, [(0.70, 0.0), (0.90, 0.4), (1.00, 0.9), (1.15, 1.4), (1.30, 1.8), (1.50, 2.0)])
+        pts = _lerp_score(ratio, [(0.70, 0.0), (0.90, 0.3), (1.00, 0.68), (1.15, 1.05), (1.30, 1.35), (1.50, 1.5)])
         add_factor("Active inventory vs history",
                    f"{current:,.0f} (hist avg {hist_avg:,.0f}, {ratio:.2f}×)",
                    pts, w3,
@@ -815,6 +1008,29 @@ def compute_buy_signals(data: dict, national: dict | None = None) -> dict:
                    "Falling rates improve payment + refi optionality. Elevated rates reduce buyer competition.")
     else:
         add_missing("Mortgage-rate environment", w8, "30-yr mortgage data unavailable.")
+
+    # ─────────── Factor 9: Housing Cycle Stage (2 pts) ───────────
+    # Forward-looking supply-pipeline signal based on EPB Research's
+    # "Five-Step Housing Sequence" framework. The sequence is always the
+    # same across cycles: (1) new home sales → (2) permits → (3) under
+    # construction → (4) residential employment → (5) home prices. EPB:
+    # "Home prices are regional, but the sequence is national" — so we
+    # compute this once at the national level and apply to every state.
+    # Local state permits trend is shown as context but doesn't modify
+    # the factor score (it sets MAGNITUDE not TIMING).
+    w9 = 2.0
+    cycle = compute_cycle_stage(national)
+    if cycle.get("stage_index", -1) >= 0:
+        # Describe the per-domino status compactly for the UI
+        fallen = sum(1 for d in cycle["dominos"] if d.get("status") == "fallen")
+        declining = sum(1 for d in cycle["dominos"] if d.get("status") == "declining")
+        value_str = f"{cycle['stage']} · {fallen} fallen / {declining} declining / 5 dominos"
+        add_factor("Housing cycle stage (EPB framework)",
+                   value_str,
+                   cycle["buyer_pts"], w9,
+                   cycle["narrative"])
+    else:
+        add_missing("Housing cycle stage", w9, "National leading indicators unavailable.")
 
     # ─────────── Final Rating ───────────
     score = round(score, 2)
