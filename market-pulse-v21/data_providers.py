@@ -666,8 +666,21 @@ def compute_cycle_stage(national: dict | None) -> dict:
     prices_domino = next((d for d in dominos if d["key"] == "home_prices"), None)
     prices_fallen = prices_domino and prices_domino.get("status") == "fallen"
 
-    # Map the weighted count to a stage (5 dominos, weights 0-5)
-    if fallen_weight < 0.5:
+    # Map the weighted count to a stage (5 dominos, weights 0-5).
+    # Home prices fallen is definitive of PRICE CORRECTION ACTIVE regardless
+    # of exact weight — prices are THE last domino in the EPB sequence, so if
+    # they've rolled over we're by definition in the final stage (even if
+    # earlier dominos haven't hit the weight threshold, which would be an
+    # unusual cycle pattern but still classifiable).
+    if prices_fallen:
+        stage, idx = "PRICE CORRECTION ACTIVE", 4
+        narrative = ("Home prices have rolled over — the final EPB domino has "
+                     "fallen. This is the part of the cycle where buyer leverage "
+                     "is maximum; the correction is priced in rather than priced "
+                     "for. Remember: prices are regional, so state-level impact "
+                     "varies by local supply/demand magnitude.")
+        buyer_pts = 2.0
+    elif fallen_weight < 0.5:
         stage, idx = "EXPANSION", 0
         narrative = ("All five cycle dominos are intact — housing is in expansion. "
                      "Seller's market at or near cycle peak. Historically, no price "
@@ -687,19 +700,10 @@ def compute_cycle_stage(national: dict | None) -> dict:
                      "Supply glut building through the pipeline; softening in "
                      "prices is likely in the next 6-18 months.")
         buyer_pts = 1.25
-    elif prices_fallen:
-        # If home prices specifically have rolled over, that's the definitive
-        # PRICE CORRECTION ACTIVE stage regardless of exact fallen_weight.
-        stage, idx = "PRICE CORRECTION ACTIVE", 4
-        narrative = ("Home prices have rolled over — the final EPB domino has "
-                     "fallen. This is the part of the cycle where buyer leverage "
-                     "is maximum; the correction is priced in rather than priced "
-                     "for. Remember: prices are regional, so state-level impact "
-                     "varies by local supply/demand magnitude.")
-        buyer_pts = 2.0
     else:
-        # 4 dominos have fallen but home prices haven't yet — the chain has
-        # reached the broader economy but sellers are still holding the line.
+        # 3+ dominos have fallen by weight, and home prices haven't yet —
+        # the chain has reached the broader economy but sellers are still
+        # holding the line on prices.
         stage, idx = "LATE CYCLE", 3
         narrative = ("Four dominos down, including residential construction "
                      "employment, but sellers are still holding the line on "
