@@ -1,6 +1,6 @@
 # Market Pulse
 
-Real estate market timing dashboard (CA, NV, RI, AZ, WA, UT, TN, TX) + national buyer-demand leading indicator (FRED) + high-margin stock screener.
+Real estate market timing dashboard (CA, NV, RI, AZ, WA, UT, TN, TX, IN) + national buyer-demand leading indicator (FRED) + high-margin stock screener.
 
 ## Setup
 

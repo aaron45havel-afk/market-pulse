@@ -24,6 +24,7 @@ STATES = {
     "UT": {"name": "Utah", "fips": "49"},
     "TN": {"name": "Tennessee", "fips": "47"},
     "TX": {"name": "Texas", "fips": "48"},
+    "IN": {"name": "Indiana", "fips": "18"},
 }
 
 COUNTIES = {
@@ -129,6 +130,20 @@ COUNTIES = {
         "48355": "Nueces County",
         "48061": "Cameron County",
     },
+    "IN": {
+        "18097": "Marion County",           # Indianapolis
+        "18089": "Lake County",              # Gary / Hammond
+        "18003": "Allen County",             # Fort Wayne
+        "18057": "Hamilton County",          # Carmel / Fishers (wealthy Indy suburb)
+        "18141": "St. Joseph County",        # South Bend
+        "18039": "Elkhart County",
+        "18157": "Tippecanoe County",        # Lafayette / Purdue
+        "18163": "Vanderburgh County",       # Evansville
+        "18127": "Porter County",            # Valparaiso / NW Indiana
+        "18105": "Monroe County",            # Bloomington / IU
+        "18081": "Johnson County",           # Indy south suburbs
+        "18063": "Hendricks County",         # Indy west suburbs
+    },
 }
 
 # ═══════════════════════════════════════════════════
@@ -209,6 +224,7 @@ STATE_PROPERTY_TAX_RATE = {
     "UT": 0.0058,
     "TN": 0.0067,
     "TX": 0.0180,   # High rates offset the no-income-tax advantage
+    "IN": 0.0084,   # Statutory 1% residential cap; effective ~0.84% after homestead
 }
 
 # Rough average annual homeowners insurance premium ($/yr) on a median home.
@@ -223,6 +239,7 @@ STATE_INSURANCE_ANNUAL = {
     "UT": 1000,
     "TN": 1500,
     "TX": 3900,   # Hurricane + hail belt — structurally high
+    "IN": 1500,   # Edge of Tornado Alley — moderate wind/hail exposure
 }
 
 # TX homestead exemption: ~$100K off taxable value for owner-occupied homes
@@ -245,6 +262,7 @@ STATE_MEDIAN_INCOME_FALLBACK = {
     "UT": 93421,
     "TN": 67097,
     "TX": 76292,
+    "IN": 70051,
 }
 
 
@@ -398,6 +416,7 @@ def get_all_state_data(api_key: str | None) -> dict:
     state_suffix = {
         "CA": "CA", "NV": "NV", "RI": "RI", "AZ": "AZ",
         "WA": "WA", "UT": "UT", "TN": "TN", "TX": "TX",
+        "IN": "IN",
     }
     for code in STATES:
         suffix = state_suffix[code]
