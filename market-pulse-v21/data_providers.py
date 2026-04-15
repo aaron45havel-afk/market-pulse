@@ -364,26 +364,68 @@ def _fetch_batch(fred, series_map: dict, start: str = "2016-01-01") -> dict:
     return result
 
 
+# Keys the national cache must contain to be considered "current". If any
+# are missing, the cache is stale (written before these series were added
+# to NATIONAL_SERIES) and we refetch. Bump this set when adding series
+# that are load-bearing for the cycle detector or scoring.
+_REQUIRED_NATIONAL_KEYS = {
+    "mortgage_30yr", "new_home_sales", "building_permits",
+    "under_construction", "residential_employment", "national_hpi",
+}
+
+
 def get_national_data(api_key: str | None) -> dict:
-    """Fetch all national-level macro indicators."""
+    """Fetch all national-level macro indicators.
+
+    Auto-heals stale caches: if the cached payload lacks any of the required
+    series (e.g. was written before the EPB cycle indicators were added to
+    NATIONAL_SERIES), force a refetch instead of serving stale data that
+    would make the cycle detector return INSUFFICIENT DATA.
+    """
     cached = _read_cache("national", max_age_hours=24)
-    if cached:
+    if cached and _REQUIRED_NATIONAL_KEYS.issubset(cached.keys()):
         return cached
+    # Cache missing or stale-shape — refetch.
     if not api_key:
-        return {"error": "FRED_API_KEY not set"}
+        # Still return whatever partial cached data we had, if any.
+        return cached or {"error": "FRED_API_KEY not set"}
     from fredapi import Fred
     fred = Fred(api_key=api_key)
     result = _fetch_batch(fred, NATIONAL_SERIES)
-    _write_cache("national", result)
-    return result
+    if result:
+        _write_cache("national", result)
+    # Fall back to prior cached content if fetch returned nothing
+    # (e.g. transient FRED outage) — better stale than empty.
+    return result or cached or {}
 
 
 def get_county_data(api_key: str | None, state_code: str, fips: str) -> dict:
-    """Fetch all available FRED series for a specific county."""
+    """Fetch all available FRED series for a specific county.
+
+    Cycle + national data are always refreshed on every call (never served
+    from the county's 24-hour cache) so that:
+      • Old county caches written before the cycle feature still get a
+        current cycle attached on read.
+      • Any refresh of the national cache is immediately visible in
+        every county view without waiting for the county TTL to expire.
+    Only the heavy county-specific FRED fetches are cached.
+    """
+    # Always pull current national context and recompute cycle — cheap
+    # (just reads the national cache + runs comparisons), and keeps the
+    # cycle card consistent across the app.
+    national_ctx = get_national_data(api_key) or {}
+    fresh_cycle = compute_cycle_stage(national_ctx)
+
     cache_key = f"county_{fips}"
     cached = _read_cache(cache_key, max_age_hours=24)
     if cached:
+        cached["cycle"] = fresh_cycle
+        cached["national"] = national_ctx
+        # Also recompute signals so the score reflects the fresh cycle
+        # factor — score is cheap to compute once all series are in hand.
+        cached["signals"] = compute_buy_signals(cached, national=national_ctx)
         return cached
+
     if not api_key:
         return {"error": "FRED_API_KEY not set"}
     from fredapi import Fred
@@ -409,22 +451,32 @@ def get_county_data(api_key: str | None, state_code: str, fips: str) -> dict:
     result.update(_fetch_batch(fred, all_series))
     result.update(_fetch_batch(fred, extra_series, start="2010-01-01"))
 
-    # County signals: also pass national context (mortgage rate)
-    national_ctx = get_national_data(api_key) or {}
+    # Signals + cycle + national attached fresh.
     result["signals"] = compute_buy_signals(result, national=national_ctx)
-    # Attach cycle info + national data needed by the UI cascade widget so
-    # county views render the same EPB cycle card as state views.
-    result["cycle"] = compute_cycle_stage(national_ctx)
+    result["cycle"] = fresh_cycle
     result["national"] = national_ctx
     _write_cache(cache_key, result)
     return result
 
 
 def get_all_state_data(api_key: str | None) -> dict:
-    """Fetch summary data for all states + national — parallelized."""
+    """Fetch summary data for all states + national — parallelized.
+
+    Auto-heals stale caches: if the cached national data is missing any
+    required cycle-detector series (was written before those series were
+    added to NATIONAL_SERIES), force a refetch. Otherwise recompute the
+    cycle field in place on cache hit — cheap, and picks up any
+    detector-logic changes that shipped since the cache was written.
+    """
     cached = _read_cache("all_states", max_age_hours=24)
     if cached:
-        return cached
+        cached_nat = cached.get("national", {}) or {}
+        if _REQUIRED_NATIONAL_KEYS.issubset(cached_nat.keys()):
+            # Cache shape is current — just refresh the cycle field in case
+            # detector thresholds or narrative copy changed.
+            cached["cycle"] = compute_cycle_stage(cached_nat)
+            return cached
+        # Stale cache shape (missing EPB series) — fall through to refetch.
     if not api_key:
         return {"error": "FRED_API_KEY not set. Get a free key at https://fred.stlouisfed.org/docs/api/api_key.html"}
     from fredapi import Fred

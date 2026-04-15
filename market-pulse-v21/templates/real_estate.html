@@ -443,7 +443,16 @@ function renderCycleCascade(cycle) {
     const fallen = cycle.dominos.filter(d => d.status === 'fallen').length;
     const declining = cycle.dominos.filter(d => d.status === 'declining').length;
     const intact = cycle.dominos.filter(d => d.status === 'intact').length;
-    countEl.textContent = `${fallen} fallen · ${declining} declining · ${intact} intact`;
+    const unknown = cycle.dominos.filter(d => d.status === 'unknown').length;
+    // When everything is unknown, saying "0 fallen / 0 declining / 0 intact"
+    // is more misleading than helpful — surface the data gap explicitly.
+    if (unknown === cycle.dominos.length) {
+        countEl.textContent = `${unknown} of ${cycle.dominos.length} indicators unavailable`;
+    } else if (unknown > 0) {
+        countEl.textContent = `${fallen} fallen · ${declining} declining · ${intact} intact · ${unknown} unavailable`;
+    } else {
+        countEl.textContent = `${fallen} fallen · ${declining} declining · ${intact} intact`;
+    }
 
     // Per-domino cascade row
     const dominoColor = {
@@ -496,7 +505,16 @@ async function loadCounty(state, fips) {
         // back to the state-wide bundle's cached national data if absent.
         const nationalCtx = data.national || (stateData && stateData.national) || null;
         renderData(data, nationalCtx);
-        renderCycleCascade(data.cycle || (stateData && stateData.cycle));
+        // Cycle fallback: county's cycle takes priority, UNLESS it's
+        // INSUFFICIENT DATA (stale national cache on the county path) — in
+        // which case the state-wide bundle's cycle is almost certainly the
+        // fresher/more complete read.
+        const countyCycle = data.cycle;
+        const stateCycle = stateData && stateData.cycle;
+        const pickedCycle = (countyCycle && countyCycle.stage !== 'INSUFFICIENT DATA')
+            ? countyCycle
+            : (stateCycle || countyCycle);
+        renderCycleCascade(pickedCycle);
         document.getElementById('dataSource').textContent = `Source: FRED county FIPS ${fips} (Realtor.com + Census + FHFA)`;
     } catch (e) {
         document.getElementById('loading').style.display = 'none';
