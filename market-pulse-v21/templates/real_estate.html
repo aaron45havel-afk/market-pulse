@@ -481,7 +481,26 @@ function renderCycleCascade(cycle) {
 }
 
 function renderStateOverview(state) {
-    if (!stateData || !stateData.states || !stateData.states[state]) return;
+    // Guard: if stateData isn't loaded yet, we shouldn't be here.
+    if (!stateData || !stateData.states) return;
+    // State missing from the cached bundle (likely because the cache
+    // predates the state being added). Instead of silently leaving the
+    // previous state's data on screen, surface the condition so the user
+    // knows to refresh rather than staring at stale data.
+    if (!stateData.states[state]) {
+        document.getElementById('dataSource').textContent =
+            `Cache pre-dates ${state} — click /api/refresh-all to reload FRED data`;
+        // Explicitly clear the signal + cycle so the prior state's numbers
+        // don't ghost through on screen.
+        const signalRating = document.getElementById('signalRating');
+        if (signalRating) signalRating.innerHTML = '<span class="signal-badge signal-neutral">LOADING</span>';
+        document.getElementById('signalDetail').textContent = `No cached data for ${state}. Try refreshing.`;
+        document.getElementById('signalScore').textContent = '';
+        document.getElementById('signalBarFill').style.width = '0%';
+        // Attempt a background refresh so the view self-heals on next click.
+        fetch('/api/refresh-all').then(() => console.log('Refresh triggered; reload the page.')).catch(() => {});
+        return;
+    }
     renderData(stateData.states[state], stateData.national);
     renderCycleCascade(stateData.cycle);
     document.getElementById('dataSource').textContent = `Source: FRED (state-level Realtor.com data)`;

@@ -493,21 +493,28 @@ def get_county_data(api_key: str | None, state_code: str, fips: str) -> dict:
 def get_all_state_data(api_key: str | None) -> dict:
     """Fetch summary data for all states + national — parallelized.
 
-    Auto-heals stale caches: if the cached national data is missing any
-    required cycle-detector series (was written before those series were
-    added to NATIONAL_SERIES), force a refetch. Otherwise recompute the
-    cycle field in place on cache hit — cheap, and picks up any
-    detector-logic changes that shipped since the cache was written.
+    Auto-heals stale caches across two dimensions:
+      • National series shape: if cached national data is missing any
+        required cycle-detector series, refetch.
+      • State coverage: if cached states dict is missing any state from
+        the current STATES config (e.g. cache was written before a new
+        state was added), refetch. This prevents the silent "click new
+        state, score doesn't change" failure mode.
+    Otherwise recompute the cycle field in place on cache hit.
     """
     cached = _read_cache("all_states", max_age_hours=24)
     if cached:
         cached_nat = cached.get("national", {}) or {}
-        if _REQUIRED_NATIONAL_KEYS.issubset(cached_nat.keys()):
-            # Cache shape is current — just refresh the cycle field in case
-            # detector thresholds or narrative copy changed.
+        cached_states = set((cached.get("states") or {}).keys())
+        national_ok = _REQUIRED_NATIONAL_KEYS.issubset(cached_nat.keys())
+        states_ok = set(STATES.keys()).issubset(cached_states)
+        if national_ok and states_ok:
+            # Cache is current — just refresh the cycle field in case
+            # detector thresholds or narrative copy changed since write.
             cached["cycle"] = compute_cycle_stage(cached_nat)
             return cached
-        # Stale cache shape (missing EPB series) — fall through to refetch.
+        # Cache is stale-shape (missing EPB series and/or new states added)
+        # — fall through and refetch the full bundle.
     if not api_key:
         return {"error": "FRED_API_KEY not set. Get a free key at https://fred.stlouisfed.org/docs/api/api_key.html"}
     from fredapi import Fred
