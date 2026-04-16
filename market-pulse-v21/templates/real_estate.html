@@ -2,7 +2,24 @@
 {% block title %}Real Estate — Market Pulse{% endblock %}
 {% block content %}
 <h1>Real Estate Market Dashboard</h1>
-<p class="subtitle">County-level market timing signals for CA, NV, RI, AZ, WA, UT, TN, TX, IN &amp; CO &mdash; 10+ indicators per county from FRED / Realtor.com data, plus a national buyer-demand leading indicator.</p>
+<p class="subtitle">Housing cycle tracking + market timing for 10 states from FRED / Realtor.com data.</p>
+
+<!-- ═══ GOLDILOCKS TOP 5 ═══ -->
+<div class="card" id="goldilocksCard" style="margin-bottom:1.5rem; display:none;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:0.75rem;">
+        <div>
+            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Goldilocks Rankings — Where to Buy</div>
+            <div style="font-size:0.8rem; color:var(--text-dim); margin-top:0.25rem;">Composite of affordability, market timing, job market, population growth &amp; livability</div>
+        </div>
+        <div style="font-size:0.65rem; color:var(--text-dim);">
+            <span title="FRED: PITI/income, buy signals, unemployment. Hardcoded: population growth (Census 2023), walkability (Walk Score 2024), schools (Niche 2024).">ⓘ Data sources</span>
+        </div>
+    </div>
+    <div id="goldilocksGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:0.5rem;"></div>
+</div>
+
+<!-- ═══ STATE DRILL-DOWN ═══ -->
+<div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">State &amp; County Drill-Down</div>
 
 <!-- State Tabs -->
 <div class="state-tabs" id="stateTabs">
@@ -186,27 +203,26 @@
             <div class="chart-container"><canvas id="mortgageChart"></canvas></div>
         </div>
     </div>
-    <!-- Charts Row 4: Leading Indicators -->
+    <!-- Charts Row 4: Leading Indicator -->
     <div class="grid-2" style="margin-bottom:1rem;">
         <div class="card">
             <h2>New Home Sales <span style="font-size:0.7rem; color:var(--text-dim); font-weight:500;">— monthly buyer demand (leading indicator, SAAR thousands)</span></h2>
             <div class="chart-container"><canvas id="mbaChart"></canvas></div>
         </div>
-        <div class="card">
-            <h2>Pending Sales Ratio (National)</h2>
-            <div class="chart-container"><canvas id="pendingChart"></canvas></div>
-        </div>
+        <div class="card" style="display:none;"><canvas id="pendingChart"></canvas></div>
     </div>
 
-    <!-- Signal Breakdown -->
-    <div class="card" style="margin-bottom:1rem;">
-        <h2>Buy Signal Breakdown — <span id="signalFactorCount"></span> factors analyzed</h2>
-        <ul class="signals-list" id="signalsList"></ul>
-    </div>
+    <!-- Signal Breakdown (collapsible — reduces visual noise) -->
+    <details class="card" style="margin-bottom:1rem;">
+        <summary style="cursor:pointer; font-weight:600; font-size:0.95rem;">
+            Buy Signal Breakdown — <span id="signalFactorCount"></span> factors analyzed <span style="font-size:0.75rem; color:var(--text-dim); font-weight:400;">(click to expand)</span>
+        </summary>
+        <ul class="signals-list" id="signalsList" style="margin-top:0.75rem;"></ul>
+    </details>
 
     <!-- Data Sources -->
     <div class="card" style="font-size:0.75rem; color:var(--text-dim);">
-        <strong>Data Sources:</strong> Federal Reserve Economic Data (FRED) via Realtor.com Housing Inventory Core Metrics, FHFA House Price Index, U.S. Census Bureau (ACS &amp; New Residential Sales — HSN1F as buyer-demand leading indicator), and Freddie Mac Primary Mortgage Market Survey. Updated monthly (housing &amp; new home sales) / weekly (mortgage rates).
+        <strong>Data Sources:</strong> FRED (Realtor.com Housing Inventory, FHFA HPI, Census New Residential Sales, Freddie Mac PMMS, BLS Employment). Hardcoded: walkability (Walk Score 2024), school quality (Niche 2024), population growth (Census 2023). Housing/permits updated monthly, mortgage rates weekly.
     </div>
 </div>
 
@@ -421,6 +437,44 @@ function populateCounties(state) {
     });
 }
 
+function renderGoldilocks(rankings) {
+    const card = document.getElementById('goldilocksCard');
+    const grid = document.getElementById('goldilocksGrid');
+    if (!card || !grid || !rankings || rankings.length === 0) return;
+    card.style.display = '';
+    grid.innerHTML = '';
+    const top5 = rankings.slice(0, 5);
+    const medals = ['🥇', '🥈', '🥉', '4.', '5.'];
+    top5.forEach((r, i) => {
+        const color = r.composite >= 55 ? '#22c55e' : r.composite >= 45 ? '#eab308' : r.composite >= 35 ? '#f97316' : '#ef4444';
+        const priceStr = r.median_price ? '$' + Math.round(r.median_price / 1000) + 'K' : '—';
+        grid.innerHTML += `
+            <div style="background:var(--card-bg, #1e1e2e); border:1px solid var(--border, #2d3044); border-radius:8px; padding:0.8rem; cursor:pointer;"
+                 onclick="document.querySelector('[data-state=${r.code}]').click();" title="Click to drill into ${r.name}">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                    <span style="font-size:1.1rem; font-weight:700;">${medals[i]} ${r.name}</span>
+                    <span style="font-size:1rem; font-weight:700; color:${color};">${r.composite.toFixed(0)}%</span>
+                </div>
+                <div style="font-size:0.8rem; color:var(--text-dim); margin-bottom:0.5rem;">
+                    Median ${priceStr} · Unemp ${r.unemployment}% · Pop growth ${r.pop_growth > 0 ? '+' : ''}${r.pop_growth}%
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:2px; margin-bottom:0.4rem;">
+                    ${['affordability','timing','jobs','growth','livability'].map(k => {
+                        const v = r[k];
+                        const bg = v >= 60 ? 'rgba(34,197,94,0.25)' : v >= 40 ? 'rgba(234,179,8,0.2)' : 'rgba(239,68,68,0.2)';
+                        return `<div style="background:${bg}; border-radius:3px; text-align:center; padding:2px 0; font-size:0.6rem; color:var(--text-dim);" title="${k}: ${v}%">${v.toFixed(0)}</div>`;
+                    }).join('')}
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.6rem; color:var(--text-dim);">
+                    <span>Aff</span><span>Tim</span><span>Job</span><span>Grw</span><span>Liv</span>
+                </div>
+                <div style="font-size:0.7rem; margin-top:0.4rem;">
+                    <span style="color:#22c55e;">▲ ${r.strength}</span> · <span style="color:#ef4444;">▼ ${r.weakness}</span>
+                </div>
+            </div>`;
+    });
+}
+
 function renderCycleCascade(cycle) {
     const stageEl = document.getElementById('cycleStage');
     const dominosEl = document.getElementById('cycleDominos');
@@ -578,6 +632,7 @@ fetch('/api/real-estate')
         }
         stateData = data;
         document.getElementById('dashboard').style.display = 'block';
+        renderGoldilocks(data.goldilocks);
         renderStateOverview('CA');
     })
     .catch(err => {

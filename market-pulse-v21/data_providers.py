@@ -303,6 +303,62 @@ STATE_MEDIAN_INCOME_FALLBACK = {
 
 
 # ═══════════════════════════════════════════════════
+# LIVABILITY & GROWTH — static data (NOT auto-renewing from FRED)
+# ═══════════════════════════════════════════════════
+# These capture dimensions where no free auto-renewing API exists.
+# Bump annually alongside the income fallback constants.
+
+# State-level walkability tier (0-10 scale, approximate from Walk Score
+# published metro data, weighted by population). Higher = more walkable.
+# Source: Walk Score published city scores (walkscore.com), population-
+# weighted to state level. Most recent: 2024 data.
+STATE_WALKABILITY = {
+    "CA": 7,   # SF/Oakland 86, LA 67, SD 50 — high overall
+    "NV": 4,   # Las Vegas 41, Reno 44
+    "RI": 8,   # Providence 82, very compact state
+    "AZ": 4,   # Phoenix 36, Tucson 41
+    "WA": 6,   # Seattle 73, Spokane 44
+    "UT": 4,   # SLC 57, Provo 40, but suburban sprawl dominates
+    "TN": 3,   # Nashville 28, Memphis 34 — car-dependent
+    "TX": 3,   # Houston 36, Dallas 46, Austin 39
+    "IN": 3,   # Indianapolis 30, Fort Wayne 26
+    "CO": 5,   # Denver 61, Boulder 58, Colorado Springs 35
+}
+
+# State-level school quality (0-10 scale). Approximate from Niche.com's
+# 2024 state K-12 education rankings. 10 = A+, 7 = B+, 5 = C+, etc.
+STATE_SCHOOL_QUALITY = {
+    "CA": 6,   # Wide variance — excellent in wealthy suburbs, poor in rural
+    "NV": 4,   # Consistently bottom quartile nationally
+    "RI": 7,   # Small state, strong per-pupil funding
+    "AZ": 5,   # Below average but improving
+    "WA": 7,   # Strong state funding, good outcomes
+    "UT": 7,   # High per-capita youth, strong community investment
+    "TN": 5,   # Below average overall, pockets of excellence
+    "TX": 6,   # Varies enormously by district (Frisco A+ vs rural D)
+    "IN": 5,   # Middle of the pack, good charter options
+    "CO": 7,   # Strong Front Range schools, weaker rural
+}
+
+# Annual population growth rate (%) — Census Bureau 2023 annual estimates.
+# Positive = net in-migration, negative = net out-migration. This is the
+# closest free proxy for migration trends without a custom Census API
+# pipeline. Bump annually.
+STATE_POPULATION_GROWTH = {
+    "CA": -0.1,   # Slight net outflow (domestic emigration > immigration)
+    "NV": 1.2,    # Casino/remote-work migration
+    "RI": 0.2,    # Slow but stable
+    "AZ": 1.4,    # Strong Sun Belt in-migration
+    "WA": 0.8,    # Tech spillover from CA
+    "UT": 1.5,    # Young demographics + natural increase
+    "TN": 0.7,    # Nashville boom pulling population
+    "TX": 1.6,    # Strongest in-migration nationally
+    "IN": 0.3,    # Slow but positive
+    "CO": 0.6,    # Slowed from pandemic-era surge
+}
+
+
+# ═══════════════════════════════════════════════════
 # CACHING
 # ═══════════════════════════════════════════════════
 
@@ -509,9 +565,10 @@ def get_all_state_data(api_key: str | None) -> dict:
         national_ok = _REQUIRED_NATIONAL_KEYS.issubset(cached_nat.keys())
         states_ok = set(STATES.keys()).issubset(cached_states)
         if national_ok and states_ok:
-            # Cache is current — just refresh the cycle field in case
-            # detector thresholds or narrative copy changed since write.
+            # Cache is current — refresh cycle + goldilocks in case
+            # detector thresholds or scoring weights changed since write.
             cached["cycle"] = compute_cycle_stage(cached_nat)
+            cached["goldilocks"] = compute_goldilocks_rankings(cached)
             return cached
         # Cache is stale-shape (missing EPB series and/or new states added)
         # — fall through and refetch the full bundle.
@@ -553,6 +610,9 @@ def get_all_state_data(api_key: str | None) -> dict:
             # factor. The national sequence sets TIMING; state permits set
             # local MAGNITUDE of any coming supply wave.
             "building_permits_state": f"{suffix}BPPRIV",
+            # State unemployment rate (BLS via FRED, monthly, SA) — feeds
+            # Goldilocks job-market dimension.
+            "unemployment_rate": f"{suffix}UR",
         }
         for name, sid in state_series.items():
             all_to_fetch[f"{code}__{name}"] = sid
@@ -586,6 +646,9 @@ def get_all_state_data(api_key: str | None) -> dict:
         result["states"][code]["signals"] = compute_buy_signals(
             result["states"][code], national=result.get("national", {})
         )
+
+    # Goldilocks composite rankings — ranks all states for the "Top 5" card
+    result["goldilocks"] = compute_goldilocks_rankings(result)
 
     _write_cache("all_states", result)
     return result
@@ -810,6 +873,94 @@ def compute_cycle_stage(national: dict | None) -> dict:
         "buyer_pts": buyer_pts,
         "fallen_weight": round(fallen_weight, 2),
     }
+
+
+def compute_goldilocks_rankings(result: dict) -> list:
+    """Rank states by a composite 'Goldilocks' score for home-buying suitability.
+
+    Dimensions (weights sum to 1.0):
+      30% Affordability    — PITI/income from the buy-signal scoring model
+      25% Market timing    — overall buy-signal score (current conditions + cycle)
+      15% Job market       — state unemployment rate (lower = better)
+      15% Growth momentum  — population growth rate (proxy for migration trends)
+      15% Livability       — walkability + school quality (hardcoded tiers)
+
+    Returns a list of dicts sorted by composite score (highest first),
+    each containing the per-dimension sub-scores and the key strength /
+    weakness for the Goldilocks card display.
+    """
+    rankings = []
+    for code, state in (result.get("states") or {}).items():
+        signals = state.get("signals") or {}
+        factors = signals.get("factors") or []
+
+        # ── Affordability sub-score (0-1, higher = more affordable) ──
+        aff = next((f for f in factors if "Affordability" in f.get("name", "")), None)
+        if aff and aff.get("max_points", 0) > 0:
+            aff_score = aff["points"] / aff["max_points"]
+        else:
+            aff_score = 0.4  # neutral default
+
+        # ── Market timing sub-score (0-1) ──
+        timing_score = (signals.get("score_pct") or 40) / 100
+
+        # ── Job market (0-1, lower unemployment = higher score) ──
+        unemp = state.get("unemployment_rate")
+        unemp_val = unemp.get("current", 5.0) if isinstance(unemp, dict) else 5.0
+        job_score = max(0, min(1, (8 - unemp_val) / 6))  # 2% → 1.0, 8% → 0.0
+
+        # ── Growth momentum (0-1, from hardcoded population growth %) ──
+        pop_growth = STATE_POPULATION_GROWTH.get(code, 0.5)
+        growth_score = max(0, min(1, (pop_growth + 0.5) / 2.5))  # -0.5% → 0, +2% → 1.0
+
+        # ── Livability (0-1, average of walkability and school quality) ──
+        walk = STATE_WALKABILITY.get(code, 5) / 10
+        school = STATE_SCHOOL_QUALITY.get(code, 5) / 10
+        livability = (walk + school) / 2
+
+        composite = (
+            0.30 * aff_score +
+            0.25 * timing_score +
+            0.15 * job_score +
+            0.15 * growth_score +
+            0.15 * livability
+        )
+
+        # Identify key strength and weakness for the card
+        dims = {
+            "Affordability": aff_score,
+            "Market timing": timing_score,
+            "Job market": job_score,
+            "Growth": growth_score,
+            "Livability": livability,
+        }
+        strength = max(dims, key=dims.get)
+        weakness = min(dims, key=dims.get)
+
+        # Pull out headline numbers for display
+        price = state.get("median_list_price", {})
+        price_val = price.get("current") if isinstance(price, dict) else None
+
+        rankings.append({
+            "code": code,
+            "name": state.get("name", code),
+            "composite": round(composite * 100, 1),
+            "affordability": round(aff_score * 100, 1),
+            "timing": round(timing_score * 100, 1),
+            "jobs": round(job_score * 100, 1),
+            "growth": round(growth_score * 100, 1),
+            "livability": round(livability * 100, 1),
+            "strength": strength,
+            "weakness": weakness,
+            "median_price": price_val,
+            "unemployment": round(unemp_val, 1),
+            "pop_growth": pop_growth,
+            "walkability": STATE_WALKABILITY.get(code, 5),
+            "schools": STATE_SCHOOL_QUALITY.get(code, 5),
+        })
+
+    rankings.sort(key=lambda x: -x["composite"])
+    return rankings
 
 
 def compute_buy_signals(data: dict, national: dict | None = None) -> dict:
