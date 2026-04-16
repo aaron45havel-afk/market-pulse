@@ -220,7 +220,7 @@ NATIONAL_SERIES = {
     # Home prices are REGIONAL (varies by state) but the SEQUENCE is NATIONAL.
     "new_home_sales":         "HSN1F",                  # New 1-family houses sold (Census, SAAR thousands)
     "under_construction":     "UNDCONTSA",              # Privately-owned housing units under construction, total (SAAR thousands)
-    "residential_employment": "CES2023610001",          # All employees, residential building construction (BLS, thousands)
+    "residential_employment": "USCONS",                 # All employees, construction (BLS, thousands). Broader than residential-only but captures the same cyclical signal. Prior ID CES2023610001 (residential sub-industry) was unreliable on FRED's free tier.
 }
 
 # National buyer-demand leading indicator (surfaced on the dashboard as the
@@ -326,50 +326,55 @@ def _write_cache(key: str, data):
 # ═══════════════════════════════════════════════════
 
 def _fetch_series(fred, series_id: str, start: str = "2016-01-01") -> dict | None:
-    """Fetch a single FRED series, return dict with dates/values or None."""
-    try:
-        s = fred.get_series(series_id, observation_start=start)
-        s = s.dropna()
-        if len(s) == 0:
+    """Fetch a single FRED series with one retry, return dict with dates/values or None.
+
+    FRED's free-tier API allows 120 requests/minute. When we fire a big
+    batch (120+ series at 10 threads), some requests can fail transiently
+    due to rate-limiting. A single retry with a short backoff recovers
+    most of these without materially slowing the batch.
+    """
+    for attempt in range(2):
+        try:
+            s = fred.get_series(series_id, observation_start=start)
+            s = s.dropna()
+            if len(s) == 0:
+                return None
+            values = [round(float(v), 2) for v in s.values]
+            # Normalize pending-ratio units: county-level PENRAT{fips}
+            # publishes as a decimal (0-1), state/national as percent (0-100).
+            if series_id.startswith("PENRAT") and values and max(values) < 3:
+                values = [round(v * 100, 2) for v in values]
+            dates = [d.strftime("%Y-%m-%d") for d in s.index]
+            result = {
+                "dates": dates,
+                "values": values,
+                "current": values[-1],
+                "series_id": series_id,
+            }
+            # YoY change (compare to ~12 months ago)
+            if len(values) >= 13:
+                old_val = values[-13]
+                if old_val != 0:
+                    result["yoy_change"] = round((values[-1] - old_val) / abs(old_val) * 100, 1)
+            # Peak and trough in last 24 months
+            recent = values[-min(24, len(values)):]
+            result["peak_24m"] = max(recent)
+            result["trough_24m"] = min(recent)
+            result["pct_from_peak"] = round((values[-1] - result["peak_24m"]) / result["peak_24m"] * 100, 1) if result["peak_24m"] != 0 else 0
+            # 6-month trend (avg of last 3 vs avg of prior 3)
+            if len(values) >= 6:
+                recent_avg = sum(values[-3:]) / 3
+                prior_avg = sum(values[-6:-3]) / 3
+                if prior_avg != 0:
+                    result["trend_6m"] = round((recent_avg - prior_avg) / abs(prior_avg) * 100, 1)
+            return result
+        except Exception as e:
+            if attempt == 0:
+                time.sleep(1.5)
+                continue
+            logger.warning(f"Could not fetch {series_id} after 2 attempts: {e}")
             return None
-        values = [round(float(v), 2) for v in s.values]
-        # Normalize pending-ratio units: FRED's county-level PENRAT{fips}
-        # series often publishes as a decimal ratio (0.0-1.0) while the
-        # state/national versions (PENRATUS, PENRATCA, etc.) publish as
-        # percent (0-100). Rescale the decimal form to percent so UI
-        # labels ("X%") and scoring thresholds are consistent across
-        # levels. A max-value < 3 is a safe decimal-vs-percent signature
-        # for pending ratio, which realistically always sits 10-90% when
-        # expressed as a percentage.
-        if series_id.startswith("PENRAT") and values and max(values) < 3:
-            values = [round(v * 100, 2) for v in values]
-        dates = [d.strftime("%Y-%m-%d") for d in s.index]
-        result = {
-            "dates": dates,
-            "values": values,
-            "current": values[-1],
-            "series_id": series_id,
-        }
-        # YoY change (compare to ~12 months ago)
-        if len(values) >= 13:
-            old_val = values[-13]
-            if old_val != 0:
-                result["yoy_change"] = round((values[-1] - old_val) / abs(old_val) * 100, 1)
-        # Peak and trough in last 24 months
-        recent = values[-min(24, len(values)):]
-        result["peak_24m"] = max(recent)
-        result["trough_24m"] = min(recent)
-        result["pct_from_peak"] = round((values[-1] - result["peak_24m"]) / result["peak_24m"] * 100, 1) if result["peak_24m"] != 0 else 0
-        # 6-month trend (avg of last 3 vs avg of prior 3)
-        if len(values) >= 6:
-            recent_avg = sum(values[-3:]) / 3
-            prior_avg = sum(values[-6:-3]) / 3
-            if prior_avg != 0:
-                result["trend_6m"] = round((recent_avg - prior_avg) / abs(prior_avg) * 100, 1)
-        return result
-    except Exception as e:
-        logger.debug(f"Could not fetch {series_id}: {e}")
-        return None
+    return None
 
 
 def _fetch_batch(fred, series_map: dict, start: str = "2016-01-01") -> dict:
@@ -393,8 +398,10 @@ def _fetch_batch(fred, series_map: dict, start: str = "2016-01-01") -> dict:
 # to NATIONAL_SERIES) and we refetch. Bump this set when adding series
 # that are load-bearing for the cycle detector or scoring.
 _REQUIRED_NATIONAL_KEYS = {
-    "mortgage_30yr", "new_home_sales", "building_permits",
-    "under_construction", "residential_employment", "national_hpi",
+    "mortgage_30yr", "building_permits", "national_hpi",
+    # EPB cycle dominos (if any of these are missing, the cycle detector
+    # degrades to INSUFFICIENT DATA or misclassifies the stage):
+    "new_home_sales", "under_construction", "residential_employment",
 }
 
 
@@ -682,7 +689,7 @@ CYCLE_DOMINOS = [
     ("new_home_sales",         "new_home_sales",         "New Home Sales"),
     ("building_permits",       "building_permits",       "Building Permits"),
     ("under_construction",     "under_construction",     "Units Under Construction"),
-    ("residential_employment", "residential_employment", "Residential Building Employment"),
+    ("residential_employment", "residential_employment", "Construction Employment"),
     ("home_prices",            "national_hpi",           "Home Prices (FHFA HPI)"),
 ]
 
