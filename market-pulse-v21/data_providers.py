@@ -25,6 +25,7 @@ STATES = {
     "TN": {"name": "Tennessee", "fips": "47"},
     "TX": {"name": "Texas", "fips": "48"},
     "IN": {"name": "Indiana", "fips": "18"},
+    "CO": {"name": "Colorado", "fips": "08"},
 }
 
 COUNTIES = {
@@ -144,6 +145,26 @@ COUNTIES = {
         "18081": "Johnson County",           # Indy south suburbs
         "18063": "Hendricks County",         # Indy west suburbs
     },
+    "CO": {
+        # Front Range urban corridor (most of the population + liquidity)
+        "8031":  "Denver County",            # Denver city/county
+        "8041":  "El Paso County",           # Colorado Springs
+        "8005":  "Arapahoe County",          # Aurora / east Denver
+        "8059":  "Jefferson County",         # Golden / Lakewood
+        "8001":  "Adams County",             # North Denver metro
+        "8035":  "Douglas County",           # Castle Rock / Highlands Ranch (wealthy)
+        "8013":  "Boulder County",           # Boulder
+        "8069":  "Larimer County",           # Fort Collins
+        "8123":  "Weld County",              # Greeley
+        "8014":  "Broomfield County",        # Denver metro city-county
+        # Western Slope + smaller metros
+        "8077":  "Mesa County",              # Grand Junction
+        "8101":  "Pueblo County",            # Pueblo
+        # Mountain resort towns (very different dynamics from Front Range)
+        "8037":  "Eagle County",             # Vail
+        "8117":  "Summit County",            # Breckenridge / Frisco
+        "8097":  "Pitkin County",            # Aspen
+    },
 }
 
 # ═══════════════════════════════════════════════════
@@ -237,6 +258,7 @@ STATE_PROPERTY_TAX_RATE = {
     "TN": 0.0067,
     "TX": 0.0180,   # High rates offset the no-income-tax advantage
     "IN": 0.0084,   # Statutory 1% residential cap; effective ~0.84% after homestead
+    "CO": 0.0055,   # One of the lowest in the US — Gallagher legacy + TABOR caps
 }
 
 # Rough average annual homeowners insurance premium ($/yr) on a median home.
@@ -252,6 +274,7 @@ STATE_INSURANCE_ANNUAL = {
     "TN": 1500,
     "TX": 3900,   # Hurricane + hail belt — structurally high
     "IN": 1500,   # Edge of Tornado Alley — moderate wind/hail exposure
+    "CO": 2500,   # Hail belt + Front Range wildfire exposure (Marshall Fire 2021)
 }
 
 # TX homestead exemption: ~$100K off taxable value for owner-occupied homes
@@ -275,6 +298,7 @@ STATE_MEDIAN_INCOME_FALLBACK = {
     "TN": 67097,
     "TX": 76292,
     "IN": 70051,
+    "CO": 92911,
 }
 
 
@@ -494,7 +518,7 @@ def get_all_state_data(api_key: str | None) -> dict:
     state_suffix = {
         "CA": "CA", "NV": "NV", "RI": "RI", "AZ": "AZ",
         "WA": "WA", "UT": "UT", "TN": "TN", "TX": "TX",
-        "IN": "IN",
+        "IN": "IN", "CO": "CO",
     }
     for code in STATES:
         suffix = state_suffix[code]
