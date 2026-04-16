@@ -357,6 +357,134 @@ STATE_POPULATION_GROWTH = {
     "CO": 0.6,    # Slowed from pandemic-era surge
 }
 
+# ── State income tax effective rate at median income (Tax Foundation 2024) ──
+# Captures the MISSING piece from PITI: state income tax reduces the actual
+# dollars available for a mortgage payment. TX/TN/WA/NV have 0% which is a
+# real ~5-8% affordability bonus that the old model under-credited.
+STATE_INCOME_TAX_EFFECTIVE = {
+    "CA": 0.068,   # Graduated up to 13.3%; effective at $96K ≈ 6.8%
+    "NV": 0.000,   # No state income tax
+    "RI": 0.045,   # Graduated; effective at $87K ≈ 4.5%
+    "AZ": 0.025,   # 2.5% flat (post-2023 reform)
+    "WA": 0.000,   # No state income tax (7% cap gains over $262K doesn't hit W2)
+    "UT": 0.0465,  # 4.65% flat
+    "TN": 0.000,   # No state income tax
+    "TX": 0.000,   # No state income tax
+    "IN": 0.0315,  # 3.15% flat (phasing down)
+    "CO": 0.044,   # 4.4% flat
+}
+
+# ── State-level median monthly rent (Zillow Observed Rent Index, Q4 2024) ──
+# Used to compute rent-to-price ratio (rental yield) — distinguishes markets
+# priced for rental income vs markets priced for pure appreciation hope.
+# Bump annually from Zillow's published ZORI data.
+STATE_MEDIAN_RENT_MONTHLY = {
+    "CA": 2900,
+    "NV": 1850,
+    "RI": 1950,
+    "AZ": 1850,
+    "WA": 2250,
+    "UT": 1800,
+    "TN": 1700,
+    "TX": 1800,
+    "IN": 1400,
+    "CO": 2100,
+}
+
+# ── Avg YoY wage growth (BLS QCEW, 2023-2024) ──
+# Current unemployment is a snapshot; wage growth is trajectory. High-wage-
+# growth states can absorb current affordability pressure more easily.
+STATE_WAGE_GROWTH_YOY = {
+    "CA": 0.045,
+    "NV": 0.055,   # Service-sector wage recovery
+    "RI": 0.040,
+    "AZ": 0.052,
+    "WA": 0.058,   # Tech wage growth
+    "UT": 0.062,   # Fastest-growing state wages
+    "TN": 0.048,
+    "TX": 0.050,
+    "IN": 0.040,
+    "CO": 0.048,
+}
+
+# ── Property tax growth cap (annual % cap on assessed value increase) ──
+# States with caps protect YOU from tax bill growth over your holding period.
+# None = no statutory cap (taxes can rise with home value annually).
+# This is a subtle but real long-term cost-of-ownership differentiator.
+STATE_PROPERTY_TAX_CAP_PCT = {
+    "CA": 2.0,    # Prop 13 — 2%/yr cap (resets on sale to purchase price)
+    "NV": 3.0,    # Statutory 3% cap
+    "RI": None,   # No formal cap
+    "AZ": None,   # Limited rate cap but not assessment growth cap
+    "WA": None,   # 1% levy cap at jurisdictional level (not per-property)
+    "UT": None,
+    "TN": None,
+    "TX": 10.0,   # 10% homestead cap (applies to new buyers too)
+    "IN": None,   # "Circuit breaker" caps bill as % of value but not growth
+    "CO": None,   # TABOR governs state revenue but not per-property assessment
+}
+
+# ── Insurance premium 3-yr trajectory (avg annual % change, 2022-2024) ──
+# Current premium is a static snapshot. Trajectory tells you how fast the
+# cost is climbing. CA wildfire crisis, TX hurricanes, CO hail = structural
+# premium inflation that dwarfs general inflation.
+STATE_INSURANCE_TRAJECTORY_YOY = {
+    "CA": 0.15,   # Wildfire crisis — insurers pulling out of market
+    "NV": 0.08,
+    "RI": 0.07,
+    "AZ": 0.12,   # Monsoon/wildfire
+    "WA": 0.05,
+    "UT": 0.08,
+    "TN": 0.10,   # Tornado/hail belt
+    "TX": 0.20,   # Worst in US — hurricane + hail + rising reinsurance costs
+    "IN": 0.09,
+    "CO": 0.18,   # Post-Marshall Fire + hail belt
+}
+
+# ── HOA prevalence (approximate % of SFHs with HOA, CAI 2024) ──
+# Sun Belt new construction is heavily HOA-governed. Adds $200-800/mo
+# hidden cost that doesn't show up in PITI. Midwest/Northeast mostly HOA-free.
+STATE_HOA_PREVALENCE = {
+    "CA": 0.45,   # Common in southern CA new builds
+    "NV": 0.60,   # Very high in Las Vegas/Henderson
+    "RI": 0.15,   # Mostly older fee-simple homes
+    "AZ": 0.65,   # Near-universal in Phoenix-area new builds
+    "WA": 0.35,
+    "UT": 0.50,
+    "TN": 0.30,
+    "TX": 0.55,   # Very high in DFW/Austin suburbs
+    "IN": 0.25,
+    "CO": 0.55,   # High in Denver suburbs; near-universal in resorts
+}
+
+# ── Cost of living index (BEA Regional Price Parities 2023, 100 = US avg) ──
+# Non-housing expenses: utilities, groceries, gas, services. Captures the
+# hidden day-to-day cost burden beyond PITI.
+STATE_COST_OF_LIVING_INDEX = {
+    "CA": 114,   # 14% above US avg
+    "NV": 97,
+    "RI": 99,
+    "AZ": 97,
+    "WA": 108,
+    "UT": 98,
+    "TN": 91,    # Cheapest in this set
+    "TX": 97,
+    "IN": 90,    # Lowest COL
+    "CO": 103,
+}
+
+# ── Personas: pre-set weights for the Goldilocks composite ──
+# Each tuple is weights for: (affordability, timing, jobs, growth,
+# livability, rental_yield). Must sum to 1.0.
+# The same data produces different rankings depending on who you are.
+PERSONAS = {
+    "balanced":   (0.25, 0.20, 0.15, 0.15, 0.15, 0.10),   # default general buyer
+    "first_time": (0.35, 0.25, 0.20, 0.05, 0.10, 0.05),   # income-constrained young buyer
+    "family":     (0.20, 0.15, 0.15, 0.10, 0.35, 0.05),   # schools + walkability dominant
+    "retiree":    (0.35, 0.15, 0.05, 0.05, 0.35, 0.05),   # low carrying cost + livable
+    "investor":   (0.10, 0.20, 0.15, 0.20, 0.05, 0.30),   # yield + appreciation matter most
+}
+
 
 # ═══════════════════════════════════════════════════
 # CACHING
@@ -565,10 +693,13 @@ def get_all_state_data(api_key: str | None) -> dict:
         national_ok = _REQUIRED_NATIONAL_KEYS.issubset(cached_nat.keys())
         states_ok = set(STATES.keys()).issubset(cached_states)
         if national_ok and states_ok:
-            # Cache is current — refresh cycle + goldilocks in case
-            # detector thresholds or scoring weights changed since write.
+            # Cache is current — refresh cycle + goldilocks (for all personas)
+            # in case detector thresholds or scoring weights changed since write.
             cached["cycle"] = compute_cycle_stage(cached_nat)
-            cached["goldilocks"] = compute_goldilocks_rankings(cached)
+            cached["goldilocks"] = {
+                persona: compute_goldilocks_rankings(cached, persona=persona)
+                for persona in PERSONAS
+            }
             return cached
         # Cache is stale-shape (missing EPB series and/or new states added)
         # — fall through and refetch the full bundle.
@@ -647,8 +778,12 @@ def get_all_state_data(api_key: str | None) -> dict:
             result["states"][code], national=result.get("national", {})
         )
 
-    # Goldilocks composite rankings — ranks all states for the "Top 5" card
-    result["goldilocks"] = compute_goldilocks_rankings(result)
+    # Goldilocks composite rankings — compute for all personas so the frontend
+    # can instantly swap persona without refetching or recomputing server-side.
+    result["goldilocks"] = {
+        persona: compute_goldilocks_rankings(result, persona=persona)
+        for persona in PERSONAS
+    }
 
     _write_cache("all_states", result)
     return result
@@ -875,71 +1010,106 @@ def compute_cycle_stage(national: dict | None) -> dict:
     }
 
 
-def compute_goldilocks_rankings(result: dict) -> list:
+def compute_goldilocks_rankings(result: dict, persona: str = "balanced") -> list:
     """Rank states by a composite 'Goldilocks' score for home-buying suitability.
 
-    Dimensions (weights sum to 1.0):
-      30% Affordability    — PITI/income from the buy-signal scoring model
-      25% Market timing    — overall buy-signal score (current conditions + cycle)
-      15% Job market       — state unemployment rate (lower = better)
-      15% Growth momentum  — population growth rate (proxy for migration trends)
-      15% Livability       — walkability + school quality (hardcoded tiers)
+    Six dimensions (weights depend on persona):
+      1. Affordability        — PITI/after-tax-income from the buy-signal model
+      2. Market timing        — overall buy-signal score (current + cycle)
+      3. Job market           — state unemployment rate + wage growth trajectory
+      4. Growth momentum      — population growth (migration proxy)
+      5. Livability           — walkability + schools + insurance trajectory +
+                                HOA prevalence + property tax cap
+      6. Rental yield (NEW)   — rent/price ratio (investment viability)
 
-    Returns a list of dicts sorted by composite score (highest first),
-    each containing the per-dimension sub-scores and the key strength /
-    weakness for the Goldilocks card display.
+    Personas re-weight these dimensions:
+      balanced  — even weighting (default for general buyer)
+      first_time — income-constrained, weights affordability heaviest
+      family    — schools & walkability dominate
+      retiree   — low carrying cost + livability
+      investor  — rental yield + appreciation / growth
+
+    Returns a list of dicts sorted by composite (highest first).
     """
+    weights = PERSONAS.get(persona, PERSONAS["balanced"])
+    w_aff, w_tim, w_job, w_grow, w_liv, w_yield = weights
+
     rankings = []
     for code, state in (result.get("states") or {}).items():
         signals = state.get("signals") or {}
         factors = signals.get("factors") or []
 
-        # ── Affordability sub-score (0-1, higher = more affordable) ──
+        # ── 1. Affordability (0-1, higher = more affordable) ──
         aff = next((f for f in factors if "Affordability" in f.get("name", "")), None)
         if aff and aff.get("max_points", 0) > 0:
             aff_score = aff["points"] / aff["max_points"]
         else:
-            aff_score = 0.4  # neutral default
+            aff_score = 0.4
 
-        # ── Market timing sub-score (0-1) ──
+        # ── 2. Market timing (0-1) ──
         timing_score = (signals.get("score_pct") or 40) / 100
 
-        # ── Job market (0-1, lower unemployment = higher score) ──
+        # ── 3. Job market (0-1) — combines current unemployment + wage-growth trajectory ──
         unemp = state.get("unemployment_rate")
         unemp_val = unemp.get("current", 5.0) if isinstance(unemp, dict) else 5.0
-        job_score = max(0, min(1, (8 - unemp_val) / 6))  # 2% → 1.0, 8% → 0.0
+        unemp_sub = max(0, min(1, (8 - unemp_val) / 6))   # 2% → 1.0, 8% → 0.0
+        wage_growth = STATE_WAGE_GROWTH_YOY.get(code, 0.045)
+        wage_sub = max(0, min(1, (wage_growth - 0.02) / 0.06))  # 2% → 0, 8% → 1.0
+        # 70/30 blend: level matters more than trajectory but both count
+        job_score = 0.70 * unemp_sub + 0.30 * wage_sub
 
-        # ── Growth momentum (0-1, from hardcoded population growth %) ──
+        # ── 4. Growth momentum (0-1) ──
         pop_growth = STATE_POPULATION_GROWTH.get(code, 0.5)
         growth_score = max(0, min(1, (pop_growth + 0.5) / 2.5))  # -0.5% → 0, +2% → 1.0
 
-        # ── Livability (0-1, average of walkability and school quality) ──
+        # ── 5. Livability (0-1) — composite of 5 sub-signals ──
         walk = STATE_WALKABILITY.get(code, 5) / 10
         school = STATE_SCHOOL_QUALITY.get(code, 5) / 10
-        livability = (walk + school) / 2
+        # Insurance trajectory: lower YoY premium growth = better (less cost creep)
+        ins_traj = STATE_INSURANCE_TRAJECTORY_YOY.get(code, 0.10)
+        ins_sub = max(0, min(1, (0.25 - ins_traj) / 0.22))  # 3% → 1.0, 25% → 0.0
+        # HOA prevalence: lower = better (fewer hidden monthly fees)
+        hoa = STATE_HOA_PREVALENCE.get(code, 0.35)
+        hoa_sub = max(0, min(1, (0.70 - hoa) / 0.55))  # 15% → 1.0, 70% → 0.0
+        # Property tax cap: caps are a benefit (lower cost-growth over time)
+        cap = STATE_PROPERTY_TAX_CAP_PCT.get(code)
+        cap_sub = 1.0 if cap and cap <= 3 else (0.7 if cap and cap <= 10 else 0.3)
+        # Weighted livability: walkability + schools dominate (50%), risk/cost creep (50%)
+        livability = 0.25 * walk + 0.25 * school + 0.20 * ins_sub + 0.15 * hoa_sub + 0.15 * cap_sub
 
+        # ── 6. Rental yield (0-1) — rent/price annualized ──
+        monthly_rent = STATE_MEDIAN_RENT_MONTHLY.get(code)
+        price = state.get("median_list_price", {})
+        price_val = price.get("current") if isinstance(price, dict) else None
+        if monthly_rent and price_val and price_val > 0:
+            annual_rent = monthly_rent * 12
+            rent_yield = annual_rent / price_val
+            # 3% = poor (priced for appreciation), 10%+ = strong cash flow
+            yield_score = max(0, min(1, (rent_yield - 0.03) / 0.07))
+        else:
+            rent_yield = None
+            yield_score = 0.4  # neutral default
+
+        # ── Composite using persona weights ──
         composite = (
-            0.30 * aff_score +
-            0.25 * timing_score +
-            0.15 * job_score +
-            0.15 * growth_score +
-            0.15 * livability
+            w_aff * aff_score +
+            w_tim * timing_score +
+            w_job * job_score +
+            w_grow * growth_score +
+            w_liv * livability +
+            w_yield * yield_score
         )
 
-        # Identify key strength and weakness for the card
         dims = {
             "Affordability": aff_score,
             "Market timing": timing_score,
             "Job market": job_score,
             "Growth": growth_score,
             "Livability": livability,
+            "Rental yield": yield_score,
         }
         strength = max(dims, key=dims.get)
         weakness = min(dims, key=dims.get)
-
-        # Pull out headline numbers for display
-        price = state.get("median_list_price", {})
-        price_val = price.get("current") if isinstance(price, dict) else None
 
         rankings.append({
             "code": code,
@@ -950,13 +1120,22 @@ def compute_goldilocks_rankings(result: dict) -> list:
             "jobs": round(job_score * 100, 1),
             "growth": round(growth_score * 100, 1),
             "livability": round(livability * 100, 1),
+            "rental_yield": round(yield_score * 100, 1),
             "strength": strength,
             "weakness": weakness,
             "median_price": price_val,
+            "monthly_rent": monthly_rent,
+            "rent_to_price_pct": round(rent_yield * 100, 2) if rent_yield else None,
             "unemployment": round(unemp_val, 1),
+            "wage_growth": round(wage_growth * 100, 1),
             "pop_growth": pop_growth,
             "walkability": STATE_WALKABILITY.get(code, 5),
             "schools": STATE_SCHOOL_QUALITY.get(code, 5),
+            "income_tax_pct": round(STATE_INCOME_TAX_EFFECTIVE.get(code, 0.045) * 100, 1),
+            "insurance_trajectory_pct": round(STATE_INSURANCE_TRAJECTORY_YOY.get(code, 0.10) * 100, 1),
+            "hoa_prevalence_pct": round(STATE_HOA_PREVALENCE.get(code, 0.35) * 100, 0),
+            "property_tax_cap": STATE_PROPERTY_TAX_CAP_PCT.get(code),
+            "col_index": STATE_COST_OF_LIVING_INDEX.get(code, 100),
         })
 
     rankings.sort(key=lambda x: -x["composite"])
@@ -1194,30 +1373,40 @@ def compute_buy_signals(data: dict, national: dict | None = None) -> dict:
             monthly_ins = annual_ins / 12.0
             # Full PITI
             monthly_piti = monthly_pi + monthly_tax + monthly_ins
-            monthly_income = income / 12.0
-            piti_pct = monthly_piti / monthly_income
+            # State income tax reduces the actual dollars available to spend
+            # on a mortgage. TX/TN/WA/NV (0% income tax) get a real affordability
+            # bonus worth ~5-8% relative to CA/OR/NY. This was missing from the
+            # old calc and under-credited no-income-tax states.
+            income_tax_rate = STATE_INCOME_TAX_EFFECTIVE.get(state_code, 0.045)  # ~US avg fallback
+            after_tax_income = income * (1 - income_tax_rate)
+            monthly_income_after_tax = after_tax_income / 12.0
+            piti_pct = monthly_piti / monthly_income_after_tax
             # Underwriting standard: 28% front-end DTI (PITI/income) is the
             # canonical "healthy" threshold. 36% = borderline, 43% = distress.
+            # Note: these thresholds are against AFTER-TAX income now, so the
+            # score is slightly stricter than before (which used gross income).
             pts = _lerp_score(piti_pct, [
-                (0.20, 2.0),   # excellent
-                (0.28, 1.6),   # healthy (classic 28% rule)
-                (0.33, 1.0),   # borderline
-                (0.40, 0.5),   # stretched
-                (0.48, 0.2),   # distress
-                (0.55, 0.0),   # unaffordable
+                (0.22, 2.0),   # excellent (shifted up ~2pp vs gross-income baseline)
+                (0.30, 1.6),   # healthy
+                (0.36, 1.0),   # borderline (classic 36% back-end DTI)
+                (0.43, 0.5),   # stretched
+                (0.52, 0.2),   # distress
+                (0.60, 0.0),   # unaffordable
             ])
             exempt_note = f" minus ${exemption:,.0f} homestead exemption" if exemption else ""
+            income_tax_note = f" (after ~{income_tax_rate*100:.1f}% state income tax)" if income_tax_rate > 0 else " (no state income tax)"
             add_factor(
-                "Affordability (PITI/income)",
-                (f"{piti_pct*100:.0f}% of income · "
+                "Affordability (PITI/after-tax income)",
+                (f"{piti_pct*100:.0f}% of after-tax income · "
                  f"PITI ${monthly_piti:,.0f}/mo = "
                  f"P&I ${monthly_pi:,.0f} + tax ${monthly_tax:,.0f} + ins ${monthly_ins:,.0f}"),
                 pts, w7,
                 (f"Full PITI on 80% LTV {price_src} price at {mort_rate:.2f}% vs monthly "
-                 f"median income (${income:,.0f}/yr · {income_source}). "
+                 f"median income{income_tax_note} (${income:,.0f}/yr gross · {income_source}). "
                  f"Uses {state_code or 'state'} property-tax rate "
                  f"{tax_rate*100:.2f}%{exempt_note} and ~${annual_ins:,.0f}/yr insurance. "
-                 "Scored against the canonical 28% front-end DTI underwriting standard."),
+                 "Scored against the 28% front-end DTI standard on AFTER-TAX income — "
+                 "no-income-tax states (TX/TN/WA/NV) keep more gross pay for PITI."),
             )
         else:
             add_missing("Affordability", w7, "Could not compute mortgage payment.")

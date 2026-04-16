@@ -4,18 +4,29 @@
 <h1>Real Estate Market Dashboard</h1>
 <p class="subtitle">Housing cycle tracking + market timing for 10 states from FRED / Realtor.com data.</p>
 
-<!-- ═══ GOLDILOCKS TOP 5 ═══ -->
+<!-- ═══ GOLDILOCKS TOP 5 WITH PERSONA SELECTOR ═══ -->
 <div class="card" id="goldilocksCard" style="margin-bottom:1.5rem; display:none;">
-    <div style="display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:0.75rem;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:0.85rem;">
         <div>
-            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Goldilocks Rankings — Where to Buy</div>
-            <div style="font-size:0.8rem; color:var(--text-dim); margin-top:0.25rem;">Composite of affordability, market timing, job market, population growth &amp; livability</div>
+            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Goldilocks Top 5 — Where to Buy</div>
+            <div style="font-size:0.82rem; color:var(--text-dim); margin-top:0.25rem;">Same data, re-weighted for who <em>you</em> are. Pick a persona:</div>
         </div>
         <div style="font-size:0.65rem; color:var(--text-dim);">
-            <span title="FRED: PITI/income, buy signals, unemployment. Hardcoded: population growth (Census 2023), walkability (Walk Score 2024), schools (Niche 2024).">ⓘ Data sources</span>
+            <span title="FRED (live): PITI, unemployment, buy signals. Hardcoded (annual bump): pop growth (Census 2023), walkability (Walk Score 2024), schools (Niche 2024), income tax (Tax Foundation), rent (Zillow Q4 2024), wage growth (BLS QCEW), insurance trajectory (NAIC), HOA prevalence (CAI), COL (BEA RPP).">ⓘ Data sources</span>
         </div>
     </div>
-    <div id="goldilocksGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:0.5rem;"></div>
+
+    <!-- Persona selector: re-weights dimensions instantly, no page reload -->
+    <div id="personaSelector" style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.9rem;">
+        <button class="persona-btn" data-persona="balanced" style="padding:0.4rem 0.85rem; border-radius:999px; background:var(--accent,#6366f1); color:white; border:1px solid var(--accent,#6366f1); font-size:0.78rem; cursor:pointer;">⚖️ Balanced</button>
+        <button class="persona-btn" data-persona="first_time" style="padding:0.4rem 0.85rem; border-radius:999px; background:transparent; color:var(--text,#e5e7eb); border:1px solid var(--border,#2d3044); font-size:0.78rem; cursor:pointer;">🏡 First-Time Buyer</button>
+        <button class="persona-btn" data-persona="family" style="padding:0.4rem 0.85rem; border-radius:999px; background:transparent; color:var(--text,#e5e7eb); border:1px solid var(--border,#2d3044); font-size:0.78rem; cursor:pointer;">👨‍👩‍👧 Family</button>
+        <button class="persona-btn" data-persona="retiree" style="padding:0.4rem 0.85rem; border-radius:999px; background:transparent; color:var(--text,#e5e7eb); border:1px solid var(--border,#2d3044); font-size:0.78rem; cursor:pointer;">🌴 Retiree</button>
+        <button class="persona-btn" data-persona="investor" style="padding:0.4rem 0.85rem; border-radius:999px; background:transparent; color:var(--text,#e5e7eb); border:1px solid var(--border,#2d3044); font-size:0.78rem; cursor:pointer;">💰 Investor</button>
+    </div>
+
+    <div id="personaDescription" style="font-size:0.75rem; color:var(--text-dim); margin-bottom:0.85rem; font-style:italic;"></div>
+    <div id="goldilocksGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:0.5rem;"></div>
 </div>
 
 <!-- ═══ STATE DRILL-DOWN ═══ -->
@@ -437,43 +448,107 @@ function populateCounties(state) {
     });
 }
 
-function renderGoldilocks(rankings) {
+// Persona descriptions shown under the selector — give context for
+// why the ranking shifted when the user clicks a different persona.
+const PERSONA_DESCRIPTIONS = {
+    balanced:   "General buyer — even weighting across affordability, timing, jobs, growth, livability & rental yield.",
+    first_time: "First-time buyer — heaviest weight on affordability (35%) and market timing (25%). Income-constrained.",
+    family:     "Family — livability (schools + walkability) dominates at 35%. Long holding period assumed.",
+    retiree:    "Retiree — fixed income → 35% affordability, 35% livability (healthcare & walkability). Growth less important.",
+    investor:   "Investor — rental yield 30%, growth 20%, timing 20%. Affordability/livability matter less when someone else pays the rent.",
+};
+
+let currentGoldilocksData = null;   // full {persona: [rankings]} payload
+let currentPersona = "balanced";
+
+function renderGoldilocks(dataOrRankings) {
     const card = document.getElementById('goldilocksCard');
     const grid = document.getElementById('goldilocksGrid');
-    if (!card || !grid || !rankings || rankings.length === 0) return;
+    const descEl = document.getElementById('personaDescription');
+    if (!card || !grid) return;
+
+    // Accept either a raw rankings list (legacy) or the persona-keyed dict (new).
+    if (Array.isArray(dataOrRankings)) {
+        // Legacy call with flat list — wrap it so the persona selector still has
+        // something to show. Won't re-weight but won't crash either.
+        currentGoldilocksData = { balanced: dataOrRankings };
+    } else if (dataOrRankings && typeof dataOrRankings === 'object') {
+        currentGoldilocksData = dataOrRankings;
+    }
+    const rankings = (currentGoldilocksData && currentGoldilocksData[currentPersona])
+        || (currentGoldilocksData && currentGoldilocksData.balanced)
+        || [];
+    if (rankings.length === 0) return;
     card.style.display = '';
+    if (descEl) descEl.textContent = PERSONA_DESCRIPTIONS[currentPersona] || '';
+
     grid.innerHTML = '';
     const top5 = rankings.slice(0, 5);
     const medals = ['🥇', '🥈', '🥉', '4.', '5.'];
     top5.forEach((r, i) => {
         const color = r.composite >= 55 ? '#22c55e' : r.composite >= 45 ? '#eab308' : r.composite >= 35 ? '#f97316' : '#ef4444';
         const priceStr = r.median_price ? '$' + Math.round(r.median_price / 1000) + 'K' : '—';
+        const rentStr = r.monthly_rent ? '$' + r.monthly_rent + '/mo' : '—';
+        const yieldStr = r.rent_to_price_pct ? r.rent_to_price_pct.toFixed(1) + '%' : '—';
+        const incomeTaxStr = r.income_tax_pct === 0 ? '0%' : r.income_tax_pct + '%';
+        const capStr = r.property_tax_cap ? `${r.property_tax_cap}% cap` : 'no cap';
+        const insTrajStr = r.insurance_trajectory_pct > 12 ? '⚠️' : '';
+        const dims = [
+            ['affordability', 'Aff', 'After-tax-income PITI'],
+            ['timing', 'Tim', 'Current-market buy signal'],
+            ['jobs', 'Job', 'Unemployment + wage growth'],
+            ['growth', 'Grw', 'Population growth (migration)'],
+            ['livability', 'Liv', 'Walk + schools + ins trajectory + HOA + tax cap'],
+            ['rental_yield', 'Yld', 'Rent-to-price ratio'],
+        ];
         grid.innerHTML += `
-            <div style="background:var(--card-bg, #1e1e2e); border:1px solid var(--border, #2d3044); border-radius:8px; padding:0.8rem; cursor:pointer;"
-                 onclick="document.querySelector('[data-state=${r.code}]').click();" title="Click to drill into ${r.name}">
+            <div style="background:var(--card-bg, #1e1e2e); border:1px solid var(--border, #2d3044); border-radius:8px; padding:0.8rem; cursor:pointer; transition:transform 0.1s;"
+                 onclick="document.querySelector('[data-state=${r.code}]').click();"
+                 onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='none';"
+                 title="Click to drill into ${r.name}">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
-                    <span style="font-size:1.1rem; font-weight:700;">${medals[i]} ${r.name}</span>
+                    <span style="font-size:1.05rem; font-weight:700;">${medals[i]} ${r.name}</span>
                     <span style="font-size:1rem; font-weight:700; color:${color};">${r.composite.toFixed(0)}%</span>
                 </div>
-                <div style="font-size:0.8rem; color:var(--text-dim); margin-bottom:0.5rem;">
-                    Median ${priceStr} · Unemp ${r.unemployment}% · Pop growth ${r.pop_growth > 0 ? '+' : ''}${r.pop_growth}%
+                <div style="font-size:0.72rem; color:var(--text-dim); margin-bottom:0.5rem; line-height:1.35;">
+                    ${priceStr} · Rent ${rentStr} · Yield ${yieldStr}<br>
+                    Unemp ${r.unemployment}% · Wage +${r.wage_growth}% · Pop ${r.pop_growth > 0 ? '+' : ''}${r.pop_growth}%<br>
+                    State tax ${incomeTaxStr} · Prop ${capStr} · Ins +${r.insurance_trajectory_pct}%/yr ${insTrajStr}
                 </div>
-                <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:2px; margin-bottom:0.4rem;">
-                    ${['affordability','timing','jobs','growth','livability'].map(k => {
+                <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:2px; margin-bottom:0.25rem;">
+                    ${dims.map(([k, lbl, desc]) => {
                         const v = r[k];
-                        const bg = v >= 60 ? 'rgba(34,197,94,0.25)' : v >= 40 ? 'rgba(234,179,8,0.2)' : 'rgba(239,68,68,0.2)';
-                        return `<div style="background:${bg}; border-radius:3px; text-align:center; padding:2px 0; font-size:0.6rem; color:var(--text-dim);" title="${k}: ${v}%">${v.toFixed(0)}</div>`;
+                        const bg = v >= 60 ? 'rgba(34,197,94,0.28)' : v >= 40 ? 'rgba(234,179,8,0.22)' : 'rgba(239,68,68,0.22)';
+                        return `<div style="background:${bg}; border-radius:3px; text-align:center; padding:3px 0; font-size:0.62rem; font-weight:600;" title="${lbl}: ${desc} — ${v}%">${v.toFixed(0)}</div>`;
                     }).join('')}
                 </div>
-                <div style="display:flex; justify-content:space-between; font-size:0.6rem; color:var(--text-dim);">
-                    <span>Aff</span><span>Tim</span><span>Job</span><span>Grw</span><span>Liv</span>
+                <div style="display:grid; grid-template-columns:repeat(6, 1fr); font-size:0.58rem; color:var(--text-dim); text-align:center; margin-bottom:0.35rem;">
+                    ${dims.map(([k, lbl]) => `<span>${lbl}</span>`).join('')}
                 </div>
-                <div style="font-size:0.7rem; margin-top:0.4rem;">
+                <div style="font-size:0.7rem; border-top:1px solid var(--border, #2d3044); padding-top:0.35rem;">
                     <span style="color:#22c55e;">▲ ${r.strength}</span> · <span style="color:#ef4444;">▼ ${r.weakness}</span>
                 </div>
             </div>`;
     });
 }
+
+// Persona selector handling — re-renders on click, no refetch needed
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.persona-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const persona = btn.dataset.persona;
+            currentPersona = persona;
+            // Re-style all buttons: selected one gets accent background
+            document.querySelectorAll('.persona-btn').forEach(b => {
+                const active = b.dataset.persona === persona;
+                b.style.background = active ? 'var(--accent, #6366f1)' : 'transparent';
+                b.style.color = active ? 'white' : 'var(--text, #e5e7eb)';
+                b.style.borderColor = active ? 'var(--accent, #6366f1)' : 'var(--border, #2d3044)';
+            });
+            renderGoldilocks(currentGoldilocksData);
+        });
+    });
+});
 
 function renderCycleCascade(cycle) {
     const stageEl = document.getElementById('cycleStage');
