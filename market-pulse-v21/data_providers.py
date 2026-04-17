@@ -614,6 +614,18 @@ def get_national_data(api_key: str | None) -> dict:
     return result or cached or {}
 
 
+def _county_has_real_data(data: dict) -> bool:
+    """True iff the payload contains at least one real FRED county series.
+
+    The county cache write is gated on this — if a transient FRED failure
+    drops every series, we must NOT persist an empty shell, because the
+    24-hour TTL would then lock the county view into "all dashes" until
+    the cache naturally expires. Same check is used on cache reads to
+    auto-heal county caches written by older code that lacked this guard.
+    """
+    return any(k in data for k in COUNTY_SERIES)
+
+
 def get_county_data(api_key: str | None, state_code: str, fips: str) -> dict:
     """Fetch all available FRED series for a specific county.
 
@@ -624,6 +636,11 @@ def get_county_data(api_key: str | None, state_code: str, fips: str) -> dict:
       • Any refresh of the national cache is immediately visible in
         every county view without waiting for the county TTL to expire.
     Only the heavy county-specific FRED fetches are cached.
+
+    Auto-heals empty caches: a county cache that lacks every Realtor.com
+    series (e.g. written during a transient FRED outage) is treated as
+    stale and refetched, so a single failed request doesn't blank the
+    county view for 24 hours.
     """
     # Always pull current national context and recompute cycle — cheap
     # (just reads the national cache + runs comparisons), and keeps the
@@ -633,7 +650,7 @@ def get_county_data(api_key: str | None, state_code: str, fips: str) -> dict:
 
     cache_key = f"county_{fips}"
     cached = _read_cache(cache_key, max_age_hours=24)
-    if cached:
+    if cached and _county_has_real_data(cached):
         cached["cycle"] = fresh_cycle
         cached["national"] = national_ctx
         # Also recompute signals so the score reflects the fresh cycle
@@ -670,7 +687,13 @@ def get_county_data(api_key: str | None, state_code: str, fips: str) -> dict:
     result["signals"] = compute_buy_signals(result, national=national_ctx)
     result["cycle"] = fresh_cycle
     result["national"] = national_ctx
-    _write_cache(cache_key, result)
+    # Only persist a county cache when the fetch actually returned series
+    # data. Caching an empty shell would hide the county metrics for the
+    # full 24-hour TTL even after FRED recovers.
+    if _county_has_real_data(result):
+        _write_cache(cache_key, result)
+    else:
+        logger.warning(f"County {fips}: no FRED series returned — skipping cache write")
     return result
 
 
