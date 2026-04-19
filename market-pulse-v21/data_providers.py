@@ -545,6 +545,45 @@ def _write_cache(key: str, data):
     _cache_path(key).write_text(json.dumps(data, default=str))
 
 
+def _all_states_completeness(payload: dict | None) -> tuple[int, int]:
+    """Rough completeness score for an `all_states` payload.
+
+    Returns (populated_state_metric_count, populated_national_series_count).
+    Higher is better. Used to decide whether a freshly-fetched result
+    should overwrite an existing cache; a smaller/emptier result from a
+    rate-limited refetch must not evict a richer cached snapshot.
+    """
+    if not isinstance(payload, dict):
+        return (0, 0)
+    states = payload.get("states") or {}
+    state_metrics = 0
+    for _code, s in states.items():
+        if not isinstance(s, dict):
+            continue
+        for k, v in s.items():
+            if k in ("code", "name", "counties", "signals"):
+                continue
+            if isinstance(v, dict) and v.get("values"):
+                state_metrics += 1
+    national = payload.get("national") or {}
+    nat_series = sum(1 for v in national.values() if isinstance(v, dict) and v.get("values"))
+    return (state_metrics, nat_series)
+
+
+def _should_replace_cache(cached: dict | None, fresh: dict) -> bool:
+    """Replace the cache only if the fresh payload isn't materially worse.
+
+    Allow replacement when there's no cache at all, or when fresh has at
+    least as many populated state metrics AND national series. This
+    prevents a transient FRED rate-limit from wiping a good cache.
+    """
+    if not cached:
+        return True
+    fresh_s, fresh_n = _all_states_completeness(fresh)
+    cached_s, cached_n = _all_states_completeness(cached)
+    return fresh_s >= cached_s and fresh_n >= cached_n
+
+
 # ═══════════════════════════════════════════════════
 # FRED DATA FETCHING
 # ═══════════════════════════════════════════════════
@@ -767,9 +806,13 @@ def get_all_state_data(api_key: str | None) -> dict:
         national_ok = _REQUIRED_NATIONAL_KEYS.issubset(cached_nat.keys())
         states_ok = set(STATES.keys()).issubset(cached_states)
         if national_ok and states_ok:
-            # Cache is current — refresh cycle + goldilocks (for all personas)
-            # in case detector thresholds or scoring weights changed since write.
+            # Cache is current — refresh cycle + signals + goldilocks
+            # in case detector thresholds or scoring weights changed since
+            # write. Signals include Factor 9 (cycle stage), so they must
+            # be recomputed whenever cycle is.
             cached["cycle"] = compute_cycle_stage(cached_nat)
+            for code, state in (cached.get("states") or {}).items():
+                state["signals"] = compute_buy_signals(state, national=cached_nat)
             cached["goldilocks"] = {
                 persona: compute_goldilocks_rankings(cached, persona=persona)
                 for persona in PERSONAS
@@ -827,6 +870,17 @@ def get_all_state_data(api_key: str | None) -> dict:
     # Fetch everything in parallel (10 threads)
     fetched = _fetch_batch(fred, all_to_fetch)
 
+    # Seed every configured state with a skeleton entry so it's always
+    # represented even if every one of its FRED series failed in this batch
+    # (rate-limit, transient outage). Without this, the frontend shows the
+    # state tab as "LOADING / no cached data" with no market signal.
+    for code in STATES:
+        result["states"][code] = {
+            "code": code,
+            "name": STATES[code]["name"],
+            "counties": list(COUNTIES.get(code, {}).keys()),
+        }
+
     # Sort results into national vs state buckets
     for key, data in fetched.items():
         parts = key.split("__", 1)
@@ -835,13 +889,24 @@ def get_all_state_data(api_key: str | None) -> dict:
         else:
             state_code = parts[0]
             metric = parts[1]
-            if state_code not in result["states"]:
-                result["states"][state_code] = {
-                    "code": state_code,
-                    "name": STATES[state_code]["name"],
-                    "counties": list(COUNTIES.get(state_code, {}).keys()),
-                }
             result["states"][state_code][metric] = data
+
+    # Fold in any cached values that the fresh fetch dropped (partial-failure
+    # resilience). Fresh data always wins where present; cache fills gaps.
+    # Without this, a rate-limited refetch silently wipes previously-good
+    # state metrics and leaves every signal scoring on "NO DATA".
+    if cached:
+        prev_nat = (cached.get("national") or {})
+        for k, v in prev_nat.items():
+            result["national"].setdefault(k, v)
+        prev_states = (cached.get("states") or {})
+        for code, prev in prev_states.items():
+            if code not in result["states"]:
+                continue
+            for k, v in prev.items():
+                if k in ("code", "name", "counties", "signals"):
+                    continue
+                result["states"][code].setdefault(k, v)
 
     # Compute the national housing cycle stage once (it's a national concept
     # per the EPB framework) and attach it alongside the national series so
@@ -861,7 +926,11 @@ def get_all_state_data(api_key: str | None) -> dict:
         for persona in PERSONAS
     }
 
-    _write_cache("all_states", result)
+    # Only overwrite the cache if the new result is at least as complete as
+    # what's already persisted. A partial refetch (e.g. one state got zero
+    # series back) should not evict good data that's still useful.
+    if _should_replace_cache(cached, result):
+        _write_cache("all_states", result)
     return result
 
 
