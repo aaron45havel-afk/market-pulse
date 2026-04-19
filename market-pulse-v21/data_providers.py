@@ -26,6 +26,7 @@ STATES = {
     "TX": {"name": "Texas", "fips": "48"},
     "IN": {"name": "Indiana", "fips": "18"},
     "CO": {"name": "Colorado", "fips": "08"},
+    "OH": {"name": "Ohio", "fips": "39"},
 }
 
 COUNTIES = {
@@ -165,6 +166,29 @@ COUNTIES = {
         "8117":  "Summit County",            # Breckenridge / Frisco
         "8097":  "Pitkin County",            # Aspen
     },
+    "OH": {
+        # The 3C's — Ohio's three anchor metros cover ~60% of state population
+        "39049": "Franklin County",          # Columbus (state capital, fastest-growing Ohio metro)
+        "39035": "Cuyahoga County",          # Cleveland
+        "39061": "Hamilton County",          # Cincinnati
+        # Secondary metros
+        "39113": "Montgomery County",        # Dayton
+        "39153": "Summit County",            # Akron
+        "39095": "Lucas County",             # Toledo
+        "39151": "Stark County",             # Canton
+        "39099": "Mahoning County",          # Youngstown
+        # Wealthy / fast-growing suburbs (different market dynamics from the core city)
+        "39041": "Delaware County",          # Columbus N suburbs (highest-income county in OH)
+        "39165": "Warren County",            # Cincinnati NE suburbs (Mason, Lebanon)
+        "39017": "Butler County",            # Cincinnati NW suburbs (West Chester)
+        "39055": "Geauga County",            # Cleveland E suburbs (wealthy, Chagrin Falls)
+        "39085": "Lake County",              # Cleveland E suburbs (Mentor)
+        # Growth corridors around Columbus
+        "39089": "Licking County",           # Columbus E growth corridor (Intel site, Newark)
+        "39045": "Fairfield County",         # Columbus SE suburbs (Lancaster)
+        # Cleveland W suburbs
+        "39093": "Lorain County",            # Cleveland W (Elyria, Lorain)
+    },
 }
 
 # ═══════════════════════════════════════════════════
@@ -259,6 +283,7 @@ STATE_PROPERTY_TAX_RATE = {
     "TX": 0.0180,   # High rates offset the no-income-tax advantage
     "IN": 0.0084,   # Statutory 1% residential cap; effective ~0.84% after homestead
     "CO": 0.0055,   # One of the lowest in the US — Gallagher legacy + TABOR caps
+    "OH": 0.0156,   # Among the highest in the Midwest — heavy reliance on local property tax
 }
 
 # Rough average annual homeowners insurance premium ($/yr) on a median home.
@@ -275,6 +300,7 @@ STATE_INSURANCE_ANNUAL = {
     "TX": 3900,   # Hurricane + hail belt — structurally high
     "IN": 1500,   # Edge of Tornado Alley — moderate wind/hail exposure
     "CO": 2500,   # Hail belt + Front Range wildfire exposure (Marshall Fire 2021)
+    "OH": 1300,   # Low overall — occasional tornado/hail in western half, no coastal risk
 }
 
 # TX homestead exemption: ~$100K off taxable value for owner-occupied homes
@@ -299,6 +325,7 @@ STATE_MEDIAN_INCOME_FALLBACK = {
     "TX": 76292,
     "IN": 70051,
     "CO": 92911,
+    "OH": 69680,
 }
 
 
@@ -323,6 +350,7 @@ STATE_WALKABILITY = {
     "TX": 3,   # Houston 36, Dallas 46, Austin 39
     "IN": 3,   # Indianapolis 30, Fort Wayne 26
     "CO": 5,   # Denver 61, Boulder 58, Colorado Springs 35
+    "OH": 4,   # Cleveland 57, Cincinnati 50, Dayton 42, Columbus 41 — dense urban cores
 }
 
 # State-level school quality (0-10 scale). Approximate from Niche.com's
@@ -338,6 +366,7 @@ STATE_SCHOOL_QUALITY = {
     "TX": 6,   # Varies enormously by district (Frisco A+ vs rural D)
     "IN": 5,   # Middle of the pack, good charter options
     "CO": 7,   # Strong Front Range schools, weaker rural
+    "OH": 6,   # Strong suburban districts (Dublin, Mason, Solon), weak urban cores
 }
 
 # Annual population growth rate (%) — Census Bureau 2023 annual estimates.
@@ -355,6 +384,7 @@ STATE_POPULATION_GROWTH = {
     "TX": 1.6,    # Strongest in-migration nationally
     "IN": 0.3,    # Slow but positive
     "CO": 0.6,    # Slowed from pandemic-era surge
+    "OH": 0.1,    # Near-flat — Columbus growth offsets Cleveland/Youngstown decline
 }
 
 # ── State income tax effective rate at median income (Tax Foundation 2024) ──
@@ -372,6 +402,7 @@ STATE_INCOME_TAX_EFFECTIVE = {
     "TX": 0.000,   # No state income tax
     "IN": 0.0315,  # 3.15% flat (phasing down)
     "CO": 0.044,   # 4.4% flat
+    "OH": 0.028,   # Graduated up to 3.5%; effective at $70K ≈ 2.8% (plus 1-3% local municipal)
 }
 
 # ── State-level median monthly rent (Zillow Observed Rent Index, Q4 2024) ──
@@ -389,6 +420,7 @@ STATE_MEDIAN_RENT_MONTHLY = {
     "TX": 1800,
     "IN": 1400,
     "CO": 2100,
+    "OH": 1350,
 }
 
 # ── Avg YoY wage growth (BLS QCEW, 2023-2024) ──
@@ -405,6 +437,7 @@ STATE_WAGE_GROWTH_YOY = {
     "TX": 0.050,
     "IN": 0.040,
     "CO": 0.048,
+    "OH": 0.039,   # Below national average — mature manufacturing base, slow wage growth
 }
 
 # ── Property tax growth cap (annual % cap on assessed value increase) ──
@@ -422,6 +455,7 @@ STATE_PROPERTY_TAX_CAP_PCT = {
     "TX": 10.0,   # 10% homestead cap (applies to new buyers too)
     "IN": None,   # "Circuit breaker" caps bill as % of value but not growth
     "CO": None,   # TABOR governs state revenue but not per-property assessment
+    "OH": None,   # HB 920 freezes voted millage $ but full reappraisal still raises bills
 }
 
 # ── Insurance premium 3-yr trajectory (avg annual % change, 2022-2024) ──
@@ -439,6 +473,7 @@ STATE_INSURANCE_TRAJECTORY_YOY = {
     "TX": 0.20,   # Worst in US — hurricane + hail + rising reinsurance costs
     "IN": 0.09,
     "CO": 0.18,   # Post-Marshall Fire + hail belt
+    "OH": 0.08,   # Rising with national reinsurance costs but no major catastrophe exposure
 }
 
 # ── HOA prevalence (approximate % of SFHs with HOA, CAI 2024) ──
@@ -455,6 +490,7 @@ STATE_HOA_PREVALENCE = {
     "TX": 0.55,   # Very high in DFW/Austin suburbs
     "IN": 0.25,
     "CO": 0.55,   # High in Denver suburbs; near-universal in resorts
+    "OH": 0.22,   # Mostly older fee-simple stock; HOAs only in newer Columbus/Cincy suburbs
 }
 
 # ── Cost of living index (BEA Regional Price Parities 2023, 100 = US avg) ──
@@ -471,6 +507,7 @@ STATE_COST_OF_LIVING_INDEX = {
     "TX": 97,
     "IN": 90,    # Lowest COL
     "CO": 103,
+    "OH": 90,    # Among the lowest in the US — matches IN
 }
 
 # ── Personas: pre-set weights for the Goldilocks composite ──
@@ -743,7 +780,7 @@ def get_all_state_data(api_key: str | None) -> dict:
     state_suffix = {
         "CA": "CA", "NV": "NV", "RI": "RI", "AZ": "AZ",
         "WA": "WA", "UT": "UT", "TN": "TN", "TX": "TX",
-        "IN": "IN", "CO": "CO",
+        "IN": "IN", "CO": "CO", "OH": "OH",
     }
     for code in STATES:
         suffix = state_suffix[code]
