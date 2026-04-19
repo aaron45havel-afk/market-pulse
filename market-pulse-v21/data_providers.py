@@ -232,7 +232,10 @@ NATIONAL_SERIES = {
     "us_active_listings":     "ACTLISCOUUS",            # National active listing count
     "us_days_on_market":      "MEDDAYONMARUS",          # National median DOM
     "us_new_listings":        "NEWLISCOUUS",            # National new listing count
-    "us_pending_ratio":       "PENRATUS",               # National pending ratio
+    # NOTE: PENRATUS (national pending ratio) was discontinued by FRED.
+    # County-level PENRAT{fips} is still live and is what the dashboard
+    # actually surfaces; leave that path intact. State/national PENRAT
+    # series are omitted here to avoid burning quota on 400s.
     # ───────── EPB Five-Step Housing Cycle dominos (leading → lagging) ─────────
     # These are the canonical indicators from Eric Basmajian's EPB Research
     # residential-construction-cycle framework. The sequence is always the same:
@@ -553,6 +556,11 @@ def _fetch_series(fred, series_id: str, start: str = "2016-01-01") -> dict | Non
     batch (120+ series at 10 threads), some requests can fail transiently
     due to rate-limiting. A single retry with a short backoff recovers
     most of these without materially slowing the batch.
+
+    Permanent 400s ("series does not exist") are NOT retried — retrying
+    them just wastes quota and pushes transient requests into rate-limit
+    territory, which manifests downstream as HTML error pages that the
+    XML parser chokes on ("mismatched tag: line 9, column 2").
     """
     for attempt in range(2):
         try:
@@ -590,6 +598,12 @@ def _fetch_series(fred, series_id: str, start: str = "2016-01-01") -> dict | Non
                     result["trend_6m"] = round((recent_avg - prior_avg) / abs(prior_avg) * 100, 1)
             return result
         except Exception as e:
+            msg = str(e)
+            # Permanent failure — series was renamed/discontinued on FRED.
+            # Don't retry; just log once and skip so we don't waste quota.
+            if "does not exist" in msg:
+                logger.warning(f"Skipping {series_id}: series not on FRED (discontinued/renamed)")
+                return None
             if attempt == 0:
                 time.sleep(1.5)
                 continue
@@ -789,9 +803,11 @@ def get_all_state_data(api_key: str | None) -> dict:
             "active_listings": f"ACTLISCOU{suffix}",
             "days_on_market": f"MEDDAYONMAR{suffix}",
             "new_listings": f"NEWLISCOU{suffix}",
-            "pending_ratio": f"PENRAT{suffix}",
+            # PENRAT{state} and MEDSFHP{state} were discontinued by FRED.
+            # Requesting them returned 400s that, with the previous retry
+            # logic, burned ~22 requests of quota per batch and pushed the
+            # remaining live requests into rate-limited territory.
             "price_reduced_count": f"PRIREDCOU{suffix}",
-            "median_sale_price": f"MEDSFHP{suffix}",
             "median_income": f"MEHOINUS{suffix}A672N",
             # Realtor.com publishes $/sqft at the state level too; not all state
             # suffixes have it on FRED, but the parallel fetcher silently drops
