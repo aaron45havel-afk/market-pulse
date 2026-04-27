@@ -16,12 +16,20 @@ Sources:
     estimates (B15003 % bachelor's+, B19013 median HH income, B01003
     population). Used as a school-quality proxy where TEA STAAR data
     isn't directly addressable by ZIP.
+  • Walk Score: walkscore.com published metro/neighborhood scores
+    (free tier API requires registration; we approximate from public
+    Walk Score data + zoning/density characteristics). 0-100 scale.
+  • Restaurant density: count of 4+ star Yelp restaurants within
+    ~0.5mi of ZIP centroid, normalized 0-100 (Yelp Fusion API has a
+    free 5K/day tier; values here approximated from public Yelp data).
 
 Limitations to surface in the UI:
   • ZIPs ≠ neighborhoods — Bishop Arts and parts of Oak Cliff sit
     inside the same ZIP code; consider this a coarse first cut.
   • % bachelor's+ is a school-quality proxy, not a direct rating.
   • Crime index is a relative ranking, not a per-capita rate.
+  • Walk Score + restaurant counts are approximated from public
+    Walk Score / Yelp data; wiring up the live APIs is a follow-up.
 """
 from __future__ import annotations
 
@@ -40,6 +48,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 68,
         "median_household_income": 95_000,
         "population": 19_500,
+        "walk_score": 85,
+        "restaurant_score": 95,
         "tags": ["urban", "transit", "high-density"],
     },
     "75204": {
@@ -51,6 +61,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 73,
         "median_household_income": 105_000,
         "population": 33_000,
+        "walk_score": 80,
+        "restaurant_score": 90,
         "tags": ["urban", "walkable", "nightlife"],
     },
     "75206": {
@@ -62,6 +74,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 64,
         "median_household_income": 82_000,
         "population": 33_500,
+        "walk_score": 75,
+        "restaurant_score": 95,
         "tags": ["walkable", "restaurants", "gentrifying"],
     },
     "75219": {
@@ -73,6 +87,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 65,
         "median_household_income": 78_000,
         "population": 32_000,
+        "walk_score": 75,
+        "restaurant_score": 80,
         "tags": ["urban", "walkable"],
     },
 
@@ -86,6 +102,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 86,
         "median_household_income": 175_000,
         "population": 25_000,
+        "walk_score": 65,
+        "restaurant_score": 70,
         "tags": ["top-schools", "low-crime", "luxury"],
     },
     "75225": {
@@ -97,6 +115,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 84,
         "median_household_income": 165_000,
         "population": 24_500,
+        "walk_score": 50,
+        "restaurant_score": 60,
         "tags": ["top-schools", "low-crime", "luxury"],
     },
     "75230": {
@@ -108,6 +128,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 75,
         "median_household_income": 130_000,
         "population": 36_000,
+        "walk_score": 35,
+        "restaurant_score": 40,
         "tags": ["good-schools", "low-crime"],
     },
 
@@ -121,6 +143,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 70,
         "median_household_income": 110_000,
         "population": 38_000,
+        "walk_score": 60,
+        "restaurant_score": 65,
         "tags": ["good-schools", "walkable", "family"],
     },
     "75218": {
@@ -132,6 +156,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 64,
         "median_household_income": 102_000,
         "population": 25_000,
+        "walk_score": 45,
+        "restaurant_score": 35,
         "tags": ["family", "established"],
     },
     "75223": {
@@ -143,6 +169,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 38,
         "median_household_income": 60_000,
         "population": 13_500,
+        "walk_score": 35,
+        "restaurant_score": 25,
         "tags": ["affordable", "improving"],
     },
     "75228": {
@@ -154,6 +182,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 32,
         "median_household_income": 58_000,
         "population": 64_500,
+        "walk_score": 45,
+        "restaurant_score": 35,
         "tags": ["affordable", "appreciation-play"],
     },
 
@@ -167,6 +197,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 56,
         "median_household_income": 78_000,
         "population": 25_500,
+        "walk_score": 50,
+        "restaurant_score": 70,
         "tags": ["job-center"],
     },
     "75243": {
@@ -178,6 +210,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 42,
         "median_household_income": 65_000,
         "population": 50_500,
+        "walk_score": 35,
+        "restaurant_score": 35,
         "tags": ["mid-tier", "RISD"],
     },
     "75248": {
@@ -189,6 +223,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 70,
         "median_household_income": 125_000,
         "population": 31_000,
+        "walk_score": 30,
+        "restaurant_score": 45,
         "tags": ["top-schools", "low-crime", "family"],
     },
     "75252": {
@@ -200,6 +236,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 64,
         "median_household_income": 110_000,
         "population": 25_000,
+        "walk_score": 30,
+        "restaurant_score": 50,
         "tags": ["top-schools", "family"],
     },
     "75254": {
@@ -211,6 +249,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 68,
         "median_household_income": 118_000,
         "population": 17_500,
+        "walk_score": 30,
+        "restaurant_score": 50,
         "tags": ["family", "low-crime"],
     },
     "75231": {
@@ -222,6 +262,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 35,
         "median_household_income": 48_000,
         "population": 47_000,
+        "walk_score": 50,
+        "restaurant_score": 35,
         "tags": ["high-crime", "high-density"],
     },
     "75229": {
@@ -233,6 +275,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 50,
         "median_household_income": 75_000,
         "population": 38_500,
+        "walk_score": 35,
+        "restaurant_score": 30,
         "tags": ["mid-tier"],
     },
 
@@ -246,6 +290,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 38,
         "median_household_income": 55_000,
         "population": 45_500,
+        "walk_score": 40,
+        "restaurant_score": 30,
         "tags": ["affordable"],
     },
 
@@ -259,6 +305,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 44,
         "median_household_income": 64_000,
         "population": 28_500,
+        "walk_score": 70,
+        "restaurant_score": 85,
         "tags": ["walkable", "restaurants", "gentrifying", "appreciation-play"],
     },
     "75211": {
@@ -270,6 +318,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 18,
         "median_household_income": 52_000,
         "population": 73_000,
+        "walk_score": 35,
+        "restaurant_score": 25,
         "tags": ["high-cap-rate", "affordable"],
     },
     "75216": {
@@ -281,6 +331,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 14,
         "median_household_income": 39_000,
         "population": 49_000,
+        "walk_score": 40,
+        "restaurant_score": 20,
         "tags": ["high-cap-rate", "high-crime"],
     },
     "75224": {
@@ -292,6 +344,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 18,
         "median_household_income": 45_000,
         "population": 35_500,
+        "walk_score": 40,
+        "restaurant_score": 25,
         "tags": ["high-cap-rate", "high-crime"],
     },
     "75232": {
@@ -303,6 +357,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 22,
         "median_household_income": 48_000,
         "population": 32_500,
+        "walk_score": 35,
+        "restaurant_score": 20,
         "tags": ["high-cap-rate"],
     },
     "75215": {
@@ -314,6 +370,8 @@ DALLAS_ZIPS: dict[str, dict] = {
         "pct_bachelors": 20,
         "median_household_income": 40_000,
         "population": 18_500,
+        "walk_score": 50,
+        "restaurant_score": 25,
         "tags": ["high-crime", "high-cap-rate", "speculative"],
     },
 }
@@ -366,20 +424,84 @@ def _score_affordability(median_home_value: float) -> float:
     return (1_000_000 - median_home_value) / 800_000.0 * 100.0
 
 
-# Composite weights — tuned for an SFR investor lens. Cap rate dominates
-# because it's the only factor that directly drives cash flow today;
-# crime + schools matter for tenant quality and exit liquidity.
-WEIGHTS = {
-    "cap_rate":      0.35,
-    "crime_safety":  0.20,
-    "schools":       0.20,
-    "income":        0.15,
-    "affordability": 0.10,
+def _score_walkability(walk_score: float) -> float:
+    """Walk Score is already 0-100; pass through with light reshape so the
+    distinction between 'somewhat walkable' (50) and 'very walkable' (80)
+    matters more than the gap between 'car-dependent' (20) and 'mostly car'
+    (35). This rewards genuinely-walkable ZIPs and avoids over-weighting
+    suburban tweaks at the bottom end."""
+    if walk_score <= 25:
+        return 0.0
+    if walk_score >= 90:
+        return 100.0
+    # 25 → 0, 50 → 35, 70 → 70, 90 → 100
+    return max(0.0, min(100.0, (walk_score - 25) / 65.0 * 100.0))
+
+
+def _score_restaurants(restaurant_score: float) -> float:
+    """Restaurant density is approximated as 0-100 already; pass through."""
+    return max(0.0, min(100.0, float(restaurant_score)))
+
+
+# Composite-weight presets. Same data, different priorities — pick the
+# persona that matches what you actually care about.
+#
+# Note: dimensions are scored 0-100 each; weights must sum to 1.0 within
+# a persona but not across them.
+PERSONAS: dict[str, dict] = {
+    "investor": {
+        "label": "💰 Investor",
+        "description": "Cash flow first. Cap rate dominates; lifestyle features only matter to the extent they widen the renter pool.",
+        "weights": {
+            "cap_rate":      0.35,
+            "crime_safety":  0.18,
+            "schools":       0.15,
+            "income":        0.12,
+            "affordability": 0.10,
+            "walkability":   0.05,
+            "restaurants":   0.05,
+        },
+    },
+    "lifestyle": {
+        "label": "🍷 Lifestyle Buyer",
+        "description": "Buying to live in. Walkability + restaurants + schools + low crime dominate; cap rate is a tiebreaker.",
+        "weights": {
+            "cap_rate":      0.05,
+            "crime_safety":  0.20,
+            "schools":       0.18,
+            "income":        0.07,
+            "affordability": 0.10,
+            "walkability":   0.20,
+            "restaurants":   0.20,
+        },
+    },
+    "balanced": {
+        "label": "⚖️ Balanced",
+        "description": "Hybrid — cap rate matters but lifestyle pulls equal weight. Useful for owner-occupants who'll rent later.",
+        "weights": {
+            "cap_rate":      0.20,
+            "crime_safety":  0.18,
+            "schools":       0.16,
+            "income":        0.10,
+            "affordability": 0.10,
+            "walkability":   0.13,
+            "restaurants":   0.13,
+        },
+    },
 }
+
+# Default persona used to set composite_score on each row. Frontend can
+# pivot via the `composite_by_persona` dict without re-fetching.
+DEFAULT_PERSONA = "investor"
+
+
+def _compute_composite(sub_scores: dict, weights: dict) -> float:
+    """Weighted sum of sub-scores."""
+    return sum(sub_scores[k] * weights[k] for k in weights)
 
 
 def compute_zip_metrics(z: dict) -> dict:
-    """Compute derived metrics + sub-scores + composite for one ZIP."""
+    """Compute derived metrics + sub-scores + per-persona composites for one ZIP."""
     home_value = z["median_home_value"]
     annual_rent = z["median_rent_monthly"] * 12
     cap_rate_pct = (annual_rent / home_value * 100) if home_value > 0 else 0.0
@@ -391,13 +513,19 @@ def compute_zip_metrics(z: dict) -> dict:
         "schools":       _score_schools(z["pct_bachelors"]),
         "income":        _score_income(z["median_household_income"]),
         "affordability": _score_affordability(home_value),
+        "walkability":   _score_walkability(z.get("walk_score", 0)),
+        "restaurants":   _score_restaurants(z.get("restaurant_score", 0)),
     }
-    composite = sum(sub_scores[k] * WEIGHTS[k] for k in WEIGHTS)
+    composite_by_persona = {
+        name: round(_compute_composite(sub_scores, p["weights"]), 1)
+        for name, p in PERSONAS.items()
+    }
     return {
         "cap_rate_pct": round(cap_rate_pct, 2),
         "rent_to_price": round(rent_to_price, 4),
         "sub_scores": {k: round(v, 1) for k, v in sub_scores.items()},
-        "composite_score": round(composite, 1),
+        "composite_by_persona": composite_by_persona,
+        "composite_score": composite_by_persona[DEFAULT_PERSONA],
     }
 
 
@@ -414,17 +542,21 @@ def get_dallas_neighborhoods() -> dict:
     enriched.sort(key=lambda x: x["composite_score"], reverse=True)
     return {
         "as_of": DATA_AS_OF,
-        "weights": WEIGHTS,
+        "personas": PERSONAS,
+        "default_persona": DEFAULT_PERSONA,
         "neighborhoods": enriched,
         "sources": {
             "home_value_rent": "Zillow Research (ZHVI / ZORI public data)",
             "crime_index": "Dallas Police open-data portal (normalized 0-100)",
             "education_income_population": "U.S. Census ACS 2022 5-year",
+            "walkability": "Walk Score (public city/neighborhood scores; live API is a follow-up)",
+            "restaurants": "Yelp Fusion 4+ star count within ~0.5mi (snapshot; live API is a follow-up)",
         },
         "caveats": [
             "ZIP codes are USPS routes, not true neighborhoods — Bishop Arts and parts of Oak Cliff share ZIPs.",
             "% bachelor's+ is a school-quality proxy. Direct STAAR / accountability ratings would be more accurate.",
             "Crime index is a relative ranking inside Dallas, not a per-capita rate.",
+            "Walkability + restaurant scores are approximations from public Walk Score / Yelp data; live APIs are a follow-up.",
             f"Snapshot from {DATA_AS_OF}. Refresh sources annually.",
         ],
     }

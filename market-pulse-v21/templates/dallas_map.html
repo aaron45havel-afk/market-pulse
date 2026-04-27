@@ -45,6 +45,12 @@
 
 <div class="card" style="margin-bottom:1rem;">
     <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">
+        Persona — re-weights the composite for what <em>you</em> actually care about
+    </div>
+    <div class="factor-pills" id="personaPills"></div>
+    <div id="personaDescription" style="font-size:0.75rem; color:var(--text-dim); margin-top:0.4rem; font-style:italic;"></div>
+
+    <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-top:0.85rem; margin-bottom:0.5rem;">
         Color shading by
     </div>
     <div class="factor-pills" id="factorPills">
@@ -52,6 +58,8 @@
         <button class="factor-pill" data-factor="cap_rate">Cap Rate</button>
         <button class="factor-pill" data-factor="crime_safety">Crime Safety</button>
         <button class="factor-pill" data-factor="schools">Schools (proxy)</button>
+        <button class="factor-pill" data-factor="walkability">Walkability</button>
+        <button class="factor-pill" data-factor="restaurants">Restaurants</button>
         <button class="factor-pill" data-factor="income">Income</button>
         <button class="factor-pill" data-factor="affordability">Affordability</button>
     </div>
@@ -83,14 +91,7 @@
 
         <div class="card" style="margin-top:1rem;">
             <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Methodology</div>
-            <div style="font-size:0.78rem; color:var(--text-dim); margin-top:0.5rem; line-height:1.5;">
-                Composite =
-                <strong>35%</strong> cap rate (rent/value) +
-                <strong>20%</strong> crime safety +
-                <strong>20%</strong> schools (% bachelor's+ proxy) +
-                <strong>15%</strong> income (tenant-pool quality) +
-                <strong>10%</strong> affordability (lower entry price).
-            </div>
+            <div id="methodology" style="font-size:0.78rem; color:var(--text-dim); margin-top:0.5rem; line-height:1.5;"></div>
             <div id="caveats" style="font-size:0.72rem; color:var(--text-dim); margin-top:0.6rem; line-height:1.4;"></div>
         </div>
     </div>
@@ -112,6 +113,8 @@
                     <th data-sort="median_home_value">Home Value</th>
                     <th data-sort="median_rent_monthly">Rent</th>
                     <th data-sort="crime_index">Crime Idx</th>
+                    <th data-sort="walk_score">Walk</th>
+                    <th data-sort="restaurant_score">Rest.</th>
                     <th data-sort="pct_bachelors">% Bach+</th>
                     <th data-sort="median_household_income">Median HH Inc</th>
                 </tr>
@@ -127,22 +130,32 @@
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 let neighborhoods = [];
+let personas = {};
 let currentFactor = 'composite_score';
+let currentPersona = 'investor';
 let map, markerLayer;
 const FACTOR_LABELS = {
     composite_score: 'Composite',
     cap_rate: 'Cap Rate',
     crime_safety: 'Crime Safety',
     schools: 'Schools (proxy)',
+    walkability: 'Walkability',
+    restaurants: 'Restaurants',
     income: 'Income',
     affordability: 'Affordability',
 };
 
 function fmtMoney(v) { return '$' + Math.round(v).toLocaleString('en-US'); }
 
-// Sub-score lookup — composite is on the row directly, sub-scores nested.
+// Composite for the selected persona, falling back to the default
+// composite_score field if the per-persona map isn't present.
+function compositeFor(n) {
+    return (n.composite_by_persona && n.composite_by_persona[currentPersona]) ?? n.composite_score;
+}
+
+// Sub-score lookup — composite is per-persona, sub-scores are persona-agnostic.
 function valueFor(n, factor) {
-    if (factor === 'composite_score') return n.composite_score;
+    if (factor === 'composite_score') return compositeFor(n);
     return (n.sub_scores || {})[factor] || 0;
 }
 
@@ -206,6 +219,9 @@ function renderTopList() {
 
 function showZipPanel(n) {
     const body = document.getElementById('zipPanelBody');
+    const composite = compositeFor(n);
+    const w = (personas[currentPersona] && personas[currentPersona].weights) || {};
+    const pct = (k) => w[k] != null ? `${Math.round(w[k] * 100)}%` : '';
     const subBar = (label, score) =>
         `<div class="panel-row" style="display:block; padding:0.35rem 0;">
             <div style="display:flex; justify-content:space-between;"><span class="label">${label}</span><span>${score.toFixed(1)}</span></div>
@@ -218,7 +234,10 @@ function showZipPanel(n) {
                 <div style="font-size:1.1rem; font-weight:700;">${n.zip}</div>
                 <div style="font-size:0.85rem; color:var(--text-dim);">${n.name}</div>
             </div>
-            <div style="font-size:1.5rem; font-weight:700; color:${scoreColor(n.composite_score)};">${n.composite_score.toFixed(1)}</div>
+            <div style="text-align:right;">
+                <div style="font-size:1.5rem; font-weight:700; color:${scoreColor(composite)};">${composite.toFixed(1)}</div>
+                <div style="font-size:0.7rem; color:var(--text-dim);">${(personas[currentPersona] && personas[currentPersona].label) || currentPersona}</div>
+            </div>
         </div>
         <div style="margin-top:0.4rem;">${tags}</div>
         <div class="panel-section">
@@ -228,15 +247,19 @@ function showZipPanel(n) {
             <div class="panel-row"><span class="label">Median HH income</span><span>${fmtMoney(n.median_household_income)}</span></div>
             <div class="panel-row"><span class="label">% Bachelor's+</span><span>${n.pct_bachelors}%</span></div>
             <div class="panel-row"><span class="label">Crime index (0-100)</span><span>${n.crime_index}</span></div>
+            <div class="panel-row"><span class="label">Walk Score</span><span>${n.walk_score ?? '—'}</span></div>
+            <div class="panel-row"><span class="label">Restaurants (0-100)</span><span>${n.restaurant_score ?? '—'}</span></div>
             <div class="panel-row"><span class="label">Population</span><span>${n.population.toLocaleString()}</span></div>
         </div>
         <div class="panel-section">
-            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Sub-scores</div>
-            ${subBar('Cap rate (35%)', n.sub_scores.cap_rate)}
-            ${subBar('Crime safety (20%)', n.sub_scores.crime_safety)}
-            ${subBar('Schools (20%)', n.sub_scores.schools)}
-            ${subBar('Income (15%)', n.sub_scores.income)}
-            ${subBar('Affordability (10%)', n.sub_scores.affordability)}
+            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Sub-scores (weights for ${currentPersona})</div>
+            ${subBar(`Cap rate (${pct('cap_rate')})`, n.sub_scores.cap_rate)}
+            ${subBar(`Crime safety (${pct('crime_safety')})`, n.sub_scores.crime_safety)}
+            ${subBar(`Schools (${pct('schools')})`, n.sub_scores.schools)}
+            ${subBar(`Walkability (${pct('walkability')})`, n.sub_scores.walkability ?? 0)}
+            ${subBar(`Restaurants (${pct('restaurants')})`, n.sub_scores.restaurants ?? 0)}
+            ${subBar(`Income (${pct('income')})`, n.sub_scores.income)}
+            ${subBar(`Affordability (${pct('affordability')})`, n.sub_scores.affordability)}
         </div>`;
 }
 
@@ -244,16 +267,19 @@ function renderTable() {
     const tbody = document.getElementById('zipTableBody');
     tbody.innerHTML = '';
     neighborhoods.forEach(n => {
+        const composite = compositeFor(n);
         const tr = document.createElement('tr');
         tr.style.cursor = 'pointer';
         tr.innerHTML = `
             <td>${n.zip}</td>
             <td>${n.name}</td>
-            <td style="font-weight:700; color:${scoreColor(n.composite_score)};">${n.composite_score.toFixed(1)}</td>
+            <td style="font-weight:700; color:${scoreColor(composite)};">${composite.toFixed(1)}</td>
             <td>${n.cap_rate_pct.toFixed(2)}%</td>
             <td>${fmtMoney(n.median_home_value)}</td>
             <td>${fmtMoney(n.median_rent_monthly)}</td>
             <td>${n.crime_index}</td>
+            <td>${n.walk_score ?? '—'}</td>
+            <td>${n.restaurant_score ?? '—'}</td>
             <td>${n.pct_bachelors}%</td>
             <td>${fmtMoney(n.median_household_income)}</td>`;
         tr.addEventListener('click', () => {
@@ -268,8 +294,9 @@ let sortState = { key: 'composite_score', dir: 'desc' };
 function sortAndRenderTable(key) {
     if (sortState.key === key) sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
     else sortState = { key, dir: 'desc' };
+    const accessor = (row) => key === 'composite_score' ? compositeFor(row) : row[key];
     neighborhoods.sort((a, b) => {
-        const av = a[key], bv = b[key];
+        const av = accessor(a), bv = accessor(b);
         if (typeof av === 'string') return sortState.dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
         return sortState.dir === 'asc' ? av - bv : bv - av;
     });
@@ -278,6 +305,62 @@ function sortAndRenderTable(key) {
         th.classList.remove('sorted-asc', 'sorted-desc');
         if (th.dataset.sort === key) th.classList.add(sortState.dir === 'asc' ? 'sorted-asc' : 'sorted-desc');
     });
+}
+
+function renderPersonaPills() {
+    const container = document.getElementById('personaPills');
+    if (!container) return;
+    container.innerHTML = '';
+    Object.entries(personas).forEach(([key, p]) => {
+        const btn = document.createElement('button');
+        btn.className = 'factor-pill' + (key === currentPersona ? ' active' : '');
+        btn.dataset.persona = key;
+        btn.textContent = p.label || key;
+        btn.addEventListener('click', () => setPersona(key));
+        container.appendChild(btn);
+    });
+    updatePersonaDescription();
+}
+
+function updatePersonaDescription() {
+    const el = document.getElementById('personaDescription');
+    if (!el) return;
+    const p = personas[currentPersona];
+    el.textContent = p ? p.description : '';
+}
+
+function setPersona(key) {
+    if (!personas[key] || key === currentPersona) return;
+    currentPersona = key;
+    document.querySelectorAll('#personaPills .factor-pill').forEach(b => {
+        b.classList.toggle('active', b.dataset.persona === key);
+    });
+    updatePersonaDescription();
+    // Re-sort by composite when in default state, then re-render everything.
+    if (sortState.key === 'composite_score') {
+        neighborhoods.sort((a, b) => compositeFor(b) - compositeFor(a));
+    }
+    renderMap();
+    renderTopList();
+    renderTable();
+    renderMethodology();
+}
+
+function renderMethodology() {
+    const el = document.getElementById('methodology');
+    if (!el) return;
+    const p = personas[currentPersona];
+    if (!p) return;
+    const w = p.weights;
+    const fmt = (k, label) => `<strong>${Math.round(w[k] * 100)}%</strong> ${label}`;
+    el.innerHTML =
+        `Composite for <strong>${p.label}</strong> = ${fmt('cap_rate', 'cap rate')} + ` +
+        `${fmt('crime_safety', 'crime safety')} + ` +
+        `${fmt('schools', 'schools (proxy)')} + ` +
+        `${fmt('walkability', 'walkability')} + ` +
+        `${fmt('restaurants', 'restaurants')} + ` +
+        `${fmt('income', 'income')} + ` +
+        `${fmt('affordability', 'affordability')}.`;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -292,11 +375,16 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(r => r.json())
         .then(data => {
             neighborhoods = data.neighborhoods || [];
+            personas = data.personas || {};
+            currentPersona = data.default_persona || 'investor';
+
             document.getElementById('dataAsOf').textContent =
                 `Data as of ${data.as_of} · ${neighborhoods.length} ZIPs`;
             const caveatsEl = document.getElementById('caveats');
             caveatsEl.innerHTML = (data.caveats || []).map(c => `• ${c}`).join('<br>');
 
+            renderPersonaPills();
+            renderMethodology();
             renderMap();
             renderTopList();
             renderTable();
@@ -305,9 +393,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (neighborhoods.length) showZipPanel(neighborhoods[0]);
         });
 
-    document.querySelectorAll('.factor-pill').forEach(btn => {
+    // Factor pills (color shading) — scoped to the factor-pills row only,
+    // so persona pills above don't get pulled into this listener.
+    document.querySelectorAll('#factorPills .factor-pill').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.factor-pill').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#factorPills .factor-pill').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentFactor = btn.dataset.factor;
             renderMap();
