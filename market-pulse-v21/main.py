@@ -10,6 +10,7 @@ from data_providers import (
     get_all_state_data, get_county_data, get_national_data, STATES, COUNTIES
 )
 from sec_edgar import build_net_net_screener
+from dallas_neighborhoods import get_dallas_neighborhoods
 from database import (init_db, save_price, save_prices_bulk, get_all_prices, delete_price,
                       lock_portfolio, update_portfolio_prices, exit_holding,
                       close_portfolio, get_all_portfolios)
@@ -72,6 +73,18 @@ async def api_national():
 async def api_counties(state: str):
     state = state.upper()
     return JSONResponse(COUNTIES.get(state, {}))
+
+
+@app.get("/real-estate/dallas")
+async def dallas_map(request: Request):
+    """ZIP-level investor map for Dallas County."""
+    return templates.TemplateResponse("dallas_map.html", {"request": request})
+
+
+@app.get("/api/dallas-neighborhoods")
+async def api_dallas_neighborhoods():
+    """Dallas ZIP-level investor data + composite scores."""
+    return JSONResponse(get_dallas_neighborhoods())
 
 
 @app.get("/finance")
