@@ -54,10 +54,6 @@
         <option value="">— State Overview —</option>
     </select>
     <span id="dataSource" style="color:var(--text-dim); font-size:0.75rem;"></span>
-    <a id="dallasMapLink" href="/real-estate/dallas"
-       style="display:none; padding:0.4rem 0.85rem; border-radius:999px; background:var(--accent2); color:white; font-size:0.78rem; font-weight:600; text-decoration:none;">
-       🗺️ Dallas neighborhood map →
-    </a>
 </div>
 
 <div id="loading" class="loading">
@@ -685,24 +681,13 @@ document.querySelectorAll('.state-tab').forEach(tab => {
         currentState = tab.dataset.state;
         populateCounties(currentState);
         document.getElementById('countySelect').value = '';
-        updateDallasMapLink('');
         renderStateOverview(currentState);
     });
 });
 
-// Dallas neighborhood-map shortcut: only meaningful when the user is on
-// TX and either viewing the state overview or has Dallas County selected.
-function updateDallasMapLink(fips) {
-    const link = document.getElementById('dallasMapLink');
-    if (!link) return;
-    const isDallasContext = currentState === 'TX' && (fips === '' || fips === '48113');
-    link.style.display = isDallasContext ? 'inline-block' : 'none';
-}
-
 // County selector
 document.getElementById('countySelect').addEventListener('change', function() {
     const fips = this.value;
-    updateDallasMapLink(fips);
     if (!fips) {
         renderStateOverview(currentState);
     } else {
