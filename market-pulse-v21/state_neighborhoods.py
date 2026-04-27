@@ -263,6 +263,121 @@ PHOENIX_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# UT — Utah County (Provo / Orem / Silicon Slopes corridor, south of SLC)
+# ─────────────────────────────────────────────────────────────────────────────
+PROVO_ZIPS: dict[str, dict] = {
+    "84601": {
+        "name": "Provo Downtown / BYU adj",
+        "lat": 40.2338, "lng": -111.6585,
+        "median_home_value": 430_000, "median_rent_monthly": 1_800,
+        "crime_index": 38, "pct_bachelors": 65,
+        "median_household_income": 55_000, "population": 38_000,
+        "walk_score": 65, "restaurant_score": 60,
+        "tags": ["college", "rental-demand", "walkable"],
+    },
+    "84604": {
+        "name": "Provo N / Edgemont",
+        "lat": 40.2680, "lng": -111.6500,
+        "median_home_value": 580_000, "median_rent_monthly": 2_200,
+        "crime_index": 25, "pct_bachelors": 70,
+        "median_household_income": 80_000, "population": 32_000,
+        "walk_score": 45, "restaurant_score": 50,
+        "tags": ["family", "low-crime", "established"],
+    },
+    "84606": {
+        "name": "East Provo / Provost",
+        "lat": 40.2280, "lng": -111.6300,
+        "median_home_value": 480_000, "median_rent_monthly": 1_900,
+        "crime_index": 35, "pct_bachelors": 50,
+        "median_household_income": 65_000, "population": 26_000,
+        "walk_score": 50, "restaurant_score": 45,
+        "tags": ["established", "mid-tier"],
+    },
+    "84057": {
+        "name": "Orem",
+        "lat": 40.2840, "lng": -111.7000,
+        "median_home_value": 510_000, "median_rent_monthly": 2_000,
+        "crime_index": 30, "pct_bachelors": 45,
+        "median_household_income": 72_000, "population": 44_000,
+        "walk_score": 45, "restaurant_score": 55,
+        "tags": ["family", "mid-tier"],
+    },
+    "84058": {
+        "name": "Orem N / UVU",
+        "lat": 40.3060, "lng": -111.7050,
+        "median_home_value": 540_000, "median_rent_monthly": 2_000,
+        "crime_index": 28, "pct_bachelors": 50,
+        "median_household_income": 75_000, "population": 36_000,
+        "walk_score": 40, "restaurant_score": 50,
+        "tags": ["college", "family"],
+    },
+    "84097": {
+        "name": "N Orem / Lindon",
+        "lat": 40.3260, "lng": -111.7100,
+        "median_home_value": 620_000, "median_rent_monthly": 2_200,
+        "crime_index": 22, "pct_bachelors": 55,
+        "median_household_income": 92_000, "population": 24_000,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["family", "low-crime"],
+    },
+    "84003": {
+        "name": "American Fork",
+        "lat": 40.3770, "lng": -111.7950,
+        "median_home_value": 580_000, "median_rent_monthly": 2_200,
+        "crime_index": 25, "pct_bachelors": 50,
+        "median_household_income": 98_000, "population": 41_000,
+        "walk_score": 30, "restaurant_score": 40,
+        "tags": ["family", "growth"],
+    },
+    "84043": {
+        "name": "Lehi / Silicon Slopes",
+        "lat": 40.3915, "lng": -111.8505,
+        "median_home_value": 720_000, "median_rent_monthly": 2_500,
+        "crime_index": 18, "pct_bachelors": 60,
+        "median_household_income": 130_000, "population": 90_000,
+        "walk_score": 25, "restaurant_score": 50,
+        "tags": ["tech", "family", "low-crime", "growth"],
+    },
+    "84005": {
+        "name": "Eagle Mountain / Saratoga Springs",
+        "lat": 40.3140, "lng": -111.9000,
+        "median_home_value": 560_000, "median_rent_monthly": 2_300,
+        "crime_index": 18, "pct_bachelors": 45,
+        "median_household_income": 115_000, "population": 56_000,
+        "walk_score": 15, "restaurant_score": 25,
+        "tags": ["family", "growth", "newer"],
+    },
+    "84062": {
+        "name": "Pleasant Grove",
+        "lat": 40.3640, "lng": -111.7370,
+        "median_home_value": 560_000, "median_rent_monthly": 2_200,
+        "crime_index": 22, "pct_bachelors": 48,
+        "median_household_income": 98_000, "population": 41_000,
+        "walk_score": 30, "restaurant_score": 40,
+        "tags": ["family", "established", "low-crime"],
+    },
+    "84660": {
+        "name": "Spanish Fork",
+        "lat": 40.1150, "lng": -111.6550,
+        "median_home_value": 480_000, "median_rent_monthly": 2_000,
+        "crime_index": 25, "pct_bachelors": 38,
+        "median_household_income": 90_000, "population": 47_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["family", "affordable"],
+    },
+    "84663": {
+        "name": "Springville",
+        "lat": 40.1648, "lng": -111.6107,
+        "median_home_value": 510_000, "median_rent_monthly": 2_100,
+        "crime_index": 25, "pct_bachelors": 40,
+        "median_household_income": 88_000, "population": 36_000,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["family", "established"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Per-metro registry. Each entry maps a state code to a metro deep-dive that
 # the /real-estate/{state}/map route can render. TX uses the existing Dallas
 # County dataset from dallas_neighborhoods.py so weights/data stay in one
@@ -286,6 +401,16 @@ STATE_METROS: dict[str, dict] = {
         "extra_caveats": [
             "LA ZIPs span huge populations — 90011 alone has ~110K residents and is heterogeneous.",
             "Beach ZIPs (90291, 90402) trade at a beach premium that distorts cap-rate scoring vs. hill/inland ZIPs.",
+        ],
+    },
+    "UT": {
+        "metro_label": "Utah County (Provo / Silicon Slopes)",
+        "subtitle": "ZIP-level scores for the Utah Valley — Provo, Orem, and the Lehi tech corridor south of Salt Lake.",
+        "map_center": {"lat": 40.30, "lng": -111.75, "zoom": 10},
+        "zips": PROVO_ZIPS,
+        "extra_caveats": [
+            "84601 / 84602 are BYU-dominated — median income reads low because the population is mostly students.",
+            "84043 (Lehi) is huge by Utah standards (~90K) and absorbs most of the 'Silicon Slopes' tech wage premium.",
         ],
     },
     "AZ": {
