@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+{% block title %}{{ state_name }} Neighborhood Map — Market Pulse{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+    .map-wrap { display: grid; grid-template-columns: 1fr 380px; gap: 1rem; }
+    @media (max-width: 1100px) { .map-wrap { grid-template-columns: 1fr; } }
+    #stateMap { height: 620px; border-radius: 12px; border: 1px solid var(--border); background: #0b0d14; }
+    .factor-pills { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .factor-pill { padding: 0.4rem 0.85rem; border-radius: 999px; background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); font-size: 0.78rem; cursor: pointer; transition: all 0.15s; }
+    .factor-pill:hover { color: var(--text); border-color: var(--accent2); }
+    .factor-pill.active { background: var(--accent2); color: white; border-color: var(--accent2); }
+    .legend { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-dim); }
+    .legend-bar { display: inline-block; width: 220px; height: 10px; border-radius: 5px; background: linear-gradient(to right, #ef4444, #eab308, #22c55e); }
+    .panel-section { padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
+    .panel-section:last-child { border-bottom: none; }
+    .panel-row { display: flex; justify-content: space-between; padding: 0.25rem 0; font-size: 0.85rem; }
+    .panel-row .label { color: var(--text-dim); }
+    .subscore-bar { width: 100%; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; margin-top: 0.2rem; }
+    .subscore-bar > div { height: 100%; border-radius: 3px; }
+    .leaflet-popup-content-wrapper { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    .leaflet-popup-tip { background: var(--surface); }
+    .leaflet-popup-content { margin: 0.6rem 0.8rem; font-size: 0.85rem; }
+    .leaflet-container { font-family: inherit; }
+    .leaflet-tile-pane { filter: brightness(0.65) saturate(0.8); }
+    .top-list { list-style: none; padding: 0; margin: 0.5rem 0; }
+    .top-list li { padding: 0.4rem 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 0.82rem; }
+    .top-list li:last-child { border: none; }
+    .top-list .rank { color: var(--text-dim); width: 1.5rem; }
+    .top-list .name { flex: 1; }
+    .top-list .score { font-weight: 700; }
+    .tag-chip { display: inline-block; font-size: 0.65rem; padding: 0.1rem 0.5rem; border-radius: 999px; background: var(--surface2); color: var(--text-dim); margin: 0.1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>{{ data.metro_label }} Neighborhood Investor Map</h1>
+<p class="subtitle">
+    {{ data.subtitle }}
+    <a href="/real-estate" style="margin-left:0.5rem;">← back to state view</a>
+</p>
+
+<div class="card" style="margin-bottom:1rem;">
+    <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">
+        Persona — re-weights the composite for what <em>you</em> actually care about
+    </div>
+    <div class="factor-pills" id="personaPills"></div>
+    <div id="personaDescription" style="font-size:0.75rem; color:var(--text-dim); margin-top:0.4rem; font-style:italic;"></div>
+
+    <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-top:0.85rem; margin-bottom:0.5rem;">
+        Color shading by
+    </div>
+    <div class="factor-pills" id="factorPills">
+        <button class="factor-pill active" data-factor="composite_score">Composite</button>
+        <button class="factor-pill" data-factor="cap_rate">Cap Rate</button>
+        <button class="factor-pill" data-factor="crime_safety">Crime Safety</button>
+        <button class="factor-pill" data-factor="schools">Schools (proxy)</button>
+        <button class="factor-pill" data-factor="walkability">Walkability</button>
+        <button class="factor-pill" data-factor="restaurants">Restaurants</button>
+        <button class="factor-pill" data-factor="income">Income</button>
+        <button class="factor-pill" data-factor="affordability">Affordability</button>
+    </div>
+    <div class="legend">
+        <span>Worse</span>
+        <span class="legend-bar"></span>
+        <span>Better</span>
+        <span style="margin-left:1rem;">· Marker size = population</span>
+    </div>
+</div>
+
+<div class="map-wrap">
+    <div>
+        <div id="stateMap"></div>
+    </div>
+
+    <div>
+        <div class="card" id="zipPanel">
+            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Selected ZIP</div>
+            <div id="zipPanelBody" style="margin-top:0.5rem;">
+                <div style="color:var(--text-dim); font-size:0.85rem;">Click any ZIP marker on the map to see the breakdown.</div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:1rem;">
+            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Top 8 by Current Factor</div>
+            <ol class="top-list" id="topList"></ol>
+        </div>
+
+        <div class="card" style="margin-top:1rem;">
+            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Methodology</div>
+            <div id="methodology" style="font-size:0.78rem; color:var(--text-dim); margin-top:0.5rem; line-height:1.5;"></div>
+            <div id="caveats" style="font-size:0.72rem; color:var(--text-dim); margin-top:0.6rem; line-height:1.4;"></div>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top:1rem;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:0.5rem;">
+        <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Full ZIP table — click a row to fly to it</div>
+        <div id="dataAsOf" style="font-size:0.7rem; color:var(--text-dim);"></div>
+    </div>
+    <div style="overflow-x:auto;">
+        <table id="zipTable">
+            <thead>
+                <tr>
+                    <th data-sort="zip">ZIP</th>
+                    <th data-sort="name">Neighborhood</th>
+                    <th data-sort="composite_score">Score</th>
+                    <th data-sort="cap_rate_pct">Cap Rate</th>
+                    <th data-sort="median_home_value">Home Value</th>
+                    <th data-sort="median_rent_monthly">Rent</th>
+                    <th data-sort="crime_index">Crime Idx</th>
+                    <th data-sort="walk_score">Walk</th>
+                    <th data-sort="restaurant_score">Rest.</th>
+                    <th data-sort="pct_bachelors">% Bach+</th>
+                    <th data-sort="median_household_income">Median HH Inc</th>
+                </tr>
+            </thead>
+            <tbody id="zipTableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script id="state-map-data" type="application/json">{{ data | tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+// Data is embedded server-side — no fetch, no API surface to error on.
+const PAGE_DATA = JSON.parse(document.getElementById('state-map-data').textContent);
+
+let neighborhoods = PAGE_DATA.neighborhoods || [];
+let personas = PAGE_DATA.personas || {};
+let currentFactor = 'composite_score';
+let currentPersona = PAGE_DATA.default_persona || 'investor';
+let map, markerLayer;
+const FACTOR_LABELS = {
+    composite_score: 'Composite',
+    cap_rate: 'Cap Rate',
+    crime_safety: 'Crime Safety',
+    schools: 'Schools (proxy)',
+    walkability: 'Walkability',
+    restaurants: 'Restaurants',
+    income: 'Income',
+    affordability: 'Affordability',
+};
+
+function fmtMoney(v) { return '$' + Math.round(v).toLocaleString('en-US'); }
+
+function compositeFor(n) {
+    return (n.composite_by_persona && n.composite_by_persona[currentPersona]) ?? n.composite_score;
+}
+
+function valueFor(n, factor) {
+    if (factor === 'composite_score') return compositeFor(n);
+    return (n.sub_scores || {})[factor] || 0;
+}
+
+function scoreColor(score) {
+    const s = Math.max(0, Math.min(100, score));
+    if (s < 50) {
+        const t = s / 50;
+        const r = 239, g = Math.round(68 + (179 - 68) * t), b = Math.round(68 + (8 - 68) * t);
+        return `rgb(${r},${g},${b})`;
+    }
+    const t = (s - 50) / 50;
+    const r = Math.round(234 + (34 - 234) * t), g = Math.round(179 + (197 - 179) * t), b = Math.round(8 + (94 - 8) * t);
+    return `rgb(${r},${g},${b})`;
+}
+
+function radiusFor(pop) {
+    return Math.max(8, Math.min(28, Math.sqrt(pop) / 18));
+}
+
+function renderMap() {
+    if (markerLayer) markerLayer.clearLayers();
+    markerLayer = L.layerGroup().addTo(map);
+    neighborhoods.forEach(n => {
+        const v = valueFor(n, currentFactor);
+        const m = L.circleMarker([n.lat, n.lng], {
+            radius: radiusFor(n.population),
+            fillColor: scoreColor(v),
+            color: '#0b0d14',
+            weight: 1.5,
+            fillOpacity: 0.85,
+        }).addTo(markerLayer);
+        m.bindTooltip(
+            `<strong>${n.zip}</strong> ${n.name}<br>` +
+            `${FACTOR_LABELS[currentFactor]}: <strong>${v.toFixed(1)}</strong> · Composite: ${n.composite_score.toFixed(1)}<br>` +
+            `Cap rate ${n.cap_rate_pct.toFixed(2)}%`,
+            { sticky: true }
+        );
+        m.on('click', () => showZipPanel(n));
+    });
+}
+
+function renderTopList() {
+    const sorted = [...neighborhoods].sort((a, b) => valueFor(b, currentFactor) - valueFor(a, currentFactor));
+    const list = document.getElementById('topList');
+    list.innerHTML = '';
+    sorted.slice(0, 8).forEach((n, i) => {
+        const v = valueFor(n, currentFactor);
+        const li = document.createElement('li');
+        li.innerHTML = `<span class="rank">${i + 1}</span>` +
+                       `<span class="name">${n.zip} ${n.name}</span>` +
+                       `<span class="score" style="color:${scoreColor(v)};">${v.toFixed(1)}</span>`;
+        li.style.cursor = 'pointer';
+        li.addEventListener('click', () => {
+            map.flyTo([n.lat, n.lng], 13, { duration: 0.6 });
+            showZipPanel(n);
+        });
+        list.appendChild(li);
+    });
+}
+
+function showZipPanel(n) {
+    const body = document.getElementById('zipPanelBody');
+    const composite = compositeFor(n);
+    const w = (personas[currentPersona] && personas[currentPersona].weights) || {};
+    const pct = (k) => w[k] != null ? `${Math.round(w[k] * 100)}%` : '';
+    const subBar = (label, score) =>
+        `<div class="panel-row" style="display:block; padding:0.35rem 0;">
+            <div style="display:flex; justify-content:space-between;"><span class="label">${label}</span><span>${score.toFixed(1)}</span></div>
+            <div class="subscore-bar"><div style="width:${score}%; background:${scoreColor(score)};"></div></div>
+        </div>`;
+    const tags = (n.tags || []).map(t => `<span class="tag-chip">${t}</span>`).join('');
+    body.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem;">
+            <div>
+                <div style="font-size:1.1rem; font-weight:700;">${n.zip}</div>
+                <div style="font-size:0.85rem; color:var(--text-dim);">${n.name}</div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-size:1.5rem; font-weight:700; color:${scoreColor(composite)};">${composite.toFixed(1)}</div>
+                <div style="font-size:0.7rem; color:var(--text-dim);">${(personas[currentPersona] && personas[currentPersona].label) || currentPersona}</div>
+            </div>
+        </div>
+        <div style="margin-top:0.4rem;">${tags}</div>
+        <div class="panel-section">
+            <div class="panel-row"><span class="label">Median home value</span><span>${fmtMoney(n.median_home_value)}</span></div>
+            <div class="panel-row"><span class="label">Median rent /mo</span><span>${fmtMoney(n.median_rent_monthly)}</span></div>
+            <div class="panel-row"><span class="label">Cap rate (gross)</span><span style="font-weight:700;">${n.cap_rate_pct.toFixed(2)}%</span></div>
+            <div class="panel-row"><span class="label">Median HH income</span><span>${fmtMoney(n.median_household_income)}</span></div>
+            <div class="panel-row"><span class="label">% Bachelor's+</span><span>${n.pct_bachelors}%</span></div>
+            <div class="panel-row"><span class="label">Crime index (0-100)</span><span>${n.crime_index}</span></div>
+            <div class="panel-row"><span class="label">Walk Score</span><span>${n.walk_score ?? '—'}</span></div>
+            <div class="panel-row"><span class="label">Restaurants (0-100)</span><span>${n.restaurant_score ?? '—'}</span></div>
+            <div class="panel-row"><span class="label">Population</span><span>${n.population.toLocaleString()}</span></div>
+        </div>
+        <div class="panel-section">
+            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Sub-scores (weights for ${currentPersona})</div>
+            ${subBar(`Cap rate (${pct('cap_rate')})`, n.sub_scores.cap_rate)}
+            ${subBar(`Crime safety (${pct('crime_safety')})`, n.sub_scores.crime_safety)}
+            ${subBar(`Schools (${pct('schools')})`, n.sub_scores.schools)}
+            ${subBar(`Walkability (${pct('walkability')})`, n.sub_scores.walkability ?? 0)}
+            ${subBar(`Restaurants (${pct('restaurants')})`, n.sub_scores.restaurants ?? 0)}
+            ${subBar(`Income (${pct('income')})`, n.sub_scores.income)}
+            ${subBar(`Affordability (${pct('affordability')})`, n.sub_scores.affordability)}
+        </div>`;
+}
+
+function renderTable() {
+    const tbody = document.getElementById('zipTableBody');
+    tbody.innerHTML = '';
+    neighborhoods.forEach(n => {
+        const composite = compositeFor(n);
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.innerHTML = `
+            <td>${n.zip}</td>
+            <td>${n.name}</td>
+            <td style="font-weight:700; color:${scoreColor(composite)};">${composite.toFixed(1)}</td>
+            <td>${n.cap_rate_pct.toFixed(2)}%</td>
+            <td>${fmtMoney(n.median_home_value)}</td>
+            <td>${fmtMoney(n.median_rent_monthly)}</td>
+            <td>${n.crime_index}</td>
+            <td>${n.walk_score ?? '—'}</td>
+            <td>${n.restaurant_score ?? '—'}</td>
+            <td>${n.pct_bachelors}%</td>
+            <td>${fmtMoney(n.median_household_income)}</td>`;
+        tr.addEventListener('click', () => {
+            map.flyTo([n.lat, n.lng], 13, { duration: 0.6 });
+            showZipPanel(n);
+        });
+        tbody.appendChild(tr);
+    });
+}
+
+let sortState = { key: 'composite_score', dir: 'desc' };
+function sortAndRenderTable(key) {
+    if (sortState.key === key) sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+    else sortState = { key, dir: 'desc' };
+    const accessor = (row) => key === 'composite_score' ? compositeFor(row) : row[key];
+    neighborhoods.sort((a, b) => {
+        const av = accessor(a), bv = accessor(b);
+        if (typeof av === 'string') return sortState.dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+        return sortState.dir === 'asc' ? av - bv : bv - av;
+    });
+    renderTable();
+    document.querySelectorAll('#zipTable thead th').forEach(th => {
+        th.classList.remove('sorted-asc', 'sorted-desc');
+        if (th.dataset.sort === key) th.classList.add(sortState.dir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+    });
+}
+
+function renderPersonaPills() {
+    const container = document.getElementById('personaPills');
+    if (!container) return;
+    container.innerHTML = '';
+    Object.entries(personas).forEach(([key, p]) => {
+        const btn = document.createElement('button');
+        btn.className = 'factor-pill' + (key === currentPersona ? ' active' : '');
+        btn.dataset.persona = key;
+        btn.textContent = p.label || key;
+        btn.addEventListener('click', () => setPersona(key));
+        container.appendChild(btn);
+    });
+    updatePersonaDescription();
+}
+
+function updatePersonaDescription() {
+    const el = document.getElementById('personaDescription');
+    if (!el) return;
+    const p = personas[currentPersona];
+    el.textContent = p ? p.description : '';
+}
+
+function setPersona(key) {
+    if (!personas[key] || key === currentPersona) return;
+    currentPersona = key;
+    document.querySelectorAll('#personaPills .factor-pill').forEach(b => {
+        b.classList.toggle('active', b.dataset.persona === key);
+    });
+    updatePersonaDescription();
+    if (sortState.key === 'composite_score') {
+        neighborhoods.sort((a, b) => compositeFor(b) - compositeFor(a));
+    }
+    renderMap();
+    renderTopList();
+    renderTable();
+    renderMethodology();
+}
+
+function renderMethodology() {
+    const el = document.getElementById('methodology');
+    if (!el) return;
+    const p = personas[currentPersona];
+    if (!p) return;
+    const w = p.weights;
+    const fmt = (k, label) => `<strong>${Math.round(w[k] * 100)}%</strong> ${label}`;
+    el.innerHTML =
+        `Composite for <strong>${p.label}</strong> = ${fmt('cap_rate', 'cap rate')} + ` +
+        `${fmt('crime_safety', 'crime safety')} + ` +
+        `${fmt('schools', 'schools (proxy)')} + ` +
+        `${fmt('walkability', 'walkability')} + ` +
+        `${fmt('restaurants', 'restaurants')} + ` +
+        `${fmt('income', 'income')} + ` +
+        `${fmt('affordability', 'affordability')}.`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const center = PAGE_DATA.map_center || { lat: 32.78, lng: -96.80, zoom: 11 };
+    map = L.map('stateMap', { zoomControl: true, scrollWheelZoom: true })
+        .setView([center.lat, center.lng], center.zoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap',
+    }).addTo(map);
+
+    document.getElementById('dataAsOf').textContent =
+        `Data as of ${PAGE_DATA.as_of} · ${neighborhoods.length} ZIPs`;
+    const caveatsEl = document.getElementById('caveats');
+    caveatsEl.innerHTML = (PAGE_DATA.caveats || []).map(c => `• ${c}`).join('<br>');
+
+    renderPersonaPills();
+    renderMethodology();
+    renderMap();
+    renderTopList();
+    renderTable();
+
+    if (neighborhoods.length) showZipPanel(neighborhoods[0]);
+
+    document.querySelectorAll('#factorPills .factor-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#factorPills .factor-pill').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentFactor = btn.dataset.factor;
+            renderMap();
+            renderTopList();
+        });
+    });
+
+    document.querySelectorAll('#zipTable thead th').forEach(th => {
+        th.addEventListener('click', () => sortAndRenderTable(th.dataset.sort));
+    });
+});
+</script>
+{% endblock %}

@@ -10,6 +10,7 @@ from data_providers import (
     get_all_state_data, get_county_data, get_national_data, STATES, COUNTIES
 )
 from sec_edgar import build_net_net_screener
+from state_neighborhoods import get_state_neighborhoods, list_supported_states
 from database import (init_db, save_price, save_prices_bulk, get_all_prices, delete_price,
                       lock_portfolio, update_portfolio_prices, exit_holding,
                       close_portfolio, get_all_portfolios)
@@ -47,6 +48,26 @@ async def real_estate(request: Request):
         "request": request,
         "states": STATES,
         "counties": COUNTIES,
+        "states_with_map": list_supported_states(),
+    })
+
+
+@app.get("/real-estate/{state}/map")
+async def state_map(request: Request, state: str):
+    """ZIP-level investor map for a state's primary metro. Data is rendered
+    into the page server-side — no client-side API call."""
+    data = get_state_neighborhoods(state)
+    if data is None:
+        return JSONResponse(
+            {"error": f"No metro deep-dive available for state '{state}'."},
+            status_code=404,
+        )
+    state_name = STATES.get(state.upper(), {}).get("name", state.upper())
+    return templates.TemplateResponse("state_map.html", {
+        "request": request,
+        "state": state.upper(),
+        "state_name": state_name,
+        "data": data,
     })
 
 

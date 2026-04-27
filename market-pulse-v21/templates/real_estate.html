@@ -54,7 +54,13 @@
         <option value="">— State Overview —</option>
     </select>
     <span id="dataSource" style="color:var(--text-dim); font-size:0.75rem;"></span>
+    <a id="stateMapLink" href="#"
+       style="display:none; padding:0.4rem 0.85rem; border-radius:999px; background:var(--accent2); color:white; font-size:0.78rem; font-weight:600; text-decoration:none;">
+       🗺️ Neighborhood map →
+    </a>
 </div>
+
+<script id="states-with-map" type="application/json">{{ states_with_map | tojson }}</script>
 
 <div id="loading" class="loading">
     <div class="spinner"></div>
@@ -681,9 +687,28 @@ document.querySelectorAll('.state-tab').forEach(tab => {
         currentState = tab.dataset.state;
         populateCounties(currentState);
         document.getElementById('countySelect').value = '';
+        updateStateMapLink(currentState);
         renderStateOverview(currentState);
     });
 });
+
+// Neighborhood-map shortcut: visible only for states that have a metro
+// deep-dive page wired up server-side (states_with_map is rendered by Jinja).
+const STATES_WITH_MAP = (function() {
+    const el = document.getElementById('states-with-map');
+    try { return el ? JSON.parse(el.textContent) : []; } catch (e) { return []; }
+})();
+function updateStateMapLink(state) {
+    const link = document.getElementById('stateMapLink');
+    if (!link) return;
+    if (STATES_WITH_MAP.includes(state)) {
+        link.href = `/real-estate/${state}/map`;
+        link.style.display = 'inline-block';
+    } else {
+        link.style.display = 'none';
+    }
+}
+updateStateMapLink(currentState);
 
 // County selector
 document.getElementById('countySelect').addEventListener('change', function() {
