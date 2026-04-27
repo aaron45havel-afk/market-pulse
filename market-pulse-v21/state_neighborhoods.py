@@ -378,13 +378,95 @@ PROVO_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Per-metro registry. Each entry maps a state code to a metro deep-dive that
-# the /real-estate/{state}/map route can render. TX uses the existing Dallas
-# County dataset from dallas_neighborhoods.py so weights/data stay in one
-# place.
+# UT — Washington County (St. George / Ivins / Hurricane — "Southern Utah")
+# ─────────────────────────────────────────────────────────────────────────────
+ST_GEORGE_ZIPS: dict[str, dict] = {
+    "84770": {
+        "name": "St. George Central / W",
+        "lat": 37.0965, "lng": -113.5684,
+        "median_home_value": 480_000, "median_rent_monthly": 1_900,
+        "crime_index": 35, "pct_bachelors": 38,
+        "median_household_income": 68_000, "population": 32_000,
+        "walk_score": 50, "restaurant_score": 60,
+        "tags": ["established", "family"],
+    },
+    "84790": {
+        "name": "St. George S / SunRiver",
+        "lat": 37.0590, "lng": -113.5710,
+        "median_home_value": 560_000, "median_rent_monthly": 2_200,
+        "crime_index": 22, "pct_bachelors": 42,
+        "median_household_income": 82_000, "population": 38_000,
+        "walk_score": 30, "restaurant_score": 45,
+        "tags": ["family", "retiree", "newer", "low-crime"],
+    },
+    "84780": {
+        "name": "Washington City",
+        "lat": 37.1320, "lng": -113.5080,
+        "median_home_value": 510_000, "median_rent_monthly": 2_000,
+        "crime_index": 25, "pct_bachelors": 32,
+        "median_household_income": 78_000, "population": 30_000,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["family", "growth"],
+    },
+    "84738": {
+        "name": "Hurricane",
+        "lat": 37.1750, "lng": -113.2890,
+        "median_home_value": 420_000, "median_rent_monthly": 1_800,
+        "crime_index": 30, "pct_bachelors": 22,
+        "median_household_income": 65_000, "population": 22_000,
+        "walk_score": 35, "restaurant_score": 30,
+        "tags": ["affordable", "family", "growth"],
+    },
+    "84765": {
+        "name": "Santa Clara / Ivins",
+        "lat": 37.1248, "lng": -113.6572,
+        "median_home_value": 620_000, "median_rent_monthly": 2_400,
+        "crime_index": 18, "pct_bachelors": 45,
+        "median_household_income": 92_000, "population": 14_000,
+        "walk_score": 25, "restaurant_score": 30,
+        "tags": ["retiree", "low-crime", "scenic"],
+    },
+    "84757": {
+        "name": "Leeds",
+        "lat": 37.2436, "lng": -113.3650,
+        "median_home_value": 720_000, "median_rent_monthly": 2_800,
+        "crime_index": 15, "pct_bachelors": 40,
+        "median_household_income": 98_000, "population": 1_200,
+        "walk_score": 10, "restaurant_score": 15,
+        "tags": ["rural", "low-crime", "luxury"],
+    },
+    "84745": {
+        "name": "La Verkin",
+        "lat": 37.2017, "lng": -113.2715,
+        "median_home_value": 360_000, "median_rent_monthly": 1_600,
+        "crime_index": 35, "pct_bachelors": 18,
+        "median_household_income": 58_000, "population": 4_500,
+        "walk_score": 25, "restaurant_score": 20,
+        "tags": ["affordable", "rural"],
+    },
+    "84783": {
+        "name": "Toquerville",
+        "lat": 37.2540, "lng": -113.2855,
+        "median_home_value": 480_000, "median_rent_monthly": 1_800,
+        "crime_index": 22, "pct_bachelors": 25,
+        "median_household_income": 72_000, "population": 1_800,
+        "walk_score": 15, "restaurant_score": 15,
+        "tags": ["rural", "low-crime"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Per-metro registry. Keys are metro slugs — usually a state code, but states
+# with more than one metro deep-dive use a `{state}-{tag}` suffix (e.g.
+# UT-STG for Washington County / St. George). The /real-estate/{slug}/map
+# route looks up the slug here directly. STATE_TO_METROS keeps the
+# state→metro list ordering used by the dashboard link + the in-page metro
+# switcher.
 # ─────────────────────────────────────────────────────────────────────────────
 STATE_METROS: dict[str, dict] = {
     "TX": {
+        "state": "TX",
         "metro_label": "Dallas County",
         "subtitle": "ZIP-level cap rate, crime, schools, income & affordability for Dallas County — composite weighted for an SFR investor lens.",
         "map_center": {"lat": 32.78, "lng": -96.80, "zoom": 11},
@@ -394,6 +476,7 @@ STATE_METROS: dict[str, dict] = {
         ],
     },
     "CA": {
+        "state": "CA",
         "metro_label": "Los Angeles County",
         "subtitle": "ZIP-level scores for greater Los Angeles — beach, hills, urban core, and high-cap-rate South LA submarkets.",
         "map_center": {"lat": 34.05, "lng": -118.30, "zoom": 10},
@@ -404,6 +487,7 @@ STATE_METROS: dict[str, dict] = {
         ],
     },
     "UT": {
+        "state": "UT",
         "metro_label": "Utah County (Provo / Silicon Slopes)",
         "subtitle": "ZIP-level scores for the Utah Valley — Provo, Orem, and the Lehi tech corridor south of Salt Lake.",
         "map_center": {"lat": 40.30, "lng": -111.75, "zoom": 10},
@@ -413,7 +497,19 @@ STATE_METROS: dict[str, dict] = {
             "84043 (Lehi) is huge by Utah standards (~90K) and absorbs most of the 'Silicon Slopes' tech wage premium.",
         ],
     },
+    "UT-STG": {
+        "state": "UT",
+        "metro_label": "Washington County (St. George)",
+        "subtitle": "ZIP-level scores for Southern Utah — St. George, Washington City, Hurricane, Ivins. Heavy retiree/family mix, very different cycle from the Wasatch Front.",
+        "map_center": {"lat": 37.13, "lng": -113.45, "zoom": 10},
+        "zips": ST_GEORGE_ZIPS,
+        "extra_caveats": [
+            "St. George is a retiree/snowbird market — owner occupancy is high and rental supply is thin, so cap rates here are noisier than in Wasatch Front metros.",
+            "Outlying ZIPs (84757, 84745, 84783) have small populations; treat their scores as directional, not statistically robust.",
+        ],
+    },
     "AZ": {
+        "state": "AZ",
         "metro_label": "Maricopa County",
         "subtitle": "ZIP-level scores for the Phoenix metro — Phoenix proper, Scottsdale, Tempe, Chandler, Glendale.",
         "map_center": {"lat": 33.50, "lng": -112.00, "zoom": 10},
@@ -425,19 +521,44 @@ STATE_METROS: dict[str, dict] = {
     },
 }
 
+# Ordered list of metro slugs per state. Drives the dashboard's
+# default link target (first entry) and the metro switcher on the map page.
+STATE_TO_METROS: dict[str, list[str]] = {
+    "TX": ["TX"],
+    "CA": ["CA"],
+    "UT": ["UT", "UT-STG"],
+    "AZ": ["AZ"],
+}
+
 
 def list_supported_states() -> list[str]:
-    """State codes that have a metro deep-dive available."""
-    return list(STATE_METROS.keys())
+    """Two-letter state codes that have at least one metro deep-dive."""
+    return list(STATE_TO_METROS.keys())
 
 
-def get_state_neighborhoods(state: str) -> dict | None:
-    """Return enriched neighborhoods for a state's primary metro, or None
-    if the state has no deep-dive yet. Same shape as the legacy
-    get_dallas_neighborhoods() output so the Leaflet map template can stay
-    generic."""
+def default_metro_slug(state: str) -> str | None:
+    """The metro slug the state-dashboard link should target by default."""
+    metros = STATE_TO_METROS.get(state.upper())
+    return metros[0] if metros else None
+
+
+def metros_for_state(state: str) -> list[dict]:
+    """Sibling list for the in-page metro switcher: ordered metros for a
+    state with their slug + label. Returns [] for unsupported states."""
     state = state.upper()
-    metro = STATE_METROS.get(state)
+    return [
+        {"slug": slug, "label": STATE_METROS[slug]["metro_label"]}
+        for slug in STATE_TO_METROS.get(state, [])
+        if slug in STATE_METROS
+    ]
+
+
+def get_state_neighborhoods(slug: str) -> dict | None:
+    """Return enriched neighborhoods for a metro slug (e.g. 'TX', 'UT-STG'),
+    or None if the slug isn't wired up yet. Shape stays the same as
+    get_dallas_neighborhoods() so the Leaflet template can be generic."""
+    slug = slug.upper()
+    metro = STATE_METROS.get(slug)
     if metro is None:
         return None
 
@@ -454,10 +575,12 @@ def get_state_neighborhoods(state: str) -> dict | None:
         f"Snapshot from {DATA_AS_OF}. Refresh sources annually.",
     ]
     return {
-        "state": state,
+        "slug": slug,
+        "state": metro["state"],
         "metro_label": metro["metro_label"],
         "subtitle": metro["subtitle"],
         "map_center": metro["map_center"],
+        "siblings": metros_for_state(metro["state"]),
         "as_of": DATA_AS_OF,
         "personas": PERSONAS,
         "default_persona": DEFAULT_PERSONA,

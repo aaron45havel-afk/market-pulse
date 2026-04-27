@@ -10,7 +10,9 @@ from data_providers import (
     get_all_state_data, get_county_data, get_national_data, STATES, COUNTIES
 )
 from sec_edgar import build_net_net_screener
-from state_neighborhoods import get_state_neighborhoods, list_supported_states
+from state_neighborhoods import (
+    get_state_neighborhoods, list_supported_states, default_metro_slug,
+)
 from database import (init_db, save_price, save_prices_bulk, get_all_prices, delete_price,
                       lock_portfolio, update_portfolio_prices, exit_holding,
                       close_portfolio, get_all_portfolios)
@@ -44,29 +46,38 @@ async def home(request: Request):
 
 @app.get("/real-estate")
 async def real_estate(request: Request):
+    # state code → default metro slug, used by the dashboard link to route
+    # each state tab at its primary metro (e.g. UT → UT for Provo).
+    state_default_metro = {
+        s: default_metro_slug(s) for s in list_supported_states()
+    }
     return templates.TemplateResponse("real_estate.html", {
         "request": request,
         "states": STATES,
         "counties": COUNTIES,
         "states_with_map": list_supported_states(),
+        "state_default_metro": state_default_metro,
     })
 
 
-@app.get("/real-estate/{state}/map")
-async def state_map(request: Request, state: str):
-    """ZIP-level investor map for a state's primary metro. Data is rendered
-    into the page server-side — no client-side API call."""
-    data = get_state_neighborhoods(state)
+@app.get("/real-estate/{slug}/map")
+async def state_map(request: Request, slug: str):
+    """ZIP-level investor map for a metro. `slug` is a state code (e.g. 'TX')
+    for the state's primary metro, or a `{state}-{tag}` slug for a secondary
+    one (e.g. 'UT-STG'). Data is rendered server-side — no fetch."""
+    data = get_state_neighborhoods(slug)
     if data is None:
         return JSONResponse(
-            {"error": f"No metro deep-dive available for state '{state}'."},
+            {"error": f"No metro deep-dive available for slug '{slug}'."},
             status_code=404,
         )
-    state_name = STATES.get(state.upper(), {}).get("name", state.upper())
+    state_code = data["state"]
+    state_name = STATES.get(state_code, {}).get("name", state_code)
     return templates.TemplateResponse("state_map.html", {
         "request": request,
-        "state": state.upper(),
+        "state": state_code,
         "state_name": state_name,
+        "slug": data["slug"],
         "data": data,
     })
 

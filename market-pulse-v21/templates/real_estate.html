@@ -61,6 +61,7 @@
 </div>
 
 <script id="states-with-map" type="application/json">{{ states_with_map | tojson }}</script>
+<script id="state-default-metro" type="application/json">{{ state_default_metro | tojson }}</script>
 
 <div id="loading" class="loading">
     <div class="spinner"></div>
@@ -693,16 +694,23 @@ document.querySelectorAll('.state-tab').forEach(tab => {
 });
 
 // Neighborhood-map shortcut: visible only for states that have a metro
-// deep-dive page wired up server-side (states_with_map is rendered by Jinja).
+// deep-dive page wired up server-side. STATE_DEFAULT_METRO maps each state
+// to its primary metro slug so states with multiple metros (e.g. UT)
+// land on the right page by default.
 const STATES_WITH_MAP = (function() {
     const el = document.getElementById('states-with-map');
     try { return el ? JSON.parse(el.textContent) : []; } catch (e) { return []; }
+})();
+const STATE_DEFAULT_METRO = (function() {
+    const el = document.getElementById('state-default-metro');
+    try { return el ? JSON.parse(el.textContent) : {}; } catch (e) { return {}; }
 })();
 function updateStateMapLink(state) {
     const link = document.getElementById('stateMapLink');
     if (!link) return;
     if (STATES_WITH_MAP.includes(state)) {
-        link.href = `/real-estate/${state}/map`;
+        const slug = STATE_DEFAULT_METRO[state] || state;
+        link.href = `/real-estate/${slug}/map`;
         link.style.display = 'inline-block';
     } else {
         link.style.display = 'none';
