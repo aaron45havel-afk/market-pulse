@@ -378,6 +378,163 @@ PROVO_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
+# Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
+# of SLC so the map zoom is wide; treat Cache County as a separate submarket.
+# ─────────────────────────────────────────────────────────────────────────────
+WASATCH_NORTH_ZIPS: dict[str, dict] = {
+    # Salt Lake City (Salt Lake County)
+    "84101": {
+        "name": "Downtown SLC",
+        "lat": 40.7589, "lng": -111.8883,
+        "median_home_value": 480_000, "median_rent_monthly": 1_950,
+        "crime_index": 65, "pct_bachelors": 50,
+        "median_household_income": 58_000, "population": 8_500,
+        "walk_score": 80, "restaurant_score": 85,
+        "tags": ["urban", "walkable", "transit"],
+    },
+    "84102": {
+        "name": "East Downtown / U of U",
+        "lat": 40.7637, "lng": -111.8595,
+        "median_home_value": 620_000, "median_rent_monthly": 2_100,
+        "crime_index": 50, "pct_bachelors": 75,
+        "median_household_income": 72_000, "population": 19_000,
+        "walk_score": 75, "restaurant_score": 70,
+        "tags": ["college", "walkable", "rental-demand"],
+    },
+    "84103": {
+        "name": "Avenues / Capitol Hill",
+        "lat": 40.7860, "lng": -111.8810,
+        "median_home_value": 720_000, "median_rent_monthly": 2_200,
+        "crime_index": 35, "pct_bachelors": 70,
+        "median_household_income": 92_000, "population": 18_500,
+        "walk_score": 65, "restaurant_score": 55,
+        "tags": ["historic", "walkable", "established"],
+    },
+    "84105": {
+        "name": "Sugar House",
+        "lat": 40.7263, "lng": -111.8632,
+        "median_home_value": 680_000, "median_rent_monthly": 2_200,
+        "crime_index": 45, "pct_bachelors": 65,
+        "median_household_income": 85_000, "population": 24_000,
+        "walk_score": 70, "restaurant_score": 75,
+        "tags": ["walkable", "hip", "established"],
+    },
+    "84108": {
+        "name": "Federal Heights / E Bench",
+        "lat": 40.7693, "lng": -111.8410,
+        "median_home_value": 1_150_000, "median_rent_monthly": 2_800,
+        "crime_index": 22, "pct_bachelors": 85,
+        "median_household_income": 145_000, "population": 18_500,
+        "walk_score": 35, "restaurant_score": 40,
+        "tags": ["top-tier", "low-crime", "schools"],
+    },
+    "84109": {
+        "name": "Holladay",
+        "lat": 40.6603, "lng": -111.8210,
+        "median_home_value": 850_000, "median_rent_monthly": 2_500,
+        "crime_index": 25, "pct_bachelors": 65,
+        "median_household_income": 115_000, "population": 26_500,
+        "walk_score": 35, "restaurant_score": 50,
+        "tags": ["upscale", "family", "low-crime"],
+    },
+    # Davis County (Bountiful, Centerville, Farmington, Kaysville)
+    "84010": {
+        "name": "Bountiful",
+        "lat": 40.8898, "lng": -111.8807,
+        "median_home_value": 620_000, "median_rent_monthly": 2_300,
+        "crime_index": 28, "pct_bachelors": 50,
+        "median_household_income": 98_000, "population": 43_500,
+        "walk_score": 35, "restaurant_score": 45,
+        "tags": ["family", "established", "low-crime"],
+    },
+    "84014": {
+        "name": "Centerville",
+        "lat": 40.9183, "lng": -111.8723,
+        "median_home_value": 580_000, "median_rent_monthly": 2_200,
+        "crime_index": 25, "pct_bachelors": 48,
+        "median_household_income": 95_000, "population": 17_500,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["family", "established"],
+    },
+    "84025": {
+        "name": "Farmington",
+        "lat": 40.9818, "lng": -111.8870,
+        "median_home_value": 720_000, "median_rent_monthly": 2_400,
+        "crime_index": 22, "pct_bachelors": 55,
+        "median_household_income": 115_000, "population": 25_000,
+        "walk_score": 30, "restaurant_score": 50,
+        "tags": ["family", "newer", "low-crime"],
+    },
+    "84037": {
+        "name": "Kaysville",
+        "lat": 41.0353, "lng": -111.9385,
+        "median_home_value": 620_000, "median_rent_monthly": 2_200,
+        "crime_index": 22, "pct_bachelors": 50,
+        "median_household_income": 108_000, "population": 35_000,
+        "walk_score": 28, "restaurant_score": 40,
+        "tags": ["family", "low-crime", "established"],
+    },
+    # Weber County (Ogden)
+    "84401": {
+        "name": "Downtown Ogden / 25th St",
+        "lat": 41.2230, "lng": -111.9738,
+        "median_home_value": 340_000, "median_rent_monthly": 1_600,
+        "crime_index": 60, "pct_bachelors": 32,
+        "median_household_income": 48_000, "population": 16_000,
+        "walk_score": 70, "restaurant_score": 70,
+        "tags": ["walkable", "gentrifying", "affordable"],
+    },
+    "84403": {
+        "name": "South Ogden",
+        "lat": 41.1800, "lng": -111.9450,
+        "median_home_value": 420_000, "median_rent_monthly": 1_800,
+        "crime_index": 40, "pct_bachelors": 35,
+        "median_household_income": 72_000, "population": 38_500,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["family", "mid-tier"],
+    },
+    "84404": {
+        "name": "North Ogden / Pleasant View",
+        "lat": 41.2860, "lng": -112.0130,
+        "median_home_value": 470_000, "median_rent_monthly": 1_900,
+        "crime_index": 35, "pct_bachelors": 32,
+        "median_household_income": 78_000, "population": 41_000,
+        "walk_score": 25, "restaurant_score": 30,
+        "tags": ["family", "established"],
+    },
+    "84405": {
+        "name": "Riverdale / S Ogden",
+        "lat": 41.1690, "lng": -112.0010,
+        "median_home_value": 380_000, "median_rent_monthly": 1_750,
+        "crime_index": 50, "pct_bachelors": 25,
+        "median_household_income": 62_000, "population": 31_000,
+        "walk_score": 35, "restaurant_score": 45,
+        "tags": ["affordable", "mid-tier"],
+    },
+    # Cache County (Logan)
+    "84321": {
+        "name": "Logan / USU",
+        "lat": 41.7355, "lng": -111.8338,
+        "median_home_value": 400_000, "median_rent_monthly": 1_700,
+        "crime_index": 30, "pct_bachelors": 55,
+        "median_household_income": 52_000, "population": 36_000,
+        "walk_score": 55, "restaurant_score": 55,
+        "tags": ["college", "rental-demand", "affordable"],
+    },
+    "84341": {
+        "name": "North Logan / Hyde Park",
+        "lat": 41.7700, "lng": -111.8050,
+        "median_home_value": 480_000, "median_rent_monthly": 1_900,
+        "crime_index": 18, "pct_bachelors": 50,
+        "median_household_income": 78_000, "population": 17_500,
+        "walk_score": 25, "restaurant_score": 30,
+        "tags": ["family", "low-crime"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Washington County (St. George / Ivins / Hurricane — "Southern Utah")
 # ─────────────────────────────────────────────────────────────────────────────
 ST_GEORGE_ZIPS: dict[str, dict] = {
@@ -497,6 +654,18 @@ STATE_METROS: dict[str, dict] = {
             "84043 (Lehi) is huge by Utah standards (~90K) and absorbs most of the 'Silicon Slopes' tech wage premium.",
         ],
     },
+    "UT-SLC": {
+        "state": "UT",
+        "metro_label": "Wasatch Front North (SLC / Ogden / Logan)",
+        "subtitle": "ZIP-level scores for Salt Lake County and the corridor north — SLC core, Davis County (Bountiful / Farmington / Kaysville), Weber County (Ogden), and Cache County (Logan).",
+        "map_center": {"lat": 41.05, "lng": -111.95, "zoom": 8},
+        "zips": WASATCH_NORTH_ZIPS,
+        "extra_caveats": [
+            "Logan (84321 / 84341) is ~80 miles north of SLC — the map zoom is wide so the Cache County submarket fits. Treat Logan as a separate market driven by USU + ag, not by SLC.",
+            "Weber County (84401-84405) has a different employer base than Salt Lake — Hill AFB to the south plus aerospace/manufacturing — so cap rates compress less in downturns.",
+            "84108 (Federal Heights) bridges the U of U medical corridor and the wealthiest blocks of SLC; values are pulled toward the upper end of the ZIP.",
+        ],
+    },
     "UT-STG": {
         "state": "UT",
         "metro_label": "Washington County (St. George)",
@@ -526,7 +695,7 @@ STATE_METROS: dict[str, dict] = {
 STATE_TO_METROS: dict[str, list[str]] = {
     "TX": ["TX"],
     "CA": ["CA"],
-    "UT": ["UT", "UT-STG"],
+    "UT": ["UT", "UT-SLC", "UT-STG"],
     "AZ": ["AZ"],
 }
 
