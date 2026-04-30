@@ -3,7 +3,78 @@
 {% block content %}
 <h1>Real Estate Affordability Calculator</h1>
 <p class="subtitle">Find your true buying power across NV, CA, UT, TX, AZ — back-solves max sustainable price from your income and target DTI.</p>
-<div class="card"><div style="color:var(--text-dim);">Calculator UI coming online piece by piece.</div></div>
+<div class="grid-2" style="gap:1rem;">
+    <!-- ─────────────  INPUT PANEL  ───────────── -->
+    <div class="card">
+        <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.75rem;">Your inputs</div>
+
+        <label class="afford-row">
+            <span>Annual gross income <span class="hint" title="Pre-tax household income. Used for DTI calc + state income tax estimate.">ⓘ</span></span>
+            <input id="i-income" type="number" min="0" step="1000" value="113800">
+        </label>
+
+        <label class="afford-row">
+            <span>DTI threshold <span class="hint" title="Debt-to-Income. 28% is the conservative front-end rule (housing only); banks underwrite up to ~43% back-end (housing + other debts).">ⓘ</span><span id="dti-readout" class="readout">28%</span></span>
+            <input id="i-dti" type="range" min="25" max="40" step="1" value="28">
+        </label>
+
+        <label class="afford-row">
+            <span>Interest rate <span class="hint" title="30-year fixed. Drag between 4% and 8%.">ⓘ</span><span id="rate-readout" class="readout">6.50%</span></span>
+            <input id="i-rate" type="range" min="4.0" max="8.0" step="0.125" value="6.5">
+        </label>
+
+        <div class="afford-row">
+            <span>Down payment</span>
+            <div style="display:flex; gap:0.4rem; align-items:center;">
+                <input id="i-down" type="number" min="0" step="0.5" value="3.5" style="flex:1;">
+                <div class="dp-toggle">
+                    <button type="button" data-mode="%" class="active">%</button>
+                    <button type="button" data-mode="$">$</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="afford-row">
+            <span>Loan type <span class="hint" title="FHA: 3.5% min down + lifetime monthly MIP + 1.75% UFMIP financed. Conventional: PMI applies under 20% down.">ⓘ</span></span>
+            <div class="loan-toggle">
+                <button type="button" data-loan="FHA" class="active">FHA</button>
+                <button type="button" data-loan="Conventional">Conventional</button>
+            </div>
+        </div>
+
+        <label class="afford-row">
+            <span>Other monthly debts <span class="hint" title="Auto, student, credit-card minimums. Subtracted from max housing payment for back-end DTI.">ⓘ</span></span>
+            <input id="i-debts" type="number" min="0" step="50" value="0">
+        </label>
+
+        <label class="afford-row">
+            <span>HOA estimate <span class="hint" title="Monthly HOA dues. Counted toward DTI by lenders.">ⓘ</span></span>
+            <input id="i-hoa" type="number" min="0" step="25" value="0">
+        </label>
+    </div>
+
+    <!-- ─────────────  HEADLINE SUMMARY  ───────────── -->
+    <div class="card" id="summaryCard">
+        <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">At your inputs</div>
+        <div id="summaryBody" style="color:var(--text-dim); font-size:0.9rem;">Adjust any input — results recalc automatically. (Comparison table arrives in the next piece.)</div>
+    </div>
+</div>
+
+<style>
+.afford-row { display:block; margin-bottom:0.85rem; }
+.afford-row > span { display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; color:var(--text-dim); margin-bottom:0.3rem; }
+.afford-row input[type=number],
+.afford-row input[type=range] { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.7rem; color:var(--text); font-size:0.95rem; outline:none; }
+.afford-row input[type=range] { padding:0; height:6px; -webkit-appearance:none; appearance:none; }
+.afford-row input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:16px; height:16px; border-radius:50%; background:var(--accent2); cursor:pointer; border:none; }
+.afford-row input[type=range]::-moz-range-thumb { width:16px; height:16px; border-radius:50%; background:var(--accent2); cursor:pointer; border:none; }
+.afford-row .readout { margin-left:auto; color:var(--text); font-weight:600; font-variant-numeric:tabular-nums; }
+.dp-toggle, .loan-toggle { display:inline-flex; border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+.dp-toggle button, .loan-toggle button { background:var(--surface2); color:var(--text-dim); border:none; padding:0.45rem 0.85rem; cursor:pointer; font-size:0.85rem; font-weight:500; }
+.dp-toggle button.active, .loan-toggle button.active { background:var(--accent2); color:white; }
+.hint { color:var(--text-dim); cursor:help; font-size:0.8rem; opacity:0.7; }
+.hint:hover { opacity:1; color:var(--accent2); }
+</style>
 {% endblock %}
 
 {% block scripts %}
@@ -183,5 +254,76 @@ window.calc = {
     STATE_DATA, fmtMoney, fmtPct, downAmountFor,
     calculatePITI, calculateMaxPrice, calculateStateIncomeTax
 };
+
+// ─── INPUT PANEL WIRING ─────────────────────────────────────────────
+// Reads the form, normalizes to a single inputs object, fires
+// 'affordabilityRecalc' (debounced). Subsequent pieces listen for that
+// event to render the table + forward calculator. State for the two
+// segmented controls (down-payment mode, loan type) lives on the buttons.
+
+let dpMode = '%';
+let loanType = 'FHA';
+
+function readInputs() {
+    return {
+        income:        Math.max(0, +document.getElementById('i-income').value || 0),
+        dti:           (+document.getElementById('i-dti').value || 28) / 100,
+        rate:          (+document.getElementById('i-rate').value || 6.5) / 100,
+        downPayment:   Math.max(0, +document.getElementById('i-down').value || 0),
+        downPaymentMode: dpMode,
+        loanType:      loanType,
+        monthlyDebts:  Math.max(0, +document.getElementById('i-debts').value || 0),
+        hoa:           Math.max(0, +document.getElementById('i-hoa').value || 0),
+    };
+}
+
+function updateReadouts() {
+    document.getElementById('dti-readout').textContent  = document.getElementById('i-dti').value + '%';
+    document.getElementById('rate-readout').textContent = (+document.getElementById('i-rate').value).toFixed(2) + '%';
+}
+
+let _recalcTimer = null;
+function scheduleRecalc() {
+    updateReadouts();
+    clearTimeout(_recalcTimer);
+    _recalcTimer = setTimeout(() => {
+        const inputs = readInputs();
+        document.dispatchEvent(new CustomEvent('affordabilityRecalc', { detail: inputs }));
+    }, 150);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Number + range inputs: any change triggers recalc.
+    document.querySelectorAll('#i-income, #i-dti, #i-rate, #i-down, #i-debts, #i-hoa')
+        .forEach(el => el.addEventListener('input', scheduleRecalc));
+
+    // Down-payment mode toggle (% vs $).
+    document.querySelectorAll('.dp-toggle button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.dp-toggle button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            dpMode = btn.dataset.mode;
+            // Sensible default flip when switching modes: 3.5% ↔ ~$15k.
+            const dpEl = document.getElementById('i-down');
+            if (dpMode === '$' && +dpEl.value < 100) dpEl.value = 15000;
+            if (dpMode === '%' && +dpEl.value > 100) dpEl.value = 3.5;
+            scheduleRecalc();
+        });
+    });
+
+    // Loan type toggle.
+    document.querySelectorAll('.loan-toggle button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.loan-toggle button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            loanType = btn.dataset.loan;
+            scheduleRecalc();
+        });
+    });
+
+    // Kick off the first calculation so listeners get an initial payload.
+    updateReadouts();
+    scheduleRecalc();
+});
 </script>
 {% endblock %}
