@@ -152,6 +152,15 @@
     </div>
 </div>
 
+<!-- ─────────────  CUMULATIVE COST CHART  ───────────── -->
+<div class="card" style="margin-top:1rem;">
+    <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">10-year cumulative housing cost — at each state's max price</div>
+    <div style="font-size:0.82rem; color:var(--text-dim); margin-bottom:0.85rem;">If you buy at your max sustainable price in each state, here's the running total of cash out the door (PITI + escalating property tax). Diverging lines = the long-run cost of state policy.</div>
+    <div style="position:relative; height:340px;">
+        <canvas id="costChart"></canvas>
+    </div>
+</div>
+
 <style>
 .detail-list { display:flex; flex-direction:column; gap:0.3rem; font-size:0.85rem; }
 .detail-list .row { display:flex; justify-content:space-between; gap:0.5rem; padding:0.2rem 0; border-bottom:1px dashed var(--border); }
@@ -526,7 +535,85 @@ document.addEventListener('affordabilityRecalc', e => {
         const r = sortedRows.find(x => x.state === _openDetailState);
         if (r) renderDetail(r, e.detail);
     }
+    renderCostChart(sortedRows);
 });
+
+// ─── CUMULATIVE COST CHART ─────────────────────────────────────────
+// Re-uses Chart.js (already loaded by base.html). Each state gets a line
+// showing year-by-year cumulative outflow at *its* max price, with the
+// state-specific property-tax growth applied each year.
+
+let _chart = null;
+const STATE_COLORS = { NV: '#eab308', CA: '#f97316', UT: '#22c55e', TX: '#ef4444', AZ: '#3b82f6' };
+
+function cumulativeByYear(piti, annualPropTax, growth, years) {
+    const out = [];
+    let total = 0;
+    let propTax = annualPropTax;
+    const nonTaxMonthly = piti.PI + piti.insurance + piti.MIP + piti.HOA;
+    for (let y = 0; y < years; y++) {
+        total += nonTaxMonthly * 12 + propTax;
+        out.push(Math.round(total));
+        propTax *= (1 + growth);
+    }
+    return out;
+}
+
+function renderCostChart(rows) {
+    const canvas = document.getElementById('costChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+    const years = 10;
+    const labels = Array.from({ length: years }, (_, i) => `Yr ${i + 1}`);
+    const datasets = rows.map(r => ({
+        label: STATE_DATA[r.state].name,
+        data: cumulativeByYear(r.piti, r.piti.annualPropertyTax, PROP_TAX_GROWTH[r.state] || 0.03, years),
+        borderColor: STATE_COLORS[r.state] || '#9ca3af',
+        backgroundColor: STATE_COLORS[r.state] || '#9ca3af',
+        tension: 0.2,
+        borderWidth: 2,
+        pointRadius: 3,
+    }));
+
+    if (_chart) {
+        _chart.data.labels = labels;
+        _chart.data.datasets = datasets;
+        _chart.update();
+        return;
+    }
+
+    _chart = new Chart(canvas, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { labels: { color: '#e4e4e7', boxWidth: 12 } },
+                tooltip: {
+                    backgroundColor: '#1a1d27',
+                    borderColor: '#2d3044',
+                    borderWidth: 1,
+                    titleColor: '#e4e4e7',
+                    bodyColor: '#e4e4e7',
+                    callbacks: {
+                        label: c => `${c.dataset.label}: $${Math.round(c.parsed.y).toLocaleString()}`,
+                    },
+                },
+            },
+            scales: {
+                x: { ticks: { color: '#9ca3af' }, grid: { color: '#2d3044' } },
+                y: {
+                    ticks: {
+                        color: '#9ca3af',
+                        callback: v => '$' + Math.round(v / 1000).toLocaleString() + 'k',
+                    },
+                    grid: { color: '#2d3044' },
+                },
+            },
+        },
+    });
+}
 
 // ─── STATE DETAIL PANEL ─────────────────────────────────────────────
 // Cumulative cost + amortization helpers. `principalPaidByYear` uses the
