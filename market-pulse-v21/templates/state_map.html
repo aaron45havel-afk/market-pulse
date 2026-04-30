@@ -152,6 +152,7 @@ let personas = PAGE_DATA.personas || {};
 let currentFactor = 'composite_score';
 let currentPersona = PAGE_DATA.default_persona || 'investor';
 let map, markerLayer;
+let selectedZip = null;  // last ZIP shown in the side panel — re-rendered on persona change
 const FACTOR_LABELS = {
     composite_score: 'Composite',
     cap_rate: 'Cap Rate',
@@ -232,6 +233,7 @@ function renderTopList() {
 }
 
 function showZipPanel(n) {
+    selectedZip = n;
     const body = document.getElementById('zipPanelBody');
     const composite = compositeFor(n);
     const w = (personas[currentPersona] && personas[currentPersona].weights) || {};
@@ -357,6 +359,10 @@ function setPersona(key) {
     renderTopList();
     renderTable();
     renderMethodology();
+    // Re-render the selected ZIP panel so its score + sub-score weights
+    // reflect the new persona — otherwise the panel looks stale until
+    // the user clicks another ZIP.
+    if (selectedZip) showZipPanel(selectedZip);
 }
 
 function renderMethodology() {
