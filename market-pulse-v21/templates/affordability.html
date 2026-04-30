@@ -5,3 +5,183 @@
 <p class="subtitle">Find your true buying power across NV, CA, UT, TX, AZ — back-solves max sustainable price from your income and target DTI.</p>
 <div class="card"><div style="color:var(--text-dim);">Calculator UI coming online piece by piece.</div></div>
 {% endblock %}
+
+{% block scripts %}
+<script>
+// State-level tax + insurance defaults. Sources: state DOR / Tax Foundation
+// (income tax brackets 2024), Lincoln Institute / county assessor reports
+// (effective property tax), industry insurance averages. Edit directly to
+// update — no backend dependency.
+const STATE_DATA = {
+    NV: {
+        name: "Nevada",
+        propertyTaxEffective: 0.0054,
+        propertyTaxCap: 0.03,
+        stateIncomeTaxRates: [{ rate: 0, threshold: Infinity }],
+        insuranceMultiplier: 0.0025,
+        primaryResidenceDiscount: false,
+        notes: "No state income tax. Property tax cap protects against escalation."
+    },
+    CA: {
+        name: "California",
+        propertyTaxEffective: 0.011,
+        propertyTaxCap: 0.02,
+        stateIncomeTaxRates: [
+            { rate: 0.01,  threshold: 10412 },
+            { rate: 0.02,  threshold: 24684 },
+            { rate: 0.04,  threshold: 38959 },
+            { rate: 0.06,  threshold: 54081 },
+            { rate: 0.08,  threshold: 68350 },
+            { rate: 0.093, threshold: 349137 },
+            { rate: 0.103, threshold: 418961 },
+            { rate: 0.113, threshold: 698271 },
+            { rate: 0.123, threshold: Infinity }
+        ],
+        insuranceMultiplier: 0.0035,
+        primaryResidenceDiscount: false,
+        notes: "Prop 13 caps assessed-value growth at 2%/yr for long-term owners. Wildfire insurance varies dramatically by county."
+    },
+    UT: {
+        name: "Utah",
+        propertyTaxEffective: 0.0055,
+        propertyTaxCap: null,
+        primaryResidenceAssessmentRatio: 0.55,
+        stateIncomeTaxRates: [{ rate: 0.0455, threshold: Infinity }],
+        insuranceMultiplier: 0.0025,
+        primaryResidenceDiscount: true,
+        notes: "Primary residence taxed at 55% of assessed value — significant savings vs investment property."
+    },
+    TX: {
+        name: "Texas",
+        propertyTaxEffective: 0.025,
+        propertyTaxCap: 0.10,
+        stateIncomeTaxRates: [{ rate: 0, threshold: Infinity }],
+        insuranceMultiplier: 0.0050,
+        primaryResidenceDiscount: false,
+        homesteadExemption: 100000,
+        notes: "No state income tax but high property tax. Reassesses to sale price, then capped at 10%/yr for homestead."
+    },
+    AZ: {
+        name: "Arizona",
+        propertyTaxEffective: 0.0066,
+        propertyTaxCap: 0.05,
+        stateIncomeTaxRates: [{ rate: 0.025, threshold: Infinity }],
+        insuranceMultiplier: 0.0030,
+        primaryResidenceDiscount: false,
+        notes: "Flat 2.5% income tax. Moderate property tax with 5% cap on primary residence."
+    }
+};
+
+// FHA upfront MIP financed into loan; FHA monthly MIP; conventional PMI when
+// down payment < 20%. These are industry-standard simplifications — actual
+// rates vary by lender + credit + LTV.
+const FHA_UFMIP_RATE = 0.0175;
+const FHA_MONTHLY_MIP_RATE = 0.0055;
+const CONV_PMI_RATE = 0.005;
+const LOAN_TERM_MONTHS = 360;
+
+function fmtMoney(v) {
+    if (!isFinite(v)) return '—';
+    return '$' + Math.round(v).toLocaleString('en-US');
+}
+function fmtPct(v) { return (v * 100).toFixed(2) + '%'; }
+
+// Returns the down-payment dollar amount given the user's input + mode.
+// mode '%' treats `dp` as a percentage (3.5 → 0.035 of price); mode '$'
+// treats `dp` as a fixed dollar amount independent of price.
+function downAmountFor(price, dp, mode) {
+    return mode === '%' ? price * (dp / 100) : Math.min(dp, price);
+}
+
+// Forward calc: given a price + financing inputs, return the full monthly
+// PITI breakdown for one state.
+function calculatePITI(price, dp, dpMode, rate, state, loanType, hoa) {
+    const sd = STATE_DATA[state];
+    const downAmount = downAmountFor(price, dp, dpMode);
+    const baseLoan = Math.max(0, price - downAmount);
+    const ufmip = loanType === 'FHA' ? baseLoan * FHA_UFMIP_RATE : 0;
+    const totalLoan = baseLoan + ufmip;
+
+    // Monthly P&I — standard amortization formula.
+    const monthlyRate = rate / 12;
+    let PI = 0;
+    if (totalLoan > 0 && monthlyRate > 0) {
+        PI = totalLoan * (monthlyRate * Math.pow(1 + monthlyRate, LOAN_TERM_MONTHS)) /
+             (Math.pow(1 + monthlyRate, LOAN_TERM_MONTHS) - 1);
+    }
+
+    // Property tax — Utah uses 55% assessment ratio for primary residence;
+    // Texas applies a flat homestead exemption before the rate.
+    let assessmentValue = price;
+    if (state === 'UT' && sd.primaryResidenceDiscount) {
+        assessmentValue = price * sd.primaryResidenceAssessmentRatio;
+    }
+    if (state === 'TX' && sd.homesteadExemption) {
+        assessmentValue = Math.max(0, price - sd.homesteadExemption);
+    }
+    const annualPropertyTax = assessmentValue * sd.propertyTaxEffective;
+    const monthlyPropertyTax = annualPropertyTax / 12;
+
+    const monthlyInsurance = (price * sd.insuranceMultiplier) / 12;
+
+    // FHA monthly MIP runs for the life of the loan (under current rules);
+    // conventional PMI applies when LTV > 80%.
+    let monthlyMIP = 0;
+    if (loanType === 'FHA') {
+        monthlyMIP = (totalLoan * FHA_MONTHLY_MIP_RATE) / 12;
+    } else if ((downAmount / price) < 0.20) {
+        monthlyMIP = (baseLoan * CONV_PMI_RATE) / 12;
+    }
+
+    const total = PI + monthlyPropertyTax + monthlyInsurance + monthlyMIP + (hoa || 0);
+    return {
+        PI: Math.round(PI),
+        propertyTax: Math.round(monthlyPropertyTax),
+        annualPropertyTax: Math.round(annualPropertyTax),
+        insurance: Math.round(monthlyInsurance),
+        MIP: Math.round(monthlyMIP),
+        HOA: Math.round(hoa || 0),
+        total: Math.round(total),
+        downAmount: Math.round(downAmount),
+        baseLoan: Math.round(baseLoan)
+    };
+}
+
+// Reverse calc: binary-search the maximum price whose PITI fits inside
+// (monthly income × DTI) − other monthly debts. Bounded at $50K / $5M.
+function calculateMaxPrice(income, dti, rate, state, loanType, dp, dpMode, hoa, monthlyDebts) {
+    const monthlyIncome = income / 12;
+    const maxHousing = monthlyIncome * dti - (monthlyDebts || 0);
+    if (maxHousing <= 0) return 0;
+
+    let low = 50000, high = 5000000;
+    for (let i = 0; i < 40 && (high - low) > 100; i++) {
+        const mid = (low + high) / 2;
+        const piti = calculatePITI(mid, dp, dpMode, rate, state, loanType, hoa);
+        if (piti.total > maxHousing) high = mid;
+        else low = mid;
+    }
+    return Math.floor(low);
+}
+
+// State income tax via graduated brackets. Each entry is the top of a
+// bracket plus the marginal rate applied within that bracket.
+function calculateStateIncomeTax(income, state) {
+    const brackets = STATE_DATA[state].stateIncomeTaxRates;
+    let tax = 0, prev = 0;
+    for (const b of brackets) {
+        if (income <= prev) break;
+        const top = Math.min(income, b.threshold);
+        tax += (top - prev) * b.rate;
+        prev = b.threshold;
+    }
+    return tax;
+}
+
+// Expose for next-piece UI + smoke testing in dev console.
+window.calc = {
+    STATE_DATA, fmtMoney, fmtPct, downAmountFor,
+    calculatePITI, calculateMaxPrice, calculateStateIncomeTax
+};
+</script>
+{% endblock %}
