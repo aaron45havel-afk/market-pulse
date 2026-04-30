@@ -1,0 +1,8 @@
+{
+  "_meta": {
+    "as_of": null,
+    "source": "Zillow Research (ZHVI all-homes; ZORI SFR+condo+MFR)",
+    "note": "Empty stub. Run scripts/refresh_zillow.py to populate."
+  },
+  "overrides": {}
+}

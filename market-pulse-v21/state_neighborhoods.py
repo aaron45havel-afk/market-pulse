@@ -20,6 +20,8 @@ from dallas_neighborhoods import (
     PERSONAS,
     DEFAULT_PERSONA,
     compute_zip_metrics,
+    _ZILLOW_OVERRIDES,
+    _apply_zillow_overrides,
 )
 
 
@@ -611,6 +613,14 @@ ST_GEORGE_ZIPS: dict[str, dict] = {
         "tags": ["rural", "low-crime"],
     },
 }
+
+
+# Apply Zillow overrides (loaded once in dallas_neighborhoods) to every
+# metro dict. Hand-curated values stay in the source file as the snapshot;
+# fresh ZHVI / ZORI values from data/zillow_overrides.json win when
+# available. DALLAS_ZIPS is patched in dallas_neighborhoods.py itself.
+for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_ZIPS):
+    _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

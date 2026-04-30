@@ -33,7 +33,39 @@ Limitations to surface in the UI:
 """
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 DATA_AS_OF = "2024-04"
+
+# ── Optional Zillow overrides ────────────────────────────────────────────────
+# scripts/refresh_zillow.py writes data/zillow_overrides.json with the most
+# recent ZHVI (home value) and ZORI (rent) values per ZIP. If that file
+# exists, apply it on top of the hand-curated snapshot below — gives us
+# fresh cap rates without editing source. Missing/unreadable file is fine;
+# we just keep the hardcoded values.
+def _load_zillow_overrides() -> dict:
+    path = Path(__file__).resolve().parent / "data" / "zillow_overrides.json"
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text())
+        return payload.get("overrides", {}) or {}
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def _apply_zillow_overrides(zips_dict: dict, overrides: dict) -> None:
+    for zip_code, fresh in overrides.items():
+        if zip_code not in zips_dict:
+            continue
+        if "median_home_value" in fresh:
+            zips_dict[zip_code]["median_home_value"] = fresh["median_home_value"]
+        if "median_rent_monthly" in fresh:
+            zips_dict[zip_code]["median_rent_monthly"] = fresh["median_rent_monthly"]
+
+
+_ZILLOW_OVERRIDES = _load_zillow_overrides()
 
 # ZIP-level snapshot for Dallas County + close-in suburbs.
 # Coordinates are approximate centroids of the ZIP polygon (USPS).
@@ -375,6 +407,9 @@ DALLAS_ZIPS: dict[str, dict] = {
         "tags": ["high-crime", "high-cap-rate", "speculative"],
     },
 }
+
+# Patch DALLAS_ZIPS in place with fresh Zillow values when available.
+_apply_zillow_overrides(DALLAS_ZIPS, _ZILLOW_OVERRIDES)
 
 
 # ───── Sub-score helpers (each returns 0-100) ─────
