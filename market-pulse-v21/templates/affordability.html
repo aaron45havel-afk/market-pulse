@@ -179,6 +179,24 @@
     </div>
 </div>
 
+<!-- ─────────────  DPA PROGRAMS  ───────────── -->
+<div class="card" id="dpaCard" style="margin-top:1rem;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.6rem;">
+        <div>
+            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Down Payment Assistance — programs by state</div>
+            <div style="font-size:0.78rem; color:var(--text-dim); margin-top:0.2rem;">Curated state-level DPA programs. Eligibility, funding, and award amounts change frequently — verify directly with the source authority before applying.</div>
+        </div>
+        <div class="dp-toggle" id="dpa-state-pills">
+            <button type="button" data-state="NV">NV</button>
+            <button type="button" data-state="CA">CA</button>
+            <button type="button" data-state="UT">UT</button>
+            <button type="button" data-state="TX">TX</button>
+            <button type="button" data-state="AZ">AZ</button>
+        </div>
+    </div>
+    <div id="dpa-list" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
+</div>
+
 <!-- ─────────────  PROPERTY TAX PROJECTION  ───────────── -->
 <div class="card" id="taxProjCard" style="margin-top:1rem;">
     <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Property tax escalation — 20 years at max-cap growth</div>
@@ -997,6 +1015,94 @@ document.addEventListener('affordabilityRecalc', e => {
     renderCostChart(sortedRows);
     renderTaxProjection(sortedRows);
     renderPrintSummary(e.detail);
+});
+
+// ─── DPA PROGRAMS ───────────────────────────────────────────────────
+// Curated list of state-level Down Payment Assistance programs. These
+// are real, named programs as of 2024 — but funding cycles, income
+// caps, and award amounts change frequently. Always verify with the
+// state authority before applying.
+//
+// type: 'grant'      — non-repayable
+//       'forgivable' — silent second forgiven after a hold period
+//       'deferred'   — silent second, repayable on sale/refi
+//       'mcc'        — federal mortgage interest tax credit
+//       'shared'     — shared-appreciation second
+const DPA_TYPE_COLORS = {
+    grant:      { bg: 'rgba(34,197,94,0.15)',  fg: '#22c55e' },
+    forgivable: { bg: 'rgba(59,130,246,0.15)', fg: '#3b82f6' },
+    deferred:   { bg: 'rgba(234,179,8,0.15)',  fg: '#eab308' },
+    mcc:        { bg: 'rgba(168,85,247,0.15)', fg: '#a855f7' },
+    shared:     { bg: 'rgba(249,115,22,0.15)', fg: '#f97316' },
+};
+
+const DPA_PROGRAMS = {
+    NV: [
+        { name: 'Home Is Possible (HIP)', provider: 'Nevada Housing Division', type: 'grant', max: 'Up to 5% of loan amount', note: 'Statewide, first-time + repeat buyers. Income + price caps by county.', url: 'https://housing.nv.gov/Programs/Single_Family/Home_Is_Possible/' },
+        { name: 'Home At Last', provider: 'Nevada Rural Housing', type: 'grant', max: '3–5% DPA grant', note: 'Rural-focused (most counties outside Clark/Washoe). Pairs with FHA/VA/USDA.', url: 'https://nvrural.org/' },
+        { name: 'Mortgage Credit Certificate (MCC)', provider: 'Nevada Housing Division', type: 'mcc', max: 'Up to $2,000/yr federal tax credit', note: 'Reduces federal tax bill by ~20% of mortgage interest paid annually. First-time buyers only.', url: 'https://housing.nv.gov/Programs/Single_Family/Mortgage_Credit_Certificate/' },
+    ],
+    CA: [
+        { name: 'MyHome Assistance Program', provider: 'CalHFA', type: 'deferred', max: 'Up to 3.5% of price (FHA) or 3% (conventional)', note: 'Silent second, repayable on sale/refi. First-time buyer + income limits.', url: 'https://www.calhfa.ca.gov/homebuyer/programs/myhome.htm' },
+        { name: 'Forgivable Equity Builder', provider: 'CalHFA', type: 'forgivable', max: 'Up to 10% of price', note: 'Forgiven after 5 years of owner-occupancy. Funding is intermittent — check availability.', url: 'https://www.calhfa.ca.gov/homebuyer/programs/feb.htm' },
+        { name: 'California Dream For All', provider: 'CalHFA', type: 'shared', max: 'Up to 20% of price', note: 'Shared-appreciation second — repay original + ~20% of price gains. Lottery-allocated when funded.', url: 'https://www.calhfa.ca.gov/dream/' },
+        { name: 'Mortgage Credit Certificate (MCC)', provider: 'CalHFA / local IDAs', type: 'mcc', max: 'Up to 20% of mortgage interest as federal tax credit', note: 'Local IDA-issued; available in most counties. First-time buyer.', url: 'https://www.calhfa.ca.gov/homebuyer/programs/mcc.htm' },
+    ],
+    UT: [
+        { name: 'FirstHome Loan + DPA Second', provider: 'Utah Housing Corp', type: 'deferred', max: 'Up to 6% of price as silent second', note: '30-year fixed first + DPA second covering down + most of closing. First-time buyer.', url: 'https://utahhousingcorp.org/firsthome' },
+        { name: 'HomeAgain Loan + DPA Second', provider: 'Utah Housing Corp', type: 'deferred', max: 'Up to 6% of price', note: 'Same structure as FirstHome but no first-time-buyer requirement. Higher income limits.', url: 'https://utahhousingcorp.org/homeagain' },
+        { name: 'Score Loan + DPA Second', provider: 'Utah Housing Corp', type: 'deferred', max: 'Up to 6% of price', note: 'Lower-credit-score option (down to ~620 FICO). Slightly higher rate than FirstHome.', url: 'https://utahhousingcorp.org/score' },
+        { name: 'Provo Home Purchase Plus / SLC HOME', provider: 'City programs', type: 'forgivable', max: 'Varies — typically $5K–$20K', note: 'City-level DPA layered on top of UHC programs. Provo, SLC, Ogden, Logan all have variants — check city housing dept.', url: 'https://www.provo.gov/government/departments/community-development' },
+    ],
+    TX: [
+        { name: 'TSAHC Home Sweet Texas', provider: 'TSAHC', type: 'grant', max: 'Up to 5% of loan as DPA grant', note: 'General-purpose, no first-time-buyer requirement. Income limits by county.', url: 'https://www.tsahc.org/homebuyers-renters/home-sweet-texas-home-loan-program' },
+        { name: 'TSAHC Homes for Texas Heroes', provider: 'TSAHC', type: 'grant', max: 'Up to 5% of loan as DPA grant', note: 'Teachers, firefighters, police, EMS, corrections, veterans. Slightly better terms than Home Sweet TX.', url: 'https://www.tsahc.org/homebuyers-renters/homes-for-texas-heroes-home-loan-program' },
+        { name: 'TDHCA My First Texas Home', provider: 'TDHCA', type: 'forgivable', max: '5% of loan as forgivable second', note: 'First-time buyer; forgiven over 3 years. Income + price limits.', url: 'https://www.tdhca.state.tx.us/homeownership/fthb/' },
+        { name: 'SETH 5 Star Texas Advantage', provider: 'SETH', type: 'grant', max: 'Up to 5% of loan', note: 'Statewide grant, no repayment, no first-time-buyer requirement.', url: 'https://www.sethfc.com/' },
+    ],
+    AZ: [
+        { name: 'HOME Plus', provider: 'Arizona IDA', type: 'grant', max: 'Up to 5% of loan amount', note: 'Statewide, no first-time-buyer requirement. Income limits.', url: 'https://www.azhomeplus.com/' },
+        { name: 'Pathway to Purchase', provider: 'Arizona Dept. of Housing', type: 'forgivable', max: 'Up to 10% / $20,000', note: 'Forgivable second, geographic-restricted (target areas). Income limits.', url: 'https://housing.az.gov/general-public/homebuyers' },
+        { name: 'Maricopa / Pima County DPA', provider: 'Local IDAs', type: 'forgivable', max: 'Varies — typically up to 5%', note: 'Phoenix-area (Maricopa) + Tucson-area (Pima Tucson IDA) layered DPA. Check local IDA for current programs.', url: 'https://www.maricopa.gov/3725/Down-Payment-Assistance' },
+    ],
+};
+
+let _dpaState = null;
+
+function renderDPA(state) {
+    _dpaState = state;
+    const list = document.getElementById('dpa-list');
+    if (!list) return;
+    document.querySelectorAll('#dpa-state-pills button').forEach(b =>
+        b.classList.toggle('active', b.dataset.state === state));
+    const programs = DPA_PROGRAMS[state] || [];
+    if (!programs.length) {
+        list.innerHTML = '<div style="font-size:0.85rem; color:var(--text-dim); font-style:italic;">No programs catalogued for this state yet.</div>';
+        return;
+    }
+    list.innerHTML = programs.map(p => {
+        const c = DPA_TYPE_COLORS[p.type] || { bg: 'transparent', fg: 'var(--text-dim)' };
+        return `
+            <div style="padding:0.7rem 0.85rem; background:var(--surface2); border:1px solid var(--border); border-radius:6px;">
+                <div style="display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem; flex-wrap:wrap;">
+                    <div>
+                        <div style="font-weight:700; font-size:0.95rem;">${p.name}</div>
+                        <div style="font-size:0.74rem; color:var(--text-dim); margin-top:0.15rem;">${p.provider}</div>
+                    </div>
+                    <span style="padding:0.18rem 0.55rem; border-radius:999px; background:${c.bg}; color:${c.fg}; font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">${p.type}</span>
+                </div>
+                <div style="font-size:0.85rem; margin-top:0.5rem;"><strong>${p.max}</strong></div>
+                <div style="font-size:0.8rem; color:var(--text-dim); margin-top:0.3rem; line-height:1.45;">${p.note}</div>
+                <a href="${p.url}" target="_blank" rel="noopener" style="display:inline-block; font-size:0.75rem; margin-top:0.45rem;">${p.url.replace(/^https?:\/\//,'').split('/')[0]} →</a>
+            </div>`;
+    }).join('');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('#dpa-state-pills button').forEach(btn => {
+        btn.addEventListener('click', () => renderDPA(btn.dataset.state));
+    });
+    renderDPA('UT'); // default
 });
 
 // Cross-state property-tax projection table. Anchors at year-1 prop
