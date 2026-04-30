@@ -231,6 +231,47 @@
     </div>
 </div>
 
+<!-- ─────────────  BUYDOWN CALCULATOR  ───────────── -->
+<div class="card" id="buydownCard" style="margin-top:1rem;">
+    <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Buydown — points vs temporary</div>
+    <div style="font-size:0.82rem; color:var(--text-dim); margin-bottom:0.85rem;">Permanent buydown (discount points): pay upfront to lower the rate for the life of the loan. Temporary buydown: a 1–3 year payment subsidy, typically funded by the seller.</div>
+
+    <div class="dp-toggle" id="bd-mode" style="margin-bottom:0.85rem;">
+        <button type="button" data-mode="permanent" class="active">Permanent (points)</button>
+        <button type="button" data-mode="2-1">2-1 Temporary</button>
+        <button type="button" data-mode="3-2-1">3-2-1 Temporary</button>
+    </div>
+
+    <div class="grid-3" style="gap:0.75rem;">
+        <label class="afford-row" style="margin:0;">
+            <span>Loan amount</span>
+            <input id="bd-loan" type="number" inputmode="numeric" min="0" step="1000" value="350000">
+        </label>
+        <label class="afford-row" style="margin:0;">
+            <span>Base rate (no buydown)</span>
+            <input id="bd-rate" type="number" inputmode="decimal" min="0.5" max="15" step="0.125" value="6.5">
+        </label>
+        <label class="afford-row" style="margin:0;">
+            <span>Term (years)</span>
+            <input id="bd-years" type="number" inputmode="numeric" min="5" max="40" step="5" value="30">
+        </label>
+        <label class="afford-row bd-permanent" style="margin:0;">
+            <span>Points purchased</span>
+            <input id="bd-points" type="number" inputmode="decimal" min="0" max="6" step="0.25" value="1.0">
+        </label>
+        <label class="afford-row bd-permanent" style="margin:0;">
+            <span>Rate reduction per point</span>
+            <input id="bd-redux" type="number" inputmode="decimal" min="0.05" max="0.5" step="0.05" value="0.25">
+        </label>
+        <div class="bd-permanent"></div>
+    </div>
+
+    <div id="bd-output" style="margin-top:1rem;"></div>
+    <div style="font-size:0.68rem; color:var(--text-dim); margin-top:0.85rem; line-height:1.4;">
+        Per-point reduction is lender-dependent — ~0.25% is the typical retail benchmark in 2024. Temporary buydown payments are computed on the full loan balance at each year's effective rate (what lenders disclose); the reality involves small amortization-balance adjustments year-over-year.
+    </div>
+</div>
+
 <!-- ─────────────  CUMULATIVE COST CHART  ───────────── -->
 <div class="card" style="margin-top:1rem;">
     <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">10-year cumulative housing cost — at each state's max price</div>
@@ -692,6 +733,124 @@ document.addEventListener('DOMContentLoaded', () => {
     ['refi-balance','refi-rate-old','refi-rate-new','refi-years','refi-closing']
         .forEach(id => document.getElementById(id).addEventListener('input', renderRefi));
     renderRefi();
+});
+
+// ─── BUYDOWN CALCULATOR ─────────────────────────────────────────────
+// Three modes share the same loan/base-rate/term inputs:
+//   permanent — pay points up front, rate reduces for life of loan
+//   2-1      — year 1 = base-2%, year 2 = base-1%, year 3+ = base
+//   3-2-1    — year 1 = base-3%, year 2 = base-2%, year 3 = base-1%
+// Temporary modes assume the seller funds the escrow; 'total escrow'
+// is the sum of (full payment − reduced payment) × 12 across the
+// subsidy years. Points cost = loan × points × 1%.
+
+let buydownMode = 'permanent';
+
+function renderBuydown() {
+    const loan  = +document.getElementById('bd-loan').value || 0;
+    const base  = +document.getElementById('bd-rate').value || 0;
+    const years = Math.max(5, +document.getElementById('bd-years').value || 30);
+    const out   = document.getElementById('bd-output');
+    if (!loan || !base) { out.innerHTML = ''; return; }
+
+    const basePI = monthlyPI(loan, base, years);
+
+    // Show/hide the points inputs based on mode.
+    document.querySelectorAll('.bd-permanent').forEach(el => {
+        el.style.display = buydownMode === 'permanent' ? '' : 'none';
+    });
+
+    if (buydownMode === 'permanent') {
+        const points = +document.getElementById('bd-points').value || 0;
+        const redux  = +document.getElementById('bd-redux').value || 0.25;
+        const newRate = Math.max(0.5, base - points * redux);
+        const newPI = monthlyPI(loan, newRate, years);
+        const cost = loan * points * 0.01;
+        const savings = basePI - newPI;
+        const breakEven = savings > 0 ? Math.ceil(cost / savings) : Infinity;
+        const lifetimeSaved = savings * years * 12 - cost;
+        out.innerHTML = `
+            <div class="grid-3" style="gap:1rem;">
+              <div>
+                <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.35rem;">Effective rate</div>
+                <div class="detail-list">
+                  <div class="row"><span class="label">Base rate</span><span>${base.toFixed(2)}%</span></div>
+                  <div class="row"><span class="label">Bought-down rate</span><span>${newRate.toFixed(2)}%</span></div>
+                  <div class="row"><span class="label">Points cost (1pt = 1%)</span><span>${fmtMoney(cost)}</span></div>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.35rem;">Monthly payment</div>
+                <div class="detail-list">
+                  <div class="row"><span class="label">Without buydown</span><span>${fmtMoney(basePI)}</span></div>
+                  <div class="row"><span class="label">With buydown</span><span>${fmtMoney(newPI)}</span></div>
+                  <div class="row total"><span>Monthly savings</span><span style="color:${savings>0?'var(--accent)':'var(--red)'};">${fmtMoney(savings)}</span></div>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.35rem;">Break-even &amp; lifetime</div>
+                <div class="detail-list">
+                  <div class="row"><span class="label">Months to recoup points</span><span>${isFinite(breakEven) ? breakEven : '—'}</span></div>
+                  <div class="row"><span class="label">Lifetime payment savings</span><span>${fmtMoney(savings * years * 12)}</span></div>
+                  <div class="row total"><span>Net of points</span><span style="color:${lifetimeSaved>0?'var(--accent)':'var(--red)'};">${fmtMoney(lifetimeSaved)}</span></div>
+                </div>
+              </div>
+            </div>`;
+        return;
+    }
+
+    // Temporary buydown — array of subsidy reductions per year.
+    const reductions = buydownMode === '2-1' ? [2, 1] : [3, 2, 1];
+    const yearlyRows = [];
+    let totalEscrow = 0;
+    reductions.forEach((cut, i) => {
+        const r = Math.max(0.5, base - cut);
+        const pi = monthlyPI(loan, r, years);
+        const subsidyPerMonth = basePI - pi;
+        const yearSubsidy = subsidyPerMonth * 12;
+        totalEscrow += yearSubsidy;
+        yearlyRows.push({ year: i + 1, rate: r, pi, subsidyPerMonth, yearSubsidy });
+    });
+    yearlyRows.push({ year: reductions.length + 1, rate: base, pi: basePI, subsidyPerMonth: 0, yearSubsidy: 0, terminal: true });
+
+    out.innerHTML = `
+        <div class="grid-2" style="gap:1rem;">
+          <div>
+            <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.35rem;">Year-by-year payment</div>
+            <div class="detail-list">
+              ${yearlyRows.map(y => `
+                <div class="row">
+                  <span class="label">${y.terminal ? `Year ${y.year}+ (full rate)` : `Year ${y.year} @ ${y.rate.toFixed(2)}%`}</span>
+                  <span>${fmtMoney(y.pi)}${y.subsidyPerMonth > 0 ? ` <span style="color:var(--accent); font-size:0.78rem;">(−${fmtMoney(y.subsidyPerMonth)})</span>` : ''}</span>
+                </div>`).join('')}
+            </div>
+          </div>
+          <div>
+            <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.35rem;">Escrow needed</div>
+            <div class="detail-list">
+              ${yearlyRows.filter(y => !y.terminal).map(y => `
+                <div class="row"><span class="label">Year ${y.year} subsidy (×12)</span><span>${fmtMoney(y.yearSubsidy)}</span></div>`).join('')}
+              <div class="row total"><span>Total escrow (seller funds)</span><span>${fmtMoney(totalEscrow)}</span></div>
+            </div>
+            <div style="font-size:0.72rem; color:var(--text-dim); margin-top:0.6rem; line-height:1.4;">
+              Negotiate this number into the offer as a closing-cost credit. Note that for any unused portion (e.g. if you refi early), most lenders return the unused escrow to the principal.
+            </div>
+          </div>
+        </div>`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('#bd-mode button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#bd-mode button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            buydownMode = btn.dataset.mode;
+            renderBuydown();
+        });
+    });
+    ['bd-loan','bd-rate','bd-years','bd-points','bd-redux']
+        .forEach(id => document.getElementById(id).addEventListener('input', renderBuydown));
+    renderBuydown();
 });
 
 function renderScenarioList() {
