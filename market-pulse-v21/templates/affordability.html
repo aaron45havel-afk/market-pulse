@@ -10,7 +10,7 @@
 
         <label class="afford-row">
             <span>Annual gross income <span class="hint" title="Pre-tax household income. Used for DTI calc + state income tax estimate.">ⓘ</span></span>
-            <input id="i-income" type="number" min="0" step="1000" value="113800">
+            <input id="i-income" type="number" inputmode="numeric" min="0" step="1000" value="113800">
         </label>
 
         <label class="afford-row">
@@ -26,7 +26,7 @@
         <div class="afford-row">
             <span>Down payment</span>
             <div style="display:flex; gap:0.4rem; align-items:center;">
-                <input id="i-down" type="number" min="0" step="0.5" value="3.5" style="flex:1;">
+                <input id="i-down" type="number" inputmode="decimal" min="0" step="0.5" value="3.5" style="flex:1;">
                 <div class="dp-toggle">
                     <button type="button" data-mode="%" class="active">%</button>
                     <button type="button" data-mode="$">$</button>
@@ -44,12 +44,12 @@
 
         <label class="afford-row">
             <span>Other monthly debts <span class="hint" title="Auto, student, credit-card minimums. Subtracted from max housing payment for back-end DTI.">ⓘ</span></span>
-            <input id="i-debts" type="number" min="0" step="50" value="0">
+            <input id="i-debts" type="number" inputmode="numeric" min="0" step="50" value="0">
         </label>
 
         <label class="afford-row">
             <span>HOA estimate <span class="hint" title="Monthly HOA dues. Counted toward DTI by lenders.">ⓘ</span></span>
-            <input id="i-hoa" type="number" min="0" step="25" value="0">
+            <input id="i-hoa" type="number" inputmode="numeric" min="0" step="25" value="0">
         </label>
     </div>
 
@@ -75,7 +75,7 @@
                     <th style="text-align:right;">Prop Tax/yr</th>
                     <th style="text-align:right;">State Income Tax/yr</th>
                     <th style="text-align:right;">Total Annual Tax</th>
-                    <th style="text-align:right;">% of Income</th>
+                    <th style="text-align:right;" class="col-secondary">% of Income</th>
                 </tr>
             </thead>
             <tbody id="resultsBody"></tbody>
@@ -95,7 +95,7 @@
         </div>
         <div style="display:flex; align-items:center; gap:0.4rem;">
             <span style="font-size:0.8rem; color:var(--text-dim);">Price</span>
-            <input id="i-test-price" type="number" min="0" step="5000" value="400000" style="width:140px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.7rem; color:var(--text); font-size:0.95rem;">
+            <input id="i-test-price" type="number" inputmode="numeric" min="0" step="5000" value="400000" style="width:140px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.7rem; color:var(--text); font-size:0.95rem;">
         </div>
     </div>
     <div style="overflow-x:auto;">
@@ -136,6 +136,19 @@
 .dp-toggle button.active, .loan-toggle button.active { background:var(--accent2); color:white; }
 .hint { color:var(--text-dim); cursor:help; font-size:0.8rem; opacity:0.7; }
 .hint:hover { opacity:1; color:var(--accent2); }
+
+/* Mobile polish — bigger touch targets for sliders, smaller hero,
+   hide the lowest-priority columns so the comparison table doesn't
+   force horizontal scroll on phones (overflow-x:auto still kicks in
+   for everything else). */
+@media (max-width: 640px) {
+    .afford-row input[type=range] { height: 10px; }
+    .afford-row input[type=range]::-webkit-slider-thumb { width: 22px; height: 22px; }
+    .afford-row input[type=range]::-moz-range-thumb     { width: 22px; height: 22px; }
+    #summaryHero { font-size: 1.25rem; }
+    #resultsTable .col-secondary,
+    .forward-col-secondary { display: none; }
+}
 </style>
 {% endblock %}
 
@@ -426,7 +439,7 @@ function renderResults(inputs) {
             <td style="text-align:right;">${fmtMoney(r.piti.annualPropertyTax)}</td>
             <td style="text-align:right;">${fmtMoney(r.stateIncomeTax)}</td>
             <td style="text-align:right;">${fmtMoney(r.totalAnnualTax)}</td>
-            <td style="text-align:right;">${(r.pctOfIncome * 100).toFixed(1)}%</td>
+            <td style="text-align:right;" class="col-secondary">${(r.pctOfIncome * 100).toFixed(1)}%</td>
         `;
         tbody.appendChild(tr);
     });
