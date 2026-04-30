@@ -122,6 +122,46 @@
     </div>
 </div>
 
+<!-- ─────────────  STATE DETAIL CARD  ───────────── -->
+<div class="card" id="detailCard" style="margin-top:1rem; display:none;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.85rem;">
+        <div>
+            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Selected state</div>
+            <div id="detailHeading" style="font-size:1.4rem; font-weight:700; margin-top:0.2rem;"></div>
+            <div id="detailSub" style="font-size:0.85rem; color:var(--text-dim); margin-top:0.2rem;"></div>
+        </div>
+        <button id="detailClose" type="button" style="background:transparent; border:1px solid var(--border); color:var(--text-dim); padding:0.3rem 0.7rem; border-radius:6px; cursor:pointer; font-size:0.8rem;">Close</button>
+    </div>
+    <div id="detailNote" style="padding:0.7rem 0.85rem; border-left:3px solid var(--accent2); background:rgba(59,130,246,0.06); border-radius:4px; font-size:0.82rem; line-height:1.45; margin-bottom:1rem;"></div>
+    <div class="grid-3" style="gap:1rem;">
+        <div>
+            <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.35rem;">Monthly PITI</div>
+            <div id="detailPITI" class="detail-list"></div>
+        </div>
+        <div>
+            <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.35rem;">Loan summary</div>
+            <div id="detailLoan" class="detail-list"></div>
+        </div>
+        <div>
+            <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.35rem;">5y &amp; 10y projection</div>
+            <div id="detailProjection" class="detail-list"></div>
+        </div>
+    </div>
+    <div style="font-size:0.68rem; color:var(--text-dim); margin-top:0.85rem; line-height:1.4;">
+        Projection assumes property tax escalates at the state's cap (TX 10%, AZ 5%, NV 3%, CA 2%, UT 3% — UT has no statewide cap, 3% used as a typical assumption). Insurance and HOA are held flat. Equity built reflects principal amortized — home-price appreciation is excluded.
+    </div>
+</div>
+
+<style>
+.detail-list { display:flex; flex-direction:column; gap:0.3rem; font-size:0.85rem; }
+.detail-list .row { display:flex; justify-content:space-between; gap:0.5rem; padding:0.2rem 0; border-bottom:1px dashed var(--border); }
+.detail-list .row:last-child { border-bottom:none; }
+.detail-list .row .label { color:var(--text-dim); }
+.detail-list .row.total { border-top:1px solid var(--border); padding-top:0.45rem; margin-top:0.2rem; font-weight:700; }
+#resultsTable tbody tr { cursor:pointer; }
+#resultsTable tbody tr.selected { background:rgba(59,130,246,0.10); }
+</style>
+
 <style>
 .afford-row { display:block; margin-bottom:0.85rem; }
 .afford-row > span { display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; color:var(--text-dim); margin-bottom:0.3rem; }
@@ -466,7 +506,108 @@ function renderResults(inputs) {
     }
 }
 
-document.addEventListener('affordabilityRecalc', e => renderResults(e.detail));
+// Click → show detail panel for that state.
+function bindRowClicks(rows) {
+    document.querySelectorAll('#resultsBody tr').forEach((tr, i) => {
+        tr.addEventListener('click', () => {
+            document.querySelectorAll('#resultsBody tr').forEach(t => t.classList.remove('selected'));
+            tr.classList.add('selected');
+            renderDetail(rows[i], _lastInputs);
+        });
+    });
+}
+
+document.addEventListener('affordabilityRecalc', e => {
+    renderResults(e.detail);
+    // Re-bind click handlers and re-render the open detail (if any).
+    const sortedRows = STATE_ORDER.map(s => computeRow(e.detail, s)).sort((a,b) => b.maxPrice - a.maxPrice);
+    bindRowClicks(sortedRows);
+    if (_openDetailState) {
+        const r = sortedRows.find(x => x.state === _openDetailState);
+        if (r) renderDetail(r, e.detail);
+    }
+});
+
+// ─── STATE DETAIL PANEL ─────────────────────────────────────────────
+// Cumulative cost + amortization helpers. `principalPaidByYear` uses the
+// closed-form amortization-balance formula; cumulative cost grows the
+// property-tax line each year by the state's cap (or a 3% default).
+
+let _openDetailState = null;
+
+const PROP_TAX_GROWTH = { NV: 0.03, CA: 0.02, UT: 0.03, TX: 0.10, AZ: 0.05 };
+
+function principalPaidByYear(loan, rate, year) {
+    if (loan <= 0 || rate <= 0 || year <= 0) return 0;
+    const r = rate / 12;
+    const N = LOAN_TERM_MONTHS;
+    const k = year * 12;
+    return loan * (Math.pow(1 + r, k) - 1) / (Math.pow(1 + r, N) - 1);
+}
+
+function cumulativeOutflow(piti, annualPropTax, growth, years) {
+    let total = 0;
+    let propTax = annualPropTax;
+    const nonTaxMonthly = piti.PI + piti.insurance + piti.MIP + piti.HOA;
+    for (let y = 0; y < years; y++) {
+        total += nonTaxMonthly * 12 + propTax;
+        propTax *= (1 + growth);
+    }
+    return total;
+}
+
+function renderDetail(rowData, inputs) {
+    if (!rowData || !inputs) return;
+    _openDetailState = rowData.state;
+    const sd = STATE_DATA[rowData.state];
+    const piti = rowData.piti;
+    const totalLoan = piti.baseLoan + (inputs.loanType === 'FHA' ? piti.baseLoan * FHA_UFMIP_RATE : 0);
+    const growth = PROP_TAX_GROWTH[rowData.state] || 0.03;
+
+    document.getElementById('detailCard').style.display = 'block';
+    document.getElementById('detailHeading').textContent = `${sd.name} — ${fmtMoney(rowData.maxPrice)}`;
+    document.getElementById('detailSub').textContent =
+        `Monthly PITI ${fmtMoney(piti.total)} · ${(rowData.pctOfIncome * 100).toFixed(1)}% of gross income`;
+    document.getElementById('detailNote').textContent = sd.notes;
+
+    const pitiHtml =
+        `<div class="row"><span class="label">Principal &amp; Interest</span><span>${fmtMoney(piti.PI)}</span></div>` +
+        `<div class="row"><span class="label">Property Tax</span><span>${fmtMoney(piti.propertyTax)}</span></div>` +
+        `<div class="row"><span class="label">Insurance</span><span>${fmtMoney(piti.insurance)}</span></div>` +
+        `<div class="row"><span class="label">${inputs.loanType === 'FHA' ? 'FHA MIP' : 'PMI'}</span><span>${fmtMoney(piti.MIP)}</span></div>` +
+        `<div class="row"><span class="label">HOA</span><span>${fmtMoney(piti.HOA)}</span></div>` +
+        `<div class="row total"><span>Total monthly PITI</span><span>${fmtMoney(piti.total)}</span></div>`;
+    document.getElementById('detailPITI').innerHTML = pitiHtml;
+
+    const loanHtml =
+        `<div class="row"><span class="label">Purchase price</span><span>${fmtMoney(rowData.maxPrice)}</span></div>` +
+        `<div class="row"><span class="label">Down payment</span><span>${fmtMoney(piti.downAmount)}</span></div>` +
+        `<div class="row"><span class="label">Base loan</span><span>${fmtMoney(piti.baseLoan)}</span></div>` +
+        (inputs.loanType === 'FHA' ? `<div class="row"><span class="label">UFMIP financed</span><span>${fmtMoney(totalLoan - piti.baseLoan)}</span></div>` : '') +
+        `<div class="row"><span class="label">Total loan</span><span>${fmtMoney(totalLoan)}</span></div>` +
+        `<div class="row"><span class="label">Annual property tax (yr 1)</span><span>${fmtMoney(piti.annualPropertyTax)}</span></div>` +
+        `<div class="row"><span class="label">State income tax (annual)</span><span>${fmtMoney(rowData.stateIncomeTax)}</span></div>`;
+    document.getElementById('detailLoan').innerHTML = loanHtml;
+
+    const cum5 = cumulativeOutflow(piti, piti.annualPropertyTax, growth, 5);
+    const cum10 = cumulativeOutflow(piti, piti.annualPropertyTax, growth, 10);
+    const eq5 = principalPaidByYear(totalLoan, inputs.rate, 5);
+    const eq10 = principalPaidByYear(totalLoan, inputs.rate, 10);
+    const propTax10 = piti.annualPropertyTax * Math.pow(1 + growth, 9); // year-10 annual
+    const projHtml =
+        `<div class="row"><span class="label">5-year cumulative outflow</span><span>${fmtMoney(cum5)}</span></div>` +
+        `<div class="row"><span class="label">10-year cumulative outflow</span><span>${fmtMoney(cum10)}</span></div>` +
+        `<div class="row"><span class="label">Equity built (5y, principal)</span><span>${fmtMoney(eq5)}</span></div>` +
+        `<div class="row"><span class="label">Equity built (10y, principal)</span><span>${fmtMoney(eq10)}</span></div>` +
+        `<div class="row"><span class="label">Year-10 annual prop tax @ ${(growth*100).toFixed(0)}%/yr</span><span>${fmtMoney(propTax10)}</span></div>`;
+    document.getElementById('detailProjection').innerHTML = projHtml;
+}
+
+document.getElementById('detailClose').addEventListener('click', () => {
+    document.getElementById('detailCard').style.display = 'none';
+    document.querySelectorAll('#resultsBody tr').forEach(t => t.classList.remove('selected'));
+    _openDetailState = null;
+});
 
 // ─── FORWARD CALCULATOR ─────────────────────────────────────────────
 // At a user-entered price, show each state's PITI breakdown and flag
