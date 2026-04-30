@@ -2,7 +2,17 @@
 {% block title %}Affordability Calculator — Market Pulse{% endblock %}
 {% block content %}
 <h1>Real Estate Affordability Calculator</h1>
-<p class="subtitle">Find your true buying power across NV, CA, UT, TX, AZ — back-solves max sustainable price from your income and target DTI.</p>
+<p class="subtitle">Find your true buying power across NV, CA, UT, TX, AZ — back-solves max sustainable price from your income and target DTI.
+    <button id="printBtn" type="button" style="margin-left:0.6rem; padding:0.35rem 0.85rem; border-radius:6px; background:transparent; border:1px solid var(--border); color:var(--text-dim); font-size:0.8rem; cursor:pointer;">🖨️ Print results</button>
+</p>
+
+<!-- Visible only in print: a plain-text recap of the user's inputs so a
+     lender or advisor reading the printout has full context. Populated
+     by JS on every recalc. -->
+<div id="printSummary" class="print-only" style="display:none; margin-bottom:1rem;">
+    <h2 style="font-size:1rem; margin-bottom:0.5rem;">Assumptions</h2>
+    <div id="printSummaryBody" style="font-size:0.9rem;"></div>
+</div>
 <div class="grid-2" style="gap:1rem;">
     <!-- ─────────────  INPUT PANEL  ───────────── -->
     <div class="card">
@@ -174,6 +184,32 @@
 .detail-list .row.total { border-top:1px solid var(--border); padding-top:0.45rem; margin-top:0.2rem; font-weight:700; }
 #resultsTable tbody tr { cursor:pointer; }
 #resultsTable tbody tr.selected { background:rgba(59,130,246,0.10); }
+
+/* ─── PRINT STYLES ──────────────────────────────────────────────
+   Invert to a clean light layout for paper. Hide interactive
+   chrome (nav, footer, input form, buttons, sliders, chart);
+   keep the comparison table, detail panel, and the forward-calc
+   table. The plain-text input summary fills in for the form. */
+.print-only { display:none; }
+@media print {
+    @page { margin: 0.5in; }
+    body, .container { background:white !important; color:black !important; }
+    nav, .footer, #printBtn, .hint, #i-test-price,
+    .dp-toggle, .loan-toggle,
+    .afford-row input[type=range], .afford-row input[type=number],
+    #costChart, .grid-2 > .card:first-child,
+    #detailClose { display:none !important; }
+    .print-only { display:block !important; }
+    .card { background:white !important; border:1px solid #d4d4d8 !important; box-shadow:none !important; page-break-inside:avoid; }
+    h1 { color:black !important; }
+    .subtitle, .label, [class*="text-dim"] { color:#52525b !important; }
+    table { color:black !important; }
+    thead th { color:#52525b !important; border-bottom:1px solid #d4d4d8 !important; }
+    tbody td { border-bottom:1px solid #e4e4e7 !important; color:black !important; }
+    #resultsTable tbody tr.selected { background:#eff6ff !important; }
+    .detail-list .row { border-bottom-color:#e4e4e7 !important; }
+    /* Keep the green/red max-price highlights but darken slightly for paper. */
+}
 </style>
 
 <style>
@@ -458,6 +494,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Print button → window.print(); the @media print stylesheet
+    // handles the layout swap and the renderResults handler keeps
+    // #printSummaryBody up to date.
+    const printBtn = document.getElementById('printBtn');
+    if (printBtn) printBtn.addEventListener('click', () => window.print());
+
     // Kick off the first calculation so listeners get an initial payload.
     updateReadouts();
     scheduleRecalc();
@@ -549,7 +591,29 @@ document.addEventListener('affordabilityRecalc', e => {
         if (r) renderDetail(r, e.detail);
     }
     renderCostChart(sortedRows);
+    renderPrintSummary(e.detail);
 });
+
+// Populate the print-only assumptions block. Mirrors the live form so
+// printouts are self-contained for whoever's reading them.
+function renderPrintSummary(inputs) {
+    const el = document.getElementById('printSummaryBody');
+    if (!el) return;
+    const dpStr = inputs.downPaymentMode === '%'
+        ? `${inputs.downPayment}% of price`
+        : fmtMoney(inputs.downPayment) + ' fixed';
+    const lines = [
+        `Annual gross income: <strong>${fmtMoney(inputs.income)}</strong>`,
+        `Target DTI threshold: <strong>${(inputs.dti * 100).toFixed(0)}%</strong>`,
+        `Interest rate: <strong>${(inputs.rate * 100).toFixed(2)}%</strong> (30-year fixed)`,
+        `Down payment: <strong>${dpStr}</strong>`,
+        `Loan type: <strong>${inputs.loanType}</strong>`,
+        `Other monthly debts: <strong>${fmtMoney(inputs.monthlyDebts || 0)}</strong>`,
+        `HOA estimate: <strong>${fmtMoney(inputs.hoa || 0)}</strong>`,
+        `Roommate / rental income: <strong>${fmtMoney(inputs.rentalIncome || 0)}</strong>${inputs.rentalIncome ? ' (75% counted by lender)' : ''}`,
+    ];
+    el.innerHTML = lines.map(l => `<div>${l}</div>`).join('');
+}
 
 // ─── CUMULATIVE COST CHART ─────────────────────────────────────────
 // Re-uses Chart.js (already loaded by base.html). Each state gets a line
