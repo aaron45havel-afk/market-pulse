@@ -13,7 +13,15 @@
     <h2 style="font-size:1rem; margin-bottom:0.5rem;">Assumptions</h2>
     <div id="printSummaryBody" style="font-size:0.9rem;"></div>
 </div>
-<div class="grid-2" style="gap:1rem;">
+
+<!-- ─────────────  TAB BAR  ───────────── -->
+<div class="tab-bar" id="affordTabBar">
+    <button type="button" class="tab-btn active" data-tab="affordability">📊 Affordability</button>
+    <button type="button" class="tab-btn" data-tab="refi">🏦 Refinance</button>
+    <button type="button" class="tab-btn" data-tab="buydown">💰 Buydown</button>
+    <button type="button" class="tab-btn" data-tab="dpa">🎯 DPA Programs</button>
+</div>
+<div class="grid-2" data-tab="affordability" style="gap:1rem;">
     <!-- ─────────────  INPUT PANEL  ───────────── -->
     <div class="card">
         <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.75rem;">Your inputs</div>
@@ -78,7 +86,7 @@
 </div>
 
 <!-- ─────────────  SAVED SCENARIOS  ───────────── -->
-<div class="card" id="scenariosCard" style="margin-top:1rem;">
+<div class="card" id="scenariosCard" data-tab="affordability" style="margin-top:1rem;">
     <div style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.6rem;">
         <div>
             <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Saved scenarios</div>
@@ -90,7 +98,7 @@
 </div>
 
 <!-- ─────────────  COMPARISON TABLE  ───────────── -->
-<div class="card" style="margin-top:1rem;">
+<div class="card" data-tab="affordability" style="margin-top:1rem;">
     <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">State comparison — max sustainable purchase price</div>
     <div style="overflow-x:auto;">
         <table id="resultsTable">
@@ -114,7 +122,7 @@
 </div>
 
 <!-- ─────────────  FORWARD CALCULATOR  ───────────── -->
-<div class="card" style="margin-top:1rem;">
+<div class="card" data-tab="affordability" style="margin-top:1rem;">
     <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.85rem;">
         <div>
             <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Test a specific property</div>
@@ -150,7 +158,7 @@
 </div>
 
 <!-- ─────────────  STATE DETAIL CARD  ───────────── -->
-<div class="card" id="detailCard" style="margin-top:1rem; display:none;">
+<div class="card" id="detailCard" data-tab="affordability" style="margin-top:1rem; display:none;">
     <div style="display:flex; align-items:baseline; justify-content:space-between; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.85rem;">
         <div>
             <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Selected state</div>
@@ -180,7 +188,7 @@
 </div>
 
 <!-- ─────────────  DPA PROGRAMS  ───────────── -->
-<div class="card" id="dpaCard" style="margin-top:1rem;">
+<div class="card" id="dpaCard" data-tab="dpa" style="margin-top:1rem;">
     <div style="display:flex; align-items:baseline; justify-content:space-between; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.6rem;">
         <div>
             <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Down Payment Assistance — programs by state</div>
@@ -198,7 +206,7 @@
 </div>
 
 <!-- ─────────────  PROPERTY TAX PROJECTION  ───────────── -->
-<div class="card" id="taxProjCard" style="margin-top:1rem;">
+<div class="card" id="taxProjCard" data-tab="affordability" style="margin-top:1rem;">
     <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Property tax escalation — 20 years at max-cap growth</div>
     <div style="font-size:0.82rem; color:var(--text-dim); margin-bottom:0.85rem;">Year-by-year annual property tax at <em>each state's max price</em>, growing at the state's policy cap. The 20-year total quantifies the long-run cost of weak caps (TX 10%, AZ 5%) vs strong ones (CA 2%, NV 3%, UT 3%-default).</div>
     <div style="overflow-x:auto;">
@@ -221,7 +229,7 @@
 </div>
 
 <!-- ─────────────  REFINANCE CALCULATOR  ───────────── -->
-<div class="card" id="refiCard" style="margin-top:1rem;">
+<div class="card" id="refiCard" data-tab="refi" style="margin-top:1rem;">
     <div style="display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.85rem;">
         <div>
             <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Refinance — what would lowering your rate save?</div>
@@ -273,7 +281,7 @@
 </div>
 
 <!-- ─────────────  BUYDOWN CALCULATOR  ───────────── -->
-<div class="card" id="buydownCard" style="margin-top:1rem;">
+<div class="card" id="buydownCard" data-tab="buydown" style="margin-top:1rem;">
     <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Buydown — points vs temporary</div>
     <div style="font-size:0.82rem; color:var(--text-dim); margin-bottom:0.85rem;">Permanent buydown (discount points): pay upfront to lower the rate for the life of the loan. Temporary buydown: a 1–3 year payment subsidy, typically funded by the seller.</div>
 
@@ -314,7 +322,7 @@
 </div>
 
 <!-- ─────────────  CUMULATIVE COST CHART  ───────────── -->
-<div class="card" style="margin-top:1rem;">
+<div class="card" data-tab="affordability" style="margin-top:1rem;">
     <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">10-year cumulative housing cost — at each state's max price</div>
     <div style="font-size:0.82rem; color:var(--text-dim); margin-bottom:0.85rem;">If you buy at your max sustainable price in each state, here's the running total of cash out the door (PITI + escalating property tax). Diverging lines = the long-run cost of state policy.</div>
     <div style="position:relative; height:340px;">
@@ -323,6 +331,14 @@
 </div>
 
 <style>
+/* Tab navigation. Sticky to the top of the viewport so users always
+   know which view they're in while scrolling within a long tab. */
+.tab-bar { display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:1rem; position:sticky; top:0; background:var(--bg); padding:0.55rem 0; z-index:10; border-bottom:1px solid var(--border); }
+.tab-btn { padding:0.5rem 1.05rem; border-radius:999px; background:var(--surface2); border:1px solid var(--border); color:var(--text-dim); font-size:0.85rem; font-weight:500; cursor:pointer; transition:all 0.15s; }
+.tab-btn:hover { color:var(--text); border-color:var(--accent2); }
+.tab-btn.active { background:var(--accent2); color:white; border-color:var(--accent2); }
+@media print { .tab-bar { display:none !important; } [data-tab] { display:revert !important; } .grid-2[data-tab] { display:grid !important; } }
+
 .detail-list { display:flex; flex-direction:column; gap:0.3rem; font-size:0.85rem; }
 .detail-list .row { display:flex; justify-content:space-between; gap:0.5rem; padding:0.2rem 0; border-bottom:1px dashed var(--border); }
 .detail-list .row:last-child { border-bottom:none; }
@@ -1103,6 +1119,38 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => renderDPA(btn.dataset.state));
     });
     renderDPA('UT'); // default
+});
+
+// ─── TAB NAVIGATION ─────────────────────────────────────────────────
+// Splits the page into four use-cases: affordability (the main flow),
+// refinance, buydown, dpa. Single state machine: setActiveTab toggles
+// every [data-tab] element's display so users only see the active
+// section. Detail card has its own internal open/closed state which
+// we preserve when switching back to affordability.
+
+function setActiveTab(name) {
+    document.body.dataset.activeTab = name;
+    document.querySelectorAll('.tab-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.tab === name));
+    document.querySelectorAll('[data-tab]').forEach(el => {
+        if (el.id === 'detailCard') {
+            // Respect the row-click open/closed state.
+            el.style.display = (name === 'affordability' && _openDetailState) ? 'block' : 'none';
+        } else {
+            el.style.display = el.dataset.tab === name ? '' : 'none';
+        }
+    });
+    // Force a chart resize when switching back to affordability so
+    // Chart.js re-measures the now-visible canvas (otherwise the
+    // bounding box can come out 0×0 and the lines clip).
+    if (name === 'affordability' && _chart) setTimeout(() => _chart.resize(), 50);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('#affordTabBar .tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
+    });
+    setActiveTab('affordability');
 });
 
 // Cross-state property-tax projection table. Anchors at year-1 prop
