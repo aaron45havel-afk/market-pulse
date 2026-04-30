@@ -121,42 +121,6 @@
     </div>
 </div>
 
-<!-- ─────────────  FORWARD CALCULATOR  ───────────── -->
-<div class="card" data-tab="affordability" style="margin-top:1rem;">
-    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.85rem;">
-        <div>
-            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Test a specific property</div>
-            <div style="font-size:0.82rem; color:var(--text-dim); margin-top:0.25rem;">What does <em>this</em> price actually cost you per month in each state? Color = PITI vs your DTI cap.</div>
-        </div>
-        <div style="display:flex; align-items:center; gap:0.4rem;">
-            <span style="font-size:0.8rem; color:var(--text-dim);">Price</span>
-            <input id="i-test-price" type="number" inputmode="numeric" min="0" step="5000" value="400000" style="width:140px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.7rem; color:var(--text); font-size:0.95rem;">
-        </div>
-    </div>
-    <div style="overflow-x:auto;">
-        <table>
-            <thead>
-                <tr>
-                    <th>State</th>
-                    <th style="text-align:right;">P&amp;I</th>
-                    <th style="text-align:right;">Prop Tax</th>
-                    <th style="text-align:right;">Insurance</th>
-                    <th style="text-align:right;">MIP/PMI</th>
-                    <th style="text-align:right;">Total PITI</th>
-                    <th style="text-align:right;">% of cap</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="forwardBody"></tbody>
-        </table>
-    </div>
-    <div style="font-size:0.7rem; color:var(--text-dim); margin-top:0.6rem; line-height:1.4;">
-        <span style="color:var(--accent); font-weight:600;">●</span> under cap &nbsp;
-        <span style="color:var(--yellow); font-weight:600;">●</span> within 5% of cap &nbsp;
-        <span style="color:var(--red); font-weight:600;">●</span> over cap. The cap is monthly income × DTI − other debts.
-    </div>
-</div>
-
 <!-- ─────────────  STATE DETAIL CARD  ───────────── -->
 <div class="card" id="detailCard" data-tab="affordability" style="margin-top:1rem; display:none;">
     <div style="display:flex; align-items:baseline; justify-content:space-between; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.85rem;">
@@ -187,6 +151,51 @@
     </div>
 </div>
 
+<!-- ─────────────  CUMULATIVE COST CHART  ───────────── -->
+<div class="card" data-tab="affordability" style="margin-top:1rem;">
+    <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">10-year cumulative housing cost — at each state's max price</div>
+    <div style="font-size:0.82rem; color:var(--text-dim); margin-bottom:0.85rem;">Running total of cash out the door (PITI + escalating property tax). Diverging lines = the long-run cost of state policy.</div>
+    <div style="position:relative; height:340px;">
+        <canvas id="costChart"></canvas>
+    </div>
+</div>
+
+<!-- ─────────────  FORWARD CALCULATOR (collapsed by default)  ───────────── -->
+<details class="card collapsible" data-tab="affordability" style="margin-top:1rem;">
+    <summary style="cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between; gap:0.5rem; flex-wrap:wrap;">
+        <div>
+            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Test a specific property <span class="chev">▾</span></div>
+            <div style="font-size:0.82rem; color:var(--text-dim); margin-top:0.25rem;">PITI for a specific price across all 5 states, color-coded against your DTI cap.</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.4rem;" onclick="event.preventDefault();event.stopPropagation();">
+            <span style="font-size:0.8rem; color:var(--text-dim);">Price</span>
+            <input id="i-test-price" type="number" inputmode="numeric" min="0" step="5000" value="400000" style="width:140px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.7rem; color:var(--text); font-size:0.95rem;">
+        </div>
+    </summary>
+    <div style="margin-top:0.85rem; overflow-x:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>State</th>
+                    <th style="text-align:right;">P&amp;I</th>
+                    <th style="text-align:right;">Prop Tax</th>
+                    <th style="text-align:right;" class="forward-col-secondary">Insurance</th>
+                    <th style="text-align:right;" class="forward-col-secondary">MIP/PMI</th>
+                    <th style="text-align:right;">Total PITI</th>
+                    <th style="text-align:right;">% of cap</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="forwardBody"></tbody>
+        </table>
+    </div>
+    <div style="font-size:0.7rem; color:var(--text-dim); margin-top:0.6rem; line-height:1.4;">
+        <span style="color:var(--accent); font-weight:600;">●</span> under cap &nbsp;
+        <span style="color:var(--yellow); font-weight:600;">●</span> within 5% of cap &nbsp;
+        <span style="color:var(--red); font-weight:600;">●</span> over cap.
+    </div>
+</details>
+
 <!-- ─────────────  DPA PROGRAMS  ───────────── -->
 <div class="card" id="dpaCard" data-tab="dpa" style="margin-top:1rem;">
     <div style="display:flex; align-items:baseline; justify-content:space-between; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.6rem;">
@@ -205,10 +214,13 @@
     <div id="dpa-list" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
 </div>
 
-<!-- ─────────────  PROPERTY TAX PROJECTION  ───────────── -->
-<div class="card" id="taxProjCard" data-tab="affordability" style="margin-top:1rem;">
-    <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Property tax escalation — 20 years at max-cap growth</div>
-    <div style="font-size:0.82rem; color:var(--text-dim); margin-bottom:0.85rem;">Year-by-year annual property tax at <em>each state's max price</em>, growing at the state's policy cap. The 20-year total quantifies the long-run cost of weak caps (TX 10%, AZ 5%) vs strong ones (CA 2%, NV 3%, UT 3%-default).</div>
+<!-- ─────────────  PROPERTY TAX PROJECTION (collapsed by default)  ───────────── -->
+<details class="card collapsible" id="taxProjCard" data-tab="affordability" style="margin-top:1rem;">
+    <summary style="cursor:pointer; list-style:none;">
+        <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Property tax escalation — 20-year projection <span class="chev">▾</span></div>
+        <div style="font-size:0.82rem; color:var(--text-dim); margin-top:0.25rem;">Year-by-year annual property tax at each state's max price, growing at the state's policy cap. 20-year total quantifies the cost of weak vs strong caps.</div>
+    </summary>
+    <div style="margin-top:0.85rem;"></div>
     <div style="overflow-x:auto;">
         <table id="taxProjTable">
             <thead>
@@ -226,7 +238,7 @@
             <tbody id="taxProjBody"></tbody>
         </table>
     </div>
-</div>
+</details>
 
 <!-- ─────────────  REFINANCE CALCULATOR  ───────────── -->
 <div class="card" id="refiCard" data-tab="refi" style="margin-top:1rem;">
@@ -321,15 +333,6 @@
     </div>
 </div>
 
-<!-- ─────────────  CUMULATIVE COST CHART  ───────────── -->
-<div class="card" data-tab="affordability" style="margin-top:1rem;">
-    <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">10-year cumulative housing cost — at each state's max price</div>
-    <div style="font-size:0.82rem; color:var(--text-dim); margin-bottom:0.85rem;">If you buy at your max sustainable price in each state, here's the running total of cash out the door (PITI + escalating property tax). Diverging lines = the long-run cost of state policy.</div>
-    <div style="position:relative; height:340px;">
-        <canvas id="costChart"></canvas>
-    </div>
-</div>
-
 <style>
 /* Tab navigation. Sticky to the top of the viewport so users always
    know which view they're in while scrolling within a long tab. */
@@ -337,7 +340,15 @@
 .tab-btn { padding:0.5rem 1.05rem; border-radius:999px; background:var(--surface2); border:1px solid var(--border); color:var(--text-dim); font-size:0.85rem; font-weight:500; cursor:pointer; transition:all 0.15s; }
 .tab-btn:hover { color:var(--text); border-color:var(--accent2); }
 .tab-btn.active { background:var(--accent2); color:white; border-color:var(--accent2); }
-@media print { .tab-bar { display:none !important; } [data-tab] { display:revert !important; } .grid-2[data-tab] { display:grid !important; } }
+@media print { .tab-bar { display:none !important; } [data-tab] { display:revert !important; } .grid-2[data-tab] { display:grid !important; } details.collapsible[open], details.collapsible:not([open]) { display:block !important; } details.collapsible:not([open]) > *:not(summary) { display:revert !important; } }
+
+/* Collapsible <details> cards. Native disclosure widget styled to
+   match the rest of the dark theme. Chevron rotates when open. */
+details.collapsible { padding:1rem 1.25rem; }
+details.collapsible > summary::-webkit-details-marker { display:none; }
+details.collapsible > summary { user-select:none; }
+details.collapsible .chev { display:inline-block; transition:transform 0.15s; font-size:0.7rem; color:var(--text-dim); margin-left:0.3rem; }
+details.collapsible[open] .chev { transform:rotate(180deg); }
 
 .detail-list { display:flex; flex-direction:column; gap:0.3rem; font-size:0.85rem; }
 .detail-list .row { display:flex; justify-content:space-between; gap:0.5rem; padding:0.2rem 0; border-bottom:1px dashed var(--border); }
