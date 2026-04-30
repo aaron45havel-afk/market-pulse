@@ -82,6 +82,11 @@ async def state_map(request: Request, slug: str):
     })
 
 
+@app.get("/affordability")
+async def affordability(request: Request):
+    return templates.TemplateResponse("affordability.html", {"request": request})
+
+
 @app.get("/api/real-estate")
 async def api_real_estate():
     data = get_all_state_data(FRED_API_KEY)
