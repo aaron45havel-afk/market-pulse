@@ -77,6 +77,18 @@
     </div>
 </div>
 
+<!-- ─────────────  SAVED SCENARIOS  ───────────── -->
+<div class="card" id="scenariosCard" style="margin-top:1rem;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.6rem;">
+        <div>
+            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Saved scenarios</div>
+            <div style="font-size:0.78rem; color:var(--text-dim); margin-top:0.2rem;">Save the current inputs to compare against later (FHA vs Conventional, with vs without roommate, etc.). Stored locally in your browser.</div>
+        </div>
+        <button id="saveScenarioBtn" type="button" style="padding:0.4rem 0.95rem; border-radius:6px; background:var(--accent2); color:white; border:none; font-size:0.82rem; font-weight:600; cursor:pointer;">Save current</button>
+    </div>
+    <div id="scenariosList" style="display:flex; flex-direction:column; gap:0.4rem;"></div>
+</div>
+
 <!-- ─────────────  COMPARISON TABLE  ───────────── -->
 <div class="card" style="margin-top:1rem;">
     <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">State comparison — max sustainable purchase price</div>
@@ -199,6 +211,7 @@
     .afford-row input[type=range], .afford-row input[type=number],
     #costChart, .grid-2 > .card:first-child,
     #detailClose { display:none !important; }
+    #scenariosCard { display:none !important; }
     .print-only { display:block !important; }
     .card { background:white !important; border:1px solid #d4d4d8 !important; box-shadow:none !important; page-break-inside:avoid; }
     h1 { color:black !important; }
@@ -500,10 +513,105 @@ document.addEventListener('DOMContentLoaded', () => {
     const printBtn = document.getElementById('printBtn');
     if (printBtn) printBtn.addEventListener('click', () => window.print());
 
+    // Saved scenarios: hooks for the card defined below.
+    document.getElementById('saveScenarioBtn').addEventListener('click', saveCurrentScenario);
+    renderScenarioList();
+
     // Kick off the first calculation so listeners get an initial payload.
     updateReadouts();
     scheduleRecalc();
 });
+
+// ─── SAVED SCENARIOS ────────────────────────────────────────────────
+// Stored under a single localStorage key as a JSON array. Each entry
+// keeps the full inputs payload + a name + timestamp so loading is
+// just "set the form and trigger recalc". Falls back to an in-memory
+// array if localStorage is unavailable (private mode etc.).
+
+const SCENARIOS_KEY = 'mp.affordability.scenarios';
+let _scenariosFallback = [];
+
+function loadScenarios() {
+    try {
+        const raw = localStorage.getItem(SCENARIOS_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch (e) { return _scenariosFallback; }
+}
+
+function persistScenarios(arr) {
+    _scenariosFallback = arr;
+    try { localStorage.setItem(SCENARIOS_KEY, JSON.stringify(arr)); } catch (e) {}
+}
+
+function saveCurrentScenario() {
+    const inputs = readInputs();
+    const defaultName = `${fmtMoney(inputs.income)} · ${(inputs.dti*100).toFixed(0)}% DTI · ${inputs.loanType} ${inputs.downPaymentMode === '%' ? inputs.downPayment + '% down' : fmtMoney(inputs.downPayment) + ' down'}`;
+    const name = (window.prompt('Name this scenario:', defaultName) || '').trim();
+    if (!name) return;
+    const all = loadScenarios();
+    all.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2,7), name, ts: Date.now(), inputs });
+    persistScenarios(all);
+    renderScenarioList();
+}
+
+function deleteScenario(id) {
+    const all = loadScenarios().filter(s => s.id !== id);
+    persistScenarios(all);
+    renderScenarioList();
+}
+
+function applyScenario(scenario) {
+    const i = scenario.inputs;
+    document.getElementById('i-income').value = i.income;
+    document.getElementById('i-dti').value    = Math.round(i.dti * 100);
+    document.getElementById('i-rate').value   = (i.rate * 100).toFixed(2);
+    document.getElementById('i-down').value   = i.downPayment;
+    document.getElementById('i-debts').value  = i.monthlyDebts || 0;
+    document.getElementById('i-hoa').value    = i.hoa || 0;
+    document.getElementById('i-rental').value = i.rentalIncome || 0;
+
+    // Re-sync the segmented controls (down payment mode + loan type) so
+    // both the visible button state AND the module-level vars match.
+    dpMode = i.downPaymentMode;
+    loanType = i.loanType;
+    document.querySelectorAll('.dp-toggle button').forEach(b => b.classList.toggle('active', b.dataset.mode === dpMode));
+    document.querySelectorAll('.loan-toggle button').forEach(b => b.classList.toggle('active', b.dataset.loan === loanType));
+
+    scheduleRecalc();
+}
+
+function renderScenarioList() {
+    const list = document.getElementById('scenariosList');
+    if (!list) return;
+    const all = loadScenarios();
+    if (!all.length) {
+        list.innerHTML = '<div style="font-size:0.78rem; color:var(--text-dim); font-style:italic;">No scenarios saved yet.</div>';
+        return;
+    }
+    list.innerHTML = '';
+    all.slice().reverse().forEach(s => {
+        const inc = fmtMoney(s.inputs.income);
+        const dtiStr = (s.inputs.dti * 100).toFixed(0) + '%';
+        const dpStr = s.inputs.downPaymentMode === '%' ? s.inputs.downPayment + '%' : fmtMoney(s.inputs.downPayment);
+        const meta = `${inc} · ${dtiStr} DTI · ${(s.inputs.rate*100).toFixed(2)}% · ${s.inputs.loanType} ${dpStr} down`;
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:0.5rem; padding:0.55rem 0.75rem; background:var(--surface2); border:1px solid var(--border); border-radius:6px; flex-wrap:wrap;';
+        row.innerHTML = `
+            <div style="min-width:0; flex:1;">
+                <div style="font-weight:600; font-size:0.9rem;">${s.name.replace(/</g, '&lt;')}</div>
+                <div style="font-size:0.72rem; color:var(--text-dim); margin-top:0.15rem;">${meta}</div>
+            </div>
+            <div style="display:flex; gap:0.35rem;">
+                <button type="button" data-act="load" data-id="${s.id}" style="padding:0.35rem 0.7rem; border-radius:4px; background:transparent; border:1px solid var(--accent2); color:var(--accent2); font-size:0.75rem; cursor:pointer;">Load</button>
+                <button type="button" data-act="del" data-id="${s.id}" style="padding:0.35rem 0.7rem; border-radius:4px; background:transparent; border:1px solid var(--border); color:var(--text-dim); font-size:0.75rem; cursor:pointer;">Delete</button>
+            </div>`;
+        row.querySelector('[data-act=load]').addEventListener('click', () => applyScenario(s));
+        row.querySelector('[data-act=del]').addEventListener('click', () => {
+            if (confirm(`Delete scenario "${s.name}"?`)) deleteScenario(s.id);
+        });
+        list.appendChild(row);
+    });
+}
 
 // ─── COMPARISON TABLE RENDER ────────────────────────────────────────
 // Listens for affordabilityRecalc, computes max-price + tax burden per
