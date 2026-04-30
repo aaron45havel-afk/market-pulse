@@ -179,6 +179,58 @@
     </div>
 </div>
 
+<!-- ─────────────  REFINANCE CALCULATOR  ───────────── -->
+<div class="card" id="refiCard" style="margin-top:1rem;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.85rem;">
+        <div>
+            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Refinance — what would lowering your rate save?</div>
+            <div style="font-size:0.82rem; color:var(--text-dim); margin-top:0.25rem;">Compare your existing loan to a hypothetical refinance at today's rate. Break-even = how long it takes the monthly savings to cover the closing costs.</div>
+        </div>
+    </div>
+
+    <div class="grid-3" style="gap:0.75rem;">
+        <label class="afford-row" style="margin:0;">
+            <span>Current balance</span>
+            <input id="refi-balance" type="number" inputmode="numeric" min="0" step="1000" value="350000">
+        </label>
+        <label class="afford-row" style="margin:0;">
+            <span>Current rate</span>
+            <input id="refi-rate-old" type="number" inputmode="decimal" min="0.5" max="15" step="0.125" value="7.5">
+        </label>
+        <label class="afford-row" style="margin:0;">
+            <span>New rate</span>
+            <input id="refi-rate-new" type="number" inputmode="decimal" min="0.5" max="15" step="0.125" value="6.0">
+        </label>
+        <label class="afford-row" style="margin:0;">
+            <span>Years remaining</span>
+            <input id="refi-years" type="number" inputmode="numeric" min="1" max="40" step="1" value="28">
+        </label>
+        <label class="afford-row" style="margin:0;">
+            <span>Closing costs</span>
+            <input id="refi-closing" type="number" inputmode="numeric" min="0" step="500" value="5000">
+        </label>
+        <div></div>
+    </div>
+
+    <div class="grid-3" style="gap:1rem; margin-top:1rem;">
+        <div>
+            <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.35rem;">Monthly P&amp;I</div>
+            <div id="refi-monthly" class="detail-list"></div>
+        </div>
+        <div>
+            <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.35rem;">Break-even</div>
+            <div id="refi-breakeven" class="detail-list"></div>
+        </div>
+        <div>
+            <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.35rem;">Lifetime interest</div>
+            <div id="refi-lifetime" class="detail-list"></div>
+        </div>
+    </div>
+    <div style="font-size:0.68rem; color:var(--text-dim); margin-top:0.85rem; line-height:1.4;">
+        Assumes the refinance resets the term to the years entered above. Compares against your current loan running to the same horizon. Doesn't model tax-deduction effects or PMI changes from re-LTV.
+    </div>
+</div>
+
 <!-- ─────────────  CUMULATIVE COST CHART  ───────────── -->
 <div class="card" style="margin-top:1rem;">
     <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">10-year cumulative housing cost — at each state's max price</div>
@@ -579,6 +631,68 @@ function applyScenario(scenario) {
 
     scheduleRecalc();
 }
+
+// ─── REFINANCE CALCULATOR ───────────────────────────────────────────
+// Standalone — doesn't read the main affordability inputs. Computes
+// monthly P&I at the old vs new rate, the closing-cost break-even,
+// and lifetime interest delta over the remaining term.
+
+function monthlyPI(loan, ratePct, years) {
+    if (loan <= 0 || years <= 0) return 0;
+    const r = (ratePct / 100) / 12;
+    const n = years * 12;
+    if (r === 0) return loan / n;
+    return loan * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+}
+
+function renderRefi() {
+    const balance = +document.getElementById('refi-balance').value || 0;
+    const rOld    = +document.getElementById('refi-rate-old').value || 0;
+    const rNew    = +document.getElementById('refi-rate-new').value || 0;
+    const years   = Math.max(1, +document.getElementById('refi-years').value || 30);
+    const closing = +document.getElementById('refi-closing').value || 0;
+
+    const oldPI = monthlyPI(balance, rOld, years);
+    const newPI = monthlyPI(balance, rNew, years);
+    const savings = oldPI - newPI;
+
+    const monthsToBreakEven = savings > 0 ? Math.ceil(closing / savings) : Infinity;
+    const lifetimeOld = oldPI * years * 12 - balance;
+    const lifetimeNew = newPI * years * 12 - balance;
+    const lifetimeSaved = lifetimeOld - lifetimeNew;
+
+    const monthlyEl   = document.getElementById('refi-monthly');
+    const breakEl     = document.getElementById('refi-breakeven');
+    const lifetimeEl  = document.getElementById('refi-lifetime');
+
+    monthlyEl.innerHTML =
+        `<div class="row"><span class="label">Current P&amp;I @ ${rOld.toFixed(2)}%</span><span>${fmtMoney(oldPI)}</span></div>` +
+        `<div class="row"><span class="label">New P&amp;I @ ${rNew.toFixed(2)}%</span><span>${fmtMoney(newPI)}</span></div>` +
+        `<div class="row total"><span>Monthly savings</span><span style="color:${savings>0?'var(--accent)':'var(--red)'};">${fmtMoney(savings)}</span></div>`;
+
+    if (!isFinite(monthsToBreakEven) || savings <= 0) {
+        breakEl.innerHTML = `<div style="font-size:0.85rem; color:var(--red);">No break-even — new rate doesn't reduce the payment.</div>`;
+    } else {
+        const yrs = Math.floor(monthsToBreakEven / 12);
+        const mos = monthsToBreakEven % 12;
+        const dur = yrs ? `${yrs}y ${mos}m` : `${mos}m`;
+        breakEl.innerHTML =
+            `<div class="row"><span class="label">Closing costs</span><span>${fmtMoney(closing)}</span></div>` +
+            `<div class="row"><span class="label">Months to recoup</span><span>${monthsToBreakEven}</span></div>` +
+            `<div class="row total"><span>Break-even</span><span>${dur}</span></div>`;
+    }
+
+    lifetimeEl.innerHTML =
+        `<div class="row"><span class="label">Interest if kept (current)</span><span>${fmtMoney(lifetimeOld)}</span></div>` +
+        `<div class="row"><span class="label">Interest if refinanced</span><span>${fmtMoney(lifetimeNew)}</span></div>` +
+        `<div class="row total"><span>Lifetime interest saved</span><span style="color:${lifetimeSaved>0?'var(--accent)':'var(--red)'};">${fmtMoney(lifetimeSaved)}</span></div>`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    ['refi-balance','refi-rate-old','refi-rate-new','refi-years','refi-closing']
+        .forEach(id => document.getElementById(id).addEventListener('input', renderRefi));
+    renderRefi();
+});
 
 function renderScenarioList() {
     const list = document.getElementById('scenariosList');
