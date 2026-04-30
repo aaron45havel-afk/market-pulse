@@ -51,6 +51,11 @@
             <span>HOA estimate <span class="hint" title="Monthly HOA dues. Counted toward DTI by lenders.">ⓘ</span></span>
             <input id="i-hoa" type="number" inputmode="numeric" min="0" step="25" value="0">
         </label>
+
+        <label class="afford-row">
+            <span>Roommate / rental income <span class="hint" title="Expected monthly rent (roommate, ADU, basement). Lenders apply a 25% vacancy haircut, so only 75% of what you enter is added to your housing cap.">ⓘ</span></span>
+            <input id="i-rental" type="number" inputmode="numeric" min="0" step="50" value="0">
+        </label>
     </div>
 
     <!-- ─────────────  HEADLINE SUMMARY  ───────────── -->
@@ -342,11 +347,18 @@ function calculatePITI(price, dp, dpMode, rate, state, loanType, hoa) {
     };
 }
 
+// Lender vacancy haircut applied to user-supplied rental income before it
+// counts toward the housing cap. 75% (i.e. 25% haircut) is the standard
+// FHA / Fannie / Freddie convention for departure-residence rents and
+// boarder/ADU income.
+const RENTAL_INCOME_FACTOR = 0.75;
+
 // Reverse calc: binary-search the maximum price whose PITI fits inside
-// (monthly income × DTI) − other monthly debts. Bounded at $50K / $5M.
-function calculateMaxPrice(income, dti, rate, state, loanType, dp, dpMode, hoa, monthlyDebts) {
+// (monthly income × DTI) − other monthly debts + 75% of rental income.
+// Bounded at $50K / $5M.
+function calculateMaxPrice(income, dti, rate, state, loanType, dp, dpMode, hoa, monthlyDebts, rentalIncome) {
     const monthlyIncome = income / 12;
-    const maxHousing = monthlyIncome * dti - (monthlyDebts || 0);
+    const maxHousing = monthlyIncome * dti - (monthlyDebts || 0) + (rentalIncome || 0) * RENTAL_INCOME_FACTOR;
     if (maxHousing <= 0) return 0;
 
     let low = 50000, high = 5000000;
@@ -398,6 +410,7 @@ function readInputs() {
         loanType:      loanType,
         monthlyDebts:  Math.max(0, +document.getElementById('i-debts').value || 0),
         hoa:           Math.max(0, +document.getElementById('i-hoa').value || 0),
+        rentalIncome:  Math.max(0, +document.getElementById('i-rental').value || 0),
     };
 }
 
@@ -418,7 +431,7 @@ function scheduleRecalc() {
 
 document.addEventListener('DOMContentLoaded', () => {
     // Number + range inputs: any change triggers recalc.
-    document.querySelectorAll('#i-income, #i-dti, #i-rate, #i-down, #i-debts, #i-hoa')
+    document.querySelectorAll('#i-income, #i-dti, #i-rate, #i-down, #i-debts, #i-hoa, #i-rental')
         .forEach(el => el.addEventListener('input', scheduleRecalc));
 
     // Down-payment mode toggle (% vs $).
@@ -458,8 +471,8 @@ document.addEventListener('DOMContentLoaded', () => {
 const STATE_ORDER = ['NV', 'CA', 'UT', 'TX', 'AZ'];
 
 function computeRow(inputs, state) {
-    const { income, dti, rate, downPayment, downPaymentMode, loanType, monthlyDebts, hoa } = inputs;
-    const maxPrice = calculateMaxPrice(income, dti, rate, state, loanType, downPayment, downPaymentMode, hoa, monthlyDebts);
+    const { income, dti, rate, downPayment, downPaymentMode, loanType, monthlyDebts, hoa, rentalIncome } = inputs;
+    const maxPrice = calculateMaxPrice(income, dti, rate, state, loanType, downPayment, downPaymentMode, hoa, monthlyDebts, rentalIncome);
     const piti = calculatePITI(maxPrice, downPayment, downPaymentMode, rate, state, loanType, hoa);
     const stateIncomeTax = calculateStateIncomeTax(income, state);
     const totalAnnualTax = piti.annualPropertyTax + stateIncomeTax;
@@ -706,7 +719,9 @@ let _lastInputs = null;
 function renderForward(inputs, price) {
     const tbody = document.getElementById('forwardBody');
     if (!tbody || !inputs) return;
-    const cap = (inputs.income / 12) * inputs.dti - (inputs.monthlyDebts || 0);
+    const cap = (inputs.income / 12) * inputs.dti
+              - (inputs.monthlyDebts || 0)
+              + (inputs.rentalIncome || 0) * RENTAL_INCOME_FACTOR;
 
     tbody.innerHTML = '';
     STATE_ORDER.forEach(state => {
