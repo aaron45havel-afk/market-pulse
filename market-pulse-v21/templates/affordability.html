@@ -86,6 +86,42 @@
     </div>
 </div>
 
+<!-- ─────────────  FORWARD CALCULATOR  ───────────── -->
+<div class="card" style="margin-top:1rem;">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.85rem;">
+        <div>
+            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Test a specific property</div>
+            <div style="font-size:0.82rem; color:var(--text-dim); margin-top:0.25rem;">What does <em>this</em> price actually cost you per month in each state? Color = PITI vs your DTI cap.</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.4rem;">
+            <span style="font-size:0.8rem; color:var(--text-dim);">Price</span>
+            <input id="i-test-price" type="number" min="0" step="5000" value="400000" style="width:140px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.7rem; color:var(--text); font-size:0.95rem;">
+        </div>
+    </div>
+    <div style="overflow-x:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>State</th>
+                    <th style="text-align:right;">P&amp;I</th>
+                    <th style="text-align:right;">Prop Tax</th>
+                    <th style="text-align:right;">Insurance</th>
+                    <th style="text-align:right;">MIP/PMI</th>
+                    <th style="text-align:right;">Total PITI</th>
+                    <th style="text-align:right;">% of cap</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="forwardBody"></tbody>
+        </table>
+    </div>
+    <div style="font-size:0.7rem; color:var(--text-dim); margin-top:0.6rem; line-height:1.4;">
+        <span style="color:var(--accent); font-weight:600;">●</span> under cap &nbsp;
+        <span style="color:var(--yellow); font-weight:600;">●</span> within 5% of cap &nbsp;
+        <span style="color:var(--red); font-weight:600;">●</span> over cap. The cap is monthly income × DTI − other debts.
+    </div>
+</div>
+
 <style>
 .afford-row { display:block; margin-bottom:0.85rem; }
 .afford-row > span { display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; color:var(--text-dim); margin-bottom:0.3rem; }
@@ -418,5 +454,58 @@ function renderResults(inputs) {
 }
 
 document.addEventListener('affordabilityRecalc', e => renderResults(e.detail));
+
+// ─── FORWARD CALCULATOR ─────────────────────────────────────────────
+// At a user-entered price, show each state's PITI breakdown and flag
+// it against the user's DTI cap. Re-renders whenever inputs OR the
+// price changes.
+
+let _lastInputs = null;
+
+function renderForward(inputs, price) {
+    const tbody = document.getElementById('forwardBody');
+    if (!tbody || !inputs) return;
+    const cap = (inputs.income / 12) * inputs.dti - (inputs.monthlyDebts || 0);
+
+    tbody.innerHTML = '';
+    STATE_ORDER.forEach(state => {
+        const piti = calculatePITI(price, inputs.downPayment, inputs.downPaymentMode, inputs.rate, state, inputs.loanType, inputs.hoa);
+        const ratio = cap > 0 ? piti.total / cap : Infinity;
+
+        let color, label;
+        if (ratio <= 0.95)      { color = 'var(--accent)'; label = 'under cap'; }
+        else if (ratio <= 1.00) { color = 'var(--yellow)'; label = 'within 5%'; }
+        else                    { color = 'var(--red)';    label = 'over cap'; }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${STATE_DATA[state].name}</strong></td>
+            <td style="text-align:right;">${fmtMoney(piti.PI)}</td>
+            <td style="text-align:right;">${fmtMoney(piti.propertyTax)}</td>
+            <td style="text-align:right;">${fmtMoney(piti.insurance)}</td>
+            <td style="text-align:right;">${fmtMoney(piti.MIP)}</td>
+            <td style="text-align:right; font-weight:700;">${fmtMoney(piti.total)}</td>
+            <td style="text-align:right; color:${color}; font-weight:600;">${(ratio * 100).toFixed(0)}%</td>
+            <td><span style="color:${color}; font-weight:600;">● ${label}</span></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+document.addEventListener('affordabilityRecalc', e => {
+    _lastInputs = e.detail;
+    const price = +document.getElementById('i-test-price').value || 0;
+    renderForward(_lastInputs, price);
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const priceEl = document.getElementById('i-test-price');
+    if (priceEl) {
+        priceEl.addEventListener('input', () => {
+            const price = +priceEl.value || 0;
+            renderForward(_lastInputs, price);
+        });
+    }
+});
 </script>
 {% endblock %}
