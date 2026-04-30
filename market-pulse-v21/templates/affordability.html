@@ -179,6 +179,29 @@
     </div>
 </div>
 
+<!-- ─────────────  PROPERTY TAX PROJECTION  ───────────── -->
+<div class="card" id="taxProjCard" style="margin-top:1rem;">
+    <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Property tax escalation — 20 years at max-cap growth</div>
+    <div style="font-size:0.82rem; color:var(--text-dim); margin-bottom:0.85rem;">Year-by-year annual property tax at <em>each state's max price</em>, growing at the state's policy cap. The 20-year total quantifies the long-run cost of weak caps (TX 10%, AZ 5%) vs strong ones (CA 2%, NV 3%, UT 3%-default).</div>
+    <div style="overflow-x:auto;">
+        <table id="taxProjTable">
+            <thead>
+                <tr>
+                    <th>State</th>
+                    <th style="text-align:right;">Cap</th>
+                    <th style="text-align:right;">Year 1</th>
+                    <th style="text-align:right;">Year 5</th>
+                    <th style="text-align:right;">Year 10</th>
+                    <th style="text-align:right;">Year 15</th>
+                    <th style="text-align:right;">Year 20</th>
+                    <th style="text-align:right;">20-yr total</th>
+                </tr>
+            </thead>
+            <tbody id="taxProjBody"></tbody>
+        </table>
+    </div>
+</div>
+
 <!-- ─────────────  REFINANCE CALCULATOR  ───────────── -->
 <div class="card" id="refiCard" style="margin-top:1rem;">
     <div style="display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.85rem;">
@@ -972,8 +995,36 @@ document.addEventListener('affordabilityRecalc', e => {
         if (r) renderDetail(r, e.detail);
     }
     renderCostChart(sortedRows);
+    renderTaxProjection(sortedRows);
     renderPrintSummary(e.detail);
 });
+
+// Cross-state property-tax projection table. Anchors at year-1 prop
+// tax for each state's max price, then escalates at the state's cap
+// (UT defaults to 3% since there's no statewide cap).
+function renderTaxProjection(rows) {
+    const tbody = document.getElementById('taxProjBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    rows.forEach(r => {
+        const growth = PROP_TAX_GROWTH[r.state] || 0.03;
+        const y1 = r.piti.annualPropertyTax;
+        const yN = (n) => y1 * Math.pow(1 + growth, n - 1);
+        let total = 0;
+        for (let i = 1; i <= 20; i++) total += y1 * Math.pow(1 + growth, i - 1);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${STATE_DATA[r.state].name}</strong></td>
+            <td style="text-align:right;">${(growth * 100).toFixed(0)}%/yr</td>
+            <td style="text-align:right;">${fmtMoney(y1)}</td>
+            <td style="text-align:right;">${fmtMoney(yN(5))}</td>
+            <td style="text-align:right;">${fmtMoney(yN(10))}</td>
+            <td style="text-align:right;">${fmtMoney(yN(15))}</td>
+            <td style="text-align:right;">${fmtMoney(yN(20))}</td>
+            <td style="text-align:right; font-weight:700;">${fmtMoney(total)}</td>`;
+        tbody.appendChild(tr);
+    });
+}
 
 // Populate the print-only assumptions block. Mirrors the live form so
 // printouts are self-contained for whoever's reading them.
