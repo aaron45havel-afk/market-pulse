@@ -496,6 +496,21 @@ function fmtMoney(v) {
 }
 function fmtPct(v) { return (v * 100).toFixed(2) + '%'; }
 
+// HTML-escape any user-controlled string before injecting into innerHTML.
+// Used for scenario names + meta from localStorage and any dynamic
+// strings that might come from external sources later.
+function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Allow only http/https URLs into href attributes — defense against
+// javascript:/data: injection if a future DPA entry has a bad URL.
+function safeHref(url) {
+    if (typeof url !== 'string') return '#';
+    return /^https?:\/\//i.test(url) ? url : '#';
+}
+
 // Returns the down-payment dollar amount given the user's input + mode.
 // mode '%' treats `dp` as a percentage (3.5 → 0.035 of price); mode '$'
 // treats `dp` as a fixed dollar amount independent of price.
@@ -722,19 +737,23 @@ function deleteScenario(id) {
 }
 
 function applyScenario(scenario) {
+    if (!scenario || !scenario.inputs) return;
     const i = scenario.inputs;
-    document.getElementById('i-income').value = i.income;
-    document.getElementById('i-dti').value    = Math.round(i.dti * 100);
-    document.getElementById('i-rate').value   = (i.rate * 100).toFixed(2);
-    document.getElementById('i-down').value   = i.downPayment;
-    document.getElementById('i-debts').value  = i.monthlyDebts || 0;
-    document.getElementById('i-hoa').value    = i.hoa || 0;
-    document.getElementById('i-rental').value = i.rentalIncome || 0;
+    // Numeric fields with safe defaults so a malformed or older saved
+    // scenario (missing fields added in later releases like rentalIncome)
+    // can still be loaded without producing NaN.
+    document.getElementById('i-income').value = +i.income || 0;
+    document.getElementById('i-dti').value    = Math.round((+i.dti || 0.28) * 100);
+    document.getElementById('i-rate').value   = ((+i.rate || 0.065) * 100).toFixed(2);
+    document.getElementById('i-down').value   = +i.downPayment || 0;
+    document.getElementById('i-debts').value  = +i.monthlyDebts || 0;
+    document.getElementById('i-hoa').value    = +i.hoa || 0;
+    document.getElementById('i-rental').value = +i.rentalIncome || 0;
 
-    // Re-sync the segmented controls (down payment mode + loan type) so
-    // both the visible button state AND the module-level vars match.
-    dpMode = i.downPaymentMode;
-    loanType = i.loanType;
+    // Segmented controls — fall back to the page's defaults if the saved
+    // scenario predates these fields.
+    dpMode = (i.downPaymentMode === '$' || i.downPaymentMode === '%') ? i.downPaymentMode : '%';
+    loanType = (i.loanType === 'FHA' || i.loanType === 'Conventional') ? i.loanType : 'FHA';
     document.querySelectorAll('.dp-toggle button').forEach(b => b.classList.toggle('active', b.dataset.mode === dpMode));
     document.querySelectorAll('.loan-toggle button').forEach(b => b.classList.toggle('active', b.dataset.loan === loanType));
 
@@ -931,20 +950,25 @@ function renderScenarioList() {
     }
     list.innerHTML = '';
     all.slice().reverse().forEach(s => {
-        const inc = fmtMoney(s.inputs.income);
-        const dtiStr = (s.inputs.dti * 100).toFixed(0) + '%';
-        const dpStr = s.inputs.downPaymentMode === '%' ? s.inputs.downPayment + '%' : fmtMoney(s.inputs.downPayment);
-        const meta = `${inc} · ${dtiStr} DTI · ${(s.inputs.rate*100).toFixed(2)}% · ${s.inputs.loanType} ${dpStr} down`;
+        // Defensive: skip malformed scenarios (missing inputs) rather than crash.
+        if (!s || !s.inputs) return;
+        const inputs = s.inputs;
+        const inc = fmtMoney(+inputs.income || 0);
+        const dtiStr = ((+inputs.dti || 0) * 100).toFixed(0) + '%';
+        const dpStr = inputs.downPaymentMode === '%' ? (+inputs.downPayment || 0) + '%' : fmtMoney(+inputs.downPayment || 0);
+        // Every interpolated field comes from localStorage, so esc() it
+        // before injecting into innerHTML.
+        const meta = `${inc} · ${dtiStr} DTI · ${((+inputs.rate || 0)*100).toFixed(2)}% · ${esc(inputs.loanType)} ${esc(dpStr)} down`;
         const row = document.createElement('div');
         row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:0.5rem; padding:0.55rem 0.75rem; background:var(--surface2); border:1px solid var(--border); border-radius:6px; flex-wrap:wrap;';
         row.innerHTML = `
             <div style="min-width:0; flex:1;">
-                <div style="font-weight:600; font-size:0.9rem;">${s.name.replace(/</g, '&lt;')}</div>
+                <div style="font-weight:600; font-size:0.9rem;">${esc(s.name)}</div>
                 <div style="font-size:0.72rem; color:var(--text-dim); margin-top:0.15rem;">${meta}</div>
             </div>
             <div style="display:flex; gap:0.35rem;">
-                <button type="button" data-act="load" data-id="${s.id}" style="padding:0.35rem 0.7rem; border-radius:4px; background:transparent; border:1px solid var(--accent2); color:var(--accent2); font-size:0.75rem; cursor:pointer;">Load</button>
-                <button type="button" data-act="del" data-id="${s.id}" style="padding:0.35rem 0.7rem; border-radius:4px; background:transparent; border:1px solid var(--border); color:var(--text-dim); font-size:0.75rem; cursor:pointer;">Delete</button>
+                <button type="button" data-act="load" data-id="${esc(s.id)}" style="padding:0.35rem 0.7rem; border-radius:4px; background:transparent; border:1px solid var(--accent2); color:var(--accent2); font-size:0.75rem; cursor:pointer;">Load</button>
+                <button type="button" data-act="del" data-id="${esc(s.id)}" style="padding:0.35rem 0.7rem; border-radius:4px; background:transparent; border:1px solid var(--border); color:var(--text-dim); font-size:0.75rem; cursor:pointer;">Delete</button>
             </div>`;
         row.querySelector('[data-act=load]').addEventListener('click', () => applyScenario(s));
         row.querySelector('[data-act=del]').addEventListener('click', () => {
@@ -1109,18 +1133,22 @@ function renderDPA(state) {
     }
     list.innerHTML = programs.map(p => {
         const c = DPA_TYPE_COLORS[p.type] || { bg: 'transparent', fg: 'var(--text-dim)' };
+        // Hardcoded source data is safe today; esc()/safeHref() are
+        // defensive in case future entries pick up user-editable values.
+        const safeUrl = safeHref(p.url);
+        const domain = safeUrl === '#' ? '' : safeUrl.replace(/^https?:\/\//,'').split('/')[0];
         return `
             <div style="padding:0.7rem 0.85rem; background:var(--surface2); border:1px solid var(--border); border-radius:6px;">
                 <div style="display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem; flex-wrap:wrap;">
                     <div>
-                        <div style="font-weight:700; font-size:0.95rem;">${p.name}</div>
-                        <div style="font-size:0.74rem; color:var(--text-dim); margin-top:0.15rem;">${p.provider}</div>
+                        <div style="font-weight:700; font-size:0.95rem;">${esc(p.name)}</div>
+                        <div style="font-size:0.74rem; color:var(--text-dim); margin-top:0.15rem;">${esc(p.provider)}</div>
                     </div>
-                    <span style="padding:0.18rem 0.55rem; border-radius:999px; background:${c.bg}; color:${c.fg}; font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">${p.type}</span>
+                    <span style="padding:0.18rem 0.55rem; border-radius:999px; background:${c.bg}; color:${c.fg}; font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">${esc(p.type)}</span>
                 </div>
-                <div style="font-size:0.85rem; margin-top:0.5rem;"><strong>${p.max}</strong></div>
-                <div style="font-size:0.8rem; color:var(--text-dim); margin-top:0.3rem; line-height:1.45;">${p.note}</div>
-                <a href="${p.url}" target="_blank" rel="noopener" style="display:inline-block; font-size:0.75rem; margin-top:0.45rem;">${p.url.replace(/^https?:\/\//,'').split('/')[0]} →</a>
+                <div style="font-size:0.85rem; margin-top:0.5rem;"><strong>${esc(p.max)}</strong></div>
+                <div style="font-size:0.8rem; color:var(--text-dim); margin-top:0.3rem; line-height:1.45;">${esc(p.note)}</div>
+                <a href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-block; font-size:0.75rem; margin-top:0.45rem;">${esc(domain)} →</a>
             </div>`;
     }).join('');
 }
