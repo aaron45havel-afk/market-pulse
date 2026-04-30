@@ -1171,7 +1171,10 @@ function setActiveTab(name) {
     document.body.dataset.activeTab = name;
     document.querySelectorAll('.tab-btn').forEach(b =>
         b.classList.toggle('active', b.dataset.tab === name));
-    document.querySelectorAll('[data-tab]').forEach(el => {
+    // Toggle content sections — exclude .tab-btn (tab buttons share the
+    // same data-tab attribute to declare which tab they activate; they
+    // must always remain visible regardless of which tab is active).
+    document.querySelectorAll('[data-tab]:not(.tab-btn)').forEach(el => {
         if (el.id === 'detailCard') {
             // Respect the row-click open/closed state.
             el.style.display = (name === 'affordability' && _openDetailState) ? 'block' : 'none';
