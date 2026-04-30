@@ -55,8 +55,34 @@
 
     <!-- ─────────────  HEADLINE SUMMARY  ───────────── -->
     <div class="card" id="summaryCard">
-        <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">At your inputs</div>
-        <div id="summaryBody" style="color:var(--text-dim); font-size:0.9rem;">Adjust any input — results recalc automatically. (Comparison table arrives in the next piece.)</div>
+        <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Strongest buying power</div>
+        <div id="summaryHero" style="font-size:1.6rem; font-weight:700; line-height:1.2;">—</div>
+        <div id="summarySub" style="font-size:0.85rem; color:var(--text-dim); margin-top:0.4rem;"></div>
+        <div id="summaryInsight" style="margin-top:0.85rem; padding:0.7rem 0.85rem; border-left:3px solid var(--accent2); background:rgba(59,130,246,0.06); border-radius:4px; font-size:0.82rem; line-height:1.45; color:var(--text);"></div>
+    </div>
+</div>
+
+<!-- ─────────────  COMPARISON TABLE  ───────────── -->
+<div class="card" style="margin-top:1rem;">
+    <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">State comparison — max sustainable purchase price</div>
+    <div style="overflow-x:auto;">
+        <table id="resultsTable">
+            <thead>
+                <tr>
+                    <th>State</th>
+                    <th style="text-align:right;">Max Price</th>
+                    <th style="text-align:right;">Monthly PITI</th>
+                    <th style="text-align:right;">Prop Tax/yr</th>
+                    <th style="text-align:right;">State Income Tax/yr</th>
+                    <th style="text-align:right;">Total Annual Tax</th>
+                    <th style="text-align:right;">% of Income</th>
+                </tr>
+            </thead>
+            <tbody id="resultsBody"></tbody>
+        </table>
+    </div>
+    <div style="font-size:0.7rem; color:var(--text-dim); margin-top:0.6rem; line-height:1.4;">
+        <strong>Reading this:</strong> Max Price is the highest purchase price whose total monthly PITI fits inside your DTI threshold (less other debts). State Income Tax is computed at <em>your</em> income, not at any house price — it's a flat per-state cost that reduces real disposable income. Property tax assumptions: UT uses the 55% primary-residence assessment ratio; TX subtracts the $100K homestead exemption before applying the rate.
     </div>
 </div>
 
@@ -325,5 +351,72 @@ document.addEventListener('DOMContentLoaded', () => {
     updateReadouts();
     scheduleRecalc();
 });
+
+// ─── COMPARISON TABLE RENDER ────────────────────────────────────────
+// Listens for affordabilityRecalc, computes max-price + tax burden per
+// state, paints the table. Highlights the strongest (green) and weakest
+// (red) max-price rows so it's a glance-comparable view.
+
+const STATE_ORDER = ['NV', 'CA', 'UT', 'TX', 'AZ'];
+
+function computeRow(inputs, state) {
+    const { income, dti, rate, downPayment, downPaymentMode, loanType, monthlyDebts, hoa } = inputs;
+    const maxPrice = calculateMaxPrice(income, dti, rate, state, loanType, downPayment, downPaymentMode, hoa, monthlyDebts);
+    const piti = calculatePITI(maxPrice, downPayment, downPaymentMode, rate, state, loanType, hoa);
+    const stateIncomeTax = calculateStateIncomeTax(income, state);
+    const totalAnnualTax = piti.annualPropertyTax + stateIncomeTax;
+    const pctOfIncome = income > 0 ? (piti.total * 12) / income : 0;
+    return { state, maxPrice, piti, stateIncomeTax, totalAnnualTax, pctOfIncome };
+}
+
+function renderResults(inputs) {
+    const rows = STATE_ORDER.map(s => computeRow(inputs, s))
+                            .sort((a, b) => b.maxPrice - a.maxPrice);
+    const tbody = document.getElementById('resultsBody');
+    tbody.innerHTML = '';
+
+    const top = rows[0], bottom = rows[rows.length - 1];
+    const allZero = rows.every(r => r.maxPrice === 0);
+
+    rows.forEach(r => {
+        const tr = document.createElement('tr');
+        let priceStyle = '';
+        if (!allZero && r.state === top.state)    priceStyle = 'color:var(--accent); font-weight:700;';
+        if (!allZero && r.state === bottom.state) priceStyle = 'color:var(--red); font-weight:700;';
+        tr.innerHTML = `
+            <td><strong>${STATE_DATA[r.state].name}</strong></td>
+            <td style="text-align:right; ${priceStyle}">${fmtMoney(r.maxPrice)}</td>
+            <td style="text-align:right;">${fmtMoney(r.piti.total)}</td>
+            <td style="text-align:right;">${fmtMoney(r.piti.annualPropertyTax)}</td>
+            <td style="text-align:right;">${fmtMoney(r.stateIncomeTax)}</td>
+            <td style="text-align:right;">${fmtMoney(r.totalAnnualTax)}</td>
+            <td style="text-align:right;">${(r.pctOfIncome * 100).toFixed(1)}%</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // Headline summary card.
+    const heroEl    = document.getElementById('summaryHero');
+    const subEl     = document.getElementById('summarySub');
+    const insightEl = document.getElementById('summaryInsight');
+    if (allZero) {
+        heroEl.textContent = 'Below threshold in every state';
+        subEl.textContent = 'Try lowering monthly debts, increasing income, or raising the DTI slider.';
+        insightEl.textContent = '';
+    } else {
+        heroEl.textContent = `${fmtMoney(top.maxPrice)} in ${STATE_DATA[top.state].name}`;
+        subEl.textContent = `Monthly PITI ${fmtMoney(top.piti.total)} · ${(top.pctOfIncome * 100).toFixed(1)}% of gross income`;
+
+        // Cheap insight: gap between top and bottom + tax-burden flavor.
+        const gap = top.maxPrice - bottom.maxPrice;
+        const topName = STATE_DATA[top.state].name, botName = STATE_DATA[bottom.state].name;
+        const topNote = STATE_DATA[top.state].notes;
+        insightEl.innerHTML =
+            `<strong>${topName}</strong> beats <strong>${botName}</strong> by ` +
+            `<strong>${fmtMoney(gap)}</strong> in max price at the same income & DTI. ${topNote}`;
+    }
+}
+
+document.addEventListener('affordabilityRecalc', e => renderResults(e.detail));
 </script>
 {% endblock %}
