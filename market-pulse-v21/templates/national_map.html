@@ -87,9 +87,15 @@ document.addEventListener('DOMContentLoaded', () => {
         attribution: '&copy; OpenStreetMap',
     }).addTo(map);
 
+    // Collect each marker's coords so we can fitBounds() at the end —
+    // gives a tight initial framing on the actual metros instead of
+    // showing the whole continent. Auto-adapts when new states are added.
+    const coords = [];
+
     METROS.forEach(m => {
         const c = m.map_center;
         if (!c || c.lat == null || c.lng == null) return;
+        coords.push([c.lat, c.lng]);
         const color = scoreColor(m.top_zip.composite_score);
         const marker = L.circleMarker([c.lat, c.lng], {
             radius: 10 + Math.min(8, m.zip_count / 2),  // radius scales lightly with ZIP count
@@ -110,6 +116,14 @@ document.addEventListener('DOMContentLoaded', () => {
         marker.bindPopup(popup, { maxWidth: 320 });
         marker.bindTooltip(`<strong>${m.metro_label}</strong>`, { sticky: true });
     });
+
+    // Fit the viewport to the cluster of metros once they're all on the
+    // map. Padding gives breathing room so the corner pins aren't right
+    // at the edge. maxZoom prevents zooming past metro-region scale if
+    // all markers happen to cluster tightly.
+    if (coords.length) {
+        map.fitBounds(L.latLngBounds(coords), { padding: [60, 60], maxZoom: 6 });
+    }
 });
 </script>
 {% endblock %}
