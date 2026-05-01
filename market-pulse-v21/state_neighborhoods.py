@@ -1729,6 +1729,142 @@ SAN_DIEGO_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# IN — Indianapolis metro (Marion County + close-in Hamilton suburbs)
+# Indy is one of the cheapest mid-major metros in the US — cap rates of
+# 6-10% are routine in inner-ring ZIPs but come paired with the crime
+# tradeoff that's well-known to local investors.
+# ─────────────────────────────────────────────────────────────────────────────
+INDIANAPOLIS_ZIPS: dict[str, dict] = {
+    "46202": {
+        "name": "Downtown / IUPUI",
+        "lat": 39.7820, "lng": -86.1700,
+        "median_home_value": 310_000, "median_rent_monthly": 1_800,
+        "crime_index": 60, "pct_bachelors": 50,
+        "median_household_income": 48_000, "population": 28_000,
+        "walk_score": 78, "restaurant_score": 75,
+        "tags": ["urban", "walkable", "transit"],
+    },
+    "46208": {
+        "name": "Butler-Tarkington",
+        "lat": 39.8170, "lng": -86.1700,
+        "median_home_value": 400_000, "median_rent_monthly": 1_800,
+        "crime_index": 50, "pct_bachelors": 60,
+        "median_household_income": 75_000, "population": 14_000,
+        "walk_score": 55, "restaurant_score": 50,
+        "tags": ["established", "family"],
+    },
+    "46220": {
+        "name": "Broad Ripple",
+        "lat": 39.8650, "lng": -86.1390,
+        "median_home_value": 350_000, "median_rent_monthly": 1_800,
+        "crime_index": 45, "pct_bachelors": 65,
+        "median_household_income": 80_000, "population": 35_000,
+        "walk_score": 65, "restaurant_score": 80,
+        "tags": ["walkable", "hip", "established"],
+    },
+    "46201": {
+        "name": "Near Eastside / Holy Cross",
+        "lat": 39.7720, "lng": -86.1240,
+        "median_home_value": 190_000, "median_rent_monthly": 1_300,
+        "crime_index": 75, "pct_bachelors": 25,
+        "median_household_income": 42_000, "population": 24_000,
+        "walk_score": 45, "restaurant_score": 50,
+        "tags": ["affordable", "high-cap-rate", "gentrifying"],
+    },
+    "46225": {
+        "name": "Garfield Park / Bates-Hendricks",
+        "lat": 39.7430, "lng": -86.1430,
+        "median_home_value": 260_000, "median_rent_monthly": 1_500,
+        "crime_index": 65, "pct_bachelors": 38,
+        "median_household_income": 52_000, "population": 22_000,
+        "walk_score": 50, "restaurant_score": 60,
+        "tags": ["gentrifying", "high-cap-rate", "appreciation-play"],
+    },
+    "46226": {
+        "name": "Devington / NE Indy",
+        "lat": 39.8420, "lng": -86.1090,
+        "median_home_value": 200_000, "median_rent_monthly": 1_400,
+        "crime_index": 60, "pct_bachelors": 25,
+        "median_household_income": 50_000, "population": 50_000,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "46260": {
+        "name": "North Meridian",
+        "lat": 39.8980, "lng": -86.1700,
+        "median_home_value": 480_000, "median_rent_monthly": 2_200,
+        "crime_index": 30, "pct_bachelors": 70,
+        "median_household_income": 120_000, "population": 30_000,
+        "walk_score": 35, "restaurant_score": 45,
+        "tags": ["luxury", "low-crime", "family"],
+    },
+    "46228": {
+        "name": "Crows Nest / NW Indy",
+        "lat": 39.8500, "lng": -86.1800,
+        "median_home_value": 350_000, "median_rent_monthly": 1_750,
+        "crime_index": 45, "pct_bachelors": 50,
+        "median_household_income": 72_000, "population": 24_000,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["family", "established"],
+    },
+    "46219": {
+        "name": "East Indy",
+        "lat": 39.7820, "lng": -86.0700,
+        "median_home_value": 180_000, "median_rent_monthly": 1_300,
+        "crime_index": 70, "pct_bachelors": 18,
+        "median_household_income": 42_000, "population": 38_000,
+        "walk_score": 35, "restaurant_score": 30,
+        "tags": ["affordable", "high-cap-rate", "high-crime"],
+    },
+    "46237": {
+        "name": "Beech Grove / Southport",
+        "lat": 39.7180, "lng": -86.0900,
+        "median_home_value": 230_000, "median_rent_monthly": 1_500,
+        "crime_index": 45, "pct_bachelors": 28,
+        "median_household_income": 60_000, "population": 38_000,
+        "walk_score": 25, "restaurant_score": 30,
+        "tags": ["family", "affordable", "established"],
+    },
+    "46227": {
+        "name": "South Indy",
+        "lat": 39.6720, "lng": -86.1300,
+        "median_home_value": 250_000, "median_rent_monthly": 1_500,
+        "crime_index": 50, "pct_bachelors": 30,
+        "median_household_income": 58_000, "population": 60_000,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["affordable", "family"],
+    },
+    "46241": {
+        "name": "West Indy / Speedway-adj",
+        "lat": 39.7440, "lng": -86.2750,
+        "median_home_value": 200_000, "median_rent_monthly": 1_400,
+        "crime_index": 55, "pct_bachelors": 22,
+        "median_household_income": 52_000, "population": 48_000,
+        "walk_score": 35, "restaurant_score": 35,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "46240": {
+        "name": "Nora",
+        "lat": 39.9050, "lng": -86.1340,
+        "median_home_value": 400_000, "median_rent_monthly": 1_950,
+        "crime_index": 35, "pct_bachelors": 65,
+        "median_household_income": 98_000, "population": 18_000,
+        "walk_score": 40, "restaurant_score": 50,
+        "tags": ["family", "low-crime"],
+    },
+    "46032": {
+        "name": "Carmel (Hamilton County)",
+        "lat": 39.9780, "lng": -86.1180,
+        "median_home_value": 580_000, "median_rent_monthly": 2_400,
+        "crime_index": 18, "pct_bachelors": 75,
+        "median_household_income": 145_000, "population": 50_000,
+        "walk_score": 30, "restaurant_score": 50,
+        "tags": ["family", "top-schools", "low-crime"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -1972,7 +2108,7 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               LAS_VEGAS_ZIPS, RENO_ZIPS, CARSON_CITY_ZIPS,
               MIAMI_ZIPS, ORLANDO_ZIPS, ATLANTA_ZIPS,
               AUSTIN_ZIPS, HOUSTON_ZIPS, SAN_ANTONIO_ZIPS, FORT_WORTH_ZIPS,
-              SF_BAY_ZIPS, SAN_DIEGO_ZIPS):
+              SF_BAY_ZIPS, SAN_DIEGO_ZIPS, INDIANAPOLIS_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -2198,6 +2334,19 @@ STATE_METROS: dict[str, dict] = {
             "A few Scottsdale ZIPs (85254, 85266) bridge city limits — values reflect the population centroid.",
         ],
     },
+    "IN-IND": {
+        "state": "IN",
+        "metro_label": "Indianapolis (Marion County)",
+        "subtitle": "ZIP-level scores for the Indianapolis metro — Downtown / IUPUI, Broad Ripple + Butler-Tarkington north side, gentrifying inner east + south, plus the high-end North Meridian and Carmel anchor.",
+        "map_center": {"lat": 39.82, "lng": -86.15, "zoom": 11},
+        "zips": INDIANAPOLIS_ZIPS,
+        "extra_caveats": [
+            "Indianapolis is one of the cheapest mid-major metros in the US — cap rates of 6-10% are routine in inner-ring ZIPs, but they come paired with the crime / appreciation tradeoff that's well-known to local investors.",
+            "46032 (Carmel) is technically Hamilton County, not Marion. Included because it's commonly considered part of 'Indianapolis' by outside investors and the Hamilton county-line dynamics matter for school-driven decisions.",
+            "Indiana caps property tax at 1% of assessed value for owner-occupied homes (statutory) but rentals get the 2% cap — materially affects cap-rate math for non-owner-occupants and isn't reflected in our headline rate.",
+            "Proximity to I-465 (the loop) and I-70 swings desirability sharply within a ZIP; ZIP-level data can mask block-level volatility in 46201, 46225, 46219.",
+        ],
+    },
 }
 
 # Ordered list of metro slugs per state. Drives the dashboard's
@@ -2210,6 +2359,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "NV": ["NV-LV", "NV-RNO", "NV-CC"],
     "FL": ["FL-MIA", "FL-ORL"],
     "GA": ["GA-ATL"],
+    "IN": ["IN-IND"],
 }
 
 
