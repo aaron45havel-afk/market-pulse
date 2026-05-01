@@ -883,6 +883,121 @@ ORLANDO_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# GA — Atlanta metro (Fulton + DeKalb + Cobb + Gwinnett + Forsyth)
+# ─────────────────────────────────────────────────────────────────────────────
+ATLANTA_ZIPS: dict[str, dict] = {
+    "30303": {
+        "name": "Downtown Atlanta",
+        "lat": 33.7540, "lng": -84.3900,
+        "median_home_value": 400_000, "median_rent_monthly": 1_800,
+        "crime_index": 75, "pct_bachelors": 50,
+        "median_household_income": 48_000, "population": 8_000,
+        "walk_score": 80, "restaurant_score": 75,
+        "tags": ["urban", "walkable", "transit", "high-crime"],
+    },
+    "30309": {
+        "name": "Midtown",
+        "lat": 33.7820, "lng": -84.3895,
+        "median_home_value": 580_000, "median_rent_monthly": 2_400,
+        "crime_index": 50, "pct_bachelors": 75,
+        "median_household_income": 95_000, "population": 25_000,
+        "walk_score": 90, "restaurant_score": 90,
+        "tags": ["urban", "walkable", "restaurants"],
+    },
+    "30308": {
+        "name": "Old Fourth Ward",
+        "lat": 33.7720, "lng": -84.3700,
+        "median_home_value": 620_000, "median_rent_monthly": 2_500,
+        "crime_index": 50, "pct_bachelors": 70,
+        "median_household_income": 90_000, "population": 18_000,
+        "walk_score": 80, "restaurant_score": 85,
+        "tags": ["walkable", "hip", "gentrified"],
+    },
+    "30312": {
+        "name": "Grant Park / Reynoldstown",
+        "lat": 33.7390, "lng": -84.3680,
+        "median_home_value": 560_000, "median_rent_monthly": 2_400,
+        "crime_index": 55, "pct_bachelors": 62,
+        "median_household_income": 85_000, "population": 22_000,
+        "walk_score": 75, "restaurant_score": 70,
+        "tags": ["walkable", "gentrified", "hip"],
+    },
+    "30318": {
+        "name": "Westside / Howell Mill",
+        "lat": 33.7920, "lng": -84.4310,
+        "median_home_value": 440_000, "median_rent_monthly": 2_300,
+        "crime_index": 60, "pct_bachelors": 50,
+        "median_household_income": 68_000, "population": 47_000,
+        "walk_score": 60, "restaurant_score": 70,
+        "tags": ["gentrifying", "high-cap-rate", "appreciation-play"],
+    },
+    "30327": {
+        "name": "Buckhead",
+        "lat": 33.8550, "lng": -84.4080,
+        "median_home_value": 1_400_000, "median_rent_monthly": 4_000,
+        "crime_index": 28, "pct_bachelors": 80,
+        "median_household_income": 200_000, "population": 18_000,
+        "walk_score": 35, "restaurant_score": 60,
+        "tags": ["luxury", "low-crime", "top-schools"],
+    },
+    "30307": {
+        "name": "Inman Park / Candler Park",
+        "lat": 33.7720, "lng": -84.3500,
+        "median_home_value": 720_000, "median_rent_monthly": 2_800,
+        "crime_index": 40, "pct_bachelors": 75,
+        "median_household_income": 115_000, "population": 13_000,
+        "walk_score": 80, "restaurant_score": 80,
+        "tags": ["walkable", "upscale", "established"],
+    },
+    "30030": {
+        "name": "Decatur",
+        "lat": 33.7748, "lng": -84.2963,
+        "median_home_value": 720_000, "median_rent_monthly": 2_500,
+        "crime_index": 30, "pct_bachelors": 75,
+        "median_household_income": 110_000, "population": 25_000,
+        "walk_score": 75, "restaurant_score": 75,
+        "tags": ["family", "walkable", "top-schools", "low-crime"],
+    },
+    "30033": {
+        "name": "Druid Hills / Emory",
+        "lat": 33.8060, "lng": -84.3155,
+        "median_home_value": 850_000, "median_rent_monthly": 2_800,
+        "crime_index": 28, "pct_bachelors": 80,
+        "median_household_income": 140_000, "population": 28_000,
+        "walk_score": 50, "restaurant_score": 50,
+        "tags": ["family", "top-schools", "low-crime"],
+    },
+    "30062": {
+        "name": "East Cobb / Marietta",
+        "lat": 34.0270, "lng": -84.4860,
+        "median_home_value": 620_000, "median_rent_monthly": 2_400,
+        "crime_index": 22, "pct_bachelors": 65,
+        "median_household_income": 130_000, "population": 65_000,
+        "walk_score": 25, "restaurant_score": 40,
+        "tags": ["family", "top-schools", "low-crime"],
+    },
+    "30097": {
+        "name": "Duluth (Gwinnett)",
+        "lat": 34.0030, "lng": -84.1450,
+        "median_home_value": 520_000, "median_rent_monthly": 2_300,
+        "crime_index": 25, "pct_bachelors": 60,
+        "median_household_income": 115_000, "population": 38_000,
+        "walk_score": 30, "restaurant_score": 60,
+        "tags": ["family", "newer", "low-crime"],
+    },
+    "30041": {
+        "name": "Cumming / Forsyth",
+        "lat": 34.2380, "lng": -84.1410,
+        "median_home_value": 650_000, "median_rent_monthly": 2_500,
+        "crime_index": 18, "pct_bachelors": 60,
+        "median_household_income": 135_000, "population": 65_000,
+        "walk_score": 18, "restaurant_score": 35,
+        "tags": ["family", "newer", "low-crime", "growth"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -1124,7 +1239,7 @@ ST_GEORGE_ZIPS: dict[str, dict] = {
 # available. DALLAS_ZIPS is patched in dallas_neighborhoods.py itself.
 for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_ZIPS,
               LAS_VEGAS_ZIPS, RENO_ZIPS, CARSON_CITY_ZIPS,
-              MIAMI_ZIPS, ORLANDO_ZIPS):
+              MIAMI_ZIPS, ORLANDO_ZIPS, ATLANTA_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -1252,6 +1367,18 @@ STATE_METROS: dict[str, dict] = {
             "FL hurricane / wind insurance has roughly tripled in 5 years; not modeled in cap-rate scoring.",
         ],
     },
+    "GA-ATL": {
+        "state": "GA",
+        "metro_label": "Atlanta Metro",
+        "subtitle": "ZIP-level scores for the Atlanta metro — intown (Midtown, Buckhead, O4W, Inman Park, Westside, Grant Park), DeKalb (Decatur, Druid Hills), Cobb (East Cobb), Gwinnett (Duluth), and Forsyth exurbs (Cumming).",
+        "map_center": {"lat": 33.85, "lng": -84.35, "zoom": 10},
+        "zips": ATLANTA_ZIPS,
+        "extra_caveats": [
+            "Atlanta crime varies block-by-block within several intown ZIPs (especially 30318 Westside and 30312 Grant Park) — ZIP-level crime indexes can mask significant micro-neighborhood variation.",
+            "Forsyth + Cherokee exurbs (30041 etc.) saw a major post-pandemic price surge; Zillow auto-refresh keeps the home value current but cap-rate scoring lags behind real-time rental shifts.",
+            "School quality varies widely within Cobb + Gwinnett — ZIP-level % bachelor's+ is a coarse proxy; check specific feeder patterns for school-driven decisions.",
+        ],
+    },
     "AZ": {
         "state": "AZ",
         "metro_label": "Maricopa County",
@@ -1274,6 +1401,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "AZ": ["AZ"],
     "NV": ["NV-LV", "NV-RNO", "NV-CC"],
     "FL": ["FL-MIA", "FL-ORL"],
+    "GA": ["GA-ATL"],
 }
 
 
