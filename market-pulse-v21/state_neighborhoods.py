@@ -1229,6 +1229,121 @@ HOUSTON_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# TX — San Antonio / Bexar County: Downtown, Pearl, Stone Oak, military bases
+# ─────────────────────────────────────────────────────────────────────────────
+SAN_ANTONIO_ZIPS: dict[str, dict] = {
+    "78205": {
+        "name": "Downtown / King William",
+        "lat": 29.4250, "lng": -98.4900,
+        "median_home_value": 300_000, "median_rent_monthly": 1_800,
+        "crime_index": 60, "pct_bachelors": 50,
+        "median_household_income": 55_000, "population": 7_000,
+        "walk_score": 75, "restaurant_score": 80,
+        "tags": ["urban", "walkable", "historic"],
+    },
+    "78212": {
+        "name": "Monte Vista / Mahncke Park",
+        "lat": 29.4630, "lng": -98.5050,
+        "median_home_value": 440_000, "median_rent_monthly": 2_000,
+        "crime_index": 45, "pct_bachelors": 60,
+        "median_household_income": 75_000, "population": 28_000,
+        "walk_score": 65, "restaurant_score": 70,
+        "tags": ["walkable", "historic", "established"],
+    },
+    "78215": {
+        "name": "Tobin Hill / Pearl District",
+        "lat": 29.4400, "lng": -98.4860,
+        "median_home_value": 390_000, "median_rent_monthly": 1_900,
+        "crime_index": 55, "pct_bachelors": 55,
+        "median_household_income": 65_000, "population": 9_000,
+        "walk_score": 70, "restaurant_score": 80,
+        "tags": ["walkable", "gentrified", "hip"],
+    },
+    "78230": {
+        "name": "Castle Hills",
+        "lat": 29.5550, "lng": -98.5290,
+        "median_home_value": 560_000, "median_rent_monthly": 2_300,
+        "crime_index": 30, "pct_bachelors": 65,
+        "median_household_income": 105_000, "population": 36_000,
+        "walk_score": 35, "restaurant_score": 50,
+        "tags": ["upscale", "low-crime", "established"],
+    },
+    "78248": {
+        "name": "Hollywood Park / Shavano",
+        "lat": 29.6020, "lng": -98.5200,
+        "median_home_value": 880_000, "median_rent_monthly": 3_000,
+        "crime_index": 18, "pct_bachelors": 75,
+        "median_household_income": 165_000, "population": 12_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["luxury", "low-crime", "family"],
+    },
+    "78258": {
+        "name": "Stone Oak",
+        "lat": 29.6360, "lng": -98.4400,
+        "median_home_value": 620_000, "median_rent_monthly": 2_500,
+        "crime_index": 22, "pct_bachelors": 65,
+        "median_household_income": 140_000, "population": 38_000,
+        "walk_score": 25, "restaurant_score": 40,
+        "tags": ["family", "newer", "low-crime"],
+    },
+    "78249": {
+        "name": "Northwest / UTSA",
+        "lat": 29.5460, "lng": -98.6300,
+        "median_home_value": 360_000, "median_rent_monthly": 1_800,
+        "crime_index": 35, "pct_bachelors": 55,
+        "median_household_income": 80_000, "population": 60_000,
+        "walk_score": 30, "restaurant_score": 45,
+        "tags": ["college", "family", "rental-demand"],
+    },
+    "78232": {
+        "name": "North Central",
+        "lat": 29.5760, "lng": -98.4790,
+        "median_home_value": 420_000, "median_rent_monthly": 2_000,
+        "crime_index": 32, "pct_bachelors": 55,
+        "median_household_income": 88_000, "population": 32_000,
+        "walk_score": 30, "restaurant_score": 45,
+        "tags": ["family", "established"],
+    },
+    "78207": {
+        "name": "West Side",
+        "lat": 29.4280, "lng": -98.5550,
+        "median_home_value": 180_000, "median_rent_monthly": 1_200,
+        "crime_index": 70, "pct_bachelors": 12,
+        "median_household_income": 35_000, "population": 50_000,
+        "walk_score": 50, "restaurant_score": 40,
+        "tags": ["affordable", "high-cap-rate", "high-crime"],
+    },
+    "78211": {
+        "name": "South Side",
+        "lat": 29.3380, "lng": -98.5440,
+        "median_home_value": 180_000, "median_rent_monthly": 1_200,
+        "crime_index": 65, "pct_bachelors": 14,
+        "median_household_income": 40_000, "population": 36_000,
+        "walk_score": 30, "restaurant_score": 30,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "78239": {
+        "name": "NE / Windcrest",
+        "lat": 29.5470, "lng": -98.4040,
+        "median_home_value": 260_000, "median_rent_monthly": 1_650,
+        "crime_index": 42, "pct_bachelors": 32,
+        "median_household_income": 62_000, "population": 38_000,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["family", "mid-tier"],
+    },
+    "78247": {
+        "name": "Live Oak / NE family",
+        "lat": 29.5710, "lng": -98.4060,
+        "median_home_value": 340_000, "median_rent_monthly": 1_950,
+        "crime_index": 28, "pct_bachelors": 45,
+        "median_household_income": 92_000, "population": 50_000,
+        "walk_score": 28, "restaurant_score": 40,
+        "tags": ["family", "established", "low-crime"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -1471,7 +1586,7 @@ ST_GEORGE_ZIPS: dict[str, dict] = {
 for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_ZIPS,
               LAS_VEGAS_ZIPS, RENO_ZIPS, CARSON_CITY_ZIPS,
               MIAMI_ZIPS, ORLANDO_ZIPS, ATLANTA_ZIPS,
-              AUSTIN_ZIPS, HOUSTON_ZIPS):
+              AUSTIN_ZIPS, HOUSTON_ZIPS, SAN_ANTONIO_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -1504,6 +1619,18 @@ STATE_METROS: dict[str, dict] = {
             "Houston has no zoning, so ZIP-level data masks significant block-by-block variance — particularly in 77036 / 77033 where redevelopment activity is patchy.",
             "Energy-sector employment (77079 Energy Corridor especially) makes Houston the most cyclical TX metro — cap rates and rent demand swing with oil prices.",
             "Hurricane / flood insurance has roughly tripled in 5 years and varies by FEMA flood zone within ZIP — the cap-rate scoring uses the state-avg insurance figure as a placeholder.",
+        ],
+    },
+    "TX-SA": {
+        "state": "TX",
+        "metro_label": "San Antonio / Bexar County",
+        "subtitle": "ZIP-level scores for the San Antonio metro — Downtown / King William, the Pearl District, Castle Hills, Stone Oak, Hollywood Park, plus high-cap-rate West and South Side ZIPs.",
+        "map_center": {"lat": 29.50, "lng": -98.50, "zoom": 10},
+        "zips": SAN_ANTONIO_ZIPS,
+        "extra_caveats": [
+            "San Antonio is the largest metro in the dataset where home values stay genuinely affordable (median sub-$300K in core ZIPs). Cap rates skew high but appreciation lags Dallas/Austin/Houston.",
+            "Stone Oak (78258) is master-planned territory; HOA dues add ~\\$80–\\$200/mo to PITI not modeled in the score.",
+            "Military bases (Lackland, Randolph, Fort Sam Houston, JBSA) provide a meaningful rental-demand floor across multiple ZIPs — cap-rate scoring doesn't isolate this.",
         ],
     },
     "TX-AUS": {
@@ -1652,7 +1779,7 @@ STATE_METROS: dict[str, dict] = {
 # Ordered list of metro slugs per state. Drives the dashboard's
 # default link target (first entry) and the metro switcher on the map page.
 STATE_TO_METROS: dict[str, list[str]] = {
-    "TX": ["TX", "TX-HOU", "TX-AUS"],
+    "TX": ["TX", "TX-HOU", "TX-SA", "TX-AUS"],
     "CA": ["CA"],
     "UT": ["UT", "UT-SLC", "UT-STG"],
     "AZ": ["AZ"],
