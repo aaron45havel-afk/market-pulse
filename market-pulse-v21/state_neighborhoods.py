@@ -1594,6 +1594,141 @@ SF_BAY_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# CA — San Diego County: Downtown, beach, La Jolla, family suburbs, Encanto
+# Distinct from LA/Bay: heavy military presence anchors rents, biotech in
+# Sorrento Mesa/UTC, beach premium most pronounced in OB/PB/La Jolla.
+# ─────────────────────────────────────────────────────────────────────────────
+SAN_DIEGO_ZIPS: dict[str, dict] = {
+    "92101": {
+        "name": "Downtown / Gaslamp / Little Italy",
+        "lat": 32.7150, "lng": -117.1610,
+        "median_home_value": 700_000, "median_rent_monthly": 2_800,
+        "crime_index": 65, "pct_bachelors": 65,
+        "median_household_income": 90_000, "population": 38_000,
+        "walk_score": 95, "restaurant_score": 90,
+        "tags": ["urban", "walkable", "transit"],
+    },
+    "92103": {
+        "name": "Hillcrest / Mission Hills",
+        "lat": 32.7470, "lng": -117.1620,
+        "median_home_value": 880_000, "median_rent_monthly": 3_000,
+        "crime_index": 45, "pct_bachelors": 70,
+        "median_household_income": 100_000, "population": 30_000,
+        "walk_score": 90, "restaurant_score": 90,
+        "tags": ["walkable", "hip", "established"],
+    },
+    "92104": {
+        "name": "North Park / South Park",
+        "lat": 32.7470, "lng": -117.1300,
+        "median_home_value": 820_000, "median_rent_monthly": 2_800,
+        "crime_index": 50, "pct_bachelors": 65,
+        "median_household_income": 85_000, "population": 50_000,
+        "walk_score": 85, "restaurant_score": 90,
+        "tags": ["walkable", "hip", "gentrified"],
+    },
+    "92107": {
+        "name": "Ocean Beach",
+        "lat": 32.7440, "lng": -117.2520,
+        "median_home_value": 1_250_000, "median_rent_monthly": 3_200,
+        "crime_index": 50, "pct_bachelors": 60,
+        "median_household_income": 90_000, "population": 14_000,
+        "walk_score": 85, "restaurant_score": 80,
+        "tags": ["beach", "walkable", "hip"],
+    },
+    "92109": {
+        "name": "Pacific Beach / Mission Beach",
+        "lat": 32.7960, "lng": -117.2480,
+        "median_home_value": 1_400_000, "median_rent_monthly": 3_500,
+        "crime_index": 55, "pct_bachelors": 65,
+        "median_household_income": 100_000, "population": 38_000,
+        "walk_score": 80, "restaurant_score": 85,
+        "tags": ["beach", "walkable", "high-density"],
+    },
+    "92037": {
+        "name": "La Jolla",
+        "lat": 32.8330, "lng": -117.2790,
+        "median_home_value": 2_500_000, "median_rent_monthly": 4_500,
+        "crime_index": 25, "pct_bachelors": 80,
+        "median_household_income": 175_000, "population": 32_000,
+        "walk_score": 60, "restaurant_score": 75,
+        "tags": ["luxury", "low-crime", "top-schools", "beach"],
+    },
+    "92106": {
+        "name": "Point Loma",
+        "lat": 32.7440, "lng": -117.2280,
+        "median_home_value": 1_500_000, "median_rent_monthly": 3_800,
+        "crime_index": 30, "pct_bachelors": 75,
+        "median_household_income": 135_000, "population": 30_000,
+        "walk_score": 50, "restaurant_score": 60,
+        "tags": ["established", "low-crime", "family"],
+    },
+    "92122": {
+        "name": "University City / UCSD",
+        "lat": 32.8650, "lng": -117.2300,
+        "median_home_value": 1_100_000, "median_rent_monthly": 3_400,
+        "crime_index": 28, "pct_bachelors": 75,
+        "median_household_income": 135_000, "population": 50_000,
+        "walk_score": 55, "restaurant_score": 50,
+        "tags": ["college", "tech", "low-crime"],
+    },
+    "92127": {
+        "name": "4S Ranch / Black Mountain Ranch",
+        "lat": 33.0210, "lng": -117.0970,
+        "median_home_value": 1_400_000, "median_rent_monthly": 3_800,
+        "crime_index": 18, "pct_bachelors": 75,
+        "median_household_income": 175_000, "population": 32_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["family", "newer", "low-crime", "top-schools"],
+    },
+    "92064": {
+        "name": "Poway",
+        "lat": 32.9595, "lng": -117.0340,
+        "median_home_value": 1_300_000, "median_rent_monthly": 3_800,
+        "crime_index": 22, "pct_bachelors": 70,
+        "median_household_income": 155_000, "population": 50_000,
+        "walk_score": 30, "restaurant_score": 40,
+        "tags": ["family", "top-schools", "low-crime"],
+    },
+    "92024": {
+        "name": "Encinitas",
+        "lat": 33.0490, "lng": -117.2820,
+        "median_home_value": 1_600_000, "median_rent_monthly": 4_000,
+        "crime_index": 22, "pct_bachelors": 70,
+        "median_household_income": 155_000, "population": 62_000,
+        "walk_score": 40, "restaurant_score": 60,
+        "tags": ["beach", "family", "low-crime", "top-schools"],
+    },
+    "92114": {
+        "name": "Encanto / Lincoln Park",
+        "lat": 32.7000, "lng": -117.0570,
+        "median_home_value": 560_000, "median_rent_monthly": 2_400,
+        "crime_index": 70, "pct_bachelors": 22,
+        "median_household_income": 58_000, "population": 50_000,
+        "walk_score": 50, "restaurant_score": 35,
+        "tags": ["affordable", "high-cap-rate", "high-crime"],
+    },
+    "92117": {
+        "name": "Clairemont",
+        "lat": 32.8170, "lng": -117.2010,
+        "median_home_value": 850_000, "median_rent_monthly": 3_000,
+        "crime_index": 35, "pct_bachelors": 50,
+        "median_household_income": 98_000, "population": 50_000,
+        "walk_score": 50, "restaurant_score": 55,
+        "tags": ["family", "established"],
+    },
+    "92128": {
+        "name": "Rancho Bernardo",
+        "lat": 33.0260, "lng": -117.0680,
+        "median_home_value": 980_000, "median_rent_monthly": 3_300,
+        "crime_index": 22, "pct_bachelors": 60,
+        "median_household_income": 115_000, "population": 50_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["family", "retiree", "low-crime"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -1837,7 +1972,7 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               LAS_VEGAS_ZIPS, RENO_ZIPS, CARSON_CITY_ZIPS,
               MIAMI_ZIPS, ORLANDO_ZIPS, ATLANTA_ZIPS,
               AUSTIN_ZIPS, HOUSTON_ZIPS, SAN_ANTONIO_ZIPS, FORT_WORTH_ZIPS,
-              SF_BAY_ZIPS):
+              SF_BAY_ZIPS, SAN_DIEGO_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -1918,6 +2053,19 @@ STATE_METROS: dict[str, dict] = {
         "extra_caveats": [
             "LA ZIPs span huge populations — 90011 alone has ~110K residents and is heterogeneous.",
             "Beach ZIPs (90291, 90402) trade at a beach premium that distorts cap-rate scoring vs. hill/inland ZIPs.",
+        ],
+    },
+    "CA-SD": {
+        "state": "CA",
+        "metro_label": "San Diego County",
+        "subtitle": "ZIP-level scores for San Diego — Downtown / Gaslamp, the beach corridor (OB / PB / La Jolla), tech-employer ZIPs around UTC, family suburbs (Poway / 4S Ranch / Encinitas), plus high-cap-rate Encanto.",
+        "map_center": {"lat": 32.85, "lng": -117.15, "zoom": 10},
+        "zips": SAN_DIEGO_ZIPS,
+        "extra_caveats": [
+            "San Diego has ~220K active-duty + retired military across the county; BAH (Basic Allowance for Housing) anchors rents in many ZIPs and creates an unusual cap-rate floor compared to other CA metros.",
+            "Mello-Roos special assessments add \\$2K-7K/yr in newer master-planned communities (especially 92127 4S Ranch + newer 92128 Rancho Bernardo sections); not in the standard property-tax line.",
+            "Both wildfire AND earthquake insurance apply in San Diego (East County wildfire risk + the same regional fault system as LA); the state-avg insurance multiplier likely understates both.",
+            "Prop 13 protects long-term holders (2% cap), but a fresh purchase resets to sale price → first-year buyers see effective rates closer to 1.0-1.2% vs the 0.75% statewide average shown.",
         ],
     },
     "CA-SF": {
@@ -2056,7 +2204,7 @@ STATE_METROS: dict[str, dict] = {
 # default link target (first entry) and the metro switcher on the map page.
 STATE_TO_METROS: dict[str, list[str]] = {
     "TX": ["TX", "TX-FW", "TX-HOU", "TX-SA", "TX-AUS"],
-    "CA": ["CA", "CA-SF"],
+    "CA": ["CA", "CA-SF", "CA-SD"],
     "UT": ["UT", "UT-SLC", "UT-STG"],
     "AZ": ["AZ"],
     "NV": ["NV-LV", "NV-RNO", "NV-CC"],
