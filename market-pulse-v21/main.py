@@ -80,6 +80,15 @@ async def national_map(request: Request):
         avg_school = sum(z.get("pct_bachelors", 0) for z in zips) / n
         avg_crime = sum(z.get("crime_index", 50) for z in zips) / n
         avg_restaurants = sum(z.get("restaurant_score", 0) for z in zips) / n
+        # Per-persona metro composites (avg of per-ZIP composite_by_persona).
+        # Lets the right-rail leaderboard re-sort instantly when the user
+        # toggles persona, without any refetch.
+        persona_keys = ('balanced', 'investor', 'lifestyle')
+        composite_by_persona = {}
+        for pkey in persona_keys:
+            vals = [z.get('composite_by_persona', {}).get(pkey) for z in zips]
+            vals = [v for v in vals if v is not None]
+            composite_by_persona[pkey] = round(sum(vals) / len(vals), 1) if vals else round(avg_score, 1)
         # State-level lookups for tax-haven + growth-momentum signals.
         sunshine = STATE_SUNSHINE_DAYS.get(cfg["state"], 200)
         state_income_tax = STATE_INCOME_TAX_EFFECTIVE.get(cfg["state"], 0.045)
@@ -97,6 +106,7 @@ async def national_map(request: Request):
             },
             "zip_count": n,
             "avg_composite": round(avg_score, 1),
+            "composite_by_persona": composite_by_persona,
             "avg_cap_rate_pct": round(avg_cap, 2),
             "avg_home_value": round(avg_home),
             "avg_rent": round(avg_rent),
