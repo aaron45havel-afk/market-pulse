@@ -6,28 +6,81 @@
 
 <!-- ═══ GOLDILOCKS TOP 5 WITH PERSONA SELECTOR ═══ -->
 <div class="card" id="goldilocksCard" style="margin-bottom:1.5rem; display:none;">
-    <div style="display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:0.85rem;">
-        <div>
-            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Goldilocks Top 5 — Where to Buy</div>
-            <div style="font-size:0.82rem; color:var(--text-dim); margin-top:0.25rem;">Same data, re-weighted for who <em>you</em> are. Pick a persona:</div>
-        </div>
-        <div style="font-size:0.65rem; color:var(--text-dim);">
-            <span title="FRED (live): PITI, unemployment, buy signals. Hardcoded (annual bump): pop growth (Census 2023), walkability (Walk Score 2024), schools (Niche 2024), income tax (Tax Foundation), rent (Zillow Q4 2024), wage growth (BLS QCEW), insurance trajectory (NAIC), HOA prevalence (CAI), COL (BEA RPP).">ⓘ Data sources</span>
+    <!-- Single-row header: section label on left, persona pill row on right.
+         Persona pills are emoji-only to keep them compact; full label +
+         description live on the persona button title attr (hover tooltip)
+         and in the caption strip below. -->
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+        <div style="font-size:0.78rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Where to buy <span style="margin-left:0.4rem; font-size:0.7rem; opacity:0.7;" title="FRED (live): PITI, unemployment, buy signals. Hardcoded (annual bump): pop growth (Census 2023), walkability (Walk Score 2024), schools (Niche 2024), income tax (Tax Foundation), rent (Zillow Q4 2024), wage growth (BLS QCEW), insurance trajectory (NAIC), HOA prevalence (CAI), COL (BEA RPP).">ⓘ</span></div>
+        <div id="personaSelector" style="display:flex; gap:0.3rem; flex-wrap:wrap;">
+            <button class="persona-btn active" data-persona="balanced"   title="⚖️ Balanced — even weighting across all factors">⚖️</button>
+            <button class="persona-btn"        data-persona="first_time" title="🏡 First-Time Buyer — affordability dominates">🏡</button>
+            <button class="persona-btn"        data-persona="family"     title="👨‍👩‍👧 Family — schools + walkability + low crime dominate">👨‍👩‍👧</button>
+            <button class="persona-btn"        data-persona="retiree"    title="🌴 Retiree — low carrying cost + climate + livability">🌴</button>
+            <button class="persona-btn"        data-persona="investor"   title="💰 Investor — rental yield + appreciation/growth">💰</button>
         </div>
     </div>
 
-    <!-- Persona selector: re-weights dimensions instantly, no page reload -->
-    <div id="personaSelector" style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.9rem;">
-        <button class="persona-btn" data-persona="balanced" style="padding:0.4rem 0.85rem; border-radius:999px; background:var(--accent,#6366f1); color:white; border:1px solid var(--accent,#6366f1); font-size:0.78rem; cursor:pointer;">⚖️ Balanced</button>
-        <button class="persona-btn" data-persona="first_time" style="padding:0.4rem 0.85rem; border-radius:999px; background:transparent; color:var(--text,#e5e7eb); border:1px solid var(--border,#2d3044); font-size:0.78rem; cursor:pointer;">🏡 First-Time Buyer</button>
-        <button class="persona-btn" data-persona="family" style="padding:0.4rem 0.85rem; border-radius:999px; background:transparent; color:var(--text,#e5e7eb); border:1px solid var(--border,#2d3044); font-size:0.78rem; cursor:pointer;">👨‍👩‍👧 Family</button>
-        <button class="persona-btn" data-persona="retiree" style="padding:0.4rem 0.85rem; border-radius:999px; background:transparent; color:var(--text,#e5e7eb); border:1px solid var(--border,#2d3044); font-size:0.78rem; cursor:pointer;">🌴 Retiree</button>
-        <button class="persona-btn" data-persona="investor" style="padding:0.4rem 0.85rem; border-radius:999px; background:transparent; color:var(--text,#e5e7eb); border:1px solid var(--border,#2d3044); font-size:0.78rem; cursor:pointer;">💰 Investor</button>
-    </div>
+    <!-- One-line caption that names the active persona + brief description.
+         Replaces the old standalone description block — same info, less
+         vertical real estate. -->
+    <div id="personaCaption" style="font-size:0.85rem; color:var(--text-dim); margin:0.45rem 0 1rem; line-height:1.5;"></div>
 
-    <div id="personaDescription" style="font-size:0.75rem; color:var(--text-dim); margin-bottom:0.85rem; font-style:italic;"></div>
-    <div id="goldilocksGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:0.5rem;"></div>
+    <!-- Hero (top pick) + 4 compact cards. Hero gets ~2x the width on
+         desktop and full width on tablet/mobile. -->
+    <div id="goldilocksGrid" class="goldilocks-grid"></div>
 </div>
+
+<style>
+    /* Goldilocks layout — 5-column on desktop with the 1st card double-wide;
+       2-column on tablets (hero spans both cols); single column on phones. */
+    .goldilocks-grid { display:grid; grid-template-columns: 1.7fr 1fr 1fr 1fr 1fr; gap:0.6rem; }
+    @media (max-width: 1180px) {
+        .goldilocks-grid { grid-template-columns: 1fr 1fr; }
+        .goldilocks-grid > .gold-hero { grid-column: 1 / -1; }
+    }
+    @media (max-width: 600px) {
+        .goldilocks-grid { grid-template-columns: 1fr; }
+        .goldilocks-grid > .gold-hero { grid-column: auto; }
+    }
+
+    /* Persona pills — emoji-only icon buttons */
+    .persona-btn { padding:0.4rem 0.55rem; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text); font-size:1.05rem; cursor:pointer; line-height:1; transition:all 0.15s; min-width:2.2rem; }
+    .persona-btn:hover { border-color:var(--accent2); transform: translateY(-1px); }
+    .persona-btn.active { background: var(--accent); border-color: var(--accent); }
+
+    /* Card base */
+    .gold-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem; transition: transform 0.12s, border-color 0.15s; display:flex; flex-direction:column; }
+    .gold-card:hover { transform: translateY(-2px); border-color: var(--accent2); }
+
+    /* Hero card */
+    .gold-hero { background: linear-gradient(140deg, var(--surface2) 0%, var(--surface) 100%); padding:1rem 1.1rem; }
+    .gold-hero-head { display:flex; align-items:baseline; justify-content:space-between; gap:0.5rem; margin-bottom:0.85rem; padding-bottom:0.65rem; border-bottom:1px solid var(--border); }
+    .gold-hero-head .gold-rank { font-size:0.72rem; color:var(--text-dim); margin-right:0.5rem; font-weight:600; letter-spacing:0.04em; }
+    .gold-hero-head .gold-name { font-size:1.45rem; font-weight:700; }
+    .gold-hero-head .gold-score { font-size:1.5rem; font-weight:800; font-variant-numeric: tabular-nums; }
+    .gold-stats { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem 1rem; margin-bottom:0.85rem; }
+    .gold-stats .gold-stat-label { font-size:0.66rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; display:block; }
+    .gold-stats .gold-stat-value { font-weight:700; font-size:1rem; color:var(--text); display:block; margin-top:0.1rem; }
+    .gold-callouts { font-size:0.78rem; line-height:1.55; padding:0.55rem 0.7rem; background:rgba(255,255,255,0.025); border-radius:6px; margin-bottom:0.85rem; }
+    .gold-callouts > div { padding:0.1rem 0; }
+    .gold-cta-primary { display:block; padding:0.6rem 0.9rem; background:var(--accent2); color:white; border-radius:8px; text-align:center; font-size:0.85rem; font-weight:700; text-decoration:none; margin-bottom:0.4rem; }
+    .gold-cta-primary:hover { background:#2563eb; text-decoration:none; }
+    .gold-secondary-link { display:block; text-align:center; font-size:0.72rem; color:var(--text-dim); padding:0.3rem; cursor:pointer; }
+    .gold-secondary-link:hover { color:var(--text); text-decoration:none; }
+
+    /* Compact card */
+    .gold-compact { cursor: pointer; gap: 0.4rem; padding: 0.7rem 0.8rem; }
+    .gold-compact-head { display:flex; align-items:baseline; justify-content:space-between; }
+    .gold-compact .gold-rank-small { font-size:0.7rem; color:var(--text-dim); font-weight:600; letter-spacing:0.04em; }
+    .gold-compact .gold-score-small { font-size:1.2rem; font-weight:700; font-variant-numeric:tabular-nums; }
+    .gold-compact .gold-name-compact { font-size:1rem; font-weight:700; line-height:1.2; }
+    .gold-compact .gold-compact-stats { display:flex; gap:0.6rem; align-items:baseline; font-size:0.78rem; color:var(--text-dim); }
+    .gold-compact .gold-compact-stats .price { font-weight:700; color:var(--text); }
+    .gold-compact .gold-compact-strength { font-size:0.7rem; color:#22c55e; }
+    .gold-compact .gold-compact-cta { font-size:0.7rem; color:var(--accent2); margin-top:auto; padding-top:0.25rem; border-top:1px dashed var(--border); display:block; }
+    .gold-compact .gold-compact-cta:hover { color:white; text-decoration:none; }
+</style>
 
 <!-- ═══ STATE DRILL-DOWN ═══ -->
 <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">State &amp; County Drill-Down</div>
@@ -471,74 +524,128 @@ const PERSONA_DESCRIPTIONS = {
 let currentGoldilocksData = null;   // full {persona: [rankings]} payload
 let currentPersona = "balanced";
 
+// Persona label lookup — used in the caption strip + hero card label.
+const PERSONA_LABELS = {
+    balanced: '⚖️ Balanced',
+    first_time: '🏡 First-Time Buyer',
+    family: '👨‍👩‍👧 Family',
+    retiree: '🌴 Retiree',
+    investor: '💰 Investor',
+};
+
+// Resolve the metro slug (and human label) for a state code, so the
+// inline "Explore X neighborhoods" button on each Goldilocks card lands
+// on the right per-metro page. Falls back to null if the state has no
+// neighborhood-map data wired up.
+function metroSlugForState(code) {
+    if (typeof STATE_DEFAULT_METRO !== 'object' || !STATE_DEFAULT_METRO) return null;
+    return STATE_DEFAULT_METRO[code] || null;
+}
+
+function _scoreColor(c) {
+    return c >= 55 ? '#22c55e' : c >= 45 ? '#eab308' : c >= 35 ? '#f97316' : '#ef4444';
+}
+
+function _renderHeroCard(r) {
+    const score = r.composite.toFixed(0);
+    const color = _scoreColor(r.composite);
+    const priceStr = r.median_price ? '$' + Math.round(r.median_price / 1000) + 'K' : '—';
+    const yieldStr = r.rent_to_price_pct ? r.rent_to_price_pct.toFixed(1) + '%' : '—';
+    const popGrowth = (r.pop_growth > 0 ? '+' : '') + r.pop_growth + '%';
+    const wageGrowth = '+' + r.wage_growth + '%';
+    const slug = metroSlugForState(r.code);
+    const mapBtn = slug
+        ? `<a href="/real-estate/${slug}/map" class="gold-cta-primary">📍 Explore ${r.name} neighborhoods →</a>`
+        : '';
+    return `
+        <div class="gold-card gold-hero" data-rank="1">
+            <div class="gold-hero-head">
+                <div><span class="gold-rank">🥇 #1</span><span class="gold-name">${r.name}</span></div>
+                <span class="gold-score" style="color:${color};">${score}%</span>
+            </div>
+            <div class="gold-stats">
+                <div><span class="gold-stat-label">Median home</span><span class="gold-stat-value">${priceStr}</span></div>
+                <div><span class="gold-stat-label">Rental yield</span><span class="gold-stat-value">${yieldStr}</span></div>
+                <div><span class="gold-stat-label">Pop growth</span><span class="gold-stat-value">${popGrowth}</span></div>
+                <div><span class="gold-stat-label">Wage growth</span><span class="gold-stat-value">${wageGrowth}</span></div>
+            </div>
+            <div class="gold-callouts">
+                <div><span style="color:#22c55e; font-weight:700;">✓ Strongest:</span> ${r.strength}</div>
+                <div><span style="color:#ef4444; font-weight:700;">⚠ Watch:</span> ${r.weakness}</div>
+            </div>
+            ${mapBtn}
+            <a class="gold-secondary-link" data-jump-state="${r.code}">↓ Drill into ${r.name} state data</a>
+        </div>`;
+}
+
+function _renderCompactCard(r, rank) {
+    const score = r.composite.toFixed(0);
+    const color = _scoreColor(r.composite);
+    const priceStr = r.median_price ? '$' + Math.round(r.median_price / 1000) + 'K' : '—';
+    const yieldStr = r.rent_to_price_pct ? r.rent_to_price_pct.toFixed(1) + '%' : '—';
+    const slug = metroSlugForState(r.code);
+    const mapLink = slug
+        ? `<a href="/real-estate/${slug}/map" class="gold-compact-cta" onclick="event.stopPropagation();">📍 Open ${r.name} map →</a>`
+        : '';
+    return `
+        <div class="gold-card gold-compact" data-rank="${rank}" data-jump-state="${r.code}" title="Click to drill into ${r.name}">
+            <div class="gold-compact-head">
+                <span class="gold-rank-small">#${rank}</span>
+                <span class="gold-score-small" style="color:${color};">${score}%</span>
+            </div>
+            <div class="gold-name-compact">${r.name}</div>
+            <div class="gold-compact-stats">
+                <span class="price">${priceStr}</span>
+                <span>${yieldStr} yield</span>
+            </div>
+            <div class="gold-compact-strength">▲ ${r.strength}</div>
+            ${mapLink}
+        </div>`;
+}
+
 function renderGoldilocks(dataOrRankings) {
     const card = document.getElementById('goldilocksCard');
     const grid = document.getElementById('goldilocksGrid');
-    const descEl = document.getElementById('personaDescription');
+    const captionEl = document.getElementById('personaCaption');
     if (!card || !grid) return;
 
-    // Accept either a raw rankings list (legacy) or the persona-keyed dict (new).
     if (Array.isArray(dataOrRankings)) {
-        // Legacy call with flat list — wrap it so the persona selector still has
-        // something to show. Won't re-weight but won't crash either.
         currentGoldilocksData = { balanced: dataOrRankings };
     } else if (dataOrRankings && typeof dataOrRankings === 'object') {
         currentGoldilocksData = dataOrRankings;
     }
     const rankings = (currentGoldilocksData && currentGoldilocksData[currentPersona])
-        || (currentGoldilocksData && currentGoldilocksData.balanced)
-        || [];
+        || (currentGoldilocksData && currentGoldilocksData.balanced) || [];
     if (rankings.length === 0) return;
     card.style.display = '';
-    if (descEl) descEl.textContent = PERSONA_DESCRIPTIONS[currentPersona] || '';
 
-    grid.innerHTML = '';
+    if (captionEl) {
+        const label = PERSONA_LABELS[currentPersona] || currentPersona;
+        const desc = PERSONA_DESCRIPTIONS[currentPersona] || '';
+        captionEl.innerHTML = `Top markets weighted for: <strong style="color:var(--text);">${label}</strong>` +
+            (desc ? ` <span style="opacity:0.78;">— ${desc}</span>` : '');
+    }
+
     const top5 = rankings.slice(0, 5);
-    const medals = ['🥇', '🥈', '🥉', '4.', '5.'];
-    top5.forEach((r, i) => {
-        const color = r.composite >= 55 ? '#22c55e' : r.composite >= 45 ? '#eab308' : r.composite >= 35 ? '#f97316' : '#ef4444';
-        const priceStr = r.median_price ? '$' + Math.round(r.median_price / 1000) + 'K' : '—';
-        const rentStr = r.monthly_rent ? '$' + r.monthly_rent + '/mo' : '—';
-        const yieldStr = r.rent_to_price_pct ? r.rent_to_price_pct.toFixed(1) + '%' : '—';
-        const incomeTaxStr = r.income_tax_pct === 0 ? '0%' : r.income_tax_pct + '%';
-        const capStr = r.property_tax_cap ? `${r.property_tax_cap}% cap` : 'no cap';
-        const insTrajStr = r.insurance_trajectory_pct > 12 ? '⚠️' : '';
-        const dims = [
-            ['affordability', 'Aff', 'After-tax-income PITI'],
-            ['timing', 'Tim', 'Current-market buy signal'],
-            ['jobs', 'Job', 'Unemployment + wage growth'],
-            ['growth', 'Grw', 'Population growth (migration)'],
-            ['livability', 'Liv', 'Walk + schools + ins trajectory + HOA + tax cap'],
-            ['rental_yield', 'Yld', 'Rent-to-price ratio'],
-        ];
-        grid.innerHTML += `
-            <div style="background:var(--card-bg, #1e1e2e); border:1px solid var(--border, #2d3044); border-radius:8px; padding:0.8rem; cursor:pointer; transition:transform 0.1s;"
-                 onclick="document.querySelector('[data-state=${r.code}]').click();"
-                 onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='none';"
-                 title="Click to drill into ${r.name}">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
-                    <span style="font-size:1.05rem; font-weight:700;">${medals[i]} ${r.name}</span>
-                    <span style="font-size:1rem; font-weight:700; color:${color};">${r.composite.toFixed(0)}%</span>
-                </div>
-                <div style="font-size:0.72rem; color:var(--text-dim); margin-bottom:0.5rem; line-height:1.35;">
-                    ${priceStr} · Rent ${rentStr} · Yield ${yieldStr}<br>
-                    Unemp ${r.unemployment}% · Wage +${r.wage_growth}% · Pop ${r.pop_growth > 0 ? '+' : ''}${r.pop_growth}%<br>
-                    State tax ${incomeTaxStr} · Prop ${capStr} · Ins +${r.insurance_trajectory_pct}%/yr ${insTrajStr}
-                </div>
-                <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:2px; margin-bottom:0.25rem;">
-                    ${dims.map(([k, lbl, desc]) => {
-                        const v = r[k];
-                        const bg = v >= 60 ? 'rgba(34,197,94,0.28)' : v >= 40 ? 'rgba(234,179,8,0.22)' : 'rgba(239,68,68,0.22)';
-                        return `<div style="background:${bg}; border-radius:3px; text-align:center; padding:3px 0; font-size:0.62rem; font-weight:600;" title="${lbl}: ${desc} — ${v}%">${v.toFixed(0)}</div>`;
-                    }).join('')}
-                </div>
-                <div style="display:grid; grid-template-columns:repeat(6, 1fr); font-size:0.58rem; color:var(--text-dim); text-align:center; margin-bottom:0.35rem;">
-                    ${dims.map(([k, lbl]) => `<span>${lbl}</span>`).join('')}
-                </div>
-                <div style="font-size:0.7rem; border-top:1px solid var(--border, #2d3044); padding-top:0.35rem;">
-                    <span style="color:#22c55e;">▲ ${r.strength}</span> · <span style="color:#ef4444;">▼ ${r.weakness}</span>
-                </div>
-            </div>`;
+    grid.innerHTML = top5.map((r, i) =>
+        i === 0 ? _renderHeroCard(r) : _renderCompactCard(r, i + 1)
+    ).join('');
+
+    // Wire up the click-to-drill behavior for cards (compact card =
+    // anywhere on card, hero secondary link = anchor only). Stops bubbling
+    // so the inline map CTA still navigates to the metro map.
+    grid.querySelectorAll('.gold-compact[data-jump-state]').forEach(el => {
+        el.addEventListener('click', () => {
+            const tab = document.querySelector(`[data-state="${el.dataset.jumpState}"]`);
+            if (tab) tab.click();
+        });
+    });
+    grid.querySelectorAll('.gold-secondary-link[data-jump-state]').forEach(el => {
+        el.addEventListener('click', e => {
+            e.preventDefault();
+            const tab = document.querySelector(`[data-state="${el.dataset.jumpState}"]`);
+            if (tab) tab.click();
+        });
     });
 }
 
