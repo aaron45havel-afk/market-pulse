@@ -485,7 +485,7 @@ def _score_restaurants(restaurant_score: float) -> float:
 # a persona but not across them.
 PERSONAS: dict[str, dict] = {
     "investor": {
-        "label": "💰 Investor",
+        "label": "Investor",
         "description": "Cash flow first. Cap rate dominates; lifestyle features only matter to the extent they widen the renter pool.",
         "weights": {
             "cap_rate":      0.35,
@@ -498,7 +498,7 @@ PERSONAS: dict[str, dict] = {
         },
     },
     "lifestyle": {
-        "label": "🍷 Lifestyle Buyer",
+        "label": "Lifestyle Buyer",
         "description": "Buying to live in. Walkability + restaurants + schools + low crime dominate; cap rate is a tiebreaker.",
         "weights": {
             "cap_rate":      0.05,
@@ -511,7 +511,7 @@ PERSONAS: dict[str, dict] = {
         },
     },
     "balanced": {
-        "label": "⚖️ Balanced",
+        "label": "Balanced",
         "description": "Hybrid — cap rate matters but lifestyle pulls equal weight. Useful for owner-occupants who'll rent later.",
         "weights": {
             "cap_rate":      0.20,

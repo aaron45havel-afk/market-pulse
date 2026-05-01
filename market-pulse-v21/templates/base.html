@@ -130,11 +130,11 @@
         <aside class="sidebar" id="sidebar">
             <div class="logo">Market Pulse</div>
             <nav class="nav-links">
-                <a href="/map" class="{% if '/map' in request.url.path or request.url.path == '/' %}active{% endif %}"><span class="icon">🗺️</span>Map</a>
-                <a href="/real-estate" class="{% if '/real-estate' in request.url.path %}active{% endif %}"><span class="icon">🏘️</span>State Data</a>
-                <a href="/affordability" class="{% if '/affordability' in request.url.path %}active{% endif %}"><span class="icon">🧮</span>Affordability</a>
-                <a href="/finance" class="{% if request.url.path == '/finance' %}active{% endif %}"><span class="icon">📊</span>Value Screener</a>
-                <a href="/results" class="{% if '/results' in request.url.path %}active{% endif %}"><span class="icon">📋</span>Results</a>
+                <a href="/map" class="{% if '/map' in request.url.path or request.url.path == '/' %}active{% endif %}">Map</a>
+                <a href="/real-estate" class="{% if '/real-estate' in request.url.path %}active{% endif %}">State Data</a>
+                <a href="/affordability" class="{% if '/affordability' in request.url.path %}active{% endif %}">Affordability</a>
+                <a href="/finance" class="{% if request.url.path == '/finance' %}active{% endif %}">Value Screener</a>
+                <a href="/results" class="{% if '/results' in request.url.path %}active{% endif %}">Results</a>
             </nav>
             <div class="footer-note">FRED · SEC EDGAR · Yahoo Finance · Zillow Research. Not financial advice.</div>
         </aside>

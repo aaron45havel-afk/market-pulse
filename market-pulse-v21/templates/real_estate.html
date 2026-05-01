@@ -13,11 +13,11 @@
     <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
         <div style="font-size:0.78rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Where to buy <span style="margin-left:0.4rem; font-size:0.7rem; opacity:0.7;" title="FRED (live): PITI, unemployment, buy signals. Hardcoded (annual bump): pop growth (Census 2023), walkability (Walk Score 2024), schools (Niche 2024), income tax (Tax Foundation), rent (Zillow Q4 2024), wage growth (BLS QCEW), insurance trajectory (NAIC), HOA prevalence (CAI), COL (BEA RPP).">ⓘ</span></div>
         <div id="personaSelector" style="display:flex; gap:0.3rem; flex-wrap:wrap;">
-            <button class="persona-btn active" data-persona="balanced"   title="⚖️ Balanced — even weighting across all factors">⚖️</button>
-            <button class="persona-btn"        data-persona="first_time" title="🏡 First-Time Buyer — affordability dominates">🏡</button>
-            <button class="persona-btn"        data-persona="family"     title="👨‍👩‍👧 Family — schools + walkability + low crime dominate">👨‍👩‍👧</button>
-            <button class="persona-btn"        data-persona="retiree"    title="🌴 Retiree — low carrying cost + climate + livability">🌴</button>
-            <button class="persona-btn"        data-persona="investor"   title="💰 Investor — rental yield + appreciation/growth">💰</button>
+            <button class="persona-btn active" data-persona="balanced"   title="Balanced — even weighting across all factors">Balanced</button>
+            <button class="persona-btn"        data-persona="first_time" title="First-Time Buyer — affordability dominates">First-Time</button>
+            <button class="persona-btn"        data-persona="family"     title="Family — schools + walkability + low crime dominate">Family</button>
+            <button class="persona-btn"        data-persona="retiree"    title="Retiree — low carrying cost + climate + livability">Retiree</button>
+            <button class="persona-btn"        data-persona="investor"   title="Investor — rental yield + appreciation/growth">Investor</button>
         </div>
     </div>
 
@@ -45,7 +45,7 @@
     }
 
     /* Persona pills — emoji-only icon buttons */
-    .persona-btn { padding:0.4rem 0.55rem; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text); font-size:1.05rem; cursor:pointer; line-height:1; transition:all 0.15s; min-width:2.2rem; }
+    .persona-btn { padding:0.42rem 0.85rem; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text); font-size:0.82rem; font-weight:500; cursor:pointer; line-height:1.2; transition:all 0.15s; }
     .persona-btn:hover { border-color:var(--accent2); transform: translateY(-1px); }
     .persona-btn.active { background: var(--accent); border-color: var(--accent); }
 
@@ -83,10 +83,10 @@
 </style>
 
 <!-- ═══ STATE DRILL-DOWN ═══ -->
-<!-- Compact 2-letter postal-code pills. 📍 dot on the corner indicates the
-     state has a neighborhood-map deep-dive available. The selected state's
-     full name is rendered prominently in the context bar below, so we save
-     horizontal space here without losing identity cues. -->
+<!-- Compact 2-letter postal-code pills. A small green corner dot indicates
+     the state has a neighborhood-map deep-dive available. The selected
+     state's full name is rendered prominently in the context bar below,
+     so we save horizontal space here without losing identity cues. -->
 <div class="state-pills" id="stateTabs">
     <div class="state-pill active" data-state="CA" title="California">CA</div>
     <div class="state-pill"        data-state="NV" title="Nevada">NV</div>
@@ -114,7 +114,7 @@
         <select id="countySelect" class="search-bar" aria-label="Select county">
             <option value="">All counties (state overview)</option>
         </select>
-        <a id="stateMapLink" href="#" class="map-cta">📍 Neighborhood map →</a>
+        <a id="stateMapLink" href="#" class="map-cta">Neighborhood map &rarr;</a>
         <span id="dataSource" class="state-source"></span>
     </div>
 </div>
@@ -555,11 +555,11 @@ let currentPersona = "balanced";
 
 // Persona label lookup — used in the caption strip + hero card label.
 const PERSONA_LABELS = {
-    balanced: '⚖️ Balanced',
-    first_time: '🏡 First-Time Buyer',
-    family: '👨‍👩‍👧 Family',
-    retiree: '🌴 Retiree',
-    investor: '💰 Investor',
+    balanced: 'Balanced',
+    first_time: 'First-Time Buyer',
+    family: 'Family',
+    retiree: 'Retiree',
+    investor: 'Investor',
 };
 
 // Resolve the metro slug (and human label) for a state code, so the
@@ -584,12 +584,12 @@ function _renderHeroCard(r) {
     const wageGrowth = '+' + r.wage_growth + '%';
     const slug = metroSlugForState(r.code);
     const mapBtn = slug
-        ? `<a href="/real-estate/${slug}/map" class="gold-cta-primary">📍 Explore ${r.name} neighborhoods →</a>`
+        ? `<a href="/real-estate/${slug}/map" class="gold-cta-primary">Explore ${r.name} neighborhoods &rarr;</a>`
         : '';
     return `
         <div class="gold-card gold-hero" data-rank="1">
             <div class="gold-hero-head">
-                <div><span class="gold-rank">🥇 #1</span><span class="gold-name">${r.name}</span></div>
+                <div><span class="gold-rank">#1</span><span class="gold-name">${r.name}</span></div>
                 <span class="gold-score" style="color:${color};">${score}%</span>
             </div>
             <div class="gold-stats">
@@ -599,11 +599,11 @@ function _renderHeroCard(r) {
                 <div><span class="gold-stat-label">Wage growth</span><span class="gold-stat-value">${wageGrowth}</span></div>
             </div>
             <div class="gold-callouts">
-                <div><span style="color:#22c55e; font-weight:700;">✓ Strongest:</span> ${r.strength}</div>
-                <div><span style="color:#ef4444; font-weight:700;">⚠ Watch:</span> ${r.weakness}</div>
+                <div><span style="color:#22c55e; font-weight:700;">Strongest:</span> ${r.strength}</div>
+                <div><span style="color:#ef4444; font-weight:700;">Watch:</span> ${r.weakness}</div>
             </div>
             ${mapBtn}
-            <a class="gold-secondary-link" data-jump-state="${r.code}">↓ Drill into ${r.name} state data</a>
+            <a class="gold-secondary-link" data-jump-state="${r.code}">Drill into ${r.name} state data &darr;</a>
         </div>`;
 }
 
@@ -614,7 +614,7 @@ function _renderCompactCard(r, rank) {
     const yieldStr = r.rent_to_price_pct ? r.rent_to_price_pct.toFixed(1) + '%' : '—';
     const slug = metroSlugForState(r.code);
     const mapLink = slug
-        ? `<a href="/real-estate/${slug}/map" class="gold-compact-cta" onclick="event.stopPropagation();">📍 Open ${r.name} map →</a>`
+        ? `<a href="/real-estate/${slug}/map" class="gold-compact-cta" onclick="event.stopPropagation();">Open ${r.name} map &rarr;</a>`
         : '';
     return `
         <div class="gold-card gold-compact" data-rank="${rank}" data-jump-state="${r.code}" title="Click to drill into ${r.name}">
@@ -627,7 +627,7 @@ function _renderCompactCard(r, rank) {
                 <span class="price">${priceStr}</span>
                 <span>${yieldStr} yield</span>
             </div>
-            <div class="gold-compact-strength">▲ ${r.strength}</div>
+            <div class="gold-compact-strength">Top: ${r.strength}</div>
             ${mapLink}
         </div>`;
 }

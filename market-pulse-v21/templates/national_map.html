@@ -98,7 +98,7 @@
          Click to expand. All matching is client-side; answers persist in
          localStorage so the user doesn't re-enter on return visits. -->
     <div class="fit-drawer" id="fitDrawer">
-        <div class="tab" id="fitTab" title="Find a metro that fits your lifestyle">💬 Find your fit</div>
+        <div class="tab" id="fitTab" title="Find a metro that fits your lifestyle">Find your fit</div>
         <div class="panel">
             <div class="fit-body">
                 <div class="fit-head">
@@ -139,15 +139,15 @@
                 <div class="fit-q" data-key="priority" data-multi="true">
                     <span class="q-label">What matters most? <span style="font-weight:400; text-transform:none; opacity:0.7;">(pick any)</span></span>
                     <div class="fit-opts">
-                        <button class="fit-opt" data-val="schools">🎓 Schools</button>
-                        <button class="fit-opt" data-val="walkability">🚶 Walkability</button>
-                        <button class="fit-opt" data-val="yield">💵 Cap rate / yield</button>
-                        <button class="fit-opt" data-val="climate">☀️ Sunny climate</button>
-                        <button class="fit-opt" data-val="affordability">💰 Affordability</button>
-                        <button class="fit-opt" data-val="safety">🛡️ Safety / low crime</button>
-                        <button class="fit-opt" data-val="restaurants">🍽️ Restaurants</button>
-                        <button class="fit-opt" data-val="growth">📈 Growth / appreciation</button>
-                        <button class="fit-opt" data-val="lowtax">🏛️ Low taxes</button>
+                        <button class="fit-opt" data-val="schools">Schools</button>
+                        <button class="fit-opt" data-val="walkability">Walkability</button>
+                        <button class="fit-opt" data-val="yield">Cap rate / yield</button>
+                        <button class="fit-opt" data-val="climate">Sunny climate</button>
+                        <button class="fit-opt" data-val="affordability">Affordability</button>
+                        <button class="fit-opt" data-val="safety">Safety / low crime</button>
+                        <button class="fit-opt" data-val="restaurants">Restaurants</button>
+                        <button class="fit-opt" data-val="growth">Growth / appreciation</button>
+                        <button class="fit-opt" data-val="lowtax">Low taxes</button>
                     </div>
                 </div>
 
@@ -455,14 +455,13 @@ function renderMatches() {
 
     const container = document.getElementById('fitMatches');
     const wrapper = document.getElementById('fitResults');
-    const medals = ['🥇', '🥈', '🥉'];
     container.innerHTML = scored.slice(0, 3).map((s, i) => {
         const m = s.m;
         const why = s.reasons.length ? s.reasons.slice(0, 2).join(' · ')
                                      : `top ZIP ${m.top_zip.zip} · ${m.top_zip.composite_score.toFixed(0)} composite`;
         return `<div class="fit-match" data-slug="${m.slug}">
                     <div class="fit-match-head">
-                        <span class="rank">${medals[i]} ${m.metro_label}</span>
+                        <span class="rank">#${i + 1} &middot; ${m.metro_label}</span>
                         <span class="score">${Math.round(s.score)}</span>
                     </div>
                     <div class="fit-match-stats">${fmtMoney(m.avg_home_value)} avg · ${m.avg_cap_rate_pct.toFixed(1)}% yield · ${m.sunshine_days} sunny days</div>

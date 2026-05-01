@@ -24,7 +24,7 @@
     .metro-pill:hover { color: var(--text); border-color: var(--accent2); text-decoration: none; }
     .metro-pill.active { background: var(--accent2); color: white; border-color: var(--accent2); }
 
-    .icon-pill { padding: 0.32rem 0.55rem; border-radius: 7px; border: 1px solid var(--border); background: transparent; color: var(--text); font-size: 1rem; cursor: pointer; line-height: 1; min-width: 2rem; transition: all 0.15s; }
+    .icon-pill { padding: 0.32rem 0.7rem; border-radius: 7px; border: 1px solid var(--border); background: transparent; color: var(--text); font-size: 0.8rem; font-weight: 500; cursor: pointer; line-height: 1.2; transition: all 0.15s; }
     .icon-pill:hover { border-color: var(--accent2); transform: translateY(-1px); }
     .icon-pill.active { background: var(--accent); border-color: var(--accent); }
 
@@ -149,8 +149,8 @@
     <!-- Tabbed side panel: Details / Top 8 -->
     <div class="side-card">
         <div class="side-tabs">
-            <button type="button" class="side-tab active" data-pane="paneDetails">📍 Selected ZIP</button>
-            <button type="button" class="side-tab"        data-pane="paneTop">🏆 Top 8</button>
+            <button type="button" class="side-tab active" data-pane="paneDetails">Selected ZIP</button>
+            <button type="button" class="side-tab"        data-pane="paneTop">Top 8</button>
         </div>
         <div class="side-panes">
             <div class="side-pane" id="paneDetails">
@@ -401,9 +401,9 @@ function renderPersonaPills() {
         btn.className = 'icon-pill' + (key === currentPersona ? ' active' : '');
         btn.dataset.persona = key;
         btn.title = (p.label || key) + (p.description ? ' — ' + p.description : '');
-        // Show emoji from label if present, else first char
-        const emoji = (p.label || '').match(/^\p{Emoji}+/u);
-        btn.textContent = emoji ? emoji[0] : (p.label || key).slice(0, 2);
+        // Use the full persona label as the button text (data is plain
+        // text now; emoji-prefix extraction is no longer needed).
+        btn.textContent = p.label || key;
         btn.addEventListener('click', () => setPersona(key));
         container.appendChild(btn);
     });
