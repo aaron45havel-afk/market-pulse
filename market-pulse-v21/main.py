@@ -12,6 +12,7 @@ from data_providers import (
 from sec_edgar import build_net_net_screener
 from state_neighborhoods import (
     get_state_neighborhoods, list_supported_states, default_metro_slug,
+    STATE_METROS, STATE_TO_METROS, metros_for_state,
 )
 from database import (init_db, save_price, save_prices_bulk, get_all_prices, delete_price,
                       lock_portfolio, update_portfolio_prices, exit_holding,
@@ -42,6 +43,49 @@ templates = Jinja2Templates(directory="templates")
 @app.get("/")
 async def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+
+@app.get("/map")
+async def national_map(request: Request):
+    """National overview — every supported metro pinned on a single Leaflet
+    map. Each pin's color reflects the top ZIP's composite score under the
+    default investor persona; click → popup with metro summary + link to
+    the full per-metro deep-dive at /real-estate/{slug}/map."""
+    metros = []
+    for slug, cfg in STATE_METROS.items():
+        data = get_state_neighborhoods(slug)
+        if not data:
+            continue
+        zips = data.get("neighborhoods", [])
+        if not zips:
+            continue
+        top_zip = zips[0]  # already sorted by composite_score desc
+        avg_score = sum(z["composite_score"] for z in zips) / len(zips)
+        avg_cap = sum(z["cap_rate_pct"] for z in zips) / len(zips)
+        avg_home = sum(z["median_home_value"] for z in zips) / len(zips)
+        avg_rent = sum(z["median_rent_monthly"] for z in zips) / len(zips)
+        metros.append({
+            "slug": slug,
+            "state": cfg["state"],
+            "metro_label": cfg["metro_label"],
+            "map_center": cfg["map_center"],
+            "top_zip": {
+                "zip": top_zip["zip"],
+                "name": top_zip["name"],
+                "composite_score": top_zip["composite_score"],
+                "cap_rate_pct": top_zip["cap_rate_pct"],
+            },
+            "zip_count": len(zips),
+            "avg_composite": round(avg_score, 1),
+            "avg_cap_rate_pct": round(avg_cap, 2),
+            "avg_home_value": round(avg_home),
+            "avg_rent": round(avg_rent),
+        })
+    metros.sort(key=lambda m: -m["avg_composite"])
+    return templates.TemplateResponse("national_map.html", {
+        "request": request,
+        "metros": metros,
+    })
 
 
 @app.get("/real-estate")

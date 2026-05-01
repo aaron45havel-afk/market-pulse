@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Map — Market Pulse{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+    /* Map fills the viewport beneath the page header. The header is small
+       so the map is the dominant element — that's the whole point of this
+       redesign. */
+    .map-page { display: flex; flex-direction: column; height: calc(100vh - 60px); margin: -1.5rem -2rem; }
+    @media (max-width: 768px) { .map-page { margin: -1rem; height: calc(100vh - 110px); } }
+
+    .map-header { padding: 0.85rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+    .map-header h1 { font-size: 1.1rem; margin: 0; }
+    .map-header .sub { color: var(--text-dim); font-size: 0.78rem; }
+
+    #nationalMap { flex: 1; min-height: 0; background: #0b0d14; }
+    .leaflet-tile-pane { filter: brightness(0.65) saturate(0.8); }
+    .leaflet-popup-content-wrapper { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    .leaflet-popup-tip { background: var(--surface); }
+    .leaflet-popup-content { margin: 0.7rem 0.9rem; font-size: 0.85rem; min-width: 220px; }
+    .leaflet-container { font-family: inherit; }
+    .pop-stat { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.15rem 0; font-size: 0.82rem; }
+    .pop-stat .label { color: var(--text-dim); }
+    .pop-cta { display: inline-block; margin-top: 0.55rem; padding: 0.4rem 0.85rem; background: var(--accent2); color: white; border-radius: 6px; font-size: 0.78rem; font-weight: 600; }
+    .pop-cta:hover { text-decoration: none; opacity: 0.9; }
+
+    .legend { position: absolute; bottom: 18px; left: 18px; z-index: 500; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.75rem; font-size: 0.72rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.5rem; }
+    .legend-bar { display: inline-block; width: 110px; height: 8px; border-radius: 4px; background: linear-gradient(to right, #ef4444, #eab308, #22c55e); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="map-page">
+    <div class="map-header">
+        <div>
+            <h1>Neighborhood Investor Map — National</h1>
+            <div class="sub">{{ metros|length }} metros · click any pin to see the metro summary, then open the full ZIP-level map.</div>
+        </div>
+    </div>
+    <div style="flex:1; position:relative; min-height:0;">
+        <div id="nationalMap"></div>
+        <div class="legend">
+            <span>Worse</span>
+            <span class="legend-bar"></span>
+            <span>Better</span>
+            <span style="margin-left:0.4rem;">· composite (top ZIP)</span>
+        </div>
+    </div>
+</div>
+
+<script id="metros-data" type="application/json">{{ metros | tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+const METROS = JSON.parse(document.getElementById('metros-data').textContent);
+
+// Map composite score 0-100 to a red→yellow→green hue (same logic as the
+// per-metro state_map.html so colors stay consistent across views).
+function scoreColor(score) {
+    const s = Math.max(0, Math.min(100, score));
+    if (s < 50) {
+        const t = s / 50;
+        return `rgb(239, ${Math.round(68 + (179 - 68) * t)}, ${Math.round(68 + (8 - 68) * t)})`;
+    }
+    const t = (s - 50) / 50;
+    return `rgb(${Math.round(234 + (34 - 234) * t)}, ${Math.round(179 + (197 - 179) * t)}, ${Math.round(8 + (94 - 8) * t)})`;
+}
+
+function fmtMoney(v) { return '$' + Math.round(v).toLocaleString('en-US'); }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const map = L.map('nationalMap', { zoomControl: true, scrollWheelZoom: true })
+        .setView([38.5, -98.5], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap',
+    }).addTo(map);
+
+    METROS.forEach(m => {
+        const c = m.map_center;
+        if (!c || c.lat == null || c.lng == null) return;
+        const color = scoreColor(m.top_zip.composite_score);
+        const marker = L.circleMarker([c.lat, c.lng], {
+            radius: 10 + Math.min(8, m.zip_count / 2),  // radius scales lightly with ZIP count
+            fillColor: color,
+            color: '#0b0d14',
+            weight: 1.5,
+            fillOpacity: 0.92,
+        }).addTo(map);
+        const popup =
+            `<div style="font-weight:700; font-size:1.0rem; margin-bottom:0.25rem;">${m.metro_label}</div>` +
+            `<div style="font-size:0.72rem; color:var(--text-dim); margin-bottom:0.5rem;">${m.zip_count} ZIPs · ${m.state}</div>` +
+            `<div class="pop-stat"><span class="label">Top ZIP</span><span><strong>${m.top_zip.zip}</strong> ${m.top_zip.name}</span></div>` +
+            `<div class="pop-stat"><span class="label">Top score</span><span style="color:${color}; font-weight:700;">${m.top_zip.composite_score.toFixed(1)}</span></div>` +
+            `<div class="pop-stat"><span class="label">Top cap rate</span><span>${m.top_zip.cap_rate_pct.toFixed(2)}%</span></div>` +
+            `<div class="pop-stat"><span class="label">Avg home value</span><span>${fmtMoney(m.avg_home_value)}</span></div>` +
+            `<div class="pop-stat"><span class="label">Avg rent /mo</span><span>${fmtMoney(m.avg_rent)}</span></div>` +
+            `<a href="/real-estate/${m.slug}/map" class="pop-cta">Open ${m.metro_label} map →</a>`;
+        marker.bindPopup(popup, { maxWidth: 320 });
+        marker.bindTooltip(`<strong>${m.metro_label}</strong>`, { sticky: true });
+    });
+});
+</script>
+{% endblock %}
