@@ -1865,6 +1865,124 @@ INDIANAPOLIS_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# IN — Fort Wayne / Allen County
+# Cheaper than Indianapolis (median home values about half), heavy
+# manufacturing base (Steel Dynamics, BAE Systems, GM, defense). Inner-
+# ring cap rates run 8-12% paired with the typical crime/yield tradeoff.
+# ─────────────────────────────────────────────────────────────────────────────
+FORT_WAYNE_ZIPS: dict[str, dict] = {
+    "46802": {
+        "name": "Downtown",
+        "lat": 41.0760, "lng": -85.1390,
+        "median_home_value": 130_000, "median_rent_monthly": 900,
+        "crime_index": 70, "pct_bachelors": 25,
+        "median_household_income": 35_000, "population": 12_000,
+        "walk_score": 65, "restaurant_score": 65,
+        "tags": ["urban", "walkable", "affordable", "high-cap-rate"],
+    },
+    "46807": {
+        "name": "South Wayne / Indian Village",
+        "lat": 41.0500, "lng": -85.1200,
+        "median_home_value": 185_000, "median_rent_monthly": 1_100,
+        "crime_index": 50, "pct_bachelors": 45,
+        "median_household_income": 55_000, "population": 13_000,
+        "walk_score": 50, "restaurant_score": 45,
+        "tags": ["historic", "established", "high-cap-rate"],
+    },
+    "46805": {
+        "name": "Coliseum / Lake Side",
+        "lat": 41.1010, "lng": -85.1190,
+        "median_home_value": 170_000, "median_rent_monthly": 1_000,
+        "crime_index": 50, "pct_bachelors": 35,
+        "median_household_income": 52_000, "population": 24_000,
+        "walk_score": 40, "restaurant_score": 35,
+        "tags": ["established", "mid-tier"],
+    },
+    "46815": {
+        "name": "NE Fort Wayne / Maumee",
+        "lat": 41.1000, "lng": -85.0700,
+        "median_home_value": 230_000, "median_rent_monthly": 1_300,
+        "crime_index": 35, "pct_bachelors": 45,
+        "median_household_income": 72_000, "population": 35_000,
+        "walk_score": 25, "restaurant_score": 30,
+        "tags": ["family", "established"],
+    },
+    "46825": {
+        "name": "Aboite NE / Glenbrook",
+        "lat": 41.1180, "lng": -85.1300,
+        "median_home_value": 260_000, "median_rent_monthly": 1_400,
+        "crime_index": 30, "pct_bachelors": 50,
+        "median_household_income": 82_000, "population": 45_000,
+        "walk_score": 22, "restaurant_score": 35,
+        "tags": ["family", "newer"],
+    },
+    "46835": {
+        "name": "NW Fort Wayne / North Heritage",
+        "lat": 41.1370, "lng": -85.1090,
+        "median_home_value": 290_000, "median_rent_monthly": 1_500,
+        "crime_index": 28, "pct_bachelors": 55,
+        "median_household_income": 92_000, "population": 30_000,
+        "walk_score": 22, "restaurant_score": 30,
+        "tags": ["family", "newer", "low-crime"],
+    },
+    "46845": {
+        "name": "Aboite NW / Pine Valley",
+        "lat": 41.1820, "lng": -85.1640,
+        "median_home_value": 380_000, "median_rent_monthly": 1_800,
+        "crime_index": 18, "pct_bachelors": 65,
+        "median_household_income": 130_000, "population": 25_000,
+        "walk_score": 18, "restaurant_score": 25,
+        "tags": ["luxury", "low-crime", "top-schools"],
+    },
+    "46818": {
+        "name": "NW Fort Wayne",
+        "lat": 41.1240, "lng": -85.2080,
+        "median_home_value": 185_000, "median_rent_monthly": 1_150,
+        "crime_index": 45, "pct_bachelors": 32,
+        "median_household_income": 58_000, "population": 30_000,
+        "walk_score": 22, "restaurant_score": 25,
+        "tags": ["affordable", "family"],
+    },
+    "46804": {
+        "name": "SW Fort Wayne",
+        "lat": 41.0660, "lng": -85.2030,
+        "median_home_value": 230_000, "median_rent_monthly": 1_300,
+        "crime_index": 35, "pct_bachelors": 45,
+        "median_household_income": 72_000, "population": 35_000,
+        "walk_score": 22, "restaurant_score": 30,
+        "tags": ["family", "established"],
+    },
+    "46806": {
+        "name": "Southeast",
+        "lat": 41.0420, "lng": -85.0880,
+        "median_home_value": 115_000, "median_rent_monthly": 950,
+        "crime_index": 70, "pct_bachelors": 18,
+        "median_household_income": 35_000, "population": 25_000,
+        "walk_score": 30, "restaurant_score": 25,
+        "tags": ["affordable", "high-cap-rate", "high-crime"],
+    },
+    "46808": {
+        "name": "NorthCrest / SW Fort Wayne",
+        "lat": 41.0980, "lng": -85.1730,
+        "median_home_value": 145_000, "median_rent_monthly": 1_050,
+        "crime_index": 55, "pct_bachelors": 22,
+        "median_household_income": 42_000, "population": 22_000,
+        "walk_score": 35, "restaurant_score": 30,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "46816": {
+        "name": "SE / New Haven adj",
+        "lat": 41.0270, "lng": -85.0150,
+        "median_home_value": 180_000, "median_rent_monthly": 1_250,
+        "crime_index": 40, "pct_bachelors": 28,
+        "median_household_income": 62_000, "population": 28_000,
+        "walk_score": 22, "restaurant_score": 25,
+        "tags": ["family", "affordable"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -2108,7 +2226,7 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               LAS_VEGAS_ZIPS, RENO_ZIPS, CARSON_CITY_ZIPS,
               MIAMI_ZIPS, ORLANDO_ZIPS, ATLANTA_ZIPS,
               AUSTIN_ZIPS, HOUSTON_ZIPS, SAN_ANTONIO_ZIPS, FORT_WORTH_ZIPS,
-              SF_BAY_ZIPS, SAN_DIEGO_ZIPS, INDIANAPOLIS_ZIPS):
+              SF_BAY_ZIPS, SAN_DIEGO_ZIPS, INDIANAPOLIS_ZIPS, FORT_WAYNE_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -2334,6 +2452,19 @@ STATE_METROS: dict[str, dict] = {
             "A few Scottsdale ZIPs (85254, 85266) bridge city limits — values reflect the population centroid.",
         ],
     },
+    "IN-FW": {
+        "state": "IN",
+        "metro_label": "Fort Wayne (Allen County)",
+        "subtitle": "ZIP-level scores for the Fort Wayne metro — Downtown, the historic Indian Village + Wildwood Park (South Wayne), the Aboite Township growth corridor (NW), plus high-cap-rate inner-southeast pockets.",
+        "map_center": {"lat": 41.10, "lng": -85.13, "zoom": 11},
+        "zips": FORT_WAYNE_ZIPS,
+        "extra_caveats": [
+            "Fort Wayne median home values run ~half of Indianapolis. Inner-ring cap rates (46802 / 46806 / 46808) routinely show 8-12% — the cheapest legit cap rates in the entire dataset.",
+            "Heavy manufacturing concentration (Steel Dynamics HQ, BAE Systems, GM, defense contractors). Local economy is more cyclical than Indy's diversified base; rents soften in industrial downturns.",
+            "Aboite Township (46825 / 46835 / 46845) is technically inside Allen County but is often considered separate from 'Fort Wayne proper' — Pine Valley + Carroll High School district pull a significant school-district premium.",
+            "Same Indiana 1%/2% property-tax cap split (owner-occupied vs rental) applies; cap-rate math for non-owner-occupants meaningfully different from headline rate.",
+        ],
+    },
     "IN-IND": {
         "state": "IN",
         "metro_label": "Indianapolis (Marion County)",
@@ -2359,7 +2490,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "NV": ["NV-LV", "NV-RNO", "NV-CC"],
     "FL": ["FL-MIA", "FL-ORL"],
     "GA": ["GA-ATL"],
-    "IN": ["IN-IND"],
+    "IN": ["IN-IND", "IN-FW"],
 }
 
 
