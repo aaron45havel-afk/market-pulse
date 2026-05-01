@@ -36,6 +36,41 @@
 
     .legend { position: absolute; bottom: 18px; left: 18px; z-index: 500; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.75rem; font-size: 0.72rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.5rem; }
     .legend-bar { display: inline-block; width: 110px; height: 8px; border-radius: 4px; background: linear-gradient(to right, #ef4444, #eab308, #22c55e); }
+
+    /* ─── Find-your-fit drawer ─────────────────────────────────────
+       Right-side collapsed drawer with a vertical-text tab. Click the
+       tab to expand a 320px panel over the map; click again or hit ✕
+       to collapse. Doesn't interfere with the map's pointer events
+       when collapsed. */
+    .fit-drawer { position: absolute; top: 12px; right: 0; bottom: 12px; z-index: 600; display: flex; align-items: stretch; pointer-events: none; }
+    .fit-drawer .tab { pointer-events: auto; writing-mode: vertical-rl; transform: rotate(180deg); padding: 1rem 0.5rem; background: var(--accent2); color: white; border-radius: 8px 0 0 8px; font-weight: 700; font-size: 0.78rem; cursor: pointer; box-shadow: -2px 2px 8px rgba(0,0,0,0.3); user-select: none; letter-spacing: 0.05em; }
+    .fit-drawer .panel { pointer-events: auto; width: 0; overflow: hidden; transition: width 0.18s; background: var(--surface); border: 1px solid var(--border); border-right: none; border-radius: 8px 0 0 8px; }
+    .fit-drawer.open .panel { width: 320px; }
+    @media (max-width: 700px) { .fit-drawer.open .panel { width: 88vw; } }
+    .fit-body { padding: 0.85rem 1rem; overflow-y: auto; height: 100%; }
+    .fit-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.35rem; }
+    .fit-head h3 { font-size: 1rem; margin: 0; }
+    .fit-head .close-btn { background: transparent; border: none; color: var(--text-dim); font-size: 1.1rem; cursor: pointer; padding: 0; }
+    .fit-blurb { font-size: 0.74rem; color: var(--text-dim); line-height: 1.45; margin-bottom: 0.85rem; }
+    .fit-q { margin-bottom: 0.85rem; }
+    .fit-q .q-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); font-weight: 600; margin-bottom: 0.3rem; display: block; }
+    .fit-opts { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+    .fit-opt { padding: 0.32rem 0.6rem; border-radius: 6px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-size: 0.76rem; cursor: pointer; transition: all 0.12s; }
+    .fit-opt:hover { border-color: var(--accent2); }
+    .fit-opt.active { background: var(--accent); border-color: var(--accent); color: white; }
+    .fit-go { width: 100%; padding: 0.55rem; background: var(--accent2); color: white; border: none; border-radius: 7px; font-size: 0.85rem; font-weight: 700; cursor: pointer; margin-top: 0.3rem; }
+    .fit-go:hover { background: #2563eb; }
+    .fit-go:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .fit-results { margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid var(--border); }
+    .fit-results-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); font-weight: 600; margin-bottom: 0.5rem; }
+    .fit-match { padding: 0.65rem 0.75rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; margin-bottom: 0.5rem; cursor: pointer; transition: border-color 0.12s; }
+    .fit-match:hover { border-color: var(--accent2); }
+    .fit-match-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; margin-bottom: 0.25rem; }
+    .fit-match-head .rank { font-size: 0.95rem; font-weight: 700; }
+    .fit-match-head .score { font-size: 0.85rem; font-weight: 700; }
+    .fit-match-stats { font-size: 0.72rem; color: var(--text-dim); }
+    .fit-match-why { font-size: 0.7rem; color: var(--accent); margin-top: 0.25rem; }
 </style>
 {% endblock %}
 
@@ -53,6 +88,69 @@
         <span class="legend-bar"></span>
         <span>Better</span>
         <span style="margin-left:0.4rem;">· composite (top ZIP)</span>
+    </div>
+
+    <!-- Find-your-fit drawer — collapsed tab on the right edge of the map.
+         Click to expand. All matching is client-side; answers persist in
+         localStorage so the user doesn't re-enter on return visits. -->
+    <div class="fit-drawer" id="fitDrawer">
+        <div class="tab" id="fitTab" title="Find a metro that fits your lifestyle">💬 Find your fit</div>
+        <div class="panel">
+            <div class="fit-body">
+                <div class="fit-head">
+                    <h3>Find your fit</h3>
+                    <button type="button" class="close-btn" id="fitClose" aria-label="Close">✕</button>
+                </div>
+                <div class="fit-blurb">Quick 4-question profile. Answers stay on your device — used to score the 20 metros against what <em>you</em> care about.</div>
+
+                <div class="fit-q" data-key="age">
+                    <span class="q-label">Age</span>
+                    <div class="fit-opts">
+                        <button class="fit-opt" data-val="under30">Under 30</button>
+                        <button class="fit-opt" data-val="30-45">30–45</button>
+                        <button class="fit-opt" data-val="45-60">45–60</button>
+                        <button class="fit-opt" data-val="60plus">60+</button>
+                    </div>
+                </div>
+
+                <div class="fit-q" data-key="income">
+                    <span class="q-label">Annual household income</span>
+                    <div class="fit-opts">
+                        <button class="fit-opt" data-val="under75">&lt;\$75K</button>
+                        <button class="fit-opt" data-val="75-150">\$75–150K</button>
+                        <button class="fit-opt" data-val="150-250">\$150–250K</button>
+                        <button class="fit-opt" data-val="250plus">\$250K+</button>
+                    </div>
+                </div>
+
+                <div class="fit-q" data-key="purpose">
+                    <span class="q-label">Buying for</span>
+                    <div class="fit-opts">
+                        <button class="fit-opt" data-val="lifestyle">To live in</button>
+                        <button class="fit-opt" data-val="investment">Investment</button>
+                        <button class="fit-opt" data-val="both">Both</button>
+                    </div>
+                </div>
+
+                <div class="fit-q" data-key="priority">
+                    <span class="q-label">What matters most?</span>
+                    <div class="fit-opts">
+                        <button class="fit-opt" data-val="schools">Schools</button>
+                        <button class="fit-opt" data-val="walkability">Walkability</button>
+                        <button class="fit-opt" data-val="yield">Cap rate / yield</button>
+                        <button class="fit-opt" data-val="climate">Sunny climate</button>
+                        <button class="fit-opt" data-val="affordability">Affordability</button>
+                    </div>
+                </div>
+
+                <button class="fit-go" id="fitGo" disabled>Pick at least one answer</button>
+
+                <div class="fit-results" id="fitResults" style="display:none;">
+                    <div class="fit-results-label">Top matches for you</div>
+                    <div id="fitMatches"></div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -124,6 +222,193 @@ document.addEventListener('DOMContentLoaded', () => {
     if (coords.length) {
         map.fitBounds(L.latLngBounds(coords), { padding: [60, 60], maxZoom: 6 });
     }
+
+    // ─── Find-your-fit drawer wiring ─────────────────────────────────
+    initFitDrawer();
 });
+
+// Maps user income buckets to a max-affordable home price using the
+// rough 4× household-income heuristic. Used to penalize unaffordable
+// metros in the matcher rather than hard-filter them out.
+const INCOME_MAX_AFFORDABLE = {
+    'under75':   75_000 * 4,        // ~$300K
+    '75-150':   150_000 * 4,        // ~$600K
+    '150-250':  250_000 * 4,        // ~$1M
+    '250plus':  10_000_000,         // effectively no cap
+};
+
+const PROFILE_KEY = 'mp.findYourFit.profile';
+
+function initFitDrawer() {
+    const drawer = document.getElementById('fitDrawer');
+    const tab    = document.getElementById('fitTab');
+    const close  = document.getElementById('fitClose');
+    const goBtn  = document.getElementById('fitGo');
+    if (!drawer) return;
+
+    // Restore persisted profile (if any) so users coming back don't
+    // have to re-enter answers.
+    const profile = loadProfile();
+    applyProfileToUI(profile);
+    updateGoButton();
+
+    tab.addEventListener('click', () => drawer.classList.toggle('open'));
+    close.addEventListener('click', () => drawer.classList.remove('open'));
+
+    // Single delegated listener — every .fit-opt click toggles its
+    // siblings off and itself on, then auto-saves + recomputes.
+    document.querySelectorAll('.fit-q').forEach(q => {
+        q.addEventListener('click', e => {
+            const btn = e.target.closest('.fit-opt');
+            if (!btn) return;
+            q.querySelectorAll('.fit-opt').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            saveProfile();
+            updateGoButton();
+        });
+    });
+
+    goBtn.addEventListener('click', renderMatches);
+
+    // Auto-render if there's enough data on load.
+    if (countAnswered(profile) >= 1) renderMatches();
+}
+
+function readProfile() {
+    const out = {};
+    document.querySelectorAll('.fit-q').forEach(q => {
+        const sel = q.querySelector('.fit-opt.active');
+        if (sel) out[q.dataset.key] = sel.dataset.val;
+    });
+    return out;
+}
+
+function applyProfileToUI(profile) {
+    Object.entries(profile || {}).forEach(([k, v]) => {
+        const q = document.querySelector(`.fit-q[data-key="${k}"]`);
+        if (!q) return;
+        const btn = q.querySelector(`.fit-opt[data-val="${v}"]`);
+        if (btn) btn.classList.add('active');
+    });
+}
+
+function saveProfile() {
+    try { localStorage.setItem(PROFILE_KEY, JSON.stringify(readProfile())); } catch (e) {}
+}
+
+function loadProfile() {
+    try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}'); } catch (e) { return {}; }
+}
+
+function countAnswered(profile) {
+    return Object.values(profile || {}).filter(Boolean).length;
+}
+
+function updateGoButton() {
+    const goBtn = document.getElementById('fitGo');
+    const n = countAnswered(readProfile());
+    goBtn.disabled = n === 0;
+    goBtn.textContent = n === 0 ? 'Pick at least one answer'
+                       : n < 4 ? `Find my matches (${n}/4 answered)`
+                       : 'Find my matches';
+}
+
+// Score a metro 0-100 against the user's profile. Starts from the
+// existing avg_composite (which already bakes in cap rate, crime,
+// schools, etc.) and adjusts based on what the user said matters.
+function scoreMetroForProfile(m, profile) {
+    let score = m.avg_composite;
+    const reasons = [];
+
+    // Affordability constraint — penalize metros above the user's
+    // income-implied max affordable price. 4x income is the standard
+    // rule of thumb; we soft-penalize beyond that rather than filter.
+    if (profile.income) {
+        const cap = INCOME_MAX_AFFORDABLE[profile.income];
+        if (cap && m.avg_home_value > cap) {
+            const stretch = m.avg_home_value / cap;
+            score -= Math.min(35, (stretch - 1) * 30);
+        } else if (cap && m.avg_home_value < cap * 0.6) {
+            score += 5;
+            reasons.push('comfortably affordable for your income');
+        }
+    }
+
+    // Top-priority bonus: each priority lifts the dim it cares about.
+    const p = profile.priority;
+    if (p === 'yield') {
+        score += (m.avg_cap_rate_pct - 4) * 5;
+        if (m.avg_cap_rate_pct > 5.5) reasons.push(`${m.avg_cap_rate_pct.toFixed(1)}% avg cap rate`);
+    } else if (p === 'climate') {
+        score += (m.sunshine_days - 200) / 5;
+        if (m.sunshine_days >= 240) reasons.push(`${m.sunshine_days} sunny days/yr`);
+    } else if (p === 'walkability') {
+        score += (m.avg_walk_score - 40) / 3;
+        if (m.avg_walk_score > 65) reasons.push(`avg walk score ${m.avg_walk_score}`);
+    } else if (p === 'schools') {
+        score += (m.avg_pct_bachelors - 40) / 4;
+        if (m.avg_pct_bachelors > 55) reasons.push(`${Math.round(m.avg_pct_bachelors)}% bachelor's+ (school proxy)`);
+    } else if (p === 'affordability') {
+        // Reward cheaper metros directly
+        const benchmark = 500_000;
+        score += (benchmark - m.avg_home_value) / 12_000;
+        if (m.avg_home_value < 350_000) reasons.push(`median home ~$${Math.round(m.avg_home_value/1000)}K`);
+    }
+
+    // Purpose-driven adjustment: investors care about yield, lifestyle
+    // buyers about livability proxies (walk, low crime).
+    if (profile.purpose === 'investment') {
+        score += (m.avg_cap_rate_pct - 4) * 3;
+    } else if (profile.purpose === 'lifestyle') {
+        score += (m.avg_walk_score - 40) / 5;
+        score -= (m.avg_crime_index - 50) / 4;   // lower crime = higher score
+    }
+
+    // Age-stage adjustments: 60+ likes climate + low crime; under-30
+    // tolerates urban grit (lower crime penalty).
+    if (profile.age === '60plus') {
+        score += (m.sunshine_days - 200) / 8;
+        score -= (m.avg_crime_index - 50) / 5;
+    } else if (profile.age === 'under30') {
+        score += (m.avg_walk_score - 40) / 6;
+    } else if (profile.age === '30-45') {
+        // Mid-career family-stage — schools matter even if not picked
+        score += (m.avg_pct_bachelors - 40) / 7;
+    }
+
+    return { score, reasons };
+}
+
+function renderMatches() {
+    const profile = readProfile();
+    if (countAnswered(profile) === 0) return;
+    const scored = METROS.map(m => {
+        const { score, reasons } = scoreMetroForProfile(m, profile);
+        return { m, score, reasons };
+    }).sort((a, b) => b.score - a.score);
+
+    const container = document.getElementById('fitMatches');
+    const wrapper = document.getElementById('fitResults');
+    const medals = ['🥇', '🥈', '🥉'];
+    container.innerHTML = scored.slice(0, 3).map((s, i) => {
+        const m = s.m;
+        const why = s.reasons.length ? s.reasons.slice(0, 2).join(' · ')
+                                     : `top ZIP ${m.top_zip.zip} · ${m.top_zip.composite_score.toFixed(0)} composite`;
+        return `<div class="fit-match" data-slug="${m.slug}">
+                    <div class="fit-match-head">
+                        <span class="rank">${medals[i]} ${m.metro_label}</span>
+                        <span class="score">${Math.round(s.score)}</span>
+                    </div>
+                    <div class="fit-match-stats">${fmtMoney(m.avg_home_value)} avg · ${m.avg_cap_rate_pct.toFixed(1)}% yield · ${m.sunshine_days} sunny days</div>
+                    <div class="fit-match-why">→ ${why}</div>
+                </div>`;
+    }).join('');
+    container.querySelectorAll('.fit-match').forEach(el => {
+        el.addEventListener('click', () => {
+            window.location.href = `/real-estate/${el.dataset.slug}/map`;
+        });
+    });
+    wrapper.style.display = '';
+}
 </script>
 {% endblock %}

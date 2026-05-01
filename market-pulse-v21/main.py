@@ -55,6 +55,9 @@ async def national_map(request: Request):
     map. Each pin's color reflects the top ZIP's composite score under the
     default investor persona; click → popup with metro summary + link to
     the full per-metro deep-dive at /real-estate/{slug}/map."""
+    # State-level sunshine data — used by the find-your-fit matcher to
+    # boost climate-prioritized profiles toward Sun Belt metros.
+    from data_providers import STATE_SUNSHINE_DAYS
     metros = []
     for slug, cfg in STATE_METROS.items():
         data = get_state_neighborhoods(slug)
@@ -64,10 +67,18 @@ async def national_map(request: Request):
         if not zips:
             continue
         top_zip = zips[0]  # already sorted by composite_score desc
-        avg_score = sum(z["composite_score"] for z in zips) / len(zips)
-        avg_cap = sum(z["cap_rate_pct"] for z in zips) / len(zips)
-        avg_home = sum(z["median_home_value"] for z in zips) / len(zips)
-        avg_rent = sum(z["median_rent_monthly"] for z in zips) / len(zips)
+        n = len(zips)
+        avg_score = sum(z["composite_score"] for z in zips) / n
+        avg_cap = sum(z["cap_rate_pct"] for z in zips) / n
+        avg_home = sum(z["median_home_value"] for z in zips) / n
+        avg_rent = sum(z["median_rent_monthly"] for z in zips) / n
+        # Aggregate the lifestyle/quality dimensions from per-ZIP data so
+        # the find-your-fit matcher can score profiles without needing
+        # per-metro hand-curated data.
+        avg_walk = sum(z.get("walk_score", 0) for z in zips) / n
+        avg_school = sum(z.get("pct_bachelors", 0) for z in zips) / n
+        avg_crime = sum(z.get("crime_index", 50) for z in zips) / n
+        sunshine = STATE_SUNSHINE_DAYS.get(cfg["state"], 200)
         metros.append({
             "slug": slug,
             "state": cfg["state"],
@@ -79,11 +90,15 @@ async def national_map(request: Request):
                 "composite_score": top_zip["composite_score"],
                 "cap_rate_pct": top_zip["cap_rate_pct"],
             },
-            "zip_count": len(zips),
+            "zip_count": n,
             "avg_composite": round(avg_score, 1),
             "avg_cap_rate_pct": round(avg_cap, 2),
             "avg_home_value": round(avg_home),
             "avg_rent": round(avg_rent),
+            "avg_walk_score": round(avg_walk, 1),
+            "avg_pct_bachelors": round(avg_school, 1),
+            "avg_crime_index": round(avg_crime, 1),
+            "sunshine_days": sunshine,
         })
     metros.sort(key=lambda m: -m["avg_composite"])
     return templates.TemplateResponse("national_map.html", {
