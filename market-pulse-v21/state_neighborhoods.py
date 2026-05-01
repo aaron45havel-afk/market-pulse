@@ -998,6 +998,122 @@ ATLANTA_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# TX — Austin / Travis County: Downtown, East Austin, Tarrytown, S Congress,
+# Westlake-adj, NW Hills, tech corridor, Barton Creek, S/E Austin
+# ─────────────────────────────────────────────────────────────────────────────
+AUSTIN_ZIPS: dict[str, dict] = {
+    "78701": {
+        "name": "Downtown Austin",
+        "lat": 30.2700, "lng": -97.7430,
+        "median_home_value": 620_000, "median_rent_monthly": 2_800,
+        "crime_index": 55, "pct_bachelors": 70,
+        "median_household_income": 95_000, "population": 13_000,
+        "walk_score": 80, "restaurant_score": 90,
+        "tags": ["urban", "walkable", "transit"],
+    },
+    "78702": {
+        "name": "East Austin",
+        "lat": 30.2640, "lng": -97.7170,
+        "median_home_value": 620_000, "median_rent_monthly": 2_500,
+        "crime_index": 50, "pct_bachelors": 55,
+        "median_household_income": 80_000, "population": 25_000,
+        "walk_score": 65, "restaurant_score": 80,
+        "tags": ["walkable", "hip", "gentrified"],
+    },
+    "78703": {
+        "name": "Tarrytown / Clarksville",
+        "lat": 30.2880, "lng": -97.7660,
+        "median_home_value": 1_800_000, "median_rent_monthly": 4_200,
+        "crime_index": 22, "pct_bachelors": 80,
+        "median_household_income": 200_000, "population": 15_000,
+        "walk_score": 60, "restaurant_score": 65,
+        "tags": ["luxury", "low-crime", "top-schools"],
+    },
+    "78704": {
+        "name": "S Congress / Bouldin / Travis Heights",
+        "lat": 30.2470, "lng": -97.7660,
+        "median_home_value": 880_000, "median_rent_monthly": 2_800,
+        "crime_index": 38, "pct_bachelors": 70,
+        "median_household_income": 115_000, "population": 50_000,
+        "walk_score": 70, "restaurant_score": 85,
+        "tags": ["walkable", "hip", "established"],
+    },
+    "78705": {
+        "name": "UT West Campus",
+        "lat": 30.2940, "lng": -97.7390,
+        "median_home_value": 580_000, "median_rent_monthly": 2_200,
+        "crime_index": 52, "pct_bachelors": 65,
+        "median_household_income": 55_000, "population": 28_000,
+        "walk_score": 75, "restaurant_score": 75,
+        "tags": ["college", "rental-demand", "walkable"],
+    },
+    "78731": {
+        "name": "Northwest Hills",
+        "lat": 30.3580, "lng": -97.7700,
+        "median_home_value": 1_100_000, "median_rent_monthly": 3_200,
+        "crime_index": 22, "pct_bachelors": 75,
+        "median_household_income": 150_000, "population": 22_000,
+        "walk_score": 30, "restaurant_score": 50,
+        "tags": ["upscale", "low-crime", "family"],
+    },
+    "78759": {
+        "name": "N Spicewood / Anderson Mill",
+        "lat": 30.4040, "lng": -97.7560,
+        "median_home_value": 620_000, "median_rent_monthly": 2_500,
+        "crime_index": 28, "pct_bachelors": 65,
+        "median_household_income": 115_000, "population": 45_000,
+        "walk_score": 30, "restaurant_score": 50,
+        "tags": ["family", "tech", "low-crime"],
+    },
+    "78717": {
+        "name": "Avery Ranch / Brushy Creek",
+        "lat": 30.4910, "lng": -97.7460,
+        "median_home_value": 650_000, "median_rent_monthly": 2_500,
+        "crime_index": 22, "pct_bachelors": 60,
+        "median_household_income": 130_000, "population": 36_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["family", "newer", "low-crime"],
+    },
+    "78745": {
+        "name": "South Austin",
+        "lat": 30.2120, "lng": -97.8090,
+        "median_home_value": 520_000, "median_rent_monthly": 2_200,
+        "crime_index": 40, "pct_bachelors": 42,
+        "median_household_income": 78_000, "population": 60_000,
+        "walk_score": 35, "restaurant_score": 50,
+        "tags": ["family", "mid-tier"],
+    },
+    "78735": {
+        "name": "Barton Creek / SW Austin",
+        "lat": 30.2600, "lng": -97.8580,
+        "median_home_value": 1_400_000, "median_rent_monthly": 3_500,
+        "crime_index": 18, "pct_bachelors": 75,
+        "median_household_income": 180_000, "population": 14_000,
+        "walk_score": 20, "restaurant_score": 35,
+        "tags": ["luxury", "low-crime", "top-schools"],
+    },
+    "78741": {
+        "name": "East Riverside",
+        "lat": 30.2330, "lng": -97.7140,
+        "median_home_value": 360_000, "median_rent_monthly": 1_800,
+        "crime_index": 65, "pct_bachelors": 30,
+        "median_household_income": 52_000, "population": 50_000,
+        "walk_score": 50, "restaurant_score": 50,
+        "tags": ["affordable", "high-cap-rate", "gentrifying"],
+    },
+    "78744": {
+        "name": "SE Austin",
+        "lat": 30.1820, "lng": -97.7400,
+        "median_home_value": 400_000, "median_rent_monthly": 1_900,
+        "crime_index": 55, "pct_bachelors": 28,
+        "median_household_income": 58_000, "population": 48_000,
+        "walk_score": 35, "restaurant_score": 35,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -1239,7 +1355,7 @@ ST_GEORGE_ZIPS: dict[str, dict] = {
 # available. DALLAS_ZIPS is patched in dallas_neighborhoods.py itself.
 for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_ZIPS,
               LAS_VEGAS_ZIPS, RENO_ZIPS, CARSON_CITY_ZIPS,
-              MIAMI_ZIPS, ORLANDO_ZIPS, ATLANTA_ZIPS):
+              MIAMI_ZIPS, ORLANDO_ZIPS, ATLANTA_ZIPS, AUSTIN_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -1260,6 +1376,19 @@ STATE_METROS: dict[str, dict] = {
         "zips": DALLAS_ZIPS,
         "extra_caveats": [
             "ZIP codes are USPS routes, not true neighborhoods — Bishop Arts and parts of Oak Cliff share ZIPs.",
+        ],
+    },
+    "TX-AUS": {
+        "state": "TX",
+        "metro_label": "Austin / Travis County",
+        "subtitle": "ZIP-level scores for the Austin metro — Downtown, East Austin, Tarrytown, S Congress, NW Hills, the tech corridor (Anderson Mill / Avery Ranch), Barton Creek, and the high-cap-rate SE pockets.",
+        "map_center": {"lat": 30.30, "lng": -97.75, "zoom": 11},
+        "zips": AUSTIN_ZIPS,
+        "extra_caveats": [
+            "Austin's market peaked early-2022 then reset 15–20% through 2024; current values reflect post-correction state but volatility remains higher than other TX metros.",
+            "Big-tech employment exposure (Apple, Tesla, Meta, Google all have major Austin offices) means cap rates can shift quickly with hiring/layoff cycles — local rent demand tracks tech headcount.",
+            "Tarrytown / Westlake-adj (78703) is in Eanes ISD, separate from AISD — top-rated schools but lot sizes + price reflect that.",
+            "East Austin (78702, 78741) has some of the fastest gentrification in the country; cap rates here lag the underlying home-value appreciation trend.",
         ],
     },
     "CA": {
@@ -1395,7 +1524,7 @@ STATE_METROS: dict[str, dict] = {
 # Ordered list of metro slugs per state. Drives the dashboard's
 # default link target (first entry) and the metro switcher on the map page.
 STATE_TO_METROS: dict[str, list[str]] = {
-    "TX": ["TX"],
+    "TX": ["TX", "TX-AUS"],
     "CA": ["CA"],
     "UT": ["UT", "UT-SLC", "UT-STG"],
     "AZ": ["AZ"],
