@@ -1344,6 +1344,121 @@ SAN_ANTONIO_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# TX — Fort Worth / Tarrant County: Cultural District, TCU, NE luxury suburbs
+# ─────────────────────────────────────────────────────────────────────────────
+FORT_WORTH_ZIPS: dict[str, dict] = {
+    "76102": {
+        "name": "Downtown Fort Worth",
+        "lat": 32.7530, "lng": -97.3320,
+        "median_home_value": 400_000, "median_rent_monthly": 1_800,
+        "crime_index": 60, "pct_bachelors": 55,
+        "median_household_income": 58_000, "population": 9_000,
+        "walk_score": 75, "restaurant_score": 75,
+        "tags": ["urban", "walkable"],
+    },
+    "76107": {
+        "name": "Cultural District / West 7th",
+        "lat": 32.7440, "lng": -97.3680,
+        "median_home_value": 480_000, "median_rent_monthly": 2_100,
+        "crime_index": 45, "pct_bachelors": 65,
+        "median_household_income": 85_000, "population": 30_000,
+        "walk_score": 70, "restaurant_score": 75,
+        "tags": ["walkable", "hip", "established"],
+    },
+    "76109": {
+        "name": "TCU / South Hills",
+        "lat": 32.7180, "lng": -97.3700,
+        "median_home_value": 720_000, "median_rent_monthly": 2_500,
+        "crime_index": 28, "pct_bachelors": 75,
+        "median_household_income": 135_000, "population": 32_000,
+        "walk_score": 50, "restaurant_score": 65,
+        "tags": ["upscale", "top-schools", "college", "low-crime"],
+    },
+    "76104": {
+        "name": "Near Southside / Magnolia",
+        "lat": 32.7390, "lng": -97.3220,
+        "median_home_value": 380_000, "median_rent_monthly": 1_900,
+        "crime_index": 55, "pct_bachelors": 50,
+        "median_household_income": 65_000, "population": 15_000,
+        "walk_score": 60, "restaurant_score": 70,
+        "tags": ["walkable", "gentrified", "appreciation-play"],
+    },
+    "76111": {
+        "name": "Riverside",
+        "lat": 32.7860, "lng": -97.2960,
+        "median_home_value": 230_000, "median_rent_monthly": 1_500,
+        "crime_index": 65, "pct_bachelors": 22,
+        "median_household_income": 48_000, "population": 28_000,
+        "walk_score": 35, "restaurant_score": 35,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "76112": {
+        "name": "Eastside",
+        "lat": 32.7600, "lng": -97.2530,
+        "median_home_value": 210_000, "median_rent_monthly": 1_500,
+        "crime_index": 70, "pct_bachelors": 18,
+        "median_household_income": 44_000, "population": 38_000,
+        "walk_score": 35, "restaurant_score": 35,
+        "tags": ["affordable", "high-cap-rate", "high-crime"],
+    },
+    "76137": {
+        "name": "NE Fort Worth",
+        "lat": 32.8420, "lng": -97.2940,
+        "median_home_value": 360_000, "median_rent_monthly": 1_950,
+        "crime_index": 30, "pct_bachelors": 40,
+        "median_household_income": 82_000, "population": 50_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["family", "established"],
+    },
+    "76092": {
+        "name": "Southlake",
+        "lat": 32.9450, "lng": -97.1250,
+        "median_home_value": 1_400_000, "median_rent_monthly": 4_000,
+        "crime_index": 12, "pct_bachelors": 80,
+        "median_household_income": 250_000, "population": 32_000,
+        "walk_score": 18, "restaurant_score": 35,
+        "tags": ["luxury", "top-schools", "low-crime"],
+    },
+    "76051": {
+        "name": "Grapevine",
+        "lat": 32.9290, "lng": -97.0820,
+        "median_home_value": 580_000, "median_rent_monthly": 2_400,
+        "crime_index": 22, "pct_bachelors": 60,
+        "median_household_income": 130_000, "population": 51_000,
+        "walk_score": 45, "restaurant_score": 50,
+        "tags": ["family", "low-crime", "established"],
+    },
+    "76244": {
+        "name": "Keller",
+        "lat": 32.9410, "lng": -97.2350,
+        "median_home_value": 620_000, "median_rent_monthly": 2_400,
+        "crime_index": 18, "pct_bachelors": 60,
+        "median_household_income": 145_000, "population": 48_000,
+        "walk_score": 22, "restaurant_score": 35,
+        "tags": ["family", "top-schools", "low-crime"],
+    },
+    "76063": {
+        "name": "Mansfield",
+        "lat": 32.5750, "lng": -97.1280,
+        "median_home_value": 440_000, "median_rent_monthly": 2_200,
+        "crime_index": 25, "pct_bachelors": 50,
+        "median_household_income": 115_000, "population": 75_000,
+        "walk_score": 22, "restaurant_score": 35,
+        "tags": ["family", "newer", "low-crime"],
+    },
+    "76016": {
+        "name": "Arlington N / UTA",
+        "lat": 32.6970, "lng": -97.1530,
+        "median_home_value": 310_000, "median_rent_monthly": 1_800,
+        "crime_index": 35, "pct_bachelors": 38,
+        "median_household_income": 75_000, "population": 35_000,
+        "walk_score": 35, "restaurant_score": 45,
+        "tags": ["college", "family", "mid-tier"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -1586,7 +1701,7 @@ ST_GEORGE_ZIPS: dict[str, dict] = {
 for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_ZIPS,
               LAS_VEGAS_ZIPS, RENO_ZIPS, CARSON_CITY_ZIPS,
               MIAMI_ZIPS, ORLANDO_ZIPS, ATLANTA_ZIPS,
-              AUSTIN_ZIPS, HOUSTON_ZIPS, SAN_ANTONIO_ZIPS):
+              AUSTIN_ZIPS, HOUSTON_ZIPS, SAN_ANTONIO_ZIPS, FORT_WORTH_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -1619,6 +1734,18 @@ STATE_METROS: dict[str, dict] = {
             "Houston has no zoning, so ZIP-level data masks significant block-by-block variance — particularly in 77036 / 77033 where redevelopment activity is patchy.",
             "Energy-sector employment (77079 Energy Corridor especially) makes Houston the most cyclical TX metro — cap rates and rent demand swing with oil prices.",
             "Hurricane / flood insurance has roughly tripled in 5 years and varies by FEMA flood zone within ZIP — the cap-rate scoring uses the state-avg insurance figure as a placeholder.",
+        ],
+    },
+    "TX-FW": {
+        "state": "TX",
+        "metro_label": "Fort Worth / Tarrant County",
+        "subtitle": "ZIP-level scores for the Fort Worth side of DFW — Cultural District, TCU, Near Southside, plus the wealthy NE suburbs (Southlake, Grapevine, Keller, Colleyville-adj) and Mansfield / Arlington.",
+        "map_center": {"lat": 32.80, "lng": -97.30, "zoom": 10},
+        "zips": FORT_WORTH_ZIPS,
+        "extra_caveats": [
+            "Fort Worth and Dallas (TX) are sister metros within DFW — some ZIPs near the county border (Grapevine, Coppell-adj) overlap with the Dallas County dataset.",
+            "Lockheed Martin's Fort Worth plant is a major single-employer concentration (~15K+ jobs) — Northwest and Keller-adj demand tracks defense-spending cycles.",
+            "Top-tier suburbs (Southlake / Carroll ISD, Keller / Keller ISD, Colleyville / GCISD) command sustained school-district premiums that ZIP-level % bachelor's+ understates.",
         ],
     },
     "TX-SA": {
@@ -1779,7 +1906,7 @@ STATE_METROS: dict[str, dict] = {
 # Ordered list of metro slugs per state. Drives the dashboard's
 # default link target (first entry) and the metro switcher on the map page.
 STATE_TO_METROS: dict[str, list[str]] = {
-    "TX": ["TX", "TX-HOU", "TX-SA", "TX-AUS"],
+    "TX": ["TX", "TX-FW", "TX-HOU", "TX-SA", "TX-AUS"],
     "CA": ["CA"],
     "UT": ["UT", "UT-SLC", "UT-STG"],
     "AZ": ["AZ"],
