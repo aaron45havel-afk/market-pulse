@@ -25,10 +25,15 @@
         a { color: var(--accent2); text-decoration: none; }
         a:hover { text-decoration: underline; }
 
-        /* ── App shell — fixed left sidebar + scrollable main pane ── */
-        .app-shell { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; }
+        /* ── App shell — fixed left sidebar + scrollable main pane ──
+           Flexbox instead of CSS grid: under some browser/zoom conditions
+           grid was letting the 1fr column collapse to ~220px, squeezing
+           the main pane to sidebar-width and pushing content into a
+           narrow column. Flex with explicit width on the sidebar +
+           flex:1 on main is more bulletproof. */
+        .app-shell { display: flex; min-height: 100vh; align-items: stretch; }
 
-        .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 1rem 0; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; }
+        .sidebar { width: var(--sidebar-w); flex: 0 0 var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); padding: 1rem 0; position: sticky; top: 0; align-self: flex-start; height: 100vh; display: flex; flex-direction: column; }
         .sidebar .logo { font-size: 1.25rem; font-weight: 700; color: var(--accent); padding: 0.5rem 1.25rem 1.25rem; border-bottom: 1px solid var(--border); margin-bottom: 0.75rem; }
         .sidebar .nav-links { display: flex; flex-direction: column; gap: 0.15rem; padding: 0 0.5rem; flex: 1; }
         .sidebar .nav-links a { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.85rem; border-radius: 8px; color: var(--text-dim); font-size: 0.92rem; font-weight: 500; transition: all 0.15s; }
@@ -37,15 +42,15 @@
         .sidebar .nav-links .icon { font-size: 1.05rem; width: 1.2rem; text-align: center; }
         .sidebar .footer-note { font-size: 0.65rem; color: var(--text-dim); padding: 0.75rem 1rem; border-top: 1px solid var(--border); line-height: 1.5; }
 
-        .main-pane { min-width: 0; }   /* min-width:0 lets flex children shrink to fit */
+        .main-pane { flex: 1 1 auto; min-width: 0; }  /* flex:1 grabs remaining space; min-width:0 lets it shrink rather than push past viewport */
         .container { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem; }
 
         /* ── Mobile: collapse sidebar to a slide-in drawer triggered by ☰ ── */
         .mobile-bar { display: none; }
         @media (max-width: 768px) {
             :root { --sidebar-w: 0px; }
-            .app-shell { grid-template-columns: 1fr; }
-            .sidebar { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; z-index: 60; transform: translateX(-100%); transition: transform 0.2s; box-shadow: 4px 0 16px rgba(0,0,0,0.5); }
+            .app-shell { display: block; }   /* mobile: single column, sidebar overlays via fixed positioning */
+            .sidebar { position: fixed; top: 0; left: 0; width: 240px; flex-basis: auto; height: 100vh; z-index: 60; transform: translateX(-100%); transition: transform 0.2s; box-shadow: 4px 0 16px rgba(0,0,0,0.5); }
             .sidebar.open { transform: translateX(0); }
             .mobile-bar { display: flex; align-items: center; gap: 0.75rem; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.6rem 1rem; height: 52px; position: sticky; top: 0; z-index: 50; }
             .mobile-bar .hamburger { background: transparent; border: none; color: var(--text); font-size: 1.5rem; cursor: pointer; padding: 0.25rem 0.5rem; }
