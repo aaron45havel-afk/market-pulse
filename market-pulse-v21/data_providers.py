@@ -329,6 +329,8 @@ STATE_PROPERTY_TAX_RATE = {
     "IN": 0.0084,   # Statutory 1% residential cap; effective ~0.84% after homestead
     "CO": 0.0055,   # One of the lowest in the US — Gallagher legacy + TABOR caps
     "OH": 0.0156,   # Among the highest in the Midwest — heavy reliance on local property tax
+    "FL": 0.0091,   # Below US avg statewide; Save Our Homes 3% cap protects long-term holders
+    "GA": 0.0081,   # Slightly below US avg; varies by county (Fulton/DeKalb higher than rural)
 }
 
 # Rough average annual homeowners insurance premium ($/yr) on a median home.
@@ -346,6 +348,8 @@ STATE_INSURANCE_ANNUAL = {
     "IN": 1500,   # Edge of Tornado Alley — moderate wind/hail exposure
     "CO": 2500,   # Hail belt + Front Range wildfire exposure (Marshall Fire 2021)
     "OH": 1300,   # Low overall — occasional tornado/hail in western half, no coastal risk
+    "FL": 5500,   # Highest in nation — hurricane exposure + Citizens Insurance crisis pulled major insurers
+    "GA": 1800,   # Above US avg — hail / tornado exposure especially Atlanta corridor
 }
 
 # TX homestead exemption: ~$100K off taxable value for owner-occupied homes
@@ -353,6 +357,8 @@ STATE_INSURANCE_ANNUAL = {
 # that are less material — modeled only for TX for now.
 STATE_HOMESTEAD_EXEMPTION = {
     "TX": 100000,
+    "FL": 50000,    # FL: $25K standard + $25K above $50K (school taxes excluded from second tier)
+    # GA's statewide homestead is ~$2K — too small to model materially.
 }
 
 # Median household income by state — U.S. Census Bureau ACS 2023 1-year
@@ -371,6 +377,8 @@ STATE_MEDIAN_INCOME_FALLBACK = {
     "IN": 70051,
     "CO": 92911,
     "OH": 69680,
+    "FL": 71711,
+    "GA": 74664,
 }
 
 
@@ -396,6 +404,8 @@ STATE_WALKABILITY = {
     "IN": 3,   # Indianapolis 30, Fort Wayne 26
     "CO": 5,   # Denver 61, Boulder 58, Colorado Springs 35
     "OH": 4,   # Cleveland 57, Cincinnati 50, Dayton 42, Columbus 41 — dense urban cores
+    "FL": 5,   # Miami 78, Orlando 41, Tampa 51, Jacksonville 26 — wide variance
+    "GA": 4,   # Atlanta 48, Savannah 53, Macon 41 — Atlanta sprawl drags state avg
 }
 
 # State-level school quality (0-10 scale). Approximate from Niche.com's
@@ -412,6 +422,8 @@ STATE_SCHOOL_QUALITY = {
     "IN": 5,   # Middle of the pack, good charter options
     "CO": 7,   # Strong Front Range schools, weaker rural
     "OH": 6,   # Strong suburban districts (Dublin, Mason, Solon), weak urban cores
+    "FL": 5,   # Mid-pack — strong in Sarasota/Naples/Orange, weak in Miami-Dade core
+    "GA": 6,   # Strong in Atlanta NW suburbs (Forsyth, Cherokee, Cobb), weak rural
 }
 
 # Annual population growth rate (%) — Census Bureau 2023 annual estimates.
@@ -430,6 +442,8 @@ STATE_POPULATION_GROWTH = {
     "IN": 0.3,    # Slow but positive
     "CO": 0.6,    # Slowed from pandemic-era surge
     "OH": 0.1,    # Near-flat — Columbus growth offsets Cleveland/Youngstown decline
+    "FL": 1.6,    # One of fastest-growing states — Sun Belt + retiree migration
+    "GA": 1.0,    # Steady Atlanta-corridor in-migration
 }
 
 # ── State income tax effective rate at median income (Tax Foundation 2024) ──
@@ -448,6 +462,8 @@ STATE_INCOME_TAX_EFFECTIVE = {
     "IN": 0.0315,  # 3.15% flat (phasing down)
     "CO": 0.044,   # 4.4% flat
     "OH": 0.028,   # Graduated up to 3.5%; effective at $70K ≈ 2.8% (plus 1-3% local municipal)
+    "FL": 0.000,   # No state income tax
+    "GA": 0.0539,  # 5.39% flat (2024 — phasing down toward 4.99% by 2028)
 }
 
 # ── State-level median monthly rent (Zillow Observed Rent Index, Q4 2024) ──
@@ -466,6 +482,8 @@ STATE_MEDIAN_RENT_MONTHLY = {
     "IN": 1400,
     "CO": 2100,
     "OH": 1350,
+    "FL": 2250,    # Miami pulls average up; statewide trend rising on retiree + remote-work in-migration
+    "GA": 1750,    # Atlanta-driven; Athens/Macon/Columbus pull statewide rate down
 }
 
 # ── Avg YoY wage growth (BLS QCEW, 2023-2024) ──
@@ -483,6 +501,8 @@ STATE_WAGE_GROWTH_YOY = {
     "IN": 0.040,
     "CO": 0.048,
     "OH": 0.039,   # Below national average — mature manufacturing base, slow wage growth
+    "FL": 0.055,   # Strong — finance, healthcare, tech relocations
+    "GA": 0.048,   # Steady Atlanta-driven growth (logistics, fintech, film)
 }
 
 # ── Property tax growth cap (annual % cap on assessed value increase) ──
@@ -501,6 +521,8 @@ STATE_PROPERTY_TAX_CAP_PCT = {
     "IN": None,   # "Circuit breaker" caps bill as % of value but not growth
     "CO": None,   # TABOR governs state revenue but not per-property assessment
     "OH": None,   # HB 920 freezes voted millage $ but full reappraisal still raises bills
+    "FL": 3.0,    # Save Our Homes — 3% / CPI cap on homestead assessment growth
+    "GA": None,   # No statewide assessment cap (some local exemptions)
 }
 
 # ── Insurance premium 3-yr trajectory (avg annual % change, 2022-2024) ──
@@ -519,6 +541,8 @@ STATE_INSURANCE_TRAJECTORY_YOY = {
     "IN": 0.09,
     "CO": 0.18,   # Post-Marshall Fire + hail belt
     "OH": 0.08,   # Rising with national reinsurance costs but no major catastrophe exposure
+    "FL": 0.25,   # Worst trajectory in US — Citizens crisis, major insurers exiting, post-Ian premium spike
+    "GA": 0.10,   # Rising with hail / tornado exposure especially Atlanta corridor
 }
 
 # ── HOA prevalence (approximate % of SFHs with HOA, CAI 2024) ──
@@ -536,6 +560,8 @@ STATE_HOA_PREVALENCE = {
     "IN": 0.25,
     "CO": 0.55,   # High in Denver suburbs; near-universal in resorts
     "OH": 0.22,   # Mostly older fee-simple stock; HOAs only in newer Columbus/Cincy suburbs
+    "FL": 0.65,   # Very high — condo-heavy + planned communities throughout
+    "GA": 0.45,   # High in Atlanta suburbs (Forsyth, Cherokee, Cobb, Gwinnett new builds)
 }
 
 # ── Cost of living index (BEA Regional Price Parities 2023, 100 = US avg) ──
@@ -553,6 +579,8 @@ STATE_COST_OF_LIVING_INDEX = {
     "IN": 90,    # Lowest COL
     "CO": 103,
     "OH": 90,    # Among the lowest in the US — matches IN
+    "FL": 100,   # Right at US avg — Miami high, rural FL low
+    "GA": 92,    # 8% below US avg
 }
 
 # ── Personas: pre-set weights for the Goldilocks composite ──
