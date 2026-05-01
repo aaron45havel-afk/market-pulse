@@ -1459,6 +1459,141 @@ FORT_WORTH_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# CA — SF Bay Area: SF proper + Piedmont/Oakland anchors
+# Cap rates here are notoriously bad (1.5-3%); the page is more useful as a
+# pure appreciation/walkability lens than as an investor-cash-flow lens.
+# ─────────────────────────────────────────────────────────────────────────────
+SF_BAY_ZIPS: dict[str, dict] = {
+    "94102": {
+        "name": "Tenderloin / Civic Center",
+        "lat": 37.7833, "lng": -122.4167,
+        "median_home_value": 720_000, "median_rent_monthly": 2_800,
+        "crime_index": 92, "pct_bachelors": 50,
+        "median_household_income": 50_000, "population": 32_000,
+        "walk_score": 99, "restaurant_score": 90,
+        "tags": ["urban", "walkable", "high-crime", "high-density"],
+    },
+    "94103": {
+        "name": "SoMa",
+        "lat": 37.7720, "lng": -122.4110,
+        "median_home_value": 1_100_000, "median_rent_monthly": 3_800,
+        "crime_index": 65, "pct_bachelors": 70,
+        "median_household_income": 115_000, "population": 30_000,
+        "walk_score": 95, "restaurant_score": 90,
+        "tags": ["urban", "walkable", "tech", "high-density"],
+    },
+    "94105": {
+        "name": "South Beach / Embarcadero",
+        "lat": 37.7890, "lng": -122.3900,
+        "median_home_value": 1_400_000, "median_rent_monthly": 4_500,
+        "crime_index": 50, "pct_bachelors": 80,
+        "median_household_income": 145_000, "population": 14_000,
+        "walk_score": 98, "restaurant_score": 95,
+        "tags": ["luxury", "walkable", "waterfront"],
+    },
+    "94107": {
+        "name": "Potrero Hill / Mission Bay",
+        "lat": 37.7695, "lng": -122.3937,
+        "median_home_value": 1_500_000, "median_rent_monthly": 4_500,
+        "crime_index": 55, "pct_bachelors": 75,
+        "median_household_income": 145_000, "population": 22_000,
+        "walk_score": 80, "restaurant_score": 85,
+        "tags": ["biotech", "walkable", "newer"],
+    },
+    "94110": {
+        "name": "Mission District",
+        "lat": 37.7488, "lng": -122.4176,
+        "median_home_value": 1_400_000, "median_rent_monthly": 3_800,
+        "crime_index": 65, "pct_bachelors": 65,
+        "median_household_income": 110_000, "population": 75_000,
+        "walk_score": 95, "restaurant_score": 95,
+        "tags": ["walkable", "gentrified", "restaurants", "high-density"],
+    },
+    "94114": {
+        "name": "Castro / Noe Valley",
+        "lat": 37.7600, "lng": -122.4350,
+        "median_home_value": 2_000_000, "median_rent_monthly": 4_200,
+        "crime_index": 35, "pct_bachelors": 80,
+        "median_household_income": 155_000, "population": 31_000,
+        "walk_score": 95, "restaurant_score": 85,
+        "tags": ["walkable", "family", "top-schools", "low-crime"],
+    },
+    "94115": {
+        "name": "Pacific Heights / Western Addition",
+        "lat": 37.7860, "lng": -122.4360,
+        "median_home_value": 2_800_000, "median_rent_monthly": 4_500,
+        "crime_index": 35, "pct_bachelors": 80,
+        "median_household_income": 175_000, "population": 32_000,
+        "walk_score": 95, "restaurant_score": 80,
+        "tags": ["luxury", "walkable", "low-crime"],
+    },
+    "94117": {
+        "name": "Haight-Ashbury / Cole Valley",
+        "lat": 37.7710, "lng": -122.4450,
+        "median_home_value": 1_800_000, "median_rent_monthly": 4_000,
+        "crime_index": 45, "pct_bachelors": 80,
+        "median_household_income": 140_000, "population": 31_000,
+        "walk_score": 95, "restaurant_score": 85,
+        "tags": ["walkable", "established", "hip"],
+    },
+    "94118": {
+        "name": "Inner Richmond",
+        "lat": 37.7820, "lng": -122.4640,
+        "median_home_value": 1_800_000, "median_rent_monthly": 3_800,
+        "crime_index": 35, "pct_bachelors": 70,
+        "median_household_income": 130_000, "population": 38_000,
+        "walk_score": 90, "restaurant_score": 75,
+        "tags": ["family", "walkable", "established"],
+    },
+    "94122": {
+        "name": "Inner Sunset",
+        "lat": 37.7600, "lng": -122.4830,
+        "median_home_value": 1_700_000, "median_rent_monthly": 3_500,
+        "crime_index": 30, "pct_bachelors": 75,
+        "median_household_income": 135_000, "population": 60_000,
+        "walk_score": 90, "restaurant_score": 70,
+        "tags": ["family", "walkable", "established"],
+    },
+    "94123": {
+        "name": "Marina / Cow Hollow",
+        "lat": 37.8000, "lng": -122.4360,
+        "median_home_value": 2_500_000, "median_rent_monthly": 4_500,
+        "crime_index": 35, "pct_bachelors": 85,
+        "median_household_income": 185_000, "population": 24_000,
+        "walk_score": 95, "restaurant_score": 90,
+        "tags": ["luxury", "walkable", "low-crime"],
+    },
+    "94131": {
+        "name": "Glen Park / Diamond Heights",
+        "lat": 37.7440, "lng": -122.4400,
+        "median_home_value": 1_900_000, "median_rent_monthly": 4_000,
+        "crime_index": 25, "pct_bachelors": 75,
+        "median_household_income": 155_000, "population": 28_000,
+        "walk_score": 75, "restaurant_score": 60,
+        "tags": ["family", "established", "low-crime"],
+    },
+    "94612": {
+        "name": "Downtown Oakland",
+        "lat": 37.8060, "lng": -122.2700,
+        "median_home_value": 560_000, "median_rent_monthly": 2_800,
+        "crime_index": 70, "pct_bachelors": 50,
+        "median_household_income": 70_000, "population": 30_000,
+        "walk_score": 95, "restaurant_score": 80,
+        "tags": ["urban", "walkable", "gentrifying", "high-cap-rate"],
+    },
+    "94611": {
+        "name": "Piedmont / Montclair",
+        "lat": 37.8290, "lng": -122.2300,
+        "median_home_value": 2_800_000, "median_rent_monthly": 5_500,
+        "crime_index": 18, "pct_bachelors": 85,
+        "median_household_income": 245_000, "population": 40_000,
+        "walk_score": 50, "restaurant_score": 50,
+        "tags": ["luxury", "top-schools", "low-crime", "family"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -1701,7 +1836,8 @@ ST_GEORGE_ZIPS: dict[str, dict] = {
 for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_ZIPS,
               LAS_VEGAS_ZIPS, RENO_ZIPS, CARSON_CITY_ZIPS,
               MIAMI_ZIPS, ORLANDO_ZIPS, ATLANTA_ZIPS,
-              AUSTIN_ZIPS, HOUSTON_ZIPS, SAN_ANTONIO_ZIPS, FORT_WORTH_ZIPS):
+              AUSTIN_ZIPS, HOUSTON_ZIPS, SAN_ANTONIO_ZIPS, FORT_WORTH_ZIPS,
+              SF_BAY_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -1782,6 +1918,19 @@ STATE_METROS: dict[str, dict] = {
         "extra_caveats": [
             "LA ZIPs span huge populations — 90011 alone has ~110K residents and is heterogeneous.",
             "Beach ZIPs (90291, 90402) trade at a beach premium that distorts cap-rate scoring vs. hill/inland ZIPs.",
+        ],
+    },
+    "CA-SF": {
+        "state": "CA",
+        "metro_label": "San Francisco / Bay Area",
+        "subtitle": "ZIP-level scores for SF proper + close-in East Bay anchors (Oakland + Piedmont). Cap rates here are notoriously bad (1.5-3%); use this view for walkability + appreciation, not cash flow.",
+        "map_center": {"lat": 37.77, "lng": -122.42, "zoom": 12},
+        "zips": SF_BAY_ZIPS,
+        "extra_caveats": [
+            "SF condo HOA dues run \\$800-1500/mo and aren't reflected in the cap rate — adjust mentally before comparing to LA.",
+            "Rent control caps annual increases for tenured tenants (SF residential ordinance, Costa-Hawkins exemptions for newer condos) — buy-to-let math depends heavily on whether you're buying a covered unit.",
+            "Earthquake insurance (CEA or private) is \\$1500-3000/yr extra and not in the standard insurance multiplier.",
+            "94612 (Downtown Oakland) is the only genuine high-cap-rate option in the dataset — but Oakland's crime + ULTRA Measure W transfer-tax dynamics make it a different risk profile.",
         ],
     },
     "UT": {
@@ -1907,7 +2056,7 @@ STATE_METROS: dict[str, dict] = {
 # default link target (first entry) and the metro switcher on the map page.
 STATE_TO_METROS: dict[str, list[str]] = {
     "TX": ["TX", "TX-FW", "TX-HOU", "TX-SA", "TX-AUS"],
-    "CA": ["CA"],
+    "CA": ["CA", "CA-SF"],
     "UT": ["UT", "UT-SLC", "UT-STG"],
     "AZ": ["AZ"],
     "NV": ["NV-LV", "NV-RNO", "NV-CC"],
