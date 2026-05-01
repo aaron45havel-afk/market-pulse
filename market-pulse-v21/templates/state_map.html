@@ -5,144 +5,209 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <style>
-    .map-wrap { display: grid; grid-template-columns: 1fr 380px; gap: 1rem; }
+    /* ─── Compact toolbar ────────────────────────────────────────────
+       Replaces the old stacked-card chrome (sibling pills + persona
+       card + color-shading card + legend) with a single header strip
+       so the map gets all the vertical space it deserves. */
+    .map-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+    .map-head h1 { font-size: 1.4rem; margin: 0; }
+    .map-head .map-subtitle { color: var(--text-dim); font-size: 0.78rem; margin-top: 0.15rem; }
+    .map-head a.back { font-size: 0.78rem; color: var(--text-dim); white-space: nowrap; }
+    .map-head a.back:hover { color: var(--accent2); }
+
+    .map-toolbar { display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap; padding: 0.6rem 0.85rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 0.85rem; }
+    .ctl-label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+    .ctl-group { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+    .ctl-divider { width: 1px; align-self: stretch; background: var(--border); margin: 0 0.2rem; }
+
+    .metro-pill { padding: 0.32rem 0.7rem; border-radius: 7px; background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); font-size: 0.78rem; font-weight: 500; text-decoration: none; }
+    .metro-pill:hover { color: var(--text); border-color: var(--accent2); text-decoration: none; }
+    .metro-pill.active { background: var(--accent2); color: white; border-color: var(--accent2); }
+
+    .icon-pill { padding: 0.32rem 0.55rem; border-radius: 7px; border: 1px solid var(--border); background: transparent; color: var(--text); font-size: 1rem; cursor: pointer; line-height: 1; min-width: 2rem; transition: all 0.15s; }
+    .icon-pill:hover { border-color: var(--accent2); transform: translateY(-1px); }
+    .icon-pill.active { background: var(--accent); border-color: var(--accent); }
+
+    .factor-select { background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 0.32rem 0.55rem; color: var(--text); font-size: 0.82rem; cursor: pointer; }
+    .factor-select:focus { outline: 2px solid var(--accent2); outline-offset: -1px; }
+
+    .legend-inline { display: flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; color: var(--text-dim); margin-left: auto; }
+    .legend-bar { display: inline-block; width: 90px; height: 8px; border-radius: 4px; background: linear-gradient(to right, #ef4444, #eab308, #22c55e); }
+
+    /* ─── Map + tabbed side panel ────────────────────────────────── */
+    .map-wrap { display: grid; grid-template-columns: 1fr 380px; gap: 1rem; align-items: stretch; }
     @media (max-width: 1100px) { .map-wrap { grid-template-columns: 1fr; } }
-    #stateMap { height: 620px; border-radius: 12px; border: 1px solid var(--border); background: #0b0d14; }
-    .factor-pills { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; }
-    .factor-pill { padding: 0.4rem 0.85rem; border-radius: 999px; background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); font-size: 0.78rem; cursor: pointer; transition: all 0.15s; }
-    .factor-pill:hover { color: var(--text); border-color: var(--accent2); }
-    .factor-pill.active { background: var(--accent2); color: white; border-color: var(--accent2); }
-    .legend { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-dim); }
-    .legend-bar { display: inline-block; width: 220px; height: 10px; border-radius: 5px; background: linear-gradient(to right, #ef4444, #eab308, #22c55e); }
-    .panel-section { padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
+    #stateMap { height: 640px; min-height: 480px; border-radius: 12px; border: 1px solid var(--border); background: #0b0d14; }
+    @media (max-width: 1100px) { #stateMap { height: 460px; } }
+
+    .side-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0; display: flex; flex-direction: column; min-height: 0; }
+    .side-tabs { display: flex; gap: 0.25rem; padding: 0.5rem 0.5rem 0; border-bottom: 1px solid var(--border); }
+    .side-tab { flex: 1; padding: 0.55rem 0.75rem; background: transparent; border: none; color: var(--text-dim); font-size: 0.82rem; font-weight: 600; cursor: pointer; border-radius: 6px 6px 0 0; transition: all 0.15s; }
+    .side-tab:hover { color: var(--text); }
+    .side-tab.active { background: var(--surface2); color: var(--text); }
+    .side-panes { flex: 1; overflow: auto; padding: 0.85rem 1rem; }
+
+    /* ─── Selected ZIP details ─────────────────────────────────────── */
+    .panel-section { padding: 0.65rem 0; border-bottom: 1px solid var(--border); }
     .panel-section:last-child { border-bottom: none; }
-    .panel-row { display: flex; justify-content: space-between; padding: 0.25rem 0; font-size: 0.85rem; }
+    .panel-row { display: flex; justify-content: space-between; padding: 0.2rem 0; font-size: 0.85rem; }
     .panel-row .label { color: var(--text-dim); }
-    .subscore-bar { width: 100%; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; margin-top: 0.2rem; }
+    .subscore-bar { width: 100%; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; margin-top: 0.18rem; }
     .subscore-bar > div { height: 100%; border-radius: 3px; }
+    .tag-chip { display: inline-block; font-size: 0.65rem; padding: 0.1rem 0.5rem; border-radius: 999px; background: var(--surface2); color: var(--text-dim); margin: 0.1rem; }
+
+    /* ─── Top 8 list ───────────────────────────────────────────────── */
+    .top-list { list-style: none; padding: 0; margin: 0; }
+    .top-list li { padding: 0.45rem 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; font-size: 0.82rem; cursor: pointer; }
+    .top-list li:last-child { border: none; }
+    .top-list li:hover { color: var(--accent2); }
+    .top-list .rank { color: var(--text-dim); width: 1.2rem; flex-shrink: 0; }
+    .top-list .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .top-list .score { font-weight: 700; flex-shrink: 0; }
+
+    /* ─── Leaflet overrides for dark theme ─────────────────────────── */
     .leaflet-popup-content-wrapper { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
     .leaflet-popup-tip { background: var(--surface); }
     .leaflet-popup-content { margin: 0.6rem 0.8rem; font-size: 0.85rem; }
     .leaflet-container { font-family: inherit; }
     .leaflet-tile-pane { filter: brightness(0.65) saturate(0.8); }
-    .top-list { list-style: none; padding: 0; margin: 0.5rem 0; }
-    .top-list li { padding: 0.4rem 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 0.82rem; }
-    .top-list li:last-child { border: none; }
-    .top-list .rank { color: var(--text-dim); width: 1.5rem; }
-    .top-list .name { flex: 1; }
-    .top-list .score { font-weight: 700; }
-    .tag-chip { display: inline-block; font-size: 0.65rem; padding: 0.1rem 0.5rem; border-radius: 999px; background: var(--surface2); color: var(--text-dim); margin: 0.1rem; }
+
+    /* ─── Collapsed-by-default footer sections ─────────────────────── */
+    details.foot-fold { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 0.95rem; margin-top: 1rem; }
+    details.foot-fold > summary { cursor: pointer; list-style: none; font-size: 0.78rem; font-weight: 600; color: var(--text); display: flex; justify-content: space-between; align-items: center; }
+    details.foot-fold > summary::-webkit-details-marker { display: none; }
+    details.foot-fold > summary .chev { color: var(--text-dim); font-size: 0.7rem; transition: transform 0.15s; }
+    details.foot-fold[open] > summary .chev { transform: rotate(180deg); }
+    details.foot-fold > .body { margin-top: 0.7rem; }
+    .foot-fold table { font-size: 0.8rem; }
 </style>
 {% endblock %}
 
 {% block content %}
-<h1>{{ data.metro_label }} Neighborhood Investor Map</h1>
-<p class="subtitle">
-    {{ data.subtitle }}
-    <a href="/real-estate" style="margin-left:0.5rem;">← back to state view</a>
-</p>
-
-{% if data.siblings|length > 1 %}
-<div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;">
-    <span style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">{{ state_name }} metros:</span>
-    {% for m in data.siblings %}
-        {% if m.slug == slug %}
-            <span style="padding:0.35rem 0.85rem; border-radius:999px; background:var(--accent2); color:white; font-size:0.78rem; font-weight:600;">{{ m.label }}</span>
-        {% else %}
-            <a href="/real-estate/{{ m.slug }}/map"
-               style="padding:0.35rem 0.85rem; border-radius:999px; background:var(--surface2); color:var(--text-dim); border:1px solid var(--border); font-size:0.78rem; font-weight:500; text-decoration:none;">{{ m.label }}</a>
-        {% endif %}
-    {% endfor %}
+<!-- Compact head row: title + back link -->
+<div class="map-head">
+    <div>
+        <h1>{{ data.metro_label }} Neighborhood Investor Map</h1>
+        <div class="map-subtitle">{{ data.subtitle }}</div>
+    </div>
+    <a class="back" href="/real-estate">← back to state view</a>
 </div>
-{% endif %}
 
-<div class="card" style="margin-bottom:1rem;">
-    <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">
-        Persona — re-weights the composite for what <em>you</em> actually care about
+<!-- Single-row toolbar: sibling metros + persona + color shading + legend -->
+<div class="map-toolbar">
+    {% if data.siblings|length > 1 %}
+    <div class="ctl-group">
+        <span class="ctl-label">{{ state_name }}:</span>
+        {% for m in data.siblings %}
+            {% set short = m.label.split(' (')[0].split(' / ')[0].replace(' County', '') %}
+            {% if m.slug == slug %}
+                <span class="metro-pill active" title="{{ m.label }}">{{ short }}</span>
+            {% else %}
+                <a class="metro-pill" href="/real-estate/{{ m.slug }}/map" title="{{ m.label }}">{{ short }}</a>
+            {% endif %}
+        {% endfor %}
     </div>
-    <div class="factor-pills" id="personaPills"></div>
-    <div id="personaDescription" style="font-size:0.75rem; color:var(--text-dim); margin-top:0.4rem; font-style:italic;"></div>
+    <div class="ctl-divider"></div>
+    {% endif %}
 
-    <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-top:0.85rem; margin-bottom:0.5rem;">
-        Color shading by
+    <div class="ctl-group">
+        <span class="ctl-label">Persona:</span>
+        <span id="personaPills" class="ctl-group" style="gap:0.35rem;"></span>
     </div>
-    <div class="factor-pills" id="factorPills">
-        <button class="factor-pill active" data-factor="composite_score">Composite</button>
-        <button class="factor-pill" data-factor="cap_rate">Cap Rate</button>
-        <button class="factor-pill" data-factor="crime_safety">Crime Safety</button>
-        <button class="factor-pill" data-factor="schools">Schools (proxy)</button>
-        <button class="factor-pill" data-factor="walkability">Walkability</button>
-        <button class="factor-pill" data-factor="restaurants">Restaurants</button>
-        <button class="factor-pill" data-factor="income">Income</button>
-        <button class="factor-pill" data-factor="affordability">Affordability</button>
+
+    <div class="ctl-divider"></div>
+
+    <div class="ctl-group">
+        <span class="ctl-label">Color by:</span>
+        <select id="factorSelect" class="factor-select">
+            <option value="composite_score" selected>Composite</option>
+            <option value="cap_rate">Cap Rate</option>
+            <option value="crime_safety">Crime Safety</option>
+            <option value="schools">Schools (proxy)</option>
+            <option value="walkability">Walkability</option>
+            <option value="restaurants">Restaurants</option>
+            <option value="income">Income</option>
+            <option value="affordability">Affordability</option>
+        </select>
     </div>
-    <div class="legend">
+
+    <div class="legend-inline" title="Pin color = score on the selected factor. Pin size = ZIP population.">
         <span>Worse</span>
         <span class="legend-bar"></span>
         <span>Better</span>
-        <span style="margin-left:1rem;">· Marker size = population</span>
     </div>
 </div>
+
+<!-- Persona description (one-line caption) -->
+<div id="personaDescription" style="font-size:0.78rem; color:var(--text-dim); margin: -0.3rem 0 0.85rem 0.2rem; font-style:italic;"></div>
 
 <div class="map-wrap">
     <div>
         <div id="stateMap"></div>
     </div>
 
-    <div>
-        <div class="card" id="zipPanel">
-            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Selected ZIP</div>
-            <div id="zipPanelBody" style="margin-top:0.5rem;">
-                <div style="color:var(--text-dim); font-size:0.85rem;">Click any ZIP marker on the map to see the breakdown.</div>
+    <!-- Tabbed side panel: Details / Top 8 -->
+    <div class="side-card">
+        <div class="side-tabs">
+            <button type="button" class="side-tab active" data-pane="paneDetails">📍 Selected ZIP</button>
+            <button type="button" class="side-tab"        data-pane="paneTop">🏆 Top 8</button>
+        </div>
+        <div class="side-panes">
+            <div class="side-pane" id="paneDetails">
+                <div id="zipPanelBody">
+                    <div style="color:var(--text-dim); font-size:0.85rem;">Click any ZIP marker on the map to see the breakdown.</div>
+                </div>
+            </div>
+            <div class="side-pane" id="paneTop" style="display:none;">
+                <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.4rem;" id="topListLabel">Top 8 by Composite</div>
+                <ol class="top-list" id="topList"></ol>
             </div>
         </div>
-
-        <div class="card" style="margin-top:1rem;">
-            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Top 8 by Current Factor</div>
-            <ol class="top-list" id="topList"></ol>
-        </div>
-
-        <div class="card" style="margin-top:1rem;">
-            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Methodology</div>
-            <div id="methodology" style="font-size:0.78rem; color:var(--text-dim); margin-top:0.5rem; line-height:1.5;"></div>
-            <div id="caveats" style="font-size:0.72rem; color:var(--text-dim); margin-top:0.6rem; line-height:1.4;"></div>
-        </div>
     </div>
 </div>
 
-<div class="card" style="margin-top:1rem;">
-    <div style="display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:0.5rem;">
-        <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">Full ZIP table — click a row to fly to it</div>
-        <div id="dataAsOf" style="font-size:0.7rem; color:var(--text-dim);"></div>
+<!-- Footer fold-outs: full ZIP table + methodology, both collapsed by default -->
+<details class="foot-fold">
+    <summary>Full ZIP table — click a row to fly to it on the map <span class="chev">▾</span></summary>
+    <div class="body">
+        <div style="font-size:0.7rem; color:var(--text-dim); margin-bottom:0.4rem;" id="dataAsOf"></div>
+        <div style="overflow-x:auto;">
+            <table id="zipTable">
+                <thead>
+                    <tr>
+                        <th data-sort="zip">ZIP</th>
+                        <th data-sort="name">Neighborhood</th>
+                        <th data-sort="composite_score">Score</th>
+                        <th data-sort="cap_rate_pct">Cap Rate</th>
+                        <th data-sort="median_home_value">Home Value</th>
+                        <th data-sort="median_rent_monthly">Rent</th>
+                        <th data-sort="crime_index">Crime Idx</th>
+                        <th data-sort="walk_score">Walk</th>
+                        <th data-sort="restaurant_score">Rest.</th>
+                        <th data-sort="pct_bachelors">% Bach+</th>
+                        <th data-sort="median_household_income">Median HH Inc</th>
+                    </tr>
+                </thead>
+                <tbody id="zipTableBody"></tbody>
+            </table>
+        </div>
     </div>
-    <div style="overflow-x:auto;">
-        <table id="zipTable">
-            <thead>
-                <tr>
-                    <th data-sort="zip">ZIP</th>
-                    <th data-sort="name">Neighborhood</th>
-                    <th data-sort="composite_score">Score</th>
-                    <th data-sort="cap_rate_pct">Cap Rate</th>
-                    <th data-sort="median_home_value">Home Value</th>
-                    <th data-sort="median_rent_monthly">Rent</th>
-                    <th data-sort="crime_index">Crime Idx</th>
-                    <th data-sort="walk_score">Walk</th>
-                    <th data-sort="restaurant_score">Rest.</th>
-                    <th data-sort="pct_bachelors">% Bach+</th>
-                    <th data-sort="median_household_income">Median HH Inc</th>
-                </tr>
-            </thead>
-            <tbody id="zipTableBody"></tbody>
-        </table>
-    </div>
-</div>
+</details>
 
-<script id="state-map-data" type="application/json">{{ data | tojson }}</script>
+<details class="foot-fold">
+    <summary>Methodology &amp; caveats <span class="chev">▾</span></summary>
+    <div class="body">
+        <div id="methodology" style="font-size:0.82rem; color:var(--text); line-height:1.6;"></div>
+        <div id="caveats" style="font-size:0.74rem; color:var(--text-dim); margin-top:0.7rem; line-height:1.5;"></div>
+    </div>
+</details>
+
 {% endblock %}
 
 {% block scripts %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script id="state-map-data" type="application/json">{{ data | tojson }}</script>
 <script>
 // Data is embedded server-side — no fetch, no API surface to error on.
 const PAGE_DATA = JSON.parse(document.getElementById('state-map-data').textContent);
@@ -152,7 +217,7 @@ let personas = PAGE_DATA.personas || {};
 let currentFactor = 'composite_score';
 let currentPersona = PAGE_DATA.default_persona || 'investor';
 let map, markerLayer;
-let selectedZip = null;  // last ZIP shown in the side panel — re-rendered on persona change
+let selectedZip = null;
 const FACTOR_LABELS = {
     composite_score: 'Composite',
     cap_rate: 'Cap Rate',
@@ -209,13 +274,15 @@ function renderMap() {
             `Cap rate ${n.cap_rate_pct.toFixed(2)}%`,
             { sticky: true }
         );
-        m.on('click', () => showZipPanel(n));
+        m.on('click', () => { showZipPanel(n); switchSidePane('paneDetails'); });
     });
 }
 
 function renderTopList() {
     const sorted = [...neighborhoods].sort((a, b) => valueFor(b, currentFactor) - valueFor(a, currentFactor));
     const list = document.getElementById('topList');
+    const label = document.getElementById('topListLabel');
+    if (label) label.textContent = `Top 8 by ${FACTOR_LABELS[currentFactor]}`;
     list.innerHTML = '';
     sorted.slice(0, 8).forEach((n, i) => {
         const v = valueFor(n, currentFactor);
@@ -223,10 +290,10 @@ function renderTopList() {
         li.innerHTML = `<span class="rank">${i + 1}</span>` +
                        `<span class="name">${n.zip} ${n.name}</span>` +
                        `<span class="score" style="color:${scoreColor(v)};">${v.toFixed(1)}</span>`;
-        li.style.cursor = 'pointer';
         li.addEventListener('click', () => {
             map.flyTo([n.lat, n.lng], 13, { duration: 0.6 });
             showZipPanel(n);
+            switchSidePane('paneDetails');
         });
         list.appendChild(li);
     });
@@ -239,7 +306,7 @@ function showZipPanel(n) {
     const w = (personas[currentPersona] && personas[currentPersona].weights) || {};
     const pct = (k) => w[k] != null ? `${Math.round(w[k] * 100)}%` : '';
     const subBar = (label, score) =>
-        `<div class="panel-row" style="display:block; padding:0.35rem 0;">
+        `<div class="panel-row" style="display:block; padding:0.32rem 0;">
             <div style="display:flex; justify-content:space-between;"><span class="label">${label}</span><span>${score.toFixed(1)}</span></div>
             <div class="subscore-bar"><div style="width:${score}%; background:${scoreColor(score)};"></div></div>
         </div>`;
@@ -247,7 +314,7 @@ function showZipPanel(n) {
     body.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem;">
             <div>
-                <div style="font-size:1.1rem; font-weight:700;">${n.zip}</div>
+                <div style="font-size:1.15rem; font-weight:700;">${n.zip}</div>
                 <div style="font-size:0.85rem; color:var(--text-dim);">${n.name}</div>
             </div>
             <div style="text-align:right;">
@@ -268,7 +335,7 @@ function showZipPanel(n) {
             <div class="panel-row"><span class="label">Population</span><span>${n.population.toLocaleString()}</span></div>
         </div>
         <div class="panel-section">
-            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Sub-scores (weights for ${currentPersona})</div>
+            <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.25rem;">Sub-scores · weights for ${currentPersona}</div>
             ${subBar(`Cap rate (${pct('cap_rate')})`, n.sub_scores.cap_rate)}
             ${subBar(`Crime safety (${pct('crime_safety')})`, n.sub_scores.crime_safety)}
             ${subBar(`Schools (${pct('schools')})`, n.sub_scores.schools)}
@@ -301,6 +368,7 @@ function renderTable() {
         tr.addEventListener('click', () => {
             map.flyTo([n.lat, n.lng], 13, { duration: 0.6 });
             showZipPanel(n);
+            switchSidePane('paneDetails');
         });
         tbody.appendChild(tr);
     });
@@ -329,9 +397,13 @@ function renderPersonaPills() {
     container.innerHTML = '';
     Object.entries(personas).forEach(([key, p]) => {
         const btn = document.createElement('button');
-        btn.className = 'factor-pill' + (key === currentPersona ? ' active' : '');
+        btn.type = 'button';
+        btn.className = 'icon-pill' + (key === currentPersona ? ' active' : '');
         btn.dataset.persona = key;
-        btn.textContent = p.label || key;
+        btn.title = (p.label || key) + (p.description ? ' — ' + p.description : '');
+        // Show emoji from label if present, else first char
+        const emoji = (p.label || '').match(/^\p{Emoji}+/u);
+        btn.textContent = emoji ? emoji[0] : (p.label || key).slice(0, 2);
         btn.addEventListener('click', () => setPersona(key));
         container.appendChild(btn);
     });
@@ -342,13 +414,13 @@ function updatePersonaDescription() {
     const el = document.getElementById('personaDescription');
     if (!el) return;
     const p = personas[currentPersona];
-    el.textContent = p ? p.description : '';
+    el.textContent = p ? `${p.label || currentPersona} — ${p.description || ''}` : '';
 }
 
 function setPersona(key) {
     if (!personas[key] || key === currentPersona) return;
     currentPersona = key;
-    document.querySelectorAll('#personaPills .factor-pill').forEach(b => {
+    document.querySelectorAll('#personaPills .icon-pill').forEach(b => {
         b.classList.toggle('active', b.dataset.persona === key);
     });
     updatePersonaDescription();
@@ -359,9 +431,6 @@ function setPersona(key) {
     renderTopList();
     renderTable();
     renderMethodology();
-    // Re-render the selected ZIP panel so its score + sub-score weights
-    // reflect the new persona — otherwise the panel looks stale until
-    // the user clicks another ZIP.
     if (selectedZip) showZipPanel(selectedZip);
 }
 
@@ -380,6 +449,11 @@ function renderMethodology() {
         `${fmt('restaurants', 'restaurants')} + ` +
         `${fmt('income', 'income')} + ` +
         `${fmt('affordability', 'affordability')}.`;
+}
+
+function switchSidePane(targetId) {
+    document.querySelectorAll('.side-tab').forEach(t => t.classList.toggle('active', t.dataset.pane === targetId));
+    document.querySelectorAll('.side-pane').forEach(p => p.style.display = p.id === targetId ? '' : 'none');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -402,18 +476,23 @@ document.addEventListener('DOMContentLoaded', () => {
     renderTopList();
     renderTable();
 
+    // Auto-select the top-scoring ZIP so the panel isn't empty.
     if (neighborhoods.length) showZipPanel(neighborhoods[0]);
 
-    document.querySelectorAll('#factorPills .factor-pill').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('#factorPills .factor-pill').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentFactor = btn.dataset.factor;
-            renderMap();
-            renderTopList();
-        });
+    // Color-shading dropdown change → re-render
+    const factorSelect = document.getElementById('factorSelect');
+    if (factorSelect) factorSelect.addEventListener('change', e => {
+        currentFactor = e.target.value;
+        renderMap();
+        renderTopList();
     });
 
+    // Side-panel tabs
+    document.querySelectorAll('.side-tab').forEach(tab => {
+        tab.addEventListener('click', () => switchSidePane(tab.dataset.pane));
+    });
+
+    // ZIP table sort handlers
     document.querySelectorAll('#zipTable thead th').forEach(th => {
         th.addEventListener('click', () => sortAndRenderTable(th.dataset.sort));
     });
