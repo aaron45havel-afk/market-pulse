@@ -43,8 +43,12 @@
        to collapse. Doesn't interfere with the map's pointer events
        when collapsed. */
     .fit-drawer { position: absolute; top: 12px; right: 0; bottom: 12px; z-index: 600; display: flex; align-items: stretch; pointer-events: none; }
-    .fit-drawer .tab { pointer-events: auto; writing-mode: vertical-rl; transform: rotate(180deg); padding: 1rem 0.5rem; background: var(--accent2); color: white; border-radius: 8px 0 0 8px; font-weight: 700; font-size: 0.78rem; cursor: pointer; box-shadow: -2px 2px 8px rgba(0,0,0,0.3); user-select: none; letter-spacing: 0.05em; }
-    .fit-drawer .panel { pointer-events: auto; width: 0; overflow: hidden; transition: width 0.18s; background: var(--surface); border: 1px solid var(--border); border-right: none; border-radius: 8px 0 0 8px; }
+    /* Compact pill anchored mid-height, NOT stretched to fill the column.
+       align-self: center on the tab + align-self: stretch on the panel
+       gives us a small tab + a full-height panel when expanded. */
+    .fit-drawer .tab { align-self: center; pointer-events: auto; writing-mode: vertical-rl; transform: rotate(180deg); padding: 0.85rem 0.55rem; background: var(--accent2); color: white; border-radius: 8px 0 0 8px; font-weight: 700; font-size: 0.78rem; cursor: pointer; box-shadow: -2px 2px 8px rgba(0,0,0,0.3); user-select: none; letter-spacing: 0.05em; line-height: 1; }
+    .fit-drawer .tab:hover { background: #2563eb; }
+    .fit-drawer .panel { align-self: stretch; pointer-events: auto; width: 0; overflow: hidden; transition: width 0.18s; background: var(--surface); border: 1px solid var(--border); border-right: none; border-radius: 8px 0 0 8px; }
     .fit-drawer.open .panel { width: 320px; }
     @media (max-width: 700px) { .fit-drawer.open .panel { width: 88vw; } }
     .fit-body { padding: 0.85rem 1rem; overflow-y: auto; height: 100%; }
@@ -132,14 +136,18 @@
                     </div>
                 </div>
 
-                <div class="fit-q" data-key="priority">
-                    <span class="q-label">What matters most?</span>
+                <div class="fit-q" data-key="priority" data-multi="true">
+                    <span class="q-label">What matters most? <span style="font-weight:400; text-transform:none; opacity:0.7;">(pick any)</span></span>
                     <div class="fit-opts">
-                        <button class="fit-opt" data-val="schools">Schools</button>
-                        <button class="fit-opt" data-val="walkability">Walkability</button>
-                        <button class="fit-opt" data-val="yield">Cap rate / yield</button>
-                        <button class="fit-opt" data-val="climate">Sunny climate</button>
-                        <button class="fit-opt" data-val="affordability">Affordability</button>
+                        <button class="fit-opt" data-val="schools">🎓 Schools</button>
+                        <button class="fit-opt" data-val="walkability">🚶 Walkability</button>
+                        <button class="fit-opt" data-val="yield">💵 Cap rate / yield</button>
+                        <button class="fit-opt" data-val="climate">☀️ Sunny climate</button>
+                        <button class="fit-opt" data-val="affordability">💰 Affordability</button>
+                        <button class="fit-opt" data-val="safety">🛡️ Safety / low crime</button>
+                        <button class="fit-opt" data-val="restaurants">🍽️ Restaurants</button>
+                        <button class="fit-opt" data-val="growth">📈 Growth / appreciation</button>
+                        <button class="fit-opt" data-val="lowtax">🏛️ Low taxes</button>
                     </div>
                 </div>
 
@@ -255,16 +263,27 @@ function initFitDrawer() {
     tab.addEventListener('click', () => drawer.classList.toggle('open'));
     close.addEventListener('click', () => drawer.classList.remove('open'));
 
-    // Single delegated listener — every .fit-opt click toggles its
-    // siblings off and itself on, then auto-saves + recomputes.
+    // Single delegated listener — single-select questions toggle their
+    // siblings off, multi-select questions (data-multi="true") just
+    // toggle the clicked one independently.
     document.querySelectorAll('.fit-q').forEach(q => {
         q.addEventListener('click', e => {
             const btn = e.target.closest('.fit-opt');
             if (!btn) return;
-            q.querySelectorAll('.fit-opt').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            const isMulti = q.dataset.multi === 'true';
+            if (isMulti) {
+                btn.classList.toggle('active');
+            } else {
+                q.querySelectorAll('.fit-opt').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
             saveProfile();
             updateGoButton();
+            // Re-render matches as the user adjusts answers if they've
+            // already seen results once.
+            if (document.getElementById('fitResults').style.display !== 'none') {
+                renderMatches();
+            }
         });
     });
 
@@ -277,8 +296,14 @@ function initFitDrawer() {
 function readProfile() {
     const out = {};
     document.querySelectorAll('.fit-q').forEach(q => {
-        const sel = q.querySelector('.fit-opt.active');
-        if (sel) out[q.dataset.key] = sel.dataset.val;
+        const isMulti = q.dataset.multi === 'true';
+        if (isMulti) {
+            const vals = [...q.querySelectorAll('.fit-opt.active')].map(b => b.dataset.val);
+            if (vals.length) out[q.dataset.key] = vals;
+        } else {
+            const sel = q.querySelector('.fit-opt.active');
+            if (sel) out[q.dataset.key] = sel.dataset.val;
+        }
     });
     return out;
 }
@@ -287,8 +312,13 @@ function applyProfileToUI(profile) {
     Object.entries(profile || {}).forEach(([k, v]) => {
         const q = document.querySelector(`.fit-q[data-key="${k}"]`);
         if (!q) return;
-        const btn = q.querySelector(`.fit-opt[data-val="${v}"]`);
-        if (btn) btn.classList.add('active');
+        // Multi-value (array) — activate each matching option button.
+        // Single-value (string) — legacy or current single-select shape.
+        const vals = Array.isArray(v) ? v : [v];
+        vals.forEach(val => {
+            const btn = q.querySelector(`.fit-opt[data-val="${val}"]`);
+            if (btn) btn.classList.add('active');
+        });
     });
 }
 
@@ -301,28 +331,73 @@ function loadProfile() {
 }
 
 function countAnswered(profile) {
-    return Object.values(profile || {}).filter(Boolean).length;
+    return Object.values(profile || {}).filter(v => {
+        if (Array.isArray(v)) return v.length > 0;
+        return Boolean(v);
+    }).length;
 }
 
 function updateGoButton() {
     const goBtn = document.getElementById('fitGo');
     const n = countAnswered(readProfile());
     goBtn.disabled = n === 0;
-    goBtn.textContent = n === 0 ? 'Pick at least one answer'
-                       : n < 4 ? `Find my matches (${n}/4 answered)`
-                       : 'Find my matches';
+    goBtn.textContent = n === 0 ? 'Pick at least one answer' : 'Find my matches';
 }
 
+// Per-priority scoring rules. Each entry returns {delta, reason?} —
+// summed across all selected priorities for multi-select profiles.
+const PRIORITY_RULES = {
+    yield: m => {
+        const delta = (m.avg_cap_rate_pct - 4) * 5;
+        return { delta, reason: m.avg_cap_rate_pct > 5.5 ? `${m.avg_cap_rate_pct.toFixed(1)}% avg cap rate` : null };
+    },
+    climate: m => {
+        const delta = (m.sunshine_days - 200) / 5;
+        return { delta, reason: m.sunshine_days >= 240 ? `${m.sunshine_days} sunny days/yr` : null };
+    },
+    walkability: m => {
+        const delta = (m.avg_walk_score - 40) / 3;
+        return { delta, reason: m.avg_walk_score > 65 ? `avg walk score ${m.avg_walk_score}` : null };
+    },
+    schools: m => {
+        const delta = (m.avg_pct_bachelors - 40) / 4;
+        return { delta, reason: m.avg_pct_bachelors > 55 ? `${Math.round(m.avg_pct_bachelors)}% bachelor's+` : null };
+    },
+    affordability: m => {
+        const delta = (500_000 - m.avg_home_value) / 12_000;
+        return { delta, reason: m.avg_home_value < 350_000 ? `median home ~$${Math.round(m.avg_home_value/1000)}K` : null };
+    },
+    safety: m => {
+        const delta = (50 - m.avg_crime_index) / 3;
+        return { delta, reason: m.avg_crime_index < 35 ? `low crime index ${Math.round(m.avg_crime_index)}` : null };
+    },
+    restaurants: m => {
+        const delta = (m.avg_restaurant_score - 40) / 3;
+        return { delta, reason: m.avg_restaurant_score > 65 ? `restaurant density ${Math.round(m.avg_restaurant_score)}/100` : null };
+    },
+    growth: m => {
+        const delta = (m.state_pop_growth_pct - 0.5) * 10;
+        return { delta, reason: m.state_pop_growth_pct >= 1.0 ? `+${m.state_pop_growth_pct}%/yr population growth` : null };
+    },
+    lowtax: m => {
+        // 0% income tax = +15. 5% income tax = 0. Linear in between.
+        const delta = (5 - m.state_income_tax_pct) * 3;
+        return { delta, reason: m.state_income_tax_pct === 0 ? 'no state income tax' : (m.state_income_tax_pct < 3 ? `${m.state_income_tax_pct}% state income tax` : null) };
+    },
+};
+
 // Score a metro 0-100 against the user's profile. Starts from the
-// existing avg_composite (which already bakes in cap rate, crime,
-// schools, etc.) and adjusts based on what the user said matters.
+// existing avg_composite and adjusts based on what the user said
+// matters. Priority is now multi-select — bonuses sum across all
+// selected priorities (so picking 3 things that all favor Phoenix
+// gives Phoenix a 3× boost).
 function scoreMetroForProfile(m, profile) {
     let score = m.avg_composite;
     const reasons = [];
 
     // Affordability constraint — penalize metros above the user's
-    // income-implied max affordable price. 4x income is the standard
-    // rule of thumb; we soft-penalize beyond that rather than filter.
+    // income-implied max affordable price. 4× income is the rule
+    // of thumb; we soft-penalize beyond that rather than filter.
     if (profile.income) {
         const cap = INCOME_MAX_AFFORDABLE[profile.income];
         if (cap && m.avg_home_value > cap) {
@@ -334,25 +409,16 @@ function scoreMetroForProfile(m, profile) {
         }
     }
 
-    // Top-priority bonus: each priority lifts the dim it cares about.
-    const p = profile.priority;
-    if (p === 'yield') {
-        score += (m.avg_cap_rate_pct - 4) * 5;
-        if (m.avg_cap_rate_pct > 5.5) reasons.push(`${m.avg_cap_rate_pct.toFixed(1)}% avg cap rate`);
-    } else if (p === 'climate') {
-        score += (m.sunshine_days - 200) / 5;
-        if (m.sunshine_days >= 240) reasons.push(`${m.sunshine_days} sunny days/yr`);
-    } else if (p === 'walkability') {
-        score += (m.avg_walk_score - 40) / 3;
-        if (m.avg_walk_score > 65) reasons.push(`avg walk score ${m.avg_walk_score}`);
-    } else if (p === 'schools') {
-        score += (m.avg_pct_bachelors - 40) / 4;
-        if (m.avg_pct_bachelors > 55) reasons.push(`${Math.round(m.avg_pct_bachelors)}% bachelor's+ (school proxy)`);
-    } else if (p === 'affordability') {
-        // Reward cheaper metros directly
-        const benchmark = 500_000;
-        score += (benchmark - m.avg_home_value) / 12_000;
-        if (m.avg_home_value < 350_000) reasons.push(`median home ~$${Math.round(m.avg_home_value/1000)}K`);
+    // Sum all selected priority bonuses. Profile.priority can be a
+    // single string (legacy) or array (multi-select). Normalize.
+    const priorities = Array.isArray(profile.priority) ? profile.priority
+                       : (profile.priority ? [profile.priority] : []);
+    for (const p of priorities) {
+        const rule = PRIORITY_RULES[p];
+        if (!rule) continue;
+        const { delta, reason } = rule(m);
+        score += delta;
+        if (reason) reasons.push(reason);
     }
 
     // Purpose-driven adjustment: investors care about yield, lifestyle

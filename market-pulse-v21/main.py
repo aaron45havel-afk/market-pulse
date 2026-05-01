@@ -55,9 +55,12 @@ async def national_map(request: Request):
     map. Each pin's color reflects the top ZIP's composite score under the
     default investor persona; click → popup with metro summary + link to
     the full per-metro deep-dive at /real-estate/{slug}/map."""
-    # State-level sunshine data — used by the find-your-fit matcher to
-    # boost climate-prioritized profiles toward Sun Belt metros.
-    from data_providers import STATE_SUNSHINE_DAYS
+    # State-level lookups used by the find-your-fit matcher to boost
+    # profiles toward states with the right climate / tax / growth
+    # characteristics — without needing per-metro hand-curated data.
+    from data_providers import (
+        STATE_SUNSHINE_DAYS, STATE_INCOME_TAX_EFFECTIVE, STATE_POPULATION_GROWTH,
+    )
     metros = []
     for slug, cfg in STATE_METROS.items():
         data = get_state_neighborhoods(slug)
@@ -72,13 +75,15 @@ async def national_map(request: Request):
         avg_cap = sum(z["cap_rate_pct"] for z in zips) / n
         avg_home = sum(z["median_home_value"] for z in zips) / n
         avg_rent = sum(z["median_rent_monthly"] for z in zips) / n
-        # Aggregate the lifestyle/quality dimensions from per-ZIP data so
-        # the find-your-fit matcher can score profiles without needing
-        # per-metro hand-curated data.
+        # Aggregate the lifestyle/quality dimensions from per-ZIP data.
         avg_walk = sum(z.get("walk_score", 0) for z in zips) / n
         avg_school = sum(z.get("pct_bachelors", 0) for z in zips) / n
         avg_crime = sum(z.get("crime_index", 50) for z in zips) / n
+        avg_restaurants = sum(z.get("restaurant_score", 0) for z in zips) / n
+        # State-level lookups for tax-haven + growth-momentum signals.
         sunshine = STATE_SUNSHINE_DAYS.get(cfg["state"], 200)
+        state_income_tax = STATE_INCOME_TAX_EFFECTIVE.get(cfg["state"], 0.045)
+        state_pop_growth = STATE_POPULATION_GROWTH.get(cfg["state"], 0.5)
         metros.append({
             "slug": slug,
             "state": cfg["state"],
@@ -98,7 +103,10 @@ async def national_map(request: Request):
             "avg_walk_score": round(avg_walk, 1),
             "avg_pct_bachelors": round(avg_school, 1),
             "avg_crime_index": round(avg_crime, 1),
+            "avg_restaurant_score": round(avg_restaurants, 1),
             "sunshine_days": sunshine,
+            "state_income_tax_pct": round(state_income_tax * 100, 2),
+            "state_pop_growth_pct": round(state_pop_growth, 2),
         })
     metros.sort(key=lambda m: -m["avg_composite"])
     return templates.TemplateResponse("national_map.html", {
