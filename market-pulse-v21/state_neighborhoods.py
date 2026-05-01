@@ -610,6 +610,49 @@ RENO_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# NV — Carson City (consolidated city / county): state capital, retiree-heavy
+# ─────────────────────────────────────────────────────────────────────────────
+CARSON_CITY_ZIPS: dict[str, dict] = {
+    "89701": {
+        "name": "Central Carson City",
+        "lat": 39.1638, "lng": -119.7674,
+        "median_home_value": 440_000, "median_rent_monthly": 1_800,
+        "crime_index": 50, "pct_bachelors": 32,
+        "median_household_income": 60_000, "population": 19_000,
+        "walk_score": 55, "restaurant_score": 60,
+        "tags": ["urban", "walkable", "established"],
+    },
+    "89703": {
+        "name": "W Carson City",
+        "lat": 39.1620, "lng": -119.7950,
+        "median_home_value": 510_000, "median_rent_monthly": 1_950,
+        "crime_index": 30, "pct_bachelors": 38,
+        "median_household_income": 72_000, "population": 9_500,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["family", "established", "low-crime"],
+    },
+    "89705": {
+        "name": "S Carson / Indian Hills",
+        "lat": 39.0950, "lng": -119.7900,
+        "median_home_value": 560_000, "median_rent_monthly": 2_100,
+        "crime_index": 28, "pct_bachelors": 35,
+        "median_household_income": 82_000, "population": 14_500,
+        "walk_score": 18, "restaurant_score": 25,
+        "tags": ["family", "newer", "rural-edge"],
+    },
+    "89706": {
+        "name": "E Carson / Industrial",
+        "lat": 39.2050, "lng": -119.7300,
+        "median_home_value": 380_000, "median_rent_monthly": 1_700,
+        "crime_index": 42, "pct_bachelors": 22,
+        "median_household_income": 58_000, "population": 16_000,
+        "walk_score": 25, "restaurant_score": 30,
+        "tags": ["affordable", "industrial"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -850,7 +893,7 @@ ST_GEORGE_ZIPS: dict[str, dict] = {
 # fresh ZHVI / ZORI values from data/zillow_overrides.json win when
 # available. DALLAS_ZIPS is patched in dallas_neighborhoods.py itself.
 for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_ZIPS,
-              LAS_VEGAS_ZIPS, RENO_ZIPS):
+              LAS_VEGAS_ZIPS, RENO_ZIPS, CARSON_CITY_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -930,6 +973,18 @@ STATE_METROS: dict[str, dict] = {
             "Henderson PD reports separately from Las Vegas Metro — crime indexes are normalized but precision varies.",
         ],
     },
+    "NV-CC": {
+        "state": "NV",
+        "metro_label": "Carson City",
+        "subtitle": "ZIP-level scores for the Carson City consolidated city/county — state capital, retiree-heavy, smaller market with its own dynamics distinct from Reno.",
+        "map_center": {"lat": 39.16, "lng": -119.76, "zoom": 12},
+        "zips": CARSON_CITY_ZIPS,
+        "extra_caveats": [
+            "Carson City's economy is heavy on state-government employment — local cycles track legislative-session timing more than tech / national trends.",
+            "Small market (~58K residents across 4 ZIPs) means fewer comparable sales; values are noisier month-to-month than larger metros.",
+            "High owner-occupancy + thin rental supply makes the cap-rate signal less reliable than in Reno or Vegas; treat rental scores as directional.",
+        ],
+    },
     "NV-RNO": {
         "state": "NV",
         "metro_label": "Reno / Sparks (Washoe County)",
@@ -962,7 +1017,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "CA": ["CA"],
     "UT": ["UT", "UT-SLC", "UT-STG"],
     "AZ": ["AZ"],
-    "NV": ["NV-LV", "NV-RNO"],
+    "NV": ["NV-LV", "NV-RNO", "NV-CC"],
 }
 
 
