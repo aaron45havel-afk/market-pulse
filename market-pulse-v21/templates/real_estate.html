@@ -2,7 +2,7 @@
 {% block title %}Real Estate — Market Pulse{% endblock %}
 {% block content %}
 <h1>Real Estate Market Dashboard</h1>
-<p class="subtitle">Housing cycle tracking + market timing for 10 states from FRED / Realtor.com data.</p>
+<p class="subtitle">Housing cycle tracking + market timing for {{ states|length }} states from FRED / Realtor.com data.</p>
 
 <!-- ═══ GOLDILOCKS TOP 5 WITH PERSONA SELECTOR ═══ -->
 <div class="card" id="goldilocksCard" style="margin-bottom:1.5rem; display:none;">

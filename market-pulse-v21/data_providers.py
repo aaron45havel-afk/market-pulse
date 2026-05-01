@@ -875,14 +875,11 @@ def get_all_state_data(api_key: str | None) -> dict:
     for name, sid in NATIONAL_SERIES.items():
         all_to_fetch[f"national__{name}"] = sid
 
-    # States
-    state_suffix = {
-        "CA": "CA", "NV": "NV", "RI": "RI", "AZ": "AZ",
-        "WA": "WA", "UT": "UT", "TN": "TN", "TX": "TX",
-        "IN": "IN", "CO": "CO", "OH": "OH",
-    }
+    # States — FRED state-series codes are just the 2-letter postal code,
+    # so we use it directly. Adding a state to STATES is sufficient; no
+    # mapping table to keep in sync.
     for code in STATES:
-        suffix = state_suffix[code]
+        suffix = code
         state_series = {
             "median_list_price": f"MEDLISPRI{suffix}",
             "active_listings": f"ACTLISCOU{suffix}",
