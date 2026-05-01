@@ -768,6 +768,121 @@ MIAMI_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# FL — Orange County (Orlando metro): Downtown, Winter Park, Lake Nona, Dr Phillips
+# ─────────────────────────────────────────────────────────────────────────────
+ORLANDO_ZIPS: dict[str, dict] = {
+    "32801": {
+        "name": "Downtown Orlando / Lake Eola",
+        "lat": 28.5400, "lng": -81.3790,
+        "median_home_value": 440_000, "median_rent_monthly": 2_200,
+        "crime_index": 60, "pct_bachelors": 58,
+        "median_household_income": 72_000, "population": 14_000,
+        "walk_score": 80, "restaurant_score": 80,
+        "tags": ["urban", "walkable", "transit"],
+    },
+    "32803": {
+        "name": "Audubon Park / Mills 50",
+        "lat": 28.5570, "lng": -81.3500,
+        "median_home_value": 510_000, "median_rent_monthly": 2_200,
+        "crime_index": 45, "pct_bachelors": 60,
+        "median_household_income": 85_000, "population": 22_000,
+        "walk_score": 65, "restaurant_score": 80,
+        "tags": ["walkable", "hip", "established"],
+    },
+    "32804": {
+        "name": "College Park",
+        "lat": 28.5750, "lng": -81.3990,
+        "median_home_value": 560_000, "median_rent_monthly": 2_300,
+        "crime_index": 38, "pct_bachelors": 60,
+        "median_household_income": 92_000, "population": 18_000,
+        "walk_score": 55, "restaurant_score": 65,
+        "tags": ["family", "walkable", "established"],
+    },
+    "32806": {
+        "name": "SODO / Delaney Park",
+        "lat": 28.5180, "lng": -81.3690,
+        "median_home_value": 480_000, "median_rent_monthly": 2_100,
+        "crime_index": 40, "pct_bachelors": 55,
+        "median_household_income": 88_000, "population": 24_000,
+        "walk_score": 50, "restaurant_score": 60,
+        "tags": ["family", "mid-upper"],
+    },
+    "32814": {
+        "name": "Baldwin Park",
+        "lat": 28.5660, "lng": -81.3260,
+        "median_home_value": 720_000, "median_rent_monthly": 2_800,
+        "crime_index": 22, "pct_bachelors": 70,
+        "median_household_income": 130_000, "population": 12_000,
+        "walk_score": 60, "restaurant_score": 60,
+        "tags": ["family", "newer", "low-crime", "walkable"],
+    },
+    "32827": {
+        "name": "Lake Nona / Medical City",
+        "lat": 28.4140, "lng": -81.3010,
+        "median_home_value": 620_000, "median_rent_monthly": 2_600,
+        "crime_index": 22, "pct_bachelors": 60,
+        "median_household_income": 115_000, "population": 20_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["family", "newer", "growth", "low-crime"],
+    },
+    "32825": {
+        "name": "East Orlando / UCF-adj",
+        "lat": 28.5330, "lng": -81.2680,
+        "median_home_value": 410_000, "median_rent_monthly": 2_100,
+        "crime_index": 42, "pct_bachelors": 38,
+        "median_household_income": 72_000, "population": 56_000,
+        "walk_score": 30, "restaurant_score": 45,
+        "tags": ["college", "family", "mid-tier"],
+    },
+    "32836": {
+        "name": "Bay Hill / Dr Phillips",
+        "lat": 28.4540, "lng": -81.5100,
+        "median_home_value": 1_000_000, "median_rent_monthly": 4_200,
+        "crime_index": 22, "pct_bachelors": 70,
+        "median_household_income": 150_000, "population": 27_000,
+        "walk_score": 25, "restaurant_score": 60,
+        "tags": ["luxury", "low-crime", "family"],
+    },
+    "32837": {
+        "name": "Hunters Creek",
+        "lat": 28.4060, "lng": -81.4310,
+        "median_home_value": 480_000, "median_rent_monthly": 2_400,
+        "crime_index": 30, "pct_bachelors": 45,
+        "median_household_income": 90_000, "population": 26_000,
+        "walk_score": 30, "restaurant_score": 40,
+        "tags": ["family", "established"],
+    },
+    "32839": {
+        "name": "SW Orlando",
+        "lat": 28.4720, "lng": -81.4220,
+        "median_home_value": 340_000, "median_rent_monthly": 1_800,
+        "crime_index": 65, "pct_bachelors": 22,
+        "median_household_income": 52_000, "population": 50_000,
+        "walk_score": 35, "restaurant_score": 35,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "32789": {
+        "name": "Winter Park",
+        "lat": 28.5970, "lng": -81.3550,
+        "median_home_value": 850_000, "median_rent_monthly": 3_000,
+        "crime_index": 22, "pct_bachelors": 75,
+        "median_household_income": 135_000, "population": 30_000,
+        "walk_score": 60, "restaurant_score": 70,
+        "tags": ["upscale", "low-crime", "top-schools", "walkable"],
+    },
+    "32835": {
+        "name": "Metro West",
+        "lat": 28.5300, "lng": -81.4690,
+        "median_home_value": 390_000, "median_rent_monthly": 2_000,
+        "crime_index": 45, "pct_bachelors": 42,
+        "median_household_income": 68_000, "population": 50_000,
+        "walk_score": 35, "restaurant_score": 50,
+        "tags": ["family", "mid-tier"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -1009,7 +1124,7 @@ ST_GEORGE_ZIPS: dict[str, dict] = {
 # available. DALLAS_ZIPS is patched in dallas_neighborhoods.py itself.
 for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_ZIPS,
               LAS_VEGAS_ZIPS, RENO_ZIPS, CARSON_CITY_ZIPS,
-              MIAMI_ZIPS):
+              MIAMI_ZIPS, ORLANDO_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -1125,6 +1240,18 @@ STATE_METROS: dict[str, dict] = {
             "Pinecrest (33156) lot sizes skew large — median home value reflects \\$2M+ estate-style properties more than typical SFR.",
         ],
     },
+    "FL-ORL": {
+        "state": "FL",
+        "metro_label": "Orlando / Orange County",
+        "subtitle": "ZIP-level scores for the Orlando metro — Downtown, Winter Park, Lake Nona, Dr Phillips, UCF area, plus high-cap-rate SW pockets.",
+        "map_center": {"lat": 28.53, "lng": -81.38, "zoom": 10},
+        "zips": ORLANDO_ZIPS,
+        "extra_caveats": [
+            "Orlando ZIPs near the Disney / Universal corridor (32836, 32837) compete with short-term-rental investors; cap rate signal can be distorted vs. typical SFR rentals.",
+            "Lake Nona (32827) is a master-planned high-growth area — values move quickly with each new Medical City employer announcement.",
+            "FL hurricane / wind insurance has roughly tripled in 5 years; not modeled in cap-rate scoring.",
+        ],
+    },
     "AZ": {
         "state": "AZ",
         "metro_label": "Maricopa County",
@@ -1146,7 +1273,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "UT": ["UT", "UT-SLC", "UT-STG"],
     "AZ": ["AZ"],
     "NV": ["NV-LV", "NV-RNO", "NV-CC"],
-    "FL": ["FL-MIA"],
+    "FL": ["FL-MIA", "FL-ORL"],
 }
 
 
