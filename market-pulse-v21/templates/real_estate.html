@@ -83,37 +83,66 @@
 </style>
 
 <!-- ═══ STATE DRILL-DOWN ═══ -->
-<div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">State &amp; County Drill-Down</div>
-
-<!-- State Tabs -->
-<div class="state-tabs" id="stateTabs">
-    <div class="state-tab active" data-state="CA">California</div>
-    <div class="state-tab" data-state="NV">Nevada</div>
-    <div class="state-tab" data-state="RI">Rhode Island</div>
-    <div class="state-tab" data-state="AZ">Arizona</div>
-    <div class="state-tab" data-state="WA">Washington</div>
-    <div class="state-tab" data-state="UT">Utah</div>
-    <div class="state-tab" data-state="TN">Tennessee</div>
-    <div class="state-tab" data-state="TX">Texas</div>
-    <div class="state-tab" data-state="IN">Indiana</div>
-    <div class="state-tab" data-state="CO">Colorado</div>
-    <div class="state-tab" data-state="OH">Ohio</div>
-    <div class="state-tab" data-state="FL">Florida</div>
-    <div class="state-tab" data-state="GA">Georgia</div>
+<!-- Compact 2-letter postal-code pills. 📍 dot on the corner indicates the
+     state has a neighborhood-map deep-dive available. The selected state's
+     full name is rendered prominently in the context bar below, so we save
+     horizontal space here without losing identity cues. -->
+<div class="state-pills" id="stateTabs">
+    <div class="state-pill active" data-state="CA" title="California">CA</div>
+    <div class="state-pill"        data-state="NV" title="Nevada">NV</div>
+    <div class="state-pill"        data-state="RI" title="Rhode Island">RI</div>
+    <div class="state-pill"        data-state="AZ" title="Arizona">AZ</div>
+    <div class="state-pill"        data-state="WA" title="Washington">WA</div>
+    <div class="state-pill"        data-state="UT" title="Utah">UT</div>
+    <div class="state-pill"        data-state="TN" title="Tennessee">TN</div>
+    <div class="state-pill"        data-state="TX" title="Texas">TX</div>
+    <div class="state-pill"        data-state="IN" title="Indiana">IN</div>
+    <div class="state-pill"        data-state="CO" title="Colorado">CO</div>
+    <div class="state-pill"        data-state="OH" title="Ohio">OH</div>
+    <div class="state-pill"        data-state="FL" title="Florida">FL</div>
+    <div class="state-pill"        data-state="GA" title="Georgia">GA</div>
 </div>
 
-<!-- County Selector -->
-<div style="margin-bottom:1rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
-    <label style="color:var(--text-dim); font-size:0.85rem; font-weight:600;">COUNTY:</label>
-    <select id="countySelect" class="search-bar" style="width:300px;">
-        <option value="">— State Overview —</option>
-    </select>
-    <span id="dataSource" style="color:var(--text-dim); font-size:0.75rem;"></span>
-    <a id="stateMapLink" href="#"
-       style="display:none; padding:0.4rem 0.85rem; border-radius:999px; background:var(--accent2); color:white; font-size:0.78rem; font-weight:600; text-decoration:none;">
-       🗺️ Neighborhood map →
-    </a>
+<!-- Active-state context bar — full name + county selector + map CTA +
+     data-source line, all on a single row at desktop widths. -->
+<div class="state-context">
+    <div class="state-context-name">
+        <span id="activeStateName">California</span>
+        <span id="activeStateMeta" class="meta">— pick a county for drill-down</span>
+    </div>
+    <div class="state-context-controls">
+        <select id="countySelect" class="search-bar" aria-label="Select county">
+            <option value="">All counties (state overview)</option>
+        </select>
+        <a id="stateMapLink" href="#" class="map-cta">📍 Neighborhood map →</a>
+        <span id="dataSource" class="state-source"></span>
+    </div>
 </div>
+
+<style>
+    /* Compact 2-letter state pills — single-row even with 13 states.
+       Map-available pills get a green dot in the top-right corner. */
+    .state-pills { display:flex; gap:0.35rem; flex-wrap:wrap; margin-bottom:0.6rem; }
+    .state-pill { position:relative; padding:0.45rem 0.65rem; min-width:2.5rem; text-align:center;
+                  border-radius:8px; background:var(--surface2); border:1px solid var(--border);
+                  cursor:pointer; font-size:0.85rem; color:var(--text-dim); font-weight:600;
+                  letter-spacing:0.04em; transition:all 0.15s; }
+    .state-pill:hover { border-color:var(--accent2); color:var(--text); }
+    .state-pill.active { background:var(--accent2); color:white; border-color:var(--accent2); }
+    .state-pill.has-map::after { content:''; position:absolute; top:5px; right:5px; width:6px; height:6px;
+                                  border-radius:50%; background:var(--accent); box-shadow:0 0 0 1px var(--surface2); }
+    .state-pill.active.has-map::after { box-shadow:0 0 0 1px var(--accent2); }
+
+    /* Active-state context bar */
+    .state-context { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; padding:0.6rem 0; margin-bottom:1rem; border-bottom:1px solid var(--border); }
+    .state-context-name { font-size:1rem; font-weight:700; }
+    .state-context-name .meta { font-size:0.78rem; color:var(--text-dim); font-weight:400; margin-left:0.4rem; }
+    .state-context-controls { display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; }
+    .state-context-controls select { width:auto; min-width:200px; }
+    .map-cta { display:none; padding:0.4rem 0.85rem; border-radius:8px; background:var(--accent2); color:white; font-size:0.78rem; font-weight:700; text-decoration:none; }
+    .map-cta:hover { background:#2563eb; text-decoration:none; }
+    .state-source { color:var(--text-dim); font-size:0.7rem; }
+</style>
 
 <script id="states-with-map" type="application/json">{{ states_with_map | tojson }}</script>
 <script id="state-default-metro" type="application/json">{{ state_default_metro | tojson }}</script>
@@ -789,23 +818,11 @@ async function loadCounty(state, fips) {
     }
 }
 
-// State tab switching
-document.querySelectorAll('.state-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-        document.querySelectorAll('.state-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        currentState = tab.dataset.state;
-        populateCounties(currentState);
-        document.getElementById('countySelect').value = '';
-        updateStateMapLink(currentState);
-        renderStateOverview(currentState);
-    });
-});
-
-// Neighborhood-map shortcut: visible only for states that have a metro
-// deep-dive page wired up server-side. STATE_DEFAULT_METRO maps each state
-// to its primary metro slug so states with multiple metros (e.g. UT)
-// land on the right page by default.
+// Server-injected lookup tables — must be parsed before the state-pill
+// listeners reference them (for the has-map indicator dot + the map CTA
+// button URL). STATES_WITH_MAP lists state codes that have a metro
+// deep-dive; STATE_DEFAULT_METRO maps state code → primary metro slug
+// (e.g. UT → 'UT' for Provo since it's the default of three UT metros).
 const STATES_WITH_MAP = (function() {
     const el = document.getElementById('states-with-map');
     try { return el ? JSON.parse(el.textContent) : []; } catch (e) { return []; }
@@ -814,6 +831,30 @@ const STATE_DEFAULT_METRO = (function() {
     const el = document.getElementById('state-default-metro');
     try { return el ? JSON.parse(el.textContent) : {}; } catch (e) { return {}; }
 })();
+
+// Map of state code → human-readable label. Server-side STATES dict has
+// the canonical names; we mirror it here for the active-state name swap.
+const STATE_NAMES = {{ states | tojson }};
+
+// Tag every state pill that has a neighborhood-map deep-dive available
+// with .has-map so the green corner dot renders. One-time pass at load.
+document.querySelectorAll('.state-pill').forEach(pill => {
+    if (STATES_WITH_MAP.includes(pill.dataset.state)) pill.classList.add('has-map');
+});
+
+function updateActiveStateName(state) {
+    const nameEl = document.getElementById('activeStateName');
+    const metaEl = document.getElementById('activeStateMeta');
+    if (!nameEl) return;
+    const meta = STATE_NAMES[state] || {};
+    nameEl.textContent = meta.name || state;
+    if (metaEl) {
+        metaEl.textContent = STATES_WITH_MAP.includes(state)
+            ? '— neighborhood map available'
+            : '— pick a county for drill-down';
+    }
+}
+
 function updateStateMapLink(state) {
     const link = document.getElementById('stateMapLink');
     if (!link) return;
@@ -825,6 +866,22 @@ function updateStateMapLink(state) {
         link.style.display = 'none';
     }
 }
+
+// State pill switching
+document.querySelectorAll('.state-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+        document.querySelectorAll('.state-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        currentState = pill.dataset.state;
+        populateCounties(currentState);
+        document.getElementById('countySelect').value = '';
+        updateActiveStateName(currentState);
+        updateStateMapLink(currentState);
+        renderStateOverview(currentState);
+    });
+});
+
+updateActiveStateName(currentState);
 updateStateMapLink(currentState);
 
 // County selector
