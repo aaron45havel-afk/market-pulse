@@ -1,8 +1,1015 @@
 {
   "_meta": {
-    "as_of": null,
+    "as_of": "2026-05-01",
     "source": "Zillow Research (ZHVI all-homes; ZORI SFR+condo+MFR)",
-    "note": "Empty stub. Run scripts/refresh_zillow.py to populate."
+    "zhvi_url": "https://files.zillowstatic.com/research/public_csvs/zhvi/Zip_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv",
+    "zori_url": "https://files.zillowstatic.com/research/public_csvs/zori/Zip_zori_uc_sfrcondomfr_sm_month.csv",
+    "zips_covered": 252,
+    "zips_targeted": 252
   },
-  "overrides": {}
+  "overrides": {
+    "30030": {
+      "median_home_value": 639000,
+      "median_rent_monthly": 1850
+    },
+    "30033": {
+      "median_home_value": 483000,
+      "median_rent_monthly": 1860
+    },
+    "30041": {
+      "median_home_value": 639000,
+      "median_rent_monthly": 2030
+    },
+    "30062": {
+      "median_home_value": 552000,
+      "median_rent_monthly": 1940
+    },
+    "30097": {
+      "median_home_value": 720000,
+      "median_rent_monthly": 1840
+    },
+    "30303": {
+      "median_home_value": 202000,
+      "median_rent_monthly": 2030
+    },
+    "30307": {
+      "median_home_value": 730000,
+      "median_rent_monthly": 2000
+    },
+    "30308": {
+      "median_home_value": 329000,
+      "median_rent_monthly": 2030
+    },
+    "30309": {
+      "median_home_value": 398000,
+      "median_rent_monthly": 2210
+    },
+    "30312": {
+      "median_home_value": 452000,
+      "median_rent_monthly": 1870
+    },
+    "30318": {
+      "median_home_value": 386000,
+      "median_rent_monthly": 1740
+    },
+    "30327": {
+      "median_home_value": 1508000,
+      "median_rent_monthly": 1770
+    },
+    "32789": {
+      "median_home_value": 800000,
+      "median_rent_monthly": 2050
+    },
+    "32801": {
+      "median_home_value": 350000,
+      "median_rent_monthly": 1850
+    },
+    "32803": {
+      "median_home_value": 468000,
+      "median_rent_monthly": 2040
+    },
+    "32804": {
+      "median_home_value": 498000,
+      "median_rent_monthly": 2040
+    },
+    "32806": {
+      "median_home_value": 438000,
+      "median_rent_monthly": 1670
+    },
+    "32814": {
+      "median_home_value": 763000,
+      "median_rent_monthly": 2340
+    },
+    "32825": {
+      "median_home_value": 389000,
+      "median_rent_monthly": 1890
+    },
+    "32827": {
+      "median_home_value": 642000,
+      "median_rent_monthly": 2400
+    },
+    "32835": {
+      "median_home_value": 312000,
+      "median_rent_monthly": 1760
+    },
+    "32836": {
+      "median_home_value": 803000,
+      "median_rent_monthly": 2070
+    },
+    "32837": {
+      "median_home_value": 411000,
+      "median_rent_monthly": 2010
+    },
+    "32839": {
+      "median_home_value": 231000,
+      "median_rent_monthly": 1540
+    },
+    "33125": {
+      "median_home_value": 461000,
+      "median_rent_monthly": 2360
+    },
+    "33126": {
+      "median_home_value": 304000,
+      "median_rent_monthly": 2340
+    },
+    "33131": {
+      "median_home_value": 588000,
+      "median_rent_monthly": 3770
+    },
+    "33133": {
+      "median_home_value": 1294000,
+      "median_rent_monthly": 3610
+    },
+    "33134": {
+      "median_home_value": 874000,
+      "median_rent_monthly": 2740
+    },
+    "33139": {
+      "median_home_value": 459000,
+      "median_rent_monthly": 2920
+    },
+    "33140": {
+      "median_home_value": 674000,
+      "median_rent_monthly": 3820
+    },
+    "33156": {
+      "median_home_value": 1510000,
+      "median_rent_monthly": 3040
+    },
+    "33161": {
+      "median_home_value": 490000,
+      "median_rent_monthly": 2340
+    },
+    "33172": {
+      "median_home_value": 301000,
+      "median_rent_monthly": 2420
+    },
+    "33180": {
+      "median_home_value": 465000,
+      "median_rent_monthly": 3050
+    },
+    "33186": {
+      "median_home_value": 522000,
+      "median_rent_monthly": 2610
+    },
+    "46032": {
+      "median_home_value": 573000,
+      "median_rent_monthly": 1760
+    },
+    "46201": {
+      "median_home_value": 151000,
+      "median_rent_monthly": 1200
+    },
+    "46202": {
+      "median_home_value": 346000,
+      "median_rent_monthly": 1430
+    },
+    "46208": {
+      "median_home_value": 177000,
+      "median_rent_monthly": 1410
+    },
+    "46219": {
+      "median_home_value": 185000,
+      "median_rent_monthly": 1070
+    },
+    "46220": {
+      "median_home_value": 341000,
+      "median_rent_monthly": 1530
+    },
+    "46225": {
+      "median_home_value": 175000,
+      "median_rent_monthly": 1530
+    },
+    "46226": {
+      "median_home_value": 161000,
+      "median_rent_monthly": 1150
+    },
+    "46227": {
+      "median_home_value": 227000,
+      "median_rent_monthly": 1320
+    },
+    "46228": {
+      "median_home_value": 270000,
+      "median_rent_monthly": 1600
+    },
+    "46237": {
+      "median_home_value": 259000,
+      "median_rent_monthly": 1710
+    },
+    "46240": {
+      "median_home_value": 364000,
+      "median_rent_monthly": 1620
+    },
+    "46241": {
+      "median_home_value": 157000,
+      "median_rent_monthly": 1250
+    },
+    "46260": {
+      "median_home_value": 305000,
+      "median_rent_monthly": 1170
+    },
+    "46802": {
+      "median_home_value": 134000,
+      "median_rent_monthly": 990
+    },
+    "46804": {
+      "median_home_value": 300000,
+      "median_rent_monthly": 1940
+    },
+    "46805": {
+      "median_home_value": 179000,
+      "median_rent_monthly": 1030
+    },
+    "46806": {
+      "median_home_value": 113000,
+      "median_rent_monthly": 940
+    },
+    "46807": {
+      "median_home_value": 167000,
+      "median_rent_monthly": 1010
+    },
+    "46808": {
+      "median_home_value": 166000,
+      "median_rent_monthly": 1070
+    },
+    "46815": {
+      "median_home_value": 242000,
+      "median_rent_monthly": 1240
+    },
+    "46816": {
+      "median_home_value": 208000,
+      "median_rent_monthly": 1030
+    },
+    "46818": {
+      "median_home_value": 306000,
+      "median_rent_monthly": 1900
+    },
+    "46825": {
+      "median_home_value": 255000,
+      "median_rent_monthly": 1390
+    },
+    "46835": {
+      "median_home_value": 258000,
+      "median_rent_monthly": 1170
+    },
+    "46845": {
+      "median_home_value": 385000,
+      "median_rent_monthly": 1710
+    },
+    "75201": {
+      "median_home_value": 982000,
+      "median_rent_monthly": 2180
+    },
+    "75204": {
+      "median_home_value": 502000,
+      "median_rent_monthly": 1970
+    },
+    "75205": {
+      "median_home_value": 2064000,
+      "median_rent_monthly": 3000
+    },
+    "75206": {
+      "median_home_value": 603000,
+      "median_rent_monthly": 1930
+    },
+    "75208": {
+      "median_home_value": 420000,
+      "median_rent_monthly": 1560
+    },
+    "75211": {
+      "median_home_value": 229000,
+      "median_rent_monthly": 1450
+    },
+    "75214": {
+      "median_home_value": 831000,
+      "median_rent_monthly": 1640
+    },
+    "75215": {
+      "median_home_value": 173000,
+      "median_rent_monthly": 1640
+    },
+    "75216": {
+      "median_home_value": 172000,
+      "median_rent_monthly": 1770
+    },
+    "75218": {
+      "median_home_value": 551000,
+      "median_rent_monthly": 1580
+    },
+    "75219": {
+      "median_home_value": 419000,
+      "median_rent_monthly": 2030
+    },
+    "75220": {
+      "median_home_value": 510000,
+      "median_rent_monthly": 1510
+    },
+    "75223": {
+      "median_home_value": 250000,
+      "median_rent_monthly": 1450
+    },
+    "75224": {
+      "median_home_value": 231000,
+      "median_rent_monthly": 1410
+    },
+    "75225": {
+      "median_home_value": 2058000,
+      "median_rent_monthly": 3020
+    },
+    "75228": {
+      "median_home_value": 280000,
+      "median_rent_monthly": 1150
+    },
+    "75229": {
+      "median_home_value": 730000,
+      "median_rent_monthly": 2550
+    },
+    "75230": {
+      "median_home_value": 1060000,
+      "median_rent_monthly": 1810
+    },
+    "75231": {
+      "median_home_value": 300000,
+      "median_rent_monthly": 1340
+    },
+    "75232": {
+      "median_home_value": 239000
+    },
+    "75240": {
+      "median_home_value": 404000,
+      "median_rent_monthly": 1600
+    },
+    "75243": {
+      "median_home_value": 299000,
+      "median_rent_monthly": 1020
+    },
+    "75248": {
+      "median_home_value": 619000,
+      "median_rent_monthly": 1410
+    },
+    "75252": {
+      "median_home_value": 609000,
+      "median_rent_monthly": 1210
+    },
+    "75254": {
+      "median_home_value": 300000,
+      "median_rent_monthly": 1360
+    },
+    "76016": {
+      "median_home_value": 343000,
+      "median_rent_monthly": 1840
+    },
+    "76051": {
+      "median_home_value": 548000,
+      "median_rent_monthly": 1800
+    },
+    "76063": {
+      "median_home_value": 440000,
+      "median_rent_monthly": 1700
+    },
+    "76092": {
+      "median_home_value": 1296000,
+      "median_rent_monthly": 6500
+    },
+    "76102": {
+      "median_home_value": 273000,
+      "median_rent_monthly": 1550
+    },
+    "76104": {
+      "median_home_value": 187000,
+      "median_rent_monthly": 1480
+    },
+    "76107": {
+      "median_home_value": 364000,
+      "median_rent_monthly": 1620
+    },
+    "76109": {
+      "median_home_value": 692000,
+      "median_rent_monthly": 1740
+    },
+    "76111": {
+      "median_home_value": 214000,
+      "median_rent_monthly": 1460
+    },
+    "76112": {
+      "median_home_value": 244000,
+      "median_rent_monthly": 1250
+    },
+    "76137": {
+      "median_home_value": 320000,
+      "median_rent_monthly": 1600
+    },
+    "76244": {
+      "median_home_value": 384000,
+      "median_rent_monthly": 1970
+    },
+    "77002": {
+      "median_home_value": 253000,
+      "median_rent_monthly": 1880
+    },
+    "77005": {
+      "median_home_value": 1678000,
+      "median_rent_monthly": 1960
+    },
+    "77006": {
+      "median_home_value": 567000,
+      "median_rent_monthly": 1620
+    },
+    "77007": {
+      "median_home_value": 508000,
+      "median_rent_monthly": 1830
+    },
+    "77019": {
+      "median_home_value": 695000,
+      "median_rent_monthly": 1860
+    },
+    "77024": {
+      "median_home_value": 1406000,
+      "median_rent_monthly": 1830
+    },
+    "77033": {
+      "median_home_value": 143000,
+      "median_rent_monthly": 1700
+    },
+    "77036": {
+      "median_home_value": 166000,
+      "median_rent_monthly": 1010
+    },
+    "77056": {
+      "median_home_value": 668000,
+      "median_rent_monthly": 1710
+    },
+    "77079": {
+      "median_home_value": 725000,
+      "median_rent_monthly": 1490
+    },
+    "77098": {
+      "median_home_value": 701000,
+      "median_rent_monthly": 1700
+    },
+    "77584": {
+      "median_home_value": 387000,
+      "median_rent_monthly": 1770
+    },
+    "78205": {
+      "median_home_value": 600000,
+      "median_rent_monthly": 1960
+    },
+    "78207": {
+      "median_home_value": 111000,
+      "median_rent_monthly": 1120
+    },
+    "78211": {
+      "median_home_value": 131000,
+      "median_rent_monthly": 1280
+    },
+    "78212": {
+      "median_home_value": 284000,
+      "median_rent_monthly": 1460
+    },
+    "78215": {
+      "median_home_value": 411000,
+      "median_rent_monthly": 1630
+    },
+    "78230": {
+      "median_home_value": 354000,
+      "median_rent_monthly": 1070
+    },
+    "78232": {
+      "median_home_value": 381000,
+      "median_rent_monthly": 1250
+    },
+    "78239": {
+      "median_home_value": 217000,
+      "median_rent_monthly": 1450
+    },
+    "78247": {
+      "median_home_value": 279000,
+      "median_rent_monthly": 1440
+    },
+    "78248": {
+      "median_home_value": 499000,
+      "median_rent_monthly": 1220
+    },
+    "78249": {
+      "median_home_value": 301000,
+      "median_rent_monthly": 1350
+    },
+    "78258": {
+      "median_home_value": 502000,
+      "median_rent_monthly": 1510
+    },
+    "78701": {
+      "median_home_value": 672000,
+      "median_rent_monthly": 3000
+    },
+    "78702": {
+      "median_home_value": 563000,
+      "median_rent_monthly": 1970
+    },
+    "78703": {
+      "median_home_value": 1297000,
+      "median_rent_monthly": 2570
+    },
+    "78704": {
+      "median_home_value": 722000,
+      "median_rent_monthly": 1830
+    },
+    "78705": {
+      "median_home_value": 337000,
+      "median_rent_monthly": 1720
+    },
+    "78717": {
+      "median_home_value": 570000,
+      "median_rent_monthly": 1520
+    },
+    "78731": {
+      "median_home_value": 1019000,
+      "median_rent_monthly": 1500
+    },
+    "78735": {
+      "median_home_value": 829000,
+      "median_rent_monthly": 1580
+    },
+    "78741": {
+      "median_home_value": 328000,
+      "median_rent_monthly": 1370
+    },
+    "78744": {
+      "median_home_value": 334000,
+      "median_rent_monthly": 1450
+    },
+    "78745": {
+      "median_home_value": 425000,
+      "median_rent_monthly": 1450
+    },
+    "78759": {
+      "median_home_value": 661000,
+      "median_rent_monthly": 1370
+    },
+    "84003": {
+      "median_home_value": 599000,
+      "median_rent_monthly": 1840
+    },
+    "84005": {
+      "median_home_value": 510000,
+      "median_rent_monthly": 2130
+    },
+    "84010": {
+      "median_home_value": 580000,
+      "median_rent_monthly": 1600
+    },
+    "84014": {
+      "median_home_value": 590000,
+      "median_rent_monthly": 1640
+    },
+    "84025": {
+      "median_home_value": 692000,
+      "median_rent_monthly": 1630
+    },
+    "84037": {
+      "median_home_value": 701000,
+      "median_rent_monthly": 2060
+    },
+    "84043": {
+      "median_home_value": 574000,
+      "median_rent_monthly": 2220
+    },
+    "84057": {
+      "median_home_value": 473000,
+      "median_rent_monthly": 1580
+    },
+    "84058": {
+      "median_home_value": 486000,
+      "median_rent_monthly": 1450
+    },
+    "84062": {
+      "median_home_value": 585000,
+      "median_rent_monthly": 1800
+    },
+    "84097": {
+      "median_home_value": 597000,
+      "median_rent_monthly": 1430
+    },
+    "84101": {
+      "median_home_value": 499000,
+      "median_rent_monthly": 1660
+    },
+    "84102": {
+      "median_home_value": 537000,
+      "median_rent_monthly": 1570
+    },
+    "84103": {
+      "median_home_value": 731000,
+      "median_rent_monthly": 1590
+    },
+    "84105": {
+      "median_home_value": 721000,
+      "median_rent_monthly": 1980
+    },
+    "84108": {
+      "median_home_value": 936000,
+      "median_rent_monthly": 2690
+    },
+    "84109": {
+      "median_home_value": 812000,
+      "median_rent_monthly": 2190
+    },
+    "84321": {
+      "median_home_value": 421000,
+      "median_rent_monthly": 1260
+    },
+    "84341": {
+      "median_home_value": 470000,
+      "median_rent_monthly": 1420
+    },
+    "84401": {
+      "median_home_value": 440000,
+      "median_rent_monthly": 1430
+    },
+    "84403": {
+      "median_home_value": 446000,
+      "median_rent_monthly": 1410
+    },
+    "84404": {
+      "median_home_value": 433000,
+      "median_rent_monthly": 1730
+    },
+    "84405": {
+      "median_home_value": 460000,
+      "median_rent_monthly": 1360
+    },
+    "84601": {
+      "median_home_value": 452000,
+      "median_rent_monthly": 1470
+    },
+    "84604": {
+      "median_home_value": 603000,
+      "median_rent_monthly": 1820
+    },
+    "84606": {
+      "median_home_value": 430000,
+      "median_rent_monthly": 1110
+    },
+    "84660": {
+      "median_home_value": 515000,
+      "median_rent_monthly": 1900
+    },
+    "84663": {
+      "median_home_value": 509000,
+      "median_rent_monthly": 1580
+    },
+    "84738": {
+      "median_home_value": 592000,
+      "median_rent_monthly": 2140
+    },
+    "84745": {
+      "median_home_value": 432000
+    },
+    "84757": {
+      "median_home_value": 817000
+    },
+    "84765": {
+      "median_home_value": 565000,
+      "median_rent_monthly": 2180
+    },
+    "84770": {
+      "median_home_value": 487000,
+      "median_rent_monthly": 1690
+    },
+    "84780": {
+      "median_home_value": 545000,
+      "median_rent_monthly": 1880
+    },
+    "84783": {
+      "median_home_value": 774000
+    },
+    "84790": {
+      "median_home_value": 544000,
+      "median_rent_monthly": 1850
+    },
+    "85003": {
+      "median_home_value": 589000,
+      "median_rent_monthly": 1680
+    },
+    "85008": {
+      "median_home_value": 380000,
+      "median_rent_monthly": 1450
+    },
+    "85016": {
+      "median_home_value": 525000,
+      "median_rent_monthly": 1640
+    },
+    "85018": {
+      "median_home_value": 986000,
+      "median_rent_monthly": 1660
+    },
+    "85033": {
+      "median_home_value": 327000,
+      "median_rent_monthly": 1350
+    },
+    "85050": {
+      "median_home_value": 629000,
+      "median_rent_monthly": 2420
+    },
+    "85226": {
+      "median_home_value": 503000,
+      "median_rent_monthly": 1780
+    },
+    "85251": {
+      "median_home_value": 531000,
+      "median_rent_monthly": 1890
+    },
+    "85254": {
+      "median_home_value": 907000,
+      "median_rent_monthly": 2510
+    },
+    "85260": {
+      "median_home_value": 724000,
+      "median_rent_monthly": 2060
+    },
+    "85266": {
+      "median_home_value": 1293000,
+      "median_rent_monthly": 4250
+    },
+    "85283": {
+      "median_home_value": 454000,
+      "median_rent_monthly": 1560
+    },
+    "85308": {
+      "median_home_value": 475000,
+      "median_rent_monthly": 1640
+    },
+    "89014": {
+      "median_home_value": 406000,
+      "median_rent_monthly": 1490
+    },
+    "89030": {
+      "median_home_value": 303000,
+      "median_rent_monthly": 1360
+    },
+    "89052": {
+      "median_home_value": 605000,
+      "median_rent_monthly": 1870
+    },
+    "89074": {
+      "median_home_value": 467000,
+      "median_rent_monthly": 1760
+    },
+    "89102": {
+      "median_home_value": 374000,
+      "median_rent_monthly": 1300
+    },
+    "89106": {
+      "median_home_value": 338000,
+      "median_rent_monthly": 1670
+    },
+    "89109": {
+      "median_home_value": 378000,
+      "median_rent_monthly": 2690
+    },
+    "89117": {
+      "median_home_value": 484000,
+      "median_rent_monthly": 1620
+    },
+    "89134": {
+      "median_home_value": 495000,
+      "median_rent_monthly": 2330
+    },
+    "89135": {
+      "median_home_value": 720000,
+      "median_rent_monthly": 2410
+    },
+    "89138": {
+      "median_home_value": 777000,
+      "median_rent_monthly": 2790
+    },
+    "89148": {
+      "median_home_value": 475000,
+      "median_rent_monthly": 1900
+    },
+    "89431": {
+      "median_home_value": 398000,
+      "median_rent_monthly": 1600
+    },
+    "89434": {
+      "median_home_value": 471000,
+      "median_rent_monthly": 1980
+    },
+    "89436": {
+      "median_home_value": 572000,
+      "median_rent_monthly": 2100
+    },
+    "89501": {
+      "median_home_value": 410000,
+      "median_rent_monthly": 1630
+    },
+    "89502": {
+      "median_home_value": 431000,
+      "median_rent_monthly": 1450
+    },
+    "89503": {
+      "median_home_value": 468000,
+      "median_rent_monthly": 1890
+    },
+    "89506": {
+      "median_home_value": 454000,
+      "median_rent_monthly": 2090
+    },
+    "89509": {
+      "median_home_value": 681000,
+      "median_rent_monthly": 1710
+    },
+    "89511": {
+      "median_home_value": 1112000,
+      "median_rent_monthly": 1980
+    },
+    "89519": {
+      "median_home_value": 889000,
+      "median_rent_monthly": 1920
+    },
+    "89521": {
+      "median_home_value": 702000,
+      "median_rent_monthly": 2240
+    },
+    "89523": {
+      "median_home_value": 635000,
+      "median_rent_monthly": 2200
+    },
+    "89701": {
+      "median_home_value": 475000,
+      "median_rent_monthly": 1700
+    },
+    "89703": {
+      "median_home_value": 623000,
+      "median_rent_monthly": 1990
+    },
+    "89705": {
+      "median_home_value": 527000
+    },
+    "89706": {
+      "median_home_value": 452000,
+      "median_rent_monthly": 1900
+    },
+    "90004": {
+      "median_home_value": 1432000,
+      "median_rent_monthly": 2180
+    },
+    "90008": {
+      "median_home_value": 1088000,
+      "median_rent_monthly": 2130
+    },
+    "90011": {
+      "median_home_value": 601000,
+      "median_rent_monthly": 2470
+    },
+    "90019": {
+      "median_home_value": 1215000,
+      "median_rent_monthly": 2810
+    },
+    "90039": {
+      "median_home_value": 1350000,
+      "median_rent_monthly": 3080
+    },
+    "90042": {
+      "median_home_value": 1005000,
+      "median_rent_monthly": 2720
+    },
+    "90048": {
+      "median_home_value": 1769000,
+      "median_rent_monthly": 3480
+    },
+    "90065": {
+      "median_home_value": 1104000,
+      "median_rent_monthly": 2660
+    },
+    "90210": {
+      "median_home_value": 5192000,
+      "median_rent_monthly": 12010
+    },
+    "90291": {
+      "median_home_value": 1905000,
+      "median_rent_monthly": 3720
+    },
+    "90402": {
+      "median_home_value": 4760000,
+      "median_rent_monthly": 8160
+    },
+    "90744": {
+      "median_home_value": 687000,
+      "median_rent_monthly": 1930
+    },
+    "92024": {
+      "median_home_value": 1850000,
+      "median_rent_monthly": 4240
+    },
+    "92037": {
+      "median_home_value": 2354000,
+      "median_rent_monthly": 4020
+    },
+    "92064": {
+      "median_home_value": 1235000,
+      "median_rent_monthly": 3060
+    },
+    "92101": {
+      "median_home_value": 737000,
+      "median_rent_monthly": 2900
+    },
+    "92103": {
+      "median_home_value": 1076000,
+      "median_rent_monthly": 2740
+    },
+    "92104": {
+      "median_home_value": 947000,
+      "median_rent_monthly": 2500
+    },
+    "92106": {
+      "median_home_value": 1794000,
+      "median_rent_monthly": 2850
+    },
+    "92107": {
+      "median_home_value": 1480000,
+      "median_rent_monthly": 2790
+    },
+    "92109": {
+      "median_home_value": 1494000,
+      "median_rent_monthly": 3100
+    },
+    "92114": {
+      "median_home_value": 744000,
+      "median_rent_monthly": 2780
+    },
+    "92117": {
+      "median_home_value": 1107000,
+      "median_rent_monthly": 2790
+    },
+    "92122": {
+      "median_home_value": 1101000,
+      "median_rent_monthly": 3090
+    },
+    "92127": {
+      "median_home_value": 1655000,
+      "median_rent_monthly": 3630
+    },
+    "92128": {
+      "median_home_value": 1012000,
+      "median_rent_monthly": 2960
+    },
+    "94102": {
+      "median_home_value": 718000,
+      "median_rent_monthly": 3200
+    },
+    "94103": {
+      "median_home_value": 791000,
+      "median_rent_monthly": 3970
+    },
+    "94105": {
+      "median_home_value": 1065000,
+      "median_rent_monthly": 5010
+    },
+    "94107": {
+      "median_home_value": 996000,
+      "median_rent_monthly": 4170
+    },
+    "94110": {
+      "median_home_value": 1333000,
+      "median_rent_monthly": 3920
+    },
+    "94114": {
+      "median_home_value": 1866000,
+      "median_rent_monthly": 4490
+    },
+    "94115": {
+      "median_home_value": 1432000,
+      "median_rent_monthly": 3710
+    },
+    "94117": {
+      "median_home_value": 1556000,
+      "median_rent_monthly": 4020
+    },
+    "94118": {
+      "median_home_value": 2070000,
+      "median_rent_monthly": 3830
+    },
+    "94122": {
+      "median_home_value": 1626000,
+      "median_rent_monthly": 3410
+    },
+    "94123": {
+      "median_home_value": 2300000,
+      "median_rent_monthly": 4080
+    },
+    "94131": {
+      "median_home_value": 1660000,
+      "median_rent_monthly": 4150
+    },
+    "94611": {
+      "median_home_value": 1402000,
+      "median_rent_monthly": 2610
+    },
+    "94612": {
+      "median_home_value": 549000,
+      "median_rent_monthly": 2710
+    }
+  }
 }
