@@ -380,6 +380,236 @@ PROVO_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# NV — Las Vegas valley (Clark County): Strip, Summerlin, Henderson, NLV
+# ─────────────────────────────────────────────────────────────────────────────
+LAS_VEGAS_ZIPS: dict[str, dict] = {
+    "89109": {
+        "name": "The Strip / Resort Corridor",
+        "lat": 36.1147, "lng": -115.1728,
+        "median_home_value": 350_000, "median_rent_monthly": 1_900,
+        "crime_index": 80, "pct_bachelors": 30,
+        "median_household_income": 48_000, "population": 5_500,
+        "walk_score": 75, "restaurant_score": 95,
+        "tags": ["tourist", "high-density", "high-crime"],
+    },
+    "89102": {
+        "name": "Westgate / Chinatown",
+        "lat": 36.1500, "lng": -115.1835,
+        "median_home_value": 280_000, "median_rent_monthly": 1_500,
+        "crime_index": 70, "pct_bachelors": 22,
+        "median_household_income": 45_000, "population": 39_000,
+        "walk_score": 60, "restaurant_score": 78,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "89117": {
+        "name": "Spring Valley",
+        "lat": 36.1380, "lng": -115.2820,
+        "median_home_value": 430_000, "median_rent_monthly": 2_000,
+        "crime_index": 45, "pct_bachelors": 35,
+        "median_household_income": 75_000, "population": 51_000,
+        "walk_score": 35, "restaurant_score": 50,
+        "tags": ["family", "mid-tier"],
+    },
+    "89148": {
+        "name": "Spring Valley S / Mountains Edge",
+        "lat": 36.0500, "lng": -115.2950,
+        "median_home_value": 480_000, "median_rent_monthly": 2_200,
+        "crime_index": 35, "pct_bachelors": 38,
+        "median_household_income": 92_000, "population": 64_000,
+        "walk_score": 28, "restaurant_score": 40,
+        "tags": ["family", "newer", "low-crime"],
+    },
+    "89134": {
+        "name": "Summerlin / The Lakes",
+        "lat": 36.1925, "lng": -115.3065,
+        "median_home_value": 620_000, "median_rent_monthly": 2_500,
+        "crime_index": 22, "pct_bachelors": 55,
+        "median_household_income": 110_000, "population": 22_000,
+        "walk_score": 30, "restaurant_score": 45,
+        "tags": ["upscale", "low-crime", "family"],
+    },
+    "89135": {
+        "name": "Summerlin S / The Vistas",
+        "lat": 36.1480, "lng": -115.3290,
+        "median_home_value": 720_000, "median_rent_monthly": 2_800,
+        "crime_index": 20, "pct_bachelors": 60,
+        "median_household_income": 130_000, "population": 30_000,
+        "walk_score": 30, "restaurant_score": 55,
+        "tags": ["upscale", "low-crime", "family"],
+    },
+    "89138": {
+        "name": "Summerlin W / The Cliffs",
+        "lat": 36.1745, "lng": -115.3520,
+        "median_home_value": 850_000, "median_rent_monthly": 3_000,
+        "crime_index": 15, "pct_bachelors": 65,
+        "median_household_income": 145_000, "population": 14_000,
+        "walk_score": 25, "restaurant_score": 50,
+        "tags": ["luxury", "low-crime"],
+    },
+    "89052": {
+        "name": "Henderson / Anthem",
+        "lat": 36.0030, "lng": -115.0450,
+        "median_home_value": 540_000, "median_rent_monthly": 2_300,
+        "crime_index": 25, "pct_bachelors": 50,
+        "median_household_income": 105_000, "population": 56_000,
+        "walk_score": 25, "restaurant_score": 45,
+        "tags": ["family", "low-crime"],
+    },
+    "89074": {
+        "name": "Henderson / Green Valley",
+        "lat": 36.0367, "lng": -115.0610,
+        "median_home_value": 460_000, "median_rent_monthly": 2_100,
+        "crime_index": 30, "pct_bachelors": 42,
+        "median_household_income": 88_000, "population": 39_000,
+        "walk_score": 35, "restaurant_score": 55,
+        "tags": ["family", "established"],
+    },
+    "89014": {
+        "name": "Henderson E / Whitney Ranch",
+        "lat": 36.0540, "lng": -115.0420,
+        "median_home_value": 410_000, "median_rent_monthly": 1_950,
+        "crime_index": 38, "pct_bachelors": 32,
+        "median_household_income": 72_000, "population": 49_000,
+        "walk_score": 40, "restaurant_score": 50,
+        "tags": ["mid-tier"],
+    },
+    "89030": {
+        "name": "N Las Vegas / Cheyenne",
+        "lat": 36.2090, "lng": -115.1240,
+        "median_home_value": 320_000, "median_rent_monthly": 1_700,
+        "crime_index": 78, "pct_bachelors": 12,
+        "median_household_income": 45_000, "population": 56_000,
+        "walk_score": 45, "restaurant_score": 35,
+        "tags": ["high-cap-rate", "high-crime"],
+    },
+    "89106": {
+        "name": "W Las Vegas",
+        "lat": 36.1810, "lng": -115.1700,
+        "median_home_value": 290_000, "median_rent_monthly": 1_500,
+        "crime_index": 82, "pct_bachelors": 14,
+        "median_household_income": 38_000, "population": 31_000,
+        "walk_score": 55, "restaurant_score": 40,
+        "tags": ["high-cap-rate", "high-crime"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NV — Reno / Sparks (Washoe County): UNR, downtown, Caughlin, Spanish Springs
+# ─────────────────────────────────────────────────────────────────────────────
+RENO_ZIPS: dict[str, dict] = {
+    "89501": {
+        "name": "Downtown Reno",
+        "lat": 39.5240, "lng": -119.8138,
+        "median_home_value": 400_000, "median_rent_monthly": 1_800,
+        "crime_index": 65, "pct_bachelors": 42,
+        "median_household_income": 50_000, "population": 4_000,
+        "walk_score": 75, "restaurant_score": 75,
+        "tags": ["urban", "walkable", "gentrifying"],
+    },
+    "89502": {
+        "name": "East Reno / UNR-adj",
+        "lat": 39.5070, "lng": -119.7740,
+        "median_home_value": 410_000, "median_rent_monthly": 1_800,
+        "crime_index": 55, "pct_bachelors": 38,
+        "median_household_income": 58_000, "population": 38_000,
+        "walk_score": 50, "restaurant_score": 50,
+        "tags": ["college", "mid-tier"],
+    },
+    "89503": {
+        "name": "NW Reno",
+        "lat": 39.5400, "lng": -119.8400,
+        "median_home_value": 480_000, "median_rent_monthly": 1_950,
+        "crime_index": 38, "pct_bachelors": 45,
+        "median_household_income": 72_000, "population": 36_000,
+        "walk_score": 45, "restaurant_score": 45,
+        "tags": ["family", "established"],
+    },
+    "89509": {
+        "name": "SW Reno / Plumas",
+        "lat": 39.5000, "lng": -119.8400,
+        "median_home_value": 620_000, "median_rent_monthly": 2_300,
+        "crime_index": 28, "pct_bachelors": 60,
+        "median_household_income": 105_000, "population": 28_000,
+        "walk_score": 35, "restaurant_score": 45,
+        "tags": ["upscale", "low-crime", "family"],
+    },
+    "89519": {
+        "name": "SW Reno / Caughlin Ranch",
+        "lat": 39.4900, "lng": -119.8650,
+        "median_home_value": 850_000, "median_rent_monthly": 2_800,
+        "crime_index": 18, "pct_bachelors": 70,
+        "median_household_income": 135_000, "population": 13_000,
+        "walk_score": 25, "restaurant_score": 40,
+        "tags": ["luxury", "low-crime", "family"],
+    },
+    "89511": {
+        "name": "South Reno / Mt Rose Hwy",
+        "lat": 39.4180, "lng": -119.7930,
+        "median_home_value": 780_000, "median_rent_monthly": 2_700,
+        "crime_index": 18, "pct_bachelors": 65,
+        "median_household_income": 125_000, "population": 25_000,
+        "walk_score": 18, "restaurant_score": 35,
+        "tags": ["upscale", "newer", "scenic"],
+    },
+    "89523": {
+        "name": "NW Reno / Somersett",
+        "lat": 39.5670, "lng": -119.9100,
+        "median_home_value": 620_000, "median_rent_monthly": 2_400,
+        "crime_index": 22, "pct_bachelors": 55,
+        "median_household_income": 115_000, "population": 20_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["family", "newer", "low-crime"],
+    },
+    "89506": {
+        "name": "N Reno / Stead",
+        "lat": 39.6700, "lng": -119.8480,
+        "median_home_value": 410_000, "median_rent_monthly": 1_800,
+        "crime_index": 42, "pct_bachelors": 28,
+        "median_household_income": 68_000, "population": 49_000,
+        "walk_score": 25, "restaurant_score": 30,
+        "tags": ["affordable", "growth"],
+    },
+    "89521": {
+        "name": "SE Reno / Damonte Ranch",
+        "lat": 39.4570, "lng": -119.7480,
+        "median_home_value": 580_000, "median_rent_monthly": 2_300,
+        "crime_index": 22, "pct_bachelors": 50,
+        "median_household_income": 108_000, "population": 32_000,
+        "walk_score": 25, "restaurant_score": 40,
+        "tags": ["family", "newer", "growth"],
+    },
+    "89436": {
+        "name": "Sparks / Spanish Springs",
+        "lat": 39.6360, "lng": -119.7150,
+        "median_home_value": 510_000, "median_rent_monthly": 2_100,
+        "crime_index": 28, "pct_bachelors": 38,
+        "median_household_income": 92_000, "population": 47_000,
+        "walk_score": 22, "restaurant_score": 35,
+        "tags": ["family", "newer"],
+    },
+    "89431": {
+        "name": "Sparks Central",
+        "lat": 39.5460, "lng": -119.7430,
+        "median_home_value": 370_000, "median_rent_monthly": 1_700,
+        "crime_index": 50, "pct_bachelors": 22,
+        "median_household_income": 58_000, "population": 40_000,
+        "walk_score": 45, "restaurant_score": 45,
+        "tags": ["affordable", "mid-tier"],
+    },
+    "89434": {
+        "name": "Sparks E / Industrial",
+        "lat": 39.5340, "lng": -119.7160,
+        "median_home_value": 440_000, "median_rent_monthly": 1_900,
+        "crime_index": 38, "pct_bachelors": 28,
+        "median_household_income": 70_000, "population": 35_000,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["mid-tier", "industrial"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -619,7 +849,8 @@ ST_GEORGE_ZIPS: dict[str, dict] = {
 # metro dict. Hand-curated values stay in the source file as the snapshot;
 # fresh ZHVI / ZORI values from data/zillow_overrides.json win when
 # available. DALLAS_ZIPS is patched in dallas_neighborhoods.py itself.
-for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_ZIPS):
+for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_ZIPS,
+              LAS_VEGAS_ZIPS, RENO_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -687,6 +918,30 @@ STATE_METROS: dict[str, dict] = {
             "Outlying ZIPs (84757, 84745, 84783) have small populations; treat their scores as directional, not statistically robust.",
         ],
     },
+    "NV-LV": {
+        "state": "NV",
+        "metro_label": "Las Vegas / Clark County",
+        "subtitle": "ZIP-level scores for the Las Vegas valley — Strip, Spring Valley, Summerlin, Henderson, North Las Vegas.",
+        "map_center": {"lat": 36.10, "lng": -115.20, "zoom": 10},
+        "zips": LAS_VEGAS_ZIPS,
+        "extra_caveats": [
+            "89109 (the Strip) is mostly tourist accommodation — small permanent population means the rental signal is noisy and the cap rate isn't comparable to residential ZIPs.",
+            "Summerlin (89134/89135/89138) is master-planned with HOA dues that can add \\$100–\\$300/mo to PITI not reflected in the score.",
+            "Henderson PD reports separately from Las Vegas Metro — crime indexes are normalized but precision varies.",
+        ],
+    },
+    "NV-RNO": {
+        "state": "NV",
+        "metro_label": "Reno / Sparks (Washoe County)",
+        "subtitle": "ZIP-level scores for the Reno-Sparks metro — UNR, downtown, Caughlin Ranch, Spanish Springs, Damonte Ranch.",
+        "map_center": {"lat": 39.55, "lng": -119.78, "zoom": 10},
+        "zips": RENO_ZIPS,
+        "extra_caveats": [
+            "Reno's market reset hard during the Tesla Gigafactory boom (2015–2020); current values are post-reset and can move quickly with each tech-employer expansion or contraction.",
+            "South Reno ZIPs (89511, 89521) span established neighborhoods plus active development — within-ZIP variance is high.",
+            "89434 / 89431 in Sparks include some industrial parcels; SFR data trends entry-level.",
+        ],
+    },
     "AZ": {
         "state": "AZ",
         "metro_label": "Maricopa County",
@@ -707,6 +962,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "CA": ["CA"],
     "UT": ["UT", "UT-SLC", "UT-STG"],
     "AZ": ["AZ"],
+    "NV": ["NV-LV", "NV-RNO"],
 }
 
 
