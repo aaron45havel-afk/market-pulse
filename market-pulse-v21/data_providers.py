@@ -27,6 +27,8 @@ STATES = {
     "IN": {"name": "Indiana", "fips": "18"},
     "CO": {"name": "Colorado", "fips": "08"},
     "OH": {"name": "Ohio", "fips": "39"},
+    "FL": {"name": "Florida", "fips": "12"},
+    "GA": {"name": "Georgia", "fips": "13"},
 }
 
 COUNTIES = {
@@ -188,6 +190,46 @@ COUNTIES = {
         "39045": "Fairfield County",         # Columbus SE suburbs (Lancaster)
         # Cleveland W suburbs
         "39093": "Lorain County",            # Cleveland W (Elyria, Lorain)
+    },
+    "FL": {
+        # Big-three metros
+        "12086": "Miami-Dade County",        # Miami
+        "12011": "Broward County",           # Fort Lauderdale
+        "12099": "Palm Beach County",        # West Palm Beach
+        "12095": "Orange County",            # Orlando
+        "12057": "Hillsborough County",      # Tampa
+        "12103": "Pinellas County",          # St. Petersburg / Clearwater
+        "12031": "Duval County",             # Jacksonville
+        # Gulf coast / SW Florida
+        "12071": "Lee County",               # Fort Myers / Cape Coral
+        "12115": "Sarasota County",          # Sarasota
+        "12021": "Collier County",           # Naples
+        "12081": "Manatee County",           # Bradenton
+        # Central + east coast
+        "12117": "Seminole County",          # Orlando NE suburbs
+        "12127": "Volusia County",           # Daytona Beach
+        "12009": "Brevard County",           # Space Coast / Melbourne
+        "12101": "Pasco County",             # Tampa N suburbs
+        # University + capital
+        "12001": "Alachua County",           # Gainesville (UF)
+        "12073": "Leon County",              # Tallahassee (state capital)
+    },
+    "GA": {
+        # Atlanta metro core (the big four)
+        "13121": "Fulton County",            # Atlanta core
+        "13089": "DeKalb County",            # Atlanta E (Decatur, Druid Hills)
+        "13135": "Gwinnett County",          # Atlanta NE (Lawrenceville, Duluth)
+        "13067": "Cobb County",              # Atlanta NW (Marietta, Smyrna)
+        # Atlanta exurbs / fast-growth
+        "13117": "Forsyth County",           # Cumming, Alpharetta-adj (very wealthy)
+        "13057": "Cherokee County",          # NW exurbs (Canton, Woodstock)
+        "13063": "Clayton County",           # Atlanta S (Jonesboro)
+        "13139": "Hall County",              # Gainesville (GA), poultry corridor
+        # Other major metros
+        "13051": "Chatham County",           # Savannah
+        "13059": "Clarke County",            # Athens (UGA)
+        "13021": "Bibb County",              # Macon
+        "13215": "Muscogee County",          # Columbus (GA)
     },
 }
 
