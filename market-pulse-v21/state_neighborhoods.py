@@ -653,6 +653,121 @@ CARSON_CITY_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# FL — Miami-Dade County: Brickell, Beach, Coral Gables, Kendall, Aventura
+# ─────────────────────────────────────────────────────────────────────────────
+MIAMI_ZIPS: dict[str, dict] = {
+    "33131": {
+        "name": "Brickell",
+        "lat": 25.7615, "lng": -80.1918,
+        "median_home_value": 720_000, "median_rent_monthly": 4_200,
+        "crime_index": 55, "pct_bachelors": 75,
+        "median_household_income": 130_000, "population": 32_000,
+        "walk_score": 90, "restaurant_score": 90,
+        "tags": ["urban", "walkable", "luxury", "financial"],
+    },
+    "33133": {
+        "name": "Coconut Grove",
+        "lat": 25.7282, "lng": -80.2435,
+        "median_home_value": 1_200_000, "median_rent_monthly": 4_800,
+        "crime_index": 38, "pct_bachelors": 70,
+        "median_household_income": 145_000, "population": 22_000,
+        "walk_score": 70, "restaurant_score": 75,
+        "tags": ["walkable", "upscale", "established"],
+    },
+    "33134": {
+        "name": "Coral Gables",
+        "lat": 25.7493, "lng": -80.2612,
+        "median_home_value": 1_500_000, "median_rent_monthly": 4_500,
+        "crime_index": 28, "pct_bachelors": 75,
+        "median_household_income": 165_000, "population": 50_000,
+        "walk_score": 60, "restaurant_score": 70,
+        "tags": ["upscale", "low-crime", "top-schools"],
+    },
+    "33139": {
+        "name": "South Beach",
+        "lat": 25.7820, "lng": -80.1340,
+        "median_home_value": 580_000, "median_rent_monthly": 3_800,
+        "crime_index": 60, "pct_bachelors": 60,
+        "median_household_income": 80_000, "population": 41_000,
+        "walk_score": 90, "restaurant_score": 95,
+        "tags": ["beach", "walkable", "high-density"],
+    },
+    "33140": {
+        "name": "Mid-Beach",
+        "lat": 25.8170, "lng": -80.1280,
+        "median_home_value": 620_000, "median_rent_monthly": 4_000,
+        "crime_index": 38, "pct_bachelors": 55,
+        "median_household_income": 90_000, "population": 25_000,
+        "walk_score": 75, "restaurant_score": 75,
+        "tags": ["beach", "residential"],
+    },
+    "33156": {
+        "name": "Pinecrest / Palmetto Bay",
+        "lat": 25.6700, "lng": -80.3000,
+        "median_home_value": 2_200_000, "median_rent_monthly": 5_500,
+        "crime_index": 18, "pct_bachelors": 70,
+        "median_household_income": 180_000, "population": 18_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["luxury", "low-crime", "top-schools", "family"],
+    },
+    "33186": {
+        "name": "Kendall",
+        "lat": 25.6510, "lng": -80.4290,
+        "median_home_value": 480_000, "median_rent_monthly": 2_800,
+        "crime_index": 35, "pct_bachelors": 38,
+        "median_household_income": 80_000, "population": 65_000,
+        "walk_score": 30, "restaurant_score": 50,
+        "tags": ["family", "established", "mid-tier"],
+    },
+    "33180": {
+        "name": "Aventura",
+        "lat": 25.9560, "lng": -80.1390,
+        "median_home_value": 640_000, "median_rent_monthly": 3_200,
+        "crime_index": 22, "pct_bachelors": 60,
+        "median_household_income": 110_000, "population": 39_000,
+        "walk_score": 70, "restaurant_score": 75,
+        "tags": ["luxury", "low-crime", "retiree"],
+    },
+    "33161": {
+        "name": "North Miami",
+        "lat": 25.8920, "lng": -80.1830,
+        "median_home_value": 360_000, "median_rent_monthly": 2_300,
+        "crime_index": 60, "pct_bachelors": 32,
+        "median_household_income": 58_000, "population": 46_000,
+        "walk_score": 55, "restaurant_score": 50,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "33126": {
+        "name": "W Miami / Doral S",
+        "lat": 25.7775, "lng": -80.3060,
+        "median_home_value": 580_000, "median_rent_monthly": 3_200,
+        "crime_index": 30, "pct_bachelors": 50,
+        "median_household_income": 95_000, "population": 49_000,
+        "walk_score": 40, "restaurant_score": 60,
+        "tags": ["family", "newer", "growth"],
+    },
+    "33172": {
+        "name": "Doral / Sweetwater",
+        "lat": 25.7900, "lng": -80.3700,
+        "median_home_value": 540_000, "median_rent_monthly": 3_000,
+        "crime_index": 32, "pct_bachelors": 48,
+        "median_household_income": 90_000, "population": 45_000,
+        "walk_score": 35, "restaurant_score": 50,
+        "tags": ["family", "newer"],
+    },
+    "33125": {
+        "name": "Little Havana",
+        "lat": 25.7740, "lng": -80.2300,
+        "median_home_value": 420_000, "median_rent_monthly": 2_400,
+        "crime_index": 65, "pct_bachelors": 30,
+        "median_household_income": 52_000, "population": 47_000,
+        "walk_score": 70, "restaurant_score": 75,
+        "tags": ["urban", "high-density", "high-cap-rate"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -893,7 +1008,8 @@ ST_GEORGE_ZIPS: dict[str, dict] = {
 # fresh ZHVI / ZORI values from data/zillow_overrides.json win when
 # available. DALLAS_ZIPS is patched in dallas_neighborhoods.py itself.
 for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_ZIPS,
-              LAS_VEGAS_ZIPS, RENO_ZIPS, CARSON_CITY_ZIPS):
+              LAS_VEGAS_ZIPS, RENO_ZIPS, CARSON_CITY_ZIPS,
+              MIAMI_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -997,6 +1113,18 @@ STATE_METROS: dict[str, dict] = {
             "89434 / 89431 in Sparks include some industrial parcels; SFR data trends entry-level.",
         ],
     },
+    "FL-MIA": {
+        "state": "FL",
+        "metro_label": "Miami-Dade County",
+        "subtitle": "ZIP-level scores for greater Miami — Brickell, the Beaches, Coral Gables, Pinecrest, Aventura, Kendall, Doral.",
+        "map_center": {"lat": 25.78, "lng": -80.20, "zoom": 10},
+        "zips": MIAMI_ZIPS,
+        "extra_caveats": [
+            "Miami's housing market is heavily exposed to international capital flows + the post-Surfside (2021) condo insurance / SIRS reserve crunch — beach + high-rise condo carrying costs can be \\$500–\\$2K/mo above the score's PITI assumption.",
+            "Hurricane / flood insurance for ZIPs east of I-95 (33139/33140/33180) often runs 2–3× the inland rate; not reflected in cap-rate scoring.",
+            "Pinecrest (33156) lot sizes skew large — median home value reflects \\$2M+ estate-style properties more than typical SFR.",
+        ],
+    },
     "AZ": {
         "state": "AZ",
         "metro_label": "Maricopa County",
@@ -1018,6 +1146,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "UT": ["UT", "UT-SLC", "UT-STG"],
     "AZ": ["AZ"],
     "NV": ["NV-LV", "NV-RNO", "NV-CC"],
+    "FL": ["FL-MIA"],
 }
 
 
