@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from dotenv import load_dotenv
 from data_providers import (
     get_all_state_data, get_county_data, get_national_data, STATES, COUNTIES
@@ -41,8 +41,12 @@ templates = Jinja2Templates(directory="templates")
 
 
 @app.get("/")
-async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+async def home():
+    """Map-first landing — the national overview is the primary view; the
+    other tools (state data, affordability, screener, results) are one
+    click away in the sidebar. Permanent redirect so search engines and
+    bookmarks settle on /map as the canonical home URL."""
+    return RedirectResponse(url="/map", status_code=308)
 
 
 @app.get("/map")
