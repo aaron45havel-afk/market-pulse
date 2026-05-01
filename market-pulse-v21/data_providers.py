@@ -583,6 +583,28 @@ STATE_COST_OF_LIVING_INDEX = {
     "GA": 92,    # 8% below US avg
 }
 
+# ── Average sunny days per year (NOAA Solar Insolation, population-weighted) ──
+# A small but real driver of buyer preference: Sun Belt outdoor lifestyle is
+# what pulls retirees and remote workers off the coasts. AZ tops the list at
+# ~290 days/yr, WA + RI bottom out at ~150. Wired into the Livability sub-
+# score below; if a buyer cares about climate specifically, the future
+# 'outdoors' persona can re-weight this dimension heavier.
+STATE_SUNSHINE_DAYS = {
+    "CA": 260,   # SoCal pulls statewide avg up; SF/Bay Area ~180
+    "NV": 280,   # Las Vegas ~292, Reno ~252
+    "RI": 200,   # Coastal New England — humid, frequently overcast
+    "AZ": 290,   # Highest in US — Phoenix 299, Tucson 286
+    "WA": 155,   # Lowest in our set — Seattle 152, Spokane 192 (rain shadow)
+    "UT": 235,   # SLC 222, St. George 255
+    "TN": 205,   # Nashville 207, Knoxville 204
+    "TX": 230,   # Austin 228, San Antonio 220, Dallas 233, Houston 204
+    "IN": 185,   # Indy 186, South Bend 175 (lake effect)
+    "CO": 245,   # Denver 245, Colorado Springs 243 (Front Range high desert)
+    "OH": 175,   # Cleveland 165, Columbus 178, Cincinnati 188
+    "FL": 240,   # Miami 248, Orlando 233, Tampa 244 (afternoon thunderstorm offset)
+    "GA": 215,   # Atlanta 217, Savannah 215
+}
+
 # ── Personas: pre-set weights for the Goldilocks composite ──
 # Each tuple is weights for: (affordability, timing, jobs, growth,
 # livability, rental_yield). Must sum to 1.0.
@@ -1274,7 +1296,7 @@ def compute_goldilocks_rankings(result: dict, persona: str = "balanced") -> list
         pop_growth = STATE_POPULATION_GROWTH.get(code, 0.5)
         growth_score = max(0, min(1, (pop_growth + 0.5) / 2.5))  # -0.5% → 0, +2% → 1.0
 
-        # ── 5. Livability (0-1) — composite of 5 sub-signals ──
+        # ── 5. Livability (0-1) — composite of 6 sub-signals ──
         walk = STATE_WALKABILITY.get(code, 5) / 10
         school = STATE_SCHOOL_QUALITY.get(code, 5) / 10
         # Insurance trajectory: lower YoY premium growth = better (less cost creep)
@@ -1286,8 +1308,15 @@ def compute_goldilocks_rankings(result: dict, persona: str = "balanced") -> list
         # Property tax cap: caps are a benefit (lower cost-growth over time)
         cap = STATE_PROPERTY_TAX_CAP_PCT.get(code)
         cap_sub = 1.0 if cap and cap <= 3 else (0.7 if cap and cap <= 10 else 0.3)
-        # Weighted livability: walkability + schools dominate (50%), risk/cost creep (50%)
-        livability = 0.25 * walk + 0.25 * school + 0.20 * ins_sub + 0.15 * hoa_sub + 0.15 * cap_sub
+        # Climate / sunshine days: Sun Belt outdoor lifestyle is what pulls
+        # retirees + remote workers off the coasts. NOAA scale of 0–365 sunny
+        # days, mapped: 150 days → 0.0 (Pacific NW / Great Lakes), 290 days
+        # → 1.0 (Sonoran Desert peak).
+        sun = STATE_SUNSHINE_DAYS.get(code, 200)
+        sun_sub = max(0, min(1, (sun - 150) / 140))
+        # Weighted livability: walkability + schools 40%, risk/cost creep 35%,
+        # climate 10%, plus the previous 15% cap reweighted.
+        livability = 0.20 * walk + 0.20 * school + 0.18 * ins_sub + 0.13 * hoa_sub + 0.13 * cap_sub + 0.16 * sun_sub
 
         # ── 6. Rental yield (0-1) — rent/price annualized ──
         monthly_rent = STATE_MEDIAN_RENT_MONTHLY.get(code)
