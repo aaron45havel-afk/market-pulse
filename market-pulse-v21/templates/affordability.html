@@ -344,9 +344,10 @@
 </div>
 
 <style>
-/* Tab navigation. Sticky to the top of the viewport so users always
-   know which view they're in while scrolling within a long tab. */
-.tab-bar { display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:1rem; position:sticky; top:0; background:var(--bg); padding:0.55rem 0; z-index:10; border-bottom:1px solid var(--border); }
+/* Tab navigation. Plain (non-sticky) — sticky positioning collided with
+   the sidebar shell on some browsers, leaving a transparent floating
+   bar over an empty page. Static positioning is bulletproof. */
+.tab-bar { display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:1rem; background:var(--bg); padding:0.55rem 0; border-bottom:1px solid var(--border); }
 .tab-btn { padding:0.5rem 1.05rem; border-radius:999px; background:var(--surface2); border:1px solid var(--border); color:var(--text-dim); font-size:0.85rem; font-weight:500; cursor:pointer; transition:all 0.15s; }
 .tab-btn:hover { color:var(--text); border-color:var(--accent2); }
 .tab-btn.active { background:var(--accent2); color:white; border-color:var(--accent2); }
