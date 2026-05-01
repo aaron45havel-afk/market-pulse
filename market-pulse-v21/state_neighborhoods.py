@@ -1114,6 +1114,121 @@ AUSTIN_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# TX — Houston / Harris County: Inner Loop, Galleria, Energy Corridor, Pearland
+# ─────────────────────────────────────────────────────────────────────────────
+HOUSTON_ZIPS: dict[str, dict] = {
+    "77002": {
+        "name": "Downtown Houston",
+        "lat": 29.7610, "lng": -95.3617,
+        "median_home_value": 310_000, "median_rent_monthly": 2_000,
+        "crime_index": 65, "pct_bachelors": 60,
+        "median_household_income": 70_000, "population": 9_000,
+        "walk_score": 75, "restaurant_score": 80,
+        "tags": ["urban", "walkable", "transit"],
+    },
+    "77006": {
+        "name": "Montrose",
+        "lat": 29.7430, "lng": -95.3900,
+        "median_home_value": 480_000, "median_rent_monthly": 2_200,
+        "crime_index": 50, "pct_bachelors": 70,
+        "median_household_income": 85_000, "population": 22_000,
+        "walk_score": 75, "restaurant_score": 90,
+        "tags": ["walkable", "hip", "restaurants"],
+    },
+    "77007": {
+        "name": "The Heights",
+        "lat": 29.7900, "lng": -95.4000,
+        "median_home_value": 620_000, "median_rent_monthly": 2_500,
+        "crime_index": 38, "pct_bachelors": 70,
+        "median_household_income": 110_000, "population": 32_000,
+        "walk_score": 70, "restaurant_score": 80,
+        "tags": ["walkable", "gentrified", "established"],
+    },
+    "77005": {
+        "name": "West University / Rice",
+        "lat": 29.7180, "lng": -95.4200,
+        "median_home_value": 1_500_000, "median_rent_monthly": 4_500,
+        "crime_index": 18, "pct_bachelors": 85,
+        "median_household_income": 200_000, "population": 18_000,
+        "walk_score": 60, "restaurant_score": 60,
+        "tags": ["luxury", "top-schools", "low-crime", "family"],
+    },
+    "77019": {
+        "name": "River Oaks",
+        "lat": 29.7500, "lng": -95.4150,
+        "median_home_value": 2_500_000, "median_rent_monthly": 5_500,
+        "crime_index": 22, "pct_bachelors": 85,
+        "median_household_income": 250_000, "population": 14_000,
+        "walk_score": 55, "restaurant_score": 65,
+        "tags": ["luxury", "low-crime", "top-schools"],
+    },
+    "77024": {
+        "name": "Memorial",
+        "lat": 29.7700, "lng": -95.5300,
+        "median_home_value": 900_000, "median_rent_monthly": 3_200,
+        "crime_index": 22, "pct_bachelors": 75,
+        "median_household_income": 165_000, "population": 36_000,
+        "walk_score": 30, "restaurant_score": 50,
+        "tags": ["luxury", "low-crime", "family"],
+    },
+    "77056": {
+        "name": "Galleria / Tanglewood",
+        "lat": 29.7430, "lng": -95.4640,
+        "median_home_value": 360_000, "median_rent_monthly": 2_300,
+        "crime_index": 45, "pct_bachelors": 70,
+        "median_household_income": 120_000, "population": 22_000,
+        "walk_score": 65, "restaurant_score": 80,
+        "tags": ["walkable", "high-density", "shopping"],
+    },
+    "77098": {
+        "name": "Upper Kirby / Greenway",
+        "lat": 29.7370, "lng": -95.4150,
+        "median_home_value": 540_000, "median_rent_monthly": 2_500,
+        "crime_index": 38, "pct_bachelors": 75,
+        "median_household_income": 115_000, "population": 18_000,
+        "walk_score": 60, "restaurant_score": 75,
+        "tags": ["walkable", "upscale", "established"],
+    },
+    "77079": {
+        "name": "Energy Corridor",
+        "lat": 29.7700, "lng": -95.6300,
+        "median_home_value": 410_000, "median_rent_monthly": 2_100,
+        "crime_index": 30, "pct_bachelors": 65,
+        "median_household_income": 110_000, "population": 32_000,
+        "walk_score": 25, "restaurant_score": 45,
+        "tags": ["family", "low-crime", "tech"],
+    },
+    "77036": {
+        "name": "Sharpstown",
+        "lat": 29.6940, "lng": -95.5300,
+        "median_home_value": 230_000, "median_rent_monthly": 1_500,
+        "crime_index": 60, "pct_bachelors": 28,
+        "median_household_income": 50_000, "population": 60_000,
+        "walk_score": 50, "restaurant_score": 55,
+        "tags": ["affordable", "high-cap-rate", "high-density"],
+    },
+    "77033": {
+        "name": "Sunnyside",
+        "lat": 29.6580, "lng": -95.3550,
+        "median_home_value": 200_000, "median_rent_monthly": 1_500,
+        "crime_index": 78, "pct_bachelors": 14,
+        "median_household_income": 38_000, "population": 25_000,
+        "walk_score": 40, "restaurant_score": 25,
+        "tags": ["high-cap-rate", "high-crime", "speculative"],
+    },
+    "77584": {
+        "name": "Pearland (south suburb)",
+        "lat": 29.5500, "lng": -95.3000,
+        "median_home_value": 400_000, "median_rent_monthly": 2_200,
+        "crime_index": 25, "pct_bachelors": 55,
+        "median_household_income": 110_000, "population": 75_000,
+        "walk_score": 25, "restaurant_score": 40,
+        "tags": ["family", "newer", "low-crime"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -1355,7 +1470,8 @@ ST_GEORGE_ZIPS: dict[str, dict] = {
 # available. DALLAS_ZIPS is patched in dallas_neighborhoods.py itself.
 for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_ZIPS,
               LAS_VEGAS_ZIPS, RENO_ZIPS, CARSON_CITY_ZIPS,
-              MIAMI_ZIPS, ORLANDO_ZIPS, ATLANTA_ZIPS, AUSTIN_ZIPS):
+              MIAMI_ZIPS, ORLANDO_ZIPS, ATLANTA_ZIPS,
+              AUSTIN_ZIPS, HOUSTON_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -1376,6 +1492,18 @@ STATE_METROS: dict[str, dict] = {
         "zips": DALLAS_ZIPS,
         "extra_caveats": [
             "ZIP codes are USPS routes, not true neighborhoods — Bishop Arts and parts of Oak Cliff share ZIPs.",
+        ],
+    },
+    "TX-HOU": {
+        "state": "TX",
+        "metro_label": "Houston / Harris County",
+        "subtitle": "ZIP-level scores for the Houston metro — Inner Loop (Downtown, Montrose, Heights, West U, River Oaks, Memorial), Galleria + Energy Corridor employment cores, plus high-cap-rate Sharpstown and Sunnyside.",
+        "map_center": {"lat": 29.76, "lng": -95.40, "zoom": 10},
+        "zips": HOUSTON_ZIPS,
+        "extra_caveats": [
+            "Houston has no zoning, so ZIP-level data masks significant block-by-block variance — particularly in 77036 / 77033 where redevelopment activity is patchy.",
+            "Energy-sector employment (77079 Energy Corridor especially) makes Houston the most cyclical TX metro — cap rates and rent demand swing with oil prices.",
+            "Hurricane / flood insurance has roughly tripled in 5 years and varies by FEMA flood zone within ZIP — the cap-rate scoring uses the state-avg insurance figure as a placeholder.",
         ],
     },
     "TX-AUS": {
@@ -1524,7 +1652,7 @@ STATE_METROS: dict[str, dict] = {
 # Ordered list of metro slugs per state. Drives the dashboard's
 # default link target (first entry) and the metro switcher on the map page.
 STATE_TO_METROS: dict[str, list[str]] = {
-    "TX": ["TX", "TX-AUS"],
+    "TX": ["TX", "TX-HOU", "TX-AUS"],
     "CA": ["CA"],
     "UT": ["UT", "UT-SLC", "UT-STG"],
     "AZ": ["AZ"],
