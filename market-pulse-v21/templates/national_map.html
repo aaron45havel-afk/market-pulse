@@ -5,17 +5,25 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <style>
-    /* Map fills the viewport beneath the page header. The header is small
-       so the map is the dominant element — that's the whole point of this
-       redesign. */
-    .map-page { display: flex; flex-direction: column; height: calc(100vh - 60px); margin: -1.5rem -2rem; }
-    @media (max-width: 768px) { .map-page { margin: -1rem; height: calc(100vh - 110px); } }
+    /* Override the global .container max-width / padding for this page so
+       the map can fill the entire main-pane edge-to-edge. The site footer
+       is also hidden — on the flagship map view, browser chrome should be
+       the only thing competing for vertical space. */
+    .main-pane > .container { max-width: none !important; padding: 0 !important; margin: 0 !important; }
+    .main-pane > .footer { display: none !important; }
 
-    .map-header { padding: 0.85rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+    /* Map fills the available height. position:relative anchors the legend
+       (position:absolute) and gives the leaflet container a real bounding
+       box. Leaflet won't render tiles into a 0-height parent, so the
+       explicit flex sizing matters. */
+    .map-page { display: flex; flex-direction: column; height: 100vh; position: relative; }
+    @media (max-width: 768px) { .map-page { height: calc(100vh - 52px); } }
+
+    .map-header { padding: 0.85rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; flex: 0 0 auto; }
     .map-header h1 { font-size: 1.1rem; margin: 0; }
     .map-header .sub { color: var(--text-dim); font-size: 0.78rem; }
 
-    #nationalMap { flex: 1; min-height: 0; background: #0b0d14; }
+    #nationalMap { flex: 1 1 auto; min-height: 0; background: #0b0d14; }
     .leaflet-tile-pane { filter: brightness(0.65) saturate(0.8); }
     .leaflet-popup-content-wrapper { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
     .leaflet-popup-tip { background: var(--surface); }
@@ -39,14 +47,12 @@
             <div class="sub">{{ metros|length }} metros · click any pin to see the metro summary, then open the full ZIP-level map.</div>
         </div>
     </div>
-    <div style="flex:1; position:relative; min-height:0;">
-        <div id="nationalMap"></div>
-        <div class="legend">
-            <span>Worse</span>
-            <span class="legend-bar"></span>
-            <span>Better</span>
-            <span style="margin-left:0.4rem;">· composite (top ZIP)</span>
-        </div>
+    <div id="nationalMap"></div>
+    <div class="legend">
+        <span>Worse</span>
+        <span class="legend-bar"></span>
+        <span>Better</span>
+        <span style="margin-left:0.4rem;">· composite (top ZIP)</span>
     </div>
 </div>
 
