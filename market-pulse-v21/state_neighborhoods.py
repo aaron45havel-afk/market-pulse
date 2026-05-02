@@ -2334,6 +2334,125 @@ WEST_PALM_BEACH_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# FL — Tampa / Hillsborough County (West-coast Florida): downtown +
+# Channelside, Ybor City + Seminole Heights walkable historic tier,
+# Hyde Park / SoHo / Bayshore upscale corridor, Westchase + New Tampa
+# master-planned family suburbs, MacDill AFB-anchored South Tampa,
+# USF / Brandon high-cap-rate ZIPs.
+# ─────────────────────────────────────────────────────────────────────────────
+TAMPA_ZIPS: dict[str, dict] = {
+    "33602": {
+        "name": "Downtown / Channelside",
+        "lat": 27.9450, "lng": -82.4570,
+        "median_home_value": 410_000, "median_rent_monthly": 2_300,
+        "crime_index": 50, "pct_bachelors": 65,
+        "median_household_income": 90_000, "population": 12_000,
+        "walk_score": 80, "restaurant_score": 80,
+        "tags": ["urban", "walkable", "hip"],
+    },
+    "33603": {
+        "name": "Seminole Heights / Tampa Heights",
+        "lat": 27.9885, "lng": -82.4640,
+        "median_home_value": 360_000, "median_rent_monthly": 1_900,
+        "crime_index": 55, "pct_bachelors": 50,
+        "median_household_income": 58_000, "population": 22_000,
+        "walk_score": 65, "restaurant_score": 65,
+        "tags": ["hip", "walkable", "gentrifying"],
+    },
+    "33605": {
+        "name": "Ybor City",
+        "lat": 27.9606, "lng": -82.4423,
+        "median_home_value": 270_000, "median_rent_monthly": 1_650,
+        "crime_index": 65, "pct_bachelors": 32,
+        "median_household_income": 42_000, "population": 17_000,
+        "walk_score": 75, "restaurant_score": 80,
+        "tags": ["historic", "walkable", "hip", "nightlife"],
+    },
+    "33606": {
+        "name": "Hyde Park / Davis Islands",
+        "lat": 27.9356, "lng": -82.4685,
+        "median_home_value": 760_000, "median_rent_monthly": 2_650,
+        "crime_index": 22, "pct_bachelors": 75,
+        "median_household_income": 130_000, "population": 28_000,
+        "walk_score": 70, "restaurant_score": 80,
+        "tags": ["walkable", "upscale", "established"],
+    },
+    "33607": {
+        "name": "West Tampa",
+        "lat": 27.9670, "lng": -82.4925,
+        "median_home_value": 290_000, "median_rent_monthly": 1_700,
+        "crime_index": 60, "pct_bachelors": 26,
+        "median_household_income": 48_000, "population": 38_000,
+        "walk_score": 45, "restaurant_score": 35,
+        "tags": ["affordable", "transitional"],
+    },
+    "33609": {
+        "name": "Westshore / South Tampa",
+        "lat": 27.9460, "lng": -82.5050,
+        "median_home_value": 560_000, "median_rent_monthly": 2_500,
+        "crime_index": 28, "pct_bachelors": 60,
+        "median_household_income": 95_000, "population": 28_000,
+        "walk_score": 60, "restaurant_score": 70,
+        "tags": ["walkable", "upscale", "business"],
+    },
+    "33611": {
+        "name": "South Tampa / MacDill",
+        "lat": 27.8770, "lng": -82.4955,
+        "median_home_value": 540_000, "median_rent_monthly": 2_400,
+        "crime_index": 25, "pct_bachelors": 60,
+        "median_household_income": 90_000, "population": 47_000,
+        "walk_score": 45, "restaurant_score": 50,
+        "tags": ["family", "upscale", "military"],
+    },
+    "33612": {
+        "name": "USF / North Tampa",
+        "lat": 28.0510, "lng": -82.4395,
+        "median_home_value": 230_000, "median_rent_monthly": 1_500,
+        "crime_index": 70, "pct_bachelors": 35,
+        "median_household_income": 40_000, "population": 50_000,
+        "walk_score": 50, "restaurant_score": 50,
+        "tags": ["student", "affordable", "high-cap-rate"],
+    },
+    "33619": {
+        "name": "SE Tampa / Brandon edge",
+        "lat": 27.9305, "lng": -82.3690,
+        "median_home_value": 270_000, "median_rent_monthly": 1_650,
+        "crime_index": 65, "pct_bachelors": 22,
+        "median_household_income": 50_000, "population": 65_000,
+        "walk_score": 30, "restaurant_score": 30,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "33626": {
+        "name": "Westchase",
+        "lat": 28.0560, "lng": -82.6075,
+        "median_home_value": 580_000, "median_rent_monthly": 2_800,
+        "crime_index": 18, "pct_bachelors": 65,
+        "median_household_income": 115_000, "population": 42_000,
+        "walk_score": 25, "restaurant_score": 50,
+        "tags": ["family", "top-schools", "low-crime"],
+    },
+    "33629": {
+        "name": "Bayshore Beautiful",
+        "lat": 27.9085, "lng": -82.5005,
+        "median_home_value": 1_250_000, "median_rent_monthly": 3_500,
+        "crime_index": 15, "pct_bachelors": 75,
+        "median_household_income": 200_000, "population": 25_000,
+        "walk_score": 50, "restaurant_score": 65,
+        "tags": ["luxury", "family", "established"],
+    },
+    "33647": {
+        "name": "New Tampa / Tampa Palms",
+        "lat": 28.1320, "lng": -82.3580,
+        "median_home_value": 480_000, "median_rent_monthly": 2_500,
+        "crime_index": 22, "pct_bachelors": 60,
+        "median_household_income": 105_000, "population": 70_000,
+        "walk_score": 25, "restaurant_score": 50,
+        "tags": ["family", "low-crime", "master-planned"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # GA — Savannah / Chatham County: tourism-driven Historic District +
 # coastal islands (Wilmington, Skidaway) + Pooler growth corridor + the
 # Hunter Army Airfield-anchored southside.
@@ -2696,7 +2815,7 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               AUSTIN_ZIPS, HOUSTON_ZIPS, SAN_ANTONIO_ZIPS, FORT_WORTH_ZIPS,
               SF_BAY_ZIPS, SAN_DIEGO_ZIPS, INDIANAPOLIS_ZIPS, FORT_WAYNE_ZIPS,
               JACKSONVILLE_ZIPS, FORT_LAUDERDALE_ZIPS, WEST_PALM_BEACH_ZIPS,
-              SAVANNAH_ZIPS):
+              TAMPA_ZIPS, SAVANNAH_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -2938,6 +3057,19 @@ STATE_METROS: dict[str, dict] = {
             "Citizens Insurance crisis applies metro-wide; condo SIRS-reserve assessments add hidden carrying cost in waterfront 33308 / 33019 buildings.",
         ],
     },
+    "FL-TPA": {
+        "state": "FL",
+        "metro_label": "Tampa / Hillsborough County",
+        "subtitle": "ZIP-level scores for Tampa — Downtown / Channelside urban core, Ybor City + Seminole Heights walkable historic tier, Hyde Park / Davis Islands + Bayshore upscale corridor, MacDill-anchored South Tampa, USF / Brandon high-cap-rate ZIPs, plus Westchase + New Tampa master-planned family suburbs.",
+        "map_center": {"lat": 27.95, "lng": -82.46, "zoom": 10},
+        "zips": TAMPA_ZIPS,
+        "extra_caveats": [
+            "MacDill AFB (33621 just outside the dataset) anchors BAH rents in 33611 / 33616 / 33629 — creates a yield floor across South Tampa that's not visible in the standard cap-rate scoring.",
+            "Hurricane / wind-zone insurance is heaviest along Bayshore (33611 / 33629) and the southern peninsula tip; Citizens Insurance crisis applies metro-wide and stacks on top of FEMA flood premiums for east-of-Bayshore properties.",
+            "USF area (33612) has heavy student-rental supply that distorts the cap-rate signal — comparable-rent baselines reflect sub-12-month leases that don't directly compare to standard SFR investment yields.",
+            "Westchase (33626) school-quality premium runs above what the % bachelor's-plus proxy captures (Steinbrenner High feeder pattern, A-rated K-12).",
+        ],
+    },
     "GA-ATL": {
         "state": "GA",
         "metro_label": "Atlanta Metro",
@@ -3011,7 +3143,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "UT": ["UT", "UT-SLC", "UT-STG"],
     "AZ": ["AZ"],
     "NV": ["NV-LV", "NV-RNO", "NV-CC"],
-    "FL": ["FL-MIA", "FL-ORL", "FL-JAX", "FL-FTL", "FL-WPB"],
+    "FL": ["FL-MIA", "FL-ORL", "FL-TPA", "FL-JAX", "FL-FTL", "FL-WPB"],
     "GA": ["GA-ATL", "GA-SAV"],
     "IN": ["IN-IND", "IN-FW"],
 }
