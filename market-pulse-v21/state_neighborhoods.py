@@ -2690,6 +2690,126 @@ SAVANNAH_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# OH — Columbus / Franklin County: state capital + fastest-growing of the
+# 3-C's (Columbus / Cleveland / Cincinnati). OSU anchor, state government,
+# Battelle / JPMC / Nationwide HQs, Honda + Intel manufacturing buildup.
+# Mix of premium walkable urban (Short North), historic affluent (German
+# Village, Bexley), top-tier family suburbs (Upper Arlington, Dublin),
+# affordable high-cap-rate ZIPs (Hilltop, King-Lincoln).
+# ─────────────────────────────────────────────────────────────────────────────
+COLUMBUS_ZIPS: dict[str, dict] = {
+    "43215": {
+        "name": "Downtown / Arena District",
+        "lat": 39.9700, "lng": -83.0000,
+        "median_home_value": 310_000, "median_rent_monthly": 1_650,
+        "crime_index": 60, "pct_bachelors": 65,
+        "median_household_income": 80_000, "population":  9_000,
+        "walk_score": 90, "restaurant_score": 85,
+        "tags": ["urban", "walkable", "hip"],
+    },
+    "43201": {
+        "name": "Short North / Italian Village",
+        "lat": 39.9870, "lng": -82.9970,
+        "median_home_value": 400_000, "median_rent_monthly": 1_750,
+        "crime_index": 50, "pct_bachelors": 70,
+        "median_household_income": 85_000, "population": 22_000,
+        "walk_score": 90, "restaurant_score": 95,
+        "tags": ["walkable", "hip", "gentrifying"],
+    },
+    "43203": {
+        "name": "King-Lincoln / Olde Towne East",
+        "lat": 39.9690, "lng": -82.9690,
+        "median_home_value": 230_000, "median_rent_monthly": 1_300,
+        "crime_index": 70, "pct_bachelors": 32,
+        "median_household_income": 48_000, "population": 14_000,
+        "walk_score": 65, "restaurant_score": 50,
+        "tags": ["affordable", "transitional", "high-cap-rate", "historic"],
+    },
+    "43204": {
+        "name": "Hilltop",
+        "lat": 39.9530, "lng": -83.0700,
+        "median_home_value": 145_000, "median_rent_monthly": 1_150,
+        "crime_index": 75, "pct_bachelors": 18,
+        "median_household_income": 42_000, "population": 38_000,
+        "walk_score": 50, "restaurant_score": 30,
+        "tags": ["affordable", "high-cap-rate", "high-crime"],
+    },
+    "43205": {
+        "name": "German Village",
+        "lat": 39.9510, "lng": -82.9820,
+        "median_home_value": 620_000, "median_rent_monthly": 2_000,
+        "crime_index": 25, "pct_bachelors": 75,
+        "median_household_income": 115_000, "population":  8_000,
+        "walk_score": 80, "restaurant_score": 80,
+        "tags": ["walkable", "upscale", "established", "historic"],
+    },
+    "43206": {
+        "name": "Merion Village / Schumacher Place",
+        "lat": 39.9450, "lng": -82.9920,
+        "median_home_value": 290_000, "median_rent_monthly": 1_500,
+        "crime_index": 50, "pct_bachelors": 50,
+        "median_household_income": 72_000, "population": 25_000,
+        "walk_score": 70, "restaurant_score": 60,
+        "tags": ["walkable", "gentrifying"],
+    },
+    "43209": {
+        "name": "Bexley",
+        "lat": 39.9700, "lng": -82.9320,
+        "median_home_value": 620_000, "median_rent_monthly": 2_100,
+        "crime_index": 18, "pct_bachelors": 80,
+        "median_household_income": 135_000, "population": 14_000,
+        "walk_score": 50, "restaurant_score": 60,
+        "tags": ["family", "top-schools", "low-crime", "established", "upscale"],
+    },
+    "43210": {
+        "name": "OSU Campus / University District",
+        "lat": 40.0010, "lng": -83.0190,
+        "median_home_value": 250_000, "median_rent_monthly": 1_400,
+        "crime_index": 55, "pct_bachelors": 55,
+        "median_household_income": 35_000, "population": 28_000,
+        "walk_score": 75, "restaurant_score": 70,
+        "tags": ["student", "walkable", "high-cap-rate"],
+    },
+    "43219": {
+        "name": "Northland / Easton corridor",
+        "lat": 40.0420, "lng": -82.9220,
+        "median_home_value": 185_000, "median_rent_monthly": 1_200,
+        "crime_index": 60, "pct_bachelors": 25,
+        "median_household_income": 52_000, "population": 32_000,
+        "walk_score": 35, "restaurant_score": 30,
+        "tags": ["affordable", "mid-tier"],
+    },
+    "43221": {
+        "name": "Upper Arlington",
+        "lat": 40.0090, "lng": -83.0700,
+        "median_home_value": 620_000, "median_rent_monthly": 2_100,
+        "crime_index": 18, "pct_bachelors": 80,
+        "median_household_income": 130_000, "population": 35_000,
+        "walk_score": 50, "restaurant_score": 65,
+        "tags": ["family", "top-schools", "low-crime", "upscale", "established"],
+    },
+    "43232": {
+        "name": "Reynoldsburg edge / Eastland",
+        "lat": 39.9620, "lng": -82.8500,
+        "median_home_value": 235_000, "median_rent_monthly": 1_400,
+        "crime_index": 65, "pct_bachelors": 28,
+        "median_household_income": 58_000, "population": 50_000,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["affordable", "mid-tier"],
+    },
+    "43017": {
+        "name": "Dublin",
+        "lat": 40.1000, "lng": -83.1300,
+        "median_home_value": 580_000, "median_rent_monthly": 2_300,
+        "crime_index": 15, "pct_bachelors": 80,
+        "median_household_income": 135_000, "population": 36_000,
+        "walk_score": 30, "restaurant_score": 60,
+        "tags": ["family", "top-schools", "low-crime", "master-planned"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -2935,7 +3055,7 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               AUSTIN_ZIPS, HOUSTON_ZIPS, SAN_ANTONIO_ZIPS, FORT_WORTH_ZIPS,
               SF_BAY_ZIPS, SAN_DIEGO_ZIPS, SACRAMENTO_ZIPS, INDIANAPOLIS_ZIPS, FORT_WAYNE_ZIPS,
               JACKSONVILLE_ZIPS, FORT_LAUDERDALE_ZIPS, WEST_PALM_BEACH_ZIPS,
-              TAMPA_ZIPS, SAVANNAH_ZIPS):
+              TAMPA_ZIPS, SAVANNAH_ZIPS, COLUMBUS_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -3229,6 +3349,19 @@ STATE_METROS: dict[str, dict] = {
             "Coastal hurricane / wind-zone insurance + Savannah River flood-zone exposure stack on east-side ZIPs (31401, 31404, 31410); Citizens GA equivalent applies.",
         ],
     },
+    "OH": {
+        "state": "OH",
+        "metro_label": "Columbus / Franklin County",
+        "subtitle": "ZIP-level scores for Columbus — Downtown / Arena District urban core, Short North + German Village walkable historic tier, Bexley + Upper Arlington premier family enclaves, Dublin master-planned corridor, OSU campus + Hilltop affordable high-cap-rate ZIPs.",
+        "map_center": {"lat": 39.96, "lng": -83.00, "zoom": 11},
+        "zips": COLUMBUS_ZIPS,
+        "extra_caveats": [
+            "Intel's \\$20B Licking County semiconductor plant + Honda's EV battery investment are reshaping the eastern + northern growth corridors faster than the Columbus MSA averages reflect — short-term comp lag in 43004 / 43054 / 43065 outside our covered ZIPs.",
+            "Bexley (43209) and Upper Arlington (43221) are independent cities WITHIN Franklin County with their own school districts (separate from Columbus City Schools) — the school-quality premium in those ZIPs runs above what the bachelor's-percent proxy alone captures.",
+            "OSU campus area (43210) median home value is dominated by triplex / 4-plex student rentals; the cap-rate signal reflects student-lease premiums (often 12-month with summer occupancy gaps) rather than typical SFR investor yield.",
+            "Hilltop (43204) and parts of King-Lincoln (43203) have block-level crime variance the ZIP-average can't capture; investor-grade SFRs vs. high-vacancy stock can differ by 50%+ within the same ZIP.",
+        ],
+    },
     "AZ": {
         "state": "AZ",
         "metro_label": "Maricopa County",
@@ -3279,6 +3412,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "FL": ["FL-MIA", "FL-ORL", "FL-TPA", "FL-JAX", "FL-FTL", "FL-WPB"],
     "GA": ["GA-ATL", "GA-SAV"],
     "IN": ["IN-IND", "IN-FW"],
+    "OH": ["OH"],
 }
 
 
