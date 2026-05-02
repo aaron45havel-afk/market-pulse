@@ -705,6 +705,12 @@ CHOROPLETH_METRICS = [
     {"key": "property_tax",  "label": "Property tax rate",     "unit": "%",  "good_when": "low",  "decimals": 2, "category": "Tax & Cost",          "popular": True},
     {"key": "pop_growth",    "label": "Population growth/yr",  "unit": "%",  "good_when": "high", "decimals": 1, "category": "Demographic",         "popular": True},
     {"key": "col",           "label": "Cost of living index",  "unit": "",   "good_when": "low",  "decimals": 0, "category": "Tax & Cost",          "popular": True},
+    # Market-velocity metrics from Redfin Data Center, applied at module
+    # load via _apply_redfin_overrides(). high homes_sold = active market;
+    # low days-on-market = competitive demand. Both flagged "good" from
+    # an investor-appreciation lens.
+    {"key": "homes_sold",    "label": "Home sales (last month)","unit": "",  "good_when": "high", "decimals": 0, "category": "Market", "popular": True},
+    {"key": "dom",           "label": "Days on market",        "unit": " d", "good_when": "low",  "decimals": 0, "category": "Market", "popular": True},
     {"key": "insurance",     "label": "Home insurance/yr",     "format": "money", "good_when": "low",  "decimals": 0, "category": "Tax & Cost"},
     {"key": "median_rent",   "label": "Median monthly rent",   "format": "money", "good_when": "low",  "decimals": 0, "category": "Tax & Cost"},
     {"key": "median_income", "label": "Median household income","format": "money","good_when": "high", "decimals": 0, "category": "Demographic"},
@@ -712,6 +718,34 @@ CHOROPLETH_METRICS = [
     {"key": "walk",          "label": "Walk score",            "unit": "",   "good_when": "high", "decimals": 0, "category": "Climate & Lifestyle"},
     {"key": "schools",       "label": "School quality",        "unit": "/10","good_when": "high", "decimals": 0, "category": "Climate & Lifestyle"},
 ]
+
+
+# ═══════════════════════════════════════════════════
+# REDFIN OVERRIDES — auto-refreshed Home Sales + Days on Market
+# ═══════════════════════════════════════════════════
+# Patches CHOROPLETH_STATES at module load with the latest monthly
+# values from data/redfin_overrides.json (refreshed by the GitHub
+# Action that runs scripts/refresh_redfin.py monthly). Failure is
+# silent — if the file is missing or malformed, sales/DOM just won't
+# show on the choropleth, and everything else still works.
+def _apply_redfin_overrides() -> None:
+    overrides_path = Path(__file__).parent / "data" / "redfin_overrides.json"
+    if not overrides_path.exists():
+        return
+    try:
+        payload = json.loads(overrides_path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return
+    overrides = payload.get("overrides", {})
+    for state_code, values in overrides.items():
+        target = CHOROPLETH_STATES.get(state_code)
+        if not target:
+            continue
+        for key, val in values.items():
+            target[key] = val
+
+
+_apply_redfin_overrides()
 
 
 # ═══════════════════════════════════════════════════

@@ -1,0 +1,215 @@
+{
+  "_meta": {
+    "as_of": "2026-05-02",
+    "source": "Redfin Data Center (state_market_tracker, All Residential)",
+    "url": "https://redfin-public-data.s3.us-west-2.amazonaws.com/redfin_market_tracker/state_market_tracker.tsv000.gz",
+    "primary_period_end": "2026-03-31",
+    "states_covered": 51
+  },
+  "overrides": {
+    "AK": {
+      "homes_sold": 461,
+      "dom": 33
+    },
+    "AL": {
+      "homes_sold": 5295,
+      "dom": 69
+    },
+    "AR": {
+      "homes_sold": 3153,
+      "dom": 75
+    },
+    "AZ": {
+      "homes_sold": 9885,
+      "dom": 64
+    },
+    "CA": {
+      "homes_sold": 23474,
+      "dom": 37
+    },
+    "CO": {
+      "homes_sold": 6559,
+      "dom": 45
+    },
+    "CT": {
+      "homes_sold": 2331,
+      "dom": 45
+    },
+    "DC": {
+      "homes_sold": 529,
+      "dom": 68
+    },
+    "DE": {
+      "homes_sold": 566,
+      "dom": 48
+    },
+    "FL": {
+      "homes_sold": 34168,
+      "dom": 77
+    },
+    "GA": {
+      "homes_sold": 10870,
+      "dom": 67
+    },
+    "HI": {
+      "homes_sold": 1040,
+      "dom": 104
+    },
+    "IA": {
+      "homes_sold": 2932,
+      "dom": 72
+    },
+    "ID": {
+      "homes_sold": 2456,
+      "dom": 68
+    },
+    "IL": {
+      "homes_sold": 10460,
+      "dom": 51
+    },
+    "IN": {
+      "homes_sold": 6506,
+      "dom": 49
+    },
+    "KS": {
+      "homes_sold": 2594,
+      "dom": 35
+    },
+    "KY": {
+      "homes_sold": 3476,
+      "dom": 63
+    },
+    "LA": {
+      "homes_sold": 3535,
+      "dom": 81
+    },
+    "MA": {
+      "homes_sold": 3727,
+      "dom": 31
+    },
+    "MD": {
+      "homes_sold": 4864,
+      "dom": 47
+    },
+    "ME": {
+      "homes_sold": 1154,
+      "dom": 67
+    },
+    "MI": {
+      "homes_sold": 7753,
+      "dom": 40
+    },
+    "MN": {
+      "homes_sold": 4460,
+      "dom": 44
+    },
+    "MO": {
+      "homes_sold": 6256,
+      "dom": 44
+    },
+    "MS": {
+      "homes_sold": 1605,
+      "dom": 59
+    },
+    "MT": {
+      "homes_sold": 921,
+      "dom": 115
+    },
+    "NC": {
+      "homes_sold": 12096,
+      "dom": 77
+    },
+    "ND": {
+      "homes_sold": 319,
+      "dom": 73
+    },
+    "NE": {
+      "homes_sold": 1667,
+      "dom": 40
+    },
+    "NH": {
+      "homes_sold": 1110,
+      "dom": 53
+    },
+    "NJ": {
+      "homes_sold": 5929,
+      "dom": 49
+    },
+    "NM": {
+      "homes_sold": 898,
+      "dom": 77
+    },
+    "NV": {
+      "homes_sold": 3812,
+      "dom": 62
+    },
+    "NY": {
+      "homes_sold": 8271,
+      "dom": 57
+    },
+    "OH": {
+      "homes_sold": 9662,
+      "dom": 47
+    },
+    "OK": {
+      "homes_sold": 4211,
+      "dom": 62
+    },
+    "OR": {
+      "homes_sold": 3839,
+      "dom": 46
+    },
+    "PA": {
+      "homes_sold": 8753,
+      "dom": 46
+    },
+    "RI": {
+      "homes_sold": 701,
+      "dom": 42
+    },
+    "SC": {
+      "homes_sold": 6617,
+      "dom": 92
+    },
+    "SD": {
+      "homes_sold": 669,
+      "dom": 85
+    },
+    "TN": {
+      "homes_sold": 7173,
+      "dom": 86
+    },
+    "TX": {
+      "homes_sold": 27571,
+      "dom": 82
+    },
+    "UT": {
+      "homes_sold": 3328,
+      "dom": 53
+    },
+    "VA": {
+      "homes_sold": 8865,
+      "dom": 41
+    },
+    "VT": {
+      "homes_sold": 447,
+      "dom": 95
+    },
+    "WA": {
+      "homes_sold": 7114,
+      "dom": 31
+    },
+    "WI": {
+      "homes_sold": 4612,
+      "dom": 54
+    },
+    "WV": {
+      "homes_sold": 1081,
+      "dom": 80
+    },
+    "WY": {
+      "homes_sold": 511,
+      "dom": 69
+    }
+  }
+}

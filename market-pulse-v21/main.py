@@ -122,21 +122,22 @@ async def national_map(request: Request):
     metros.sort(key=lambda m: -m["avg_composite"])
     # Build a FIPS→state-data map for the choropleth. The GeoJSON's
     # feature.id is the FIPS code, so the client looks it up by FIPS.
-    # We also stamp `has_metros: True` for the 8 states with metro
-    # coverage so the choropleth can highlight them differently.
+    # We pass through every metric key the sidebar might color by;
+    # CHOROPLETH_METRICS is the source of truth. has_metros lets the
+    # client highlight states we cover with metros.
     states_with_metros = {cfg["state"] for cfg in STATE_METROS.values()}
+    metric_keys = [m["key"] for m in CHOROPLETH_METRICS]
     choropleth_by_fips = {}
     for code, sd in CHOROPLETH_STATES.items():
-        choropleth_by_fips[sd["fips"]] = {
+        entry = {
             "code": code,
             "name": sd["name"],
-            "income_tax": sd["income_tax"],
-            "property_tax": sd["property_tax"],
-            "sunshine": sd["sunshine"],
-            "pop_growth": sd["pop_growth"],
-            "col": sd["col"],
             "has_metros": code in states_with_metros,
         }
+        for k in metric_keys:
+            if k in sd:
+                entry[k] = sd[k]
+        choropleth_by_fips[sd["fips"]] = entry
     return templates.TemplateResponse("national_map.html", {
         "request": request,
         "metros": metros,
