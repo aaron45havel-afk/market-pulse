@@ -2100,6 +2100,123 @@ JACKSONVILLE_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# FL — Fort Lauderdale / Broward County: between Miami-Dade and Palm
+# Beach. Luxury beach + top-school suburbs (Weston, Parkland) + family
+# suburbs (Pembroke Pines) + the gentrified Wilton Manors corridor.
+# ─────────────────────────────────────────────────────────────────────────────
+FORT_LAUDERDALE_ZIPS: dict[str, dict] = {
+    "33301": {
+        "name": "Downtown / Las Olas",
+        "lat": 26.1224, "lng": -80.1373,
+        "median_home_value": 620_000, "median_rent_monthly": 2_800,
+        "crime_index": 50, "pct_bachelors": 75,
+        "median_household_income": 115_000, "population": 11_000,
+        "walk_score": 85, "restaurant_score": 90,
+        "tags": ["urban", "walkable", "luxury", "transit"],
+    },
+    "33304": {
+        "name": "Wilton Manors / Victoria Park",
+        "lat": 26.1444, "lng": -80.1296,
+        "median_home_value": 580_000, "median_rent_monthly": 2_500,
+        "crime_index": 35, "pct_bachelors": 70,
+        "median_household_income": 95_000, "population": 22_000,
+        "walk_score": 75, "restaurant_score": 80,
+        "tags": ["walkable", "hip", "established"],
+    },
+    "33308": {
+        "name": "Fort Lauderdale Beach",
+        "lat": 26.1900, "lng": -80.1063,
+        "median_home_value": 1_200_000, "median_rent_monthly": 4_200,
+        "crime_index": 35, "pct_bachelors": 75,
+        "median_household_income": 145_000, "population": 18_000,
+        "walk_score": 70, "restaurant_score": 80,
+        "tags": ["beach", "luxury", "walkable"],
+    },
+    "33305": {
+        "name": "Coral Ridge",
+        "lat": 26.1820, "lng": -80.1340,
+        "median_home_value": 980_000, "median_rent_monthly": 3_500,
+        "crime_index": 30, "pct_bachelors": 75,
+        "median_household_income": 135_000, "population": 21_000,
+        "walk_score": 50, "restaurant_score": 60,
+        "tags": ["upscale", "established", "low-crime"],
+    },
+    "33312": {
+        "name": "Fort Lauderdale W / Riverland",
+        "lat": 26.1080, "lng": -80.1880,
+        "median_home_value": 440_000, "median_rent_monthly": 2_200,
+        "crime_index": 45, "pct_bachelors": 38,
+        "median_household_income": 72_000, "population": 35_000,
+        "walk_score": 40, "restaurant_score": 45,
+        "tags": ["family", "mid-tier"],
+    },
+    "33024": {
+        "name": "Pembroke Pines",
+        "lat": 26.0050, "lng": -80.2615,
+        "median_home_value": 480_000, "median_rent_monthly": 2_500,
+        "crime_index": 30, "pct_bachelors": 50,
+        "median_household_income": 95_000, "population": 80_000,
+        "walk_score": 30, "restaurant_score": 45,
+        "tags": ["family", "established", "low-crime"],
+    },
+    "33028": {
+        "name": "Pembroke Pines W (newer)",
+        "lat": 26.0010, "lng": -80.3260,
+        "median_home_value": 620_000, "median_rent_monthly": 2_800,
+        "crime_index": 22, "pct_bachelors": 60,
+        "median_household_income": 130_000, "population": 30_000,
+        "walk_score": 28, "restaurant_score": 35,
+        "tags": ["family", "newer", "low-crime"],
+    },
+    "33067": {
+        "name": "Parkland / Coral Springs N",
+        "lat": 26.3196, "lng": -80.2370,
+        "median_home_value": 1_200_000, "median_rent_monthly": 4_500,
+        "crime_index": 18, "pct_bachelors": 75,
+        "median_household_income": 185_000, "population": 38_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["luxury", "top-schools", "low-crime", "family"],
+    },
+    "33326": {
+        "name": "Weston",
+        "lat": 26.0935, "lng": -80.4060,
+        "median_home_value": 980_000, "median_rent_monthly": 4_000,
+        "crime_index": 20, "pct_bachelors": 75,
+        "median_household_income": 175_000, "population": 65_000,
+        "walk_score": 28, "restaurant_score": 40,
+        "tags": ["luxury", "top-schools", "low-crime", "family"],
+    },
+    "33019": {
+        "name": "Hollywood Beach",
+        "lat": 26.0230, "lng": -80.1190,
+        "median_home_value": 580_000, "median_rent_monthly": 3_000,
+        "crime_index": 38, "pct_bachelors": 55,
+        "median_household_income": 98_000, "population": 16_000,
+        "walk_score": 75, "restaurant_score": 70,
+        "tags": ["beach", "walkable", "established"],
+    },
+    "33068": {
+        "name": "Lauderhill / Tamarac",
+        "lat": 26.1760, "lng": -80.2450,
+        "median_home_value": 290_000, "median_rent_monthly": 1_950,
+        "crime_index": 65, "pct_bachelors": 22,
+        "median_household_income": 52_000, "population": 28_000,
+        "walk_score": 40, "restaurant_score": 35,
+        "tags": ["affordable", "high-cap-rate", "high-crime"],
+    },
+    "33020": {
+        "name": "Hollywood Central",
+        "lat": 26.0100, "lng": -80.1500,
+        "median_home_value": 360_000, "median_rent_monthly": 2_200,
+        "crime_index": 50, "pct_bachelors": 32,
+        "median_household_income": 62_000, "population": 30_000,
+        "walk_score": 50, "restaurant_score": 50,
+        "tags": ["mid-tier", "established"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -2344,7 +2461,7 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               MIAMI_ZIPS, ORLANDO_ZIPS, ATLANTA_ZIPS,
               AUSTIN_ZIPS, HOUSTON_ZIPS, SAN_ANTONIO_ZIPS, FORT_WORTH_ZIPS,
               SF_BAY_ZIPS, SAN_DIEGO_ZIPS, INDIANAPOLIS_ZIPS, FORT_WAYNE_ZIPS,
-              JACKSONVILLE_ZIPS):
+              JACKSONVILLE_ZIPS, FORT_LAUDERDALE_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -2560,6 +2677,19 @@ STATE_METROS: dict[str, dict] = {
             "Mandarin S (32223) is in the Duval School District but routes to top-rated Mandarin HS feeder pattern — within-ZIP school quality varies more than the bachelor's-percent proxy suggests.",
         ],
     },
+    "FL-FTL": {
+        "state": "FL",
+        "metro_label": "Fort Lauderdale / Broward County",
+        "subtitle": "ZIP-level scores for Broward — Downtown / Las Olas, Wilton Manors + Coral Ridge, the Beach corridor, the Weston / Parkland luxury family tier, Pembroke Pines + Hollywood, plus high-cap-rate Lauderhill / Tamarac.",
+        "map_center": {"lat": 26.13, "lng": -80.20, "zoom": 10},
+        "zips": FORT_LAUDERDALE_ZIPS,
+        "extra_caveats": [
+            "East-of-I-95 ZIPs (33301 / 33304 / 33305 / 33308 / 33019) sit in FEMA flood zones with significant flood-insurance premiums on top of the standard wind-zone hurricane policy — neither is in the headline insurance multiplier.",
+            "Weston (33326) and Parkland (33067) are in highly-rated Broward feeder patterns; the school-driven price premium runs above what the % bachelor's-plus proxy alone captures.",
+            "Hollywood Beach + Fort Lauderdale Beach face heavy STR (Airbnb) competition; cap rate readings trend higher than typical SFR rentals would suggest because the comparable-rent baseline is influenced by short-term-rental yields.",
+            "Citizens Insurance crisis applies metro-wide; condo SIRS-reserve assessments add hidden carrying cost in waterfront 33308 / 33019 buildings.",
+        ],
+    },
     "GA-ATL": {
         "state": "GA",
         "metro_label": "Atlanta Metro",
@@ -2619,7 +2749,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "UT": ["UT", "UT-SLC", "UT-STG"],
     "AZ": ["AZ"],
     "NV": ["NV-LV", "NV-RNO", "NV-CC"],
-    "FL": ["FL-MIA", "FL-ORL", "FL-JAX"],
+    "FL": ["FL-MIA", "FL-ORL", "FL-JAX", "FL-FTL"],
     "GA": ["GA-ATL"],
     "IN": ["IN-IND", "IN-FW"],
 }
