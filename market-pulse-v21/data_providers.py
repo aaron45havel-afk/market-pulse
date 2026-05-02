@@ -644,59 +644,65 @@ CHOROPLETH_STATES = {
     # Refreshable fields (auto-updated by GitHub Actions cron):
     #   home_value      median home value (Zillow ZHVI state, latest month)
     #   home_value_yoy  trailing 12-month % change in ZHVI
-    # Initial seed values reflect ~Q1 2026 Zillow data; live values get
-    # patched on top via _apply_zillow_state_overrides() at module load.
-    "AL": {"fips": "01", "name": "Alabama",        "income_tax": 4.50, "property_tax": 0.40, "sunshine": 213, "pop_growth":  0.5, "col":  88, "median_income":  59609, "median_rent": 1200, "insurance": 1800, "wage_growth": 4.5, "walk": 28, "schools": 5, "home_value": 230000, "home_value_yoy":  3.5},
-    "AK": {"fips": "02", "name": "Alaska",         "income_tax": 0.00, "property_tax": 1.19, "sunshine": 134, "pop_growth": -0.2, "col": 124, "median_income":  86370, "median_rent": 1400, "insurance": 1000, "wage_growth": 3.5, "walk": 30, "schools": 5, "home_value": 390000, "home_value_yoy":  1.0},
-    "AZ": {"fips": "04", "name": "Arizona",        "income_tax": 2.50, "property_tax": 0.63, "sunshine": 290, "pop_growth":  1.4, "col":  97, "median_income":  77315, "median_rent": 1850, "insurance": 1400, "wage_growth": 5.2, "walk": 41, "schools": 5, "home_value": 440000, "home_value_yoy": -1.0},
-    "AR": {"fips": "05", "name": "Arkansas",       "income_tax": 3.90, "property_tax": 0.64, "sunshine": 217, "pop_growth":  0.5, "col":  87, "median_income":  56335, "median_rent": 1150, "insurance": 1800, "wage_growth": 4.5, "walk": 27, "schools": 5, "home_value": 200000, "home_value_yoy":  3.0},
-    "CA": {"fips": "06", "name": "California",     "income_tax": 6.80, "property_tax": 0.75, "sunshine": 260, "pop_growth": -0.1, "col": 114, "median_income":  96334, "median_rent": 2900, "insurance": 1500, "wage_growth": 4.5, "walk": 50, "schools": 6, "home_value": 785000, "home_value_yoy":  2.0},
-    "CO": {"fips": "08", "name": "Colorado",       "income_tax": 4.40, "property_tax": 0.55, "sunshine": 245, "pop_growth":  0.6, "col": 103, "median_income":  92911, "median_rent": 2100, "insurance": 2500, "wage_growth": 4.8, "walk": 41, "schools": 7, "home_value": 565000, "home_value_yoy":  0.5},
-    "CT": {"fips": "09", "name": "Connecticut",    "income_tax": 5.50, "property_tax": 2.14, "sunshine": 196, "pop_growth":  0.1, "col": 110, "median_income":  90213, "median_rent": 2000, "insurance": 1400, "wage_growth": 4.0, "walk": 49, "schools": 8, "home_value": 400000, "home_value_yoy":  5.0},
-    "DE": {"fips": "10", "name": "Delaware",       "income_tax": 5.20, "property_tax": 0.61, "sunshine": 207, "pop_growth":  0.7, "col": 100, "median_income":  79325, "median_rent": 1800, "insurance": 1000, "wage_growth": 4.0, "walk": 38, "schools": 6, "home_value": 370000, "home_value_yoy":  5.0},
-    "DC": {"fips": "11", "name": "District of Columbia", "income_tax": 6.20, "property_tax": 0.57, "sunshine": 200, "pop_growth":  0.0, "col": 153, "median_income": 101722, "median_rent": 2400, "insurance": 1300, "wage_growth": 4.5, "walk": 77, "schools": 5, "home_value": 640000, "home_value_yoy": -2.0},
-    "FL": {"fips": "12", "name": "Florida",        "income_tax": 0.00, "property_tax": 0.91, "sunshine": 240, "pop_growth":  1.6, "col": 100, "median_income":  71711, "median_rent": 2250, "insurance": 5500, "wage_growth": 5.5, "walk": 39, "schools": 5, "home_value": 400000, "home_value_yoy": -2.5},
-    "GA": {"fips": "13", "name": "Georgia",        "income_tax": 5.39, "property_tax": 0.81, "sunshine": 215, "pop_growth":  1.0, "col":  92, "median_income":  74664, "median_rent": 1750, "insurance": 1800, "wage_growth": 4.8, "walk": 41, "schools": 6, "home_value": 345000, "home_value_yoy":  2.0},
-    "HI": {"fips": "15", "name": "Hawaii",         "income_tax": 7.20, "property_tax": 0.32, "sunshine": 240, "pop_growth": -0.1, "col": 184, "median_income":  94814, "median_rent": 2500, "insurance": 1200, "wage_growth": 4.0, "walk": 47, "schools": 5, "home_value": 830000, "home_value_yoy":  3.0},
-    "ID": {"fips": "16", "name": "Idaho",          "income_tax": 5.80, "property_tax": 0.67, "sunshine": 200, "pop_growth":  1.6, "col":  96, "median_income":  74942, "median_rent": 1650, "insurance": 1000, "wage_growth": 5.5, "walk": 32, "schools": 5, "home_value": 460000, "home_value_yoy": -1.5},
-    "IL": {"fips": "17", "name": "Illinois",       "income_tax": 4.95, "property_tax": 2.27, "sunshine": 192, "pop_growth": -0.4, "col":  95, "median_income":  82126, "median_rent": 1750, "insurance": 1400, "wage_growth": 4.0, "walk": 49, "schools": 6, "home_value": 260000, "home_value_yoy":  5.0},
-    "IN": {"fips": "18", "name": "Indiana",        "income_tax": 3.15, "property_tax": 0.84, "sunshine": 185, "pop_growth":  0.3, "col":  90, "median_income":  70051, "median_rent": 1400, "insurance": 1500, "wage_growth": 4.0, "walk": 30, "schools": 5, "home_value": 245000, "home_value_yoy":  5.0},
-    "IA": {"fips": "19", "name": "Iowa",           "income_tax": 3.80, "property_tax": 1.57, "sunshine": 197, "pop_growth":  0.2, "col":  90, "median_income":  73147, "median_rent": 1200, "insurance": 1400, "wage_growth": 4.0, "walk": 31, "schools": 7, "home_value": 215000, "home_value_yoy":  4.0},
-    "KS": {"fips": "20", "name": "Kansas",         "income_tax": 5.20, "property_tax": 1.41, "sunshine": 233, "pop_growth":  0.2, "col":  90, "median_income":  73040, "median_rent": 1200, "insurance": 2800, "wage_growth": 4.0, "walk": 33, "schools": 6, "home_value": 230000, "home_value_yoy":  5.0},
-    "KY": {"fips": "21", "name": "Kentucky",       "income_tax": 4.00, "property_tax": 0.86, "sunshine": 195, "pop_growth":  0.3, "col":  91, "median_income":  61118, "median_rent": 1250, "insurance": 1500, "wage_growth": 4.0, "walk": 33, "schools": 5, "home_value": 215000, "home_value_yoy":  5.0},
-    "LA": {"fips": "22", "name": "Louisiana",      "income_tax": 4.25, "property_tax": 0.56, "sunshine": 217, "pop_growth": -0.3, "col":  92, "median_income":  58229, "median_rent": 1200, "insurance": 4500, "wage_growth": 3.5, "walk": 33, "schools": 4, "home_value": 200000, "home_value_yoy": -3.0},
-    "ME": {"fips": "23", "name": "Maine",          "income_tax": 5.80, "property_tax": 1.36, "sunshine": 201, "pop_growth":  0.2, "col": 109, "median_income":  73733, "median_rent": 1800, "insurance": 1000, "wage_growth": 4.5, "walk": 35, "schools": 6, "home_value": 385000, "home_value_yoy":  4.0},
-    "MD": {"fips": "24", "name": "Maryland",       "income_tax": 5.00, "property_tax": 1.09, "sunshine": 205, "pop_growth":  0.3, "col": 116, "median_income":  98461, "median_rent": 2000, "insurance": 1200, "wage_growth": 4.0, "walk": 51, "schools": 8, "home_value": 430000, "home_value_yoy":  4.0},
-    "MA": {"fips": "25", "name": "Massachusetts",  "income_tax": 5.00, "property_tax": 1.23, "sunshine": 197, "pop_growth":  0.2, "col": 122, "median_income":  96505, "median_rent": 2400, "insurance": 1500, "wage_growth": 4.5, "walk": 53, "schools": 9, "home_value": 640000, "home_value_yoy":  5.5},
-    "MI": {"fips": "26", "name": "Michigan",       "income_tax": 4.25, "property_tax": 1.54, "sunshine": 165, "pop_growth":  0.0, "col":  91, "median_income":  69183, "median_rent": 1300, "insurance": 1200, "wage_growth": 4.0, "walk": 36, "schools": 5, "home_value": 250000, "home_value_yoy":  5.0},
-    "MN": {"fips": "27", "name": "Minnesota",      "income_tax": 6.85, "property_tax": 1.12, "sunshine": 198, "pop_growth":  0.3, "col":  95, "median_income":  88189, "median_rent": 1700, "insurance": 1500, "wage_growth": 4.5, "walk": 39, "schools": 8, "home_value": 335000, "home_value_yoy":  3.5},
-    "MS": {"fips": "28", "name": "Mississippi",    "income_tax": 4.40, "property_tax": 0.79, "sunshine": 215, "pop_growth": -0.2, "col":  86, "median_income":  52985, "median_rent": 1150, "insurance": 1800, "wage_growth": 3.8, "walk": 27, "schools": 4, "home_value": 180000, "home_value_yoy":  3.0},
-    "MO": {"fips": "29", "name": "Missouri",       "income_tax": 4.40, "property_tax": 0.97, "sunshine": 207, "pop_growth":  0.1, "col":  87, "median_income":  68545, "median_rent": 1250, "insurance": 1800, "wage_growth": 4.0, "walk": 35, "schools": 5, "home_value": 250000, "home_value_yoy":  5.0},
-    "MT": {"fips": "30", "name": "Montana",        "income_tax": 5.80, "property_tax": 0.83, "sunshine": 192, "pop_growth":  0.7, "col":  96, "median_income":  72980, "median_rent": 1650, "insurance": 1300, "wage_growth": 5.0, "walk": 30, "schools": 5, "home_value": 470000, "home_value_yoy": -1.0},
-    "NE": {"fips": "31", "name": "Nebraska",       "income_tax": 5.40, "property_tax": 1.73, "sunshine": 226, "pop_growth":  0.3, "col":  91, "median_income":  74590, "median_rent": 1400, "insurance": 3500, "wage_growth": 4.5, "walk": 36, "schools": 7, "home_value": 260000, "home_value_yoy":  4.5},
-    "NV": {"fips": "32", "name": "Nevada",         "income_tax": 0.00, "property_tax": 0.59, "sunshine": 280, "pop_growth":  1.2, "col":  97, "median_income":  76364, "median_rent": 1850, "insurance": 1100, "wage_growth": 5.5, "walk": 41, "schools": 4, "home_value": 445000, "home_value_yoy":  1.0},
-    "NH": {"fips": "33", "name": "New Hampshire",  "income_tax": 0.00, "property_tax": 2.18, "sunshine": 195, "pop_growth":  0.4, "col": 110, "median_income":  96838, "median_rent": 1950, "insurance": 1000, "wage_growth": 4.5, "walk": 36, "schools": 8, "home_value": 475000, "home_value_yoy":  5.0},
-    "NJ": {"fips": "34", "name": "New Jersey",     "income_tax": 6.20, "property_tax": 2.49, "sunshine": 207, "pop_growth":  0.3, "col": 113, "median_income": 101050, "median_rent": 2400, "insurance": 1300, "wage_growth": 4.0, "walk": 49, "schools": 9, "home_value": 530000, "home_value_yoy":  6.0},
-    "NM": {"fips": "35", "name": "New Mexico",     "income_tax": 4.60, "property_tax": 0.80, "sunshine": 280, "pop_growth":  0.0, "col":  92, "median_income":  58722, "median_rent": 1400, "insurance": 1500, "wage_growth": 4.0, "walk": 38, "schools": 4, "home_value": 300000, "home_value_yoy":  3.5},
-    "NY": {"fips": "36", "name": "New York",       "income_tax": 6.20, "property_tax": 1.73, "sunshine": 195, "pop_growth": -0.5, "col": 116, "median_income":  84415, "median_rent": 2500, "insurance": 1500, "wage_growth": 4.5, "walk": 67, "schools": 7, "home_value": 470000, "home_value_yoy":  6.0},
-    "NC": {"fips": "37", "name": "North Carolina", "income_tax": 4.50, "property_tax": 0.84, "sunshine": 213, "pop_growth":  1.3, "col":  95, "median_income":  69904, "median_rent": 1650, "insurance": 1500, "wage_growth": 5.0, "walk": 32, "schools": 5, "home_value": 335000, "home_value_yoy":  4.0},
-    "ND": {"fips": "38", "name": "North Dakota",   "income_tax": 1.80, "property_tax": 0.98, "sunshine": 195, "pop_growth":  0.1, "col":  92, "median_income":  76525, "median_rent": 1300, "insurance": 1400, "wage_growth": 4.0, "walk": 32, "schools": 6, "home_value": 260000, "home_value_yoy":  3.0},
-    "OH": {"fips": "39", "name": "Ohio",           "income_tax": 2.80, "property_tax": 1.56, "sunshine": 175, "pop_growth":  0.1, "col":  90, "median_income":  69680, "median_rent": 1400, "insurance": 1300, "wage_growth": 3.9, "walk": 41, "schools": 6, "home_value": 230000, "home_value_yoy":  5.0},
-    "OK": {"fips": "40", "name": "Oklahoma",       "income_tax": 4.50, "property_tax": 0.90, "sunshine": 235, "pop_growth":  0.5, "col":  86, "median_income":  61364, "median_rent": 1200, "insurance": 4000, "wage_growth": 4.5, "walk": 32, "schools": 4, "home_value": 200000, "home_value_yoy":  3.5},
-    "OR": {"fips": "41", "name": "Oregon",         "income_tax": 7.50, "property_tax": 0.93, "sunshine": 155, "pop_growth": -0.1, "col": 113, "median_income":  80160, "median_rent": 1950, "insurance":  800, "wage_growth": 4.5, "walk": 51, "schools": 6, "home_value": 500000, "home_value_yoy":  1.0},
-    "PA": {"fips": "42", "name": "Pennsylvania",   "income_tax": 3.07, "property_tax": 1.53, "sunshine": 179, "pop_growth": -0.1, "col":  96, "median_income":  73170, "median_rent": 1650, "insurance": 1100, "wage_growth": 4.0, "walk": 47, "schools": 7, "home_value": 260000, "home_value_yoy":  5.0},
-    "RI": {"fips": "44", "name": "Rhode Island",   "income_tax": 4.50, "property_tax": 1.40, "sunshine": 200, "pop_growth":  0.2, "col":  99, "median_income":  86658, "median_rent": 1950, "insurance": 1700, "wage_growth": 4.0, "walk": 47, "schools": 7, "home_value": 470000, "home_value_yoy":  5.5},
-    "SC": {"fips": "45", "name": "South Carolina", "income_tax": 5.40, "property_tax": 0.57, "sunshine": 216, "pop_growth":  1.7, "col":  94, "median_income":  67804, "median_rent": 1650, "insurance": 1800, "wage_growth": 5.0, "walk": 30, "schools": 5, "home_value": 300000, "home_value_yoy":  3.0},
-    "SD": {"fips": "46", "name": "South Dakota",   "income_tax": 0.00, "property_tax": 1.24, "sunshine": 213, "pop_growth":  0.7, "col":  90, "median_income":  73893, "median_rent": 1200, "insurance": 2500, "wage_growth": 4.5, "walk": 33, "schools": 6, "home_value": 290000, "home_value_yoy":  3.5},
-    "TN": {"fips": "47", "name": "Tennessee",      "income_tax": 0.00, "property_tax": 0.67, "sunshine": 205, "pop_growth":  0.7, "col":  91, "median_income":  67097, "median_rent": 1700, "insurance": 1500, "wage_growth": 4.8, "walk": 30, "schools": 5, "home_value": 325000, "home_value_yoy":  1.5},
-    "TX": {"fips": "48", "name": "Texas",          "income_tax": 0.00, "property_tax": 1.80, "sunshine": 230, "pop_growth":  1.6, "col":  97, "median_income":  76292, "median_rent": 1800, "insurance": 3900, "wage_growth": 5.0, "walk": 35, "schools": 6, "home_value": 300000, "home_value_yoy": -1.0},
-    "UT": {"fips": "49", "name": "Utah",           "income_tax": 4.65, "property_tax": 0.58, "sunshine": 235, "pop_growth":  1.5, "col":  98, "median_income":  93421, "median_rent": 1800, "insurance": 1000, "wage_growth": 6.2, "walk": 38, "schools": 7, "home_value": 530000, "home_value_yoy":  1.0},
-    "VT": {"fips": "50", "name": "Vermont",        "income_tax": 5.80, "property_tax": 1.90, "sunshine": 159, "pop_growth":  0.0, "col": 110, "median_income":  81211, "median_rent": 1800, "insurance": 1000, "wage_growth": 4.0, "walk": 36, "schools": 7, "home_value": 400000, "home_value_yoy":  5.0},
-    "VA": {"fips": "51", "name": "Virginia",       "income_tax": 5.50, "property_tax": 0.82, "sunshine": 200, "pop_growth":  0.4, "col": 102, "median_income":  89931, "median_rent": 1950, "insurance": 1200, "wage_growth": 4.5, "walk": 38, "schools": 8, "home_value": 400000, "home_value_yoy":  4.5},
-    "WA": {"fips": "53", "name": "Washington",     "income_tax": 0.00, "property_tax": 0.87, "sunshine": 155, "pop_growth":  0.8, "col": 108, "median_income":  94605, "median_rent": 2250, "insurance": 1100, "wage_growth": 5.8, "walk": 47, "schools": 7, "home_value": 620000, "home_value_yoy":  1.5},
-    "WV": {"fips": "54", "name": "West Virginia",  "income_tax": 4.88, "property_tax": 0.58, "sunshine": 178, "pop_growth": -0.5, "col":  87, "median_income":  55948, "median_rent": 1000, "insurance": 1000, "wage_growth": 3.5, "walk": 30, "schools": 4, "home_value": 160000, "home_value_yoy":  5.0},
-    "WI": {"fips": "55", "name": "Wisconsin",      "income_tax": 5.40, "property_tax": 1.85, "sunshine": 188, "pop_growth":  0.2, "col":  95, "median_income":  74631, "median_rent": 1400, "insurance": 1100, "wage_growth": 4.0, "walk": 39, "schools": 7, "home_value": 300000, "home_value_yoy":  5.0},
-    "WY": {"fips": "56", "name": "Wyoming",        "income_tax": 0.00, "property_tax": 0.61, "sunshine": 220, "pop_growth":  0.4, "col":  95, "median_income":  74815, "median_rent": 1400, "insurance": 1000, "wage_growth": 4.5, "walk": 30, "schools": 6, "home_value": 360000, "home_value_yoy":  4.5},
+    #   homes_sold      monthly homes sold count (Redfin All Residential)
+    #   dom             median days on market (Redfin)
+    # Growth Outlook fields (Census + BLS, refreshed by refresh_growth.py):
+    #   permits_per_1k  housing units permitted per 1K residents (annual)
+    #   net_migration   net domestic in-migration per 1K (annual; +inflow)
+    #   job_growth_yoy  total nonfarm employment YoY change %
+    # Initial seed values reflect ~Q1 2026 / 2023-2024 data; live values
+    # get patched on top via _apply_*_overrides() at module load.
+    "AL": {"fips": "01", "name": "Alabama",        "income_tax": 4.50, "property_tax": 0.40, "sunshine": 213, "pop_growth":  0.5, "col":  88, "median_income":  59609, "median_rent": 1200, "insurance": 1800, "wage_growth": 4.5, "walk": 28, "schools": 5, "home_value": 230000, "home_value_yoy":  3.5, "permits_per_1k": 2.8, "net_migration":  2.0, "job_growth_yoy": 1.5},
+    "AK": {"fips": "02", "name": "Alaska",         "income_tax": 0.00, "property_tax": 1.19, "sunshine": 134, "pop_growth": -0.2, "col": 124, "median_income":  86370, "median_rent": 1400, "insurance": 1000, "wage_growth": 3.5, "walk": 30, "schools": 5, "home_value": 390000, "home_value_yoy":  1.0, "permits_per_1k": 1.5, "net_migration": -8.0, "job_growth_yoy": 1.0},
+    "AZ": {"fips": "04", "name": "Arizona",        "income_tax": 2.50, "property_tax": 0.63, "sunshine": 290, "pop_growth":  1.4, "col":  97, "median_income":  77315, "median_rent": 1850, "insurance": 1400, "wage_growth": 5.2, "walk": 41, "schools": 5, "home_value": 440000, "home_value_yoy": -1.0, "permits_per_1k": 5.5, "net_migration":  5.0, "job_growth_yoy": 2.5},
+    "AR": {"fips": "05", "name": "Arkansas",       "income_tax": 3.90, "property_tax": 0.64, "sunshine": 217, "pop_growth":  0.5, "col":  87, "median_income":  56335, "median_rent": 1150, "insurance": 1800, "wage_growth": 4.5, "walk": 27, "schools": 5, "home_value": 200000, "home_value_yoy":  3.0, "permits_per_1k": 3.0, "net_migration":  4.0, "job_growth_yoy": 1.5},
+    "CA": {"fips": "06", "name": "California",     "income_tax": 6.80, "property_tax": 0.75, "sunshine": 260, "pop_growth": -0.1, "col": 114, "median_income":  96334, "median_rent": 2900, "insurance": 1500, "wage_growth": 4.5, "walk": 50, "schools": 6, "home_value": 785000, "home_value_yoy":  2.0, "permits_per_1k": 2.1, "net_migration": -9.0, "job_growth_yoy": 1.0},
+    "CO": {"fips": "08", "name": "Colorado",       "income_tax": 4.40, "property_tax": 0.55, "sunshine": 245, "pop_growth":  0.6, "col": 103, "median_income":  92911, "median_rent": 2100, "insurance": 2500, "wage_growth": 4.8, "walk": 41, "schools": 7, "home_value": 565000, "home_value_yoy":  0.5, "permits_per_1k": 4.0, "net_migration": -1.0, "job_growth_yoy": 1.5},
+    "CT": {"fips": "09", "name": "Connecticut",    "income_tax": 5.50, "property_tax": 2.14, "sunshine": 196, "pop_growth":  0.1, "col": 110, "median_income":  90213, "median_rent": 2000, "insurance": 1400, "wage_growth": 4.0, "walk": 49, "schools": 8, "home_value": 400000, "home_value_yoy":  5.0, "permits_per_1k": 1.8, "net_migration":  0.0, "job_growth_yoy": 1.0},
+    "DE": {"fips": "10", "name": "Delaware",       "income_tax": 5.20, "property_tax": 0.61, "sunshine": 207, "pop_growth":  0.7, "col": 100, "median_income":  79325, "median_rent": 1800, "insurance": 1000, "wage_growth": 4.0, "walk": 38, "schools": 6, "home_value": 370000, "home_value_yoy":  5.0, "permits_per_1k": 5.5, "net_migration":  5.0, "job_growth_yoy": 1.5},
+    "DC": {"fips": "11", "name": "District of Columbia", "income_tax": 6.20, "property_tax": 0.57, "sunshine": 200, "pop_growth":  0.0, "col": 153, "median_income": 101722, "median_rent": 2400, "insurance": 1300, "wage_growth": 4.5, "walk": 77, "schools": 5, "home_value": 640000, "home_value_yoy": -2.0, "permits_per_1k": 2.5, "net_migration": -8.0, "job_growth_yoy": 1.0},
+    "FL": {"fips": "12", "name": "Florida",        "income_tax": 0.00, "property_tax": 0.91, "sunshine": 240, "pop_growth":  1.6, "col": 100, "median_income":  71711, "median_rent": 2250, "insurance": 5500, "wage_growth": 5.5, "walk": 39, "schools": 5, "home_value": 400000, "home_value_yoy": -2.5, "permits_per_1k": 6.5, "net_migration":  7.0, "job_growth_yoy": 3.0},
+    "GA": {"fips": "13", "name": "Georgia",        "income_tax": 5.39, "property_tax": 0.81, "sunshine": 215, "pop_growth":  1.0, "col":  92, "median_income":  74664, "median_rent": 1750, "insurance": 1800, "wage_growth": 4.8, "walk": 41, "schools": 6, "home_value": 345000, "home_value_yoy":  2.0, "permits_per_1k": 4.2, "net_migration":  4.0, "job_growth_yoy": 2.0},
+    "HI": {"fips": "15", "name": "Hawaii",         "income_tax": 7.20, "property_tax": 0.32, "sunshine": 240, "pop_growth": -0.1, "col": 184, "median_income":  94814, "median_rent": 2500, "insurance": 1200, "wage_growth": 4.0, "walk": 47, "schools": 5, "home_value": 830000, "home_value_yoy":  3.0, "permits_per_1k": 2.0, "net_migration": -7.0, "job_growth_yoy": 1.0},
+    "ID": {"fips": "16", "name": "Idaho",          "income_tax": 5.80, "property_tax": 0.67, "sunshine": 200, "pop_growth":  1.6, "col":  96, "median_income":  74942, "median_rent": 1650, "insurance": 1000, "wage_growth": 5.5, "walk": 32, "schools": 5, "home_value": 460000, "home_value_yoy": -1.5, "permits_per_1k": 6.8, "net_migration":  6.0, "job_growth_yoy": 2.5},
+    "IL": {"fips": "17", "name": "Illinois",       "income_tax": 4.95, "property_tax": 2.27, "sunshine": 192, "pop_growth": -0.4, "col":  95, "median_income":  82126, "median_rent": 1750, "insurance": 1400, "wage_growth": 4.0, "walk": 49, "schools": 6, "home_value": 260000, "home_value_yoy":  5.0, "permits_per_1k": 1.5, "net_migration": -9.0, "job_growth_yoy": 1.0},
+    "IN": {"fips": "18", "name": "Indiana",        "income_tax": 3.15, "property_tax": 0.84, "sunshine": 185, "pop_growth":  0.3, "col":  90, "median_income":  70051, "median_rent": 1400, "insurance": 1500, "wage_growth": 4.0, "walk": 30, "schools": 5, "home_value": 245000, "home_value_yoy":  5.0, "permits_per_1k": 2.5, "net_migration":  1.0, "job_growth_yoy": 1.5},
+    "IA": {"fips": "19", "name": "Iowa",           "income_tax": 3.80, "property_tax": 1.57, "sunshine": 197, "pop_growth":  0.2, "col":  90, "median_income":  73147, "median_rent": 1200, "insurance": 1400, "wage_growth": 4.0, "walk": 31, "schools": 7, "home_value": 215000, "home_value_yoy":  4.0, "permits_per_1k": 2.5, "net_migration": -1.0, "job_growth_yoy": 1.0},
+    "KS": {"fips": "20", "name": "Kansas",         "income_tax": 5.20, "property_tax": 1.41, "sunshine": 233, "pop_growth":  0.2, "col":  90, "median_income":  73040, "median_rent": 1200, "insurance": 2800, "wage_growth": 4.0, "walk": 33, "schools": 6, "home_value": 230000, "home_value_yoy":  5.0, "permits_per_1k": 2.2, "net_migration": -2.0, "job_growth_yoy": 1.0},
+    "KY": {"fips": "21", "name": "Kentucky",       "income_tax": 4.00, "property_tax": 0.86, "sunshine": 195, "pop_growth":  0.3, "col":  91, "median_income":  61118, "median_rent": 1250, "insurance": 1500, "wage_growth": 4.0, "walk": 33, "schools": 5, "home_value": 215000, "home_value_yoy":  5.0, "permits_per_1k": 2.5, "net_migration":  1.0, "job_growth_yoy": 1.0},
+    "LA": {"fips": "22", "name": "Louisiana",      "income_tax": 4.25, "property_tax": 0.56, "sunshine": 217, "pop_growth": -0.3, "col":  92, "median_income":  58229, "median_rent": 1200, "insurance": 4500, "wage_growth": 3.5, "walk": 33, "schools": 4, "home_value": 200000, "home_value_yoy": -3.0, "permits_per_1k": 2.0, "net_migration":-10.0, "job_growth_yoy": 1.0},
+    "ME": {"fips": "23", "name": "Maine",          "income_tax": 5.80, "property_tax": 1.36, "sunshine": 201, "pop_growth":  0.2, "col": 109, "median_income":  73733, "median_rent": 1800, "insurance": 1000, "wage_growth": 4.5, "walk": 35, "schools": 6, "home_value": 385000, "home_value_yoy":  4.0, "permits_per_1k": 2.5, "net_migration":  5.0, "job_growth_yoy": 1.0},
+    "MD": {"fips": "24", "name": "Maryland",       "income_tax": 5.00, "property_tax": 1.09, "sunshine": 205, "pop_growth":  0.3, "col": 116, "median_income":  98461, "median_rent": 2000, "insurance": 1200, "wage_growth": 4.0, "walk": 51, "schools": 8, "home_value": 430000, "home_value_yoy":  4.0, "permits_per_1k": 2.4, "net_migration": -3.0, "job_growth_yoy": 1.0},
+    "MA": {"fips": "25", "name": "Massachusetts",  "income_tax": 5.00, "property_tax": 1.23, "sunshine": 197, "pop_growth":  0.2, "col": 122, "median_income":  96505, "median_rent": 2400, "insurance": 1500, "wage_growth": 4.5, "walk": 53, "schools": 9, "home_value": 640000, "home_value_yoy":  5.5, "permits_per_1k": 1.9, "net_migration": -7.0, "job_growth_yoy": 1.0},
+    "MI": {"fips": "26", "name": "Michigan",       "income_tax": 4.25, "property_tax": 1.54, "sunshine": 165, "pop_growth":  0.0, "col":  91, "median_income":  69183, "median_rent": 1300, "insurance": 1200, "wage_growth": 4.0, "walk": 36, "schools": 5, "home_value": 250000, "home_value_yoy":  5.0, "permits_per_1k": 1.9, "net_migration": -2.0, "job_growth_yoy": 1.0},
+    "MN": {"fips": "27", "name": "Minnesota",      "income_tax": 6.85, "property_tax": 1.12, "sunshine": 198, "pop_growth":  0.3, "col":  95, "median_income":  88189, "median_rent": 1700, "insurance": 1500, "wage_growth": 4.5, "walk": 39, "schools": 8, "home_value": 335000, "home_value_yoy":  3.5, "permits_per_1k": 2.5, "net_migration": -2.0, "job_growth_yoy": 1.0},
+    "MS": {"fips": "28", "name": "Mississippi",    "income_tax": 4.40, "property_tax": 0.79, "sunshine": 215, "pop_growth": -0.2, "col":  86, "median_income":  52985, "median_rent": 1150, "insurance": 1800, "wage_growth": 3.8, "walk": 27, "schools": 4, "home_value": 180000, "home_value_yoy":  3.0, "permits_per_1k": 2.0, "net_migration": -3.0, "job_growth_yoy": 1.0},
+    "MO": {"fips": "29", "name": "Missouri",       "income_tax": 4.40, "property_tax": 0.97, "sunshine": 207, "pop_growth":  0.1, "col":  87, "median_income":  68545, "median_rent": 1250, "insurance": 1800, "wage_growth": 4.0, "walk": 35, "schools": 5, "home_value": 250000, "home_value_yoy":  5.0, "permits_per_1k": 2.4, "net_migration":  0.0, "job_growth_yoy": 1.0},
+    "MT": {"fips": "30", "name": "Montana",        "income_tax": 5.80, "property_tax": 0.83, "sunshine": 192, "pop_growth":  0.7, "col":  96, "median_income":  72980, "median_rent": 1650, "insurance": 1300, "wage_growth": 5.0, "walk": 30, "schools": 5, "home_value": 470000, "home_value_yoy": -1.0, "permits_per_1k": 4.5, "net_migration":  6.0, "job_growth_yoy": 2.0},
+    "NE": {"fips": "31", "name": "Nebraska",       "income_tax": 5.40, "property_tax": 1.73, "sunshine": 226, "pop_growth":  0.3, "col":  91, "median_income":  74590, "median_rent": 1400, "insurance": 3500, "wage_growth": 4.5, "walk": 36, "schools": 7, "home_value": 260000, "home_value_yoy":  4.5, "permits_per_1k": 3.5, "net_migration": -1.0, "job_growth_yoy": 1.5},
+    "NV": {"fips": "32", "name": "Nevada",         "income_tax": 0.00, "property_tax": 0.59, "sunshine": 280, "pop_growth":  1.2, "col":  97, "median_income":  76364, "median_rent": 1850, "insurance": 1100, "wage_growth": 5.5, "walk": 41, "schools": 4, "home_value": 445000, "home_value_yoy":  1.0, "permits_per_1k": 4.5, "net_migration":  5.0, "job_growth_yoy": 2.0},
+    "NH": {"fips": "33", "name": "New Hampshire",  "income_tax": 0.00, "property_tax": 2.18, "sunshine": 195, "pop_growth":  0.4, "col": 110, "median_income":  96838, "median_rent": 1950, "insurance": 1000, "wage_growth": 4.5, "walk": 36, "schools": 8, "home_value": 475000, "home_value_yoy":  5.0, "permits_per_1k": 2.7, "net_migration":  5.0, "job_growth_yoy": 1.5},
+    "NJ": {"fips": "34", "name": "New Jersey",     "income_tax": 6.20, "property_tax": 2.49, "sunshine": 207, "pop_growth":  0.3, "col": 113, "median_income": 101050, "median_rent": 2400, "insurance": 1300, "wage_growth": 4.0, "walk": 49, "schools": 9, "home_value": 530000, "home_value_yoy":  6.0, "permits_per_1k": 2.5, "net_migration": -5.0, "job_growth_yoy": 1.0},
+    "NM": {"fips": "35", "name": "New Mexico",     "income_tax": 4.60, "property_tax": 0.80, "sunshine": 280, "pop_growth":  0.0, "col":  92, "median_income":  58722, "median_rent": 1400, "insurance": 1500, "wage_growth": 4.0, "walk": 38, "schools": 4, "home_value": 300000, "home_value_yoy":  3.5, "permits_per_1k": 2.5, "net_migration": -3.0, "job_growth_yoy": 1.5},
+    "NY": {"fips": "36", "name": "New York",       "income_tax": 6.20, "property_tax": 1.73, "sunshine": 195, "pop_growth": -0.5, "col": 116, "median_income":  84415, "median_rent": 2500, "insurance": 1500, "wage_growth": 4.5, "walk": 67, "schools": 7, "home_value": 470000, "home_value_yoy":  6.0, "permits_per_1k": 1.4, "net_migration":-13.0, "job_growth_yoy": 1.5},
+    "NC": {"fips": "37", "name": "North Carolina", "income_tax": 4.50, "property_tax": 0.84, "sunshine": 213, "pop_growth":  1.3, "col":  95, "median_income":  69904, "median_rent": 1650, "insurance": 1500, "wage_growth": 5.0, "walk": 32, "schools": 5, "home_value": 335000, "home_value_yoy":  4.0, "permits_per_1k": 5.8, "net_migration":  7.0, "job_growth_yoy": 2.5},
+    "ND": {"fips": "38", "name": "North Dakota",   "income_tax": 1.80, "property_tax": 0.98, "sunshine": 195, "pop_growth":  0.1, "col":  92, "median_income":  76525, "median_rent": 1300, "insurance": 1400, "wage_growth": 4.0, "walk": 32, "schools": 6, "home_value": 260000, "home_value_yoy":  3.0, "permits_per_1k": 3.0, "net_migration":  0.0, "job_growth_yoy": 1.5},
+    "OH": {"fips": "39", "name": "Ohio",           "income_tax": 2.80, "property_tax": 1.56, "sunshine": 175, "pop_growth":  0.1, "col":  90, "median_income":  69680, "median_rent": 1400, "insurance": 1300, "wage_growth": 3.9, "walk": 41, "schools": 6, "home_value": 230000, "home_value_yoy":  5.0, "permits_per_1k": 1.7, "net_migration": -1.0, "job_growth_yoy": 1.0},
+    "OK": {"fips": "40", "name": "Oklahoma",       "income_tax": 4.50, "property_tax": 0.90, "sunshine": 235, "pop_growth":  0.5, "col":  86, "median_income":  61364, "median_rent": 1200, "insurance": 4000, "wage_growth": 4.5, "walk": 32, "schools": 4, "home_value": 200000, "home_value_yoy":  3.5, "permits_per_1k": 2.8, "net_migration":  2.0, "job_growth_yoy": 2.0},
+    "OR": {"fips": "41", "name": "Oregon",         "income_tax": 7.50, "property_tax": 0.93, "sunshine": 155, "pop_growth": -0.1, "col": 113, "median_income":  80160, "median_rent": 1950, "insurance":  800, "wage_growth": 4.5, "walk": 51, "schools": 6, "home_value": 500000, "home_value_yoy":  1.0, "permits_per_1k": 2.2, "net_migration": -3.0, "job_growth_yoy": 0.5},
+    "PA": {"fips": "42", "name": "Pennsylvania",   "income_tax": 3.07, "property_tax": 1.53, "sunshine": 179, "pop_growth": -0.1, "col":  96, "median_income":  73170, "median_rent": 1650, "insurance": 1100, "wage_growth": 4.0, "walk": 47, "schools": 7, "home_value": 260000, "home_value_yoy":  5.0, "permits_per_1k": 1.7, "net_migration": -2.0, "job_growth_yoy": 1.0},
+    "RI": {"fips": "44", "name": "Rhode Island",   "income_tax": 4.50, "property_tax": 1.40, "sunshine": 200, "pop_growth":  0.2, "col":  99, "median_income":  86658, "median_rent": 1950, "insurance": 1700, "wage_growth": 4.0, "walk": 47, "schools": 7, "home_value": 470000, "home_value_yoy":  5.5, "permits_per_1k": 2.0, "net_migration":  0.0, "job_growth_yoy": 1.0},
+    "SC": {"fips": "45", "name": "South Carolina", "income_tax": 5.40, "property_tax": 0.57, "sunshine": 216, "pop_growth":  1.7, "col":  94, "median_income":  67804, "median_rent": 1650, "insurance": 1800, "wage_growth": 5.0, "walk": 30, "schools": 5, "home_value": 300000, "home_value_yoy":  3.0, "permits_per_1k": 6.5, "net_migration": 10.0, "job_growth_yoy": 2.5},
+    "SD": {"fips": "46", "name": "South Dakota",   "income_tax": 0.00, "property_tax": 1.24, "sunshine": 213, "pop_growth":  0.7, "col":  90, "median_income":  73893, "median_rent": 1200, "insurance": 2500, "wage_growth": 4.5, "walk": 33, "schools": 6, "home_value": 290000, "home_value_yoy":  3.5, "permits_per_1k": 5.5, "net_migration":  4.0, "job_growth_yoy": 1.5},
+    "TN": {"fips": "47", "name": "Tennessee",      "income_tax": 0.00, "property_tax": 0.67, "sunshine": 205, "pop_growth":  0.7, "col":  91, "median_income":  67097, "median_rent": 1700, "insurance": 1500, "wage_growth": 4.8, "walk": 30, "schools": 5, "home_value": 325000, "home_value_yoy":  1.5, "permits_per_1k": 4.0, "net_migration":  6.0, "job_growth_yoy": 2.0},
+    "TX": {"fips": "48", "name": "Texas",          "income_tax": 0.00, "property_tax": 1.80, "sunshine": 230, "pop_growth":  1.6, "col":  97, "median_income":  76292, "median_rent": 1800, "insurance": 3900, "wage_growth": 5.0, "walk": 35, "schools": 6, "home_value": 300000, "home_value_yoy": -1.0, "permits_per_1k": 5.5, "net_migration":  7.0, "job_growth_yoy": 2.5},
+    "UT": {"fips": "49", "name": "Utah",           "income_tax": 4.65, "property_tax": 0.58, "sunshine": 235, "pop_growth":  1.5, "col":  98, "median_income":  93421, "median_rent": 1800, "insurance": 1000, "wage_growth": 6.2, "walk": 38, "schools": 7, "home_value": 530000, "home_value_yoy":  1.0, "permits_per_1k": 7.0, "net_migration":  1.0, "job_growth_yoy": 2.5},
+    "VT": {"fips": "50", "name": "Vermont",        "income_tax": 5.80, "property_tax": 1.90, "sunshine": 159, "pop_growth":  0.0, "col": 110, "median_income":  81211, "median_rent": 1800, "insurance": 1000, "wage_growth": 4.0, "walk": 36, "schools": 7, "home_value": 400000, "home_value_yoy":  5.0, "permits_per_1k": 2.0, "net_migration":  3.0, "job_growth_yoy": 0.5},
+    "VA": {"fips": "51", "name": "Virginia",       "income_tax": 5.50, "property_tax": 0.82, "sunshine": 200, "pop_growth":  0.4, "col": 102, "median_income":  89931, "median_rent": 1950, "insurance": 1200, "wage_growth": 4.5, "walk": 38, "schools": 8, "home_value": 400000, "home_value_yoy":  4.5, "permits_per_1k": 3.0, "net_migration":  0.0, "job_growth_yoy": 1.0},
+    "WA": {"fips": "53", "name": "Washington",     "income_tax": 0.00, "property_tax": 0.87, "sunshine": 155, "pop_growth":  0.8, "col": 108, "median_income":  94605, "median_rent": 2250, "insurance": 1100, "wage_growth": 5.8, "walk": 47, "schools": 7, "home_value": 620000, "home_value_yoy":  1.5, "permits_per_1k": 3.5, "net_migration": -1.0, "job_growth_yoy": 1.5},
+    "WV": {"fips": "54", "name": "West Virginia",  "income_tax": 4.88, "property_tax": 0.58, "sunshine": 178, "pop_growth": -0.5, "col":  87, "median_income":  55948, "median_rent": 1000, "insurance": 1000, "wage_growth": 3.5, "walk": 30, "schools": 4, "home_value": 160000, "home_value_yoy":  5.0, "permits_per_1k": 1.5, "net_migration": -3.0, "job_growth_yoy": 0.5},
+    "WI": {"fips": "55", "name": "Wisconsin",      "income_tax": 5.40, "property_tax": 1.85, "sunshine": 188, "pop_growth":  0.2, "col":  95, "median_income":  74631, "median_rent": 1400, "insurance": 1100, "wage_growth": 4.0, "walk": 39, "schools": 7, "home_value": 300000, "home_value_yoy":  5.0, "permits_per_1k": 2.5, "net_migration":  0.0, "job_growth_yoy": 1.0},
+    "WY": {"fips": "56", "name": "Wyoming",        "income_tax": 0.00, "property_tax": 0.61, "sunshine": 220, "pop_growth":  0.4, "col":  95, "median_income":  74815, "median_rent": 1400, "insurance": 1000, "wage_growth": 4.5, "walk": 30, "schools": 6, "home_value": 360000, "home_value_yoy":  4.5, "permits_per_1k": 4.0, "net_migration":  5.0, "job_growth_yoy": 1.0},
 }
 
 # Choropleth metric definitions — each metric specifies its display
@@ -725,6 +731,12 @@ CHOROPLETH_METRICS = [
     # Derived metric — computed in _compute_derived_metrics() from
     # home_value + median_income against the 3.5x national P/I norm.
     {"key": "overvalued_pct","label": "Overvalued vs income",  "unit": "%",  "good_when": "low",  "decimals": 1, "category": "Market", "popular": True},
+    # Growth Outlook category — forward-leaning indicators that capture
+    # how a state's housing demand pipeline looks 1-3 years out.
+    {"key": "growth_score",   "label": "Growth Outlook score",  "unit": "",   "good_when": "high", "decimals": 0, "category": "Growth Outlook", "popular": True},
+    {"key": "permits_per_1k", "label": "Building permits/1K",   "unit": "",   "good_when": "high", "decimals": 1, "category": "Growth Outlook"},
+    {"key": "net_migration",  "label": "Net domestic migration","unit": "/1K","good_when": "high", "decimals": 1, "category": "Growth Outlook"},
+    {"key": "job_growth_yoy", "label": "Job growth YoY",        "unit": "%",  "good_when": "high", "decimals": 1, "category": "Growth Outlook"},
     {"key": "insurance",     "label": "Home insurance/yr",     "format": "money", "good_when": "low",  "decimals": 0, "category": "Tax & Cost"},
     {"key": "median_rent",   "label": "Median monthly rent",   "format": "money", "good_when": "low",  "decimals": 0, "category": "Tax & Cost"},
     {"key": "median_income", "label": "Median household income","format": "money","good_when": "high", "decimals": 0, "category": "Demographic"},
@@ -780,8 +792,27 @@ def _apply_zillow_state_overrides() -> None:
             target[key] = val
 
 
+# Census + BLS Growth Outlook overrides — building permits per 1K +
+# nonfarm-employment YoY %, refreshed monthly via refresh_growth.py.
+def _apply_growth_overrides() -> None:
+    overrides_path = Path(__file__).parent / "data" / "growth_overrides.json"
+    if not overrides_path.exists():
+        return
+    try:
+        payload = json.loads(overrides_path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return
+    for state_code, values in payload.get("overrides", {}).items():
+        target = CHOROPLETH_STATES.get(state_code)
+        if not target:
+            continue
+        for key, val in values.items():
+            target[key] = val
+
+
 _apply_redfin_overrides()
 _apply_zillow_state_overrides()
+_apply_growth_overrides()
 
 
 # Derived metrics — computed after primary fields are loaded so they
@@ -789,23 +820,62 @@ _apply_zillow_state_overrides()
 # so the input dicts above stay clean (you can read them as raw data).
 def _compute_derived_metrics() -> None:
     """Add metrics that are pure functions of other state fields.
-    Currently:
-      - overvalued_pct: (home_value / (NORM * median_income) - 1) × 100.
-        NORM = 3.5x is the long-run U.S. price-to-income ratio (Joint
-        Center for Housing Studies, Harvard, "State of the Nation's
-        Housing"). States above 3.5x P/I are flagged overvalued; below
-        are undervalued. Coarse but defensible — the more sophisticated
-        approach (state-specific historical P/I baselines) requires a
-        long ZHVI history we don't yet store.
+
+    overvalued_pct:
+        (home_value / (NORM * median_income) - 1) × 100, where
+        NORM = 3.5 is the long-run U.S. price-to-income ratio (Joint
+        Center for Housing Studies, Harvard). Above 3.5x → overvalued;
+        below → undervalued. Coarse but defensible.
+
+    growth_score:
+        0-100 composite of 5 growth indicators, each rescaled to its
+        own 0-100 sub-score then averaged. Captures the "best-run /
+        best-forecasted" angle the user asked for:
+          - pop_growth  (Census)             ~ -0.5 → 1.7   %/yr
+          - net_migration (Census PEP)       ~ -13  → 10    /1K
+          - permits_per_1k (Census BPS)      ~ 1.4  → 7.0   units/1K
+          - job_growth_yoy (BLS QCEW)        ~ 0.5  → 3.0   %/yr
+          - wage_growth (BLS)                ~ 3.5  → 6.2   %/yr
+        Bounds are tuned against the actual data spread so a state
+        scoring 100 is genuinely top-tier across all 5, not just a
+        statistical artifact of one outlier.
     """
     NATIONAL_PI_NORM = 3.5
+    # (lo, hi) bounds for each component — values clamped + rescaled
+    # into [0, 1] then averaged. Tuned to current 2023-2024 spread.
+    GS_BOUNDS = {
+        "pop_growth":     (-0.5, 1.7),
+        "net_migration":  (-13.0, 10.0),
+        "permits_per_1k": ( 1.4, 7.0),
+        "job_growth_yoy": ( 0.5, 3.0),
+        "wage_growth":    ( 3.5, 6.2),
+    }
+
+    def _rescale(v, lo, hi):
+        if v is None:
+            return None
+        t = (v - lo) / (hi - lo) if hi > lo else 0.5
+        return max(0.0, min(1.0, t))
+
     for sd in CHOROPLETH_STATES.values():
+        # Overvalued vs income.
         hv = sd.get("home_value")
         income = sd.get("median_income")
         if hv and income and income > 0:
             sd["overvalued_pct"] = round(
                 (hv / (NATIONAL_PI_NORM * income) - 1) * 100, 1
             )
+        # Growth Outlook composite — average of available sub-scores.
+        # If any input is missing, that component drops out (we don't
+        # penalize states for missing data; we just compute on what
+        # we have).
+        components = []
+        for key, (lo, hi) in GS_BOUNDS.items():
+            t = _rescale(sd.get(key), lo, hi)
+            if t is not None:
+                components.append(t)
+        if components:
+            sd["growth_score"] = round(sum(components) / len(components) * 100)
 
 
 _compute_derived_metrics()
