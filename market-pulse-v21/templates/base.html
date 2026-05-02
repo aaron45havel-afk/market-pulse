@@ -53,20 +53,22 @@
             body.compact-sidebar { --sidebar-w: 56px; }
             body.compact-sidebar .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 40; overflow: hidden; }
             body.compact-sidebar .sidebar:hover { width: 220px; box-shadow: 4px 0 16px rgba(0,0,0,0.4); }
+            /* Use display:none for the collapsed-state hide — opacity:0
+               leaves the elements taking up width which threw off the
+               icon centering and let label text bleed through visually.
+               When hovered, restore display so labels appear inline. */
             body.compact-sidebar .sidebar .label,
-            body.compact-sidebar .sidebar .footer-note,
-            body.compact-sidebar .sidebar .logo { opacity: 0; transition: opacity 0.15s; }
-            body.compact-sidebar .sidebar:hover .label,
-            body.compact-sidebar .sidebar:hover .footer-note,
-            body.compact-sidebar .sidebar:hover .logo { opacity: 1; }
+            body.compact-sidebar .sidebar .footer-note { display: none; }
+            body.compact-sidebar .sidebar:hover .label { display: inline; }
+            body.compact-sidebar .sidebar:hover .footer-note { display: block; }
             /* Center icons in collapsed state, left-align when hovered. */
-            body.compact-sidebar .sidebar .nav-links a { padding: 0.6rem 0.5rem; justify-content: center; gap: 0; }
+            body.compact-sidebar .sidebar .nav-links a { padding: 0.6rem 0; justify-content: center; gap: 0; }
             body.compact-sidebar .sidebar:hover .nav-links a { padding: 0.6rem 0.85rem; justify-content: flex-start; gap: 0.7rem; }
-            /* Logo: hidden when collapsed, restored on hover. The
-               border-bottom still shows so the header divider is
-               visible even with no text. */
-            body.compact-sidebar .sidebar .logo { padding: 0.5rem 0 1.25rem; text-align: left; }
-            body.compact-sidebar .sidebar:hover .logo { padding: 0.5rem 1.25rem 1.25rem; }
+            /* Logo: hidden entirely when collapsed (clean strip with no
+               header text), reappears with full wordmark on hover.
+               border-bottom on the .logo still draws a divider line. */
+            body.compact-sidebar .sidebar .logo { font-size: 0; padding: 0.5rem 0 1.25rem; text-align: left; }
+            body.compact-sidebar .sidebar:hover .logo { font-size: 1.25rem; padding: 0.5rem 1.25rem 1.25rem; }
             /* Push main pane right by the collapsed sidebar width — content
                stays put as the sidebar overlays it on hover. */
             body.compact-sidebar .main-pane { padding-left: 56px; min-width: 0; }
