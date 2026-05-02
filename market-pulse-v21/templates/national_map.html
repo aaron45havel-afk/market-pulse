@@ -388,8 +388,11 @@ function scoreColor(score) {
 function fmtMoney(v) { return '$' + Math.round(v).toLocaleString('en-US'); }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const map = L.map('nationalMap', { zoomControl: true, scrollWheelZoom: true })
+    // Zoom control on the right so it doesn't collide with the
+    // top-left choropleth picker overlay.
+    const map = L.map('nationalMap', { zoomControl: false, scrollWheelZoom: true })
         .setView([38.5, -98.5], 4);
+    L.control.zoom({ position: 'topright' }).addTo(map);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 18,
         attribution: '&copy; OpenStreetMap',
