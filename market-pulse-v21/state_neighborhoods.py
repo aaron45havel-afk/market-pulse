@@ -2217,6 +2217,123 @@ FORT_LAUDERDALE_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# FL — West Palm Beach / Palm Beach County: ultra-luxury Palm Beach proper +
+# Jupiter / North Palm Beach / Palm Beach Gardens beach corridor + Wellington
+# (top schools / equestrian) + Boca Raton + Delray Beach hip walkable.
+# ─────────────────────────────────────────────────────────────────────────────
+WEST_PALM_BEACH_ZIPS: dict[str, dict] = {
+    "33401": {
+        "name": "Downtown West Palm Beach",
+        "lat": 26.7150, "lng": -80.0533,
+        "median_home_value": 440_000, "median_rent_monthly": 2_400,
+        "crime_index": 55, "pct_bachelors": 60,
+        "median_household_income": 75_000, "population": 35_000,
+        "walk_score": 75, "restaurant_score": 80,
+        "tags": ["urban", "walkable", "transit"],
+    },
+    "33407": {
+        "name": "Northwood",
+        "lat": 26.7585, "lng": -80.0680,
+        "median_home_value": 310_000, "median_rent_monthly": 1_800,
+        "crime_index": 65, "pct_bachelors": 35,
+        "median_household_income": 52_000, "population": 25_000,
+        "walk_score": 55, "restaurant_score": 50,
+        "tags": ["affordable", "high-cap-rate", "gentrifying"],
+    },
+    "33480": {
+        "name": "Palm Beach (Worth Ave)",
+        "lat": 26.7050, "lng": -80.0395,
+        "median_home_value": 4_500_000, "median_rent_monthly": 7_500,
+        "crime_index": 18, "pct_bachelors": 80,
+        "median_household_income": 250_000, "population": 9_000,
+        "walk_score": 50, "restaurant_score": 70,
+        "tags": ["ultra-luxury", "low-crime", "beach"],
+    },
+    "33408": {
+        "name": "North Palm Beach",
+        "lat": 26.8200, "lng": -80.0670,
+        "median_home_value": 980_000, "median_rent_monthly": 3_500,
+        "crime_index": 25, "pct_bachelors": 70,
+        "median_household_income": 130_000, "population": 28_000,
+        "walk_score": 35, "restaurant_score": 50,
+        "tags": ["luxury", "low-crime", "beach"],
+    },
+    "33410": {
+        "name": "Palm Beach Gardens",
+        "lat": 26.8500, "lng": -80.0930,
+        "median_home_value": 720_000, "median_rent_monthly": 3_200,
+        "crime_index": 22, "pct_bachelors": 70,
+        "median_household_income": 135_000, "population": 56_000,
+        "walk_score": 30, "restaurant_score": 50,
+        "tags": ["luxury", "low-crime", "family"],
+    },
+    "33458": {
+        "name": "Jupiter",
+        "lat": 26.9342, "lng": -80.0942,
+        "median_home_value": 880_000, "median_rent_monthly": 3_400,
+        "crime_index": 22, "pct_bachelors": 65,
+        "median_household_income": 135_000, "population": 60_000,
+        "walk_score": 30, "restaurant_score": 50,
+        "tags": ["beach", "luxury", "family", "low-crime"],
+    },
+    "33414": {
+        "name": "Wellington",
+        "lat": 26.6660, "lng": -80.2700,
+        "median_home_value": 720_000, "median_rent_monthly": 3_000,
+        "crime_index": 22, "pct_bachelors": 65,
+        "median_household_income": 135_000, "population": 65_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["family", "top-schools", "low-crime", "equestrian"],
+    },
+    "33445": {
+        "name": "Delray Beach",
+        "lat": 26.4615, "lng": -80.0780,
+        "median_home_value": 580_000, "median_rent_monthly": 2_700,
+        "crime_index": 35, "pct_bachelors": 55,
+        "median_household_income": 85_000, "population": 35_000,
+        "walk_score": 65, "restaurant_score": 80,
+        "tags": ["walkable", "hip", "beach"],
+    },
+    "33486": {
+        "name": "Boca Raton Central",
+        "lat": 26.3585, "lng": -80.1196,
+        "median_home_value": 620_000, "median_rent_monthly": 2_800,
+        "crime_index": 28, "pct_bachelors": 65,
+        "median_household_income": 115_000, "population": 30_000,
+        "walk_score": 40, "restaurant_score": 50,
+        "tags": ["family", "established", "low-crime"],
+    },
+    "33487": {
+        "name": "Boca Raton NE",
+        "lat": 26.4060, "lng": -80.0930,
+        "median_home_value": 1_200_000, "median_rent_monthly": 3_800,
+        "crime_index": 18, "pct_bachelors": 75,
+        "median_household_income": 180_000, "population": 28_000,
+        "walk_score": 30, "restaurant_score": 50,
+        "tags": ["luxury", "low-crime", "family"],
+    },
+    "33411": {
+        "name": "Royal Palm Beach",
+        "lat": 26.7050, "lng": -80.2300,
+        "median_home_value": 480_000, "median_rent_monthly": 2_400,
+        "crime_index": 30, "pct_bachelors": 40,
+        "median_household_income": 85_000, "population": 38_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["family", "newer"],
+    },
+    "33433": {
+        "name": "Boca Del Mar",
+        "lat": 26.3530, "lng": -80.1740,
+        "median_home_value": 440_000, "median_rent_monthly": 2_500,
+        "crime_index": 32, "pct_bachelors": 55,
+        "median_household_income": 95_000, "population": 32_000,
+        "walk_score": 30, "restaurant_score": 45,
+        "tags": ["family", "established"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -2461,7 +2578,7 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               MIAMI_ZIPS, ORLANDO_ZIPS, ATLANTA_ZIPS,
               AUSTIN_ZIPS, HOUSTON_ZIPS, SAN_ANTONIO_ZIPS, FORT_WORTH_ZIPS,
               SF_BAY_ZIPS, SAN_DIEGO_ZIPS, INDIANAPOLIS_ZIPS, FORT_WAYNE_ZIPS,
-              JACKSONVILLE_ZIPS, FORT_LAUDERDALE_ZIPS):
+              JACKSONVILLE_ZIPS, FORT_LAUDERDALE_ZIPS, WEST_PALM_BEACH_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -2677,6 +2794,19 @@ STATE_METROS: dict[str, dict] = {
             "Mandarin S (32223) is in the Duval School District but routes to top-rated Mandarin HS feeder pattern — within-ZIP school quality varies more than the bachelor's-percent proxy suggests.",
         ],
     },
+    "FL-WPB": {
+        "state": "FL",
+        "metro_label": "West Palm Beach / Palm Beach County",
+        "subtitle": "ZIP-level scores for Palm Beach County — Downtown WPB, the ultra-luxury Palm Beach island, the Jupiter / Palm Beach Gardens beach corridor, Wellington (top schools / equestrian), Boca Raton, and the Delray Beach hip walkable tier.",
+        "map_center": {"lat": 26.65, "lng": -80.10, "zoom": 9},
+        "zips": WEST_PALM_BEACH_ZIPS,
+        "extra_caveats": [
+            "33480 (Palm Beach proper) is the only true ultra-luxury ZIP in the dataset — median ~\\$4.5M is dominated by waterfront estates; cap-rate score is meaningless at this price tier (rentals are not the use case).",
+            "Wellington (33414) is famous for equestrian / horse-stable communities — outsized school district premium beyond what % bachelor's-plus captures, and an amenity tier no scoring dimension represents.",
+            "Heavy 65+ retiree concentration in Palm Beach Gardens / Jupiter / Boca distorts the cap-rate signal — owner-occupied, year-round retirees mean rental supply is thinner than population alone suggests.",
+            "Coastal flood zones + wind-zone hurricane premium stack on top of each other for east-of-I-95 ZIPs; Citizens Insurance crisis applies metro-wide.",
+        ],
+    },
     "FL-FTL": {
         "state": "FL",
         "metro_label": "Fort Lauderdale / Broward County",
@@ -2749,7 +2879,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "UT": ["UT", "UT-SLC", "UT-STG"],
     "AZ": ["AZ"],
     "NV": ["NV-LV", "NV-RNO", "NV-CC"],
-    "FL": ["FL-MIA", "FL-ORL", "FL-JAX", "FL-FTL"],
+    "FL": ["FL-MIA", "FL-ORL", "FL-JAX", "FL-FTL", "FL-WPB"],
     "GA": ["GA-ATL"],
     "IN": ["IN-IND", "IN-FW"],
 }
