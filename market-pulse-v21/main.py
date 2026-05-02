@@ -60,6 +60,7 @@ async def national_map(request: Request):
     # characteristics — without needing per-metro hand-curated data.
     from data_providers import (
         STATE_SUNSHINE_DAYS, STATE_INCOME_TAX_EFFECTIVE, STATE_POPULATION_GROWTH,
+        CHOROPLETH_STATES, CHOROPLETH_METRICS,
     )
     metros = []
     for slug, cfg in STATE_METROS.items():
@@ -119,9 +120,28 @@ async def national_map(request: Request):
             "state_pop_growth_pct": round(state_pop_growth, 2),
         })
     metros.sort(key=lambda m: -m["avg_composite"])
+    # Build a FIPS→state-data map for the choropleth. The GeoJSON's
+    # feature.id is the FIPS code, so the client looks it up by FIPS.
+    # We also stamp `has_metros: True` for the 8 states with metro
+    # coverage so the choropleth can highlight them differently.
+    states_with_metros = {cfg["state"] for cfg in STATE_METROS.values()}
+    choropleth_by_fips = {}
+    for code, sd in CHOROPLETH_STATES.items():
+        choropleth_by_fips[sd["fips"]] = {
+            "code": code,
+            "name": sd["name"],
+            "income_tax": sd["income_tax"],
+            "property_tax": sd["property_tax"],
+            "sunshine": sd["sunshine"],
+            "pop_growth": sd["pop_growth"],
+            "col": sd["col"],
+            "has_metros": code in states_with_metros,
+        }
     return templates.TemplateResponse("national_map.html", {
         "request": request,
         "metros": metros,
+        "choropleth_states": choropleth_by_fips,
+        "choropleth_metrics": CHOROPLETH_METRICS,
     })
 
 

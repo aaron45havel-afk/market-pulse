@@ -619,6 +619,91 @@ PERSONAS = {
 
 
 # ═══════════════════════════════════════════════════
+# 50-STATE CHOROPLETH DATA — for /map's state heatmap layer
+# ═══════════════════════════════════════════════════
+# Powers the national choropleth on /map. Keeps the existing 13-state
+# STATES + per-state dicts untouched (those drive FRED fetches + metro
+# deep-dives) — this is a parallel, broader dataset for visualization
+# only. Each entry contains:
+#   fips:          FIPS state code (matches the GeoJSON's `id` field)
+#   name:          Full state name for tooltips
+#   income_tax:    Effective state income tax % at $80K household income
+#                  (Tax Foundation 2024 — flat states use stated rate;
+#                  graduated states are interpolated to a typical
+#                  household). 0 = no state income tax.
+#   property_tax:  Effective property tax rate as % of home value
+#                  (Tax Foundation 2024 state averages).
+#   sunshine:      Avg sunny days/year, NOAA Solar Insolation pop-weighted.
+#   pop_growth:    Annual population growth %, Census 2023 estimates.
+#   col:           Cost of living index, BEA Regional Price Parities 2023
+#                  (100 = US avg).
+CHOROPLETH_STATES = {
+    "AL": {"fips": "01", "name": "Alabama",        "income_tax": 4.50, "property_tax": 0.40, "sunshine": 213, "pop_growth":  0.5, "col":  88},
+    "AK": {"fips": "02", "name": "Alaska",         "income_tax": 0.00, "property_tax": 1.19, "sunshine": 134, "pop_growth": -0.2, "col": 124},
+    "AZ": {"fips": "04", "name": "Arizona",        "income_tax": 2.50, "property_tax": 0.63, "sunshine": 290, "pop_growth":  1.4, "col":  97},
+    "AR": {"fips": "05", "name": "Arkansas",       "income_tax": 3.90, "property_tax": 0.64, "sunshine": 217, "pop_growth":  0.5, "col":  87},
+    "CA": {"fips": "06", "name": "California",     "income_tax": 6.80, "property_tax": 0.75, "sunshine": 260, "pop_growth": -0.1, "col": 114},
+    "CO": {"fips": "08", "name": "Colorado",       "income_tax": 4.40, "property_tax": 0.55, "sunshine": 245, "pop_growth":  0.6, "col": 103},
+    "CT": {"fips": "09", "name": "Connecticut",    "income_tax": 5.50, "property_tax": 2.14, "sunshine": 196, "pop_growth":  0.1, "col": 110},
+    "DE": {"fips": "10", "name": "Delaware",       "income_tax": 5.20, "property_tax": 0.61, "sunshine": 207, "pop_growth":  0.7, "col": 100},
+    "DC": {"fips": "11", "name": "District of Columbia", "income_tax": 6.20, "property_tax": 0.57, "sunshine": 200, "pop_growth":  0.0, "col": 153},
+    "FL": {"fips": "12", "name": "Florida",        "income_tax": 0.00, "property_tax": 0.91, "sunshine": 240, "pop_growth":  1.6, "col": 100},
+    "GA": {"fips": "13", "name": "Georgia",        "income_tax": 5.39, "property_tax": 0.81, "sunshine": 215, "pop_growth":  1.0, "col":  92},
+    "HI": {"fips": "15", "name": "Hawaii",         "income_tax": 7.20, "property_tax": 0.32, "sunshine": 240, "pop_growth": -0.1, "col": 184},
+    "ID": {"fips": "16", "name": "Idaho",          "income_tax": 5.80, "property_tax": 0.67, "sunshine": 200, "pop_growth":  1.6, "col":  96},
+    "IL": {"fips": "17", "name": "Illinois",       "income_tax": 4.95, "property_tax": 2.27, "sunshine": 192, "pop_growth": -0.4, "col":  95},
+    "IN": {"fips": "18", "name": "Indiana",        "income_tax": 3.15, "property_tax": 0.84, "sunshine": 185, "pop_growth":  0.3, "col":  90},
+    "IA": {"fips": "19", "name": "Iowa",           "income_tax": 3.80, "property_tax": 1.57, "sunshine": 197, "pop_growth":  0.2, "col":  90},
+    "KS": {"fips": "20", "name": "Kansas",         "income_tax": 5.20, "property_tax": 1.41, "sunshine": 233, "pop_growth":  0.2, "col":  90},
+    "KY": {"fips": "21", "name": "Kentucky",       "income_tax": 4.00, "property_tax": 0.86, "sunshine": 195, "pop_growth":  0.3, "col":  91},
+    "LA": {"fips": "22", "name": "Louisiana",      "income_tax": 4.25, "property_tax": 0.56, "sunshine": 217, "pop_growth": -0.3, "col":  92},
+    "ME": {"fips": "23", "name": "Maine",          "income_tax": 5.80, "property_tax": 1.36, "sunshine": 201, "pop_growth":  0.2, "col": 109},
+    "MD": {"fips": "24", "name": "Maryland",       "income_tax": 5.00, "property_tax": 1.09, "sunshine": 205, "pop_growth":  0.3, "col": 116},
+    "MA": {"fips": "25", "name": "Massachusetts",  "income_tax": 5.00, "property_tax": 1.23, "sunshine": 197, "pop_growth":  0.2, "col": 122},
+    "MI": {"fips": "26", "name": "Michigan",       "income_tax": 4.25, "property_tax": 1.54, "sunshine": 165, "pop_growth":  0.0, "col":  91},
+    "MN": {"fips": "27", "name": "Minnesota",      "income_tax": 6.85, "property_tax": 1.12, "sunshine": 198, "pop_growth":  0.3, "col":  95},
+    "MS": {"fips": "28", "name": "Mississippi",    "income_tax": 4.40, "property_tax": 0.79, "sunshine": 215, "pop_growth": -0.2, "col":  86},
+    "MO": {"fips": "29", "name": "Missouri",       "income_tax": 4.40, "property_tax": 0.97, "sunshine": 207, "pop_growth":  0.1, "col":  87},
+    "MT": {"fips": "30", "name": "Montana",        "income_tax": 5.80, "property_tax": 0.83, "sunshine": 192, "pop_growth":  0.7, "col":  96},
+    "NE": {"fips": "31", "name": "Nebraska",       "income_tax": 5.40, "property_tax": 1.73, "sunshine": 226, "pop_growth":  0.3, "col":  91},
+    "NV": {"fips": "32", "name": "Nevada",         "income_tax": 0.00, "property_tax": 0.59, "sunshine": 280, "pop_growth":  1.2, "col":  97},
+    "NH": {"fips": "33", "name": "New Hampshire",  "income_tax": 0.00, "property_tax": 2.18, "sunshine": 195, "pop_growth":  0.4, "col": 110},
+    "NJ": {"fips": "34", "name": "New Jersey",     "income_tax": 6.20, "property_tax": 2.49, "sunshine": 207, "pop_growth":  0.3, "col": 113},
+    "NM": {"fips": "35", "name": "New Mexico",     "income_tax": 4.60, "property_tax": 0.80, "sunshine": 280, "pop_growth":  0.0, "col":  92},
+    "NY": {"fips": "36", "name": "New York",       "income_tax": 6.20, "property_tax": 1.73, "sunshine": 195, "pop_growth": -0.5, "col": 116},
+    "NC": {"fips": "37", "name": "North Carolina", "income_tax": 4.50, "property_tax": 0.84, "sunshine": 213, "pop_growth":  1.3, "col":  95},
+    "ND": {"fips": "38", "name": "North Dakota",   "income_tax": 1.80, "property_tax": 0.98, "sunshine": 195, "pop_growth":  0.1, "col":  92},
+    "OH": {"fips": "39", "name": "Ohio",           "income_tax": 2.80, "property_tax": 1.56, "sunshine": 175, "pop_growth":  0.1, "col":  90},
+    "OK": {"fips": "40", "name": "Oklahoma",       "income_tax": 4.50, "property_tax": 0.90, "sunshine": 235, "pop_growth":  0.5, "col":  86},
+    "OR": {"fips": "41", "name": "Oregon",         "income_tax": 7.50, "property_tax": 0.93, "sunshine": 155, "pop_growth": -0.1, "col": 113},
+    "PA": {"fips": "42", "name": "Pennsylvania",   "income_tax": 3.07, "property_tax": 1.53, "sunshine": 179, "pop_growth": -0.1, "col":  96},
+    "RI": {"fips": "44", "name": "Rhode Island",   "income_tax": 4.50, "property_tax": 1.40, "sunshine": 200, "pop_growth":  0.2, "col":  99},
+    "SC": {"fips": "45", "name": "South Carolina", "income_tax": 5.40, "property_tax": 0.57, "sunshine": 216, "pop_growth":  1.7, "col":  94},
+    "SD": {"fips": "46", "name": "South Dakota",   "income_tax": 0.00, "property_tax": 1.24, "sunshine": 213, "pop_growth":  0.7, "col":  90},
+    "TN": {"fips": "47", "name": "Tennessee",      "income_tax": 0.00, "property_tax": 0.67, "sunshine": 205, "pop_growth":  0.7, "col":  91},
+    "TX": {"fips": "48", "name": "Texas",          "income_tax": 0.00, "property_tax": 1.80, "sunshine": 230, "pop_growth":  1.6, "col":  97},
+    "UT": {"fips": "49", "name": "Utah",           "income_tax": 4.65, "property_tax": 0.58, "sunshine": 235, "pop_growth":  1.5, "col":  98},
+    "VT": {"fips": "50", "name": "Vermont",        "income_tax": 5.80, "property_tax": 1.90, "sunshine": 159, "pop_growth":  0.0, "col": 110},
+    "VA": {"fips": "51", "name": "Virginia",       "income_tax": 5.50, "property_tax": 0.82, "sunshine": 200, "pop_growth":  0.4, "col": 102},
+    "WA": {"fips": "53", "name": "Washington",     "income_tax": 0.00, "property_tax": 0.87, "sunshine": 155, "pop_growth":  0.8, "col": 108},
+    "WV": {"fips": "54", "name": "West Virginia",  "income_tax": 4.88, "property_tax": 0.58, "sunshine": 178, "pop_growth": -0.5, "col":  87},
+    "WI": {"fips": "55", "name": "Wisconsin",      "income_tax": 5.40, "property_tax": 1.85, "sunshine": 188, "pop_growth":  0.2, "col":  95},
+    "WY": {"fips": "56", "name": "Wyoming",        "income_tax": 0.00, "property_tax": 0.61, "sunshine": 220, "pop_growth":  0.4, "col":  95},
+}
+
+# Choropleth metric definitions — what the picker exposes, plus the
+# direction (low or high = "good" for a green color). The label is what
+# shows in the picker; unit is used in the tooltip readout.
+CHOROPLETH_METRICS = [
+    {"key": "income_tax",   "label": "State income tax",      "unit": "%",        "good_when": "low",  "decimals": 2},
+    {"key": "property_tax", "label": "Property tax rate",     "unit": "%",        "good_when": "low",  "decimals": 2},
+    {"key": "sunshine",     "label": "Sunshine days/yr",      "unit": " d",       "good_when": "high", "decimals": 0},
+    {"key": "pop_growth",   "label": "Population growth/yr",  "unit": "%",        "good_when": "high", "decimals": 1},
+    {"key": "col",          "label": "Cost of living index",  "unit": "",         "good_when": "low",  "decimals": 0},
+]
+
+
+# ═══════════════════════════════════════════════════
 # CACHING
 # ═══════════════════════════════════════════════════
 

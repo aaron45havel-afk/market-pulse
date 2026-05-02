@@ -73,6 +73,36 @@
     .legend { position: absolute; bottom: 18px; left: 18px; z-index: 500; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.75rem; font-size: 0.72rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.5rem; }
     .legend-bar { display: inline-block; width: 110px; height: 8px; border-radius: 4px; background: linear-gradient(to right, #ef4444, #eab308, #22c55e); }
 
+    /* ─── Choropleth picker overlay (top-left of the map) ─────────── */
+    .cp-picker { position: absolute; top: 16px; left: 16px; z-index: 500; background: rgba(20, 23, 33, 0.94); backdrop-filter: blur(8px); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 0.85rem; min-width: 240px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+    .cp-picker-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.55rem; }
+    .cp-picker-row:last-child { margin-bottom: 0; }
+    .cp-picker-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); font-weight: 700; flex-shrink: 0; }
+    .cp-select { flex: 1; padding: 0.35rem 0.55rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.8rem; cursor: pointer; }
+    .cp-select:hover { border-color: var(--accent2); }
+    .cp-select:focus { outline: none; border-color: var(--accent2); box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+
+    /* Toggle switch (replaces a checkbox visually) */
+    .cp-toggle { display: flex; align-items: center; gap: 0.55rem; cursor: pointer; user-select: none; }
+    .cp-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+    .cp-toggle-track { position: relative; display: inline-block; width: 32px; height: 18px; background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; transition: background 0.15s; }
+    .cp-toggle-track::after { content: ''; position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; border-radius: 50%; background: var(--text-dim); transition: transform 0.15s, background 0.15s; }
+    .cp-toggle input:checked + .cp-toggle-track { background: rgba(59,130,246,0.25); border-color: var(--accent2); }
+    .cp-toggle input:checked + .cp-toggle-track::after { transform: translateX(14px); background: var(--accent2); }
+    .cp-toggle-label { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+
+    /* Compact legend bar */
+    .cp-legend { display: flex; align-items: center; gap: 0.4rem; padding-top: 0.5rem; border-top: 1px solid var(--border); }
+    .cp-legend-text { font-size: 0.68rem; color: var(--text-dim); font-variant-numeric: tabular-nums; min-width: 38px; }
+    .cp-legend-text:last-child { text-align: right; }
+    .cp-legend-bar { flex: 1; height: 8px; border-radius: 4px; background: linear-gradient(to right, #ef4444, #eab308, #22c55e); }
+    /* When the metric is "low is good", flip the gradient so green is left. */
+    .cp-legend.cp-flip .cp-legend-bar { background: linear-gradient(to right, #22c55e, #eab308, #ef4444); }
+
+    /* Hide the metric row + legend when toggle is off */
+    .cp-picker.cp-disabled #cpMetricRow,
+    .cp-picker.cp-disabled #cpLegend { display: none; }
+
     /* ─── Find-your-fit pane (lives inside the right rail as a tab) ── */
     .fit-body { padding: 0.85rem 1rem; overflow-y: auto; flex: 1; }
     .fit-blurb { font-size: 0.74rem; color: var(--text-dim); line-height: 1.45; margin-bottom: 0.85rem; }
@@ -176,6 +206,29 @@
         <!-- Map column: holds the Leaflet canvas + the legend overlay -->
         <div class="map-col">
             <div id="nationalMap"></div>
+
+            <!-- Choropleth metric picker overlay (top-left). Tints every
+                 state by the selected metric. Toggle off if you want
+                 just the metro pins. -->
+            <div class="cp-picker" id="cpPicker">
+                <div class="cp-picker-row">
+                    <label class="cp-toggle">
+                        <input type="checkbox" id="cpToggle" checked>
+                        <span class="cp-toggle-track"></span>
+                        <span class="cp-toggle-label">State heatmap</span>
+                    </label>
+                </div>
+                <div class="cp-picker-row" id="cpMetricRow">
+                    <span class="cp-picker-label">Color by</span>
+                    <select id="cpMetric" class="cp-select"></select>
+                </div>
+                <div class="cp-legend" id="cpLegend">
+                    <span class="cp-legend-text" id="cpLegendLow">—</span>
+                    <span class="cp-legend-bar"></span>
+                    <span class="cp-legend-text" id="cpLegendHigh">—</span>
+                </div>
+            </div>
+
             <div class="legend">
                 <span>Worse</span>
                 <span class="legend-bar"></span>
@@ -308,6 +361,8 @@
 </div>
 
 <script id="metros-data" type="application/json">{{ metros | tojson }}</script>
+<script id="cp-states-data" type="application/json">{{ choropleth_states | tojson }}</script>
+<script id="cp-metrics-data" type="application/json">{{ choropleth_metrics | tojson }}</script>
 {% endblock %}
 
 {% block scripts %}
@@ -315,6 +370,8 @@
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 const METROS = JSON.parse(document.getElementById('metros-data').textContent);
+const CP_STATES = JSON.parse(document.getElementById('cp-states-data').textContent);
+const CP_METRICS = JSON.parse(document.getElementById('cp-metrics-data').textContent);
 
 // Map composite score 0-100 to a red→yellow→green hue (same logic as the
 // per-metro state_map.html so colors stay consistent across views).
@@ -388,6 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initLeaderboard();
     initFitTab();
     initFilters();
+    initChoropleth();
 });
 
 // Maps user income buckets to a max-affordable home price using the
@@ -755,6 +813,177 @@ function applyFilters() {
     const tab = document.querySelector('.rail-tab[data-pane="filters"]');
     if (tab) tab.classList.toggle('has-active', anyActive);
     renderLeaderboard();
+}
+
+// ─── State choropleth (national heatmap layer) ─────────────────────
+// Loads a US-states GeoJSON from a CDN and tints each state by the
+// selected metric. The metro pin layer sits on top so users can still
+// click pins. The picker overlay lives top-left of the map. Toggle off
+// to revert to the plain pin map.
+//
+// Color logic: each metric has a `good_when` direction. Values are
+// normalized 0–1 against the metric's full range across all 51 states,
+// then mapped to a red→yellow→green gradient. For "low_is_good"
+// metrics the gradient is flipped so green is at the low end.
+//
+// GeoJSON source: PublicaMundi MappingAPI (MIT-licensed, well-known
+// dataset). Each feature has `id` = FIPS code, which we use to join
+// against CP_STATES.
+const CP_GEOJSON_URL = 'https://cdn.jsdelivr.net/gh/PublicaMundi/MappingAPI@master/data/geojson/us-states.json';
+
+let _cpLayer = null;          // Leaflet GeoJSON layer
+let _cpEnabled = true;        // Toggle state
+let _cpMetric = null;         // Currently selected CHOROPLETH_METRICS entry
+
+function initChoropleth() {
+    const select = document.getElementById('cpMetric');
+    const toggle = document.getElementById('cpToggle');
+    const picker = document.getElementById('cpPicker');
+    if (!select || !toggle || !picker) return;
+
+    // Populate metric picker. Default to sunshine — visually striking
+    // and unambiguous (Sun Belt vs Pacific NW).
+    CP_METRICS.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.key;
+        opt.textContent = m.label;
+        select.appendChild(opt);
+    });
+    const defaultKey = 'sunshine';
+    select.value = defaultKey;
+    _cpMetric = CP_METRICS.find(m => m.key === defaultKey);
+
+    select.addEventListener('change', () => {
+        _cpMetric = CP_METRICS.find(m => m.key === select.value);
+        repaintChoropleth();
+    });
+
+    toggle.addEventListener('change', () => {
+        _cpEnabled = toggle.checked;
+        picker.classList.toggle('cp-disabled', !_cpEnabled);
+        if (_cpLayer) {
+            if (_cpEnabled) _cpLayer.addTo(window._mpMap);
+            else window._mpMap.removeLayer(_cpLayer);
+        }
+    });
+
+    // Fetch GeoJSON and build the layer. Failure is silent — pins still
+    // work without the choropleth layer, so the page degrades gracefully
+    // if the CDN is reachable but the file 404s for some reason.
+    fetch(CP_GEOJSON_URL)
+        .then(r => r.ok ? r.json() : Promise.reject(r.status))
+        .then(buildChoroplethLayer)
+        .catch(err => {
+            console.warn('Choropleth GeoJSON failed to load:', err);
+            picker.style.display = 'none';
+        });
+}
+
+function getMetricBounds(metricKey) {
+    const vals = Object.values(CP_STATES).map(s => s[metricKey]);
+    return { min: Math.min(...vals), max: Math.max(...vals) };
+}
+
+// Map a 0-1 normalized value to a red→yellow→green RGB string. Same
+// gradient as scoreColor() for the metro pins, so the two layers are
+// chromatically consistent.
+function gradientColor(t) {
+    t = Math.max(0, Math.min(1, t));
+    if (t < 0.5) {
+        const k = t / 0.5;
+        return `rgb(239, ${Math.round(68 + (179 - 68) * k)}, ${Math.round(68 + (8 - 68) * k)})`;
+    }
+    const k = (t - 0.5) / 0.5;
+    return `rgb(${Math.round(234 + (34 - 234) * k)}, ${Math.round(179 + (197 - 179) * k)}, ${Math.round(8 + (94 - 8) * k)})`;
+}
+
+function colorForState(fips) {
+    const sd = CP_STATES[fips];
+    if (!sd || !_cpMetric) return '#2a2d3a';
+    const v = sd[_cpMetric.key];
+    if (v == null) return '#2a2d3a';
+    const { min, max } = getMetricBounds(_cpMetric.key);
+    let t = max > min ? (v - min) / (max - min) : 0.5;
+    // Flip so "good" is always green: high_is_good keeps t, low_is_good
+    // inverts (so the smallest value becomes 1.0 → green).
+    if (_cpMetric.good_when === 'low') t = 1 - t;
+    return gradientColor(t);
+}
+
+function styleForFeature(feature) {
+    const fips = feature.id || (feature.properties && feature.properties.STATE);
+    return {
+        fillColor: colorForState(fips),
+        weight: 1,
+        opacity: 0.8,
+        color: '#0b0d14',
+        fillOpacity: 0.55,
+    };
+}
+
+function buildChoroplethLayer(geojson) {
+    _cpLayer = L.geoJSON(geojson, {
+        style: styleForFeature,
+        onEachFeature: (feature, layer) => {
+            const fips = feature.id || (feature.properties && feature.properties.STATE);
+            const sd = CP_STATES[fips];
+            // Tooltip shows state name + the current metric's value.
+            // Rebuilt on every metric change via repaintChoropleth().
+            layer.on('mouseover', e => {
+                e.target.setStyle({ weight: 2.5, color: '#fff', fillOpacity: 0.7 });
+                e.target.bringToFront();
+                if (sd && _cpMetric) {
+                    const v = sd[_cpMetric.key];
+                    const valStr = v.toFixed(_cpMetric.decimals) + _cpMetric.unit;
+                    const coverage = sd.has_metros ? '<div style="margin-top:4px; color:#3b82f6; font-size:11px;">▸ Metro coverage available</div>' : '';
+                    e.target.bindTooltip(
+                        `<div style="font-weight:700;">${sd.name}</div>` +
+                        `<div style="font-size:12px; margin-top:2px;">${_cpMetric.label}: <strong>${valStr}</strong></div>` +
+                        coverage,
+                        { sticky: true, opacity: 1, direction: 'top' }
+                    ).openTooltip();
+                }
+            });
+            layer.on('mouseout', e => {
+                _cpLayer.resetStyle(e.target);
+                e.target.unbindTooltip();
+            });
+            // Click a covered state → fly to its metros so users can
+            // see the pins and dive in. Uncovered states do nothing
+            // (visual-only at this granularity).
+            layer.on('click', e => {
+                if (!sd || !sd.has_metros) return;
+                const stateMetros = METROS.filter(m => m.state === sd.code);
+                if (!stateMetros.length) return;
+                const lats = stateMetros.map(m => m.map_center.lat);
+                const lngs = stateMetros.map(m => m.map_center.lng);
+                const bounds = L.latLngBounds(
+                    [Math.min(...lats), Math.min(...lngs)],
+                    [Math.max(...lats), Math.max(...lngs)]
+                );
+                window._mpMap.flyToBounds(bounds, { padding: [60, 60], maxZoom: 7, duration: 0.7 });
+            });
+        },
+    });
+    if (_cpEnabled) _cpLayer.addTo(window._mpMap);
+    // Send the choropleth to the bottom so the metro pin markers always
+    // render on top of the polygons (otherwise the polygon click handler
+    // intercepts pin clicks).
+    _cpLayer.bringToBack();
+    repaintChoropleth();
+}
+
+function repaintChoropleth() {
+    if (!_cpLayer || !_cpMetric) return;
+    _cpLayer.setStyle(styleForFeature);
+    // Update legend bar direction + endpoint labels.
+    const legend = document.getElementById('cpLegend');
+    legend.classList.toggle('cp-flip', _cpMetric.good_when === 'low');
+    const { min, max } = getMetricBounds(_cpMetric.key);
+    const lowEl = document.getElementById('cpLegendLow');
+    const highEl = document.getElementById('cpLegendHigh');
+    lowEl.textContent = min.toFixed(_cpMetric.decimals) + _cpMetric.unit;
+    highEl.textContent = max.toFixed(_cpMetric.decimals) + _cpMetric.unit;
 }
 
 // ─── Find-your-fit pane wiring (right-rail Tab 2) ────────────────────
