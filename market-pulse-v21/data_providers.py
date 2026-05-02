@@ -722,6 +722,9 @@ CHOROPLETH_METRICS = [
     # an investor-appreciation lens.
     {"key": "homes_sold",    "label": "Home sales (last month)","unit": "",  "good_when": "high", "decimals": 0, "category": "Market", "popular": True},
     {"key": "dom",           "label": "Days on market",        "unit": " d", "good_when": "low",  "decimals": 0, "category": "Market", "popular": True},
+    # Derived metric — computed in _compute_derived_metrics() from
+    # home_value + median_income against the 3.5x national P/I norm.
+    {"key": "overvalued_pct","label": "Overvalued vs income",  "unit": "%",  "good_when": "low",  "decimals": 1, "category": "Market", "popular": True},
     {"key": "insurance",     "label": "Home insurance/yr",     "format": "money", "good_when": "low",  "decimals": 0, "category": "Tax & Cost"},
     {"key": "median_rent",   "label": "Median monthly rent",   "format": "money", "good_when": "low",  "decimals": 0, "category": "Tax & Cost"},
     {"key": "median_income", "label": "Median household income","format": "money","good_when": "high", "decimals": 0, "category": "Demographic"},
@@ -779,6 +782,33 @@ def _apply_zillow_state_overrides() -> None:
 
 _apply_redfin_overrides()
 _apply_zillow_state_overrides()
+
+
+# Derived metrics — computed after primary fields are loaded so they
+# always reflect the latest refreshed values. Kept as a separate pass
+# so the input dicts above stay clean (you can read them as raw data).
+def _compute_derived_metrics() -> None:
+    """Add metrics that are pure functions of other state fields.
+    Currently:
+      - overvalued_pct: (home_value / (NORM * median_income) - 1) × 100.
+        NORM = 3.5x is the long-run U.S. price-to-income ratio (Joint
+        Center for Housing Studies, Harvard, "State of the Nation's
+        Housing"). States above 3.5x P/I are flagged overvalued; below
+        are undervalued. Coarse but defensible — the more sophisticated
+        approach (state-specific historical P/I baselines) requires a
+        long ZHVI history we don't yet store.
+    """
+    NATIONAL_PI_NORM = 3.5
+    for sd in CHOROPLETH_STATES.values():
+        hv = sd.get("home_value")
+        income = sd.get("median_income")
+        if hv and income and income > 0:
+            sd["overvalued_pct"] = round(
+                (hv / (NATIONAL_PI_NORM * income) - 1) * 100, 1
+            )
+
+
+_compute_derived_metrics()
 
 
 # ═══════════════════════════════════════════════════
