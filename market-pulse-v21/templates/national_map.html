@@ -112,11 +112,15 @@
        give a quick visual signal. */
     .mp-cluster {
         display: flex; align-items: center; justify-content: center;
-        font-weight: 700; font-size: 0.78rem;
+        font-weight: 700; font-size: 0.85rem;
         color: white;
-        border: 2px solid rgba(255,255,255,0.85);
+        border: 3px solid #fff;
         border-radius: 50%;
-        box-shadow: 0 1px 6px rgba(0,0,0,0.5);
+        /* Double shadow: tight dark outline outside the white border so
+           the cluster bubble visibly separates from any choropleth color
+           (otherwise a green cluster vanishes on a green state). */
+        box-shadow: 0 0 0 1.5px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.6);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
     }
     .mp-cluster:hover { transform: scale(1.06); }
     /* Plugin uses .marker-cluster (with -small/-medium/-large variants).
@@ -466,9 +470,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const marker = L.circleMarker([c.lat, c.lng], {
             radius: 10 + Math.min(8, m.zip_count / 2),  // radius scales lightly with ZIP count
             fillColor: color,
-            color: '#0b0d14',
-            weight: 1.5,
-            fillOpacity: 0.92,
+            // White border with extra weight pops against any choropleth
+            // color (the prior dark border disappeared on dark states).
+            color: '#fff',
+            weight: 2.5,
+            fillOpacity: 0.95,
         });
         marker._mpScore = m.top_zip.composite_score;  // used by the cluster icon to compute avg color
         const popup =
@@ -865,7 +871,7 @@ function applyFilters() {
     if (window._mpMarkers) {
         Object.entries(window._mpMarkers).forEach(([slug, marker]) => {
             const ok = passing.has(slug);
-            marker.setStyle({ fillOpacity: ok ? 0.92 : 0.12, opacity: ok ? 1 : 0.25 });
+            marker.setStyle({ fillOpacity: ok ? 0.95 : 0.12, opacity: ok ? 1 : 0.25 });
             // Add/remove from the cluster so bubble counts reflect the
             // filtered set. hasLayer is the supported way to test
             // membership across versions of leaflet.markercluster.
@@ -1001,7 +1007,11 @@ function styleForFeature(feature) {
         weight: 1,
         opacity: 0.8,
         color: '#0b0d14',
-        fillOpacity: 0.55,
+        // Lower opacity than the original 0.55 — the choropleth is
+        // context, the metro pins are the focus. Saturated state colors
+        // were swamping pin visibility, especially where pin and state
+        // share a color (green pin on green state).
+        fillOpacity: 0.4,
     };
 }
 
