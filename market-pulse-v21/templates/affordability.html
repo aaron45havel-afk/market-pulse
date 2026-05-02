@@ -222,6 +222,10 @@
         </div>
     </details>
     <div id="dpa-list" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
+    <!-- County-level program limits (only shown when the selected state
+         has DPA_LIMITS data wired up). Renders price + income caps so
+         you can quickly see whether a specific county qualifies you. -->
+    <div id="dpa-limits" style="margin-top:1rem;"></div>
 </div>
 
 <!-- ─────────────  PROPERTY TAX PROJECTION (collapsed by default)  ───────────── -->
@@ -1157,6 +1161,73 @@ const DPA_PROGRAMS = {
     ],
 };
 
+// County-level price + income caps for state DPA programs. `targeted`
+// flag = HUD HFA targeted-area limits apply (asterisk in source data) —
+// these counties may have additional eligibility carve-outs, so we mark
+// them in the table to nudge users toward verifying directly. Income
+// brackets show the lower (≤2 ppl) and upper (≥3 ppl) household-size
+// caps, which is how the Nevada Housing Division publishes them.
+const DPA_LIMITS = {
+    NV: {
+        sourceLabel: 'Home Is Possible / Home At Last — Nevada Housing Division & Nevada Rural Housing',
+        counties: [
+            { name: 'Carson City', maxPrice: 596945, income12: 109121, income3plus: 125489 },
+            { name: 'Churchill',   maxPrice: 544232, income12: 102000, income3plus: 117185, targeted: true },
+            { name: 'Clark',       maxPrice: 544232, income12: 102000, income3plus: 117300, targeted: true },
+            { name: 'Douglas',     maxPrice: 746181, income12: 130560, income3plus: 152320 },
+            { name: 'Elko',        maxPrice: 544232, income12: 110300, income3plus: 126845 },
+            { name: 'Esmeralda',   maxPrice: 544232, income12:  94800, income3plus: 119025, targeted: true },
+            { name: 'Eureka',      maxPrice: 544232, income12:  97834, income3plus: 112509 },
+            { name: 'Humboldt',    maxPrice: 544232, income12:  97500, income3plus: 112125 },
+            { name: 'Lander',      maxPrice: 544232, income12: 107600, income3plus: 123740 },
+            { name: 'Lincoln',     maxPrice: 544232, income12:  97500, income3plus: 112125, targeted: true },
+            { name: 'Lyon',        maxPrice: 544232, income12:  97614, income3plus: 112256, targeted: true },
+            { name: 'Mineral',     maxPrice: 544232, income12:  97834, income3plus: 112509, targeted: true },
+            { name: 'Nye',         maxPrice: 544232, income12:  97834, income3plus: 112509, targeted: true },
+            { name: 'Pershing',    maxPrice: 544232, income12: 100800, income3plus: 115920, targeted: true },
+            { name: 'Storey',      maxPrice: 656640, income12: 118503, income3plus: 136279 },
+            { name: 'Washoe',      maxPrice: 656640, income12: 118503, income3plus: 136279 },
+            { name: 'White Pine',  maxPrice: 544232, income12: 103900, income3plus: 125489, targeted: true },
+        ],
+    },
+};
+
+function renderDPALimits(state) {
+    const wrap = document.getElementById('dpa-limits');
+    if (!wrap) return;
+    const limits = DPA_LIMITS[state];
+    if (!limits) { wrap.innerHTML = ''; return; }
+    // Sort by max price descending so the most generous counties are on
+    // top — useful when scanning for "where can I actually buy a house".
+    const counties = [...limits.counties].sort((a, b) => b.maxPrice - a.maxPrice);
+    const hasTargeted = counties.some(c => c.targeted);
+    const rowsHtml = counties.map(c => `
+        <tr>
+            <td style="padding:0.4rem 0.6rem;">${esc(c.name)}${c.targeted ? ' <span style="color:var(--text-dim);">*</span>' : ''}</td>
+            <td style="padding:0.4rem 0.6rem; text-align:right;">${fmtMoney(c.maxPrice)}</td>
+            <td style="padding:0.4rem 0.6rem; text-align:right;">${fmtMoney(c.income12)}</td>
+            <td style="padding:0.4rem 0.6rem; text-align:right;">${fmtMoney(c.income3plus)}</td>
+        </tr>`).join('');
+    wrap.innerHTML = `
+        <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.4rem;">County program limits</div>
+        <div style="font-size:0.78rem; color:var(--text-dim); margin-bottom:0.5rem;">${esc(limits.sourceLabel)}</div>
+        <div style="overflow-x:auto; border:1px solid var(--border); border-radius:6px;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                <thead>
+                    <tr style="background:var(--surface2); color:var(--text-dim); text-align:left; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em;">
+                        <th style="padding:0.5rem 0.6rem;">County</th>
+                        <th style="padding:0.5rem 0.6rem; text-align:right;">Max purchase price</th>
+                        <th style="padding:0.5rem 0.6rem; text-align:right;">Max income (≤2 ppl)</th>
+                        <th style="padding:0.5rem 0.6rem; text-align:right;">Max income (3+ ppl)</th>
+                    </tr>
+                </thead>
+                <tbody>${rowsHtml}</tbody>
+            </table>
+        </div>
+        ${hasTargeted ? '<div style="font-size:0.72rem; color:var(--text-dim); margin-top:0.45rem;">* HUD HFA targeted-area limits apply — additional eligibility rules. Verify directly with the program before applying.</div>' : ''}
+    `;
+}
+
 let _dpaState = null;
 
 function renderDPA(state) {
@@ -1165,6 +1236,7 @@ function renderDPA(state) {
     if (!list) return;
     document.querySelectorAll('#dpa-state-pills button').forEach(b =>
         b.classList.toggle('active', b.dataset.state === state));
+    renderDPALimits(state);
     const programs = DPA_PROGRAMS[state] || [];
     if (!programs.length) {
         list.innerHTML = '<div style="font-size:0.85rem; color:var(--text-dim); font-style:italic;">No programs catalogued for this state yet.</div>';
