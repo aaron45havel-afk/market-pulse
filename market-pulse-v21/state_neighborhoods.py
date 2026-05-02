@@ -3050,6 +3050,124 @@ CINCINNATI_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# CO — Fort Collins / Loveland (Larimer County): CSU anchor + tech corridor
+# (HP / Avago / Woodward), Old Town walkable historic district, Harmony /
+# Timnath master-planned new growth, Front Range mountain-view family
+# suburbs (Loveland west, Berthoud, Estes Park gateway tourism market).
+# ─────────────────────────────────────────────────────────────────────────────
+FORT_COLLINS_ZIPS: dict[str, dict] = {
+    "80521": {
+        "name": "Old Town / Downtown FC",
+        "lat": 40.5853, "lng": -105.0850,
+        "median_home_value": 560_000, "median_rent_monthly": 2_100,
+        "crime_index": 35, "pct_bachelors": 65,
+        "median_household_income": 75_000, "population": 18_000,
+        "walk_score": 80, "restaurant_score": 90,
+        "tags": ["walkable", "hip", "historic"],
+    },
+    "80524": {
+        "name": "Old Town North / Riverside",
+        "lat": 40.6050, "lng": -105.0900,
+        "median_home_value": 440_000, "median_rent_monthly": 1_750,
+        "crime_index": 30, "pct_bachelors": 50,
+        "median_household_income": 65_000, "population": 22_000,
+        "walk_score": 60, "restaurant_score": 50,
+        "tags": ["walkable", "gentrifying"],
+    },
+    "80525": {
+        "name": "Midtown / Foothills",
+        "lat": 40.5600, "lng": -105.0850,
+        "median_home_value": 510_000, "median_rent_monthly": 1_950,
+        "crime_index": 25, "pct_bachelors": 60,
+        "median_household_income": 80_000, "population": 32_000,
+        "walk_score": 50, "restaurant_score": 60,
+        "tags": ["family", "established"],
+    },
+    "80526": {
+        "name": "South FC / CSU",
+        "lat": 40.5550, "lng": -105.1100,
+        "median_home_value": 480_000, "median_rent_monthly": 1_900,
+        "crime_index": 35, "pct_bachelors": 55,
+        "median_household_income": 52_000, "population": 35_000,
+        "walk_score": 50, "restaurant_score": 55,
+        "tags": ["student", "walkable", "mid-tier"],
+    },
+    "80528": {
+        "name": "SE FC / Harmony corridor",
+        "lat": 40.5200, "lng": -105.0300,
+        "median_home_value": 620_000, "median_rent_monthly": 2_400,
+        "crime_index": 15, "pct_bachelors": 65,
+        "median_household_income": 130_000, "population": 42_000,
+        "walk_score": 25, "restaurant_score": 50,
+        "tags": ["family", "low-crime", "master-planned", "upscale"],
+    },
+    "80535": {
+        "name": "Laporte / NW Larimer",
+        "lat": 40.6250, "lng": -105.1800,
+        "median_home_value": 550_000, "median_rent_monthly": 2_000,
+        "crime_index": 20, "pct_bachelors": 50,
+        "median_household_income": 95_000, "population":  5_000,
+        "walk_score": 15, "restaurant_score": 25,
+        "tags": ["rural-edge", "established"],
+    },
+    "80538": {
+        "name": "Loveland east",
+        "lat": 40.4050, "lng": -105.0600,
+        "median_home_value": 470_000, "median_rent_monthly": 1_950,
+        "crime_index": 30, "pct_bachelors": 40,
+        "median_household_income": 75_000, "population": 50_000,
+        "walk_score": 35, "restaurant_score": 50,
+        "tags": ["family", "mid-tier"],
+    },
+    "80537": {
+        "name": "Loveland west / mountain",
+        "lat": 40.3800, "lng": -105.0850,
+        "median_home_value": 560_000, "median_rent_monthly": 2_150,
+        "crime_index": 22, "pct_bachelors": 50,
+        "median_household_income": 90_000, "population": 35_000,
+        "walk_score": 30, "restaurant_score": 50,
+        "tags": ["family", "established"],
+    },
+    "80513": {
+        "name": "Berthoud",
+        "lat": 40.3050, "lng": -105.0800,
+        "median_home_value": 610_000, "median_rent_monthly": 2_250,
+        "crime_index": 18, "pct_bachelors": 55,
+        "median_household_income": 105_000, "population": 12_000,
+        "walk_score": 45, "restaurant_score": 50,
+        "tags": ["family", "low-crime", "established"],
+    },
+    "80547": {
+        "name": "Timnath",
+        "lat": 40.5350, "lng": -104.9950,
+        "median_home_value": 710_000, "median_rent_monthly": 2_650,
+        "crime_index": 12, "pct_bachelors": 65,
+        "median_household_income": 145_000, "population":  8_000,
+        "walk_score": 25, "restaurant_score": 50,
+        "tags": ["family", "top-schools", "low-crime", "master-planned", "upscale"],
+    },
+    "80550": {
+        "name": "Windsor",
+        "lat": 40.4800, "lng": -104.9000,
+        "median_home_value": 580_000, "median_rent_monthly": 2_300,
+        "crime_index": 20, "pct_bachelors": 55,
+        "median_household_income": 115_000, "population": 32_000,
+        "walk_score": 30, "restaurant_score": 50,
+        "tags": ["family", "master-planned", "growth"],
+    },
+    "80517": {
+        "name": "Estes Park",
+        "lat": 40.3800, "lng": -105.5200,
+        "median_home_value": 720_000, "median_rent_monthly": 2_400,
+        "crime_index": 25, "pct_bachelors": 55,
+        "median_household_income": 80_000, "population":  9_000,
+        "walk_score": 60, "restaurant_score": 75,
+        "tags": ["vacation", "walkable", "scenic"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -3296,7 +3414,8 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               SF_BAY_ZIPS, SAN_DIEGO_ZIPS, SACRAMENTO_ZIPS, INDIANAPOLIS_ZIPS, FORT_WAYNE_ZIPS,
               JACKSONVILLE_ZIPS, FORT_LAUDERDALE_ZIPS, WEST_PALM_BEACH_ZIPS,
               TAMPA_ZIPS, SAVANNAH_ZIPS,
-              COLUMBUS_ZIPS, CLEVELAND_ZIPS, CINCINNATI_ZIPS):
+              COLUMBUS_ZIPS, CLEVELAND_ZIPS, CINCINNATI_ZIPS,
+              FORT_COLLINS_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -3631,6 +3750,20 @@ STATE_METROS: dict[str, dict] = {
             "Procter & Gamble + Kroger + GE Aerospace anchor a steady downtown / suburban professional rental floor that explains why Cincy yields look investable across the spectrum, not just at the affordable tier.",
         ],
     },
+    "CO-FTC": {
+        "state": "CO",
+        "metro_label": "Fort Collins / Larimer County",
+        "subtitle": "ZIP-level scores for Fort Collins-Loveland — Old Town walkable historic district, CSU + Midtown / South FC, Harmony corridor + Timnath master-planned upscale, Loveland east+west commuter belt, Berthoud + Windsor growth-corridor edges, plus Estes Park (Rocky Mountain National Park gateway).",
+        "map_center": {"lat": 40.50, "lng": -105.08, "zoom": 10},
+        "zips": FORT_COLLINS_ZIPS,
+        "extra_caveats": [
+            "CSU (Colorado State University) drives student-rental demand in 80526 + parts of 80521; cap rates in those ZIPs reflect 12-month leases with summer occupancy gaps, not typical SFR market dynamics.",
+            "Estes Park (80517) is geographically far west of the FC-Loveland urbanized area and the market is dominated by short-term vacation rentals (Rocky Mountain National Park gateway) — cap rate signal there reflects nightly Airbnb yields, not LTR comparables.",
+            "Larimer County wildfire risk runs heavier toward the foothills (80535 Laporte, 80517 Estes, west portions of 80537); insurance multiplier is higher than the Colorado state average, and the High Park + Cameron Peak fires reset risk modeling for west-of-I-25 properties.",
+            "Timnath (80547) and SE FC / Harmony corridor (80528) are seeing the heaviest new construction in the metro — Zillow auto-refresh keeps home values current but rental supply lags new builds by 6-12 months, biasing cap-rate scoring.",
+            "Hewlett-Packard / HP Enterprise + Avago + Woodward + Anheuser-Busch anchor a stable engineering / manufacturing rental floor across Fort Collins, but layoffs at any one of the big three would ripple through 80525 / 80526 / 80528 visibly.",
+        ],
+    },
     "AZ": {
         "state": "AZ",
         "metro_label": "Maricopa County",
@@ -3682,6 +3815,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "GA": ["GA-ATL", "GA-SAV"],
     "IN": ["IN-IND", "IN-FW"],
     "OH": ["OH", "OH-CLE", "OH-CIN"],
+    "CO": ["CO-FTC"],
 }
 
 
