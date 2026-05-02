@@ -2334,6 +2334,123 @@ WEST_PALM_BEACH_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# GA — Savannah / Chatham County: tourism-driven Historic District +
+# coastal islands (Wilmington, Skidaway) + Pooler growth corridor + the
+# Hunter Army Airfield-anchored southside.
+# ─────────────────────────────────────────────────────────────────────────────
+SAVANNAH_ZIPS: dict[str, dict] = {
+    "31401": {
+        "name": "Downtown / Historic District",
+        "lat": 32.0809, "lng": -81.0912,
+        "median_home_value": 480_000, "median_rent_monthly": 2_200,
+        "crime_index": 60, "pct_bachelors": 65,
+        "median_household_income": 58_000, "population": 9_000,
+        "walk_score": 90, "restaurant_score": 90,
+        "tags": ["urban", "walkable", "historic", "tourist"],
+    },
+    "31404": {
+        "name": "Eastside / Thunderbolt",
+        "lat": 32.0410, "lng": -81.0480,
+        "median_home_value": 250_000, "median_rent_monthly": 1_500,
+        "crime_index": 55, "pct_bachelors": 30,
+        "median_household_income": 52_000, "population": 28_000,
+        "walk_score": 50, "restaurant_score": 50,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "31405": {
+        "name": "Midtown / Ardsley Park",
+        "lat": 32.0260, "lng": -81.0820,
+        "median_home_value": 390_000, "median_rent_monthly": 1_800,
+        "crime_index": 38, "pct_bachelors": 60,
+        "median_household_income": 78_000, "population": 28_000,
+        "walk_score": 55, "restaurant_score": 65,
+        "tags": ["walkable", "established", "historic"],
+    },
+    "31406": {
+        "name": "Southside / Gordonston",
+        "lat": 31.9990, "lng": -81.1080,
+        "median_home_value": 280_000, "median_rent_monthly": 1_500,
+        "crime_index": 42, "pct_bachelors": 38,
+        "median_household_income": 58_000, "population": 34_000,
+        "walk_score": 35, "restaurant_score": 45,
+        "tags": ["family", "mid-tier"],
+    },
+    "31408": {
+        "name": "Garden City",
+        "lat": 32.1170, "lng": -81.1500,
+        "median_home_value": 180_000, "median_rent_monthly": 1_300,
+        "crime_index": 60, "pct_bachelors": 18,
+        "median_household_income": 42_000, "population": 11_000,
+        "walk_score": 30, "restaurant_score": 30,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "31410": {
+        "name": "Wilmington Island",
+        "lat": 32.0040, "lng": -81.0050,
+        "median_home_value": 480_000, "median_rent_monthly": 2_300,
+        "crime_index": 22, "pct_bachelors": 60,
+        "median_household_income": 98_000, "population": 16_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["family", "low-crime", "beach-adj"],
+    },
+    "31411": {
+        "name": "The Landings (Skidaway Island)",
+        "lat": 31.9460, "lng": -81.0570,
+        "median_home_value": 850_000, "median_rent_monthly": 3_200,
+        "crime_index": 12, "pct_bachelors": 80,
+        "median_household_income": 145_000, "population": 8_000,
+        "walk_score": 18, "restaurant_score": 30,
+        "tags": ["luxury", "low-crime", "gated", "retiree"],
+    },
+    "31415": {
+        "name": "West Savannah",
+        "lat": 32.0900, "lng": -81.1400,
+        "median_home_value": 130_000, "median_rent_monthly": 1_200,
+        "crime_index": 75, "pct_bachelors": 14,
+        "median_household_income": 32_000, "population": 18_000,
+        "walk_score": 35, "restaurant_score": 25,
+        "tags": ["affordable", "high-cap-rate", "high-crime"],
+    },
+    "31419": {
+        "name": "Southwest Savannah",
+        "lat": 32.0010, "lng": -81.1830,
+        "median_home_value": 290_000, "median_rent_monthly": 1_650,
+        "crime_index": 38, "pct_bachelors": 40,
+        "median_household_income": 68_000, "population": 50_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["family", "mid-tier"],
+    },
+    "31322": {
+        "name": "Pooler",
+        "lat": 32.1148, "lng": -81.2480,
+        "median_home_value": 400_000, "median_rent_monthly": 2_000,
+        "crime_index": 22, "pct_bachelors": 50,
+        "median_household_income": 92_000, "population": 28_000,
+        "walk_score": 22, "restaurant_score": 35,
+        "tags": ["family", "newer", "growth", "low-crime"],
+    },
+    "31407": {
+        "name": "Port Wentworth",
+        "lat": 32.1500, "lng": -81.1665,
+        "median_home_value": 290_000, "median_rent_monthly": 1_700,
+        "crime_index": 30, "pct_bachelors": 32,
+        "median_household_income": 65_000, "population": 12_000,
+        "walk_score": 22, "restaurant_score": 30,
+        "tags": ["family", "affordable"],
+    },
+    "31302": {
+        "name": "Bloomingdale",
+        "lat": 32.1320, "lng": -81.2950,
+        "median_home_value": 310_000, "median_rent_monthly": 1_750,
+        "crime_index": 25, "pct_bachelors": 30,
+        "median_household_income": 72_000, "population": 5_000,
+        "walk_score": 18, "restaurant_score": 25,
+        "tags": ["family", "rural-edge"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -2578,7 +2695,8 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               MIAMI_ZIPS, ORLANDO_ZIPS, ATLANTA_ZIPS,
               AUSTIN_ZIPS, HOUSTON_ZIPS, SAN_ANTONIO_ZIPS, FORT_WORTH_ZIPS,
               SF_BAY_ZIPS, SAN_DIEGO_ZIPS, INDIANAPOLIS_ZIPS, FORT_WAYNE_ZIPS,
-              JACKSONVILLE_ZIPS, FORT_LAUDERDALE_ZIPS, WEST_PALM_BEACH_ZIPS):
+              JACKSONVILLE_ZIPS, FORT_LAUDERDALE_ZIPS, WEST_PALM_BEACH_ZIPS,
+              SAVANNAH_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -2832,6 +2950,20 @@ STATE_METROS: dict[str, dict] = {
             "School quality varies widely within Cobb + Gwinnett — ZIP-level % bachelor's+ is a coarse proxy; check specific feeder patterns for school-driven decisions.",
         ],
     },
+    "GA-SAV": {
+        "state": "GA",
+        "metro_label": "Savannah / Chatham County",
+        "subtitle": "ZIP-level scores for Chatham County — the tourism-heavy Historic District, Ardsley Park midtown, the coastal islands (Wilmington, Skidaway / The Landings), Pooler growth corridor, plus high-cap-rate inner-city pockets.",
+        "map_center": {"lat": 32.05, "lng": -81.10, "zoom": 11},
+        "zips": SAVANNAH_ZIPS,
+        "extra_caveats": [
+            "31401 (Historic District) is dominated by short-term rentals — Airbnb / VRBO yields drive the cap-rate signal upward vs. comparable LTR rentals; the score over-credits this ZIP for traditional buy-to-let math.",
+            "Skidaway Island / The Landings (31411) is an exclusive gated community with its own entry process and HOA structure (~\\$300+/mo); not in our standard PITI assumption.",
+            "Pooler (31322) saw explosive post-2018 growth from logistics + Gulfstream Aerospace expansion; Zillow auto-refresh keeps home values current but rental supply lags.",
+            "Hunter Army Airfield (~6K active duty plus dependents) anchors rents in the southside corridor (31405, 31406, 31419); BAH-driven yield floor not seen in tourism-only metros.",
+            "Coastal hurricane / wind-zone insurance + Savannah River flood-zone exposure stack on east-side ZIPs (31401, 31404, 31410); Citizens GA equivalent applies.",
+        ],
+    },
     "AZ": {
         "state": "AZ",
         "metro_label": "Maricopa County",
@@ -2880,7 +3012,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "AZ": ["AZ"],
     "NV": ["NV-LV", "NV-RNO", "NV-CC"],
     "FL": ["FL-MIA", "FL-ORL", "FL-JAX", "FL-FTL", "FL-WPB"],
-    "GA": ["GA-ATL"],
+    "GA": ["GA-ATL", "GA-SAV"],
     "IN": ["IN-IND", "IN-FW"],
 }
 
