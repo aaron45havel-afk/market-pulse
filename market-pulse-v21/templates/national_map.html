@@ -95,6 +95,34 @@
     .fit-match-head .score { font-size: 0.85rem; font-weight: 700; }
     .fit-match-stats { font-size: 0.72rem; color: var(--text-dim); }
     .fit-match-why { font-size: 0.7rem; color: var(--accent); margin-top: 0.25rem; }
+
+    /* ─── Filters pane (right-rail Tab 3) ─────────────────────────── */
+    .filter-body { padding: 0.85rem 1rem; overflow-y: auto; flex: 1; }
+    .filter-blurb { font-size: 0.72rem; color: var(--text-dim); line-height: 1.45; margin-bottom: 0.85rem; }
+    .filter-section { margin-bottom: 0.95rem; }
+    .filter-section-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); font-weight: 600; margin-bottom: 0.4rem; display: block; }
+    .filter-presets { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+    .filter-preset { padding: 0.32rem 0.6rem; border-radius: 999px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-size: 0.74rem; cursor: pointer; transition: all 0.12s; }
+    .filter-preset:hover { border-color: var(--accent2); }
+    .filter-preset.active { background: var(--accent2); border-color: var(--accent2); color: white; }
+    .filter-select { width: 100%; padding: 0.4rem 0.6rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.82rem; }
+    .filter-slider { margin-bottom: 0.7rem; }
+    .filter-slider-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; margin-bottom: 0.3rem; }
+    .filter-slider-head .label { font-size: 0.78rem; font-weight: 600; }
+    .filter-slider-head .range { font-size: 0.72rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+    /* Dual-thumb range — two inputs stacked, the second sits on top so
+       both thumbs are clickable. Track is drawn by the wrapper below. */
+    .filter-range-wrap { position: relative; height: 24px; }
+    .filter-range-track { position: absolute; left: 0; right: 0; top: 11px; height: 3px; background: var(--border); border-radius: 2px; }
+    .filter-range-fill { position: absolute; top: 11px; height: 3px; background: var(--accent2); border-radius: 2px; }
+    .filter-range-wrap input[type="range"] { position: absolute; left: 0; right: 0; top: 0; width: 100%; height: 24px; -webkit-appearance: none; appearance: none; background: transparent; pointer-events: none; }
+    .filter-range-wrap input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent2); border: 2px solid var(--surface); cursor: pointer; pointer-events: auto; }
+    .filter-range-wrap input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--accent2); border: 2px solid var(--surface); cursor: pointer; pointer-events: auto; }
+
+    .filter-actions { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding-top: 0.6rem; border-top: 1px solid var(--border); margin-top: 0.4rem; position: sticky; bottom: 0; background: var(--surface); }
+    .filter-count { font-size: 0.78rem; color: var(--text-dim); font-weight: 600; }
+    .filter-reset { padding: 0.42rem 0.85rem; background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+    .filter-reset:hover { border-color: var(--red, #ef4444); color: var(--red, #ef4444); }
 </style>
 {% endblock %}
 
@@ -124,6 +152,7 @@
             <div class="rail-tabs">
                 <button type="button" class="rail-tab active" data-pane="leaderboard">Top Metros</button>
                 <button type="button" class="rail-tab" data-pane="fit">Find Your Fit</button>
+                <button type="button" class="rail-tab" data-pane="filters">Filters</button>
             </div>
 
             <!-- Tab 1: leaderboard ranked by per-metro composite under
@@ -196,6 +225,41 @@
                     <div class="fit-results" id="fitResults" style="display:none;">
                         <div class="fit-results-label">Top matches for you</div>
                         <div id="fitMatches"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: filters — quick presets + range sliders. Filters
+                 the metros visible on the map AND the leaderboard list
+                 in real time. State stays in memory only (no persist). -->
+            <div class="rail-pane" data-pane="filters">
+                <div class="filter-body">
+                    <div class="filter-blurb">Quick presets snap the sliders to common patterns. Drag any slider to narrow further. Map pins fade out and the leaderboard re-ranks live as you change filters.</div>
+
+                    <div class="filter-section">
+                        <span class="filter-section-label">Quick presets</span>
+                        <div class="filter-presets" id="filterPresets">
+                            <button type="button" class="filter-preset" data-preset="cheapest">Cheapest</button>
+                            <button type="button" class="filter-preset" data-preset="affordable">Affordable</button>
+                            <button type="button" class="filter-preset" data-preset="yield">High Yield</button>
+                            <button type="button" class="filter-preset" data-preset="sunny">Sunny</button>
+                            <button type="button" class="filter-preset" data-preset="taxhaven">Tax Haven</button>
+                            <button type="button" class="filter-preset" data-preset="growth">Sunbelt Growth</button>
+                        </div>
+                    </div>
+
+                    <div class="filter-section">
+                        <span class="filter-section-label">State</span>
+                        <select id="filterState" class="filter-select">
+                            <option value="">All states</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-section" id="filterSliders"></div>
+
+                    <div class="filter-actions">
+                        <span id="filterCount" class="filter-count">— metros</span>
+                        <button type="button" id="filterReset" class="filter-reset">Reset</button>
                     </div>
                 </div>
             </div>
@@ -283,6 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initRailTabs();
     initLeaderboard();
     initFitTab();
+    initFilters();
 });
 
 // Maps user income buckets to a max-affordable home price using the
@@ -336,8 +401,15 @@ function initLeaderboard() {
 function renderLeaderboard() {
     const list = document.getElementById('lbList');
     if (!list) return;
-    const sorted = [...METROS].sort((a, b) =>
+    // Filters narrow the candidate pool first, then we sort by persona
+    // composite. When all filters are cleared, this is just METROS.
+    const pool = (typeof getFilteredMetros === 'function') ? getFilteredMetros() : METROS;
+    const sorted = [...pool].sort((a, b) =>
         compositeForPersona(b, _lbPersona) - compositeForPersona(a, _lbPersona));
+    if (!sorted.length) {
+        list.innerHTML = '<div style="padding:1rem 0.85rem; font-size:0.82rem; color:var(--text-dim); font-style:italic;">No metros match the current filters. Try widening a slider or hitting Reset.</div>';
+        return;
+    }
     list.innerHTML = sorted.slice(0, 12).map((m, i) => {
         const score = compositeForPersona(m, _lbPersona);
         const color = scoreColor(score);
@@ -371,6 +443,227 @@ function highlightLeaderboardRow(slug) {
     // If the selected row exists, scroll it into view inside the rail.
     const active = document.querySelector(`#lbList .lb-row[data-slug="${slug}"]`);
     if (active) active.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ─── Filters pane (right-rail Tab 3) ────────────────────────────────
+// Range-slider + preset filter that narrows the metro pool feeding both
+// the leaderboard and the visible map pins. Filters are pure client-side
+// — METROS is already in memory — so dragging is instant.
+//
+// Slider definitions: each entry maps a metric key on the metro object
+// to a label, formatter, and a step. min/max bounds are computed from
+// the actual data at init so sliders fit our coverage exactly.
+const FILTER_DEFS = [
+    { key: 'avg_home_value',         label: 'Home value',        fmt: v => '$' + Math.round(v / 1000) + 'k',          step: 10000 },
+    { key: 'avg_cap_rate_pct',       label: 'Cap rate %',        fmt: v => v.toFixed(1) + '%',                        step: 0.1 },
+    { key: 'sunshine_days',          label: 'Sunshine days/yr',  fmt: v => Math.round(v) + ' d',                      step: 5 },
+    { key: 'state_income_tax_pct',   label: 'State income tax %', fmt: v => v.toFixed(1) + '%',                       step: 0.1 },
+    { key: 'avg_walk_score',         label: 'Walk score',        fmt: v => v.toFixed(0),                              step: 1 },
+    { key: 'state_pop_growth_pct',   label: 'Population growth %/yr', fmt: v => v.toFixed(2) + '%',                   step: 0.05 },
+    { key: 'avg_pct_bachelors',      label: 'Bachelor\'s degree %', fmt: v => v.toFixed(0) + '%',                     step: 1 },
+];
+
+// Quick-filter presets — each one is a partial filter state that gets
+// merged onto the current state. Sliders not mentioned are left alone
+// (the preset is additive). This matches reventure's pattern where
+// pills set ranges without resetting unrelated filters.
+const FILTER_PRESETS = {
+    // Fractions are tuned against the actual data spread so each preset
+    // returns a useful 5-10 metro pool — not the full 24, not just one.
+    // SF/SD push the upper home-value bound to ~$1.8M, so "cheapest"
+    // needs a low fraction (0.18) to land on the genuinely affordable
+    // metros instead of half the country.
+    cheapest:   { sliders: { avg_home_value: { useMax: 0.18 } } },
+    affordable: { sliders: { state_income_tax_pct: { useMax: 0.25 }, avg_home_value: { useMax: 0.30 } } },
+    yield:      { sliders: { avg_cap_rate_pct: { useMin: 0.55 } } },
+    sunny:      { sliders: { sunshine_days: { useMin: 0.65 } } },
+    taxhaven:   { sliders: { state_income_tax_pct: { useMax: 0.05 } } },
+    growth:     { sliders: { state_pop_growth_pct: { useMin: 0.55 } } },
+};
+
+let _filterState = { state: '', sliders: {}, activePreset: null };
+let _filterBounds = {};   // key → { min, max }
+
+function getFilteredMetros() {
+    return METROS.filter(m => {
+        if (_filterState.state && m.state !== _filterState.state) return false;
+        for (const def of FILTER_DEFS) {
+            const range = _filterState.sliders[def.key];
+            if (!range) continue;
+            const v = m[def.key];
+            if (v == null) continue;
+            if (v < range.min || v > range.max) return false;
+        }
+        return true;
+    });
+}
+
+function initFilters() {
+    // Compute bounds across all metros so sliders span the full data
+    // range. Use a small epsilon to widen by step so the upper-bound
+    // metro still passes when slider sits at max.
+    FILTER_DEFS.forEach(def => {
+        const vals = METROS.map(m => m[def.key]).filter(v => v != null);
+        if (!vals.length) return;
+        _filterBounds[def.key] = { min: Math.min(...vals), max: Math.max(...vals) };
+    });
+
+    // Populate the state dropdown from the metros we actually have.
+    const stateSel = document.getElementById('filterState');
+    const states = [...new Set(METROS.map(m => m.state))].sort();
+    states.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s; opt.textContent = s;
+        stateSel.appendChild(opt);
+    });
+    stateSel.addEventListener('change', e => {
+        _filterState.state = e.target.value;
+        _filterState.activePreset = null;
+        applyFilters();
+    });
+
+    // Build slider DOM — one row per FILTER_DEFS entry.
+    const wrap = document.getElementById('filterSliders');
+    FILTER_DEFS.forEach(def => {
+        const b = _filterBounds[def.key];
+        if (!b) return;
+        const row = document.createElement('div');
+        row.className = 'filter-slider';
+        row.dataset.key = def.key;
+        row.innerHTML = `
+            <div class="filter-slider-head">
+                <span class="label">${def.label}</span>
+                <span class="range" data-range>${def.fmt(b.min)} – ${def.fmt(b.max)}</span>
+            </div>
+            <div class="filter-range-wrap">
+                <div class="filter-range-track"></div>
+                <div class="filter-range-fill" data-fill></div>
+                <input type="range" min="${b.min}" max="${b.max}" step="${def.step}" value="${b.min}" data-thumb="min">
+                <input type="range" min="${b.min}" max="${b.max}" step="${def.step}" value="${b.max}" data-thumb="max">
+            </div>`;
+        wrap.appendChild(row);
+
+        const thumbMin = row.querySelector('[data-thumb="min"]');
+        const thumbMax = row.querySelector('[data-thumb="max"]');
+        const fill = row.querySelector('[data-fill]');
+        const rangeEl = row.querySelector('[data-range]');
+
+        const onChange = () => {
+            // Enforce min <= max by snapping the offending thumb.
+            let lo = parseFloat(thumbMin.value), hi = parseFloat(thumbMax.value);
+            if (lo > hi) { [lo, hi] = [hi, lo]; thumbMin.value = lo; thumbMax.value = hi; }
+            // Persist into filter state only if the user has actually
+            // narrowed from the bounds — otherwise leave it absent so
+            // getFilteredMetros() short-circuits the check.
+            if (lo > b.min || hi < b.max) {
+                _filterState.sliders[def.key] = { min: lo, max: hi };
+            } else {
+                delete _filterState.sliders[def.key];
+            }
+            _filterState.activePreset = null;   // manual change clears preset highlight
+            paintFill(def, lo, hi, fill, rangeEl);
+            applyFilters();
+        };
+        thumbMin.addEventListener('input', onChange);
+        thumbMax.addEventListener('input', onChange);
+
+        paintFill(def, b.min, b.max, fill, rangeEl);
+    });
+
+    // Preset pills.
+    document.querySelectorAll('#filterPresets .filter-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const key = btn.dataset.preset;
+            // Toggle: clicking the active preset clears it.
+            if (_filterState.activePreset === key) {
+                resetFilters();
+                return;
+            }
+            applyPreset(key);
+        });
+    });
+
+    // Reset button.
+    document.getElementById('filterReset').addEventListener('click', resetFilters);
+
+    applyFilters();
+}
+
+// Paint the colored fill between the two thumbs, plus update the
+// numeric label above the slider. Called on every drag.
+function paintFill(def, lo, hi, fillEl, rangeEl) {
+    const b = _filterBounds[def.key];
+    const pctLo = ((lo - b.min) / (b.max - b.min)) * 100;
+    const pctHi = ((hi - b.min) / (b.max - b.min)) * 100;
+    fillEl.style.left = pctLo + '%';
+    fillEl.style.right = (100 - pctHi) + '%';
+    rangeEl.textContent = `${def.fmt(lo)} – ${def.fmt(hi)}`;
+}
+
+function applyPreset(presetKey) {
+    const preset = FILTER_PRESETS[presetKey];
+    if (!preset) return;
+    _filterState.activePreset = presetKey;
+    // Each useMin/useMax is a fraction of the full slider span. Apply
+    // it onto the slider's actual numeric range to derive a min/max.
+    Object.entries(preset.sliders || {}).forEach(([key, rule]) => {
+        const b = _filterBounds[key];
+        if (!b) return;
+        const span = b.max - b.min;
+        let lo = b.min, hi = b.max;
+        if (rule.useMin != null) lo = b.min + span * rule.useMin;
+        if (rule.useMax != null) hi = b.min + span * rule.useMax;
+        _filterState.sliders[key] = { min: lo, max: hi };
+        // Sync the slider thumbs + fill to the new values.
+        syncSliderUI(key, lo, hi);
+    });
+    refreshPresetHighlight();
+    applyFilters();
+}
+
+function syncSliderUI(key, lo, hi) {
+    const row = document.querySelector(`.filter-slider[data-key="${key}"]`);
+    if (!row) return;
+    const thumbMin = row.querySelector('[data-thumb="min"]');
+    const thumbMax = row.querySelector('[data-thumb="max"]');
+    const fill = row.querySelector('[data-fill]');
+    const rangeEl = row.querySelector('[data-range]');
+    thumbMin.value = lo;
+    thumbMax.value = hi;
+    const def = FILTER_DEFS.find(d => d.key === key);
+    if (def) paintFill(def, lo, hi, fill, rangeEl);
+}
+
+function resetFilters() {
+    _filterState = { state: '', sliders: {}, activePreset: null };
+    document.getElementById('filterState').value = '';
+    FILTER_DEFS.forEach(def => {
+        const b = _filterBounds[def.key];
+        if (b) syncSliderUI(def.key, b.min, b.max);
+    });
+    refreshPresetHighlight();
+    applyFilters();
+}
+
+function refreshPresetHighlight() {
+    document.querySelectorAll('#filterPresets .filter-preset').forEach(b =>
+        b.classList.toggle('active', b.dataset.preset === _filterState.activePreset));
+}
+
+// Apply current filter state to the map (fade out non-matching pins)
+// and the leaderboard (re-render with filtered pool). Called after
+// every UI change.
+function applyFilters() {
+    const passing = new Set(getFilteredMetros().map(m => m.slug));
+    if (window._mpMarkers) {
+        Object.entries(window._mpMarkers).forEach(([slug, marker]) => {
+            const ok = passing.has(slug);
+            marker.setStyle({ fillOpacity: ok ? 0.92 : 0.12, opacity: ok ? 1 : 0.25 });
+        });
+    }
+    const countEl = document.getElementById('filterCount');
+    if (countEl) countEl.textContent = `${passing.size} of ${METROS.length} metros`;
+    renderLeaderboard();
 }
 
 // ─── Find-your-fit pane wiring (right-rail Tab 2) ────────────────────
