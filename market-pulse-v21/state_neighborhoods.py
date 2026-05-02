@@ -2810,6 +2810,126 @@ COLUMBUS_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# OH — Cleveland / Cuyahoga County: Lake Erie waterfront + Cleveland
+# Clinic + CWRU + Sherwin-Williams HQ. Most diverse value spectrum of
+# any midwestern metro: walkable revival corridors (Tremont/Ohio City,
+# Lakewood) sit a few miles from the cheapest US ZIPs (Glenville at
+# ~$80K). Top-tier streetcar suburbs (Shaker Heights, Cleveland Heights)
+# anchor the eastern inner ring with strong school feeders.
+# ─────────────────────────────────────────────────────────────────────────────
+CLEVELAND_ZIPS: dict[str, dict] = {
+    "44113": {
+        "name": "Tremont / Ohio City",
+        "lat": 41.4820, "lng": -81.6900,
+        "median_home_value": 250_000, "median_rent_monthly": 1_400,
+        "crime_index": 50, "pct_bachelors": 55,
+        "median_household_income": 58_000, "population": 14_000,
+        "walk_score": 80, "restaurant_score": 95,
+        "tags": ["walkable", "hip", "gentrifying"],
+    },
+    "44102": {
+        "name": "Detroit Shoreway / Edgewater",
+        "lat": 41.4850, "lng": -81.7300,
+        "median_home_value": 180_000, "median_rent_monthly": 1_100,
+        "crime_index": 60, "pct_bachelors": 35,
+        "median_household_income": 42_000, "population": 32_000,
+        "walk_score": 70, "restaurant_score": 65,
+        "tags": ["gentrifying", "transitional"],
+    },
+    "44106": {
+        "name": "University Circle / Little Italy",
+        "lat": 41.5000, "lng": -81.6100,
+        "median_home_value": 130_000, "median_rent_monthly": 1_150,
+        "crime_index": 65, "pct_bachelors": 60,
+        "median_household_income": 35_000, "population": 24_000,
+        "walk_score": 75, "restaurant_score": 75,
+        "tags": ["walkable", "high-cap-rate", "medical"],
+    },
+    "44107": {
+        "name": "Lakewood",
+        "lat": 41.4850, "lng": -81.8000,
+        "median_home_value": 310_000, "median_rent_monthly": 1_400,
+        "crime_index": 28, "pct_bachelors": 60,
+        "median_household_income": 80_000, "population": 50_000,
+        "walk_score": 80, "restaurant_score": 80,
+        "tags": ["family", "walkable", "established"],
+    },
+    "44108": {
+        "name": "Glenville",
+        "lat": 41.5300, "lng": -81.6200,
+        "median_home_value":  80_000, "median_rent_monthly":   850,
+        "crime_index": 80, "pct_bachelors": 18,
+        "median_household_income": 28_000, "population": 28_000,
+        "walk_score": 50, "restaurant_score": 25,
+        "tags": ["affordable", "high-cap-rate", "high-crime"],
+    },
+    "44109": {
+        "name": "Old Brooklyn / Brookhaven",
+        "lat": 41.4500, "lng": -81.7000,
+        "median_home_value": 185_000, "median_rent_monthly": 1_150,
+        "crime_index": 55, "pct_bachelors": 28,
+        "median_household_income": 48_000, "population": 36_000,
+        "walk_score": 65, "restaurant_score": 50,
+        "tags": ["affordable", "mid-tier"],
+    },
+    "44114": {
+        "name": "Downtown / Warehouse District",
+        "lat": 41.5000, "lng": -81.6900,
+        "median_home_value": 230_000, "median_rent_monthly": 1_500,
+        "crime_index": 45, "pct_bachelors": 65,
+        "median_household_income": 80_000, "population":  5_000,
+        "walk_score": 90, "restaurant_score": 80,
+        "tags": ["urban", "walkable", "hip"],
+    },
+    "44116": {
+        "name": "Rocky River",
+        "lat": 41.4750, "lng": -81.8600,
+        "median_home_value": 440_000, "median_rent_monthly": 1_800,
+        "crime_index": 15, "pct_bachelors": 65,
+        "median_household_income": 135_000, "population": 21_000,
+        "walk_score": 30, "restaurant_score": 50,
+        "tags": ["family", "top-schools", "low-crime", "upscale"],
+    },
+    "44118": {
+        "name": "Cleveland Heights / Cedar-Lee",
+        "lat": 41.5100, "lng": -81.5600,
+        "median_home_value": 235_000, "median_rent_monthly": 1_400,
+        "crime_index": 45, "pct_bachelors": 60,
+        "median_household_income": 65_000, "population": 45_000,
+        "walk_score": 65, "restaurant_score": 65,
+        "tags": ["walkable", "established", "diverse"],
+    },
+    "44120": {
+        "name": "Shaker Heights",
+        "lat": 41.4800, "lng": -81.5750,
+        "median_home_value": 310_000, "median_rent_monthly": 1_650,
+        "crime_index": 35, "pct_bachelors": 70,
+        "median_household_income": 95_000, "population": 28_000,
+        "walk_score": 50, "restaurant_score": 50,
+        "tags": ["family", "top-schools", "established", "historic"],
+    },
+    "44128": {
+        "name": "South Euclid / Bedford edge",
+        "lat": 41.4500, "lng": -81.5600,
+        "median_home_value": 135_000, "median_rent_monthly": 1_000,
+        "crime_index": 70, "pct_bachelors": 22,
+        "median_household_income": 45_000, "population": 28_000,
+        "walk_score": 40, "restaurant_score": 30,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "44135": {
+        "name": "West Park / Bellaire-Puritas",
+        "lat": 41.4300, "lng": -81.7700,
+        "median_home_value": 150_000, "median_rent_monthly": 1_100,
+        "crime_index": 60, "pct_bachelors": 28,
+        "median_household_income": 52_000, "population": 38_000,
+        "walk_score": 45, "restaurant_score": 35,
+        "tags": ["affordable", "mid-tier"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -3055,7 +3175,7 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               AUSTIN_ZIPS, HOUSTON_ZIPS, SAN_ANTONIO_ZIPS, FORT_WORTH_ZIPS,
               SF_BAY_ZIPS, SAN_DIEGO_ZIPS, SACRAMENTO_ZIPS, INDIANAPOLIS_ZIPS, FORT_WAYNE_ZIPS,
               JACKSONVILLE_ZIPS, FORT_LAUDERDALE_ZIPS, WEST_PALM_BEACH_ZIPS,
-              TAMPA_ZIPS, SAVANNAH_ZIPS, COLUMBUS_ZIPS):
+              TAMPA_ZIPS, SAVANNAH_ZIPS, COLUMBUS_ZIPS, CLEVELAND_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -3362,6 +3482,20 @@ STATE_METROS: dict[str, dict] = {
             "Hilltop (43204) and parts of King-Lincoln (43203) have block-level crime variance the ZIP-average can't capture; investor-grade SFRs vs. high-vacancy stock can differ by 50%+ within the same ZIP.",
         ],
     },
+    "OH-CLE": {
+        "state": "OH",
+        "metro_label": "Cleveland / Cuyahoga County",
+        "subtitle": "ZIP-level scores for Cleveland — Tremont / Ohio City + Lakewood walkable revival corridors, Cleveland Clinic / CWRU University Circle + Little Italy, Rocky River + Shaker Heights + Cleveland Heights premier inner-ring suburbs, Glenville + South Euclid + West Park high-cap-rate ZIPs (some of the cheapest in the US).",
+        "map_center": {"lat": 41.50, "lng": -81.69, "zoom": 11},
+        "zips": CLEVELAND_ZIPS,
+        "extra_caveats": [
+            "Cleveland has one of the widest within-metro value spreads in the US — Glenville (44108) median ~\\$80K sits a few miles from Rocky River (44116) at ~\\$440K. Investor-grade scoring works at the ZIP level but block-by-block variance dwarfs ZIP-average crime + value within Glenville and parts of 44128 (South Euclid).",
+            "Cleveland Clinic / University Hospitals + CWRU anchor 44106 / 44104 with a steady medical-professional rental floor; the cap-rate signal in 44106 (Univ Circle) reflects this rather than typical SFR market dynamics.",
+            "Shaker Heights (44120) and Cleveland Heights (44118) are independent cities WITHIN Cuyahoga County with their own school districts (separate from Cleveland Metropolitan SD) — the school-quality premium in those ZIPs runs above what the bachelor's-percent proxy captures.",
+            "Lake Effect snow + freeze-thaw cycles add ~\\$2K-4K/yr in deferred-maintenance reserves on older Cleveland housing stock (much pre-1940) that don't show in PITI but materially affect long-hold ROI.",
+            "Lakewood (44107) is technically NOT in Cuyahoga's Cleveland MSA filings (it's its own city) but functionally an inner-ring Cleveland suburb — included here for that lens.",
+        ],
+    },
     "AZ": {
         "state": "AZ",
         "metro_label": "Maricopa County",
@@ -3412,7 +3546,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "FL": ["FL-MIA", "FL-ORL", "FL-TPA", "FL-JAX", "FL-FTL", "FL-WPB"],
     "GA": ["GA-ATL", "GA-SAV"],
     "IN": ["IN-IND", "IN-FW"],
-    "OH": ["OH"],
+    "OH": ["OH", "OH-CLE"],
 }
 
 
