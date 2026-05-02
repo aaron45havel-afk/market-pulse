@@ -972,9 +972,12 @@ function applyFilters() {
 // metrics the gradient is flipped so green is at the low end.
 //
 // GeoJSON source: PublicaMundi MappingAPI (MIT-licensed, well-known
-// dataset). Each feature has `id` = FIPS code, which we use to join
-// against CP_STATES.
-const CP_GEOJSON_URL = 'https://cdn.jsdelivr.net/gh/PublicaMundi/MappingAPI@master/data/geojson/us-states.json';
+// dataset), bundled locally as /static/data/us-states.json instead of
+// fetched from a public CDN. Removes one external dependency, cuts a
+// ~100ms cross-origin round-trip off first paint, and lets us cache
+// the file with our own Cache-Control headers. ~89KB uncompressed,
+// ~30KB after gzip middleware.
+const CP_GEOJSON_URL = '/static/data/us-states.json';
 
 let _cpLayer = null;          // Leaflet GeoJSON layer
 let _cpEnabled = true;        // Toggle state
