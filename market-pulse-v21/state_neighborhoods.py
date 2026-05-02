@@ -2930,6 +2930,126 @@ CLEVELAND_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# OH — Cincinnati / Hamilton County: Procter & Gamble + Kroger + GE
+# Aerospace HQs, FC Cincinnati / Reds / Bengals, plus the famous Over-
+# the-Rhine (OTR) walkable revival. Hyde Park / Oakley / Mariemont
+# anchor a premium suburban tier with strong schools; Westwood +
+# Walnut Hills + West End offer the affordable/high-cap-rate inner
+# ring. UC (University of Cincinnati) anchors Clifton.
+# ─────────────────────────────────────────────────────────────────────────────
+CINCINNATI_ZIPS: dict[str, dict] = {
+    "45202": {
+        "name": "Downtown / Over-the-Rhine",
+        "lat": 39.1050, "lng": -84.5100,
+        "median_home_value": 370_000, "median_rent_monthly": 1_800,
+        "crime_index": 50, "pct_bachelors": 65,
+        "median_household_income": 75_000, "population": 12_000,
+        "walk_score": 90, "restaurant_score": 95,
+        "tags": ["urban", "walkable", "hip", "gentrifying"],
+    },
+    "45203": {
+        "name": "West End",
+        "lat": 39.0900, "lng": -84.5300,
+        "median_home_value": 185_000, "median_rent_monthly": 1_150,
+        "crime_index": 70, "pct_bachelors": 22,
+        "median_household_income": 32_000, "population":  5_000,
+        "walk_score": 60, "restaurant_score": 35,
+        "tags": ["affordable", "transitional", "high-cap-rate"],
+    },
+    "45206": {
+        "name": "Walnut Hills",
+        "lat": 39.1300, "lng": -84.4900,
+        "median_home_value": 265_000, "median_rent_monthly": 1_400,
+        "crime_index": 60, "pct_bachelors": 50,
+        "median_household_income": 52_000, "population": 12_000,
+        "walk_score": 70, "restaurant_score": 55,
+        "tags": ["gentrifying", "transitional"],
+    },
+    "45207": {
+        "name": "Norwood / Evanston",
+        "lat": 39.1500, "lng": -84.4700,
+        "median_home_value": 235_000, "median_rent_monthly": 1_400,
+        "crime_index": 35, "pct_bachelors": 35,
+        "median_household_income": 58_000, "population": 22_000,
+        "walk_score": 55, "restaurant_score": 50,
+        "tags": ["affordable", "mid-tier"],
+    },
+    "45208": {
+        "name": "Hyde Park",
+        "lat": 39.1400, "lng": -84.4400,
+        "median_home_value": 560_000, "median_rent_monthly": 2_200,
+        "crime_index": 18, "pct_bachelors": 75,
+        "median_household_income": 130_000, "population": 14_000,
+        "walk_score": 70, "restaurant_score": 85,
+        "tags": ["family", "walkable", "top-schools", "upscale"],
+    },
+    "45209": {
+        "name": "Oakley",
+        "lat": 39.1550, "lng": -84.4300,
+        "median_home_value": 345_000, "median_rent_monthly": 1_800,
+        "crime_index": 25, "pct_bachelors": 65,
+        "median_household_income": 85_000, "population": 10_000,
+        "walk_score": 75, "restaurant_score": 80,
+        "tags": ["walkable", "hip", "family"],
+    },
+    "45211": {
+        "name": "Westwood / North Fairmount",
+        "lat": 39.1500, "lng": -84.5800,
+        "median_home_value": 135_000, "median_rent_monthly":   950,
+        "crime_index": 70, "pct_bachelors": 18,
+        "median_household_income": 42_000, "population": 32_000,
+        "walk_score": 40, "restaurant_score": 25,
+        "tags": ["affordable", "high-cap-rate", "high-crime"],
+    },
+    "45213": {
+        "name": "Pleasant Ridge",
+        "lat": 39.1800, "lng": -84.4500,
+        "median_home_value": 250_000, "median_rent_monthly": 1_400,
+        "crime_index": 28, "pct_bachelors": 50,
+        "median_household_income": 72_000, "population": 13_000,
+        "walk_score": 50, "restaurant_score": 50,
+        "tags": ["family", "mid-tier"],
+    },
+    "45219": {
+        "name": "Mt Auburn / Corryville",
+        "lat": 39.1300, "lng": -84.5100,
+        "median_home_value": 215_000, "median_rent_monthly": 1_300,
+        "crime_index": 65, "pct_bachelors": 50,
+        "median_household_income": 42_000, "population": 18_000,
+        "walk_score": 65, "restaurant_score": 50,
+        "tags": ["walkable", "transitional", "medical"],
+    },
+    "45220": {
+        "name": "Clifton / UC",
+        "lat": 39.1400, "lng": -84.5200,
+        "median_home_value": 235_000, "median_rent_monthly": 1_400,
+        "crime_index": 50, "pct_bachelors": 60,
+        "median_household_income": 58_000, "population": 24_000,
+        "walk_score": 75, "restaurant_score": 70,
+        "tags": ["walkable", "student", "hip"],
+    },
+    "45226": {
+        "name": "Mt Lookout / Linwood",
+        "lat": 39.1050, "lng": -84.4300,
+        "median_home_value": 475_000, "median_rent_monthly": 2_100,
+        "crime_index": 15, "pct_bachelors": 78,
+        "median_household_income": 145_000, "population":  8_000,
+        "walk_score": 50, "restaurant_score": 50,
+        "tags": ["family", "top-schools", "low-crime", "upscale"],
+    },
+    "45227": {
+        "name": "Mariemont",
+        "lat": 39.1400, "lng": -84.3800,
+        "median_home_value": 560_000, "median_rent_monthly": 2_200,
+        "crime_index": 12, "pct_bachelors": 80,
+        "median_household_income": 135_000, "population":  4_000,
+        "walk_score": 50, "restaurant_score": 60,
+        "tags": ["family", "top-schools", "low-crime", "master-planned", "historic"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -3175,7 +3295,8 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               AUSTIN_ZIPS, HOUSTON_ZIPS, SAN_ANTONIO_ZIPS, FORT_WORTH_ZIPS,
               SF_BAY_ZIPS, SAN_DIEGO_ZIPS, SACRAMENTO_ZIPS, INDIANAPOLIS_ZIPS, FORT_WAYNE_ZIPS,
               JACKSONVILLE_ZIPS, FORT_LAUDERDALE_ZIPS, WEST_PALM_BEACH_ZIPS,
-              TAMPA_ZIPS, SAVANNAH_ZIPS, COLUMBUS_ZIPS, CLEVELAND_ZIPS):
+              TAMPA_ZIPS, SAVANNAH_ZIPS,
+              COLUMBUS_ZIPS, CLEVELAND_ZIPS, CINCINNATI_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -3496,6 +3617,20 @@ STATE_METROS: dict[str, dict] = {
             "Lakewood (44107) is technically NOT in Cuyahoga's Cleveland MSA filings (it's its own city) but functionally an inner-ring Cleveland suburb — included here for that lens.",
         ],
     },
+    "OH-CIN": {
+        "state": "OH",
+        "metro_label": "Cincinnati / Hamilton County",
+        "subtitle": "ZIP-level scores for Cincinnati — Over-the-Rhine + Downtown walkable revival, Hyde Park / Mt Lookout / Mariemont premier family suburbs, Oakley + Clifton hip walkable tier, Walnut Hills + Mt Auburn gentrifying middle, Westwood + West End high-cap-rate inner-ring ZIPs.",
+        "map_center": {"lat": 39.13, "lng": -84.50, "zoom": 11},
+        "zips": CINCINNATI_ZIPS,
+        "extra_caveats": [
+            "Over-the-Rhine (45202) has the most pronounced revival arc in the metro — values doubled 2014-2024 and the Findlay Market / Washington Park corridor is a national case study. Cap rate looks compressed relative to comparable affordable Cincy ZIPs; reflects that buyers are paying for appreciation, not yield.",
+            "Mariemont (45227) is a National Historic Landmark planned community (designed 1923) with its own school district + village government — premium beyond what the bachelor's-percent proxy captures, and inventory is structurally tight (almost no new construction allowed).",
+            "UC (University of Cincinnati) drives student-rental demand in 45219 / 45220 (Mt Auburn / Clifton); cap rates in those ZIPs reflect 12-month student leases with summer occupancy gaps, not typical SFR dynamics.",
+            "Cincinnati's hill geography makes block-by-block value vary sharply within ZIPs — the same ZIP often spans ridge tops (\\$500K homes) and valley flats (\\$150K homes); the median masks this.",
+            "Procter & Gamble + Kroger + GE Aerospace anchor a steady downtown / suburban professional rental floor that explains why Cincy yields look investable across the spectrum, not just at the affordable tier.",
+        ],
+    },
     "AZ": {
         "state": "AZ",
         "metro_label": "Maricopa County",
@@ -3546,7 +3681,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "FL": ["FL-MIA", "FL-ORL", "FL-TPA", "FL-JAX", "FL-FTL", "FL-WPB"],
     "GA": ["GA-ATL", "GA-SAV"],
     "IN": ["IN-IND", "IN-FW"],
-    "OH": ["OH", "OH-CLE"],
+    "OH": ["OH", "OH-CLE", "OH-CIN"],
 }
 
 
