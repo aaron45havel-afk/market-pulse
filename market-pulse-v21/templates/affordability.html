@@ -1288,7 +1288,10 @@ function renderPrintSummary(inputs) {
 // state-specific property-tax growth applied each year.
 
 let _chart = null;
-const STATE_COLORS = { NV: '#eab308', CA: '#f97316', UT: '#22c55e', TX: '#ef4444', AZ: '#3b82f6' };
+const STATE_COLORS = {
+    NV: '#eab308', CA: '#f97316', UT: '#22c55e', TX: '#ef4444', AZ: '#3b82f6',
+    FL: '#06b6d4', GA: '#ec4899', IN: '#a855f7',
+};
 
 function cumulativeByYear(piti, annualPropTax, growth, years) {
     const out = [];
@@ -1366,7 +1369,16 @@ function renderCostChart(rows) {
 
 let _openDetailState = null;
 
-const PROP_TAX_GROWTH = { NV: 0.03, CA: 0.02, UT: 0.03, TX: 0.10, AZ: 0.05 };
+// Annual cap or typical growth applied to property tax in each state.
+// FL: Save Our Homes 3% cap on primary residence assessed value.
+// GA: no statewide cap — uses typical reassessment trend.
+// IN: 1% constitutional cap on homestead — assessed value can grow but
+// the bill is locked at 1% of value, so effective tax growth tracks
+// home-value growth rather than a punitive reassessment.
+const PROP_TAX_GROWTH = {
+    NV: 0.03, CA: 0.02, UT: 0.03, TX: 0.10, AZ: 0.05,
+    FL: 0.03, GA: 0.04, IN: 0.03,
+};
 
 function principalPaidByYear(loan, rate, year) {
     if (loan <= 0 || rate <= 0 || year <= 0) return 0;
