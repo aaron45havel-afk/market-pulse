@@ -37,8 +37,12 @@
         .sidebar .logo { font-size: 1.25rem; font-weight: 700; color: var(--accent); padding: 0.5rem 1.25rem 1.25rem; border-bottom: 1px solid var(--border); margin-bottom: 0.75rem; white-space: nowrap; overflow: hidden; }
         .sidebar .nav-links { display: flex; flex-direction: column; gap: 0.15rem; padding: 0 0.5rem; flex: 1; }
         .sidebar .nav-links a { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.85rem; border-radius: 8px; color: var(--text-dim); font-size: 0.92rem; font-weight: 500; transition: all 0.15s; white-space: nowrap; overflow: hidden; }
-        .sidebar .nav-links a:hover { background: var(--surface2); color: var(--text); text-decoration: none; }
-        .sidebar .nav-links a.active { background: rgba(34,197,94,0.12); color: var(--accent); }
+        .sidebar .nav-links a:hover { color: var(--text); text-decoration: none; }
+        /* Active item is the only one with a tinted background — hover
+           just brightens the text. Otherwise active + hover both showed
+           as filled rows and "where am I right now" got ambiguous. */
+        .sidebar .nav-links a.active { background: rgba(34,197,94,0.12); color: var(--accent); font-weight: 600; }
+        .sidebar .nav-links a.active:hover { color: var(--accent); }
         .sidebar .nav-links svg.icon { width: 18px; height: 18px; flex-shrink: 0; stroke: currentColor; }
         .sidebar .footer-note { font-size: 0.65rem; color: var(--text-dim); padding: 0.75rem 1rem; border-top: 1px solid var(--border); line-height: 1.5; white-space: nowrap; overflow: hidden; }
 
