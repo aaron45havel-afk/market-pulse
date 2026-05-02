@@ -958,8 +958,14 @@ function initChoropleth() {
 }
 
 function getMetricBounds(metricKey) {
-    const vals = Object.values(CP_STATES).map(s => s[metricKey]);
-    return { min: Math.min(...vals), max: Math.max(...vals) };
+    // Use 5th and 95th percentile rather than absolute min/max so single
+    // outliers (HI's 184 cost of living, NJ's 2.49% property tax, AK's
+    // 134 sunshine days, etc.) don't compress the visible mainland into
+    // one corner of the color scale. Values outside the percentile band
+    // get clamped to the extreme color by gradientColor().
+    const vals = Object.values(CP_STATES).map(s => s[metricKey]).sort((a, b) => a - b);
+    const p = (frac) => vals[Math.min(vals.length - 1, Math.max(0, Math.floor(vals.length * frac)))];
+    return { min: p(0.05), max: p(0.95) };
 }
 
 // Map a 0-1 normalized value to a red→yellow→green RGB string. Same
