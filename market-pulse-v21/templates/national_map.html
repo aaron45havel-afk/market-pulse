@@ -97,32 +97,69 @@
     .fit-match-why { font-size: 0.7rem; color: var(--accent); margin-top: 0.25rem; }
 
     /* ─── Filters pane (right-rail Tab 3) ─────────────────────────── */
-    .filter-body { padding: 0.85rem 1rem; overflow-y: auto; flex: 1; }
-    .filter-blurb { font-size: 0.72rem; color: var(--text-dim); line-height: 1.45; margin-bottom: 0.85rem; }
-    .filter-section { margin-bottom: 0.95rem; }
-    .filter-section-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); font-weight: 600; margin-bottom: 0.4rem; display: block; }
-    .filter-presets { display: flex; flex-wrap: wrap; gap: 0.3rem; }
-    .filter-preset { padding: 0.32rem 0.6rem; border-radius: 999px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-size: 0.74rem; cursor: pointer; transition: all 0.12s; }
-    .filter-preset:hover { border-color: var(--accent2); }
-    .filter-preset.active { background: var(--accent2); border-color: var(--accent2); color: white; }
-    .filter-select { width: 100%; padding: 0.4rem 0.6rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.82rem; }
-    .filter-slider { margin-bottom: 0.7rem; }
-    .filter-slider-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; margin-bottom: 0.3rem; }
-    .filter-slider-head .label { font-size: 0.78rem; font-weight: 600; }
-    .filter-slider-head .range { font-size: 0.72rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
-    /* Dual-thumb range — two inputs stacked, the second sits on top so
-       both thumbs are clickable. Track is drawn by the wrapper below. */
-    .filter-range-wrap { position: relative; height: 24px; }
-    .filter-range-track { position: absolute; left: 0; right: 0; top: 11px; height: 3px; background: var(--border); border-radius: 2px; }
-    .filter-range-fill { position: absolute; top: 11px; height: 3px; background: var(--accent2); border-radius: 2px; }
-    .filter-range-wrap input[type="range"] { position: absolute; left: 0; right: 0; top: 0; width: 100%; height: 24px; -webkit-appearance: none; appearance: none; background: transparent; pointer-events: none; }
-    .filter-range-wrap input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent2); border: 2px solid var(--surface); cursor: pointer; pointer-events: auto; }
-    .filter-range-wrap input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--accent2); border: 2px solid var(--surface); cursor: pointer; pointer-events: auto; }
+    .filter-body { padding: 1rem 1.05rem 0; overflow-y: auto; flex: 1; }
+    .filter-blurb { font-size: 0.72rem; color: var(--text-dim); line-height: 1.5; margin-bottom: 1.1rem; padding-bottom: 0.85rem; border-bottom: 1px solid var(--border); }
 
-    .filter-actions { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding-top: 0.6rem; border-top: 1px solid var(--border); margin-top: 0.4rem; position: sticky; bottom: 0; background: var(--surface); }
-    .filter-count { font-size: 0.78rem; color: var(--text-dim); font-weight: 600; }
-    .filter-reset { padding: 0.42rem 0.85rem; background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.78rem; font-weight: 600; cursor: pointer; }
-    .filter-reset:hover { border-color: var(--red, #ef4444); color: var(--red, #ef4444); }
+    /* Section: each block has a small uppercase label + content + bottom
+       divider. The divider is what gives the pane visual rhythm. */
+    .filter-section { padding: 0.85rem 0; border-bottom: 1px solid var(--border); }
+    .filter-section:last-of-type { border-bottom: none; }
+    .filter-section-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); font-weight: 700; margin-bottom: 0.55rem; display: block; }
+
+    /* Quick-filter pills */
+    .filter-presets { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .filter-preset { padding: 0.4rem 0.75rem; border-radius: 999px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-size: 0.76rem; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+    .filter-preset:hover { border-color: var(--accent2); background: rgba(59,130,246,0.06); }
+    .filter-preset.active { background: var(--accent2); border-color: var(--accent2); color: white; font-weight: 600; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+
+    /* State dropdown */
+    .filter-select { width: 100%; padding: 0.5rem 0.7rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; color: var(--text); font-size: 0.85rem; cursor: pointer; }
+    .filter-select:hover { border-color: var(--accent2); }
+    .filter-select:focus { outline: none; border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+
+    /* Range sliders */
+    .filter-slider { margin-bottom: 1rem; }
+    .filter-slider:last-child { margin-bottom: 0.25rem; }
+    .filter-slider-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; margin-bottom: 0.4rem; }
+    .filter-slider-head .label { font-size: 0.8rem; font-weight: 600; color: var(--text); }
+    .filter-slider-head .range { font-size: 0.74rem; color: var(--text-dim); font-variant-numeric: tabular-nums; font-weight: 500; }
+    /* When a slider is narrowed past the default bounds, brighten the
+       label + range readout so the user can spot active filters at a
+       glance without reading every number. */
+    .filter-slider.is-narrowed .filter-slider-head .label { color: var(--accent2); }
+    .filter-slider.is-narrowed .filter-slider-head .range { color: var(--accent2); font-weight: 600; }
+
+    /* Dual-thumb range. Two <input>s overlap; pointer-events:none on
+       the inputs themselves + pointer-events:auto on the thumbs lets
+       both thumbs be draggable through each other. */
+    .filter-range-wrap { position: relative; height: 28px; padding: 0 7px; }
+    .filter-range-track { position: absolute; left: 7px; right: 7px; top: 13px; height: 4px; background: rgba(255,255,255,0.08); border-radius: 3px; }
+    .filter-range-fill { position: absolute; top: 13px; height: 4px; background: var(--text-dim); border-radius: 3px; transition: background 0.15s; }
+    /* Fill turns blue only when the slider is actually narrowed — at
+       defaults (full span) it stays neutral so the pane doesn't look
+       like everything is "active". */
+    .filter-slider.is-narrowed .filter-range-fill { background: var(--accent2); }
+    .filter-range-wrap input[type="range"] { position: absolute; left: 0; right: 0; top: 0; width: 100%; height: 28px; -webkit-appearance: none; appearance: none; background: transparent; pointer-events: none; margin: 0; }
+    .filter-range-wrap input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent2); cursor: pointer; pointer-events: auto; box-shadow: 0 1px 4px rgba(0,0,0,0.4); transition: transform 0.1s, box-shadow 0.1s; }
+    .filter-range-wrap input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); box-shadow: 0 2px 8px rgba(59,130,246,0.4); }
+    .filter-range-wrap input[type="range"]::-webkit-slider-thumb:active { background: var(--accent2); }
+    .filter-range-wrap input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent2); cursor: pointer; pointer-events: auto; box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+    .filter-range-wrap input[type="range"]:focus { outline: none; }
+
+    /* Sticky footer: count + reset, always visible without scrolling. */
+    .filter-actions { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.85rem 1.05rem; border-top: 1px solid var(--border); position: sticky; bottom: 0; background: var(--surface); flex: 0 0 auto; }
+    .filter-count { font-size: 0.8rem; color: var(--text); font-weight: 600; }
+    .filter-count .small { color: var(--text-dim); font-weight: 400; }
+    .filter-count.is-narrowed { color: var(--accent2); }
+    .filter-reset { padding: 0.45rem 0.95rem; background: transparent; border: 1px solid var(--border); border-radius: 7px; color: var(--text-dim); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+    .filter-reset:hover { border-color: #ef4444; color: #ef4444; }
+
+    /* Tab badge — a small dot that shows on the Filters tab when any
+       filter is active, so users know which tab is currently affecting
+       the leaderboard / map. */
+    .rail-tab { position: relative; }
+    .rail-tab .tab-badge { position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent2); display: none; }
+    .rail-tab.has-active .tab-badge { display: block; }
 </style>
 {% endblock %}
 
@@ -152,7 +189,7 @@
             <div class="rail-tabs">
                 <button type="button" class="rail-tab active" data-pane="leaderboard">Top Metros</button>
                 <button type="button" class="rail-tab" data-pane="fit">Find Your Fit</button>
-                <button type="button" class="rail-tab" data-pane="filters">Filters</button>
+                <button type="button" class="rail-tab" data-pane="filters">Filters<span class="tab-badge"></span></button>
             </div>
 
             <!-- Tab 1: leaderboard ranked by per-metro composite under
@@ -231,10 +268,12 @@
 
             <!-- Tab 3: filters — quick presets + range sliders. Filters
                  the metros visible on the map AND the leaderboard list
-                 in real time. State stays in memory only (no persist). -->
+                 in real time. State stays in memory only (no persist).
+                 Footer actions are siblings (not nested in body) so the
+                 sticky-bottom positioning works without scroll-clipping. -->
             <div class="rail-pane" data-pane="filters">
                 <div class="filter-body">
-                    <div class="filter-blurb">Quick presets snap the sliders to common patterns. Drag any slider to narrow further. Map pins fade out and the leaderboard re-ranks live as you change filters.</div>
+                    <div class="filter-blurb">Quick presets snap sliders to common patterns. Drag any slider to narrow further. Map pins fade and the leaderboard re-ranks live.</div>
 
                     <div class="filter-section">
                         <span class="filter-section-label">Quick presets</span>
@@ -255,12 +294,13 @@
                         </select>
                     </div>
 
-                    <div class="filter-section" id="filterSliders"></div>
-
-                    <div class="filter-actions">
-                        <span id="filterCount" class="filter-count">— metros</span>
-                        <button type="button" id="filterReset" class="filter-reset">Reset</button>
+                    <div class="filter-section" id="filterSliders">
+                        <span class="filter-section-label">Filter by metric</span>
                     </div>
+                </div>
+                <div class="filter-actions">
+                    <span id="filterCount" class="filter-count">— metros</span>
+                    <button type="button" id="filterReset" class="filter-reset">Reset</button>
                 </div>
             </div>
         </aside>
@@ -453,14 +493,23 @@ function highlightLeaderboardRow(slug) {
 // Slider definitions: each entry maps a metric key on the metro object
 // to a label, formatter, and a step. min/max bounds are computed from
 // the actual data at init so sliders fit our coverage exactly.
+// Format a dollar value with K (thousands) or M (millions) suffix +
+// proper grouping. $226K, $1.84M, $593K. Used in the slider readouts
+// where horizontal space is tight.
+function fmtCompactMoney(v) {
+    if (v >= 1_000_000) return '$' + (v / 1_000_000).toFixed(2) + 'M';
+    if (v >= 1_000) return '$' + Math.round(v / 1_000) + 'K';
+    return '$' + Math.round(v);
+}
+
 const FILTER_DEFS = [
-    { key: 'avg_home_value',         label: 'Home value',        fmt: v => '$' + Math.round(v / 1000) + 'k',          step: 10000 },
-    { key: 'avg_cap_rate_pct',       label: 'Cap rate %',        fmt: v => v.toFixed(1) + '%',                        step: 0.1 },
-    { key: 'sunshine_days',          label: 'Sunshine days/yr',  fmt: v => Math.round(v) + ' d',                      step: 5 },
-    { key: 'state_income_tax_pct',   label: 'State income tax %', fmt: v => v.toFixed(1) + '%',                       step: 0.1 },
-    { key: 'avg_walk_score',         label: 'Walk score',        fmt: v => v.toFixed(0),                              step: 1 },
-    { key: 'state_pop_growth_pct',   label: 'Population growth %/yr', fmt: v => v.toFixed(2) + '%',                   step: 0.05 },
-    { key: 'avg_pct_bachelors',      label: 'Bachelor\'s degree %', fmt: v => v.toFixed(0) + '%',                     step: 1 },
+    { key: 'avg_home_value',         label: 'Home value',             fmt: fmtCompactMoney,                         step: 10000 },
+    { key: 'avg_cap_rate_pct',       label: 'Cap rate',               fmt: v => v.toFixed(1) + '%',                 step: 0.1 },
+    { key: 'sunshine_days',          label: 'Sunshine days/yr',       fmt: v => Math.round(v) + ' d',               step: 5 },
+    { key: 'state_income_tax_pct',   label: 'State income tax',       fmt: v => v.toFixed(1) + '%',                 step: 0.1 },
+    { key: 'avg_walk_score',         label: 'Walk score',             fmt: v => v.toFixed(0),                       step: 1 },
+    { key: 'state_pop_growth_pct',   label: 'Population growth/yr',   fmt: v => v.toFixed(2) + '%',                 step: 0.05 },
+    { key: 'avg_pct_bachelors',      label: 'Bachelor\'s degree',     fmt: v => v.toFixed(0) + '%',                 step: 1 },
 ];
 
 // Quick-filter presets — each one is a partial filter state that gets
@@ -499,13 +548,28 @@ function getFilteredMetros() {
 }
 
 function initFilters() {
-    // Compute bounds across all metros so sliders span the full data
-    // range. Use a small epsilon to widen by step so the upper-bound
-    // metro still passes when slider sits at max.
+    // Compute bounds across all metros AND snap them outward to a step
+    // boundary. Without this, an <input type="range"> with step=10000
+    // and max=1842333 would snap the slider's max value down to 1836083,
+    // which then trips the filter check (hi < b.max) at default state
+    // and silently drops metros that sit between those values. We round
+    // min DOWN to a step boundary and max UP, so the slider's true span
+    // safely contains every actual data value.
     FILTER_DEFS.forEach(def => {
         const vals = METROS.map(m => m[def.key]).filter(v => v != null);
         if (!vals.length) return;
-        _filterBounds[def.key] = { min: Math.min(...vals), max: Math.max(...vals) };
+        const rawMin = Math.min(...vals);
+        const rawMax = Math.max(...vals);
+        const step = def.step;
+        const min = Math.floor(rawMin / step) * step;
+        const max = Math.ceil(rawMax / step) * step;
+        // Use toFixed-then-Number to scrub away floating-point noise
+        // (0.30000000000000004 → 0.3) so the slider attribute is clean.
+        const decimals = step < 1 ? Math.max(0, -Math.floor(Math.log10(step))) : 0;
+        _filterBounds[def.key] = {
+            min: Number(min.toFixed(decimals)),
+            max: Number(max.toFixed(decimals)),
+        };
     });
 
     // Populate the state dropdown from the metros we actually have.
@@ -555,11 +619,13 @@ function initFilters() {
             // Persist into filter state only if the user has actually
             // narrowed from the bounds — otherwise leave it absent so
             // getFilteredMetros() short-circuits the check.
-            if (lo > b.min || hi < b.max) {
+            const narrowed = lo > b.min || hi < b.max;
+            if (narrowed) {
                 _filterState.sliders[def.key] = { min: lo, max: hi };
             } else {
                 delete _filterState.sliders[def.key];
             }
+            row.classList.toggle('is-narrowed', narrowed);
             _filterState.activePreset = null;   // manual change clears preset highlight
             paintFill(def, lo, hi, fill, rangeEl);
             applyFilters();
@@ -603,6 +669,9 @@ function paintFill(def, lo, hi, fillEl, rangeEl) {
 function applyPreset(presetKey) {
     const preset = FILTER_PRESETS[presetKey];
     if (!preset) return;
+    // Presets replace the slider state outright (not additive) so toggling
+    // between them feels predictable. State dropdown is preserved.
+    _filterState.sliders = {};
     _filterState.activePreset = presetKey;
     // Each useMin/useMax is a fraction of the full slider span. Apply
     // it onto the slider's actual numeric range to derive a min/max.
@@ -614,8 +683,14 @@ function applyPreset(presetKey) {
         if (rule.useMin != null) lo = b.min + span * rule.useMin;
         if (rule.useMax != null) hi = b.min + span * rule.useMax;
         _filterState.sliders[key] = { min: lo, max: hi };
-        // Sync the slider thumbs + fill to the new values.
         syncSliderUI(key, lo, hi);
+    });
+    // Reset any sliders not touched by this preset to their defaults so
+    // we don't leave a previous preset's narrowing in place.
+    FILTER_DEFS.forEach(def => {
+        if (preset.sliders && preset.sliders[def.key]) return;
+        const b = _filterBounds[def.key];
+        if (b) syncSliderUI(def.key, b.min, b.max);
     });
     refreshPresetHighlight();
     applyFilters();
@@ -631,7 +706,11 @@ function syncSliderUI(key, lo, hi) {
     thumbMin.value = lo;
     thumbMax.value = hi;
     const def = FILTER_DEFS.find(d => d.key === key);
-    if (def) paintFill(def, lo, hi, fill, rangeEl);
+    if (def) {
+        paintFill(def, lo, hi, fill, rangeEl);
+        const b = _filterBounds[key];
+        row.classList.toggle('is-narrowed', lo > b.min || hi < b.max);
+    }
 }
 
 function resetFilters() {
@@ -661,8 +740,20 @@ function applyFilters() {
             marker.setStyle({ fillOpacity: ok ? 0.92 : 0.12, opacity: ok ? 1 : 0.25 });
         });
     }
+    // True if the user has narrowed anything from defaults — drives the
+    // tab-badge dot, the count-color highlight, and is the "any active"
+    // signal for users glancing at the rail.
+    const anyActive = !!_filterState.state ||
+                      Object.keys(_filterState.sliders).length > 0;
     const countEl = document.getElementById('filterCount');
-    if (countEl) countEl.textContent = `${passing.size} of ${METROS.length} metros`;
+    if (countEl) {
+        countEl.innerHTML = anyActive
+            ? `${passing.size} <span class="small">of ${METROS.length} metros</span>`
+            : `<span class="small">All ${METROS.length} metros</span>`;
+        countEl.classList.toggle('is-narrowed', anyActive);
+    }
+    const tab = document.querySelector('.rail-tab[data-pane="filters"]');
+    if (tab) tab.classList.toggle('has-active', anyActive);
     renderLeaderboard();
 }
 
