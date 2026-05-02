@@ -25,13 +25,57 @@
     .map-header h1 { font-size: 1.1rem; margin: 0; }
     .map-header .sub { color: var(--text-dim); font-size: 0.78rem; }
 
-    /* Split body: map on the left, rail on the right. Rail collapses
-       below the map on tablet/mobile. */
+    /* Three-column body: data sidebar | map | leaderboard rail. Both
+       side panels collapse below the map on tablet/mobile. */
     .map-body { flex: 1 1 auto; min-height: 0; display: flex; }
     .map-body .map-col { flex: 1 1 auto; min-width: 0; position: relative; }
     @media (max-width: 1100px) { .map-body { flex-direction: column; } }
 
     #nationalMap { width: 100%; height: 100%; background: #0b0d14; }
+
+    /* ── Left data sidebar ── reventure-style metric picker ── */
+    .data-sidebar { width: 260px; flex: 0 0 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+    @media (max-width: 1100px) { .data-sidebar { width: 100%; flex-basis: auto; height: auto; max-height: 360px; border-right: none; border-bottom: 1px solid var(--border); } }
+
+    .ds-search { padding: 0.7rem 0.85rem; border-bottom: 1px solid var(--border); flex: 0 0 auto; }
+    .ds-search input { width: 100%; padding: 0.45rem 0.7rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; color: var(--text); font-size: 0.8rem; }
+    .ds-search input::placeholder { color: var(--text-dim); }
+    .ds-search input:focus { outline: none; border-color: var(--accent2); }
+
+    /* The toggle row sits above the metric list — gives a one-click
+       "off" without having to deselect the radio. */
+    .ds-toggle-row { padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.6rem; flex: 0 0 auto; }
+
+    .ds-list { flex: 1; overflow-y: auto; padding: 0.3rem 0; }
+    .ds-section { border-bottom: 1px solid var(--border); }
+    .ds-section:last-child { border-bottom: none; }
+    .ds-section-header { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0.85rem; background: transparent; border: none; color: var(--text); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; }
+    .ds-section-header:hover { color: var(--accent2); }
+    .ds-section-header .chev { color: var(--text-dim); font-size: 0.6rem; transition: transform 0.15s; }
+    .ds-section.collapsed .chev { transform: rotate(-90deg); }
+    .ds-section.collapsed .ds-section-body { display: none; }
+
+    .ds-section-body { padding: 0 0.5rem 0.5rem; }
+    .ds-radio { display: flex; align-items: center; gap: 0.55rem; padding: 0.42rem 0.55rem; border-radius: 6px; cursor: pointer; font-size: 0.83rem; color: var(--text); transition: background 0.1s; user-select: none; }
+    .ds-radio:hover { background: var(--surface2); }
+    .ds-radio input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+    .ds-radio .radio-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border); flex-shrink: 0; transition: all 0.15s; position: relative; }
+    .ds-radio:hover .radio-dot { border-color: var(--accent2); }
+    .ds-radio input:checked + .radio-dot { border-color: var(--accent2); }
+    .ds-radio input:checked + .radio-dot::after { content: ''; position: absolute; top: 2px; left: 2px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent2); }
+    .ds-radio.is-active { background: rgba(59,130,246,0.10); color: var(--accent2); font-weight: 600; }
+
+    /* Color legend — small bar at the very bottom of the sidebar that
+       tracks whichever metric is currently active. Replaces the old
+       map-overlay legend so all the data-controls are colocated. */
+    .ds-legend { padding: 0.7rem 0.85rem; border-top: 1px solid var(--border); flex: 0 0 auto; background: var(--surface); }
+    .ds-legend-label { font-size: 0.62rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.35rem; }
+    .ds-legend-bar-wrap { display: flex; align-items: center; gap: 0.4rem; }
+    .ds-legend-text { font-size: 0.7rem; color: var(--text-dim); font-variant-numeric: tabular-nums; min-width: 36px; }
+    .ds-legend-text.right { text-align: right; }
+    .ds-legend-bar { flex: 1; height: 8px; border-radius: 4px; background: linear-gradient(to right, #ef4444, #eab308, #22c55e); }
+    .ds-legend.is-flip .ds-legend-bar { background: linear-gradient(to right, #22c55e, #eab308, #ef4444); }
+    .ds-legend.is-off { opacity: 0.4; }
 
     /* ── Right rail: leaderboard + find-your-fit, both as tabs ── */
     .leader-rail { width: 360px; flex: 0 0 360px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
@@ -230,32 +274,37 @@
     </div>
 
     <div class="map-body">
-        <!-- Map column: holds the Leaflet canvas + the legend overlay -->
-        <div class="map-col">
-            <div id="nationalMap"></div>
-
-            <!-- Choropleth metric picker overlay (top-left). Tints every
-                 state by the selected metric. Toggle off if you want
-                 just the metro pins. -->
-            <div class="cp-picker" id="cpPicker">
-                <div class="cp-picker-row">
-                    <label class="cp-toggle">
-                        <input type="checkbox" id="cpToggle" checked>
-                        <span class="cp-toggle-track"></span>
-                        <span class="cp-toggle-label">State heatmap</span>
-                    </label>
-                </div>
-                <div class="cp-picker-row" id="cpMetricRow">
-                    <span class="cp-picker-label">Color by</span>
-                    <select id="cpMetric" class="cp-select"></select>
-                </div>
-                <div class="cp-legend" id="cpLegend">
-                    <span class="cp-legend-text" id="cpLegendLow">—</span>
-                    <span class="cp-legend-bar"></span>
-                    <span class="cp-legend-text" id="cpLegendHigh">—</span>
+        <!-- Left data sidebar — reventure-style picker. Search filters
+             visible metrics; categories are collapsible. The selected
+             radio drives the choropleth tint. Built dynamically from
+             CP_METRICS; CSS controls the visual hierarchy. -->
+        <aside class="data-sidebar" id="dataSidebar">
+            <div class="ds-search">
+                <input type="text" id="dsSearch" placeholder="Search data points">
+            </div>
+            <div class="ds-toggle-row">
+                <label class="cp-toggle">
+                    <input type="checkbox" id="cpToggle" checked>
+                    <span class="cp-toggle-track"></span>
+                    <span class="cp-toggle-label">State heatmap</span>
+                </label>
+            </div>
+            <div class="ds-list" id="dsList"></div>
+            <div class="ds-legend" id="cpLegend">
+                <div class="ds-legend-label" id="cpLegendTitle">Color scale</div>
+                <div class="ds-legend-bar-wrap">
+                    <span class="ds-legend-text" id="cpLegendLow">—</span>
+                    <span class="ds-legend-bar"></span>
+                    <span class="ds-legend-text right" id="cpLegendHigh">—</span>
                 </div>
             </div>
+        </aside>
 
+        <!-- Map column: holds the Leaflet canvas + the legacy composite
+             legend (different from the choropleth legend now in the
+             sidebar — this one explains the metro PIN colors). -->
+        <div class="map-col">
+            <div id="nationalMap"></div>
             <div class="legend">
                 <span>Worse</span>
                 <span class="legend-bar"></span>
@@ -920,36 +969,31 @@ let _cpEnabled = true;        // Toggle state
 let _cpMetric = null;         // Currently selected CHOROPLETH_METRICS entry
 
 function initChoropleth() {
-    const select = document.getElementById('cpMetric');
+    const list = document.getElementById('dsList');
     const toggle = document.getElementById('cpToggle');
-    const picker = document.getElementById('cpPicker');
-    if (!select || !toggle || !picker) return;
+    const search = document.getElementById('dsSearch');
+    const sidebar = document.getElementById('dataSidebar');
+    if (!list || !toggle || !sidebar) return;
 
-    // Populate metric picker. Default to sunshine — visually striking
-    // and unambiguous (Sun Belt vs Pacific NW).
-    CP_METRICS.forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m.key;
-        opt.textContent = m.label;
-        select.appendChild(opt);
-    });
-    const defaultKey = 'sunshine';
-    select.value = defaultKey;
-    _cpMetric = CP_METRICS.find(m => m.key === defaultKey);
+    // Default to sunshine — visually striking, unambiguous Sun Belt vs
+    // Pacific NW pattern.
+    _cpMetric = CP_METRICS.find(m => m.key === 'sunshine') || CP_METRICS[0];
 
-    select.addEventListener('change', () => {
-        _cpMetric = CP_METRICS.find(m => m.key === select.value);
-        repaintChoropleth();
-    });
+    renderSidebarMetrics();
+    updateLegendTitle();
 
     toggle.addEventListener('change', () => {
         _cpEnabled = toggle.checked;
-        picker.classList.toggle('cp-disabled', !_cpEnabled);
+        document.getElementById('cpLegend').classList.toggle('is-off', !_cpEnabled);
         if (_cpLayer) {
             if (_cpEnabled) _cpLayer.addTo(window._mpMap);
             else window._mpMap.removeLayer(_cpLayer);
         }
     });
+
+    if (search) {
+        search.addEventListener('input', () => filterSidebarMetrics(search.value));
+    }
 
     // Fetch GeoJSON and build the layer. Failure is silent — pins still
     // work without the choropleth layer, so the page degrades gracefully
@@ -959,8 +1003,113 @@ function initChoropleth() {
         .then(buildChoroplethLayer)
         .catch(err => {
             console.warn('Choropleth GeoJSON failed to load:', err);
-            picker.style.display = 'none';
+            // Don't hide the sidebar — its metric picker is still useful
+            // even without polygons (e.g. for users on slow networks).
         });
+}
+
+// Format a metric value for display, respecting the metric's configured
+// format (money | numeric+unit). Used in the legend, tooltips, and any
+// future readout. Outside-bounds values are still formatted normally —
+// the percentile clamping only applies to *color*, not display.
+function fmtMetric(metric, value) {
+    if (value == null) return '—';
+    if (metric.format === 'money') {
+        if (value >= 1_000_000) return '$' + (value / 1_000_000).toFixed(2) + 'M';
+        if (value >= 1_000) return '$' + Math.round(value / 1_000) + 'K';
+        return '$' + Math.round(value);
+    }
+    return value.toFixed(metric.decimals || 0) + (metric.unit || '');
+}
+
+// Build the categorized radio-button picker. Top section is "Popular
+// Data" (the headline metrics flagged with `popular: True`); below that
+// each unique `category` field gets its own collapsible section. Order
+// of metrics within a category mirrors CP_METRICS order.
+function renderSidebarMetrics() {
+    const list = document.getElementById('dsList');
+    list.innerHTML = '';
+
+    const popular = CP_METRICS.filter(m => m.popular);
+    const byCat = {};
+    CP_METRICS.forEach(m => {
+        if (!byCat[m.category]) byCat[m.category] = [];
+        byCat[m.category].push(m);
+    });
+
+    const sections = [];
+    if (popular.length) sections.push({ name: 'Popular Data', metrics: popular });
+    Object.keys(byCat).forEach(cat => sections.push({ name: cat, metrics: byCat[cat] }));
+
+    sections.forEach((section, idx) => {
+        const sec = document.createElement('div');
+        sec.className = 'ds-section';
+        // Auto-collapse all but the first (Popular Data) section.
+        if (idx > 0) sec.classList.add('collapsed');
+
+        const header = document.createElement('button');
+        header.type = 'button';
+        header.className = 'ds-section-header';
+        header.innerHTML = `<span>${section.name}</span><span class="chev">▾</span>`;
+        header.addEventListener('click', () => sec.classList.toggle('collapsed'));
+        sec.appendChild(header);
+
+        const body = document.createElement('div');
+        body.className = 'ds-section-body';
+        section.metrics.forEach(m => body.appendChild(buildMetricRadio(m)));
+        sec.appendChild(body);
+
+        list.appendChild(sec);
+    });
+}
+
+function buildMetricRadio(metric) {
+    const label = document.createElement('label');
+    label.className = 'ds-radio';
+    label.dataset.key = metric.key;
+    label.dataset.label = metric.label.toLowerCase();
+    label.innerHTML = `
+        <input type="radio" name="ds-metric" value="${metric.key}"${metric.key === _cpMetric.key ? ' checked' : ''}>
+        <span class="radio-dot"></span>
+        <span>${metric.label}</span>
+    `;
+    if (metric.key === _cpMetric.key) label.classList.add('is-active');
+    label.querySelector('input').addEventListener('change', e => {
+        if (!e.target.checked) return;
+        _cpMetric = CP_METRICS.find(m => m.key === metric.key);
+        // Update active class on every radio so highlight follows the
+        // selection regardless of which section it's in (the metric
+        // can appear under both Popular and its category).
+        document.querySelectorAll('.ds-radio').forEach(r => {
+            r.classList.toggle('is-active', r.dataset.key === metric.key);
+        });
+        updateLegendTitle();
+        repaintChoropleth();
+    });
+    return label;
+}
+
+// Search filter — hide radios whose label doesn't match. Section
+// headers stay visible; sections with no visible children get hidden
+// so the user can scan the matching results without clutter.
+function filterSidebarMetrics(query) {
+    const q = (query || '').trim().toLowerCase();
+    document.querySelectorAll('.ds-section').forEach(sec => {
+        let anyVisible = false;
+        sec.querySelectorAll('.ds-radio').forEach(r => {
+            const matches = !q || r.dataset.label.includes(q);
+            r.style.display = matches ? '' : 'none';
+            if (matches) anyVisible = true;
+        });
+        sec.style.display = anyVisible ? '' : 'none';
+        // Auto-expand sections that have a match while searching.
+        if (q && anyVisible) sec.classList.remove('collapsed');
+    });
+}
+
+function updateLegendTitle() {
+    const el = document.getElementById('cpLegendTitle');
+    if (el && _cpMetric) el.textContent = _cpMetric.label;
 }
 
 function getMetricBounds(metricKey) {
@@ -1028,7 +1177,7 @@ function buildChoroplethLayer(geojson) {
                 e.target.bringToFront();
                 if (sd && _cpMetric) {
                     const v = sd[_cpMetric.key];
-                    const valStr = v.toFixed(_cpMetric.decimals) + _cpMetric.unit;
+                    const valStr = fmtMetric(_cpMetric, v);
                     const coverage = sd.has_metros ? '<div style="margin-top:4px; color:#3b82f6; font-size:11px;">▸ Metro coverage available</div>' : '';
                     e.target.bindTooltip(
                         `<div style="font-weight:700;">${sd.name}</div>` +
@@ -1072,12 +1221,12 @@ function repaintChoropleth() {
     _cpLayer.setStyle(styleForFeature);
     // Update legend bar direction + endpoint labels.
     const legend = document.getElementById('cpLegend');
-    legend.classList.toggle('cp-flip', _cpMetric.good_when === 'low');
+    legend.classList.toggle('is-flip', _cpMetric.good_when === 'low');
     const { min, max } = getMetricBounds(_cpMetric.key);
     const lowEl = document.getElementById('cpLegendLow');
     const highEl = document.getElementById('cpLegendHigh');
-    lowEl.textContent = min.toFixed(_cpMetric.decimals) + _cpMetric.unit;
-    highEl.textContent = max.toFixed(_cpMetric.decimals) + _cpMetric.unit;
+    lowEl.textContent = fmtMetric(_cpMetric, min);
+    highEl.textContent = fmtMetric(_cpMetric, max);
 }
 
 // ─── Find-your-fit pane wiring (right-rail Tab 2) ────────────────────
