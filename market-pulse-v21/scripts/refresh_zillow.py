@@ -46,6 +46,12 @@ ZORI_URL = (
     "https://files.zillowstatic.com/research/public_csvs/zori/"
     "Zip_zori_uc_sfrcondomfr_sm_month.csv"
 )
+# State-level ZHVI for the choropleth's "Median home value" + "Home
+# value YoY" metrics. Same naming pattern as the ZIP-level ZHVI.
+ZHVI_STATE_URL = (
+    "https://files.zillowstatic.com/research/public_csvs/zhvi/"
+    "State_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv"
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 NEIGHBORHOOD_FILES = [
@@ -107,6 +113,89 @@ def latest_value_per_zip(csv_text: str) -> dict[str, float]:
     return out
 
 
+def parse_state_zhvi(csv_text: str) -> dict[str, dict]:
+    """Parse the state-level Zillow ZHVI CSV. For each state's two-letter
+    code (StateName column maps to a state), find:
+      - latest non-empty monthly value  → home_value
+      - same value 12 months prior      → 12mo prior reference
+      - YoY % change between them       → home_value_yoy
+
+    Returns: {state_code: {"home_value": int, "home_value_yoy": float}}
+    """
+    reader = csv.reader(io.StringIO(csv_text))
+    header = next(reader)
+    try:
+        # State CSVs use 'StateName' for the full name + 'RegionName' for
+        # the same. The 2-letter abbreviation isn't always a column —
+        # look up by full name via a state→code map.
+        name_idx = header.index("RegionName")
+    except ValueError:
+        raise SystemExit("State ZHVI CSV missing RegionName column.")
+
+    date_cols = sorted(
+        ((i, h) for i, h in enumerate(header) if re.fullmatch(r"\d{4}-\d{2}-\d{2}", h)),
+        key=lambda x: x[1],
+    )
+    if not date_cols:
+        raise SystemExit("State ZHVI CSV had no date columns — schema changed?")
+    log.info("  → %d date columns; latest = %s", len(date_cols), date_cols[-1][1])
+
+    # Map full state names to 2-letter codes. Static — covers 50 states + DC.
+    name_to_code = {
+        "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR",
+        "California": "CA", "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE",
+        "District of Columbia": "DC", "Florida": "FL", "Georgia": "GA", "Hawaii": "HI",
+        "Idaho": "ID", "Illinois": "IL", "Indiana": "IN", "Iowa": "IA",
+        "Kansas": "KS", "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME",
+        "Maryland": "MD", "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN",
+        "Mississippi": "MS", "Missouri": "MO", "Montana": "MT", "Nebraska": "NE",
+        "Nevada": "NV", "New Hampshire": "NH", "New Jersey": "NJ", "New Mexico": "NM",
+        "New York": "NY", "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH",
+        "Oklahoma": "OK", "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI",
+        "South Carolina": "SC", "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX",
+        "Utah": "UT", "Vermont": "VT", "Virginia": "VA", "Washington": "WA",
+        "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY",
+    }
+
+    out: dict[str, dict] = {}
+    for row in reader:
+        name = row[name_idx]
+        code = name_to_code.get(name)
+        if not code:
+            continue
+        # Find the latest non-empty value (newest → oldest), and the
+        # column 12 months earlier in the date-sorted list. We use the
+        # latest column index, then walk back 12 months to find the
+        # comparison value.
+        latest_val = None
+        latest_idx_pos = None  # index into date_cols
+        for pos, (col_i, _) in enumerate(reversed(date_cols)):
+            if col_i < len(row) and row[col_i]:
+                try:
+                    latest_val = float(row[col_i])
+                    latest_idx_pos = len(date_cols) - 1 - pos
+                    break
+                except ValueError:
+                    pass
+        if latest_val is None or latest_idx_pos is None:
+            continue
+        prior_pos = latest_idx_pos - 12
+        prior_val = None
+        if prior_pos >= 0:
+            col_i = date_cols[prior_pos][0]
+            if col_i < len(row) and row[col_i]:
+                try:
+                    prior_val = float(row[col_i])
+                except ValueError:
+                    pass
+        entry: dict = {"home_value": int(round(latest_val))}
+        if prior_val and prior_val > 0:
+            entry["home_value_yoy"] = round((latest_val - prior_val) / prior_val * 100, 1)
+        out[code] = entry
+    log.info("  → parsed %d states with home_value (and YoY where 12mo prior available)", len(out))
+    return out
+
+
 def collect_target_zips() -> set[str]:
     """Find every 5-digit ZIP key in the neighborhood source files. The
     pattern is ``"75201":`` — keys are always 5-digit, quoted strings."""
@@ -127,7 +216,7 @@ def round_to(value: float, increment: int) -> int:
     return int(round(value / increment) * increment)
 
 
-def build_overrides(target_zips: set[str], zhvi: dict, zori: dict) -> dict:
+def build_overrides(target_zips: set[str], zhvi: dict, zori: dict, state_zhvi: dict) -> dict:
     overrides: dict[str, dict] = {}
     matched_value, matched_rent = 0, 0
     for z in sorted(target_zips):
@@ -159,10 +248,13 @@ def build_overrides(target_zips: set[str], zhvi: dict, zori: dict) -> dict:
             "source": "Zillow Research (ZHVI all-homes; ZORI SFR+condo+MFR)",
             "zhvi_url": ZHVI_URL,
             "zori_url": ZORI_URL,
+            "zhvi_state_url": ZHVI_STATE_URL,
             "zips_covered": len(overrides),
             "zips_targeted": len(target_zips),
+            "states_covered": len(state_zhvi),
         },
         "overrides": overrides,
+        "state_overrides": state_zhvi,
     }
 
 
@@ -194,8 +286,9 @@ def main(argv: list[str] | None = None) -> int:
 
     zhvi = latest_value_per_zip(fetch_csv(ZHVI_URL))
     zori = latest_value_per_zip(fetch_csv(ZORI_URL))
+    state_zhvi = parse_state_zhvi(fetch_csv(ZHVI_STATE_URL))
 
-    payload = build_overrides(target_zips, zhvi, zori)
+    payload = build_overrides(target_zips, zhvi, zori, state_zhvi)
     write_overrides(payload, dry_run=args.dry_run)
     return 0
 
