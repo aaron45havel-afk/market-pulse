@@ -4,6 +4,8 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 <style>
     /* Override the global .container max-width / padding for this page so
        the map can fill the entire main-pane edge-to-edge. The site footer
@@ -102,6 +104,27 @@
     /* Hide the metric row + legend when toggle is off */
     .cp-picker.cp-disabled #cpMetricRow,
     .cp-picker.cp-disabled #cpLegend { display: none; }
+
+    /* ─── Marker cluster (custom dark theme) ──────────────────────────
+       Replace the plugin's default green/yellow blob with a dark circle
+       that matches the rest of the map UI. The inner circle is colored
+       by the cluster's average composite score so dense regions still
+       give a quick visual signal. */
+    .mp-cluster {
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 0.78rem;
+        color: white;
+        border: 2px solid rgba(255,255,255,0.85);
+        border-radius: 50%;
+        box-shadow: 0 1px 6px rgba(0,0,0,0.5);
+    }
+    .mp-cluster:hover { transform: scale(1.06); }
+    /* Plugin uses .marker-cluster (with -small/-medium/-large variants).
+       Override them all to neutral so our inline backgroundColor wins. */
+    .marker-cluster, .marker-cluster div { background: transparent !important; }
+    .marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div {
+        background: transparent !important;
+    }
 
     /* ─── Find-your-fit pane (lives inside the right rail as a tab) ── */
     .fit-body { padding: 0.85rem 1rem; overflow-y: auto; flex: 1; }
@@ -368,6 +391,7 @@
 {% block scripts %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script>
 const METROS = JSON.parse(document.getElementById('metros-data').textContent);
 const CP_STATES = JSON.parse(document.getElementById('cp-states-data').textContent);
@@ -404,6 +428,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const coords = [];
     const markersBySlug = {};
 
+    // Cluster group — only collapses pins that visually overlap (within
+    // 35px). At low zoom the FL east-coast trio + UT Wasatch front
+    // collapse into a count bubble; click expands them. Coverage halo
+    // disabled (visually noisy on a small dataset). Custom icon picks
+    // up the cluster's average score color so dense regions still
+    // signal "good cluster" vs "mixed cluster".
+    const clusterLayer = L.markerClusterGroup({
+        maxClusterRadius: 35,
+        showCoverageOnHover: false,
+        spiderfyOnMaxZoom: true,
+        zoomToBoundsOnClick: true,
+        iconCreateFunction: cluster => {
+            const children = cluster.getAllChildMarkers();
+            // Pull the cluster's child markers' stored top scores and
+            // average them so the bubble color reflects the cluster's
+            // overall quality. Stored as `_mpScore` when each marker
+            // is created (below).
+            const scores = children.map(c => c._mpScore).filter(s => s != null);
+            const avg = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 50;
+            const color = scoreColor(avg);
+            const n = cluster.getChildCount();
+            const size = n < 5 ? 36 : n < 10 ? 42 : 48;
+            return L.divIcon({
+                html: `<div class="mp-cluster" style="width:${size}px;height:${size}px;background:${color};">${n}</div>`,
+                className: 'mp-cluster-wrap',
+                iconSize: L.point(size, size),
+            });
+        },
+    });
+
     METROS.forEach(m => {
         const c = m.map_center;
         if (!c || c.lat == null || c.lng == null) return;
@@ -415,7 +469,8 @@ document.addEventListener('DOMContentLoaded', () => {
             color: '#0b0d14',
             weight: 1.5,
             fillOpacity: 0.92,
-        }).addTo(map);
+        });
+        marker._mpScore = m.top_zip.composite_score;  // used by the cluster icon to compute avg color
         const popup =
             `<div style="font-weight:700; font-size:1.0rem; margin-bottom:0.25rem;">${m.metro_label}</div>` +
             `<div style="font-size:0.72rem; color:var(--text-dim); margin-bottom:0.5rem;">${m.zip_count} ZIPs · ${m.state}</div>` +
@@ -428,8 +483,10 @@ document.addEventListener('DOMContentLoaded', () => {
         marker.bindPopup(popup, { maxWidth: 320 });
         marker.bindTooltip(`<strong>${m.metro_label}</strong>`, { sticky: true });
         marker.on('click', () => highlightLeaderboardRow(m.slug));
+        clusterLayer.addLayer(marker);
         markersBySlug[m.slug] = marker;
     });
+    clusterLayer.addTo(map);
 
     // Fit the viewport to the cluster of metros once they're all on the
     // map. Padding gives breathing room so the corner pins aren't right
@@ -443,6 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // declared below — they need to fly + open popups on row click.
     window._mpMap = map;
     window._mpMarkers = markersBySlug;
+    window._mpClusterLayer = clusterLayer;
 
     initRailTabs();
     initLeaderboard();
@@ -529,9 +587,17 @@ function renderLeaderboard() {
             const slug = row.dataset.slug;
             const marker = window._mpMarkers && window._mpMarkers[slug];
             if (!marker) return;
-            const ll = marker.getLatLng();
-            window._mpMap.flyTo(ll, Math.max(window._mpMap.getZoom(), 6), { duration: 0.6 });
-            marker.openPopup();
+            // If the marker is currently hidden inside a cluster, ask
+            // the cluster layer to zoom + spiderfy until the marker is
+            // exposed, then open its popup. Otherwise fly directly.
+            const cluster = window._mpClusterLayer;
+            if (cluster && cluster.zoomToShowLayer) {
+                cluster.zoomToShowLayer(marker, () => marker.openPopup());
+            } else {
+                const ll = marker.getLatLng();
+                window._mpMap.flyTo(ll, Math.max(window._mpMap.getZoom(), 6), { duration: 0.6 });
+                marker.openPopup();
+            }
             highlightLeaderboardRow(slug);
         });
     });
@@ -795,10 +861,19 @@ function refreshPresetHighlight() {
 // every UI change.
 function applyFilters() {
     const passing = new Set(getFilteredMetros().map(m => m.slug));
+    const cluster = window._mpClusterLayer;
     if (window._mpMarkers) {
         Object.entries(window._mpMarkers).forEach(([slug, marker]) => {
             const ok = passing.has(slug);
             marker.setStyle({ fillOpacity: ok ? 0.92 : 0.12, opacity: ok ? 1 : 0.25 });
+            // Add/remove from the cluster so bubble counts reflect the
+            // filtered set. hasLayer is the supported way to test
+            // membership across versions of leaflet.markercluster.
+            if (cluster) {
+                const inLayer = cluster.hasLayer(marker);
+                if (ok && !inLayer) cluster.addLayer(marker);
+                else if (!ok && inLayer) cluster.removeLayer(marker);
+            }
         });
     }
     // True if the user has narrowed anything from defaults — drives the
