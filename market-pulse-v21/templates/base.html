@@ -39,7 +39,7 @@
         .sidebar .nav-links a { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.85rem; border-radius: 8px; color: var(--text-dim); font-size: 0.92rem; font-weight: 500; transition: all 0.15s; white-space: nowrap; overflow: hidden; }
         .sidebar .nav-links a:hover { background: var(--surface2); color: var(--text); text-decoration: none; }
         .sidebar .nav-links a.active { background: rgba(34,197,94,0.12); color: var(--accent); }
-        .sidebar .nav-links .icon { font-size: 1.05rem; width: 1.4rem; text-align: center; flex-shrink: 0; font-weight: 700; }
+        .sidebar .nav-links svg.icon { width: 18px; height: 18px; flex-shrink: 0; stroke: currentColor; }
         .sidebar .footer-note { font-size: 0.65rem; color: var(--text-dim); padding: 0.75rem 1rem; border-top: 1px solid var(--border); line-height: 1.5; white-space: nowrap; overflow: hidden; }
 
         /* ── Compact-sidebar mode (set on /map) ──
@@ -55,15 +55,18 @@
             body.compact-sidebar .sidebar:hover { width: 220px; box-shadow: 4px 0 16px rgba(0,0,0,0.4); }
             body.compact-sidebar .sidebar .label,
             body.compact-sidebar .sidebar .footer-note,
-            body.compact-sidebar .sidebar .logo .full { opacity: 0; transition: opacity 0.15s; }
+            body.compact-sidebar .sidebar .logo { opacity: 0; transition: opacity 0.15s; }
             body.compact-sidebar .sidebar:hover .label,
             body.compact-sidebar .sidebar:hover .footer-note,
-            body.compact-sidebar .sidebar:hover .logo .full { opacity: 1; }
+            body.compact-sidebar .sidebar:hover .logo { opacity: 1; }
             /* Center icons in collapsed state, left-align when hovered. */
             body.compact-sidebar .sidebar .nav-links a { padding: 0.6rem 0.5rem; justify-content: center; gap: 0; }
             body.compact-sidebar .sidebar:hover .nav-links a { padding: 0.6rem 0.85rem; justify-content: flex-start; gap: 0.7rem; }
-            body.compact-sidebar .sidebar .logo { padding: 0.5rem 0 1.25rem; text-align: center; }
-            body.compact-sidebar .sidebar:hover .logo { padding: 0.5rem 1.25rem 1.25rem; text-align: left; }
+            /* Logo: hidden when collapsed, restored on hover. The
+               border-bottom still shows so the header divider is
+               visible even with no text. */
+            body.compact-sidebar .sidebar .logo { padding: 0.5rem 0 1.25rem; text-align: left; }
+            body.compact-sidebar .sidebar:hover .logo { padding: 0.5rem 1.25rem 1.25rem; }
             /* Push main pane right by the collapsed sidebar width — content
                stays put as the sidebar overlays it on hover. */
             body.compact-sidebar .main-pane { padding-left: 56px; min-width: 0; }
@@ -155,13 +158,28 @@
 
     <div class="app-shell">
         <aside class="sidebar" id="sidebar">
-            <div class="logo"><span class="mark">M</span><span class="full"> Market Pulse</span></div>
+            <div class="logo">Market Pulse</div>
             <nav class="nav-links">
-                <a href="/map" class="{% if '/map' in request.url.path or request.url.path == '/' %}active{% endif %}"><span class="icon">M</span><span class="label">Map</span></a>
-                <a href="/real-estate" class="{% if '/real-estate' in request.url.path %}active{% endif %}"><span class="icon">S</span><span class="label">State Data</span></a>
-                <a href="/affordability" class="{% if '/affordability' in request.url.path %}active{% endif %}"><span class="icon">A</span><span class="label">Affordability</span></a>
-                <a href="/finance" class="{% if request.url.path == '/finance' %}active{% endif %}"><span class="icon">V</span><span class="label">Value Screener</span></a>
-                <a href="/results" class="{% if '/results' in request.url.path %}active{% endif %}"><span class="icon">R</span><span class="label">Results</span></a>
+                <a href="/map" class="{% if '/map' in request.url.path or request.url.path == '/' %}active{% endif %}">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span class="label">Map</span>
+                </a>
+                <a href="/real-estate" class="{% if '/real-estate' in request.url.path %}active{% endif %}">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="20" x2="6" y2="14"/><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/></svg>
+                    <span class="label">State Data</span>
+                </a>
+                <a href="/affordability" class="{% if '/affordability' in request.url.path %}active{% endif %}">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    <span class="label">Affordability</span>
+                </a>
+                <a href="/finance" class="{% if request.url.path == '/finance' %}active{% endif %}">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                    <span class="label">Value Screener</span>
+                </a>
+                <a href="/results" class="{% if '/results' in request.url.path %}active{% endif %}">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    <span class="label">Results</span>
+                </a>
             </nav>
             <div class="footer-note">FRED · SEC EDGAR · Yahoo Finance · Zillow Research. Not financial advice.</div>
         </aside>
