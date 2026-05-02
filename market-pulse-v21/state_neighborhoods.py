@@ -1983,6 +1983,123 @@ FORT_WAYNE_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# FL — Jacksonville / Duval County (consolidated city-county): NE Florida,
+# urban Riverside + San Marco, beaches corridor, naval anchor (Mayport + NAS
+# Jacksonville). Cheaper than Miami / Orlando, decent cap rates inland.
+# ─────────────────────────────────────────────────────────────────────────────
+JACKSONVILLE_ZIPS: dict[str, dict] = {
+    "32202": {
+        "name": "Downtown Jacksonville",
+        "lat": 30.3322, "lng": -81.6557,
+        "median_home_value": 260_000, "median_rent_monthly": 1_500,
+        "crime_index": 70, "pct_bachelors": 40,
+        "median_household_income": 42_000, "population": 6_000,
+        "walk_score": 75, "restaurant_score": 70,
+        "tags": ["urban", "walkable", "high-cap-rate"],
+    },
+    "32204": {
+        "name": "Riverside / Avondale",
+        "lat": 30.3092, "lng": -81.6884,
+        "median_home_value": 400_000, "median_rent_monthly": 1_800,
+        "crime_index": 55, "pct_bachelors": 60,
+        "median_household_income": 72_000, "population": 16_000,
+        "walk_score": 65, "restaurant_score": 80,
+        "tags": ["walkable", "hip", "established", "historic"],
+    },
+    "32207": {
+        "name": "San Marco / St. Nicholas",
+        "lat": 30.3015, "lng": -81.6529,
+        "median_home_value": 480_000, "median_rent_monthly": 2_000,
+        "crime_index": 40, "pct_bachelors": 70,
+        "median_household_income": 95_000, "population": 31_000,
+        "walk_score": 60, "restaurant_score": 75,
+        "tags": ["walkable", "upscale", "established"],
+    },
+    "32210": {
+        "name": "Westside",
+        "lat": 30.2904, "lng": -81.7635,
+        "median_home_value": 180_000, "median_rent_monthly": 1_400,
+        "crime_index": 65, "pct_bachelors": 18,
+        "median_household_income": 48_000, "population": 50_000,
+        "walk_score": 35, "restaurant_score": 35,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "32216": {
+        "name": "Tinseltown / Southside",
+        "lat": 30.2700, "lng": -81.5680,
+        "median_home_value": 300_000, "median_rent_monthly": 1_700,
+        "crime_index": 38, "pct_bachelors": 38,
+        "median_household_income": 68_000, "population": 38_000,
+        "walk_score": 35, "restaurant_score": 50,
+        "tags": ["family", "mid-tier"],
+    },
+    "32217": {
+        "name": "San Jose / Mandarin N",
+        "lat": 30.2570, "lng": -81.6177,
+        "median_home_value": 360_000, "median_rent_monthly": 1_900,
+        "crime_index": 30, "pct_bachelors": 50,
+        "median_household_income": 85_000, "population": 28_000,
+        "walk_score": 35, "restaurant_score": 45,
+        "tags": ["family", "low-crime", "established"],
+    },
+    "32220": {
+        "name": "W Jacksonville / Marietta",
+        "lat": 30.3145, "lng": -81.7886,
+        "median_home_value": 160_000, "median_rent_monthly": 1_300,
+        "crime_index": 70, "pct_bachelors": 14,
+        "median_household_income": 42_000, "population": 18_000,
+        "walk_score": 25, "restaurant_score": 25,
+        "tags": ["affordable", "high-cap-rate", "high-crime"],
+    },
+    "32223": {
+        "name": "Mandarin S",
+        "lat": 30.1820, "lng": -81.6305,
+        "median_home_value": 450_000, "median_rent_monthly": 2_100,
+        "crime_index": 22, "pct_bachelors": 60,
+        "median_household_income": 115_000, "population": 45_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["family", "top-schools", "low-crime"],
+    },
+    "32224": {
+        "name": "Beaches / Atlantic Beach",
+        "lat": 30.2840, "lng": -81.4730,
+        "median_home_value": 620_000, "median_rent_monthly": 2_500,
+        "crime_index": 25, "pct_bachelors": 65,
+        "median_household_income": 115_000, "population": 38_000,
+        "walk_score": 50, "restaurant_score": 65,
+        "tags": ["beach", "family", "low-crime"],
+    },
+    "32246": {
+        "name": "Southside Estates",
+        "lat": 30.2895, "lng": -81.5440,
+        "median_home_value": 310_000, "median_rent_monthly": 1_800,
+        "crime_index": 35, "pct_bachelors": 42,
+        "median_household_income": 72_000, "population": 42_000,
+        "walk_score": 35, "restaurant_score": 50,
+        "tags": ["family", "mid-tier"],
+    },
+    "32256": {
+        "name": "Deerwood / Baymeadows",
+        "lat": 30.2350, "lng": -81.5180,
+        "median_home_value": 400_000, "median_rent_monthly": 2_200,
+        "crime_index": 28, "pct_bachelors": 60,
+        "median_household_income": 98_000, "population": 50_000,
+        "walk_score": 30, "restaurant_score": 50,
+        "tags": ["family", "newer", "low-crime"],
+    },
+    "32218": {
+        "name": "N Jacksonville",
+        "lat": 30.4620, "lng": -81.6280,
+        "median_home_value": 260_000, "median_rent_monthly": 1_600,
+        "crime_index": 50, "pct_bachelors": 28,
+        "median_household_income": 58_000, "population": 65_000,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["affordable", "family"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -2226,7 +2343,8 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               LAS_VEGAS_ZIPS, RENO_ZIPS, CARSON_CITY_ZIPS,
               MIAMI_ZIPS, ORLANDO_ZIPS, ATLANTA_ZIPS,
               AUSTIN_ZIPS, HOUSTON_ZIPS, SAN_ANTONIO_ZIPS, FORT_WORTH_ZIPS,
-              SF_BAY_ZIPS, SAN_DIEGO_ZIPS, INDIANAPOLIS_ZIPS, FORT_WAYNE_ZIPS):
+              SF_BAY_ZIPS, SAN_DIEGO_ZIPS, INDIANAPOLIS_ZIPS, FORT_WAYNE_ZIPS,
+              JACKSONVILLE_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -2429,6 +2547,19 @@ STATE_METROS: dict[str, dict] = {
             "FL hurricane / wind insurance has roughly tripled in 5 years; not modeled in cap-rate scoring.",
         ],
     },
+    "FL-JAX": {
+        "state": "FL",
+        "metro_label": "Jacksonville / Duval County",
+        "subtitle": "ZIP-level scores for Jacksonville — Downtown, the historic Riverside / Avondale + San Marco walkable tier, the beaches corridor (Atlantic Beach), Mandarin family suburbs, plus high-cap-rate Westside ZIPs.",
+        "map_center": {"lat": 30.33, "lng": -81.65, "zoom": 10},
+        "zips": JACKSONVILLE_ZIPS,
+        "extra_caveats": [
+            "Jacksonville is a consolidated city/county (Duval) — JSO covers the entire footprint; crime indexes are normalized across the county but inner-Westside (32210, 32220) has block-level variance.",
+            "Naval Station Mayport + NAS Jacksonville add ~24K active-duty residents; BAH anchors rents in the 32224 / 32246 / 32218 corridor and creates a yield floor not seen in non-military FL metros.",
+            "Beach ZIP (32224) gets a hurricane / wind-zone insurance premium ~2-3× inland; not in the standard insurance multiplier.",
+            "Mandarin S (32223) is in the Duval School District but routes to top-rated Mandarin HS feeder pattern — within-ZIP school quality varies more than the bachelor's-percent proxy suggests.",
+        ],
+    },
     "GA-ATL": {
         "state": "GA",
         "metro_label": "Atlanta Metro",
@@ -2488,7 +2619,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "UT": ["UT", "UT-SLC", "UT-STG"],
     "AZ": ["AZ"],
     "NV": ["NV-LV", "NV-RNO", "NV-CC"],
-    "FL": ["FL-MIA", "FL-ORL"],
+    "FL": ["FL-MIA", "FL-ORL", "FL-JAX"],
     "GA": ["GA-ATL"],
     "IN": ["IN-IND", "IN-FW"],
 }
