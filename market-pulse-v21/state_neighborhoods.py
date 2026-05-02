@@ -1729,6 +1729,126 @@ SAN_DIEGO_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# CA — Sacramento / Sacramento County: state capital + Central Valley
+# affordability play. Roughly half the price of the Bay Area with strong
+# rent demand from state government / health care employers. Major
+# tiers: Downtown / Midtown urban core, East Sacramento / Land Park
+# established upscale, Pocket / Greenhaven family suburbs, South Sac +
+# Florin high-cap-rate ZIPs, Natomas master-planned newer construction.
+# ─────────────────────────────────────────────────────────────────────────────
+SACRAMENTO_ZIPS: dict[str, dict] = {
+    "95814": {
+        "name": "Downtown / Capitol",
+        "lat": 38.5800, "lng": -121.4910,
+        "median_home_value": 530_000, "median_rent_monthly": 2_200,
+        "crime_index": 60, "pct_bachelors": 60,
+        "median_household_income": 80_000, "population": 6_000,
+        "walk_score": 90, "restaurant_score": 85,
+        "tags": ["urban", "walkable", "hip"],
+    },
+    "95816": {
+        "name": "Midtown",
+        "lat": 38.5710, "lng": -121.4670,
+        "median_home_value": 620_000, "median_rent_monthly": 2_400,
+        "crime_index": 50, "pct_bachelors": 65,
+        "median_household_income": 75_000, "population": 14_000,
+        "walk_score": 85, "restaurant_score": 90,
+        "tags": ["walkable", "hip", "established"],
+    },
+    "95818": {
+        "name": "Land Park / Curtis Park",
+        "lat": 38.5470, "lng": -121.4990,
+        "median_home_value": 720_000, "median_rent_monthly": 2_700,
+        "crime_index": 25, "pct_bachelors": 70,
+        "median_household_income": 115_000, "population": 17_000,
+        "walk_score": 65, "restaurant_score": 60,
+        "tags": ["family", "established", "upscale"],
+    },
+    "95819": {
+        "name": "East Sacramento / Fab 40s",
+        "lat": 38.5630, "lng": -121.4500,
+        "median_home_value": 850_000, "median_rent_monthly": 2_900,
+        "crime_index": 18, "pct_bachelors": 75,
+        "median_household_income": 135_000, "population": 23_000,
+        "walk_score": 60, "restaurant_score": 65,
+        "tags": ["family", "top-schools", "upscale", "established"],
+    },
+    "95820": {
+        "name": "South Sacramento / Tahoe Park",
+        "lat": 38.5320, "lng": -121.4670,
+        "median_home_value": 390_000, "median_rent_monthly": 1_800,
+        "crime_index": 65, "pct_bachelors": 25,
+        "median_household_income": 50_000, "population": 30_000,
+        "walk_score": 50, "restaurant_score": 35,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "95822": {
+        "name": "South Land Park / Hollywood Park",
+        "lat": 38.5070, "lng": -121.5060,
+        "median_home_value": 620_000, "median_rent_monthly": 2_500,
+        "crime_index": 22, "pct_bachelors": 60,
+        "median_household_income": 95_000, "population": 23_000,
+        "walk_score": 35, "restaurant_score": 35,
+        "tags": ["family", "low-crime", "established"],
+    },
+    "95823": {
+        "name": "Meadowview / Valley Hi",
+        "lat": 38.4870, "lng": -121.4500,
+        "median_home_value": 360_000, "median_rent_monthly": 1_750,
+        "crime_index": 70, "pct_bachelors": 22,
+        "median_household_income": 48_000, "population": 53_000,
+        "walk_score": 35, "restaurant_score": 25,
+        "tags": ["affordable", "high-cap-rate", "high-crime"],
+    },
+    "95825": {
+        "name": "Arden Arcade / Sierra Oaks",
+        "lat": 38.5870, "lng": -121.4000,
+        "median_home_value": 480_000, "median_rent_monthly": 2_100,
+        "crime_index": 45, "pct_bachelors": 45,
+        "median_household_income": 65_000, "population": 35_000,
+        "walk_score": 50, "restaurant_score": 50,
+        "tags": ["mid-tier"],
+    },
+    "95828": {
+        "name": "Florin / Parkway",
+        "lat": 38.4920, "lng": -121.4180,
+        "median_home_value": 400_000, "median_rent_monthly": 1_850,
+        "crime_index": 65, "pct_bachelors": 28,
+        "median_household_income": 52_000, "population": 60_000,
+        "walk_score": 35, "restaurant_score": 30,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "95831": {
+        "name": "Pocket / Greenhaven",
+        "lat": 38.5060, "lng": -121.5320,
+        "median_home_value": 720_000, "median_rent_monthly": 2_700,
+        "crime_index": 22, "pct_bachelors": 65,
+        "median_household_income": 115_000, "population": 22_000,
+        "walk_score": 35, "restaurant_score": 35,
+        "tags": ["family", "low-crime", "upscale"],
+    },
+    "95833": {
+        "name": "South Natomas",
+        "lat": 38.6210, "lng": -121.5090,
+        "median_home_value": 510_000, "median_rent_monthly": 2_300,
+        "crime_index": 35, "pct_bachelors": 50,
+        "median_household_income": 80_000, "population": 32_000,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["family", "master-planned"],
+    },
+    "95835": {
+        "name": "North Natomas",
+        "lat": 38.6470, "lng": -121.5040,
+        "median_home_value": 580_000, "median_rent_monthly": 2_500,
+        "crime_index": 25, "pct_bachelors": 55,
+        "median_household_income": 100_000, "population": 45_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["family", "low-crime", "master-planned"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # IN — Indianapolis metro (Marion County + close-in Hamilton suburbs)
 # Indy is one of the cheapest mid-major metros in the US — cap rates of
 # 6-10% are routine in inner-ring ZIPs but come paired with the crime
@@ -2813,7 +2933,7 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               LAS_VEGAS_ZIPS, RENO_ZIPS, CARSON_CITY_ZIPS,
               MIAMI_ZIPS, ORLANDO_ZIPS, ATLANTA_ZIPS,
               AUSTIN_ZIPS, HOUSTON_ZIPS, SAN_ANTONIO_ZIPS, FORT_WORTH_ZIPS,
-              SF_BAY_ZIPS, SAN_DIEGO_ZIPS, INDIANAPOLIS_ZIPS, FORT_WAYNE_ZIPS,
+              SF_BAY_ZIPS, SAN_DIEGO_ZIPS, SACRAMENTO_ZIPS, INDIANAPOLIS_ZIPS, FORT_WAYNE_ZIPS,
               JACKSONVILLE_ZIPS, FORT_LAUDERDALE_ZIPS, WEST_PALM_BEACH_ZIPS,
               TAMPA_ZIPS, SAVANNAH_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
@@ -2909,6 +3029,19 @@ STATE_METROS: dict[str, dict] = {
             "Mello-Roos special assessments add \\$2K-7K/yr in newer master-planned communities (especially 92127 4S Ranch + newer 92128 Rancho Bernardo sections); not in the standard property-tax line.",
             "Both wildfire AND earthquake insurance apply in San Diego (East County wildfire risk + the same regional fault system as LA); the state-avg insurance multiplier likely understates both.",
             "Prop 13 protects long-term holders (2% cap), but a fresh purchase resets to sale price → first-year buyers see effective rates closer to 1.0-1.2% vs the 0.75% statewide average shown.",
+        ],
+    },
+    "CA-SAC": {
+        "state": "CA",
+        "metro_label": "Sacramento / Sacramento County",
+        "subtitle": "ZIP-level scores for Sacramento — Downtown / Capitol urban core, Midtown walkable hip tier, East Sac / Land Park established upscale, Pocket / Greenhaven family suburbs, South Sac + Florin high-cap-rate ZIPs, plus North + South Natomas master-planned newer construction.",
+        "map_center": {"lat": 38.58, "lng": -121.49, "zoom": 11},
+        "zips": SACRAMENTO_ZIPS,
+        "extra_caveats": [
+            "State government employment (~75K state workers + countless contractors) anchors a steady rental floor that makes Sacramento yield more reliable than most CA metros — but also caps rent upside since the state COLA, not the open market, drives most household income.",
+            "East Sacramento (95819) and Fab 40s premium runs ~30% above the bachelor's-percent proxy because the Sacramento City Unified School District's open-enrollment policies + private-school feeder patterns concentrate top families in this ZIP.",
+            "Natomas (95833 / 95835) and parts of the Pocket sit in FEMA flood zones reclassified after the 2016 levee re-certification — flood insurance is required for many properties and isn't in the standard insurance multiplier.",
+            "Wildfire risk runs east toward El Dorado / Placer counties (not modeled here); inside Sacramento County itself, wildfire insurance impact is moderate vs Bay Area / SoCal exposure.",
         ],
     },
     "CA-SF": {
@@ -3139,7 +3272,7 @@ STATE_METROS: dict[str, dict] = {
 # default link target (first entry) and the metro switcher on the map page.
 STATE_TO_METROS: dict[str, list[str]] = {
     "TX": ["TX", "TX-FW", "TX-HOU", "TX-SA", "TX-AUS"],
-    "CA": ["CA", "CA-SF", "CA-SD"],
+    "CA": ["CA", "CA-SF", "CA-SD", "CA-SAC"],
     "UT": ["UT", "UT-SLC", "UT-STG"],
     "AZ": ["AZ"],
     "NV": ["NV-LV", "NV-RNO", "NV-CC"],
