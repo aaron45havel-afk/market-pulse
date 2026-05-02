@@ -490,6 +490,34 @@ const STATE_DATA = {
         insuranceMultiplier: 0.0030,
         primaryResidenceDiscount: false,
         notes: "Flat 2.5% income tax. Moderate property tax with 5% cap on primary residence."
+    },
+    FL: {
+        name: "Florida",
+        propertyTaxEffective: 0.0091,
+        propertyTaxCap: 0.03,
+        stateIncomeTaxRates: [{ rate: 0, threshold: Infinity }],
+        insuranceMultiplier: 0.0060,
+        primaryResidenceDiscount: true,
+        homesteadExemption: 50000,
+        notes: "No state income tax. Save Our Homes 3% cap on assessed value for primary residence. Hurricane insurance runs the highest in the country."
+    },
+    GA: {
+        name: "Georgia",
+        propertyTaxEffective: 0.0090,
+        propertyTaxCap: null,
+        stateIncomeTaxRates: [{ rate: 0.0539, threshold: Infinity }],
+        insuranceMultiplier: 0.0030,
+        primaryResidenceDiscount: false,
+        notes: "Flat 5.39% income tax (transitioning down to 4.99% by 2029). Standard $2,000 homestead exemption — county-level add-ons vary."
+    },
+    IN: {
+        name: "Indiana",
+        propertyTaxEffective: 0.0084,
+        propertyTaxCap: 0.01,
+        stateIncomeTaxRates: [{ rate: 0.0305, threshold: Infinity }],
+        insuranceMultiplier: 0.0028,
+        primaryResidenceDiscount: false,
+        notes: "Constitutional 1% cap on homestead property tax. Flat 3.05% state income tax — counties add another 1-2% effective."
     }
 };
 
@@ -547,12 +575,12 @@ function calculatePITI(price, dp, dpMode, rate, state, loanType, hoa) {
     }
 
     // Property tax — Utah uses 55% assessment ratio for primary residence;
-    // Texas applies a flat homestead exemption before the rate.
+    // TX/FL apply a flat homestead exemption before the rate.
     let assessmentValue = price;
     if (state === 'UT' && sd.primaryResidenceDiscount) {
         assessmentValue = price * sd.primaryResidenceAssessmentRatio;
     }
-    if (state === 'TX' && sd.homesteadExemption) {
+    if (sd.homesteadExemption) {
         assessmentValue = Math.max(0, price - sd.homesteadExemption);
     }
     const annualPropertyTax = assessmentValue * sd.propertyTaxEffective;
@@ -994,7 +1022,7 @@ function renderScenarioList() {
 // state, paints the table. Highlights the strongest (green) and weakest
 // (red) max-price rows so it's a glance-comparable view.
 
-const STATE_ORDER = ['NV', 'CA', 'UT', 'TX', 'AZ'];
+const STATE_ORDER = ['NV', 'CA', 'UT', 'TX', 'AZ', 'FL', 'GA', 'IN'];
 
 function computeRow(inputs, state) {
     const { income, dti, rate, downPayment, downPaymentMode, loanType, monthlyDebts, hoa, rentalIncome } = inputs;
