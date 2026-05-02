@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Map — Market Pulse{% endblock %}
+{% block body_class %}compact-sidebar{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -465,10 +466,19 @@ function scoreColor(score) {
 function fmtMoney(v) { return '$' + Math.round(v).toLocaleString('en-US'); }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Zoom control on the right so it doesn't collide with the
-    // top-left choropleth picker overlay.
-    const map = L.map('nationalMap', { zoomControl: false, scrollWheelZoom: true })
-        .setView([38.5, -98.5], 4);
+    // Zoom control on the right so it doesn't collide with the data
+    // sidebar. Constrain the panning window to the continental US +
+    // a small slack so the user can drag a bit but not wander to the
+    // ocean / Alaska / Mexico interior. minZoom: 4 prevents zooming
+    // out far enough to see the whole world.
+    const usBounds = L.latLngBounds([22, -127], [51, -64]);
+    const map = L.map('nationalMap', {
+        zoomControl: false,
+        scrollWheelZoom: true,
+        maxBounds: usBounds,
+        maxBoundsViscosity: 0.7,
+        minZoom: 4,
+    }).setView([38.5, -96], 4);
     L.control.zoom({ position: 'topright' }).addTo(map);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 18,
@@ -546,9 +556,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Fit the viewport to the cluster of metros once they're all on the
     // map. Padding gives breathing room so the corner pins aren't right
     // at the edge. maxZoom prevents zooming past metro-region scale if
-    // all markers happen to cluster tightly.
+    // all markers happen to cluster tightly. Capped at zoom 5 so the
+    // initial view stays continental US — even if metros cluster
+    // tightly the user starts at a national overview, not Texas.
     if (coords.length) {
-        map.fitBounds(L.latLngBounds(coords), { padding: [60, 60], maxZoom: 6 });
+        map.fitBounds(L.latLngBounds(coords), { padding: [40, 40], maxZoom: 5 });
     }
 
     // Cache map reference + marker registry for the leaderboard handlers
@@ -1165,7 +1177,15 @@ function styleForFeature(feature) {
 }
 
 function buildChoroplethLayer(geojson) {
+    // Drop non-continental territories so the map stays focused on the
+    // lower-48 + DC. AK (02) and HI (15) sit far outside the visible
+    // viewport and pull the map's bounds way out — without filtering
+    // these, even a nudge of pan reveals an empty stretch of Pacific.
     _cpLayer = L.geoJSON(geojson, {
+        filter: feature => {
+            const fips = feature.id || (feature.properties && feature.properties.STATE);
+            return fips !== '02' && fips !== '15';
+        },
         style: styleForFeature,
         onEachFeature: (feature, layer) => {
             const fips = feature.id || (feature.properties && feature.properties.STATE);

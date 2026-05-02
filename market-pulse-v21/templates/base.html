@@ -33,14 +33,41 @@
            flex:1 on main is more bulletproof. */
         .app-shell { display: flex; min-height: 100vh; align-items: stretch; }
 
-        .sidebar { width: var(--sidebar-w); flex: 0 0 var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); padding: 1rem 0; position: sticky; top: 0; align-self: flex-start; height: 100vh; display: flex; flex-direction: column; }
-        .sidebar .logo { font-size: 1.25rem; font-weight: 700; color: var(--accent); padding: 0.5rem 1.25rem 1.25rem; border-bottom: 1px solid var(--border); margin-bottom: 0.75rem; }
+        .sidebar { width: var(--sidebar-w); flex: 0 0 var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); padding: 1rem 0; position: sticky; top: 0; align-self: flex-start; height: 100vh; display: flex; flex-direction: column; transition: width 0.18s ease; }
+        .sidebar .logo { font-size: 1.25rem; font-weight: 700; color: var(--accent); padding: 0.5rem 1.25rem 1.25rem; border-bottom: 1px solid var(--border); margin-bottom: 0.75rem; white-space: nowrap; overflow: hidden; }
         .sidebar .nav-links { display: flex; flex-direction: column; gap: 0.15rem; padding: 0 0.5rem; flex: 1; }
-        .sidebar .nav-links a { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.85rem; border-radius: 8px; color: var(--text-dim); font-size: 0.92rem; font-weight: 500; transition: all 0.15s; }
+        .sidebar .nav-links a { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.85rem; border-radius: 8px; color: var(--text-dim); font-size: 0.92rem; font-weight: 500; transition: all 0.15s; white-space: nowrap; overflow: hidden; }
         .sidebar .nav-links a:hover { background: var(--surface2); color: var(--text); text-decoration: none; }
         .sidebar .nav-links a.active { background: rgba(34,197,94,0.12); color: var(--accent); }
-        .sidebar .nav-links .icon { font-size: 1.05rem; width: 1.2rem; text-align: center; }
-        .sidebar .footer-note { font-size: 0.65rem; color: var(--text-dim); padding: 0.75rem 1rem; border-top: 1px solid var(--border); line-height: 1.5; }
+        .sidebar .nav-links .icon { font-size: 1.05rem; width: 1.4rem; text-align: center; flex-shrink: 0; font-weight: 700; }
+        .sidebar .footer-note { font-size: 0.65rem; color: var(--text-dim); padding: 0.75rem 1rem; border-top: 1px solid var(--border); line-height: 1.5; white-space: nowrap; overflow: hidden; }
+
+        /* ── Compact-sidebar mode (set on /map) ──
+           Sidebar collapses to a 56px icon strip; hovering expands it
+           to 220px with a smooth transition. We use `position: fixed`
+           so the main pane doesn't reflow when the sidebar grows —
+           this matters on /map where a reflow would resize the
+           Leaflet canvas mid-hover and trigger redraws. Wrapped in a
+           min-width media query so mobile keeps its drawer pattern. */
+        @media (min-width: 769px) {
+            body.compact-sidebar { --sidebar-w: 56px; }
+            body.compact-sidebar .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 40; overflow: hidden; }
+            body.compact-sidebar .sidebar:hover { width: 220px; box-shadow: 4px 0 16px rgba(0,0,0,0.4); }
+            body.compact-sidebar .sidebar .label,
+            body.compact-sidebar .sidebar .footer-note,
+            body.compact-sidebar .sidebar .logo .full { opacity: 0; transition: opacity 0.15s; }
+            body.compact-sidebar .sidebar:hover .label,
+            body.compact-sidebar .sidebar:hover .footer-note,
+            body.compact-sidebar .sidebar:hover .logo .full { opacity: 1; }
+            /* Center icons in collapsed state, left-align when hovered. */
+            body.compact-sidebar .sidebar .nav-links a { padding: 0.6rem 0.5rem; justify-content: center; gap: 0; }
+            body.compact-sidebar .sidebar:hover .nav-links a { padding: 0.6rem 0.85rem; justify-content: flex-start; gap: 0.7rem; }
+            body.compact-sidebar .sidebar .logo { padding: 0.5rem 0 1.25rem; text-align: center; }
+            body.compact-sidebar .sidebar:hover .logo { padding: 0.5rem 1.25rem 1.25rem; text-align: left; }
+            /* Push main pane right by the collapsed sidebar width — content
+               stays put as the sidebar overlays it on hover. */
+            body.compact-sidebar .main-pane { padding-left: 56px; min-width: 0; }
+        }
 
         .main-pane { flex: 1 1 auto; min-width: 0; }  /* flex:1 grabs remaining space; min-width:0 lets it shrink rather than push past viewport */
         .container { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem; }
@@ -118,7 +145,7 @@
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
     <!-- Mobile top bar — only visible under 768px. The hamburger toggles
          the sidebar drawer; the title is just a wayfinding label. -->
     <div class="mobile-bar">
@@ -128,13 +155,13 @@
 
     <div class="app-shell">
         <aside class="sidebar" id="sidebar">
-            <div class="logo">Market Pulse</div>
+            <div class="logo"><span class="mark">M</span><span class="full"> Market Pulse</span></div>
             <nav class="nav-links">
-                <a href="/map" class="{% if '/map' in request.url.path or request.url.path == '/' %}active{% endif %}">Map</a>
-                <a href="/real-estate" class="{% if '/real-estate' in request.url.path %}active{% endif %}">State Data</a>
-                <a href="/affordability" class="{% if '/affordability' in request.url.path %}active{% endif %}">Affordability</a>
-                <a href="/finance" class="{% if request.url.path == '/finance' %}active{% endif %}">Value Screener</a>
-                <a href="/results" class="{% if '/results' in request.url.path %}active{% endif %}">Results</a>
+                <a href="/map" class="{% if '/map' in request.url.path or request.url.path == '/' %}active{% endif %}"><span class="icon">M</span><span class="label">Map</span></a>
+                <a href="/real-estate" class="{% if '/real-estate' in request.url.path %}active{% endif %}"><span class="icon">S</span><span class="label">State Data</span></a>
+                <a href="/affordability" class="{% if '/affordability' in request.url.path %}active{% endif %}"><span class="icon">A</span><span class="label">Affordability</span></a>
+                <a href="/finance" class="{% if request.url.path == '/finance' %}active{% endif %}"><span class="icon">V</span><span class="label">Value Screener</span></a>
+                <a href="/results" class="{% if '/results' in request.url.path %}active{% endif %}"><span class="icon">R</span><span class="label">Results</span></a>
             </nav>
             <div class="footer-note">FRED · SEC EDGAR · Yahoo Finance · Zillow Research. Not financial advice.</div>
         </aside>
