@@ -7,14 +7,9 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.middleware.gzip import GZipMiddleware
 from dotenv import load_dotenv
-from data_providers import (
-    get_all_state_data, get_county_data, get_national_data, STATES, COUNTIES
-)
+from data_providers import STATES
 from sec_edgar import build_net_net_screener
-from state_neighborhoods import (
-    get_state_neighborhoods, list_supported_states, default_metro_slug,
-    STATE_METROS, STATE_TO_METROS, metros_for_state,
-)
+from state_neighborhoods import get_state_neighborhoods, STATE_METROS
 from database import (init_db, save_price, save_prices_bulk, get_all_prices, delete_price,
                       lock_portfolio, update_portfolio_prices, exit_holding,
                       close_portfolio, get_all_portfolios)
@@ -22,8 +17,6 @@ from database import (init_db, save_price, save_prices_bulk, get_all_prices, del
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-FRED_API_KEY = os.getenv("FRED_API_KEY")
 
 
 @asynccontextmanager
@@ -174,19 +167,14 @@ async def national_map(request: Request):
 
 
 @app.get("/real-estate")
-async def real_estate(request: Request):
-    # state code → default metro slug, used by the dashboard link to route
-    # each state tab at its primary metro (e.g. UT → UT for Provo).
-    state_default_metro = {
-        s: default_metro_slug(s) for s in list_supported_states()
-    }
-    return templates.TemplateResponse("real_estate.html", {
-        "request": request,
-        "states": STATES,
-        "counties": COUNTIES,
-        "states_with_map": list_supported_states(),
-        "state_default_metro": state_default_metro,
-    })
+async def real_estate():
+    """Permanent redirect to /map. The standalone State Data dashboard
+    was retired once the country → state → metro drill-down landed on
+    /map (Phase 1, P96): state pills became the choropleth, the
+    Goldilocks rankings became the State Info card's persona row, and
+    the FRED-driven metric cards were already duplicated in the /map
+    sidebar. /real-estate/{slug}/map (per-metro deep-dive) stays."""
+    return RedirectResponse(url="/map", status_code=308)
 
 
 @app.get("/real-estate/{slug}/map")
@@ -214,30 +202,6 @@ async def state_map(request: Request, slug: str):
 @app.get("/affordability")
 async def affordability(request: Request):
     return templates.TemplateResponse("affordability.html", {"request": request})
-
-
-@app.get("/api/real-estate")
-async def api_real_estate():
-    data = get_all_state_data(FRED_API_KEY)
-    return JSONResponse(data)
-
-
-@app.get("/api/real-estate/county/{state}/{fips}")
-async def api_county(state: str, fips: str):
-    data = get_county_data(FRED_API_KEY, state.upper(), fips)
-    return JSONResponse(data)
-
-
-@app.get("/api/real-estate/national")
-async def api_national():
-    data = get_national_data(FRED_API_KEY)
-    return JSONResponse(data)
-
-
-@app.get("/api/counties/{state}")
-async def api_counties(state: str):
-    state = state.upper()
-    return JSONResponse(COUNTIES.get(state, {}))
 
 
 @app.get("/finance")
