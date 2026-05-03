@@ -107,7 +107,9 @@
     .lb-row .name .label { font-weight: 700; font-size: 0.88rem; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .lb-row .name .meta { font-size: 0.7rem; color: var(--text-dim); margin-top: 0.1rem; }
     .lb-row .score { font-size: 1rem; font-weight: 700; flex-shrink: 0; font-variant-numeric: tabular-nums; }
-    .leaflet-tile-pane { filter: brightness(0.65) saturate(0.8); }
+    /* Base tiles are CartoDB Dark Matter (already designed for overlays).
+       No filter needed — drop the brightness/saturate CSS that was
+       darkening OSM in the prior layout. */
     .leaflet-popup-content-wrapper { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
     .leaflet-popup-tip { background: var(--surface); }
     .leaflet-popup-content { margin: 0.7rem 0.9rem; font-size: 0.85rem; min-width: 220px; }
@@ -480,9 +482,20 @@ document.addEventListener('DOMContentLoaded', () => {
         minZoom: 4,
     }).setView([38.5, -96], 4);
     L.control.zoom({ position: 'topright' }).addTo(map);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        attribution: '&copy; OpenStreetMap',
+    // CartoDB Dark Matter (no labels) — designed for data overlays.
+    // Neutral dark grey base means the choropleth colors stay vibrant
+    // instead of muddying with the warm tan that OSM ships by default.
+    // Labels-only goes on top so place names sit above the polygons.
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+        attribution: '&copy; OpenStreetMap, &copy; CARTO',
+    }).addTo(map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+        attribution: '',
+        pane: 'shadowPane',
     }).addTo(map);
 
     // Collect each marker's coords so we can fitBounds() at the end,
@@ -1175,14 +1188,15 @@ function styleForFeature(feature) {
     const fips = feature.id || (feature.properties && feature.properties.STATE);
     return {
         fillColor: colorForState(fips),
+        // Subtle white-ish state borders pop against the dark CartoDB
+        // base (the prior near-black `#0b0d14` border disappeared on
+        // the new dark base). Choropleth fill bumped to 0.55 because
+        // the neutral dark base no longer muddies the saturated colors
+        // the way the warm tan OSM base did.
         weight: 1,
-        opacity: 0.8,
-        color: '#0b0d14',
-        // Lower opacity than the original 0.55 — the choropleth is
-        // context, the metro pins are the focus. Saturated state colors
-        // were swamping pin visibility, especially where pin and state
-        // share a color (green pin on green state).
-        fillOpacity: 0.4,
+        opacity: 0.5,
+        color: 'rgba(255,255,255,0.4)',
+        fillOpacity: 0.55,
     };
 }
 
