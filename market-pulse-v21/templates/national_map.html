@@ -152,30 +152,40 @@
     .cp-picker.cp-disabled #cpMetricRow,
     .cp-picker.cp-disabled #cpLegend { display: none; }
 
-    /* ─── Marker cluster (custom dark theme) ──────────────────────────
-       Replace the plugin's default green/yellow blob with a dark circle
-       that matches the rest of the map UI. The inner circle is colored
-       by the cluster's average composite score so dense regions still
-       give a quick visual signal. */
+    /* ─── Marker cluster (refined for the light Positron base) ───────
+       Softer ring + drop shadow, less stark than the prior dark-theme
+       version. Cluster fill is still tinted by the cluster's average
+       composite score so density still signals "good" vs "mixed". */
     .mp-cluster {
         display: flex; align-items: center; justify-content: center;
-        font-weight: 700; font-size: 0.85rem;
+        font-weight: 700; font-size: 0.78rem;
         color: white;
-        border: 3px solid #fff;
+        border: 2px solid rgba(255,255,255,0.95);
         border-radius: 50%;
-        /* Double shadow: tight dark outline outside the white border so
-           the cluster bubble visibly separates from any choropleth color
-           (otherwise a green cluster vanishes on a green state). */
-        box-shadow: 0 0 0 1.5px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.6);
-        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.25), 0 0 0 1px rgba(15,23,42,0.18);
+        text-shadow: 0 1px 1px rgba(0,0,0,0.35);
     }
-    .mp-cluster:hover { transform: scale(1.06); }
+    .mp-cluster:hover { transform: scale(1.08); transition: transform 0.12s; }
     /* Plugin uses .marker-cluster (with -small/-medium/-large variants).
        Override them all to neutral so our inline backgroundColor wins. */
     .marker-cluster, .marker-cluster div { background: transparent !important; }
     .marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div {
         background: transparent !important;
     }
+
+    /* Suppress the browser's default focus outline (blue rectangle)
+       on Leaflet SVG paths — appeared after clicking a state. We
+       handle our own visual feedback via hover; the focus ring is
+       just visual noise on a data map. */
+    .leaflet-interactive:focus { outline: none; }
+    .leaflet-container svg .leaflet-interactive { outline: none; }
+
+    /* Mute CartoDB place-name labels at country zoom — at zoom 4-5
+       "UNITED STATES" / "MEXICO" / "CUBA" render at full size which
+       feels intrusive on a state-level data map. 60% opacity keeps
+       cities readable at higher zoom but tones down the country
+       headers without removing them. */
+    .leaflet-tile-pane .leaflet-layer:nth-child(2) { opacity: 0.6; }
 
     /* ─── Find-your-fit pane (lives inside the right rail as a tab) ── */
     .fit-body { padding: 0.85rem 1rem; overflow-y: auto; flex: 1; }
