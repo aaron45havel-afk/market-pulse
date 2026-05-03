@@ -3407,6 +3407,124 @@ CHARLESTON_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# AZ — Tucson / Pima County: smaller, cheaper sister to Phoenix. University
+# of Arizona anchor + Davis-Monthan AFB + Raytheon Missiles. Sonoran desert
+# climate (4th hottest US metro). Spans gentrified Sam Hughes historic +
+# luxury Catalina Foothills + affordable south/west sides.
+# ─────────────────────────────────────────────────────────────────────────────
+TUCSON_ZIPS: dict[str, dict] = {
+    "85701": {
+        "name": "Downtown Tucson",
+        "lat": 32.2200, "lng": -110.9650,
+        "median_home_value": 390_000, "median_rent_monthly": 1_650,
+        "crime_index": 60, "pct_bachelors": 60,
+        "median_household_income": 58_000, "population":  5_000,
+        "walk_score": 80, "restaurant_score": 80,
+        "tags": ["urban", "walkable", "hip"],
+    },
+    "85705": {
+        "name": "Old Pueblo / Menlo Park",
+        "lat": 32.2600, "lng": -110.9850,
+        "median_home_value": 260_000, "median_rent_monthly": 1_200,
+        "crime_index": 65, "pct_bachelors": 30,
+        "median_household_income": 42_000, "population": 28_000,
+        "walk_score": 60, "restaurant_score": 50,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "85711": {
+        "name": "Central East Tucson",
+        "lat": 32.2150, "lng": -110.8900,
+        "median_home_value": 310_000, "median_rent_monthly": 1_300,
+        "crime_index": 55, "pct_bachelors": 35,
+        "median_household_income": 52_000, "population": 38_000,
+        "walk_score": 50, "restaurant_score": 50,
+        "tags": ["affordable", "mid-tier"],
+    },
+    "85716": {
+        "name": "Sam Hughes",
+        "lat": 32.2300, "lng": -110.9300,
+        "median_home_value": 480_000, "median_rent_monthly": 1_750,
+        "crime_index": 30, "pct_bachelors": 70,
+        "median_household_income": 80_000, "population": 22_000,
+        "walk_score": 65, "restaurant_score": 70,
+        "tags": ["walkable", "upscale", "established", "historic"],
+    },
+    "85718": {
+        "name": "Catalina Foothills",
+        "lat": 32.3100, "lng": -110.9100,
+        "median_home_value": 720_000, "median_rent_monthly": 2_400,
+        "crime_index": 18, "pct_bachelors": 70,
+        "median_household_income": 115_000, "population": 35_000,
+        "walk_score": 25, "restaurant_score": 60,
+        "tags": ["family", "top-schools", "low-crime", "upscale"],
+    },
+    "85719": {
+        "name": "University of Arizona",
+        "lat": 32.2450, "lng": -110.9450,
+        "median_home_value": 345_000, "median_rent_monthly": 1_400,
+        "crime_index": 50, "pct_bachelors": 65,
+        "median_household_income": 40_000, "population": 35_000,
+        "walk_score": 80, "restaurant_score": 75,
+        "tags": ["student", "walkable", "high-cap-rate"],
+    },
+    "85710": {
+        "name": "East Tucson",
+        "lat": 32.2250, "lng": -110.8400,
+        "median_home_value": 280_000, "median_rent_monthly": 1_250,
+        "crime_index": 50, "pct_bachelors": 28,
+        "median_household_income": 52_000, "population": 50_000,
+        "walk_score": 40, "restaurant_score": 40,
+        "tags": ["affordable", "mid-tier"],
+    },
+    "85745": {
+        "name": "Westside",
+        "lat": 32.2100, "lng": -111.0300,
+        "median_home_value": 290_000, "median_rent_monthly": 1_250,
+        "crime_index": 65, "pct_bachelors": 25,
+        "median_household_income": 48_000, "population": 38_000,
+        "walk_score": 35, "restaurant_score": 30,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "85747": {
+        "name": "SE Tucson",
+        "lat": 32.1500, "lng": -110.8250,
+        "median_home_value": 370_000, "median_rent_monthly": 1_650,
+        "crime_index": 30, "pct_bachelors": 35,
+        "median_household_income": 80_000, "population": 30_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["family", "mid-tier"],
+    },
+    "85737": {
+        "name": "Oro Valley",
+        "lat": 32.3950, "lng": -110.9650,
+        "median_home_value": 560_000, "median_rent_monthly": 2_100,
+        "crime_index": 15, "pct_bachelors": 50,
+        "median_household_income": 115_000, "population": 38_000,
+        "walk_score": 25, "restaurant_score": 50,
+        "tags": ["family", "top-schools", "low-crime", "master-planned"],
+    },
+    "85756": {
+        "name": "Southside / Airport",
+        "lat": 32.1350, "lng": -110.9300,
+        "median_home_value": 245_000, "median_rent_monthly": 1_150,
+        "crime_index": 70, "pct_bachelors": 18,
+        "median_household_income": 42_000, "population": 50_000,
+        "walk_score": 30, "restaurant_score": 30,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "85742": {
+        "name": "NW Tucson / Marana edge",
+        "lat": 32.3550, "lng": -111.0850,
+        "median_home_value": 430_000, "median_rent_monthly": 1_800,
+        "crime_index": 22, "pct_bachelors": 50,
+        "median_household_income": 90_000, "population": 38_000,
+        "walk_score": 25, "restaurant_score": 50,
+        "tags": ["family", "low-crime", "master-planned"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # TN — Nashville / Davidson County: 'It City' Sun Belt anchor (music + health
 # care + Oracle's new campus + Amazon Operations HQ). From Lower Broadway
 # tourism to old-money Belle Meade ($1.2M) to East Nashville hip
@@ -3893,7 +4011,7 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               TAMPA_ZIPS, SAVANNAH_ZIPS,
               COLUMBUS_ZIPS, CLEVELAND_ZIPS, CINCINNATI_ZIPS,
               DENVER_ZIPS, FORT_COLLINS_ZIPS,
-              CHARLESTON_ZIPS, SEATTLE_ZIPS, NASHVILLE_ZIPS):
+              CHARLESTON_ZIPS, SEATTLE_ZIPS, NASHVILLE_ZIPS, TUCSON_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -4271,6 +4389,20 @@ STATE_METROS: dict[str, dict] = {
             "Boeing 787 plant (North Charleston, 29405-adjacent) + Volvo (29492-adjacent) + Bosch (29483-adjacent) underpin a steady engineering / manufacturing rental floor across the metro.",
         ],
     },
+    "AZ-TUC": {
+        "state": "AZ",
+        "metro_label": "Tucson / Pima County",
+        "subtitle": "ZIP-level scores for Tucson — Downtown urban core, Sam Hughes + University of Arizona walkable historic, Catalina Foothills + Oro Valley premium upscale, plus the affordable Westside / Southside / Old Pueblo high-cap-rate ZIPs. Half the price of Phoenix with similar climate and a genuine cultural scene.",
+        "map_center": {"lat": 32.22, "lng": -110.93, "zoom": 11},
+        "zips": TUCSON_ZIPS,
+        "extra_caveats": [
+            "University of Arizona drives student-rental demand in 85719 + parts of 85716 (Sam Hughes) — cap rates reflect 12-month student leases with summer occupancy gaps.",
+            "Davis-Monthan AFB (~12K active duty) anchors BAH rents in 85710 + 85730 (just outside dataset) + parts of 85706; not as dominant as JB Charleston but a real yield floor on east-side ZIPs.",
+            "Catalina Foothills (85718) is in unincorporated Pima County with its own school district (Catalina Foothills SD) — premium beyond what the bachelor's-percent proxy captures, structurally tight inventory.",
+            "Oro Valley (85737) is an independent municipality with strict build codes + impact fees — supply-constrained relative to Phoenix-equivalent suburban ZIPs.",
+            "Tucson is the 4th hottest US metro (avg July high 100°F) — utility costs run high; not in our standard PITI assumption. Insurance premium also includes monsoon flooding exposure.",
+        ],
+    },
     "TN": {
         "state": "TN",
         "metro_label": "Nashville / Davidson County",
@@ -4345,7 +4477,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "TX": ["TX", "TX-FW", "TX-HOU", "TX-SA", "TX-AUS"],
     "CA": ["CA", "CA-SF", "CA-SD", "CA-SAC"],
     "UT": ["UT", "UT-SLC", "UT-STG"],
-    "AZ": ["AZ"],
+    "AZ": ["AZ", "AZ-TUC"],
     "NV": ["NV-LV", "NV-RNO", "NV-CC"],
     "FL": ["FL-MIA", "FL-ORL", "FL-TPA", "FL-JAX", "FL-FTL", "FL-WPB"],
     "GA": ["GA-ATL", "GA-SAV"],
