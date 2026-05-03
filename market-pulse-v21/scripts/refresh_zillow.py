@@ -1,9 +1,12 @@
-"""Refresh Zillow ZHVI + ZORI data for ZIP codes used by the neighborhood maps.
+"""Refresh Zillow ZHVI + ZORI data for ZIP codes + states.
 
-Downloads two public CSVs from Zillow Research, matches the latest monthly
-value for each ZIP we have hand-curated data for, and writes the result to
-``data/zillow_overrides.json``. The neighborhood modules apply this file at
-import time, so cap-rate-driving numbers stay current without editing source.
+Downloads four public CSVs from Zillow Research (ZIP-level ZHVI/ZORI +
+state-level ZHVI/ZORI), matches the latest monthly value for each ZIP we
+have hand-curated data for, parses state-level home_value / home_value_yoy
+/ median_rent, and writes the merged result to ``data/zillow_overrides.json``.
+The neighborhood modules apply the per-ZIP section at import time;
+``data_providers`` applies the per-state section to CHOROPLETH_STATES so
+cap-rate-driving numbers (home_value AND median_rent) stay current.
 
 Usage:
     python scripts/refresh_zillow.py [--dry-run]
@@ -11,6 +14,10 @@ Usage:
 What gets refreshed (per ZIP):
   - ``median_home_value``    from ZHVI (Zillow Home Value Index, all homes)
   - ``median_rent_monthly``  from ZORI (Zillow Observed Rent Index, SFR+condo+MFR)
+
+What gets refreshed (per state):
+  - ``home_value`` + ``home_value_yoy``  from State ZHVI
+  - ``median_rent``                       from State ZORI
 
 Everything else (crime, walk score, restaurants, % bachelors, income, lat/lng,
 tags) stays at the hand-curated snapshot — those move slowly and Zillow doesn't
@@ -52,6 +59,31 @@ ZHVI_STATE_URL = (
     "https://files.zillowstatic.com/research/public_csvs/zhvi/"
     "State_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv"
 )
+# State-level ZORI for the median_rent input on the cash_on_cash
+# composite. Without this, rent stays on the seed snapshot while
+# home_value tracks live — half of cap-rate moves untracked.
+ZORI_STATE_URL = (
+    "https://files.zillowstatic.com/research/public_csvs/zori/"
+    "State_zori_uc_sfrcondomfr_sm_month.csv"
+)
+
+# Map full state names → 2-letter codes. Used by both ZHVI and ZORI
+# state parsers since neither CSV exposes the abbreviation directly.
+NAME_TO_CODE = {
+    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR",
+    "California": "CA", "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE",
+    "District of Columbia": "DC", "Florida": "FL", "Georgia": "GA", "Hawaii": "HI",
+    "Idaho": "ID", "Illinois": "IL", "Indiana": "IN", "Iowa": "IA",
+    "Kansas": "KS", "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME",
+    "Maryland": "MD", "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN",
+    "Mississippi": "MS", "Missouri": "MO", "Montana": "MT", "Nebraska": "NE",
+    "Nevada": "NV", "New Hampshire": "NH", "New Jersey": "NJ", "New Mexico": "NM",
+    "New York": "NY", "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH",
+    "Oklahoma": "OK", "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI",
+    "South Carolina": "SC", "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX",
+    "Utah": "UT", "Vermont": "VT", "Virginia": "VA", "Washington": "WA",
+    "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY",
+}
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 NEIGHBORHOOD_FILES = [
@@ -140,27 +172,10 @@ def parse_state_zhvi(csv_text: str) -> dict[str, dict]:
         raise SystemExit("State ZHVI CSV had no date columns — schema changed?")
     log.info("  → %d date columns; latest = %s", len(date_cols), date_cols[-1][1])
 
-    # Map full state names to 2-letter codes. Static — covers 50 states + DC.
-    name_to_code = {
-        "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR",
-        "California": "CA", "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE",
-        "District of Columbia": "DC", "Florida": "FL", "Georgia": "GA", "Hawaii": "HI",
-        "Idaho": "ID", "Illinois": "IL", "Indiana": "IN", "Iowa": "IA",
-        "Kansas": "KS", "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME",
-        "Maryland": "MD", "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN",
-        "Mississippi": "MS", "Missouri": "MO", "Montana": "MT", "Nebraska": "NE",
-        "Nevada": "NV", "New Hampshire": "NH", "New Jersey": "NJ", "New Mexico": "NM",
-        "New York": "NY", "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH",
-        "Oklahoma": "OK", "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI",
-        "South Carolina": "SC", "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX",
-        "Utah": "UT", "Vermont": "VT", "Virginia": "VA", "Washington": "WA",
-        "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY",
-    }
-
     out: dict[str, dict] = {}
     for row in reader:
         name = row[name_idx]
-        code = name_to_code.get(name)
+        code = NAME_TO_CODE.get(name)
         if not code:
             continue
         # Find the latest non-empty value (newest → oldest), and the
@@ -193,6 +208,45 @@ def parse_state_zhvi(csv_text: str) -> dict[str, dict]:
             entry["home_value_yoy"] = round((latest_val - prior_val) / prior_val * 100, 1)
         out[code] = entry
     log.info("  → parsed %d states with home_value (and YoY where 12mo prior available)", len(out))
+    return out
+
+
+def parse_state_zori(csv_text: str) -> dict[str, dict]:
+    """Parse the state-level ZORI CSV. For each state, take the latest
+    non-empty monthly value and emit it as median_rent (rounded to the
+    nearest $25). Returns {state_code: {"median_rent": int}}.
+
+    No YoY here — rent_yoy isn't a metric the choropleth exposes today.
+    Add a `median_rent_yoy` field if/when it does."""
+    reader = csv.reader(io.StringIO(csv_text))
+    header = next(reader)
+    try:
+        name_idx = header.index("RegionName")
+    except ValueError:
+        raise SystemExit("State ZORI CSV missing RegionName column.")
+    date_cols = sorted(
+        ((i, h) for i, h in enumerate(header) if re.fullmatch(r"\d{4}-\d{2}-\d{2}", h)),
+        key=lambda x: x[1],
+    )
+    if not date_cols:
+        raise SystemExit("State ZORI CSV had no date columns — schema changed?")
+    log.info("  → %d date columns; latest = %s", len(date_cols), date_cols[-1][1])
+
+    out: dict[str, dict] = {}
+    for row in reader:
+        name = row[name_idx]
+        code = NAME_TO_CODE.get(name)
+        if not code:
+            continue
+        for col_i, _ in reversed(date_cols):
+            if col_i < len(row) and row[col_i]:
+                try:
+                    rent = float(row[col_i])
+                    out[code] = {"median_rent": int(round(rent / 25) * 25)}
+                    break
+                except ValueError:
+                    pass
+    log.info("  → parsed %d states with median_rent", len(out))
     return out
 
 
@@ -249,6 +303,7 @@ def build_overrides(target_zips: set[str], zhvi: dict, zori: dict, state_zhvi: d
             "zhvi_url": ZHVI_URL,
             "zori_url": ZORI_URL,
             "zhvi_state_url": ZHVI_STATE_URL,
+            "zori_state_url": ZORI_STATE_URL,
             "zips_covered": len(overrides),
             "zips_targeted": len(target_zips),
             "states_covered": len(state_zhvi),
@@ -287,6 +342,14 @@ def main(argv: list[str] | None = None) -> int:
     zhvi = latest_value_per_zip(fetch_csv(ZHVI_URL))
     zori = latest_value_per_zip(fetch_csv(ZORI_URL))
     state_zhvi = parse_state_zhvi(fetch_csv(ZHVI_STATE_URL))
+    # Merge state-level ZORI rent into the same per-state dict so the
+    # final state_overrides payload carries home_value, home_value_yoy,
+    # and median_rent — the three inputs cash_on_cash needs from
+    # market data. The data_providers loader already iterates
+    # values.items() so any new key flows through to CHOROPLETH_STATES.
+    state_zori = parse_state_zori(fetch_csv(ZORI_STATE_URL))
+    for code, vals in state_zori.items():
+        state_zhvi.setdefault(code, {}).update(vals)
 
     payload = build_overrides(target_zips, zhvi, zori, state_zhvi)
     write_overrides(payload, dry_run=args.dry_run)
