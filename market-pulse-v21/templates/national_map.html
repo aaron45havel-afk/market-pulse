@@ -74,8 +74,8 @@
     .ds-legend-bar-wrap { display: flex; align-items: center; gap: 0.4rem; }
     .ds-legend-text { font-size: 0.7rem; color: var(--text-dim); font-variant-numeric: tabular-nums; min-width: 36px; }
     .ds-legend-text.right { text-align: right; }
-    .ds-legend-bar { flex: 1; height: 8px; border-radius: 4px; background: linear-gradient(to right, #ef4444, #eab308, #22c55e); }
-    .ds-legend.is-flip .ds-legend-bar { background: linear-gradient(to right, #22c55e, #eab308, #ef4444); }
+    .ds-legend-bar { flex: 1; height: 8px; border-radius: 4px; background: linear-gradient(to right, #dc2626, #f5f5f5, #22c55e); border: 1px solid var(--border); }
+    .ds-legend.is-flip .ds-legend-bar { background: linear-gradient(to right, #22c55e, #f5f5f5, #dc2626); }
     .ds-legend.is-off { opacity: 0.4; }
 
     /* ── Right rail: leaderboard + find-your-fit, both as tabs ── */
@@ -482,16 +482,18 @@ document.addEventListener('DOMContentLoaded', () => {
         minZoom: 4,
     }).setView([38.5, -96], 4);
     L.control.zoom({ position: 'topright' }).addTo(map);
-    // CartoDB Dark Matter (no labels) — designed for data overlays.
-    // Neutral dark grey base means the choropleth colors stay vibrant
-    // instead of muddying with the warm tan that OSM ships by default.
-    // Labels-only goes on top so place names sit above the polygons.
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+    // CartoDB Positron (no labels) — clean light grey base, designed
+    // for data viz. White midtones in the choropleth fade gracefully
+    // into the base instead of smearing into olive (which the old
+    // red→yellow→green palette + tan OSM/dark grey base was doing).
+    // Labels-only loads as a separate top layer so place names sit
+    // above polygons and read clearly.
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
         subdomains: 'abcd',
         attribution: '&copy; OpenStreetMap, &copy; CARTO',
     }).addTo(map);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
         subdomains: 'abcd',
         attribution: '',
@@ -1158,17 +1160,22 @@ function getMetricBounds(metricKey) {
     return { min: p(0.05), max: p(0.95) };
 }
 
-// Map a 0-1 normalized value to a red→yellow→green RGB string. Same
-// gradient as scoreColor() for the metro pins, so the two layers are
-// chromatically consistent.
+// Map a 0-1 normalized value to a diverging red→white→green RGB
+// string. Used for the choropleth state fills. White midtones (t≈0.5)
+// fade gracefully into the light base instead of smearing into the
+// olive midtones a red→yellow→green ramp produces. The metro pin
+// scoreColor() keeps its saturated red→yellow→green ramp because pins
+// are small + need to pop regardless of the underlying state color.
 function gradientColor(t) {
     t = Math.max(0, Math.min(1, t));
+    // Endpoints: rgb(220,38,38) red ↔ rgb(245,245,245) near-white ↔
+    // rgb(34,197,94) green. Linear interpolation through white center.
     if (t < 0.5) {
-        const k = t / 0.5;
-        return `rgb(239, ${Math.round(68 + (179 - 68) * k)}, ${Math.round(68 + (8 - 68) * k)})`;
+        const k = t / 0.5;       // 0 → 1 across the red-half
+        return `rgb(${Math.round(220 + (245 - 220) * k)}, ${Math.round(38  + (245 - 38)  * k)}, ${Math.round(38  + (245 - 38)  * k)})`;
     }
-    const k = (t - 0.5) / 0.5;
-    return `rgb(${Math.round(234 + (34 - 234) * k)}, ${Math.round(179 + (197 - 179) * k)}, ${Math.round(8 + (94 - 8) * k)})`;
+    const k = (t - 0.5) / 0.5;   // 0 → 1 across the green-half
+    return `rgb(${Math.round(245 + (34  - 245) * k)}, ${Math.round(245 + (197 - 245) * k)}, ${Math.round(245 + (94  - 245) * k)})`;
 }
 
 function colorForState(fips) {
@@ -1188,15 +1195,15 @@ function styleForFeature(feature) {
     const fips = feature.id || (feature.properties && feature.properties.STATE);
     return {
         fillColor: colorForState(fips),
-        // Subtle white-ish state borders pop against the dark CartoDB
-        // base (the prior near-black `#0b0d14` border disappeared on
-        // the new dark base). Choropleth fill bumped to 0.55 because
-        // the neutral dark base no longer muddies the saturated colors
-        // the way the warm tan OSM base did.
-        weight: 1,
-        opacity: 0.5,
-        color: 'rgba(255,255,255,0.4)',
-        fillOpacity: 0.55,
+        // Soft slate-grey borders read on the Positron light base. Fill
+        // opacity at 0.7 lets the diverging palette stay vivid for the
+        // good/bad endpoints while white-ish midtones blend gracefully
+        // into the base — that's how reventure-style maps avoid the
+        // muddy-middle problem.
+        weight: 0.8,
+        opacity: 0.6,
+        color: '#475569',
+        fillOpacity: 0.7,
     };
 }
 
