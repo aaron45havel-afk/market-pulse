@@ -1254,26 +1254,35 @@ function buildChoroplethLayer(geojson) {
         onEachFeature: (feature, layer) => {
             const fips = feature.id || (feature.properties && feature.properties.STATE);
             const sd = CP_STATES[fips];
-            // Tooltip shows state name + the current metric's value.
-            // Rebuilt on every metric change via repaintChoropleth().
+            // Tooltip strategy: bind ONCE per layer with the static
+            // state name. The dynamic metric value gets injected into
+            // the bound content on tooltipopen so it always reflects
+            // the active metric. Avoids the prior bind-on-hover /
+            // unbind-on-mouseout pattern that was leaving orphan
+            // tooltips when the map flew or zoomed mid-hover (mouseout
+            // doesn't fire reliably during animations).
+            if (sd) {
+                layer.bindTooltip('', { sticky: true, opacity: 0.95, direction: 'top' });
+                layer.on('tooltipopen', e => {
+                    if (!_cpMetric) return;
+                    const v = sd[_cpMetric.key];
+                    const valStr = fmtMetric(_cpMetric, v);
+                    const coverage = sd.has_metros
+                        ? '<div style="margin-top:4px; color:#3b82f6; font-size:11px;">▸ Metro coverage available</div>'
+                        : '';
+                    e.tooltip.setContent(
+                        `<div style="font-weight:700;">${sd.name}</div>` +
+                        `<div style="font-size:12px; margin-top:2px;">${_cpMetric.label}: <strong>${valStr}</strong></div>` +
+                        coverage
+                    );
+                });
+            }
             layer.on('mouseover', e => {
                 e.target.setStyle({ weight: 2.5, color: '#fff', fillOpacity: 0.7 });
                 e.target.bringToFront();
-                if (sd && _cpMetric) {
-                    const v = sd[_cpMetric.key];
-                    const valStr = fmtMetric(_cpMetric, v);
-                    const coverage = sd.has_metros ? '<div style="margin-top:4px; color:#3b82f6; font-size:11px;">▸ Metro coverage available</div>' : '';
-                    e.target.bindTooltip(
-                        `<div style="font-weight:700;">${sd.name}</div>` +
-                        `<div style="font-size:12px; margin-top:2px;">${_cpMetric.label}: <strong>${valStr}</strong></div>` +
-                        coverage,
-                        { sticky: true, opacity: 1, direction: 'top' }
-                    ).openTooltip();
-                }
             });
             layer.on('mouseout', e => {
                 _cpLayer.resetStyle(e.target);
-                e.target.unbindTooltip();
             });
             // Click a covered state → fly to its metros so users can
             // see the pins and dive in. Uncovered states do nothing
@@ -1297,6 +1306,15 @@ function buildChoroplethLayer(geojson) {
     // render on top of the polygons (otherwise the polygon click handler
     // intercepts pin clicks).
     _cpLayer.bringToBack();
+
+    // Force-close any open state tooltip when the map starts moving
+    // or zooming. Otherwise a hover tooltip can linger after the user
+    // clicks a state (which triggers flyToBounds) — mouseout doesn't
+    // fire reliably during the fly animation, so we close defensively.
+    window._mpMap.on('movestart zoomstart', () => {
+        _cpLayer.eachLayer(l => l.closeTooltip && l.closeTooltip());
+    });
+
     repaintChoropleth();
 }
 
