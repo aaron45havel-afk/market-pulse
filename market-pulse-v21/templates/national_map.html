@@ -534,6 +534,13 @@ document.addEventListener('DOMContentLoaded', () => {
             color: '#fff',
             weight: 2.5,
             fillOpacity: 0.95,
+            // Force the pin into the markerPane (z-index 600) so it
+            // stacks ABOVE the choropleth polygons (overlayPane,
+            // z-index 400). Otherwise clicks fall through to the
+            // polygon — bringToBack() controls render order but pane
+            // z-index controls click-event priority, and the latter
+            // is what matters here.
+            pane: 'markerPane',
         });
         marker._mpScore = m.top_zip.composite_score;  // used by the cluster icon to compute avg color
         const popup =
