@@ -3287,6 +3287,126 @@ FORT_COLLINS_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# SC — Charleston tri-county (Charleston + Berkeley + Dorchester): historic
+# walkable downtown + premier coastal-suburb tier (Mt Pleasant, Daniel
+# Island, Sullivan's-adjacent), Joint Base Charleston anchor (Goose Creek),
+# Boeing 787 + Bosch + Volvo manufacturing, plus the Summerville suburban
+# growth corridor. One of the hottest SE markets — SC is the 2nd-fastest-
+# growing US state and Charleston pulls a disproportionate share.
+# ─────────────────────────────────────────────────────────────────────────────
+CHARLESTON_ZIPS: dict[str, dict] = {
+    "29401": {
+        "name": "Downtown / Historic District",
+        "lat": 32.7800, "lng": -79.9300,
+        "median_home_value": 1_200_000, "median_rent_monthly": 3_200,
+        "crime_index": 35, "pct_bachelors": 70,
+        "median_household_income": 95_000, "population": 12_000,
+        "walk_score": 90, "restaurant_score": 95,
+        "tags": ["walkable", "hip", "historic"],
+    },
+    "29403": {
+        "name": "Upper King / NoMo",
+        "lat": 32.7950, "lng": -79.9450,
+        "median_home_value": 620_000, "median_rent_monthly": 2_200,
+        "crime_index": 55, "pct_bachelors": 50,
+        "median_household_income": 58_000, "population": 17_000,
+        "walk_score": 80, "restaurant_score": 80,
+        "tags": ["walkable", "hip", "gentrifying"],
+    },
+    "29407": {
+        "name": "West Ashley",
+        "lat": 32.7720, "lng": -80.0050,
+        "median_home_value": 530_000, "median_rent_monthly": 2_200,
+        "crime_index": 30, "pct_bachelors": 55,
+        "median_household_income": 80_000, "population": 32_000,
+        "walk_score": 35, "restaurant_score": 50,
+        "tags": ["family", "established"],
+    },
+    "29412": {
+        "name": "James Island",
+        "lat": 32.7400, "lng": -79.9700,
+        "median_home_value": 620_000, "median_rent_monthly": 2_400,
+        "crime_index": 28, "pct_bachelors": 60,
+        "median_household_income": 90_000, "population": 24_000,
+        "walk_score": 35, "restaurant_score": 50,
+        "tags": ["family", "beach"],
+    },
+    "29414": {
+        "name": "West Ashley S / Avondale",
+        "lat": 32.7600, "lng": -80.0500,
+        "median_home_value": 470_000, "median_rent_monthly": 1_950,
+        "crime_index": 35, "pct_bachelors": 45,
+        "median_household_income": 70_000, "population": 22_000,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["affordable", "mid-tier"],
+    },
+    "29464": {
+        "name": "Mt Pleasant",
+        "lat": 32.8000, "lng": -79.8800,
+        "median_home_value": 830_000, "median_rent_monthly": 2_800,
+        "crime_index": 12, "pct_bachelors": 70,
+        "median_household_income": 130_000, "population": 50_000,
+        "walk_score": 35, "restaurant_score": 70,
+        "tags": ["family", "top-schools", "low-crime", "upscale", "established"],
+    },
+    "29466": {
+        "name": "Mt Pleasant N / Park West",
+        "lat": 32.8800, "lng": -79.8500,
+        "median_home_value": 820_000, "median_rent_monthly": 2_600,
+        "crime_index": 10, "pct_bachelors": 75,
+        "median_household_income": 135_000, "population": 32_000,
+        "walk_score": 25, "restaurant_score": 50,
+        "tags": ["family", "top-schools", "low-crime", "master-planned"],
+    },
+    "29455": {
+        "name": "Johns Island",
+        "lat": 32.6900, "lng": -80.0700,
+        "median_home_value": 625_000, "median_rent_monthly": 2_400,
+        "crime_index": 25, "pct_bachelors": 60,
+        "median_household_income": 115_000, "population": 18_000,
+        "walk_score": 20, "restaurant_score": 30,
+        "tags": ["family", "growth", "rural-edge"],
+    },
+    "29485": {
+        "name": "Summerville (Dorchester)",
+        "lat": 33.0100, "lng": -80.1750,
+        "median_home_value": 385_000, "median_rent_monthly": 1_850,
+        "crime_index": 30, "pct_bachelors": 35,
+        "median_household_income": 72_000, "population": 60_000,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["family", "mid-tier"],
+    },
+    "29483": {
+        "name": "Summerville E (Dorchester)",
+        "lat": 33.0100, "lng": -80.0500,
+        "median_home_value": 410_000, "median_rent_monthly": 1_900,
+        "crime_index": 32, "pct_bachelors": 38,
+        "median_household_income": 75_000, "population": 50_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["family", "mid-tier"],
+    },
+    "29445": {
+        "name": "Goose Creek (Berkeley) / JB Charleston",
+        "lat": 32.9700, "lng": -80.0250,
+        "median_home_value": 360_000, "median_rent_monthly": 1_800,
+        "crime_index": 45, "pct_bachelors": 30,
+        "median_household_income": 68_000, "population": 38_000,
+        "walk_score": 30, "restaurant_score": 30,
+        "tags": ["affordable", "mid-tier", "military"],
+    },
+    "29492": {
+        "name": "Daniel Island (Berkeley)",
+        "lat": 32.8550, "lng": -79.8900,
+        "median_home_value": 1_100_000, "median_rent_monthly": 3_400,
+        "crime_index": 8, "pct_bachelors": 80,
+        "median_household_income": 190_000, "population": 12_000,
+        "walk_score": 50, "restaurant_score": 65,
+        "tags": ["family", "top-schools", "low-crime", "master-planned", "upscale", "luxury"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -3534,7 +3654,8 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               JACKSONVILLE_ZIPS, FORT_LAUDERDALE_ZIPS, WEST_PALM_BEACH_ZIPS,
               TAMPA_ZIPS, SAVANNAH_ZIPS,
               COLUMBUS_ZIPS, CLEVELAND_ZIPS, CINCINNATI_ZIPS,
-              DENVER_ZIPS, FORT_COLLINS_ZIPS):
+              DENVER_ZIPS, FORT_COLLINS_ZIPS,
+              CHARLESTON_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -3897,6 +4018,21 @@ STATE_METROS: dict[str, dict] = {
             "Hewlett-Packard / HP Enterprise + Avago + Woodward + Anheuser-Busch anchor a stable engineering / manufacturing rental floor across Fort Collins, but layoffs at any one of the big three would ripple through 80525 / 80526 / 80528 visibly.",
         ],
     },
+    "SC-CHS": {
+        "state": "SC",
+        "metro_label": "Charleston tri-county (Charleston / Berkeley / Dorchester)",
+        "subtitle": "ZIP-level scores for Charleston — Downtown / Historic District walkable luxury, Upper King + James Island + West Ashley middle tier, Mt Pleasant + Daniel Island premier coastal-suburb upscale, Johns Island growth corridor, Summerville / Goose Creek affordable family suburbs (Joint Base Charleston + Boeing 787 anchored).",
+        "map_center": {"lat": 32.85, "lng": -79.95, "zoom": 10},
+        "zips": CHARLESTON_ZIPS,
+        "extra_caveats": [
+            "Downtown / Historic District (29401) is heavily short-term-rental restricted — Charleston has some of the most aggressive STR enforcement in the SE. Cap-rate signal there reflects long-term-rental yields only, not the Airbnb economics that distort other historic-tourism markets.",
+            "Hurricane wind-zone insurance is the highest in SC and stacks with FEMA flood-zone exposure on east-of-Cooper-River ZIPs (29464 Mt Pleasant, 29401 Downtown, 29412 James Island) — adds \\$3K-8K/yr above the SC state insurance average.",
+            "Joint Base Charleston (~85K total active duty + dependents + civilian) anchors BAH rents in 29445 Goose Creek + 29420 (just outside the dataset) + parts of 29485; military-tied yield floor not seen elsewhere in metro.",
+            "Daniel Island (29492) is technically Berkeley County but functionally a Charleston master-planned community — top-tier Charleston County School District feeder pattern (Bishop England), Volvo + Boeing professional anchor base. Premium beyond what bachelor's-percent captures.",
+            "Mt Pleasant (29464 / 29466) school premium runs above the proxy — Wando High feeder pattern is one of the strongest in SC. Inventory is structurally tight (build-out limits + impact fees).",
+            "Boeing 787 plant (North Charleston, 29405-adjacent) + Volvo (29492-adjacent) + Bosch (29483-adjacent) underpin a steady engineering / manufacturing rental floor across the metro.",
+        ],
+    },
     "AZ": {
         "state": "AZ",
         "metro_label": "Maricopa County",
@@ -3949,6 +4085,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "IN": ["IN-IND", "IN-FW"],
     "OH": ["OH", "OH-CLE", "OH-CIN"],
     "CO": ["CO", "CO-FTC"],
+    "SC": ["SC-CHS"],
 }
 
 

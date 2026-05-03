@@ -29,6 +29,7 @@ STATES = {
     "OH": {"name": "Ohio", "fips": "39"},
     "FL": {"name": "Florida", "fips": "12"},
     "GA": {"name": "Georgia", "fips": "13"},
+    "SC": {"name": "South Carolina", "fips": "45"},
 }
 
 COUNTIES = {
@@ -231,6 +232,24 @@ COUNTIES = {
         "13021": "Bibb County",              # Macon
         "13215": "Muscogee County",          # Columbus (GA)
     },
+    "SC": {
+        # Charleston metro
+        "45019": "Charleston County",        # Charleston metro core
+        "45015": "Berkeley County",          # Charleston N (Goose Creek, Summerville)
+        "45035": "Dorchester County",        # Charleston W (Summerville, Ladson)
+        # Upstate (Greenville-Spartanburg)
+        "45045": "Greenville County",        # Greenville core
+        "45083": "Spartanburg County",       # BMW plant, Spartanburg
+        # Columbia metro
+        "45079": "Richland County",          # Columbia (state capital)
+        "45063": "Lexington County",         # Columbia W suburbs
+        # Other
+        "45091": "York County",              # Charlotte NC border (Rock Hill)
+        "45013": "Beaufort County",          # Hilton Head / Bluffton
+        "45051": "Horry County",             # Myrtle Beach
+        "45041": "Florence County",          # Pee Dee region
+        "45043": "Georgetown County",        # Coastal (Pawleys Island)
+    },
 }
 
 # ═══════════════════════════════════════════════════
@@ -331,6 +350,7 @@ STATE_PROPERTY_TAX_RATE = {
     "OH": 0.0156,   # Among the highest in the Midwest — heavy reliance on local property tax
     "FL": 0.0091,   # Below US avg statewide; Save Our Homes 3% cap protects long-term holders
     "GA": 0.0081,   # Slightly below US avg; varies by county (Fulton/DeKalb higher than rural)
+    "SC": 0.0057,   # Among the lowest in the SE — strong owner-occupier exemptions in coastal counties
 }
 
 # Rough average annual homeowners insurance premium ($/yr) on a median home.
@@ -350,6 +370,7 @@ STATE_INSURANCE_ANNUAL = {
     "OH": 1300,   # Low overall — occasional tornado/hail in western half, no coastal risk
     "FL": 5500,   # Highest in nation — hurricane exposure + Citizens Insurance crisis pulled major insurers
     "GA": 1800,   # Above US avg — hail / tornado exposure especially Atlanta corridor
+    "SC": 1800,   # Coastal hurricane (Charleston, HHI) + inland tornado/hail exposure
 }
 
 # TX homestead exemption: ~$100K off taxable value for owner-occupied homes
@@ -379,6 +400,7 @@ STATE_MEDIAN_INCOME_FALLBACK = {
     "OH": 69680,
     "FL": 71711,
     "GA": 74664,
+    "SC": 67804,
 }
 
 
@@ -406,6 +428,7 @@ STATE_WALKABILITY = {
     "OH": 4,   # Cleveland 57, Cincinnati 50, Dayton 42, Columbus 41 — dense urban cores
     "FL": 5,   # Miami 78, Orlando 41, Tampa 51, Jacksonville 26 — wide variance
     "GA": 4,   # Atlanta 48, Savannah 53, Macon 41 — Atlanta sprawl drags state avg
+    "SC": 3,   # Charleston 41, Greenville 38, Columbia 35 — most cities car-dependent
 }
 
 # State-level school quality (0-10 scale). Approximate from Niche.com's
@@ -424,6 +447,7 @@ STATE_SCHOOL_QUALITY = {
     "OH": 6,   # Strong suburban districts (Dublin, Mason, Solon), weak urban cores
     "FL": 5,   # Mid-pack — strong in Sarasota/Naples/Orange, weak in Miami-Dade core
     "GA": 6,   # Strong in Atlanta NW suburbs (Forsyth, Cherokee, Cobb), weak rural
+    "SC": 5,   # Mid-pack — strong in Mt Pleasant / Beaufort, weak in Pee Dee + rural
 }
 
 # Annual population growth rate (%) — Census Bureau 2023 annual estimates.
@@ -444,6 +468,7 @@ STATE_POPULATION_GROWTH = {
     "OH": 0.1,    # Near-flat — Columbus growth offsets Cleveland/Youngstown decline
     "FL": 1.6,    # One of fastest-growing states — Sun Belt + retiree migration
     "GA": 1.0,    # Steady Atlanta-corridor in-migration
+    "SC": 1.7,    # 2nd-fastest-growing US state — coastal + Charlotte spillover (York Co)
 }
 
 # ── State income tax effective rate at median income (Tax Foundation 2024) ──
@@ -464,6 +489,7 @@ STATE_INCOME_TAX_EFFECTIVE = {
     "OH": 0.028,   # Graduated up to 3.5%; effective at $70K ≈ 2.8% (plus 1-3% local municipal)
     "FL": 0.000,   # No state income tax
     "GA": 0.0539,  # 5.39% flat (2024 — phasing down toward 4.99% by 2028)
+    "SC": 0.054,   # Graduated up to 6.4%; effective at $68K ≈ 5.4%
 }
 
 # ── State-level median monthly rent (Zillow Observed Rent Index, Q4 2024) ──
@@ -484,6 +510,7 @@ STATE_MEDIAN_RENT_MONTHLY = {
     "OH": 1350,
     "FL": 2250,    # Miami pulls average up; statewide trend rising on retiree + remote-work in-migration
     "GA": 1750,    # Atlanta-driven; Athens/Macon/Columbus pull statewide rate down
+    "SC": 1650,    # Charleston pulls up; Columbia + upstate moderate
 }
 
 # ── Avg YoY wage growth (BLS QCEW, 2023-2024) ──
@@ -503,6 +530,7 @@ STATE_WAGE_GROWTH_YOY = {
     "OH": 0.039,   # Below national average — mature manufacturing base, slow wage growth
     "FL": 0.055,   # Strong — finance, healthcare, tech relocations
     "GA": 0.048,   # Steady Atlanta-driven growth (logistics, fintech, film)
+    "SC": 0.050,   # Strong — BMW + Boeing + Volvo manufacturing, Charleston port
 }
 
 # ── Property tax growth cap (annual % cap on assessed value increase) ──
@@ -523,6 +551,7 @@ STATE_PROPERTY_TAX_CAP_PCT = {
     "OH": None,   # HB 920 freezes voted millage $ but full reappraisal still raises bills
     "FL": 3.0,    # Save Our Homes — 3% / CPI cap on homestead assessment growth
     "GA": None,   # No statewide assessment cap (some local exemptions)
+    "SC": 15.0,   # 15% reassessment cap for owner-occupied (Act 388, 2006)
 }
 
 # ── Insurance premium 3-yr trajectory (avg annual % change, 2022-2024) ──
@@ -543,6 +572,7 @@ STATE_INSURANCE_TRAJECTORY_YOY = {
     "OH": 0.08,   # Rising with national reinsurance costs but no major catastrophe exposure
     "FL": 0.25,   # Worst trajectory in US — Citizens crisis, major insurers exiting, post-Ian premium spike
     "GA": 0.10,   # Rising with hail / tornado exposure especially Atlanta corridor
+    "SC": 0.11,   # Coastal hurricane premium climbing (Charleston, HHI exposure)
 }
 
 # ── HOA prevalence (approximate % of SFHs with HOA, CAI 2024) ──
@@ -562,6 +592,7 @@ STATE_HOA_PREVALENCE = {
     "OH": 0.22,   # Mostly older fee-simple stock; HOAs only in newer Columbus/Cincy suburbs
     "FL": 0.65,   # Very high — condo-heavy + planned communities throughout
     "GA": 0.45,   # High in Atlanta suburbs (Forsyth, Cherokee, Cobb, Gwinnett new builds)
+    "SC": 0.50,   # High in Charleston master-planned (Mt Pleasant, Daniel Island, Bluffton)
 }
 
 # ── Cost of living index (BEA Regional Price Parities 2023, 100 = US avg) ──
@@ -581,6 +612,7 @@ STATE_COST_OF_LIVING_INDEX = {
     "OH": 90,    # Among the lowest in the US — matches IN
     "FL": 100,   # Right at US avg — Miami high, rural FL low
     "GA": 92,    # 8% below US avg
+    "SC": 94,    # 6% below US avg — Charleston above, upstate below
 }
 
 # ── Average sunny days per year (NOAA Solar Insolation, population-weighted) ──
@@ -603,6 +635,7 @@ STATE_SUNSHINE_DAYS = {
     "OH": 175,   # Cleveland 165, Columbus 178, Cincinnati 188
     "FL": 240,   # Miami 248, Orlando 233, Tampa 244 (afternoon thunderstorm offset)
     "GA": 215,   # Atlanta 217, Savannah 215
+    "SC": 216,   # Charleston 230, Columbia 218, Greenville 215
 }
 
 # ── Personas: pre-set weights for the Goldilocks composite ──
