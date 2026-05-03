@@ -3050,6 +3050,125 @@ CINCINNATI_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# CO — Denver / Denver County: Front Range capital, post-2020 boomtown that
+# has cooled hard (insurance + COL outpacing wages). Mix of LoDo / RiNo
+# walkable urban core, Cherry Creek + Wash Park premium walkable family,
+# Highland + Capitol Hill hip / gentrifying tier, plus West Denver +
+# Aurora central affordable high-cap-rate ZIPs.
+# ─────────────────────────────────────────────────────────────────────────────
+DENVER_ZIPS: dict[str, dict] = {
+    "80202": {
+        "name": "Downtown / LoDo",
+        "lat": 39.7550, "lng": -105.0000,
+        "median_home_value": 580_000, "median_rent_monthly": 2_300,
+        "crime_index": 55, "pct_bachelors": 70,
+        "median_household_income": 95_000, "population": 12_000,
+        "walk_score": 95, "restaurant_score": 95,
+        "tags": ["urban", "walkable", "hip", "transit"],
+    },
+    "80203": {
+        "name": "Capitol Hill",
+        "lat": 39.7300, "lng": -104.9850,
+        "median_home_value": 440_000, "median_rent_monthly": 1_800,
+        "crime_index": 60, "pct_bachelors": 75,
+        "median_household_income": 80_000, "population": 18_000,
+        "walk_score": 90, "restaurant_score": 80,
+        "tags": ["walkable", "historic", "hip"],
+    },
+    "80205": {
+        "name": "RiNo / Five Points",
+        "lat": 39.7600, "lng": -104.9650,
+        "median_home_value": 620_000, "median_rent_monthly": 2_200,
+        "crime_index": 60, "pct_bachelors": 65,
+        "median_household_income": 90_000, "population": 28_000,
+        "walk_score": 80, "restaurant_score": 95,
+        "tags": ["walkable", "hip", "gentrifying"],
+    },
+    "80206": {
+        "name": "Cherry Creek",
+        "lat": 39.7200, "lng": -104.9450,
+        "median_home_value": 890_000, "median_rent_monthly": 2_800,
+        "crime_index": 25, "pct_bachelors": 80,
+        "median_household_income": 145_000, "population": 14_000,
+        "walk_score": 80, "restaurant_score": 90,
+        "tags": ["walkable", "upscale", "luxury"],
+    },
+    "80207": {
+        "name": "Park Hill",
+        "lat": 39.7450, "lng": -104.9200,
+        "median_home_value": 760_000, "median_rent_monthly": 2_400,
+        "crime_index": 35, "pct_bachelors": 70,
+        "median_household_income": 115_000, "population": 25_000,
+        "walk_score": 60, "restaurant_score": 60,
+        "tags": ["family", "established", "upscale"],
+    },
+    "80209": {
+        "name": "Wash Park / Bonnie Brae",
+        "lat": 39.7000, "lng": -104.9650,
+        "median_home_value": 1_150_000, "median_rent_monthly": 2_900,
+        "crime_index": 22, "pct_bachelors": 80,
+        "median_household_income": 145_000, "population": 26_000,
+        "walk_score": 80, "restaurant_score": 80,
+        "tags": ["walkable", "upscale", "family", "established"],
+    },
+    "80210": {
+        "name": "University Park / DU",
+        "lat": 39.6850, "lng": -104.9750,
+        "median_home_value": 740_000, "median_rent_monthly": 2_200,
+        "crime_index": 30, "pct_bachelors": 75,
+        "median_household_income": 115_000, "population": 35_000,
+        "walk_score": 70, "restaurant_score": 70,
+        "tags": ["family", "walkable", "student"],
+    },
+    "80211": {
+        "name": "Highland / Sloan's Lake",
+        "lat": 39.7700, "lng": -105.0200,
+        "median_home_value": 720_000, "median_rent_monthly": 2_200,
+        "crime_index": 35, "pct_bachelors": 70,
+        "median_household_income": 110_000, "population": 32_000,
+        "walk_score": 75, "restaurant_score": 90,
+        "tags": ["walkable", "hip", "gentrifying"],
+    },
+    "80219": {
+        "name": "West Denver / Ruby Hill",
+        "lat": 39.7000, "lng": -105.0450,
+        "median_home_value": 440_000, "median_rent_monthly": 1_650,
+        "crime_index": 65, "pct_bachelors": 25,
+        "median_household_income": 52_000, "population": 50_000,
+        "walk_score": 50, "restaurant_score": 30,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "80218": {
+        "name": "Cheesman Park",
+        "lat": 39.7300, "lng": -104.9650,
+        "median_home_value": 580_000, "median_rent_monthly": 1_950,
+        "crime_index": 50, "pct_bachelors": 70,
+        "median_household_income": 85_000, "population": 17_000,
+        "walk_score": 90, "restaurant_score": 80,
+        "tags": ["walkable", "hip", "historic"],
+    },
+    "80014": {
+        "name": "Aurora central",
+        "lat": 39.7000, "lng": -104.8350,
+        "median_home_value": 385_000, "median_rent_monthly": 1_750,
+        "crime_index": 60, "pct_bachelors": 30,
+        "median_household_income": 58_000, "population": 50_000,
+        "walk_score": 45, "restaurant_score": 40,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "80237": {
+        "name": "Hampden South / Cherry Creek east",
+        "lat": 39.6600, "lng": -104.9100,
+        "median_home_value": 620_000, "median_rent_monthly": 2_200,
+        "crime_index": 25, "pct_bachelors": 65,
+        "median_household_income": 110_000, "population": 28_000,
+        "walk_score": 50, "restaurant_score": 50,
+        "tags": ["family", "established", "upscale"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # CO — Fort Collins / Loveland (Larimer County): CSU anchor + tech corridor
 # (HP / Avago / Woodward), Old Town walkable historic district, Harmony /
 # Timnath master-planned new growth, Front Range mountain-view family
@@ -3415,7 +3534,7 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               JACKSONVILLE_ZIPS, FORT_LAUDERDALE_ZIPS, WEST_PALM_BEACH_ZIPS,
               TAMPA_ZIPS, SAVANNAH_ZIPS,
               COLUMBUS_ZIPS, CLEVELAND_ZIPS, CINCINNATI_ZIPS,
-              FORT_COLLINS_ZIPS):
+              DENVER_ZIPS, FORT_COLLINS_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -3750,6 +3869,20 @@ STATE_METROS: dict[str, dict] = {
             "Procter & Gamble + Kroger + GE Aerospace anchor a steady downtown / suburban professional rental floor that explains why Cincy yields look investable across the spectrum, not just at the affordable tier.",
         ],
     },
+    "CO": {
+        "state": "CO",
+        "metro_label": "Denver / Denver County",
+        "subtitle": "ZIP-level scores for Denver — LoDo + RiNo / Five Points walkable urban core, Cherry Creek + Wash Park premier walkable upscale, Capitol Hill + Cheesman Park + Highland hip historic tier, Park Hill + DU established family corridor, plus West Denver + Aurora central high-cap-rate ZIPs.",
+        "map_center": {"lat": 39.74, "lng": -104.99, "zoom": 11},
+        "zips": DENVER_ZIPS,
+        "extra_caveats": [
+            "Denver's post-2020 boom has cooled hard — homeowner insurance has roughly doubled in 4 years (CO is in the worst hail belt in the US, plus Marshall Fire 2021 reset wildfire underwriting), and that ~\\$2-4K/yr cost shows up in PITI but isn't in the cap-rate appreciation lens.",
+            "Wash Park (80209) is the most expensive neighborhood inside Denver proper and one of the most desirable family ZIPs in the metro; cap-rate signal there is meaningless for SFR investing — it's a pure capital-appreciation play.",
+            "RiNo / Five Points (80205) and Highland (80211) are the two most pronounced gentrification arcs in Denver; values there overshoot what the cap-rate math justifies because buyers are paying for the appreciation curve.",
+            "Aurora central (80014) is technically in Adams + Arapahoe counties, not Denver proper, but functionally part of the Denver metro and surfaces the metro's highest investor-grade cap rates here.",
+            "DIA airport noise corridors + east-Denver storage / industrial sprawl don't show in our walkability + restaurant proxies; Park Hill (80207) and Hampden South (80237) read as 'good' by ZIP averages but micro-neighborhood within those varies sharply.",
+        ],
+    },
     "CO-FTC": {
         "state": "CO",
         "metro_label": "Fort Collins / Larimer County",
@@ -3815,7 +3948,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "GA": ["GA-ATL", "GA-SAV"],
     "IN": ["IN-IND", "IN-FW"],
     "OH": ["OH", "OH-CLE", "OH-CIN"],
-    "CO": ["CO-FTC"],
+    "CO": ["CO", "CO-FTC"],
 }
 
 
