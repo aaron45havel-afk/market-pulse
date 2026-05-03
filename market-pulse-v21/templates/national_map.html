@@ -127,9 +127,16 @@
     /* Secondary CTA — TikTok "explore" link. Same color-inheritance
        issue would have applied here too; explicit white wins. */
     .pop-cta-tiktok { display: inline-block; margin-top: 0.4rem; margin-left: 0.4rem; padding: 0.4rem 0.7rem; background: #000; color: #fff !important; border-radius: 6px; font-size: 0.72rem; font-weight: 600; }
-    .pop-cta-tiktok:hover { text-decoration: none; background: #25F4EE; color: #000; }
+    .pop-cta-tiktok:hover { text-decoration: none; background: #25F4EE; color: #000 !important; }
     .pop-cta-tiktok .tt-tag { color: #25F4EE; margin-left: 0.2rem; font-weight: 500; }
     .pop-cta-tiktok:hover .tt-tag { color: #000; }
+    /* Instagram CTA — brand gradient (Instagram's official 5-color
+       sweep), same size proportions as the TikTok button so the two
+       social CTAs sit as visual peers below the primary "Open metro
+       map" action. */
+    .pop-cta-instagram { display: inline-block; margin-top: 0.4rem; margin-left: 0.4rem; padding: 0.4rem 0.7rem; background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: #fff !important; border-radius: 6px; font-size: 0.72rem; font-weight: 600; }
+    .pop-cta-instagram:hover { text-decoration: none; opacity: 0.92; }
+    .pop-cta-instagram .ig-tag { margin-left: 0.2rem; font-weight: 500; opacity: 0.9; }
 
     .legend { position: absolute; bottom: 18px; left: 18px; z-index: 500; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.75rem; font-size: 0.72rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.5rem; }
     .legend-bar { display: inline-block; width: 110px; height: 8px; border-radius: 4px; background: linear-gradient(to right, #ef4444, #eab308, #22c55e); }
@@ -589,13 +596,15 @@ document.addEventListener('DOMContentLoaded', () => {
             `<div class="pop-stat"><span class="label">Avg home value</span><span>${fmtMoney(m.avg_home_value)}</span></div>` +
             `<div class="pop-stat"><span class="label">Avg rent /mo</span><span>${fmtMoney(m.avg_rent)}</span></div>` +
             `<a href="/real-estate/${m.slug}/map" class="pop-cta">Open metro map &rarr;</a>` +
-            // TikTok deep-link for hyper-local "vibe check" content.
-            // Curated hashtag per metro is the primary URL; falls back
-            // to a search query if for some reason the hashtag is
-            // absent (every metro should have one — see STATE_METROS).
+            // Social deep-links for hyper-local "vibe check" content.
+            // Curated hashtags per metro; both fall back to platform
+            // search if a hashtag is somehow absent.
             (m.tiktok_hashtag
                 ? `<a href="https://www.tiktok.com/tag/${m.tiktok_hashtag}" target="_blank" rel="noopener noreferrer" class="pop-cta-tiktok">TikTok<span class="tt-tag">#${m.tiktok_hashtag}</span></a>`
-                : `<a href="https://www.tiktok.com/search?q=${encodeURIComponent(m.metro_label)}" target="_blank" rel="noopener noreferrer" class="pop-cta-tiktok">Search TikTok &rarr;</a>`);
+                : `<a href="https://www.tiktok.com/search?q=${encodeURIComponent(m.metro_label)}" target="_blank" rel="noopener noreferrer" class="pop-cta-tiktok">Search TikTok &rarr;</a>`) +
+            (m.instagram_hashtag
+                ? `<a href="https://www.instagram.com/explore/tags/${m.instagram_hashtag}/" target="_blank" rel="noopener noreferrer" class="pop-cta-instagram">IG<span class="ig-tag">#${m.instagram_hashtag}</span></a>`
+                : `<a href="https://www.instagram.com/explore/tags/${encodeURIComponent(m.metro_label.split(' ')[0].toLowerCase())}/" target="_blank" rel="noopener noreferrer" class="pop-cta-instagram">IG &rarr;</a>`);
         marker.bindPopup(popup, { maxWidth: 320 });
         marker.bindTooltip(`<strong>${m.metro_label}</strong>`, { sticky: true });
         marker.on('click', () => highlightLeaderboardRow(m.slug));
