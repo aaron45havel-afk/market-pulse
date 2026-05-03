@@ -1560,11 +1560,26 @@ function colorForState(fips) {
     if (!sd || !_cpMetric) return '#2a2d3a';
     const v = sd[_cpMetric.key];
     if (v == null) return '#2a2d3a';
-    const { min, max } = getMetricBounds(_cpMetric.key);
-    let t = max > min ? (v - min) / (max - min) : 0.5;
-    // Flip so "good" is always green: high_is_good keeps t, low_is_good
-    // inverts (so the smallest value becomes 1.0 → green).
-    if (_cpMetric.good_when === 'low') t = 1 - t;
+    let t;
+    if (_cpMetric.zero_anchored) {
+        // Color ramp anchored at 0 — negative is red, 0 is neutral white,
+        // positive is green. Used for cash_on_cash so "I'm making money"
+        // is unambiguously green and "I'm losing money" is red, instead
+        // of the percentile-relative ramp which made the least-bad state
+        // green even when every state lost money.
+        const { min, max } = getMetricBounds(_cpMetric.key);
+        const negSpan = Math.max(0 - Math.min(min, 0), 0.01);
+        const posSpan = Math.max(Math.max(max, 0) - 0, 0.01);
+        t = v < 0
+            ? 0.5 * (1 - Math.min(-v / negSpan, 1))
+            : 0.5 + 0.5 * Math.min(v / posSpan, 1);
+    } else {
+        const { min, max } = getMetricBounds(_cpMetric.key);
+        t = max > min ? (v - min) / (max - min) : 0.5;
+        // Flip so "good" is always green: high_is_good keeps t, low_is_good
+        // inverts (so the smallest value becomes 1.0 → green).
+        if (_cpMetric.good_when === 'low') t = 1 - t;
+    }
     return gradientColor(t);
 }
 
@@ -1669,12 +1684,24 @@ function repaintChoropleth() {
     _cpLayer.setStyle(styleForFeature);
     // Update legend bar direction + endpoint labels.
     const legend = document.getElementById('cpLegend');
-    legend.classList.toggle('is-flip', _cpMetric.good_when === 'low');
+    const bar = legend.querySelector('.ds-legend-bar');
+    legend.classList.toggle('is-flip', _cpMetric.good_when === 'low' && !_cpMetric.zero_anchored);
     const { min, max } = getMetricBounds(_cpMetric.key);
     const lowEl = document.getElementById('cpLegendLow');
     const highEl = document.getElementById('cpLegendHigh');
     lowEl.textContent = fmtMetric(_cpMetric, min);
     highEl.textContent = fmtMetric(_cpMetric, max);
+    // For zero-anchored metrics (cash_on_cash), shift the gradient so
+    // the white "zero" stop lines up with the actual position of 0
+    // along the data range. Otherwise the bar visually implies the
+    // midpoint = 0 even when every state is negative.
+    if (_cpMetric.zero_anchored && bar) {
+        let p = max > min ? (0 - min) / (max - min) : 0.5;
+        p = Math.max(0, Math.min(1, p)) * 100;
+        bar.style.background = `linear-gradient(to right, #dc2626 0%, #f5f5f5 ${p}%, #22c55e 100%)`;
+    } else if (bar) {
+        bar.style.background = '';   // fall back to the CSS class
+    }
 }
 
 // ─── Find-your-fit pane wiring (right-rail Tab 2) ────────────────────

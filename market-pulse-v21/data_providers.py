@@ -778,7 +778,7 @@ CHOROPLETH_METRICS = [
     # rent vacancy/maintenance reserve. Negative numbers mean the deal
     # doesn't cash flow at current rates. The single metric in the
     # dataset that actually moves when the Fed changes rates.
-    {"key": "cash_on_cash",  "label": "Cash-on-cash @ today's rate","unit": "%","good_when": "high","decimals": 1, "category": "Market", "popular": True},
+    {"key": "cash_on_cash",  "label": "Cash-on-cash @ today's rate","unit": "%","good_when": "high","decimals": 1, "category": "Market", "popular": True, "zero_anchored": True},
     # Growth Outlook category — forward-leaning indicators that capture
     # how a state's housing demand pipeline looks 1-3 years out.
     {"key": "growth_score",   "label": "Growth Outlook score",  "unit": "",   "good_when": "high", "decimals": 0, "category": "Growth Outlook", "popular": True},
