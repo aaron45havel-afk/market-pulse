@@ -3407,6 +3407,125 @@ CHARLESTON_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# WA — Seattle / King County: Pacific NW tech anchor (Amazon HQ + Microsoft
+# adjacent + Boeing Renton/Everett within commuter shed). High-cost market
+# with cap rates structurally compressed by appreciation expectations.
+# Range from luxury Magnolia + Capitol Hill to affordable Tukwila/Burien
+# edge + student-dense U-District.
+# ─────────────────────────────────────────────────────────────────────────────
+SEATTLE_ZIPS: dict[str, dict] = {
+    "98101": {
+        "name": "Downtown / Pike Place",
+        "lat": 47.6090, "lng": -122.3350,
+        "median_home_value": 700_000, "median_rent_monthly": 2_600,
+        "crime_index": 70, "pct_bachelors": 70,
+        "median_household_income": 115_000, "population": 12_000,
+        "walk_score": 95, "restaurant_score": 95,
+        "tags": ["urban", "walkable", "transit"],
+    },
+    "98103": {
+        "name": "Wallingford / Greenlake",
+        "lat": 47.6680, "lng": -122.3380,
+        "median_home_value": 920_000, "median_rent_monthly": 2_800,
+        "crime_index": 28, "pct_bachelors": 75,
+        "median_household_income": 130_000, "population": 32_000,
+        "walk_score": 80, "restaurant_score": 80,
+        "tags": ["family", "walkable", "hip"],
+    },
+    "98105": {
+        "name": "University District / UW",
+        "lat": 47.6650, "lng": -122.3000,
+        "median_home_value": 720_000, "median_rent_monthly": 2_200,
+        "crime_index": 50, "pct_bachelors": 65,
+        "median_household_income": 52_000, "population": 44_000,
+        "walk_score": 85, "restaurant_score": 80,
+        "tags": ["student", "walkable", "high-cap-rate"],
+    },
+    "98107": {
+        "name": "Ballard",
+        "lat": 47.6760, "lng": -122.3850,
+        "median_home_value": 880_000, "median_rent_monthly": 2_700,
+        "crime_index": 35, "pct_bachelors": 65,
+        "median_household_income": 115_000, "population": 32_000,
+        "walk_score": 80, "restaurant_score": 90,
+        "tags": ["family", "walkable", "hip"],
+    },
+    "98109": {
+        "name": "South Lake Union / Amazon",
+        "lat": 47.6240, "lng": -122.3400,
+        "median_home_value": 850_000, "median_rent_monthly": 2_800,
+        "crime_index": 50, "pct_bachelors": 80,
+        "median_household_income": 145_000, "population": 18_000,
+        "walk_score": 90, "restaurant_score": 85,
+        "tags": ["walkable", "hip", "upscale", "tech"],
+    },
+    "98112": {
+        "name": "Capitol Hill / Madrona",
+        "lat": 47.6250, "lng": -122.3000,
+        "median_home_value": 1_100_000, "median_rent_monthly": 2_800,
+        "crime_index": 45, "pct_bachelors": 75,
+        "median_household_income": 145_000, "population": 23_000,
+        "walk_score": 90, "restaurant_score": 90,
+        "tags": ["walkable", "upscale", "established", "historic"],
+    },
+    "98115": {
+        "name": "Roosevelt / Greenwood",
+        "lat": 47.6850, "lng": -122.3100,
+        "median_home_value": 920_000, "median_rent_monthly": 2_650,
+        "crime_index": 22, "pct_bachelors": 70,
+        "median_household_income": 130_000, "population": 38_000,
+        "walk_score": 70, "restaurant_score": 65,
+        "tags": ["family", "top-schools", "established"],
+    },
+    "98116": {
+        "name": "West Seattle / Alki Beach",
+        "lat": 47.5750, "lng": -122.3950,
+        "median_home_value": 880_000, "median_rent_monthly": 2_650,
+        "crime_index": 28, "pct_bachelors": 65,
+        "median_household_income": 130_000, "population": 38_000,
+        "walk_score": 65, "restaurant_score": 70,
+        "tags": ["family", "beach"],
+    },
+    "98118": {
+        "name": "Columbia City / Beacon Hill",
+        "lat": 47.5470, "lng": -122.2750,
+        "median_home_value": 720_000, "median_rent_monthly": 2_400,
+        "crime_index": 50, "pct_bachelors": 50,
+        "median_household_income": 90_000, "population": 38_000,
+        "walk_score": 70, "restaurant_score": 70,
+        "tags": ["gentrifying", "diverse", "transitional"],
+    },
+    "98119": {
+        "name": "Queen Anne",
+        "lat": 47.6420, "lng": -122.3650,
+        "median_home_value": 1_100_000, "median_rent_monthly": 2_900,
+        "crime_index": 25, "pct_bachelors": 78,
+        "median_household_income": 150_000, "population": 22_000,
+        "walk_score": 80, "restaurant_score": 75,
+        "tags": ["walkable", "upscale", "family"],
+    },
+    "98168": {
+        "name": "Tukwila / Burien edge",
+        "lat": 47.5000, "lng": -122.3000,
+        "median_home_value": 530_000, "median_rent_monthly": 1_950,
+        "crime_index": 65, "pct_bachelors": 28,
+        "median_household_income": 58_000, "population": 38_000,
+        "walk_score": 50, "restaurant_score": 35,
+        "tags": ["affordable", "mid-tier"],
+    },
+    "98199": {
+        "name": "Magnolia",
+        "lat": 47.6500, "lng": -122.3950,
+        "median_home_value": 1_300_000, "median_rent_monthly": 3_200,
+        "crime_index": 18, "pct_bachelors": 75,
+        "median_household_income": 175_000, "population": 18_000,
+        "walk_score": 50, "restaurant_score": 50,
+        "tags": ["family", "top-schools", "low-crime", "upscale", "luxury"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UT — Wasatch Front North (Salt Lake + Davis + Weber + Cache counties)
 # Covers SLC core, Bountiful, Farmington, Ogden, Logan. Logan is ~80mi north
 # of SLC so the map zoom is wide; treat Cache County as a separate submarket.
@@ -3655,7 +3774,7 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               TAMPA_ZIPS, SAVANNAH_ZIPS,
               COLUMBUS_ZIPS, CLEVELAND_ZIPS, CINCINNATI_ZIPS,
               DENVER_ZIPS, FORT_COLLINS_ZIPS,
-              CHARLESTON_ZIPS):
+              CHARLESTON_ZIPS, SEATTLE_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -4033,6 +4152,21 @@ STATE_METROS: dict[str, dict] = {
             "Boeing 787 plant (North Charleston, 29405-adjacent) + Volvo (29492-adjacent) + Bosch (29483-adjacent) underpin a steady engineering / manufacturing rental floor across the metro.",
         ],
     },
+    "WA": {
+        "state": "WA",
+        "metro_label": "Seattle / King County",
+        "subtitle": "ZIP-level scores for Seattle — Downtown / Pike Place + South Lake Union (Amazon HQ) urban core, Capitol Hill + Queen Anne walkable upscale, Ballard + Wallingford + Roosevelt premium family-walkable tier, West Seattle + Magnolia established luxury, Columbia City gentrifying, U-District student / Tukwila edge affordable.",
+        "map_center": {"lat": 47.61, "lng": -122.33, "zoom": 11},
+        "zips": SEATTLE_ZIPS,
+        "extra_caveats": [
+            "Seattle cap rates are structurally compressed across all tiers — buyers are paying for appreciation, not yield. The market is best read for capital growth + rental floor stability, not cash flow.",
+            "Amazon HQ (98109 SLU + adjacent 98101 / 98121) anchors a large professional-rental floor; Microsoft is in Redmond (outside this dataset but commuter-shed) and similarly props up north + east-side rents.",
+            "Property crime in 98101 (Downtown) + 98105 (U-District) + 98168 (Tukwila edge) runs visibly higher than the Seattle MSA average — the property-crime component dominates the crime index, not violent crime.",
+            "WA has no state income tax but does have a 0.58% effective property tax rate + the highest effective sales-tax burden in the US (~9.5% combined state + local). Affordability comparison vs other no-income-tax states (TX/FL/NV/TN) needs to factor that in.",
+            "Magnolia (98199) and the south end of Queen Anne are tightly inventory-constrained (build-out + slope topology); STR conversion + condo restrictions further limit rental supply.",
+            "Earthquake insurance is not in our standard insurance multiplier; Seattle is in PNW Cascadia subduction zone — premium adds ~\\$1K-2K/yr for owners who carry it (~50% take rate).",
+        ],
+    },
     "AZ": {
         "state": "AZ",
         "metro_label": "Maricopa County",
@@ -4086,6 +4220,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "OH": ["OH", "OH-CLE", "OH-CIN"],
     "CO": ["CO", "CO-FTC"],
     "SC": ["SC-CHS"],
+    "WA": ["WA"],
 }
 
 
