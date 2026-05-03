@@ -3407,6 +3407,125 @@ CHARLESTON_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# TN — Memphis / Shelby County: classic Sun Belt value play. FedEx HQ +
+# St. Jude + AutoZone + International Paper. One of the cheapest major US
+# metros (some ZIPs ~$80K) with high cap rates, paired with the high-crime
+# tradeoff that defines Memphis investor math. Premier eastern suburbs
+# (Germantown / Yorkshire / Galloway) anchor the upscale tier.
+# ─────────────────────────────────────────────────────────────────────────────
+MEMPHIS_ZIPS: dict[str, dict] = {
+    "38103": {
+        "name": "Downtown Memphis",
+        "lat": 35.1500, "lng": -90.0500,
+        "median_home_value": 390_000, "median_rent_monthly": 1_650,
+        "crime_index": 60, "pct_bachelors": 60,
+        "median_household_income": 80_000, "population": 14_000,
+        "walk_score": 75, "restaurant_score": 80,
+        "tags": ["urban", "walkable", "hip"],
+    },
+    "38104": {
+        "name": "Midtown / Cooper-Young",
+        "lat": 35.1300, "lng": -90.0000,
+        "median_home_value": 310_000, "median_rent_monthly": 1_400,
+        "crime_index": 50, "pct_bachelors": 55,
+        "median_household_income": 58_000, "population": 28_000,
+        "walk_score": 65, "restaurant_score": 80,
+        "tags": ["walkable", "hip", "gentrifying"],
+    },
+    "38105": {
+        "name": "Pinch District / Health Sciences",
+        "lat": 35.1500, "lng": -90.0250,
+        "median_home_value": 230_000, "median_rent_monthly": 1_150,
+        "crime_index": 65, "pct_bachelors": 50,
+        "median_household_income": 52_000, "population":  5_000,
+        "walk_score": 60, "restaurant_score": 50,
+        "tags": ["gentrifying", "medical"],
+    },
+    "38107": {
+        "name": "Crosstown / Klondike",
+        "lat": 35.1650, "lng": -89.9850,
+        "median_home_value": 145_000, "median_rent_monthly": 1_000,
+        "crime_index": 75, "pct_bachelors": 25,
+        "median_household_income": 42_000, "population": 18_000,
+        "walk_score": 50, "restaurant_score": 35,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "38108": {
+        "name": "North Memphis",
+        "lat": 35.1800, "lng": -90.0200,
+        "median_home_value":  80_000, "median_rent_monthly":   850,
+        "crime_index": 90, "pct_bachelors": 12,
+        "median_household_income": 28_000, "population": 35_000,
+        "walk_score": 30, "restaurant_score": 25,
+        "tags": ["affordable", "high-cap-rate", "high-crime"],
+    },
+    "38111": {
+        "name": "U of Memphis / Highland Heights",
+        "lat": 35.1170, "lng": -89.9350,
+        "median_home_value": 190_000, "median_rent_monthly": 1_150,
+        "crime_index": 65, "pct_bachelors": 50,
+        "median_household_income": 48_000, "population": 38_000,
+        "walk_score": 65, "restaurant_score": 60,
+        "tags": ["student", "walkable", "high-cap-rate"],
+    },
+    "38114": {
+        "name": "Orange Mound / Soulsville",
+        "lat": 35.1100, "lng": -89.9900,
+        "median_home_value":  90_000, "median_rent_monthly":   850,
+        "crime_index": 85, "pct_bachelors": 12,
+        "median_household_income": 32_000, "population": 32_000,
+        "walk_score": 35, "restaurant_score": 30,
+        "tags": ["affordable", "high-cap-rate", "high-crime"],
+    },
+    "38117": {
+        "name": "East Memphis / Yorkshire",
+        "lat": 35.1100, "lng": -89.8750,
+        "median_home_value": 475_000, "median_rent_monthly": 1_950,
+        "crime_index": 22, "pct_bachelors": 70,
+        "median_household_income": 115_000, "population": 30_000,
+        "walk_score": 35, "restaurant_score": 60,
+        "tags": ["family", "top-schools", "low-crime", "upscale", "established"],
+    },
+    "38119": {
+        "name": "Hickory Hill",
+        "lat": 35.0800, "lng": -89.8400,
+        "median_home_value": 215_000, "median_rent_monthly": 1_200,
+        "crime_index": 55, "pct_bachelors": 28,
+        "median_household_income": 52_000, "population": 50_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["affordable", "mid-tier"],
+    },
+    "38120": {
+        "name": "East Memphis / Galloway",
+        "lat": 35.1400, "lng": -89.8600,
+        "median_home_value": 620_000, "median_rent_monthly": 2_200,
+        "crime_index": 18, "pct_bachelors": 80,
+        "median_household_income": 145_000, "population": 14_000,
+        "walk_score": 30, "restaurant_score": 65,
+        "tags": ["family", "top-schools", "low-crime", "upscale"],
+    },
+    "38133": {
+        "name": "Bartlett",
+        "lat": 35.2050, "lng": -89.8400,
+        "median_home_value": 345_000, "median_rent_monthly": 1_700,
+        "crime_index": 25, "pct_bachelors": 50,
+        "median_household_income": 90_000, "population": 50_000,
+        "walk_score": 25, "restaurant_score": 50,
+        "tags": ["family", "low-crime", "established"],
+    },
+    "38138": {
+        "name": "Germantown",
+        "lat": 35.0900, "lng": -89.8100,
+        "median_home_value": 610_000, "median_rent_monthly": 2_200,
+        "crime_index": 12, "pct_bachelors": 75,
+        "median_household_income": 145_000, "population": 38_000,
+        "walk_score": 30, "restaurant_score": 65,
+        "tags": ["family", "top-schools", "low-crime", "upscale", "master-planned"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # RI — Providence + greater RI (Providence + Kent + Newport counties): the
 # whole state functions as one metro (smallest US state by area). Brown +
 # RISD + Hasbro HQ + Boston commuter shed. From premier East Side / East
@@ -4130,7 +4249,7 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               COLUMBUS_ZIPS, CLEVELAND_ZIPS, CINCINNATI_ZIPS,
               DENVER_ZIPS, FORT_COLLINS_ZIPS,
               CHARLESTON_ZIPS, SEATTLE_ZIPS, NASHVILLE_ZIPS, TUCSON_ZIPS,
-              PROVIDENCE_ZIPS):
+              PROVIDENCE_ZIPS, MEMPHIS_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -4536,6 +4655,20 @@ STATE_METROS: dict[str, dict] = {
             "Tucson is the 4th hottest US metro (avg July high 100°F) — utility costs run high; not in our standard PITI assumption. Insurance premium also includes monsoon flooding exposure.",
         ],
     },
+    "TN-MEM": {
+        "state": "TN",
+        "metro_label": "Memphis / Shelby County",
+        "subtitle": "ZIP-level scores for Memphis — Downtown + Cooper-Young walkable, U of Memphis student-rental tier, North Memphis + Orange Mound high-cap-rate (some of cheapest US ZIPs), East Memphis Yorkshire / Galloway premier upscale, Germantown + Bartlett family suburbs.",
+        "map_center": {"lat": 35.15, "lng": -89.95, "zoom": 11},
+        "zips": MEMPHIS_ZIPS,
+        "extra_caveats": [
+            "Memphis has one of the widest within-metro value spreads in the US — North Memphis (38108) median ~\\$80K sits a few miles from East Memphis Yorkshire (38117) at ~\\$475K. Investor-grade scoring works at the ZIP level but block-by-block crime + value variance dwarfs ZIP averages within 38108 / 38114 / 38107.",
+            "Crime risk in 38108 + 38114 is among the highest in any US ZIP we cover — investor due diligence on actual rent collection rates, vacancy days, and turnover costs is essential. Cap-rate scoring shows the headline yield, not the realized yield after losses.",
+            "Germantown (38138) and Bartlett (38133) are independent municipalities within Shelby County with their own school districts (separate from Memphis-Shelby County Schools) — premium beyond what bachelor's-percent captures. Same dynamic with Yorkshire (38117) within Memphis itself.",
+            "FedEx HQ + St. Jude + UTHSC anchor a steady downtown / midtown professional rental floor that explains why Cooper-Young (38104) + Pinch (38105) gentrification has been sustained vs. other US cheap-metro revival arcs.",
+            "Memphis property tax rate (1.3-1.6% effective combined city + county) is among the higher in the US South — shows up in PITI but doesn't get fully credited in cap-rate scoring at the headline level.",
+        ],
+    },
     "TN": {
         "state": "TN",
         "metro_label": "Nashville / Davidson County",
@@ -4619,7 +4752,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "CO": ["CO", "CO-FTC"],
     "SC": ["SC-CHS"],
     "WA": ["WA"],
-    "TN": ["TN"],
+    "TN": ["TN", "TN-MEM"],
     "RI": ["RI"],
 }
 
