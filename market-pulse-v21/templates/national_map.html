@@ -116,12 +116,15 @@
     .leaflet-container { font-family: inherit; }
     .pop-stat { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.15rem 0; font-size: 0.82rem; }
     .pop-stat .label { color: var(--text-dim); }
-    .pop-cta { display: inline-block; margin-top: 0.55rem; padding: 0.4rem 0.85rem; background: var(--accent2); color: white; border-radius: 6px; font-size: 0.78rem; font-weight: 600; }
-    .pop-cta:hover { text-decoration: none; opacity: 0.9; }
+    /* Primary CTA — bumped from 0.78rem/600 to 0.88rem/700 + tighter
+       white via subtle text-shadow so the label scans cleanly even
+       against the blue fill at small popup widths. */
+    .pop-cta { display: inline-block; margin-top: 0.7rem; padding: 0.5rem 1rem; background: var(--accent2); color: #fff; border-radius: 7px; font-size: 0.88rem; font-weight: 700; letter-spacing: 0.01em; text-shadow: 0 1px 1px rgba(0,0,0,0.2); }
+    .pop-cta:hover { text-decoration: none; background: #2563eb; }
     /* Secondary CTA — TikTok "explore" link. Distinct from the primary
-       map-view CTA: black fill matches TikTok's brand chrome, smaller +
-       lighter so it reads as a complement, not a duplicate action. */
-    .pop-cta-tiktok { display: inline-block; margin-top: 0.4rem; margin-left: 0.4rem; padding: 0.4rem 0.7rem; background: #000; color: #fff; border-radius: 6px; font-size: 0.72rem; font-weight: 600; }
+       map-view CTA: black fill matches TikTok's brand chrome, slightly
+       smaller so it reads as a complement, not a duplicate action. */
+    .pop-cta-tiktok { display: inline-block; margin-top: 0.55rem; margin-left: 0.4rem; padding: 0.5rem 0.85rem; background: #000; color: #fff; border-radius: 7px; font-size: 0.82rem; font-weight: 600; }
     .pop-cta-tiktok:hover { text-decoration: none; background: #25F4EE; color: #000; }
     .pop-cta-tiktok .tt-tag { color: #25F4EE; margin-left: 0.2rem; font-weight: 500; }
     .pop-cta-tiktok:hover .tt-tag { color: #000; }
