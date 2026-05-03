@@ -1448,12 +1448,24 @@ function applyStressRate(rate) {
         if (coc !== null) s.cash_on_cash = coc;
     });
 
-    // If the active choropleth metric is cash_on_cash, the map needs
-    // to repaint. Otherwise the recomputed values are still cached
-    // and will be picked up the moment the user switches metric.
-    if (_cpMetric && _cpMetric.key === 'cash_on_cash') {
-        repaintChoropleth();
+    // When the user enters stress mode but the active metric isn't
+    // cash_on_cash, switch to it so the slider has a visible effect.
+    // (The other metrics don't depend on rate, so the slider would
+    // appear to do nothing if we left the metric alone.) We don't
+    // auto-switch back on Reset — the user might want to keep
+    // browsing cash_on_cash at the live rate.
+    if (_stressMode && _cpMetric && _cpMetric.key !== 'cash_on_cash') {
+        const coc = CP_METRICS.find(m => m.key === 'cash_on_cash');
+        if (coc) {
+            _cpMetric = coc;
+            const radio = document.querySelector(`.ds-radio input[value="cash_on_cash"]`);
+            if (radio) radio.checked = true;
+            document.querySelectorAll('.ds-radio').forEach(r => {
+                r.classList.toggle('is-active', r.dataset.key === 'cash_on_cash');
+            });
+        }
     }
+    if (_cpMetric) repaintChoropleth();
     updateLegendTitle();
 
     // UI feedback: amber tint + Reset button visible only when not at live.

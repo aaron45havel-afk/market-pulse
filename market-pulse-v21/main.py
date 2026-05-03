@@ -1,6 +1,7 @@
 """Market Pulse — Real Estate & Finance Dashboard."""
 import os, logging
 from contextlib import asynccontextmanager
+from datetime import date
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -17,6 +18,16 @@ from database import (init_db, save_price, save_prices_bulk, get_all_prices, del
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def _fmt_obs_date(iso: str) -> str:
+    """Format an ISO date like '2026-05-01' as 'May 1, 2026' for the
+    rate chip + affordability tooltip. Falls back to the raw string on
+    parse failure so a malformed value never breaks the page."""
+    try:
+        return date.fromisoformat(iso).strftime("%b %-d, %Y")
+    except (ValueError, TypeError):
+        return iso
 
 
 @asynccontextmanager
@@ -165,7 +176,7 @@ async def national_map(request: Request):
         "choropleth_states": choropleth_by_fips,
         "choropleth_metrics": CHOROPLETH_METRICS,
         "mortgage_30y_rate": MORTGAGE_30Y_RATE,
-        "mortgage_30y_obs_date": MORTGAGE_30Y_OBS_DATE,
+        "mortgage_30y_obs_date": _fmt_obs_date(MORTGAGE_30Y_OBS_DATE),
     })
 
 
@@ -208,7 +219,7 @@ async def affordability(request: Request):
     return templates.TemplateResponse("affordability.html", {
         "request": request,
         "mortgage_30y_rate": MORTGAGE_30Y_RATE,
-        "mortgage_30y_obs_date": MORTGAGE_30Y_OBS_DATE,
+        "mortgage_30y_obs_date": _fmt_obs_date(MORTGAGE_30Y_OBS_DATE),
     })
 
 
