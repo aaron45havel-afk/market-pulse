@@ -576,7 +576,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `<div class="pop-stat"><span class="label">Top cap rate</span><span>${m.top_zip.cap_rate_pct.toFixed(2)}%</span></div>` +
             `<div class="pop-stat"><span class="label">Avg home value</span><span>${fmtMoney(m.avg_home_value)}</span></div>` +
             `<div class="pop-stat"><span class="label">Avg rent /mo</span><span>${fmtMoney(m.avg_rent)}</span></div>` +
-            `<a href="/real-estate/${m.slug}/map" class="pop-cta">Open ${m.metro_label} map &rarr;</a>`;
+            `<a href="/real-estate/${m.slug}/map" class="pop-cta">Open metro map &rarr;</a>`;
         marker.bindPopup(popup, { maxWidth: 320 });
         marker.bindTooltip(`<strong>${m.metro_label}</strong>`, { sticky: true });
         marker.on('click', () => highlightLeaderboardRow(m.slug));

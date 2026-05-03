@@ -4020,8 +4020,8 @@ STATE_METROS: dict[str, dict] = {
     },
     "SC-CHS": {
         "state": "SC",
-        "metro_label": "Charleston tri-county (Charleston / Berkeley / Dorchester)",
-        "subtitle": "ZIP-level scores for Charleston — Downtown / Historic District walkable luxury, Upper King + James Island + West Ashley middle tier, Mt Pleasant + Daniel Island premier coastal-suburb upscale, Johns Island growth corridor, Summerville / Goose Creek affordable family suburbs (Joint Base Charleston + Boeing 787 anchored).",
+        "metro_label": "Charleston Metro",
+        "subtitle": "ZIP-level scores for the Charleston tri-county MSA (Charleston + Berkeley + Dorchester). Downtown / Historic District walkable luxury, Upper King + James Island + West Ashley middle tier, Mt Pleasant + Daniel Island premier coastal-suburb upscale, Johns Island growth corridor, Summerville / Goose Creek affordable family suburbs (Joint Base Charleston + Boeing 787 anchored).",
         "map_center": {"lat": 32.85, "lng": -79.95, "zoom": 10},
         "zips": CHARLESTON_ZIPS,
         "extra_caveats": [
