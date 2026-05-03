@@ -1427,6 +1427,7 @@ function updateLegendTitle() {
 const LIVE_RATE = {{ mortgage_30y_rate }};
 let _testRate = LIVE_RATE;
 let _stressMode = false;
+let _stressRafId = 0;          // rAF handle so we coalesce repaints to ≤60Hz
 
 function calcCashOnCash(state, rate) {
     const hv = state.home_value;
@@ -1449,22 +1450,31 @@ function calcCashOnCash(state, rate) {
 }
 
 function applyStressRate(rate) {
+    const wasStress = _stressMode;
     _testRate = rate;
     _stressMode = Math.abs(rate - LIVE_RATE) > 0.01;
 
-    // Recompute cash_on_cash for every state at the chosen rate.
+    // Light, every-tick work: update CP_STATES + the chip readout.
+    // These are cheap and need to feel live as the user drags.
     Object.values(CP_STATES).forEach(s => {
         const coc = calcCashOnCash(s, rate);
         if (coc !== null) s.cash_on_cash = coc;
     });
+    const stress = document.getElementById('rateStress');
+    const reset = document.getElementById('rateStressReset');
+    if (stress) stress.classList.toggle('is-active', _stressMode);
+    if (reset)  reset.hidden = !_stressMode;
+    const valEl = document.getElementById('rateStressValue');
+    if (valEl) valEl.textContent = rate.toFixed(2) + '%';
 
-    // When the user enters stress mode but the active metric isn't
-    // cash_on_cash, switch to it so the slider has a visible effect.
-    // (The other metrics don't depend on rate, so the slider would
-    // appear to do nothing if we left the metric alone.) We don't
-    // auto-switch back on Reset — the user might want to keep
-    // browsing cash_on_cash at the live rate.
-    if (_stressMode && _cpMetric && _cpMetric.key !== 'cash_on_cash') {
+    // One-shot work: only run on the transition into stress mode, not
+    // every input event. Running scrollIntoView({behavior:'smooth'})
+    // on every drag tick was the source of the residual jank — each
+    // tick interrupted the prior smooth-scroll animation. Same for
+    // the pulse animation, which kept restarting before it could
+    // play. Now both fire exactly once per stress-mode entry.
+    if (_stressMode && !wasStress &&
+        _cpMetric && _cpMetric.key !== 'cash_on_cash') {
         const coc = CP_METRICS.find(m => m.key === 'cash_on_cash');
         if (coc) {
             _cpMetric = coc;
@@ -1474,44 +1484,34 @@ function applyStressRate(rate) {
                 const input = r.querySelector('input');
                 if (input) input.checked = isCoC;
             });
-            // Make the auto-switch visible: scroll the cash_on_cash
-            // radio into view in the sidebar + pulse it briefly. Same
-            // pulse on the legend title above the map. The user's eye
-            // is on the slider when they drag, so without these cues
-            // the metric switch goes unnoticed.
             const radioEl = document.querySelector('.ds-radio[data-key="cash_on_cash"]');
             if (radioEl) {
                 radioEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                radioEl.classList.remove('mp-stress-pulse');
-                void radioEl.offsetWidth;   // force reflow so the animation can replay on subsequent drags
                 radioEl.classList.add('mp-stress-pulse');
+                setTimeout(() => radioEl.classList.remove('mp-stress-pulse'), 1700);
             }
             const legendTitle = document.getElementById('cpLegendTitle');
             if (legendTitle) {
-                legendTitle.classList.remove('mp-stress-pulse');
-                void legendTitle.offsetWidth;
                 legendTitle.classList.add('mp-stress-pulse');
+                setTimeout(() => legendTitle.classList.remove('mp-stress-pulse'), 1700);
             }
         }
     }
-    if (_cpMetric) repaintChoropleth();
-    updateLegendTitle();
 
-    // UI feedback: amber tint + Reset button visible only when not at live.
-    const stress = document.getElementById('rateStress');
-    const reset = document.getElementById('rateStressReset');
-    if (stress) stress.classList.toggle('is-active', _stressMode);
-    if (reset)  reset.hidden = !_stressMode;
-    const valEl = document.getElementById('rateStressValue');
-    if (valEl) valEl.textContent = rate.toFixed(2) + '%';
-
-    // Refresh state info card if a state is selected — the cash_on_cash
-    // tile (when added to that card) reads from CP_STATES.
-    if (_selectedState) {
-        const fips = Object.keys(CP_STATES).find(f => CP_STATES[f].code === _selectedState.code);
-        if (fips) _selectedState.cash_on_cash = CP_STATES[fips].cash_on_cash;
-        renderStateInfo();
-    }
+    // Heavy work — coalesce to one frame. Without this, a fast drag
+    // queues a setStyle pass per pixel of movement and the map starts
+    // dropping frames.
+    if (_stressRafId) cancelAnimationFrame(_stressRafId);
+    _stressRafId = requestAnimationFrame(() => {
+        _stressRafId = 0;
+        if (_cpMetric) repaintChoropleth();
+        updateLegendTitle();
+        if (_selectedState) {
+            const fips = Object.keys(CP_STATES).find(f => CP_STATES[f].code === _selectedState.code);
+            if (fips) _selectedState.cash_on_cash = CP_STATES[fips].cash_on_cash;
+            renderStateInfo();
+        }
+    });
 }
 
 function initRateStress() {
