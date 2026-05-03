@@ -91,6 +91,30 @@
     .rail-pane.active { display: flex; }
 
     /* Leaderboard tab */
+    /* State Info card (top of leaderboard pane, shown on state click) */
+    .lb-state-info { padding: 0.85rem 0.85rem 0.75rem; border-bottom: 1px solid var(--border); background: linear-gradient(180deg, rgba(59,130,246,0.08), rgba(59,130,246,0)); flex: 0 0 auto; }
+    .lb-state-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.65rem; }
+    .lb-state-eyebrow { font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700; }
+    .lb-state-name { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-top: 0.1rem; }
+    .lb-state-clear { background: transparent; border: 1px solid var(--border); color: var(--text-dim); width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 0.78rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+    .lb-state-clear:hover { border-color: var(--red, #ef4444); color: var(--red, #ef4444); }
+    /* 2x3 metrics grid: tight, label above value */
+    .lb-state-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem 0.55rem; margin-bottom: 0.7rem; }
+    .lb-state-metric { display: flex; flex-direction: column; }
+    .lb-state-metric .label { font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+    .lb-state-metric .value { font-size: 0.85rem; color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 0.1rem; }
+    .lb-state-metric .value.up { color: var(--accent); }
+    .lb-state-metric .value.down { color: var(--red, #ef4444); }
+    /* Persona row: 3 compact picks */
+    .lb-state-personas { display: flex; flex-direction: column; gap: 0.35rem; }
+    .lb-state-personas-label { font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.15rem; }
+    .lb-state-persona-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.4rem 0.55rem; background: var(--surface2); border-radius: 6px; cursor: pointer; transition: background 0.12s; }
+    .lb-state-persona-row:hover { background: rgba(59,130,246,0.12); }
+    .lb-state-persona-row .persona-label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; flex: 0 0 60px; }
+    .lb-state-persona-row .persona-metro { font-size: 0.82rem; color: var(--text); font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lb-state-persona-row .persona-score { font-size: 0.85rem; font-weight: 700; font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+    .lb-state-empty { font-size: 0.75rem; color: var(--text-dim); font-style: italic; padding: 0.5rem 0; }
+
     .lb-toolbar { padding: 0.7rem 0.85rem 0.5rem; border-bottom: 1px solid var(--border); flex: 0 0 auto; }
     .lb-toolbar-label { font-size: 0.62rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 0.35rem; display: block; }
     .lb-personas { display: flex; gap: 0.3rem; flex-wrap: wrap; }
@@ -353,6 +377,23 @@
                  the selected persona. Click a row → flies to that pin
                  on the map and opens the popup. -->
             <div class="rail-pane active" data-pane="leaderboard">
+                <!-- State Info card — appears at the top of the leaderboard
+                     pane when the user clicks a covered state on the
+                     choropleth. Shows headline state metrics + a "best
+                     for" persona row. Clicking the X clears the selection
+                     and the leaderboard returns to all-metros mode. -->
+                <div class="lb-state-info" id="lbStateInfo" style="display:none;">
+                    <div class="lb-state-head">
+                        <div>
+                            <div class="lb-state-eyebrow">Selected state</div>
+                            <div class="lb-state-name" id="lbStateName">—</div>
+                        </div>
+                        <button type="button" class="lb-state-clear" id="lbStateClear" aria-label="Clear state">✕</button>
+                    </div>
+                    <div class="lb-state-metrics" id="lbStateMetrics"></div>
+                    <div class="lb-state-personas" id="lbStatePersonas"></div>
+                </div>
+
                 <div class="lb-toolbar">
                     <span class="lb-toolbar-label">Persona</span>
                     <div class="lb-personas" id="lbPersonas">
@@ -695,7 +736,122 @@ function initLeaderboard() {
             renderLeaderboard();
         });
     });
+    document.getElementById('lbStateClear').addEventListener('click', clearState);
     renderLeaderboard();
+}
+
+// ─── State drill-down (Phase 1) ────────────────────────────────────
+// When the user clicks a covered state on the choropleth, we (a) tag
+// the state as the active selection, (b) auto-set the existing
+// _filterState.state so the leaderboard list filters down to that
+// state's metros, and (c) populate the State Info card at the top of
+// the leaderboard pane with headline metrics + persona picks.
+let _selectedState = null;   // { code, name, ...all CP_STATES fields }
+
+function selectState(code, sd) {
+    _selectedState = sd ? { code, ...sd } : { code };
+    // Reuse the filters tab's state filter — same effect as if the
+    // user picked the state from the filter dropdown.
+    if (typeof _filterState === 'object' && _filterState) {
+        _filterState.state = code;
+        const stateSel = document.getElementById('filterState');
+        if (stateSel) stateSel.value = code;
+    }
+    // Switch the right rail to the leaderboard tab if user was on
+    // Find Your Fit / Filters — the State Info card lives there.
+    const lbTab = document.querySelector('.rail-tab[data-pane="leaderboard"]');
+    if (lbTab) lbTab.click();
+    renderStateInfo();
+    if (typeof applyFilters === 'function') applyFilters();
+    else renderLeaderboard();
+}
+
+function clearState() {
+    _selectedState = null;
+    if (typeof _filterState === 'object' && _filterState) {
+        _filterState.state = '';
+        const stateSel = document.getElementById('filterState');
+        if (stateSel) stateSel.value = '';
+    }
+    renderStateInfo();
+    if (typeof applyFilters === 'function') applyFilters();
+    else renderLeaderboard();
+    // Fly back to the country-wide view so user has visual feedback
+    // that the state focus has been released.
+    if (window._mpMap) {
+        window._mpMap.flyTo([38.5, -96], 4, { duration: 0.7 });
+    }
+}
+
+function renderStateInfo() {
+    const card = document.getElementById('lbStateInfo');
+    if (!card) return;
+    if (!_selectedState) {
+        card.style.display = 'none';
+        return;
+    }
+    card.style.display = 'block';
+    document.getElementById('lbStateName').textContent = _selectedState.name || _selectedState.code;
+
+    // Headline metrics: 6 most useful state-level numbers.
+    // home_value + YoY (the housing headline pair), Growth Outlook
+    // and Fiscal Health (the popular composites), Young Professional
+    // (popular persona), and median income tax (highly differentiating).
+    const m = _selectedState;
+    const yoy = m.home_value_yoy;
+    const yoyClass = yoy == null ? '' : (yoy >= 0 ? 'up' : 'down');
+    const yoyDisplay = yoy == null ? '—' : (yoy >= 0 ? '+' : '') + yoy.toFixed(1) + '%';
+    const cells = [
+        { label: 'Home value',  value: m.home_value != null ? '$' + Math.round(m.home_value/1000) + 'K' : '—' },
+        { label: 'YoY',         value: yoyDisplay, cls: yoyClass },
+        { label: 'Growth',      value: m.growth_score != null ? m.growth_score : '—' },
+        { label: 'Fiscal',      value: m.fiscal_health != null ? m.fiscal_health : '—' },
+        { label: 'Young Pro',   value: m.young_pro_score != null ? m.young_pro_score : '—' },
+        { label: 'Income tax',  value: m.income_tax != null ? m.income_tax.toFixed(1) + '%' : '—' },
+    ];
+    document.getElementById('lbStateMetrics').innerHTML = cells.map(c =>
+        `<div class="lb-state-metric"><span class="label">${c.label}</span><span class="value ${c.cls || ''}">${c.value}</span></div>`
+    ).join('');
+
+    // "Best for…" persona picks — top metro per persona within this state.
+    const inState = METROS.filter(x => x.state === _selectedState.code);
+    const personasEl = document.getElementById('lbStatePersonas');
+    if (!inState.length) {
+        personasEl.innerHTML = '<div class="lb-state-empty">No covered metros in this state yet.</div>';
+        return;
+    }
+    const PERSONAS = [
+        { key: 'balanced',  label: 'Balanced'  },
+        { key: 'investor',  label: 'Investor'  },
+        { key: 'lifestyle', label: 'Lifestyle' },
+    ];
+    const rowsHtml = PERSONAS.map(p => {
+        const top = [...inState].sort((a, b) =>
+            compositeForPersona(b, p.key) - compositeForPersona(a, p.key))[0];
+        if (!top) return '';
+        const score = compositeForPersona(top, p.key);
+        const color = scoreColor(score);
+        return `<div class="lb-state-persona-row" data-slug="${top.slug}">
+            <span class="persona-label">${p.label}</span>
+            <span class="persona-metro">${top.metro_label}</span>
+            <span class="persona-score" style="color:${color};">${score.toFixed(0)}</span>
+        </div>`;
+    }).join('');
+    personasEl.innerHTML =
+        `<div class="lb-state-personas-label">Best metro for…</div>${rowsHtml}`;
+    // Click a persona row → fly + open that metro's pin popup.
+    personasEl.querySelectorAll('.lb-state-persona-row').forEach(row => {
+        row.addEventListener('click', () => {
+            const slug = row.dataset.slug;
+            const marker = window._mpMarkers && window._mpMarkers[slug];
+            if (!marker || !window._mpClusterLayer) return;
+            if (!window._mpMap.hasLayer(window._mpClusterLayer)) {
+                window._mpClusterLayer.addTo(window._mpMap);
+            }
+            window._mpClusterLayer.zoomToShowLayer(marker, () => marker.openPopup());
+            highlightLeaderboardRow(slug);
+        });
+    });
 }
 
 function renderLeaderboard() {
@@ -1312,7 +1468,8 @@ function buildChoroplethLayer(geojson) {
             });
             // Click a covered state → fly to its metros so users can
             // see the pins and dive in. Uncovered states do nothing
-            // (visual-only at this granularity).
+            // (visual-only at this granularity). Also activates the
+            // State Info panel in the right rail.
             layer.on('click', e => {
                 if (!sd || !sd.has_metros) return;
                 const stateMetros = METROS.filter(m => m.state === sd.code);
@@ -1324,6 +1481,7 @@ function buildChoroplethLayer(geojson) {
                     [Math.max(...lats), Math.max(...lngs)]
                 );
                 window._mpMap.flyToBounds(bounds, { padding: [60, 60], maxZoom: 7, duration: 0.7 });
+                selectState(sd.code, sd);
             });
         },
     });
