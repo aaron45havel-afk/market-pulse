@@ -583,7 +583,22 @@ document.addEventListener('DOMContentLoaded', () => {
         clusterLayer.addLayer(marker);
         markersBySlug[m.slug] = marker;
     });
-    clusterLayer.addTo(map);
+
+    // Pin layer is HIDDEN at country zoom (≤5). Reveals automatically
+    // when the user clicks a state polygon (flyToBounds zooms past the
+    // threshold) or a leaderboard row (cluster.zoomToShowLayer also
+    // zooms in). Lets the choropleth communicate state-level signal
+    // without competing with cluster bubbles + pins on the country
+    // overview. User can still use the leaderboard / filters / find-
+    // your-fit drawer to pick a metro at any zoom.
+    const METRO_REVEAL_ZOOM = 5;
+    function updateClusterVisibility() {
+        const shouldShow = map.getZoom() > METRO_REVEAL_ZOOM;
+        const isOn = map.hasLayer(clusterLayer);
+        if (shouldShow && !isOn) clusterLayer.addTo(map);
+        else if (!shouldShow && isOn) map.removeLayer(clusterLayer);
+    }
+    map.on('zoomend', updateClusterVisibility);
 
     // Fit the viewport to the cluster of metros once they're all on the
     // map. Padding gives breathing room so the corner pins aren't right
@@ -594,6 +609,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (coords.length) {
         map.fitBounds(L.latLngBounds(coords), { padding: [40, 40], maxZoom: 5 });
     }
+    updateClusterVisibility();   // sync cluster visibility to the post-fit zoom
 
     // Cache map reference + marker registry for the leaderboard handlers
     // declared below — they need to fly + open popups on row click.
@@ -690,6 +706,13 @@ function renderLeaderboard() {
             // the cluster layer to zoom + spiderfy until the marker is
             // exposed, then open its popup. Otherwise fly directly.
             const cluster = window._mpClusterLayer;
+            // Cluster is hidden at country zoom (≤5). Re-add to the
+            // map first so zoomToShowLayer can find the marker and the
+            // popup has somewhere to attach. Subsequent zoomend events
+            // will keep cluster visible since we'll be at metro zoom.
+            if (cluster && !window._mpMap.hasLayer(cluster)) {
+                cluster.addTo(window._mpMap);
+            }
             if (cluster && cluster.zoomToShowLayer) {
                 cluster.zoomToShowLayer(marker, () => marker.openPopup());
             } else {
