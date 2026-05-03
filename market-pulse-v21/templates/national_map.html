@@ -25,12 +25,28 @@
     .map-header { padding: 0.85rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; flex: 0 0 auto; }
     .map-header h1 { font-size: 1.1rem; margin: 0; }
     .map-header .sub { color: var(--text-dim); font-size: 0.78rem; }
-    /* Live mortgage-rate chip — pinned right of the header. Drives
-       the cash_on_cash composite + the affordability calc default. */
+    /* Live mortgage-rate chip + stress-test slider — pinned right of
+       the header. Live chip drives the default cash_on_cash composite +
+       the /affordability calc default. Stress slider lets the user
+       see the choropleth at any rate from 4-9%. */
+    .rate-controls { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
     .rate-chip { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; padding: 0.35rem 0.85rem; font-size: 0.78rem; font-variant-numeric: tabular-nums; }
     .rate-chip .label { color: var(--text-dim); }
     .rate-chip .value { color: var(--accent); font-weight: 700; }
     .rate-chip .obs { color: var(--text-dim); font-size: 0.68rem; }
+
+    .rate-stress { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; padding: 0.35rem 0.85rem; font-size: 0.78rem; font-variant-numeric: tabular-nums; transition: background 0.15s, border-color 0.15s; }
+    .rate-stress.is-active { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.5); }
+    .rate-stress .label { color: var(--text-dim); }
+    .rate-stress input[type="range"] { -webkit-appearance: none; appearance: none; width: 100px; height: 4px; background: var(--border); border-radius: 2px; cursor: pointer; }
+    .rate-stress input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent2); cursor: pointer; border: none; }
+    .rate-stress input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--accent2); cursor: pointer; border: none; }
+    .rate-stress.is-active input[type="range"]::-webkit-slider-thumb { background: #f59e0b; }
+    .rate-stress.is-active input[type="range"]::-moz-range-thumb { background: #f59e0b; }
+    .rate-stress .test-value { color: var(--text); font-weight: 700; min-width: 3.4em; text-align: right; }
+    .rate-stress.is-active .test-value { color: #f59e0b; }
+    .rate-stress .reset-btn { background: transparent; border: none; color: var(--accent2); cursor: pointer; font-size: 0.72rem; padding: 0; text-decoration: underline; }
+    .rate-stress .reset-btn:hover { color: var(--text); }
 
     /* Three-column body: data sidebar | map | leaderboard rail. Both
        side panels collapse below the map on tablet/mobile. */
@@ -329,10 +345,18 @@
             <h1>Neighborhood Investor Map — National</h1>
             <div class="sub">{{ metros|length }} metros · click any pin or pick from the list on the right to see the metro summary.</div>
         </div>
-        <div class="rate-chip" title="30-year fixed mortgage rate (Freddie Mac PMMS, FRED MORTGAGE30US). Powers the Cash-on-cash metric + Affordability calc default.">
-            <span class="label">30-yr fixed</span>
-            <span class="value">{{ "%.2f"|format(mortgage_30y_rate) }}%</span>
-            <span class="obs">{{ mortgage_30y_obs_date }}</span>
+        <div class="rate-controls">
+            <div class="rate-chip" title="Current 30-year fixed mortgage rate (Freddie Mac PMMS, FRED MORTGAGE30US). Powers the Cash-on-cash metric + Affordability calc default.">
+                <span class="label">30-yr fixed</span>
+                <span class="value">{{ "%.2f"|format(mortgage_30y_rate) }}%</span>
+                <span class="obs">{{ mortgage_30y_obs_date }}</span>
+            </div>
+            <div class="rate-stress" id="rateStress" title="Drag to test cash-on-cash at a different mortgage rate. The choropleth repaints if Cash-on-cash @ today's rate is the active metric.">
+                <span class="label">Stress test</span>
+                <input type="range" id="rateStressInput" min="4" max="9" step="0.125" value="{{ mortgage_30y_rate }}">
+                <span class="test-value" id="rateStressValue">{{ "%.2f"|format(mortgage_30y_rate) }}%</span>
+                <button type="button" class="reset-btn" id="rateStressReset" hidden>Reset</button>
+            </div>
         </div>
     </div>
 
@@ -700,6 +724,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initFitTab();
     initFilters();
     initChoropleth();
+    initRateStress();
 });
 
 // Maps user income buckets to a max-affordable home price using the
@@ -1372,7 +1397,90 @@ function filterSidebarMetrics(query) {
 
 function updateLegendTitle() {
     const el = document.getElementById('cpLegendTitle');
-    if (el && _cpMetric) el.textContent = _cpMetric.label;
+    if (!el || !_cpMetric) return;
+    // Append stress-mode suffix when (a) the user has dragged the
+    // stress slider away from live rate and (b) the active metric is
+    // cash_on_cash — that's the only metric whose value depends on
+    // the chosen rate, so the suffix would be misleading on others.
+    let label = _cpMetric.label;
+    if (_cpMetric.key === 'cash_on_cash' && _stressMode) {
+        label = `Cash-on-cash at ${_testRate.toFixed(2)}% (stress test)`;
+    }
+    el.textContent = label;
+}
+
+// ─── Rate stress test (Phase 3) ────────────────────────────────────
+// Lets the user re-color the choropleth at any rate scenario in the
+// 4-9% range. Mirrors the Python _cash_on_cash() helper from
+// data_providers.py so server-side and client-side numbers agree at
+// the live rate (LIVE_RATE).
+const LIVE_RATE = {{ mortgage_30y_rate }};
+let _testRate = LIVE_RATE;
+let _stressMode = false;
+
+function calcCashOnCash(state, rate) {
+    const hv = state.home_value;
+    const rent = state.median_rent;
+    if (!hv || !rent || rate <= 0) return null;
+    const annualRent = rent * 12;
+    const opex = hv * ((state.property_tax || 0) / 100) +
+                 (state.insurance || 0) +
+                 annualRent * 0.18;   // vacancy 8% + maintenance 10%
+    const noi = annualRent - opex;
+    // 30-yr P&I on 80% LTV at the given rate.
+    const loan = hv * 0.80;
+    const r = (rate / 100) / 12;
+    const n = 360;
+    const monthlyPI = loan * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+    const annualPI = monthlyPI * 12;
+    const down = hv * 0.20;
+    if (down <= 0) return null;
+    return Math.round((noi - annualPI) / down * 1000) / 10;
+}
+
+function applyStressRate(rate) {
+    _testRate = rate;
+    _stressMode = Math.abs(rate - LIVE_RATE) > 0.01;
+
+    // Recompute cash_on_cash for every state at the chosen rate.
+    Object.values(CP_STATES).forEach(s => {
+        const coc = calcCashOnCash(s, rate);
+        if (coc !== null) s.cash_on_cash = coc;
+    });
+
+    // If the active choropleth metric is cash_on_cash, the map needs
+    // to repaint. Otherwise the recomputed values are still cached
+    // and will be picked up the moment the user switches metric.
+    if (_cpMetric && _cpMetric.key === 'cash_on_cash') {
+        repaintChoropleth();
+    }
+    updateLegendTitle();
+
+    // UI feedback: amber tint + Reset button visible only when not at live.
+    const stress = document.getElementById('rateStress');
+    const reset = document.getElementById('rateStressReset');
+    if (stress) stress.classList.toggle('is-active', _stressMode);
+    if (reset)  reset.hidden = !_stressMode;
+    const valEl = document.getElementById('rateStressValue');
+    if (valEl) valEl.textContent = rate.toFixed(2) + '%';
+
+    // Refresh state info card if a state is selected — the cash_on_cash
+    // tile (when added to that card) reads from CP_STATES.
+    if (_selectedState) {
+        const fips = Object.keys(CP_STATES).find(f => CP_STATES[f].code === _selectedState.code);
+        if (fips) _selectedState.cash_on_cash = CP_STATES[fips].cash_on_cash;
+        renderStateInfo();
+    }
+}
+
+function initRateStress() {
+    const slider = document.getElementById('rateStressInput');
+    const reset  = document.getElementById('rateStressReset');
+    if (slider) slider.addEventListener('input', e => applyStressRate(parseFloat(e.target.value)));
+    if (reset)  reset.addEventListener('click', () => {
+        if (slider) slider.value = LIVE_RATE;
+        applyStressRate(LIVE_RATE);
+    });
 }
 
 function getMetricBounds(metricKey) {
