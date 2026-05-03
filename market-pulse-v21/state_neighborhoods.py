@@ -3526,6 +3526,244 @@ MEMPHIS_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# SC — Greenville / Greenville County: SC upstate. BMW Spartanburg + Michelin
+# NA HQ + Bosch + Magna manufacturing corridor. Walkable downtown revival
+# (rare for a city this size in the SE), Augusta Road old-money tier, plus
+# fast-growing Simpsonville / Greer / Travelers Rest suburbs. Frequently
+# ranked top SC metro for young professionals.
+# ─────────────────────────────────────────────────────────────────────────────
+GREENVILLE_ZIPS: dict[str, dict] = {
+    "29601": {
+        "name": "Downtown Greenville",
+        "lat": 34.8500, "lng": -82.4000,
+        "median_home_value": 480_000, "median_rent_monthly": 1_950,
+        "crime_index": 35, "pct_bachelors": 65,
+        "median_household_income": 75_000, "population": 12_000,
+        "walk_score": 80, "restaurant_score": 90,
+        "tags": ["walkable", "hip", "gentrifying"],
+    },
+    "29605": {
+        "name": "Augusta Road / Cleveland Park",
+        "lat": 34.8350, "lng": -82.3850,
+        "median_home_value": 720_000, "median_rent_monthly": 2_400,
+        "crime_index": 18, "pct_bachelors": 75,
+        "median_household_income": 130_000, "population": 22_000,
+        "walk_score": 50, "restaurant_score": 65,
+        "tags": ["family", "top-schools", "low-crime", "upscale", "established"],
+    },
+    "29607": {
+        "name": "Mauldin / Eastside",
+        "lat": 34.7800, "lng": -82.3100,
+        "median_home_value": 295_000, "median_rent_monthly": 1_500,
+        "crime_index": 30, "pct_bachelors": 35,
+        "median_household_income": 65_000, "population": 38_000,
+        "walk_score": 35, "restaurant_score": 50,
+        "tags": ["family", "mid-tier"],
+    },
+    "29609": {
+        "name": "N Greenville / North Main",
+        "lat": 34.8950, "lng": -82.4000,
+        "median_home_value": 310_000, "median_rent_monthly": 1_500,
+        "crime_index": 45, "pct_bachelors": 50,
+        "median_household_income": 60_000, "population": 32_000,
+        "walk_score": 50, "restaurant_score": 50,
+        "tags": ["walkable", "gentrifying"],
+    },
+    "29611": {
+        "name": "W Greenville",
+        "lat": 34.8400, "lng": -82.4500,
+        "median_home_value": 235_000, "median_rent_monthly": 1_300,
+        "crime_index": 60, "pct_bachelors": 30,
+        "median_household_income": 48_000, "population": 28_000,
+        "walk_score": 50, "restaurant_score": 50,
+        "tags": ["affordable", "transitional", "gentrifying"],
+    },
+    "29615": {
+        "name": "Pelham / I-85 corridor",
+        "lat": 34.8550, "lng": -82.3000,
+        "median_home_value": 385_000, "median_rent_monthly": 1_700,
+        "crime_index": 28, "pct_bachelors": 50,
+        "median_household_income": 80_000, "population": 28_000,
+        "walk_score": 30, "restaurant_score": 50,
+        "tags": ["family", "established"],
+    },
+    "29617": {
+        "name": "NW Greenville",
+        "lat": 34.8950, "lng": -82.4500,
+        "median_home_value": 315_000, "median_rent_monthly": 1_500,
+        "crime_index": 35, "pct_bachelors": 40,
+        "median_household_income": 70_000, "population": 25_000,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["family", "mid-tier"],
+    },
+    "29644": {
+        "name": "Fountain Inn",
+        "lat": 34.6850, "lng": -82.2000,
+        "median_home_value": 385_000, "median_rent_monthly": 1_700,
+        "crime_index": 22, "pct_bachelors": 38,
+        "median_household_income": 75_000, "population": 18_000,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["family", "low-crime", "growth"],
+    },
+    "29650": {
+        "name": "Simpsonville",
+        "lat": 34.7400, "lng": -82.2550,
+        "median_home_value": 445_000, "median_rent_monthly": 1_900,
+        "crime_index": 18, "pct_bachelors": 50,
+        "median_household_income": 95_000, "population": 32_000,
+        "walk_score": 30, "restaurant_score": 50,
+        "tags": ["family", "low-crime", "master-planned", "growth"],
+    },
+    "29651": {
+        "name": "Greer (BMW corridor)",
+        "lat": 34.9400, "lng": -82.2300,
+        "median_home_value": 445_000, "median_rent_monthly": 1_900,
+        "crime_index": 22, "pct_bachelors": 50,
+        "median_household_income": 90_000, "population": 38_000,
+        "walk_score": 35, "restaurant_score": 50,
+        "tags": ["family", "low-crime", "master-planned", "growth"],
+    },
+    "29681": {
+        "name": "Five Forks / Simpsonville S",
+        "lat": 34.8000, "lng": -82.2300,
+        "median_home_value": 565_000, "median_rent_monthly": 2_200,
+        "crime_index": 15, "pct_bachelors": 65,
+        "median_household_income": 130_000, "population": 28_000,
+        "walk_score": 25, "restaurant_score": 50,
+        "tags": ["family", "top-schools", "low-crime", "master-planned", "upscale"],
+    },
+    "29687": {
+        "name": "Travelers Rest / Blue Ridge",
+        "lat": 34.9650, "lng": -82.4350,
+        "median_home_value": 480_000, "median_rent_monthly": 1_950,
+        "crime_index": 22, "pct_bachelors": 55,
+        "median_household_income": 95_000, "population": 28_000,
+        "walk_score": 50, "restaurant_score": 60,
+        "tags": ["family", "low-crime", "scenic", "growth"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SC — Columbia / Richland + Lexington counties: SC state capital +
+# University of South Carolina anchor + Fort Jackson (Army basic training).
+# Cheaper than Charleston, more government-anchored than Greenville.
+# Spans premier Forest Hills / Heathwood + Lake Murray + Five Points
+# walkable + affordable N Columbia high-cap-rate ZIPs.
+# ─────────────────────────────────────────────────────────────────────────────
+COLUMBIA_SC_ZIPS: dict[str, dict] = {
+    "29201": {
+        "name": "Downtown / USC",
+        "lat": 34.0000, "lng": -81.0350,
+        "median_home_value": 310_000, "median_rent_monthly": 1_500,
+        "crime_index": 55, "pct_bachelors": 60,
+        "median_household_income": 55_000, "population": 18_000,
+        "walk_score": 75, "restaurant_score": 75,
+        "tags": ["urban", "walkable", "student"],
+    },
+    "29203": {
+        "name": "N Columbia",
+        "lat": 34.0700, "lng": -81.0400,
+        "median_home_value": 150_000, "median_rent_monthly": 1_050,
+        "crime_index": 75, "pct_bachelors": 22,
+        "median_household_income": 38_000, "population": 32_000,
+        "walk_score": 40, "restaurant_score": 30,
+        "tags": ["affordable", "high-cap-rate", "high-crime"],
+    },
+    "29205": {
+        "name": "Five Points / Shandon",
+        "lat": 34.0050, "lng": -80.9950,
+        "median_home_value": 410_000, "median_rent_monthly": 1_700,
+        "crime_index": 32, "pct_bachelors": 65,
+        "median_household_income": 85_000, "population": 22_000,
+        "walk_score": 70, "restaurant_score": 80,
+        "tags": ["walkable", "hip", "gentrified"],
+    },
+    "29206": {
+        "name": "Forest Hills / Heathwood",
+        "lat": 34.0250, "lng": -80.9800,
+        "median_home_value": 620_000, "median_rent_monthly": 2_200,
+        "crime_index": 18, "pct_bachelors": 75,
+        "median_household_income": 130_000, "population": 14_000,
+        "walk_score": 35, "restaurant_score": 60,
+        "tags": ["family", "top-schools", "low-crime", "upscale", "established"],
+    },
+    "29209": {
+        "name": "SE Columbia",
+        "lat": 33.9650, "lng": -80.9700,
+        "median_home_value": 230_000, "median_rent_monthly": 1_300,
+        "crime_index": 50, "pct_bachelors": 35,
+        "median_household_income": 58_000, "population": 28_000,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["affordable", "mid-tier"],
+    },
+    "29210": {
+        "name": "NW Columbia / St Andrews",
+        "lat": 34.0500, "lng": -81.1100,
+        "median_home_value": 185_000, "median_rent_monthly": 1_200,
+        "crime_index": 60, "pct_bachelors": 32,
+        "median_household_income": 50_000, "population": 35_000,
+        "walk_score": 40, "restaurant_score": 35,
+        "tags": ["affordable", "high-cap-rate"],
+    },
+    "29212": {
+        "name": "Irmo (Lexington Co)",
+        "lat": 34.0950, "lng": -81.1850,
+        "median_home_value": 345_000, "median_rent_monthly": 1_700,
+        "crime_index": 22, "pct_bachelors": 55,
+        "median_household_income": 95_000, "population": 32_000,
+        "walk_score": 30, "restaurant_score": 50,
+        "tags": ["family", "top-schools", "low-crime"],
+    },
+    "29063": {
+        "name": "Chapin / Lake Murray",
+        "lat": 34.1700, "lng": -81.3500,
+        "median_home_value": 585_000, "median_rent_monthly": 2_200,
+        "crime_index": 12, "pct_bachelors": 65,
+        "median_household_income": 130_000, "population": 14_000,
+        "walk_score": 25, "restaurant_score": 50,
+        "tags": ["family", "top-schools", "low-crime", "luxury"],
+    },
+    "29073": {
+        "name": "Lexington",
+        "lat": 33.9800, "lng": -81.2400,
+        "median_home_value": 325_000, "median_rent_monthly": 1_650,
+        "crime_index": 22, "pct_bachelors": 45,
+        "median_household_income": 85_000, "population": 35_000,
+        "walk_score": 30, "restaurant_score": 50,
+        "tags": ["family", "low-crime", "established"],
+    },
+    "29229": {
+        "name": "NE Columbia / Killian",
+        "lat": 34.1100, "lng": -80.9300,
+        "median_home_value": 360_000, "median_rent_monthly": 1_750,
+        "crime_index": 30, "pct_bachelors": 50,
+        "median_household_income": 90_000, "population": 50_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["family", "master-planned"],
+    },
+    "29045": {
+        "name": "Elgin (NE edge)",
+        "lat": 34.1700, "lng": -80.7900,
+        "median_home_value": 370_000, "median_rent_monthly": 1_800,
+        "crime_index": 22, "pct_bachelors": 45,
+        "median_household_income": 95_000, "population": 18_000,
+        "walk_score": 25, "restaurant_score": 35,
+        "tags": ["family", "low-crime", "growth"],
+    },
+    "29044": {
+        "name": "Eastover / SE rural",
+        "lat": 33.8800, "lng": -80.6900,
+        "median_home_value": 145_000, "median_rent_monthly": 1_000,
+        "crime_index": 50, "pct_bachelors": 18,
+        "median_household_income": 42_000, "population":  4_000,
+        "walk_score": 18, "restaurant_score": 25,
+        "tags": ["affordable", "rural-edge", "high-cap-rate"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # RI — Providence + greater RI (Providence + Kent + Newport counties): the
 # whole state functions as one metro (smallest US state by area). Brown +
 # RISD + Hasbro HQ + Boston commuter shed. From premier East Side / East
@@ -4249,7 +4487,8 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               COLUMBUS_ZIPS, CLEVELAND_ZIPS, CINCINNATI_ZIPS,
               DENVER_ZIPS, FORT_COLLINS_ZIPS,
               CHARLESTON_ZIPS, SEATTLE_ZIPS, NASHVILLE_ZIPS, TUCSON_ZIPS,
-              PROVIDENCE_ZIPS, MEMPHIS_ZIPS):
+              PROVIDENCE_ZIPS, MEMPHIS_ZIPS,
+              GREENVILLE_ZIPS, COLUMBIA_SC_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -4640,6 +4879,36 @@ STATE_METROS: dict[str, dict] = {
             "Hewlett-Packard / HP Enterprise + Avago + Woodward + Anheuser-Busch anchor a stable engineering / manufacturing rental floor across Fort Collins, but layoffs at any one of the big three would ripple through 80525 / 80526 / 80528 visibly.",
         ],
     },
+    "SC-GVL": {
+        "state": "SC",
+        "metro_label": "Greenville / Greenville County",
+        "tiktok_hashtag": "greenvillesc",
+        "subtitle": "ZIP-level scores for Greenville SC — Downtown walkable revival, Augusta Road / Cleveland Park premier old-money, Five Forks + Greer (BMW corridor) + Simpsonville master-planned family suburbs, fast-growing Travelers Rest near Blue Ridge, plus affordable W Greenville + N Greenville gentrifying ZIPs.",
+        "map_center": {"lat": 34.85, "lng": -82.40, "zoom": 11},
+        "zips": GREENVILLE_ZIPS,
+        "extra_caveats": [
+            "Downtown Greenville (29601) has one of the most pronounced post-2010 revival arcs of any SE city this size — Main St + Falls Park + Swamp Rabbit Trail. Cap rate looks compressed because buyers are paying for appreciation; the rental market is also thin (most owner-occupied).",
+            "BMW Spartanburg + GE Power + Michelin NA HQ + Bosch + Magna anchor a manufacturing rental floor across 29651 (Greer) + 29615 (Pelham) + 29607 (Mauldin / Eastside). BMW employees alone are >11K and BAH-equivalent housing-allowance dynamics show up in 29651/29687 rents.",
+            "29605 (Augusta Road) sits in Greenville County School District but routes to top-tier Greenville High feeder pattern — premium beyond what the bachelor's-percent proxy captures, and inventory is structurally very tight (no new construction in the historic core).",
+            "Five Forks (29681) is in Greenville County but functionally part of unincorporated suburbia (no city tax, lower effective combined rate than 29605).",
+            "Travelers Rest (29687) sits at the Swamp Rabbit Trail / Blue Ridge gateway — short-term rental demand is real but local STR rules are tighter than Airbnb-tourism markets like Asheville, so cap rate signal stays representative of LTR.",
+        ],
+    },
+    "SC-COL": {
+        "state": "SC",
+        "metro_label": "Columbia / Richland + Lexington",
+        "tiktok_hashtag": "columbiasc",
+        "subtitle": "ZIP-level scores for Columbia SC — USC + Downtown urban core, Five Points walkable hip, Forest Hills / Heathwood premier upscale, Chapin / Lake Murray luxury, Irmo + Lexington family suburbs (Lexington County), plus N Columbia + Eastover affordable / high-cap-rate ZIPs. State capital + USC + Fort Jackson anchor.",
+        "map_center": {"lat": 34.00, "lng": -81.05, "zoom": 10},
+        "zips": COLUMBIA_SC_ZIPS,
+        "extra_caveats": [
+            "USC (University of South Carolina, ~36K students) drives student-rental demand in 29201 (Downtown) + 29205 (Five Points). Cap rates in those ZIPs reflect 12-month student leases with summer occupancy gaps.",
+            "Fort Jackson (Army basic training, ~50K personnel rotating annually + 12K permanent) anchors BAH rents in 29209 (SE Columbia) + 29207-adjacent ZIPs; military-tied yield floor not visible in employment data alone.",
+            "Lexington (29073) and Irmo (29212) are in Lexington County (Lexington-Richland Five SD) — separate from Columbia / Richland Two SD. Top schools premium in 29212 above what bachelor's-percent captures.",
+            "Lake Murray (29063 Chapin) is a luxury waterfront market with structurally tight inventory + private dock premiums; cap-rate signal is weak vs the appreciation thesis (waterfront homes are pure capital plays).",
+            "State government employment (~75K state + USC employees) is a steady rental floor across Downtown / Five Points / 29210 (NW) — explains why even N Columbia (29203) cap rates work despite the high-crime tradeoff.",
+        ],
+    },
     "SC-CHS": {
         "state": "SC",
         "metro_label": "Charleston Metro",
@@ -4787,7 +5056,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "IN": ["IN-IND", "IN-FW"],
     "OH": ["OH", "OH-CLE", "OH-CIN"],
     "CO": ["CO", "CO-FTC"],
-    "SC": ["SC-CHS"],
+    "SC": ["SC-CHS", "SC-GVL", "SC-COL"],
     "WA": ["WA"],
     "TN": ["TN", "TN-MEM"],
     "RI": ["RI"],
