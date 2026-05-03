@@ -48,6 +48,16 @@
     .rate-stress .reset-btn { background: transparent; border: none; color: var(--accent2); cursor: pointer; font-size: 0.72rem; padding: 0; text-decoration: underline; }
     .rate-stress .reset-btn:hover { color: var(--text); }
 
+    /* Brief amber pulse used to flag a metric that the stress slider
+       just auto-switched to (in the sidebar) and the legend title
+       above the choropleth. Makes the change visible since the user's
+       eye is on the slider when they trigger it. */
+    @keyframes mp-stress-pulse {
+        0%, 100% { background-color: transparent; }
+        50%      { background-color: rgba(245,158,11,0.25); }
+    }
+    .mp-stress-pulse { animation: mp-stress-pulse 0.8s ease-out 2; }
+
     /* Three-column body: data sidebar | map | leaderboard rail. Both
        side panels collapse below the map on tablet/mobile. */
     .map-body { flex: 1 1 auto; min-height: 0; display: flex; }
@@ -353,7 +363,7 @@
             </div>
             <div class="rate-stress" id="rateStress" title="Drag to test cash-on-cash at a different mortgage rate. The choropleth repaints if Cash-on-cash @ today's rate is the active metric.">
                 <span class="label">Stress test</span>
-                <input type="range" id="rateStressInput" min="4" max="9" step="0.125" value="{{ mortgage_30y_rate }}">
+                <input type="range" id="rateStressInput" min="4" max="9" step="0.05" value="{{ mortgage_30y_rate }}">
                 <span class="test-value" id="rateStressValue">{{ "%.2f"|format(mortgage_30y_rate) }}%</span>
                 <button type="button" class="reset-btn" id="rateStressReset" hidden>Reset</button>
             </div>
@@ -1458,11 +1468,30 @@ function applyStressRate(rate) {
         const coc = CP_METRICS.find(m => m.key === 'cash_on_cash');
         if (coc) {
             _cpMetric = coc;
-            const radio = document.querySelector(`.ds-radio input[value="cash_on_cash"]`);
-            if (radio) radio.checked = true;
             document.querySelectorAll('.ds-radio').forEach(r => {
-                r.classList.toggle('is-active', r.dataset.key === 'cash_on_cash');
+                const isCoC = r.dataset.key === 'cash_on_cash';
+                r.classList.toggle('is-active', isCoC);
+                const input = r.querySelector('input');
+                if (input) input.checked = isCoC;
             });
+            // Make the auto-switch visible: scroll the cash_on_cash
+            // radio into view in the sidebar + pulse it briefly. Same
+            // pulse on the legend title above the map. The user's eye
+            // is on the slider when they drag, so without these cues
+            // the metric switch goes unnoticed.
+            const radioEl = document.querySelector('.ds-radio[data-key="cash_on_cash"]');
+            if (radioEl) {
+                radioEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                radioEl.classList.remove('mp-stress-pulse');
+                void radioEl.offsetWidth;   // force reflow so the animation can replay on subsequent drags
+                radioEl.classList.add('mp-stress-pulse');
+            }
+            const legendTitle = document.getElementById('cpLegendTitle');
+            if (legendTitle) {
+                legendTitle.classList.remove('mp-stress-pulse');
+                void legendTitle.offsetWidth;
+                legendTitle.classList.add('mp-stress-pulse');
+            }
         }
     }
     if (_cpMetric) repaintChoropleth();
