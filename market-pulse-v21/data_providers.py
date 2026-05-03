@@ -790,11 +790,13 @@ CHOROPLETH_METRICS = [
     {"key": "median_income", "label": "Median household income","format": "money","good_when": "high", "decimals": 0, "category": "Demographic"},
     {"key": "wage_growth",   "label": "Wage growth/yr",        "unit": "%",  "good_when": "high", "decimals": 1, "category": "Demographic"},
     {"key": "median_age",    "label": "Median age",            "unit": "",   "good_when": "low",  "decimals": 1, "category": "Demographic"},
-    # Derived composite — see _compute_derived_metrics(). Captures
-    # "best metro for a young professional" by blending youth (low
-    # median age), job + wage momentum, low cost of living, and
-    # walkability. Popular metric in the Demographic section.
+    # Persona composites — see _compute_derived_metrics(). Each blends
+    # the dimensions that a specific buyer/lifestyle persona prioritizes.
+    # All popular so they surface in the headline section of the sidebar.
     {"key": "young_pro_score","label": "Young Professional",   "unit": "",   "good_when": "high", "decimals": 0, "category": "Demographic", "popular": True},
+    {"key": "college_score",  "label": "College / Student",    "unit": "",   "good_when": "high", "decimals": 0, "category": "Demographic", "popular": True},
+    {"key": "family_score",   "label": "Family",               "unit": "",   "good_when": "high", "decimals": 0, "category": "Demographic", "popular": True},
+    {"key": "retirement_score","label": "Retirement",          "unit": "",   "good_when": "high", "decimals": 0, "category": "Demographic", "popular": True},
     {"key": "walk",          "label": "Walk score",            "unit": "",   "good_when": "high", "decimals": 0, "category": "Climate & Lifestyle"},
     {"key": "schools",       "label": "School quality",        "unit": "/10","good_when": "high", "decimals": 0, "category": "Climate & Lifestyle"},
 ]
@@ -928,6 +930,43 @@ def _compute_derived_metrics() -> None:
         "col":            (184.0, 86.0),  # FLIPPED: lower COL scores higher
         "walk":           (27.0, 77.0),
     }
+    # College / Student composite: what undergrad + grad students care
+    # about. Affordable rent (most students rent), low COL for the
+    # entry-level wage, walkable college life, lower median age means
+    # peer-aged demographic, post-grad job market for after graduation,
+    # low income tax for entry-level salaries.
+    COL_BOUNDS = {
+        "median_rent":    (2900.0, 1000.0),  # FLIPPED: cheap rent scores higher
+        "col":            (184.0, 86.0),     # FLIPPED
+        "walk":           (27.0, 77.0),
+        "median_age":     (44.8, 31.9),      # FLIPPED
+        "job_growth_yoy": ( 0.5, 3.0),
+        "income_tax":     ( 7.5, 0.0),       # FLIPPED: low tax scores higher
+    }
+    # Family composite: schools dominate, then affordability, then area
+    # momentum (pop growth = good services investment), low taxes, low
+    # insurance (carrying cost), sunshine (outdoor lifestyle for kids).
+    # No median-age component — families span all ages.
+    FAM_BOUNDS = {
+        "schools":      ( 4.0, 9.0),
+        "col":          (184.0, 86.0),  # FLIPPED
+        "pop_growth":   (-0.5, 1.7),
+        "sunshine":     (134.0, 290.0),
+        "insurance":    (5500.0, 800.0),  # FLIPPED
+        "income_tax":   ( 7.5, 0.0),     # FLIPPED
+    }
+    # Retirement composite: low income tax (esp. on SS/pensions in
+    # states like FL/NV/TX/TN), low property tax, low COL, sunshine
+    # (warmer climate retirees migrate toward), low insurance, older
+    # median age = peer demographic. Job/wage growth doesn't matter.
+    RET_BOUNDS = {
+        "income_tax":   ( 7.5, 0.0),       # FLIPPED
+        "property_tax": ( 2.49, 0.32),     # FLIPPED
+        "col":          (184.0, 86.0),     # FLIPPED
+        "sunshine":     (134.0, 290.0),
+        "insurance":    (5500.0, 800.0),   # FLIPPED
+        "median_age":   (31.9, 44.8),      # NOT flipped: higher age = peers
+    }
 
     def _rescale(v, lo, hi):
         if v is None:
@@ -962,14 +1001,22 @@ def _compute_derived_metrics() -> None:
                 fh_components.append(t)
         if fh_components:
             sd["fiscal_health"] = round(sum(fh_components) / len(fh_components) * 100)
-        # Young Professional composite — same averaging pattern.
-        yp_components = []
-        for key, (lo, hi) in YP_BOUNDS.items():
-            t = _rescale(sd.get(key), lo, hi)
-            if t is not None:
-                yp_components.append(t)
-        if yp_components:
-            sd["young_pro_score"] = round(sum(yp_components) / len(yp_components) * 100)
+        # Persona composites — same averaging pattern across all four.
+        # Each loops over its bounds dict, rescales available inputs to
+        # [0,1], then averages. Missing inputs drop out (no penalty).
+        for score_key, bounds in (
+            ("young_pro_score",   YP_BOUNDS),
+            ("college_score",     COL_BOUNDS),
+            ("family_score",      FAM_BOUNDS),
+            ("retirement_score",  RET_BOUNDS),
+        ):
+            components = []
+            for key, (lo, hi) in bounds.items():
+                t = _rescale(sd.get(key), lo, hi)
+                if t is not None:
+                    components.append(t)
+            if components:
+                sd[score_key] = round(sum(components) / len(components) * 100)
 
 
 _compute_derived_metrics()
