@@ -37,8 +37,8 @@
         </label>
 
         <label class="afford-row">
-            <span>Interest rate <span class="hint" title="30-year fixed. Drag between 4% and 8%.">ⓘ</span><span id="rate-readout" class="readout">6.50%</span></span>
-            <input id="i-rate" type="range" min="4.0" max="8.0" step="0.125" value="6.5">
+            <span>Interest rate <span class="hint" title="30-year fixed (Freddie Mac PMMS, week ending {{ mortgage_30y_obs_date }}). Drag to test other rates.">ⓘ</span><span id="rate-readout" class="readout">{{ "%.2f"|format(mortgage_30y_rate) }}%</span></span>
+            <input id="i-rate" type="range" min="4.0" max="8.0" step="0.125" value="{{ mortgage_30y_rate }}">
         </label>
 
         <div class="afford-row">
@@ -274,7 +274,7 @@
         </label>
         <label class="afford-row" style="margin:0;">
             <span>New rate</span>
-            <input id="refi-rate-new" type="number" inputmode="decimal" min="0.5" max="15" step="0.125" value="6.0">
+            <input id="refi-rate-new" type="number" inputmode="decimal" min="0.5" max="15" step="0.125" value="{{ mortgage_30y_rate }}">
         </label>
         <label class="afford-row" style="margin:0;">
             <span>Years remaining</span>
@@ -324,7 +324,7 @@
         </label>
         <label class="afford-row" style="margin:0;">
             <span>Base rate (no buydown)</span>
-            <input id="bd-rate" type="number" inputmode="decimal" min="0.5" max="15" step="0.125" value="6.5">
+            <input id="bd-rate" type="number" inputmode="decimal" min="0.5" max="15" step="0.125" value="{{ mortgage_30y_rate }}">
         </label>
         <label class="afford-row" style="margin:0;">
             <span>Term (years)</span>

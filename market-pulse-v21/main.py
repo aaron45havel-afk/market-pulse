@@ -79,6 +79,7 @@ async def national_map(request: Request):
     from data_providers import (
         STATE_SUNSHINE_DAYS, STATE_INCOME_TAX_EFFECTIVE, STATE_POPULATION_GROWTH,
         CHOROPLETH_STATES, CHOROPLETH_METRICS,
+        MORTGAGE_30Y_RATE, MORTGAGE_30Y_OBS_DATE,
     )
     metros = []
     for slug, cfg in STATE_METROS.items():
@@ -163,6 +164,8 @@ async def national_map(request: Request):
         "metros": metros,
         "choropleth_states": choropleth_by_fips,
         "choropleth_metrics": CHOROPLETH_METRICS,
+        "mortgage_30y_rate": MORTGAGE_30Y_RATE,
+        "mortgage_30y_obs_date": MORTGAGE_30Y_OBS_DATE,
     })
 
 
@@ -201,7 +204,12 @@ async def state_map(request: Request, slug: str):
 
 @app.get("/affordability")
 async def affordability(request: Request):
-    return templates.TemplateResponse("affordability.html", {"request": request})
+    from data_providers import MORTGAGE_30Y_RATE, MORTGAGE_30Y_OBS_DATE
+    return templates.TemplateResponse("affordability.html", {
+        "request": request,
+        "mortgage_30y_rate": MORTGAGE_30Y_RATE,
+        "mortgage_30y_obs_date": MORTGAGE_30Y_OBS_DATE,
+    })
 
 
 @app.get("/finance")

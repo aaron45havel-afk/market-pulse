@@ -772,6 +772,13 @@ CHOROPLETH_METRICS = [
     # Derived metric — computed in _compute_derived_metrics() from
     # home_value + median_income against the 3.5x national P/I norm.
     {"key": "overvalued_pct","label": "Overvalued vs income",  "unit": "%",  "good_when": "low",  "decimals": 1, "category": "Market", "popular": True},
+    # Derived metric — _compute_derived_metrics() computes cash-on-cash
+    # return at today's 30-yr fixed rate (MORTGAGE_30Y_RATE), assuming
+    # 20% down, state-effective property tax + insurance, and a 18%-of-
+    # rent vacancy/maintenance reserve. Negative numbers mean the deal
+    # doesn't cash flow at current rates. The single metric in the
+    # dataset that actually moves when the Fed changes rates.
+    {"key": "cash_on_cash",  "label": "Cash-on-cash @ today's rate","unit": "%","good_when": "high","decimals": 1, "category": "Market", "popular": True},
     # Growth Outlook category — forward-leaning indicators that capture
     # how a state's housing demand pipeline looks 1-3 years out.
     {"key": "growth_score",   "label": "Growth Outlook score",  "unit": "",   "good_when": "high", "decimals": 0, "category": "Growth Outlook", "popular": True},
@@ -869,6 +876,23 @@ def _apply_growth_overrides() -> None:
 _apply_redfin_overrides()
 _apply_zillow_state_overrides()
 _apply_growth_overrides()
+
+
+# Current 30-yr fixed mortgage rate (FRED MORTGAGE30US, refreshed weekly
+# by scripts/refresh_rates.py + .github/workflows/refresh-rates.yml).
+# Module-level so /map header chip + /affordability default + the
+# cash_on_cash composite all read the same value. Falls back to a
+# recent seed if the JSON file is missing or malformed.
+MORTGAGE_30Y_RATE = 6.65
+MORTGAGE_30Y_OBS_DATE = "2026-05-01"
+try:
+    _rates_path = Path(__file__).parent / "data" / "rates.json"
+    if _rates_path.exists():
+        _rates_data = json.loads(_rates_path.read_text())
+        MORTGAGE_30Y_RATE = float(_rates_data.get("mortgage_30y", MORTGAGE_30Y_RATE))
+        MORTGAGE_30Y_OBS_DATE = _rates_data.get("mortgage_30y_obs_date", MORTGAGE_30Y_OBS_DATE)
+except (json.JSONDecodeError, OSError, ValueError, TypeError):
+    pass  # keep seed defaults
 
 
 # Derived metrics — computed after primary fields are loaded so they
@@ -974,6 +998,34 @@ def _compute_derived_metrics() -> None:
         t = (v - lo) / (hi - lo) if hi > lo else 0.5
         return max(0.0, min(1.0, t))
 
+    # Cash-on-cash helper. 20% down, 30-yr fixed at current rate, plus
+    # state-effective property tax + insurance + an 18%-of-rent reserve
+    # (vacancy 8% + maintenance 10%). Returns % per year on cash invested.
+    # Negative values mean the deal doesn't cash flow at today's rates.
+    def _cash_on_cash(home_value, monthly_rent, prop_tax_pct, ins_annual, rate_pct):
+        if not home_value or not monthly_rent or rate_pct <= 0:
+            return None
+        annual_rent = monthly_rent * 12
+        opex = (
+            home_value * (prop_tax_pct / 100.0) +
+            (ins_annual or 0) +
+            annual_rent * 0.18
+        )
+        noi = annual_rent - opex
+        # 30-yr P&I on 80% LTV at current rate.
+        loan = home_value * 0.80
+        r = (rate_pct / 100.0) / 12.0
+        n = 360
+        if r <= 0:
+            annual_pi = loan / (n / 12.0)
+        else:
+            monthly_pi = loan * r * (1 + r) ** n / ((1 + r) ** n - 1)
+            annual_pi = monthly_pi * 12
+        down = home_value * 0.20
+        if down <= 0:
+            return None
+        return round((noi - annual_pi) / down * 100, 1)
+
     for sd in CHOROPLETH_STATES.values():
         # Overvalued vs income.
         hv = sd.get("home_value")
@@ -982,6 +1034,16 @@ def _compute_derived_metrics() -> None:
             sd["overvalued_pct"] = round(
                 (hv / (NATIONAL_PI_NORM * income) - 1) * 100, 1
             )
+        # Cash-on-cash @ today's 30-yr fixed rate.
+        coc = _cash_on_cash(
+            home_value=sd.get("home_value"),
+            monthly_rent=sd.get("median_rent"),
+            prop_tax_pct=sd.get("property_tax", 0),
+            ins_annual=sd.get("insurance", 0),
+            rate_pct=MORTGAGE_30Y_RATE,
+        )
+        if coc is not None:
+            sd["cash_on_cash"] = coc
         # Growth Outlook composite — average of available sub-scores.
         # If any input is missing, that component drops out (we don't
         # penalize states for missing data; we just compute on what

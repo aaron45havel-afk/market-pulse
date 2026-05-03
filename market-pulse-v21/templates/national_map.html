@@ -22,9 +22,15 @@
     .map-page { display: flex; flex-direction: column; height: 100vh; position: relative; }
     @media (max-width: 768px) { .map-page { height: calc(100vh - 52px); } }
 
-    .map-header { padding: 0.85rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; flex: 0 0 auto; }
+    .map-header { padding: 0.85rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; flex: 0 0 auto; }
     .map-header h1 { font-size: 1.1rem; margin: 0; }
     .map-header .sub { color: var(--text-dim); font-size: 0.78rem; }
+    /* Live mortgage-rate chip — pinned right of the header. Drives
+       the cash_on_cash composite + the affordability calc default. */
+    .rate-chip { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; padding: 0.35rem 0.85rem; font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+    .rate-chip .label { color: var(--text-dim); }
+    .rate-chip .value { color: var(--accent); font-weight: 700; }
+    .rate-chip .obs { color: var(--text-dim); font-size: 0.68rem; }
 
     /* Three-column body: data sidebar | map | leaderboard rail. Both
        side panels collapse below the map on tablet/mobile. */
@@ -322,6 +328,11 @@
         <div>
             <h1>Neighborhood Investor Map — National</h1>
             <div class="sub">{{ metros|length }} metros · click any pin or pick from the list on the right to see the metro summary.</div>
+        </div>
+        <div class="rate-chip" title="30-year fixed mortgage rate (Freddie Mac PMMS, FRED MORTGAGE30US). Powers the Cash-on-cash metric + Affordability calc default.">
+            <span class="label">30-yr fixed</span>
+            <span class="value">{{ "%.2f"|format(mortgage_30y_rate) }}%</span>
+            <span class="obs">{{ mortgage_30y_obs_date }}</span>
         </div>
     </div>
 
