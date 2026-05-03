@@ -4265,6 +4265,7 @@ STATE_METROS: dict[str, dict] = {
     "TX": {
         "state": "TX",
         "metro_label": "Dallas County",
+        "tiktok_hashtag": "dallastx",
         "subtitle": "ZIP-level cap rate, crime, schools, income & affordability for Dallas County — composite weighted for an SFR investor lens.",
         "map_center": {"lat": 32.78, "lng": -96.80, "zoom": 11},
         "zips": DALLAS_ZIPS,
@@ -4275,6 +4276,7 @@ STATE_METROS: dict[str, dict] = {
     "TX-HOU": {
         "state": "TX",
         "metro_label": "Houston / Harris County",
+        "tiktok_hashtag": "houston",
         "subtitle": "ZIP-level scores for the Houston metro — Inner Loop (Downtown, Montrose, Heights, West U, River Oaks, Memorial), Galleria + Energy Corridor employment cores, plus high-cap-rate Sharpstown and Sunnyside.",
         "map_center": {"lat": 29.76, "lng": -95.40, "zoom": 10},
         "zips": HOUSTON_ZIPS,
@@ -4287,6 +4289,7 @@ STATE_METROS: dict[str, dict] = {
     "TX-FW": {
         "state": "TX",
         "metro_label": "Fort Worth / Tarrant County",
+        "tiktok_hashtag": "fortworth",
         "subtitle": "ZIP-level scores for the Fort Worth side of DFW — Cultural District, TCU, Near Southside, plus the wealthy NE suburbs (Southlake, Grapevine, Keller, Colleyville-adj) and Mansfield / Arlington.",
         "map_center": {"lat": 32.80, "lng": -97.30, "zoom": 10},
         "zips": FORT_WORTH_ZIPS,
@@ -4299,6 +4302,7 @@ STATE_METROS: dict[str, dict] = {
     "TX-SA": {
         "state": "TX",
         "metro_label": "San Antonio / Bexar County",
+        "tiktok_hashtag": "sanantoniotx",
         "subtitle": "ZIP-level scores for the San Antonio metro — Downtown / King William, the Pearl District, Castle Hills, Stone Oak, Hollywood Park, plus high-cap-rate West and South Side ZIPs.",
         "map_center": {"lat": 29.50, "lng": -98.50, "zoom": 10},
         "zips": SAN_ANTONIO_ZIPS,
@@ -4311,6 +4315,7 @@ STATE_METROS: dict[str, dict] = {
     "TX-AUS": {
         "state": "TX",
         "metro_label": "Austin / Travis County",
+        "tiktok_hashtag": "austintx",
         "subtitle": "ZIP-level scores for the Austin metro — Downtown, East Austin, Tarrytown, S Congress, NW Hills, the tech corridor (Anderson Mill / Avery Ranch), Barton Creek, and the high-cap-rate SE pockets.",
         "map_center": {"lat": 30.30, "lng": -97.75, "zoom": 11},
         "zips": AUSTIN_ZIPS,
@@ -4324,6 +4329,7 @@ STATE_METROS: dict[str, dict] = {
     "CA": {
         "state": "CA",
         "metro_label": "Los Angeles County",
+        "tiktok_hashtag": "losangeles",
         "subtitle": "ZIP-level scores for greater Los Angeles — beach, hills, urban core, and high-cap-rate South LA submarkets.",
         "map_center": {"lat": 34.05, "lng": -118.30, "zoom": 10},
         "zips": LA_ZIPS,
@@ -4335,6 +4341,7 @@ STATE_METROS: dict[str, dict] = {
     "CA-SD": {
         "state": "CA",
         "metro_label": "San Diego County",
+        "tiktok_hashtag": "sandiego",
         "subtitle": "ZIP-level scores for San Diego — Downtown / Gaslamp, the beach corridor (OB / PB / La Jolla), tech-employer ZIPs around UTC, family suburbs (Poway / 4S Ranch / Encinitas), plus high-cap-rate Encanto.",
         "map_center": {"lat": 32.85, "lng": -117.15, "zoom": 10},
         "zips": SAN_DIEGO_ZIPS,
@@ -4348,6 +4355,7 @@ STATE_METROS: dict[str, dict] = {
     "CA-SAC": {
         "state": "CA",
         "metro_label": "Sacramento / Sacramento County",
+        "tiktok_hashtag": "sacramento",
         "subtitle": "ZIP-level scores for Sacramento — Downtown / Capitol urban core, Midtown walkable hip tier, East Sac / Land Park established upscale, Pocket / Greenhaven family suburbs, South Sac + Florin high-cap-rate ZIPs, plus North + South Natomas master-planned newer construction.",
         "map_center": {"lat": 38.58, "lng": -121.49, "zoom": 11},
         "zips": SACRAMENTO_ZIPS,
@@ -4361,6 +4369,7 @@ STATE_METROS: dict[str, dict] = {
     "CA-SF": {
         "state": "CA",
         "metro_label": "San Francisco / Bay Area",
+        "tiktok_hashtag": "sanfrancisco",
         "subtitle": "ZIP-level scores for SF proper + close-in East Bay anchors (Oakland + Piedmont). Cap rates here are notoriously bad (1.5-3%); use this view for walkability + appreciation, not cash flow.",
         "map_center": {"lat": 37.77, "lng": -122.42, "zoom": 12},
         "zips": SF_BAY_ZIPS,
@@ -4374,6 +4383,7 @@ STATE_METROS: dict[str, dict] = {
     "UT": {
         "state": "UT",
         "metro_label": "Utah County (Provo / Silicon Slopes)",
+        "tiktok_hashtag": "utahcounty",
         "subtitle": "ZIP-level scores for the Utah Valley — Provo, Orem, and the Lehi tech corridor south of Salt Lake.",
         "map_center": {"lat": 40.30, "lng": -111.75, "zoom": 10},
         "zips": PROVO_ZIPS,
@@ -4385,6 +4395,7 @@ STATE_METROS: dict[str, dict] = {
     "UT-SLC": {
         "state": "UT",
         "metro_label": "Wasatch Front North (SLC / Ogden / Logan)",
+        "tiktok_hashtag": "saltlakecity",
         "subtitle": "ZIP-level scores for Salt Lake County and the corridor north — SLC core, Davis County (Bountiful / Farmington / Kaysville), Weber County (Ogden), and Cache County (Logan).",
         "map_center": {"lat": 41.05, "lng": -111.95, "zoom": 8},
         "zips": WASATCH_NORTH_ZIPS,
@@ -4397,6 +4408,7 @@ STATE_METROS: dict[str, dict] = {
     "UT-STG": {
         "state": "UT",
         "metro_label": "Washington County (St. George)",
+        "tiktok_hashtag": "stgeorgeutah",
         "subtitle": "ZIP-level scores for Southern Utah — St. George, Washington City, Hurricane, Ivins. Heavy retiree/family mix, very different cycle from the Wasatch Front.",
         "map_center": {"lat": 37.13, "lng": -113.45, "zoom": 10},
         "zips": ST_GEORGE_ZIPS,
@@ -4408,6 +4420,7 @@ STATE_METROS: dict[str, dict] = {
     "NV-LV": {
         "state": "NV",
         "metro_label": "Las Vegas / Clark County",
+        "tiktok_hashtag": "lasvegas",
         "subtitle": "ZIP-level scores for the Las Vegas valley — Strip, Spring Valley, Summerlin, Henderson, North Las Vegas.",
         "map_center": {"lat": 36.10, "lng": -115.20, "zoom": 10},
         "zips": LAS_VEGAS_ZIPS,
@@ -4420,6 +4433,7 @@ STATE_METROS: dict[str, dict] = {
     "NV-CC": {
         "state": "NV",
         "metro_label": "Carson City",
+        "tiktok_hashtag": "carsoncitynevada",
         "subtitle": "ZIP-level scores for the Carson City consolidated city/county — state capital, retiree-heavy, smaller market with its own dynamics distinct from Reno.",
         "map_center": {"lat": 39.16, "lng": -119.76, "zoom": 12},
         "zips": CARSON_CITY_ZIPS,
@@ -4432,6 +4446,7 @@ STATE_METROS: dict[str, dict] = {
     "NV-RNO": {
         "state": "NV",
         "metro_label": "Reno / Sparks (Washoe County)",
+        "tiktok_hashtag": "renonevada",
         "subtitle": "ZIP-level scores for the Reno-Sparks metro — UNR, downtown, Caughlin Ranch, Spanish Springs, Damonte Ranch.",
         "map_center": {"lat": 39.55, "lng": -119.78, "zoom": 10},
         "zips": RENO_ZIPS,
@@ -4444,6 +4459,7 @@ STATE_METROS: dict[str, dict] = {
     "FL-MIA": {
         "state": "FL",
         "metro_label": "Miami-Dade County",
+        "tiktok_hashtag": "miami",
         "subtitle": "ZIP-level scores for greater Miami — Brickell, the Beaches, Coral Gables, Pinecrest, Aventura, Kendall, Doral.",
         "map_center": {"lat": 25.78, "lng": -80.20, "zoom": 10},
         "zips": MIAMI_ZIPS,
@@ -4456,6 +4472,7 @@ STATE_METROS: dict[str, dict] = {
     "FL-ORL": {
         "state": "FL",
         "metro_label": "Orlando / Orange County",
+        "tiktok_hashtag": "orlandoflorida",
         "subtitle": "ZIP-level scores for the Orlando metro — Downtown, Winter Park, Lake Nona, Dr Phillips, UCF area, plus high-cap-rate SW pockets.",
         "map_center": {"lat": 28.53, "lng": -81.38, "zoom": 10},
         "zips": ORLANDO_ZIPS,
@@ -4468,6 +4485,7 @@ STATE_METROS: dict[str, dict] = {
     "FL-JAX": {
         "state": "FL",
         "metro_label": "Jacksonville / Duval County",
+        "tiktok_hashtag": "jacksonvillefl",
         "subtitle": "ZIP-level scores for Jacksonville — Downtown, the historic Riverside / Avondale + San Marco walkable tier, the beaches corridor (Atlantic Beach), Mandarin family suburbs, plus high-cap-rate Westside ZIPs.",
         "map_center": {"lat": 30.33, "lng": -81.65, "zoom": 10},
         "zips": JACKSONVILLE_ZIPS,
@@ -4481,6 +4499,7 @@ STATE_METROS: dict[str, dict] = {
     "FL-WPB": {
         "state": "FL",
         "metro_label": "West Palm Beach / Palm Beach County",
+        "tiktok_hashtag": "westpalmbeach",
         "subtitle": "ZIP-level scores for Palm Beach County — Downtown WPB, the ultra-luxury Palm Beach island, the Jupiter / Palm Beach Gardens beach corridor, Wellington (top schools / equestrian), Boca Raton, and the Delray Beach hip walkable tier.",
         "map_center": {"lat": 26.65, "lng": -80.10, "zoom": 9},
         "zips": WEST_PALM_BEACH_ZIPS,
@@ -4494,6 +4513,7 @@ STATE_METROS: dict[str, dict] = {
     "FL-FTL": {
         "state": "FL",
         "metro_label": "Fort Lauderdale / Broward County",
+        "tiktok_hashtag": "fortlauderdale",
         "subtitle": "ZIP-level scores for Broward — Downtown / Las Olas, Wilton Manors + Coral Ridge, the Beach corridor, the Weston / Parkland luxury family tier, Pembroke Pines + Hollywood, plus high-cap-rate Lauderhill / Tamarac.",
         "map_center": {"lat": 26.13, "lng": -80.20, "zoom": 10},
         "zips": FORT_LAUDERDALE_ZIPS,
@@ -4507,6 +4527,7 @@ STATE_METROS: dict[str, dict] = {
     "FL-TPA": {
         "state": "FL",
         "metro_label": "Tampa / Hillsborough County",
+        "tiktok_hashtag": "tampaflorida",
         "subtitle": "ZIP-level scores for Tampa — Downtown / Channelside urban core, Ybor City + Seminole Heights walkable historic tier, Hyde Park / Davis Islands + Bayshore upscale corridor, MacDill-anchored South Tampa, USF / Brandon high-cap-rate ZIPs, plus Westchase + New Tampa master-planned family suburbs.",
         "map_center": {"lat": 27.95, "lng": -82.46, "zoom": 10},
         "zips": TAMPA_ZIPS,
@@ -4520,6 +4541,7 @@ STATE_METROS: dict[str, dict] = {
     "GA-ATL": {
         "state": "GA",
         "metro_label": "Atlanta Metro",
+        "tiktok_hashtag": "atlanta",
         "subtitle": "ZIP-level scores for the Atlanta metro — intown (Midtown, Buckhead, O4W, Inman Park, Westside, Grant Park), DeKalb (Decatur, Druid Hills), Cobb (East Cobb), Gwinnett (Duluth), and Forsyth exurbs (Cumming).",
         "map_center": {"lat": 33.85, "lng": -84.35, "zoom": 10},
         "zips": ATLANTA_ZIPS,
@@ -4532,6 +4554,7 @@ STATE_METROS: dict[str, dict] = {
     "GA-SAV": {
         "state": "GA",
         "metro_label": "Savannah / Chatham County",
+        "tiktok_hashtag": "savannahga",
         "subtitle": "ZIP-level scores for Chatham County — the tourism-heavy Historic District, Ardsley Park midtown, the coastal islands (Wilmington, Skidaway / The Landings), Pooler growth corridor, plus high-cap-rate inner-city pockets.",
         "map_center": {"lat": 32.05, "lng": -81.10, "zoom": 11},
         "zips": SAVANNAH_ZIPS,
@@ -4546,6 +4569,7 @@ STATE_METROS: dict[str, dict] = {
     "OH": {
         "state": "OH",
         "metro_label": "Columbus / Franklin County",
+        "tiktok_hashtag": "columbusohio",
         "subtitle": "ZIP-level scores for Columbus — Downtown / Arena District urban core, Short North + German Village walkable historic tier, Bexley + Upper Arlington premier family enclaves, Dublin master-planned corridor, OSU campus + Hilltop affordable high-cap-rate ZIPs.",
         "map_center": {"lat": 39.96, "lng": -83.00, "zoom": 11},
         "zips": COLUMBUS_ZIPS,
@@ -4559,6 +4583,7 @@ STATE_METROS: dict[str, dict] = {
     "OH-CLE": {
         "state": "OH",
         "metro_label": "Cleveland / Cuyahoga County",
+        "tiktok_hashtag": "cleveland",
         "subtitle": "ZIP-level scores for Cleveland — Tremont / Ohio City + Lakewood walkable revival corridors, Cleveland Clinic / CWRU University Circle + Little Italy, Rocky River + Shaker Heights + Cleveland Heights premier inner-ring suburbs, Glenville + South Euclid + West Park high-cap-rate ZIPs (some of the cheapest in the US).",
         "map_center": {"lat": 41.50, "lng": -81.69, "zoom": 11},
         "zips": CLEVELAND_ZIPS,
@@ -4573,6 +4598,7 @@ STATE_METROS: dict[str, dict] = {
     "OH-CIN": {
         "state": "OH",
         "metro_label": "Cincinnati / Hamilton County",
+        "tiktok_hashtag": "cincinnati",
         "subtitle": "ZIP-level scores for Cincinnati — Over-the-Rhine + Downtown walkable revival, Hyde Park / Mt Lookout / Mariemont premier family suburbs, Oakley + Clifton hip walkable tier, Walnut Hills + Mt Auburn gentrifying middle, Westwood + West End high-cap-rate inner-ring ZIPs.",
         "map_center": {"lat": 39.13, "lng": -84.50, "zoom": 11},
         "zips": CINCINNATI_ZIPS,
@@ -4587,6 +4613,7 @@ STATE_METROS: dict[str, dict] = {
     "CO": {
         "state": "CO",
         "metro_label": "Denver / Denver County",
+        "tiktok_hashtag": "denver",
         "subtitle": "ZIP-level scores for Denver — LoDo + RiNo / Five Points walkable urban core, Cherry Creek + Wash Park premier walkable upscale, Capitol Hill + Cheesman Park + Highland hip historic tier, Park Hill + DU established family corridor, plus West Denver + Aurora central high-cap-rate ZIPs.",
         "map_center": {"lat": 39.74, "lng": -104.99, "zoom": 11},
         "zips": DENVER_ZIPS,
@@ -4601,6 +4628,7 @@ STATE_METROS: dict[str, dict] = {
     "CO-FTC": {
         "state": "CO",
         "metro_label": "Fort Collins / Larimer County",
+        "tiktok_hashtag": "fortcollins",
         "subtitle": "ZIP-level scores for Fort Collins-Loveland — Old Town walkable historic district, CSU + Midtown / South FC, Harmony corridor + Timnath master-planned upscale, Loveland east+west commuter belt, Berthoud + Windsor growth-corridor edges, plus Estes Park (Rocky Mountain National Park gateway).",
         "map_center": {"lat": 40.50, "lng": -105.08, "zoom": 10},
         "zips": FORT_COLLINS_ZIPS,
@@ -4615,6 +4643,7 @@ STATE_METROS: dict[str, dict] = {
     "SC-CHS": {
         "state": "SC",
         "metro_label": "Charleston Metro",
+        "tiktok_hashtag": "charlestonsc",
         "subtitle": "ZIP-level scores for the Charleston tri-county MSA (Charleston + Berkeley + Dorchester). Downtown / Historic District walkable luxury, Upper King + James Island + West Ashley middle tier, Mt Pleasant + Daniel Island premier coastal-suburb upscale, Johns Island growth corridor, Summerville / Goose Creek affordable family suburbs (Joint Base Charleston + Boeing 787 anchored).",
         "map_center": {"lat": 32.85, "lng": -79.95, "zoom": 10},
         "zips": CHARLESTON_ZIPS,
@@ -4630,6 +4659,7 @@ STATE_METROS: dict[str, dict] = {
     "RI": {
         "state": "RI",
         "metro_label": "Providence + greater RI",
+        "tiktok_hashtag": "rhodeisland",
         "subtitle": "ZIP-level scores for Providence + greater RI — Downtown + Federal Hill walkable hip, East Side / Brown / Wayland premier walkable upscale, East Greenwich + Cumberland family suburbs, Newport coastal historic luxury, plus Olneyville + South Providence + Pawtucket high-cap-rate ZIPs. RI is the smallest US state by area; the whole state functions as one metro.",
         "map_center": {"lat": 41.75, "lng": -71.40, "zoom": 9},
         "zips": PROVIDENCE_ZIPS,
@@ -4644,6 +4674,7 @@ STATE_METROS: dict[str, dict] = {
     "AZ-TUC": {
         "state": "AZ",
         "metro_label": "Tucson / Pima County",
+        "tiktok_hashtag": "tucson",
         "subtitle": "ZIP-level scores for Tucson — Downtown urban core, Sam Hughes + University of Arizona walkable historic, Catalina Foothills + Oro Valley premium upscale, plus the affordable Westside / Southside / Old Pueblo high-cap-rate ZIPs. Half the price of Phoenix with similar climate and a genuine cultural scene.",
         "map_center": {"lat": 32.22, "lng": -110.93, "zoom": 11},
         "zips": TUCSON_ZIPS,
@@ -4658,6 +4689,7 @@ STATE_METROS: dict[str, dict] = {
     "TN-MEM": {
         "state": "TN",
         "metro_label": "Memphis / Shelby County",
+        "tiktok_hashtag": "memphis",
         "subtitle": "ZIP-level scores for Memphis — Downtown + Cooper-Young walkable, U of Memphis student-rental tier, North Memphis + Orange Mound high-cap-rate (some of cheapest US ZIPs), East Memphis Yorkshire / Galloway premier upscale, Germantown + Bartlett family suburbs.",
         "map_center": {"lat": 35.15, "lng": -89.95, "zoom": 11},
         "zips": MEMPHIS_ZIPS,
@@ -4672,6 +4704,7 @@ STATE_METROS: dict[str, dict] = {
     "TN": {
         "state": "TN",
         "metro_label": "Nashville / Davidson County",
+        "tiktok_hashtag": "nashville",
         "subtitle": "ZIP-level scores for Nashville — Lower Broadway / Music Row urban core, 12 South + East Nashville + Germantown gentrified hip tier, Belle Meade + Green Hills + Forest Hills established upscale, Vanderbilt / Hillsboro Village student-walkable, plus affordable Inglewood + Donelson edges.",
         "map_center": {"lat": 36.16, "lng": -86.78, "zoom": 11},
         "zips": NASHVILLE_ZIPS,
@@ -4686,6 +4719,7 @@ STATE_METROS: dict[str, dict] = {
     "WA": {
         "state": "WA",
         "metro_label": "Seattle / King County",
+        "tiktok_hashtag": "seattle",
         "subtitle": "ZIP-level scores for Seattle — Downtown / Pike Place + South Lake Union (Amazon HQ) urban core, Capitol Hill + Queen Anne walkable upscale, Ballard + Wallingford + Roosevelt premium family-walkable tier, West Seattle + Magnolia established luxury, Columbia City gentrifying, U-District student / Tukwila edge affordable.",
         "map_center": {"lat": 47.61, "lng": -122.33, "zoom": 11},
         "zips": SEATTLE_ZIPS,
@@ -4701,6 +4735,7 @@ STATE_METROS: dict[str, dict] = {
     "AZ": {
         "state": "AZ",
         "metro_label": "Maricopa County",
+        "tiktok_hashtag": "phoenixaz",
         "subtitle": "ZIP-level scores for the Phoenix metro — Phoenix proper, Scottsdale, Tempe, Chandler, Glendale.",
         "map_center": {"lat": 33.50, "lng": -112.00, "zoom": 10},
         "zips": PHOENIX_ZIPS,
@@ -4712,6 +4747,7 @@ STATE_METROS: dict[str, dict] = {
     "IN-FW": {
         "state": "IN",
         "metro_label": "Fort Wayne (Allen County)",
+        "tiktok_hashtag": "fortwayneindiana",
         "subtitle": "ZIP-level scores for the Fort Wayne metro — Downtown, the historic Indian Village + Wildwood Park (South Wayne), the Aboite Township growth corridor (NW), plus high-cap-rate inner-southeast pockets.",
         "map_center": {"lat": 41.10, "lng": -85.13, "zoom": 11},
         "zips": FORT_WAYNE_ZIPS,
@@ -4725,6 +4761,7 @@ STATE_METROS: dict[str, dict] = {
     "IN-IND": {
         "state": "IN",
         "metro_label": "Indianapolis (Marion County)",
+        "tiktok_hashtag": "indianapolis",
         "subtitle": "ZIP-level scores for the Indianapolis metro — Downtown / IUPUI, Broad Ripple + Butler-Tarkington north side, gentrifying inner east + south, plus the high-end North Meridian and Carmel anchor.",
         "map_center": {"lat": 39.82, "lng": -86.15, "zoom": 11},
         "zips": INDIANAPOLIS_ZIPS,

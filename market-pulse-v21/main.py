@@ -124,6 +124,7 @@ async def national_map(request: Request):
             "state": cfg["state"],
             "metro_label": cfg["metro_label"],
             "map_center": cfg["map_center"],
+            "tiktok_hashtag": cfg.get("tiktok_hashtag"),  # curated TikTok hashtag for "Explore on TikTok" CTA
             "top_zip": {
                 "zip": top_zip["zip"],
                 "name": top_zip["name"],
