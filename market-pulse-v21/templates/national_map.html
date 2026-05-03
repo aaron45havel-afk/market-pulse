@@ -38,12 +38,14 @@
     .rate-stress { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; padding: 0.35rem 0.85rem; font-size: 0.78rem; font-variant-numeric: tabular-nums; transition: background 0.15s, border-color 0.15s; }
     .rate-stress.is-active { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.5); }
     .rate-stress .label { color: var(--text-dim); }
-    .rate-stress input[type="range"] { -webkit-appearance: none; appearance: none; width: 100px; height: 4px; background: var(--border); border-radius: 2px; cursor: pointer; }
-    .rate-stress input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent2); cursor: pointer; border: none; }
-    .rate-stress input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--accent2); cursor: pointer; border: none; }
+    .rate-stress input[type="range"] { -webkit-appearance: none; appearance: none; width: 180px; height: 5px; background: var(--border); border-radius: 3px; cursor: pointer; outline: none; }
+    .rate-stress input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent2); cursor: grab; border: 2px solid var(--surface2); box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: transform 0.1s; }
+    .rate-stress input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--accent2); cursor: grab; border: 2px solid var(--surface2); box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: transform 0.1s; }
+    .rate-stress input[type="range"]:active::-webkit-slider-thumb { cursor: grabbing; transform: scale(1.15); }
+    .rate-stress input[type="range"]:active::-moz-range-thumb { cursor: grabbing; transform: scale(1.15); }
     .rate-stress.is-active input[type="range"]::-webkit-slider-thumb { background: #f59e0b; }
     .rate-stress.is-active input[type="range"]::-moz-range-thumb { background: #f59e0b; }
-    .rate-stress .test-value { color: var(--text); font-weight: 700; min-width: 3.4em; text-align: right; }
+    .rate-stress .test-value { color: var(--text); font-weight: 700; min-width: 4em; text-align: right; }
     .rate-stress.is-active .test-value { color: #f59e0b; }
     .rate-stress .reset-btn { background: transparent; border: none; color: var(--accent2); cursor: pointer; font-size: 0.72rem; padding: 0; text-decoration: underline; }
     .rate-stress .reset-btn:hover { color: var(--text); }
@@ -363,7 +365,7 @@
             </div>
             <div class="rate-stress" id="rateStress" title="Drag to test cash-on-cash at a different mortgage rate. The choropleth repaints if Cash-on-cash @ today's rate is the active metric.">
                 <span class="label">Stress test</span>
-                <input type="range" id="rateStressInput" min="4" max="9" step="0.05" value="{{ mortgage_30y_rate }}">
+                <input type="range" id="rateStressInput" min="2" max="9" step="0.05" value="{{ mortgage_30y_rate }}">
                 <span class="test-value" id="rateStressValue">{{ "%.2f"|format(mortgage_30y_rate) }}%</span>
                 <button type="button" class="reset-btn" id="rateStressReset" hidden>Reset</button>
             </div>
