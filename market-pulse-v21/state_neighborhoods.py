@@ -3407,6 +3407,124 @@ CHARLESTON_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# RI — Providence + greater RI (Providence + Kent + Newport counties): the
+# whole state functions as one metro (smallest US state by area). Brown +
+# RISD + Hasbro HQ + Boston commuter shed. From premier East Side / East
+# Greenwich / Newport waterfront to high-cap Olneyville + South Providence.
+# ─────────────────────────────────────────────────────────────────────────────
+PROVIDENCE_ZIPS: dict[str, dict] = {
+    "02903": {
+        "name": "Downtown Providence",
+        "lat": 41.8200, "lng": -71.4200,
+        "median_home_value": 440_000, "median_rent_monthly": 1_950,
+        "crime_index": 50, "pct_bachelors": 65,
+        "median_household_income": 58_000, "population": 12_000,
+        "walk_score": 90, "restaurant_score": 90,
+        "tags": ["urban", "walkable", "hip"],
+    },
+    "02906": {
+        "name": "East Side / Brown / Wayland",
+        "lat": 41.8350, "lng": -71.3950,
+        "median_home_value": 720_000, "median_rent_monthly": 2_500,
+        "crime_index": 25, "pct_bachelors": 80,
+        "median_household_income": 90_000, "population": 22_000,
+        "walk_score": 80, "restaurant_score": 75,
+        "tags": ["walkable", "upscale", "established", "historic"],
+    },
+    "02905": {
+        "name": "Federal Hill / Elmwood",
+        "lat": 41.8150, "lng": -71.4250,
+        "median_home_value": 410_000, "median_rent_monthly": 1_750,
+        "crime_index": 55, "pct_bachelors": 50,
+        "median_household_income": 52_000, "population": 17_000,
+        "walk_score": 75, "restaurant_score": 80,
+        "tags": ["walkable", "hip", "gentrifying"],
+    },
+    "02909": {
+        "name": "Olneyville / Silver Lake",
+        "lat": 41.8300, "lng": -71.4500,
+        "median_home_value": 310_000, "median_rent_monthly": 1_400,
+        "crime_index": 70, "pct_bachelors": 22,
+        "median_household_income": 42_000, "population": 28_000,
+        "walk_score": 60, "restaurant_score": 50,
+        "tags": ["affordable", "high-cap-rate", "high-crime"],
+    },
+    "02907": {
+        "name": "South Providence",
+        "lat": 41.7950, "lng": -71.4100,
+        "median_home_value": 280_000, "median_rent_monthly": 1_400,
+        "crime_index": 75, "pct_bachelors": 18,
+        "median_household_income": 35_000, "population": 22_000,
+        "walk_score": 65, "restaurant_score": 35,
+        "tags": ["affordable", "high-cap-rate", "high-crime"],
+    },
+    "02908": {
+        "name": "Smith Hill / Mt Pleasant",
+        "lat": 41.8450, "lng": -71.4300,
+        "median_home_value": 370_000, "median_rent_monthly": 1_650,
+        "crime_index": 50, "pct_bachelors": 35,
+        "median_household_income": 48_000, "population": 18_000,
+        "walk_score": 65, "restaurant_score": 50,
+        "tags": ["walkable", "mid-tier"],
+    },
+    "02914": {
+        "name": "East Providence",
+        "lat": 41.8120, "lng": -71.3700,
+        "median_home_value": 385_000, "median_rent_monthly": 1_750,
+        "crime_index": 32, "pct_bachelors": 35,
+        "median_household_income": 58_000, "population": 22_000,
+        "walk_score": 50, "restaurant_score": 50,
+        "tags": ["family", "mid-tier"],
+    },
+    "02860": {
+        "name": "Pawtucket",
+        "lat": 41.8800, "lng": -71.3850,
+        "median_home_value": 360_000, "median_rent_monthly": 1_650,
+        "crime_index": 55, "pct_bachelors": 30,
+        "median_household_income": 52_000, "population": 70_000,
+        "walk_score": 65, "restaurant_score": 50,
+        "tags": ["affordable", "mid-tier"],
+    },
+    "02864": {
+        "name": "Cumberland",
+        "lat": 41.9650, "lng": -71.4300,
+        "median_home_value": 545_000, "median_rent_monthly": 2_200,
+        "crime_index": 18, "pct_bachelors": 50,
+        "median_household_income": 115_000, "population": 35_000,
+        "walk_score": 30, "restaurant_score": 50,
+        "tags": ["family", "low-crime", "established"],
+    },
+    "02818": {
+        "name": "East Greenwich",
+        "lat": 41.6250, "lng": -71.4600,
+        "median_home_value": 730_000, "median_rent_monthly": 2_500,
+        "crime_index": 12, "pct_bachelors": 75,
+        "median_household_income": 145_000, "population": 14_000,
+        "walk_score": 35, "restaurant_score": 60,
+        "tags": ["family", "top-schools", "low-crime", "upscale"],
+    },
+    "02888": {
+        "name": "Warwick",
+        "lat": 41.7150, "lng": -71.4300,
+        "median_home_value": 410_000, "median_rent_monthly": 1_950,
+        "crime_index": 28, "pct_bachelors": 40,
+        "median_household_income": 80_000, "population": 50_000,
+        "walk_score": 35, "restaurant_score": 50,
+        "tags": ["family", "mid-tier"],
+    },
+    "02840": {
+        "name": "Newport",
+        "lat": 41.4900, "lng": -71.3100,
+        "median_home_value": 810_000, "median_rent_monthly": 2_800,
+        "crime_index": 22, "pct_bachelors": 65,
+        "median_household_income": 90_000, "population": 24_000,
+        "walk_score": 80, "restaurant_score": 90,
+        "tags": ["walkable", "hip", "historic", "beach"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # AZ — Tucson / Pima County: smaller, cheaper sister to Phoenix. University
 # of Arizona anchor + Davis-Monthan AFB + Raytheon Missiles. Sonoran desert
 # climate (4th hottest US metro). Spans gentrified Sam Hughes historic +
@@ -4011,7 +4129,8 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               TAMPA_ZIPS, SAVANNAH_ZIPS,
               COLUMBUS_ZIPS, CLEVELAND_ZIPS, CINCINNATI_ZIPS,
               DENVER_ZIPS, FORT_COLLINS_ZIPS,
-              CHARLESTON_ZIPS, SEATTLE_ZIPS, NASHVILLE_ZIPS, TUCSON_ZIPS):
+              CHARLESTON_ZIPS, SEATTLE_ZIPS, NASHVILLE_ZIPS, TUCSON_ZIPS,
+              PROVIDENCE_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -4389,6 +4508,20 @@ STATE_METROS: dict[str, dict] = {
             "Boeing 787 plant (North Charleston, 29405-adjacent) + Volvo (29492-adjacent) + Bosch (29483-adjacent) underpin a steady engineering / manufacturing rental floor across the metro.",
         ],
     },
+    "RI": {
+        "state": "RI",
+        "metro_label": "Providence + greater RI",
+        "subtitle": "ZIP-level scores for Providence + greater RI — Downtown + Federal Hill walkable hip, East Side / Brown / Wayland premier walkable upscale, East Greenwich + Cumberland family suburbs, Newport coastal historic luxury, plus Olneyville + South Providence + Pawtucket high-cap-rate ZIPs. RI is the smallest US state by area; the whole state functions as one metro.",
+        "map_center": {"lat": 41.75, "lng": -71.40, "zoom": 9},
+        "zips": PROVIDENCE_ZIPS,
+        "extra_caveats": [
+            "Brown University + RISD drive student-rental demand in 02906 (East Side); cap rates reflect 12-month student leases with summer occupancy gaps. Highly desirable owner-occupier neighborhood compresses rental supply further.",
+            "Newport (02840) is dominated by short-term vacation rentals (mansion / coastal tourism) — cap rate signal there reflects nightly Airbnb yields, not LTR comparables. Plus winter occupancy gaps Oct-May.",
+            "RI sits within the Boston commuter shed (Providence to South Station ~1hr commuter rail) — Northern RI ZIPs (02864 Cumberland, 02860 Pawtucket) carry a Boston-job rental floor not visible in local employment data.",
+            "Property tax in RI is among the highest in the country (effective rate 1.4%) and is NOT capped (no Save Our Homes equivalent) — long-hold ROI is more sensitive to assessment growth than the standard model captures.",
+            "East Greenwich (02818) and Cumberland (02864) sit in highly-rated school districts (East Greenwich SD ranks #1 in RI consistently); school premium runs above the bachelor's-percent proxy.",
+        ],
+    },
     "AZ-TUC": {
         "state": "AZ",
         "metro_label": "Tucson / Pima County",
@@ -4487,6 +4620,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "SC": ["SC-CHS"],
     "WA": ["WA"],
     "TN": ["TN"],
+    "RI": ["RI"],
 }
 
 
