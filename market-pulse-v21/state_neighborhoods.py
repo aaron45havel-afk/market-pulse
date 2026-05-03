@@ -3407,6 +3407,125 @@ CHARLESTON_ZIPS: dict[str, dict] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# TN — Nashville / Davidson County: 'It City' Sun Belt anchor (music + health
+# care + Oracle's new campus + Amazon Operations HQ). From Lower Broadway
+# tourism to old-money Belle Meade ($1.2M) to East Nashville hip
+# gentrification to affordable Donelson / Inglewood. No state income tax +
+# below-avg property tax keep cap rates investor-friendly across tiers.
+# ─────────────────────────────────────────────────────────────────────────────
+NASHVILLE_ZIPS: dict[str, dict] = {
+    "37201": {
+        "name": "Downtown / Lower Broadway",
+        "lat": 36.1650, "lng": -86.7780,
+        "median_home_value": 560_000, "median_rent_monthly": 2_100,
+        "crime_index": 60, "pct_bachelors": 65,
+        "median_household_income": 90_000, "population":  4_000,
+        "walk_score": 90, "restaurant_score": 95,
+        "tags": ["urban", "walkable", "hip"],
+    },
+    "37203": {
+        "name": "Midtown / Music Row",
+        "lat": 36.1500, "lng": -86.7950,
+        "median_home_value": 620_000, "median_rent_monthly": 2_000,
+        "crime_index": 50, "pct_bachelors": 60,
+        "median_household_income": 80_000, "population": 14_000,
+        "walk_score": 85, "restaurant_score": 85,
+        "tags": ["walkable", "hip"],
+    },
+    "37204": {
+        "name": "12 South / Belmont",
+        "lat": 36.1180, "lng": -86.7900,
+        "median_home_value": 750_000, "median_rent_monthly": 2_400,
+        "crime_index": 30, "pct_bachelors": 70,
+        "median_household_income": 115_000, "population": 18_000,
+        "walk_score": 70, "restaurant_score": 90,
+        "tags": ["walkable", "hip", "gentrifying"],
+    },
+    "37205": {
+        "name": "West End / Belle Meade",
+        "lat": 36.1150, "lng": -86.8600,
+        "median_home_value": 1_200_000, "median_rent_monthly": 2_800,
+        "crime_index": 12, "pct_bachelors": 80,
+        "median_household_income": 200_000, "population": 28_000,
+        "walk_score": 30, "restaurant_score": 60,
+        "tags": ["family", "top-schools", "low-crime", "upscale", "established"],
+    },
+    "37206": {
+        "name": "East Nashville",
+        "lat": 36.1820, "lng": -86.7450,
+        "median_home_value": 620_000, "median_rent_monthly": 2_000,
+        "crime_index": 50, "pct_bachelors": 65,
+        "median_household_income": 90_000, "population": 32_000,
+        "walk_score": 75, "restaurant_score": 85,
+        "tags": ["walkable", "hip", "gentrifying"],
+    },
+    "37208": {
+        "name": "Germantown / N Nashville",
+        "lat": 36.1800, "lng": -86.7950,
+        "median_home_value": 560_000, "median_rent_monthly": 1_800,
+        "crime_index": 65, "pct_bachelors": 50,
+        "median_household_income": 58_000, "population": 18_000,
+        "walk_score": 60, "restaurant_score": 70,
+        "tags": ["gentrifying"],
+    },
+    "37209": {
+        "name": "Sylvan Park / Charlotte Park",
+        "lat": 36.1550, "lng": -86.8400,
+        "median_home_value": 620_000, "median_rent_monthly": 2_000,
+        "crime_index": 35, "pct_bachelors": 65,
+        "median_household_income": 95_000, "population": 28_000,
+        "walk_score": 60, "restaurant_score": 70,
+        "tags": ["family", "gentrifying", "walkable"],
+    },
+    "37212": {
+        "name": "Vanderbilt / Hillsboro Village",
+        "lat": 36.1350, "lng": -86.7980,
+        "median_home_value": 720_000, "median_rent_monthly": 2_200,
+        "crime_index": 32, "pct_bachelors": 75,
+        "median_household_income": 85_000, "population": 18_000,
+        "walk_score": 80, "restaurant_score": 80,
+        "tags": ["student", "walkable", "hip"],
+    },
+    "37215": {
+        "name": "Green Hills",
+        "lat": 36.1050, "lng": -86.8200,
+        "median_home_value": 850_000, "median_rent_monthly": 2_500,
+        "crime_index": 15, "pct_bachelors": 78,
+        "median_household_income": 135_000, "population": 28_000,
+        "walk_score": 50, "restaurant_score": 70,
+        "tags": ["family", "top-schools", "low-crime", "upscale"],
+    },
+    "37216": {
+        "name": "Inglewood",
+        "lat": 36.2050, "lng": -86.7300,
+        "median_home_value": 410_000, "median_rent_monthly": 1_650,
+        "crime_index": 60, "pct_bachelors": 35,
+        "median_household_income": 52_000, "population": 22_000,
+        "walk_score": 40, "restaurant_score": 35,
+        "tags": ["affordable", "transitional"],
+    },
+    "37217": {
+        "name": "Donelson / Antioch edge",
+        "lat": 36.1150, "lng": -86.6850,
+        "median_home_value": 385_000, "median_rent_monthly": 1_650,
+        "crime_index": 55, "pct_bachelors": 28,
+        "median_household_income": 58_000, "population": 50_000,
+        "walk_score": 30, "restaurant_score": 35,
+        "tags": ["affordable", "mid-tier"],
+    },
+    "37220": {
+        "name": "Forest Hills / Crieve Hall",
+        "lat": 36.0800, "lng": -86.8100,
+        "median_home_value": 830_000, "median_rent_monthly": 2_500,
+        "crime_index": 18, "pct_bachelors": 75,
+        "median_household_income": 130_000, "population":  8_000,
+        "walk_score": 25, "restaurant_score": 50,
+        "tags": ["family", "top-schools", "low-crime", "established"],
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # WA — Seattle / King County: Pacific NW tech anchor (Amazon HQ + Microsoft
 # adjacent + Boeing Renton/Everett within commuter shed). High-cost market
 # with cap rates structurally compressed by appreciation expectations.
@@ -3774,7 +3893,7 @@ for _zips in (LA_ZIPS, PHOENIX_ZIPS, PROVO_ZIPS, WASATCH_NORTH_ZIPS, ST_GEORGE_Z
               TAMPA_ZIPS, SAVANNAH_ZIPS,
               COLUMBUS_ZIPS, CLEVELAND_ZIPS, CINCINNATI_ZIPS,
               DENVER_ZIPS, FORT_COLLINS_ZIPS,
-              CHARLESTON_ZIPS, SEATTLE_ZIPS):
+              CHARLESTON_ZIPS, SEATTLE_ZIPS, NASHVILLE_ZIPS):
     _apply_zillow_overrides(_zips, _ZILLOW_OVERRIDES)
 
 
@@ -4152,6 +4271,20 @@ STATE_METROS: dict[str, dict] = {
             "Boeing 787 plant (North Charleston, 29405-adjacent) + Volvo (29492-adjacent) + Bosch (29483-adjacent) underpin a steady engineering / manufacturing rental floor across the metro.",
         ],
     },
+    "TN": {
+        "state": "TN",
+        "metro_label": "Nashville / Davidson County",
+        "subtitle": "ZIP-level scores for Nashville — Lower Broadway / Music Row urban core, 12 South + East Nashville + Germantown gentrified hip tier, Belle Meade + Green Hills + Forest Hills established upscale, Vanderbilt / Hillsboro Village student-walkable, plus affordable Inglewood + Donelson edges.",
+        "map_center": {"lat": 36.16, "lng": -86.78, "zoom": 11},
+        "zips": NASHVILLE_ZIPS,
+        "extra_caveats": [
+            "Nashville's STR rules vary block-by-block — non-owner-occupied STRs are restricted in most R1 zones (37206 East Nashville, 37204 12 South, 37212 Hillsboro), but heavily concentrated in 37201/37203 Lower Broadway. Cap-rate signal in those tourist-heavy ZIPs reflects nightly Airbnb yields, not LTR comparables.",
+            "Belle Meade (37205) is an independent municipality within Davidson County with its own city government + school overlay — premium beyond what the bachelor's-percent proxy captures, and almost no rental supply (>95% owner-occupied).",
+            "Vanderbilt + Belmont University drive student-rental demand in 37212/37203/37204; cap rates reflect 12-month student leases with summer occupancy gaps.",
+            "Tornado risk is real (March 2020, Dec 2023 tornados both hit Davidson County); insurance multiplier is higher than the SE state average, particularly for older housing stock in 37206 (East Nash) + 37208 (N Nash) which sit in historical tornado paths.",
+            "Oracle's new Nashville campus (East Bank, opening 2027) is the biggest single anchor since Amazon's Operations HQ — expected to push 37206 + 37208 + 37207 (just outside dataset) further upmarket faster than Zillow refresh captures.",
+        ],
+    },
     "WA": {
         "state": "WA",
         "metro_label": "Seattle / King County",
@@ -4221,6 +4354,7 @@ STATE_TO_METROS: dict[str, list[str]] = {
     "CO": ["CO", "CO-FTC"],
     "SC": ["SC-CHS"],
     "WA": ["WA"],
+    "TN": ["TN"],
 }
 
 
