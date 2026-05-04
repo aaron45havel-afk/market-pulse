@@ -94,63 +94,12 @@ async def national_map(request: Request):
     )
     metros = []
     for slug, cfg in STATE_METROS.items():
-        # Stub metros — one pin per state we don't have a per-ZIP
-        # dataset for. Build the metro entry from CHOROPLETH_STATES so
-        # the pin still ranks in the leaderboard + the popup carries
-        # real numbers, just at state granularity.
-        if cfg.get("is_stub"):
-            sd = CHOROPLETH_STATES.get(cfg["state"])
-            if not sd:
-                continue
-            hv = sd.get("home_value") or 0
-            rent = sd.get("median_rent") or 0
-            cap = (rent * 12 / hv * 100) if hv > 0 else 0.0
-            balanced = round((
-                (sd.get("young_pro_score") or 50) +
-                (sd.get("college_score") or 50) +
-                (sd.get("family_score") or 50) +
-                (sd.get("retirement_score") or 50)
-            ) / 4, 1)
-            investor = round(min(cap * 8, 100), 1)   # ~12.5% gross yield → 100
-            lifestyle = round((
-                (sd.get("walk") or 35) +
-                (sd.get("schools") or 5) * 10 +
-                min(max((sd.get("sunshine") or 200) - 150, 0) / 1.5, 100)
-            ) / 3, 1)
-            sunshine = STATE_SUNSHINE_DAYS.get(cfg["state"], 200)
-            state_income_tax = STATE_INCOME_TAX_EFFECTIVE.get(cfg["state"], 0.045)
-            state_pop_growth = STATE_POPULATION_GROWTH.get(cfg["state"], 0.5)
-            metros.append({
-                "slug": slug,
-                "state": cfg["state"],
-                "metro_label": cfg["metro_label"],
-                "map_center": cfg["map_center"],
-                "tiktok_hashtag": cfg.get("tiktok_hashtag"),
-                "instagram_hashtag": cfg.get("instagram_hashtag"),
-                "is_stub": True,
-                "top_zip": {
-                    "zip": "—",
-                    "name": cfg["metro_label"],
-                    "composite_score": balanced,
-                    "cap_rate_pct": round(cap, 2),
-                },
-                "zip_count": 0,
-                "avg_composite": balanced,
-                "composite_by_persona": {
-                    "balanced": balanced, "investor": investor, "lifestyle": lifestyle,
-                },
-                "avg_cap_rate_pct": round(cap, 2),
-                "avg_home_value": hv,
-                "avg_rent": rent,
-                "avg_walk_score": sd.get("walk", 0),
-                "avg_pct_bachelors": 0,
-                "avg_crime_index": 50,
-                "avg_restaurant_score": 0,
-                "sunshine_days": sunshine,
-                "state_income_tax_pct": round(state_income_tax * 100, 2),
-                "state_pop_growth_pct": round(state_pop_growth, 2),
-            })
-            continue
+        # Stubs go through the same get_state_neighborhoods path as
+        # real metros — get_state_neighborhoods synthesizes a single
+        # virtual ZIP for stubs from CHOROPLETH_STATES and runs it
+        # through compute_zip_metrics, so composite scoring is on the
+        # same scale for everything. is_stub flag flows through so the
+        # popup can still mark these as state-level estimates.
         data = get_state_neighborhoods(slug)
         if not data:
             continue
@@ -188,6 +137,7 @@ async def national_map(request: Request):
             "map_center": cfg["map_center"],
             "tiktok_hashtag": cfg.get("tiktok_hashtag"),     # TikTok hashtag for popup CTA
             "instagram_hashtag": cfg.get("instagram_hashtag"),  # Instagram hashtag for popup CTA
+            "is_stub": bool(cfg.get("is_stub")),
             "top_zip": {
                 "zip": top_zip["zip"],
                 "name": top_zip["name"],

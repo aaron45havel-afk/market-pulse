@@ -5243,25 +5243,77 @@ def metros_for_state(state: str) -> list[dict]:
     ]
 
 
+def _virtual_zip_for_state(state_code: str, metro_label: str, map_center: dict) -> dict | None:
+    """Synthesize a single ZIP-shaped dict from CHOROPLETH_STATES so a
+    stub state can flow through compute_zip_metrics on the same scoring
+    formula as real per-ZIP metros. Without this, stubs used a
+    completely different composite calculation and ranked systematically
+    below real metros even when the underlying state was strong (e.g.
+    NYC, Boston).
+
+    Where state-level signal is missing (crime_index, restaurant_score,
+    pct_bachelors), we use national-baseline proxies derived from data
+    we do have. As state-level crime + education feeds land, swap these
+    in for the proxies."""
+    from data_providers import CHOROPLETH_STATES
+    sd = CHOROPLETH_STATES.get(state_code)
+    if not sd:
+        return None
+    median_income = sd.get("median_income") or 70000
+    walk = sd.get("walk") or 35
+    # pct_bachelors proxy: ~33% national, scale ±1pt per ~$2K of state
+    # median income above/below the national median (~$70K). Correlation
+    # is real (r≈0.7 across states) and good enough for a coarse proxy.
+    pct_bach = max(15, min(60, 33 + (median_income - 70000) / 2000))
+    # restaurant_score proxy: walkable cities have a real food scene,
+    # rural / car-dependent states don't. Scale walk_score down so a
+    # WalkScore-50 city lands in the 35-45 restaurant range.
+    restaurant = max(0, (walk - 20) * 1.2)
+    return {
+        "name": metro_label,
+        "lat": map_center.get("lat"),
+        "lng": map_center.get("lng"),
+        "median_home_value": sd.get("home_value") or 350000,
+        "median_rent_monthly": sd.get("median_rent") or 1500,
+        "median_household_income": median_income,
+        # No state-level crime feed yet — use the 50-mid baseline.
+        "crime_index": 50,
+        "pct_bachelors": round(pct_bach, 1),
+        "population": 0,
+        "walk_score": walk,
+        "restaurant_score": round(restaurant, 1),
+        "tags": ["state-estimate"],
+    }
+
+
 def get_state_neighborhoods(slug: str) -> dict | None:
     """Return enriched neighborhoods for a metro slug (e.g. 'TX', 'UT-STG'),
     or None if the slug isn't wired up yet. Shape stays the same as
-    get_dallas_neighborhoods() so the Leaflet template can be generic."""
+    get_dallas_neighborhoods() so the Leaflet template can be generic.
+
+    For stub metros (no hand-curated zips dict), synthesize a single
+    virtual ZIP from state-level data so the same scoring pipeline
+    produces a comparable composite. The deep-dive page renders a
+    one-pin map for stubs, which is thin but not broken."""
     slug = slug.upper()
     metro = STATE_METROS.get(slug)
     if metro is None:
         return None
-    # Stub metros have no per-ZIP dataset — the per-metro deep-dive
-    # template needs ZIPs to render, so signal "not available" with
-    # None and let main.py 404 cleanly.
-    if metro.get("is_stub") or "zips" not in metro:
-        return None
 
-    enriched = []
-    for zip_code, raw in metro["zips"].items():
-        metrics = compute_zip_metrics(raw)
-        enriched.append({"zip": zip_code, **raw, **metrics})
-    enriched.sort(key=lambda x: x["composite_score"], reverse=True)
+    if metro.get("is_stub") or "zips" not in metro:
+        v = _virtual_zip_for_state(metro["state"], metro["metro_label"], metro["map_center"])
+        if not v:
+            return None
+        # Use the state code as the ZIP key — there's no real ZIP, but
+        # the frontend uses it as a stable identifier per row.
+        metrics = compute_zip_metrics(v)
+        enriched = [{"zip": metro["state"], **v, **metrics}]
+    else:
+        enriched = []
+        for zip_code, raw in metro["zips"].items():
+            metrics = compute_zip_metrics(raw)
+            enriched.append({"zip": zip_code, **raw, **metrics})
+        enriched.sort(key=lambda x: x["composite_score"], reverse=True)
 
     base_caveats = [
         "% bachelor's+ is a school-quality proxy. Direct district / accountability ratings would be more accurate.",
@@ -5275,6 +5327,7 @@ def get_state_neighborhoods(slug: str) -> dict | None:
         "metro_label": metro["metro_label"],
         "subtitle": metro["subtitle"],
         "map_center": metro["map_center"],
+        "is_stub": bool(metro.get("is_stub")),
         "siblings": metros_for_state(metro["state"]),
         "as_of": DATA_AS_OF,
         "personas": PERSONAS,

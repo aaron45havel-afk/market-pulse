@@ -184,8 +184,6 @@
     .pop-actions { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.65rem; }
     .pop-cta { flex: 1 1 auto; text-align: center; padding: 0.5rem 0.85rem; background: var(--accent2); color: #fff !important; border-radius: 6px; font-size: 0.82rem; font-weight: 600; }
     .pop-cta:hover { text-decoration: none; background: #2563eb; }
-    .pop-cta.is-disabled { background: var(--surface2); color: var(--text-dim) !important; cursor: not-allowed; font-style: italic; }
-    .pop-cta.is-disabled:hover { background: var(--surface2); }
     /* Social icon buttons — square, icon-only, brand-colored. Same
        size for visual rhythm, hover lifts each toward its brand color. */
     .pop-social { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex: 0 0 34px; border-radius: 6px; color: #fff !important; }
@@ -689,8 +687,10 @@ document.addEventListener('DOMContentLoaded', () => {
             : `<div class="pop-stat"><span class="label">Top ZIP</span><span><strong>${m.top_zip.zip}</strong> ${m.top_zip.name}</span></div>` +
               `<div class="pop-stat"><span class="label">Top score</span><span style="color:${color}; font-weight:700;">${m.top_zip.composite_score.toFixed(1)}</span></div>` +
               `<div class="pop-stat"><span class="label">Top cap rate</span><span>${m.top_zip.cap_rate_pct.toFixed(2)}%</span></div>`;
+        // Stubs get a clearer CTA label (the deep-dive page renders
+        // the single virtual ZIP, not a real neighborhood breakdown).
         const cta = m.is_stub
-            ? `<span class="pop-cta is-disabled" title="Per-ZIP deep-dive not yet available for this state.">Deep-dive coming soon</span>`
+            ? `<a href="/real-estate/${m.slug}/map" class="pop-cta" title="One-pin state-level estimate. Per-neighborhood breakdown not yet available.">View state estimate &rarr;</a>`
             : `<a href="/real-estate/${m.slug}/map" class="pop-cta">Open metro map &rarr;</a>`;
         const popup =
             `<div style="font-weight:700; font-size:1.0rem; margin-bottom:0.25rem;">${m.metro_label}</div>` +
