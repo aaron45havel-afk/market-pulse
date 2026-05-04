@@ -526,6 +526,8 @@
                             <button type="button" class="filter-preset" data-preset="foodie">Foodie</button>
                             <button type="button" class="filter-preset" data-preset="safe">Low Crime</button>
                             <button type="button" class="filter-preset" data-preset="job_market">Job Market</button>
+                            <button type="button" class="filter-preset" data-preset="coastal">Coastal</button>
+                            <button type="button" class="filter-preset" data-preset="mountain">Mountain Town</button>
                         </div>
                     </div>
 
@@ -1035,6 +1037,8 @@ const PRESET_LABELS = {
     foodie:       'Foodie',
     safe:         'Low Crime',
     job_market:   'Job Market',
+    coastal:      'Coastal',
+    mountain:     'Mountain Town',
 };
 // Profile presets only — maps each to the leaderboard persona used
 // to RANK the filtered candidate pool when picking the top-3 matches.
@@ -1053,6 +1057,39 @@ const PROFILE_KEYS = new Set(['young_pro', 'family', 'investor', 'retirement']);
 function _slotForPreset(key) {
     return PROFILE_KEYS.has(key) ? 'activeProfile' : 'activeQuick';
 }
+
+// Slug sets for the geography-based quick presets. These are filters
+// at the metro level (no slider), so the preset definition uses a
+// metroSet rule instead of slider rules. Adding a metro to a real
+// per-ZIP dataset later just keeps it in the same set — slugs are
+// stable.
+const COASTAL_METROS = new Set([
+    // Pacific
+    'CA', 'CA-SD', 'CA-SF', 'WA', 'AK',
+    // Hawaii
+    'HI', 'HI-HIL',
+    // Atlantic NE
+    'ME', 'ME-BGR', 'MA', 'RI', 'CT-NHV', 'NY', 'NJ',
+    'DE', 'DE-DOV', 'MD', 'MD-ANP', 'VA-VAB',
+    // Atlantic SE
+    'SC-CHS', 'GA-SAV',
+    // Florida
+    'FL-MIA', 'FL-FTL', 'FL-WPB', 'FL-TPA', 'FL-JAX',
+    // Gulf
+    'LA', 'MS-GPT', 'TX-HOU',
+]);
+
+const MOUNTAIN_METROS = new Set([
+    // Rockies
+    'CO', 'CO-FTC', 'UT', 'UT-SLC', 'WY', 'WY-CPR',
+    'MT', 'MT-MSO', 'ID', 'ID-IDA', 'NM', 'NM-SAF',
+    // Sierra Nevada
+    'NV-CC', 'NV-RNO',
+    // Northeast (Greens, Whites, Adirondacks)
+    'VT', 'VT-MPV', 'NH', 'NH-NSH',
+    // Appalachians
+    'WV-MGW',
+]);
 const FILTER_PRESETS = {
     // Profile presets — compound shortcuts that mirror the prior
     // Find-Your-Fit personas. Tuned against the actual data spread.
@@ -1081,14 +1118,25 @@ const FILTER_PRESETS = {
     // is educated". Sunbelt Growth is just pop growth (could be
     // retirees), so this distinguishes it as a worker-driven market.
     job_market:   { sliders: { state_pop_growth_pct: { useMin: 0.55 }, avg_pct_bachelors: { useMin: 0.55 } } },
+    // Geography presets — slug-set filters (no sliders). Stack with
+    // sliders or each other, but Coastal AND Mountain together is
+    // empty (correctly).
+    coastal:      { metroSet: COASTAL_METROS },
+    mountain:     { metroSet: MOUNTAIN_METROS },
 };
 
-let _filterState = { state: '', sliders: {}, activeProfile: null, activeQuick: null };
+let _filterState = { state: '', sliders: {}, metroSets: [], activeProfile: null, activeQuick: null };
 let _filterBounds = {};   // key → { min, max }
 
 function getFilteredMetros() {
     return METROS.filter(m => {
         if (_filterState.state && m.state !== _filterState.state) return false;
+        // Slug-set filters (Coastal, Mountain Town) — must be in EVERY
+        // active set (intersection). Stacking Coastal + Mountain Town
+        // will yield zero metros, which is correct (you can't be both).
+        for (const set of _filterState.metroSets) {
+            if (!set.has(m.slug)) return false;
+        }
         for (const def of FILTER_DEFS) {
             const range = _filterState.sliders[def.key];
             if (!range) continue;
@@ -1182,8 +1230,10 @@ function initFilters() {
             // Manual change "lifts" the user out of preset mode but
             // keeps the slider state — both highlight slots clear so
             // the chips bar shows individual slider chips instead.
+            // metroSets came from a preset and is now stale, drop it.
             _filterState.activeProfile = null;
             _filterState.activeQuick = null;
+            _filterState.metroSets = [];
             refreshPresetHighlight();
             paintFill(def, lo, hi, fill, rangeEl);
             applyFilters();
@@ -1236,10 +1286,14 @@ function togglePreset(key) {
 // practice), pin to the midpoint so the UI doesn't break.
 function applyAllPresets() {
     _filterState.sliders = {};
+    _filterState.metroSets = [];
     [_filterState.activeProfile, _filterState.activeQuick].forEach(presetKey => {
         if (!presetKey) return;
         const preset = FILTER_PRESETS[presetKey];
         if (!preset) return;
+        // Slug-set filter (Coastal / Mountain Town etc) — stacks
+        // alongside any sliders the same preset might also define.
+        if (preset.metroSet) _filterState.metroSets.push(preset.metroSet);
         Object.entries(preset.sliders || {}).forEach(([key, rule]) => {
             const b = _filterBounds[key];
             if (!b) return;
@@ -1288,7 +1342,7 @@ function syncSliderUI(key, lo, hi) {
 }
 
 function resetFilters() {
-    _filterState = { state: '', sliders: {}, activeProfile: null, activeQuick: null };
+    _filterState = { state: '', sliders: {}, metroSets: [], activeProfile: null, activeQuick: null };
     document.getElementById('filterState').value = '';
     FILTER_DEFS.forEach(def => {
         const b = _filterBounds[def.key];
