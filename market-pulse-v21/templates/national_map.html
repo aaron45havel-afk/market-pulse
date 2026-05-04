@@ -272,27 +272,15 @@
     .leaflet-tile-pane .leaflet-layer:nth-child(2) { opacity: 0.6; }
 
     /* ─── Find-your-fit pane (lives inside the right rail as a tab) ── */
-    .fit-body { padding: 0.85rem 1rem; overflow-y: auto; flex: 1; }
-    .fit-blurb { font-size: 0.74rem; color: var(--text-dim); line-height: 1.45; margin-bottom: 0.85rem; }
-    .fit-q { margin-bottom: 0.85rem; }
-    .fit-q .q-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); font-weight: 600; margin-bottom: 0.3rem; display: block; }
-    .fit-opts { display: flex; gap: 0.3rem; flex-wrap: wrap; }
-    .fit-opt { padding: 0.32rem 0.6rem; border-radius: 6px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-size: 0.76rem; cursor: pointer; transition: all 0.12s; }
-    .fit-opt:hover { border-color: var(--accent2); }
-    .fit-opt.active { background: var(--accent); border-color: var(--accent); color: white; }
-    .fit-go { width: 100%; padding: 0.55rem; background: var(--accent2); color: white; border: none; border-radius: 7px; font-size: 0.85rem; font-weight: 700; cursor: pointer; margin-top: 0.3rem; }
-    .fit-go:hover { background: #2563eb; }
-    .fit-go:disabled { opacity: 0.5; cursor: not-allowed; }
+    /* Active-filter chips — shown at the top of the Filter & Match pane
+       so users always see exactly what's applied. Each chip removes
+       its own narrowing on the × click. */
+    .active-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; padding: 0.6rem 0.85rem 0.85rem; border-bottom: 1px solid var(--border); margin-bottom: 0.85rem; }
+    .active-chips[hidden] { display: none; }
+    .active-chip { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.55rem; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.4); border-radius: 999px; font-size: 0.72rem; color: var(--text); }
+    .active-chip .chip-x { background: transparent; border: none; color: var(--text-dim); cursor: pointer; padding: 0; font-size: 0.95rem; line-height: 1; }
+    .active-chip .chip-x:hover { color: var(--text); }
 
-    .fit-results { margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid var(--border); }
-    .fit-results-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); font-weight: 600; margin-bottom: 0.5rem; }
-    .fit-match { padding: 0.65rem 0.75rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; margin-bottom: 0.5rem; cursor: pointer; transition: border-color 0.12s; }
-    .fit-match:hover { border-color: var(--accent2); }
-    .fit-match-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; margin-bottom: 0.25rem; }
-    .fit-match-head .rank { font-size: 0.95rem; font-weight: 700; }
-    .fit-match-head .score { font-size: 0.85rem; font-weight: 700; }
-    .fit-match-stats { font-size: 0.72rem; color: var(--text-dim); }
-    .fit-match-why { font-size: 0.7rem; color: var(--accent); margin-top: 0.25rem; }
 
     /* ─── Filters pane (right-rail Tab 3) ─────────────────────────── */
     .filter-body { padding: 1rem 1.05rem 0; overflow-y: auto; flex: 1; }
@@ -433,8 +421,7 @@
         <aside class="leader-rail">
             <div class="rail-tabs">
                 <button type="button" class="rail-tab active" data-pane="leaderboard">Top Metros</button>
-                <button type="button" class="rail-tab" data-pane="fit">Find Your Fit</button>
-                <button type="button" class="rail-tab" data-pane="filters">Filters<span class="tab-badge"></span></button>
+                <button type="button" class="rail-tab" data-pane="filters">Filter &amp; Match<span class="tab-badge"></span></button>
             </div>
 
             <!-- Tab 1: leaderboard ranked by per-metro composite under
@@ -471,71 +458,27 @@
 
             <!-- Tab 2: find-your-fit (existing 4-question profile +
                  priority multi-select + match list). -->
-            <div class="rail-pane" data-pane="fit">
-                <div class="fit-body">
-                    <div class="fit-blurb">Quick 4-question profile. Answers stay on your device — used to score the 20 metros against what <em>you</em> care about.</div>
-
-                    <div class="fit-q" data-key="age">
-                        <span class="q-label">Age</span>
-                        <div class="fit-opts">
-                            <button class="fit-opt" data-val="under30">Under 30</button>
-                            <button class="fit-opt" data-val="30-45">30–45</button>
-                            <button class="fit-opt" data-val="45-60">45–60</button>
-                            <button class="fit-opt" data-val="60plus">60+</button>
-                        </div>
-                    </div>
-
-                    <div class="fit-q" data-key="income">
-                        <span class="q-label">Annual household income</span>
-                        <div class="fit-opts">
-                            <button class="fit-opt" data-val="under75">&lt;\$75K</button>
-                            <button class="fit-opt" data-val="75-150">\$75–150K</button>
-                            <button class="fit-opt" data-val="150-250">\$150–250K</button>
-                            <button class="fit-opt" data-val="250plus">\$250K+</button>
-                        </div>
-                    </div>
-
-                    <div class="fit-q" data-key="purpose">
-                        <span class="q-label">Buying for</span>
-                        <div class="fit-opts">
-                            <button class="fit-opt" data-val="lifestyle">To live in</button>
-                            <button class="fit-opt" data-val="investment">Investment</button>
-                            <button class="fit-opt" data-val="both">Both</button>
-                        </div>
-                    </div>
-
-                    <div class="fit-q" data-key="priority" data-multi="true">
-                        <span class="q-label">What matters most? <span style="font-weight:400; text-transform:none; opacity:0.7;">(pick any)</span></span>
-                        <div class="fit-opts">
-                            <button class="fit-opt" data-val="schools">Schools</button>
-                            <button class="fit-opt" data-val="walkability">Walkability</button>
-                            <button class="fit-opt" data-val="yield">Cap rate / yield</button>
-                            <button class="fit-opt" data-val="climate">Sunny climate</button>
-                            <button class="fit-opt" data-val="affordability">Affordability</button>
-                            <button class="fit-opt" data-val="safety">Safety / low crime</button>
-                            <button class="fit-opt" data-val="restaurants">Restaurants</button>
-                            <button class="fit-opt" data-val="growth">Growth / appreciation</button>
-                            <button class="fit-opt" data-val="lowtax">Low taxes</button>
-                        </div>
-                    </div>
-
-                    <button class="fit-go" id="fitGo" disabled>Pick at least one answer</button>
-
-                    <div class="fit-results" id="fitResults" style="display:none;">
-                        <div class="fit-results-label">Top matches for you</div>
-                        <div id="fitMatches"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tab 3: filters — quick presets + range sliders. Filters
-                 the metros visible on the map AND the leaderboard list
-                 in real time. State stays in memory only (no persist).
-                 Footer actions are siblings (not nested in body) so the
-                 sticky-bottom positioning works without scroll-clipping. -->
+            <!-- Tab 2: Filter & Match — single pane that merges the
+                 prior "Find Your Fit" wizard + "Filters" tabs. Active-
+                 filter chips at the top show exactly what's applied
+                 (so users never wonder "what am I filtered by?"); the
+                 profile + quick presets row are shortcuts that snap
+                 the sliders below; sliders stay always-visible for
+                 manual override. Filters apply to the map (fades non-
+                 matching pins) AND the leaderboard, in real time. -->
             <div class="rail-pane" data-pane="filters">
                 <div class="filter-body">
-                    <div class="filter-blurb">Quick presets snap sliders to common patterns. Drag any slider to narrow further. Map pins fade and the leaderboard re-ranks live.</div>
+                    <div class="active-chips" id="activeChips" hidden></div>
+
+                    <div class="filter-section">
+                        <span class="filter-section-label">Match a profile</span>
+                        <div class="filter-presets" id="profilePresets">
+                            <button type="button" class="filter-preset" data-preset="young_pro">Young Pro</button>
+                            <button type="button" class="filter-preset" data-preset="family">Family</button>
+                            <button type="button" class="filter-preset" data-preset="investor">Investor</button>
+                            <button type="button" class="filter-preset" data-preset="retirement">Retirement</button>
+                        </div>
+                    </div>
 
                     <div class="filter-section">
                         <span class="filter-section-label">Quick presets</span>
@@ -767,26 +710,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initRailTabs();
     initLeaderboard();
-    initFitTab();
     initFilters();
     initChoropleth();
     initRateStress();
     initZipLayer();
 });
 
-// Maps user income buckets to a max-affordable home price using the
-// rough 4× household-income heuristic. Used to penalize unaffordable
-// metros in the matcher rather than hard-filter them out.
-const INCOME_MAX_AFFORDABLE = {
-    'under75':   75_000 * 4,        // ~$300K
-    '75-150':   150_000 * 4,        // ~$600K
-    '150-250':  250_000 * 4,        // ~$1M
-    '250plus':  10_000_000,         // effectively no cap
-};
-
-const PROFILE_KEY = 'mp.findYourFit.profile';
-
-// ─── Right-rail tabs (Top Metros | Find Your Fit) ───────────────────
+// ─── Right-rail tabs (Top Metros | Filter & Match) ──────────────────
 // Lightweight switcher between the two rail panes. Resizing the
 // underlying map after a tab switch isn't necessary because both
 // panes share the rail width — the map column doesn't change size.
@@ -1043,16 +973,35 @@ const FILTER_DEFS = [
     { key: 'avg_pct_bachelors',      label: 'Bachelor\'s degree',     fmt: v => v.toFixed(0) + '%',                 step: 1 },
 ];
 
-// Quick-filter presets — each one is a partial filter state that gets
-// merged onto the current state. Sliders not mentioned are left alone
-// (the preset is additive). This matches reventure's pattern where
-// pills set ranges without resetting unrelated filters.
+// Filter presets — each one is a partial filter state. Sliders not
+// mentioned are reset to default. The first group ("profile") replaces
+// the old Find-Your-Fit wizard: each profile snaps a set of sliders
+// to a coherent lifestyle (Young Pro = walkable + mid-affordable,
+// Investor = high cap + cheap, etc.) so users can see exactly what
+// applied via the active-chip bar above. The second group ("quick")
+// is single-axis pills.
+const PRESET_LABELS = {
+    young_pro:  'Young Pro',
+    family:     'Family',
+    investor:   'Investor',
+    retirement: 'Retirement',
+    cheapest:   'Cheapest',
+    affordable: 'Affordable',
+    yield:      'High Yield',
+    sunny:      'Sunny',
+    taxhaven:   'Tax Haven',
+    growth:     'Sunbelt Growth',
+};
 const FILTER_PRESETS = {
-    // Fractions are tuned against the actual data spread so each preset
-    // returns a useful 5-10 metro pool — not the full 24, not just one.
-    // SF/SD push the upper home-value bound to ~$1.8M, so "cheapest"
-    // needs a low fraction (0.18) to land on the genuinely affordable
-    // metros instead of half the country.
+    // Profile presets — compound shortcuts that mirror the prior
+    // Find-Your-Fit personas. Tuned against the actual data spread.
+    young_pro:  { sliders: { avg_walk_score: { useMin: 0.50 }, avg_pct_bachelors: { useMin: 0.40 }, avg_home_value: { useMax: 0.55 } } },
+    family:     { sliders: { avg_pct_bachelors: { useMin: 0.50 }, avg_home_value: { useMax: 0.55 } } },
+    investor:   { sliders: { avg_cap_rate_pct: { useMin: 0.55 }, avg_home_value: { useMax: 0.45 } } },
+    retirement: { sliders: { sunshine_days: { useMin: 0.55 }, state_income_tax_pct: { useMax: 0.20 }, avg_home_value: { useMax: 0.50 } } },
+    // Quick presets — single-axis pills. SF/SD push the upper home
+    // value bound to ~$1.8M, so "cheapest" needs a low fraction (0.18)
+    // to land on genuinely affordable metros, not half the country.
     cheapest:   { sliders: { avg_home_value: { useMax: 0.18 } } },
     affordable: { sliders: { state_income_tax_pct: { useMax: 0.25 }, avg_home_value: { useMax: 0.30 } } },
     yield:      { sliders: { avg_cap_rate_pct: { useMin: 0.55 } } },
@@ -1167,11 +1116,12 @@ function initFilters() {
         paintFill(def, b.min, b.max, fill, rangeEl);
     });
 
-    // Preset pills.
-    document.querySelectorAll('#filterPresets .filter-preset').forEach(btn => {
+    // Preset pills — both profile presets (top row) and quick presets
+    // (second row) share the same handler since they're all entries
+    // in FILTER_PRESETS. Clicking the active one clears it (toggle).
+    document.querySelectorAll('#profilePresets .filter-preset, #filterPresets .filter-preset').forEach(btn => {
         btn.addEventListener('click', () => {
             const key = btn.dataset.preset;
-            // Toggle: clicking the active preset clears it.
             if (_filterState.activePreset === key) {
                 resetFilters();
                 return;
@@ -1256,7 +1206,7 @@ function resetFilters() {
 }
 
 function refreshPresetHighlight() {
-    document.querySelectorAll('#filterPresets .filter-preset').forEach(b =>
+    document.querySelectorAll('#profilePresets .filter-preset, #filterPresets .filter-preset').forEach(b =>
         b.classList.toggle('active', b.dataset.preset === _filterState.activePreset));
 }
 
@@ -1294,7 +1244,62 @@ function applyFilters() {
     }
     const tab = document.querySelector('.rail-tab[data-pane="filters"]');
     if (tab) tab.classList.toggle('has-active', anyActive);
+    renderActiveChips();
     renderLeaderboard();
+}
+
+// Build the active-filter chip bar. Each chip names exactly one piece
+// of narrowing (preset, state, or per-slider range) and removes only
+// that piece on × click — so users can refine without nuking the
+// whole filter set. Hidden when nothing is narrowed.
+function renderActiveChips() {
+    const wrap = document.getElementById('activeChips');
+    if (!wrap) return;
+    const chips = [];
+    if (_filterState.activePreset) {
+        chips.push({
+            label: (PRESET_LABELS[_filterState.activePreset] || _filterState.activePreset) + ' preset',
+            clear: () => resetFilters(),
+        });
+    }
+    if (_filterState.state) {
+        chips.push({
+            label: _filterState.state + ' only',
+            clear: () => {
+                _filterState.state = '';
+                document.getElementById('filterState').value = '';
+                applyFilters();
+            },
+        });
+    }
+    Object.entries(_filterState.sliders).forEach(([key, range]) => {
+        // Skip per-slider chips when a preset is active — the preset
+        // chip already represents the bundle. Showing both is noisy.
+        if (_filterState.activePreset) return;
+        const def = FILTER_DEFS.find(d => d.key === key);
+        if (!def) return;
+        chips.push({
+            label: `${def.label}: ${def.fmt(range.min)}–${def.fmt(range.max)}`,
+            clear: () => {
+                delete _filterState.sliders[key];
+                const b = _filterBounds[key];
+                if (b) syncSliderUI(key, b.min, b.max);
+                applyFilters();
+            },
+        });
+    });
+    if (!chips.length) {
+        wrap.hidden = true;
+        wrap.innerHTML = '';
+        return;
+    }
+    wrap.hidden = false;
+    wrap.innerHTML = chips.map((c, i) =>
+        `<span class="active-chip" data-i="${i}">${c.label}<button type="button" class="chip-x" aria-label="Remove">×</button></span>`
+    ).join('');
+    wrap.querySelectorAll('.chip-x').forEach((btn, i) => {
+        btn.addEventListener('click', chips[i].clear);
+    });
 }
 
 // ─── State choropleth (national heatmap layer) ─────────────────────
@@ -1896,230 +1901,5 @@ function renderZipLayer(zips) {
     });
 }
 
-// ─── Find-your-fit pane wiring (right-rail Tab 2) ────────────────────
-// No longer a drawer — same logic, just lives inside the rail. Profile
-// is persisted to localStorage so users don't re-enter on return.
-function initFitTab() {
-    const goBtn = document.getElementById('fitGo');
-    if (!goBtn) return;
-
-    const profile = loadProfile();
-    applyProfileToUI(profile);
-    updateGoButton();
-
-    document.querySelectorAll('.fit-q').forEach(q => {
-        q.addEventListener('click', e => {
-            const btn = e.target.closest('.fit-opt');
-            if (!btn) return;
-            const isMulti = q.dataset.multi === 'true';
-            if (isMulti) {
-                btn.classList.toggle('active');
-            } else {
-                q.querySelectorAll('.fit-opt').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-            }
-            saveProfile();
-            updateGoButton();
-            if (document.getElementById('fitResults').style.display !== 'none') {
-                renderMatches();
-            }
-        });
-    });
-
-    goBtn.addEventListener('click', renderMatches);
-
-    if (countAnswered(profile) >= 1) renderMatches();
-}
-
-function readProfile() {
-    const out = {};
-    document.querySelectorAll('.fit-q').forEach(q => {
-        const isMulti = q.dataset.multi === 'true';
-        if (isMulti) {
-            const vals = [...q.querySelectorAll('.fit-opt.active')].map(b => b.dataset.val);
-            if (vals.length) out[q.dataset.key] = vals;
-        } else {
-            const sel = q.querySelector('.fit-opt.active');
-            if (sel) out[q.dataset.key] = sel.dataset.val;
-        }
-    });
-    return out;
-}
-
-function applyProfileToUI(profile) {
-    Object.entries(profile || {}).forEach(([k, v]) => {
-        const q = document.querySelector(`.fit-q[data-key="${k}"]`);
-        if (!q) return;
-        // Multi-value (array) — activate each matching option button.
-        // Single-value (string) — legacy or current single-select shape.
-        const vals = Array.isArray(v) ? v : [v];
-        vals.forEach(val => {
-            const btn = q.querySelector(`.fit-opt[data-val="${val}"]`);
-            if (btn) btn.classList.add('active');
-        });
-    });
-}
-
-function saveProfile() {
-    try { localStorage.setItem(PROFILE_KEY, JSON.stringify(readProfile())); } catch (e) {}
-}
-
-function loadProfile() {
-    try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}'); } catch (e) { return {}; }
-}
-
-function countAnswered(profile) {
-    return Object.values(profile || {}).filter(v => {
-        if (Array.isArray(v)) return v.length > 0;
-        return Boolean(v);
-    }).length;
-}
-
-function updateGoButton() {
-    const goBtn = document.getElementById('fitGo');
-    const n = countAnswered(readProfile());
-    goBtn.disabled = n === 0;
-    goBtn.textContent = n === 0 ? 'Pick at least one answer' : 'Find my matches';
-}
-
-// Per-priority scoring rules. Each entry returns {delta, reason?} —
-// summed across all selected priorities for multi-select profiles.
-const PRIORITY_RULES = {
-    yield: m => {
-        const delta = (m.avg_cap_rate_pct - 4) * 5;
-        return { delta, reason: m.avg_cap_rate_pct > 5.5 ? `${m.avg_cap_rate_pct.toFixed(1)}% avg cap rate` : null };
-    },
-    climate: m => {
-        const delta = (m.sunshine_days - 200) / 5;
-        return { delta, reason: m.sunshine_days >= 240 ? `${m.sunshine_days} sunny days/yr` : null };
-    },
-    walkability: m => {
-        const delta = (m.avg_walk_score - 40) / 3;
-        return { delta, reason: m.avg_walk_score > 65 ? `avg walk score ${m.avg_walk_score}` : null };
-    },
-    schools: m => {
-        const delta = (m.avg_pct_bachelors - 40) / 4;
-        return { delta, reason: m.avg_pct_bachelors > 55 ? `${Math.round(m.avg_pct_bachelors)}% bachelor's+` : null };
-    },
-    affordability: m => {
-        const delta = (500_000 - m.avg_home_value) / 12_000;
-        return { delta, reason: m.avg_home_value < 350_000 ? `median home ~$${Math.round(m.avg_home_value/1000)}K` : null };
-    },
-    safety: m => {
-        const delta = (50 - m.avg_crime_index) / 3;
-        return { delta, reason: m.avg_crime_index < 35 ? `low crime index ${Math.round(m.avg_crime_index)}` : null };
-    },
-    restaurants: m => {
-        const delta = (m.avg_restaurant_score - 40) / 3;
-        return { delta, reason: m.avg_restaurant_score > 65 ? `restaurant density ${Math.round(m.avg_restaurant_score)}/100` : null };
-    },
-    growth: m => {
-        const delta = (m.state_pop_growth_pct - 0.5) * 10;
-        return { delta, reason: m.state_pop_growth_pct >= 1.0 ? `+${m.state_pop_growth_pct}%/yr population growth` : null };
-    },
-    lowtax: m => {
-        // 0% income tax = +15. 5% income tax = 0. Linear in between.
-        const delta = (5 - m.state_income_tax_pct) * 3;
-        return { delta, reason: m.state_income_tax_pct === 0 ? 'no state income tax' : (m.state_income_tax_pct < 3 ? `${m.state_income_tax_pct}% state income tax` : null) };
-    },
-};
-
-// Score a metro 0-100 against the user's profile. Starts from the
-// existing avg_composite and adjusts based on what the user said
-// matters. Priority is now multi-select — bonuses sum across all
-// selected priorities (so picking 3 things that all favor Phoenix
-// gives Phoenix a 3× boost).
-function scoreMetroForProfile(m, profile) {
-    let score = m.avg_composite;
-    const reasons = [];
-
-    // Affordability constraint — penalize metros above the user's
-    // income-implied max affordable price. 4× income is the rule
-    // of thumb; we soft-penalize beyond that rather than filter.
-    if (profile.income) {
-        const cap = INCOME_MAX_AFFORDABLE[profile.income];
-        if (cap && m.avg_home_value > cap) {
-            const stretch = m.avg_home_value / cap;
-            score -= Math.min(35, (stretch - 1) * 30);
-        } else if (cap && m.avg_home_value < cap * 0.6) {
-            score += 5;
-            reasons.push('comfortably affordable for your income');
-        }
-    }
-
-    // Sum all selected priority bonuses. Profile.priority can be a
-    // single string (legacy) or array (multi-select). Normalize.
-    const priorities = Array.isArray(profile.priority) ? profile.priority
-                       : (profile.priority ? [profile.priority] : []);
-    for (const p of priorities) {
-        const rule = PRIORITY_RULES[p];
-        if (!rule) continue;
-        const { delta, reason } = rule(m);
-        score += delta;
-        if (reason) reasons.push(reason);
-    }
-
-    // Purpose-driven adjustment: investors care about yield, lifestyle
-    // buyers about livability proxies (walk, low crime).
-    if (profile.purpose === 'investment') {
-        score += (m.avg_cap_rate_pct - 4) * 3;
-    } else if (profile.purpose === 'lifestyle') {
-        score += (m.avg_walk_score - 40) / 5;
-        score -= (m.avg_crime_index - 50) / 4;   // lower crime = higher score
-    }
-
-    // Age-stage adjustments: 60+ likes climate + low crime; under-30
-    // tolerates urban grit (lower crime penalty).
-    if (profile.age === '60plus') {
-        score += (m.sunshine_days - 200) / 8;
-        score -= (m.avg_crime_index - 50) / 5;
-    } else if (profile.age === 'under30') {
-        score += (m.avg_walk_score - 40) / 6;
-    } else if (profile.age === '30-45') {
-        // Mid-career family-stage — schools matter even if not picked
-        score += (m.avg_pct_bachelors - 40) / 7;
-    }
-
-    return { score, reasons };
-}
-
-function renderMatches() {
-    const profile = readProfile();
-    if (countAnswered(profile) === 0) return;
-    const scored = METROS.map(m => {
-        const { score, reasons } = scoreMetroForProfile(m, profile);
-        return { m, score, reasons };
-    }).sort((a, b) => b.score - a.score);
-
-    const container = document.getElementById('fitMatches');
-    const wrapper = document.getElementById('fitResults');
-    container.innerHTML = scored.slice(0, 3).map((s, i) => {
-        const m = s.m;
-        const why = s.reasons.length ? s.reasons.slice(0, 2).join(' · ')
-                                     : `top ZIP ${m.top_zip.zip} · ${m.top_zip.composite_score.toFixed(0)} composite`;
-        return `<div class="fit-match" data-slug="${m.slug}">
-                    <div class="fit-match-head">
-                        <span class="rank">#${i + 1} &middot; ${m.metro_label}</span>
-                        <span class="score">${Math.round(s.score)}</span>
-                    </div>
-                    <div class="fit-match-stats">${fmtMoney(m.avg_home_value)} avg · ${m.avg_cap_rate_pct.toFixed(1)}% yield · ${m.sunshine_days} sunny days</div>
-                    <div class="fit-match-why">→ ${why}</div>
-                </div>`;
-    }).join('');
-    container.querySelectorAll('.fit-match').forEach(el => {
-        el.addEventListener('click', () => {
-            const slug = el.dataset.slug;
-            const marker = window._mpMarkers && window._mpMarkers[slug];
-            if (marker && window._mpMap) {
-                window._mpMap.flyTo(marker.getLatLng(), Math.max(window._mpMap.getZoom(), 6), { duration: 0.6 });
-                marker.openPopup();
-                highlightLeaderboardRow(slug);
-            } else {
-                window.location.href = `/real-estate/${slug}/map`;
-            }
-        });
-    });
-    wrapper.style.display = '';
-}
 </script>
 {% endblock %}
