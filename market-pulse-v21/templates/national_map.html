@@ -525,6 +525,7 @@
                             <button type="button" class="filter-preset" data-preset="college_town">College Town</button>
                             <button type="button" class="filter-preset" data-preset="foodie">Foodie</button>
                             <button type="button" class="filter-preset" data-preset="safe">Low Crime</button>
+                            <button type="button" class="filter-preset" data-preset="job_market">Job Market</button>
                         </div>
                     </div>
 
@@ -1033,6 +1034,7 @@ const PRESET_LABELS = {
     college_town: 'College Town',
     foodie:       'Foodie',
     safe:         'Low Crime',
+    job_market:   'Job Market',
 };
 // Profile presets only — maps each to the leaderboard persona used
 // to RANK the filtered candidate pool when picking the top-3 matches.
@@ -1075,6 +1077,10 @@ const FILTER_PRESETS = {
     college_town: { sliders: { avg_pct_bachelors: { useMin: 0.65 } } },
     foodie:       { sliders: { avg_restaurant_score: { useMin: 0.60 } } },
     safe:         { sliders: { avg_crime_index: { useMax: 0.35 } } },
+    // Strong job market = "people are moving here AND the workforce
+    // is educated". Sunbelt Growth is just pop growth (could be
+    // retirees), so this distinguishes it as a worker-driven market.
+    job_market:   { sliders: { state_pop_growth_pct: { useMin: 0.55 }, avg_pct_bachelors: { useMin: 0.55 } } },
 };
 
 let _filterState = { state: '', sliders: {}, activeProfile: null, activeQuick: null };
