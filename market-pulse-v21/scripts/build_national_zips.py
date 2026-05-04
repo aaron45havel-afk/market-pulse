@@ -70,10 +70,9 @@ GAZETTEER_URL = (
     "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/"
     "2020_Gazetteer/2020_Gaz_zcta_national.zip"
 )
-ZCTA_STATE_URL = (
-    "https://www2.census.gov/geo/docs/maps-data/data/rel2020/zcta520/"
-    "tab20_zcta520_state20_natl.txt"
-)
+# Note: state + city come from the Zillow ZHVI CSV directly (it has
+# State and City columns) so we don't need a separate Census ZCTA→state
+# crosswalk. Saves one external dependency and one network call.
 ACS_API = "https://api.census.gov/data/2022/acs/acs5"
 ACS_VARS = (
     "B19013_001E,"   # Median household income
@@ -137,11 +136,15 @@ def fetch_zip_member(url: str, label: str, member_pattern: str) -> str:
 
 # ─── Parsers ────────────────────────────────────────────────────────
 def parse_zhvi_per_zip(csv_text: str) -> dict[str, dict]:
-    """Parse Zillow ZHVI per-ZIP CSV. Returns {zip: {home_value,
-    home_value_yoy?}}. Skips ZIPs with no recent non-empty value."""
+    """Parse Zillow ZHVI per-ZIP CSV. Returns
+    {zip: {home_value, home_value_yoy?, state, city}}. Skips ZIPs with
+    no recent non-empty value. State and city come from the CSV's own
+    State/City columns — no external Census crosswalk needed."""
     reader = csv.reader(io.StringIO(csv_text))
     header = next(reader)
     zip_idx = header.index("RegionName")
+    state_idx = header.index("State") if "State" in header else None
+    city_idx = header.index("City") if "City" in header else None
     date_cols = sorted(
         [(i, h) for i, h in enumerate(header) if re.fullmatch(r"\d{4}-\d{2}-\d{2}", h)],
         key=lambda x: x[1],
@@ -177,6 +180,10 @@ def parse_zhvi_per_zip(csv_text: str) -> dict[str, dict]:
         entry: dict = {"home_value": int(round(latest_val))}
         if prior_val and prior_val > 0:
             entry["home_value_yoy"] = round((latest_val - prior_val) / prior_val * 100, 1)
+        if state_idx is not None and state_idx < len(row):
+            entry["state"] = row[state_idx].strip().upper()
+        if city_idx is not None and city_idx < len(row):
+            entry["city"] = row[city_idx].strip()
         out[zcode] = entry
     log.info("  → %d ZIPs with ZHVI", len(out))
     return out
@@ -228,28 +235,6 @@ def parse_gazetteer(text: str) -> dict[str, dict]:
             continue
         out[zcode] = {"lat": lat, "lng": lng, "aland_km2": aland_km2}
     log.info("  → %d ZCTAs in Gazetteer", len(out))
-    return out
-
-
-def parse_zcta_state(text: str) -> dict[str, str]:
-    """Parse the ZCTA→state relationship file (pipe-delimited). Some
-    ZCTAs straddle state lines; we keep the first record we see, which
-    is the state with the most overlap (file is sorted that way)."""
-    out: dict[str, str] = {}
-    for i, line in enumerate(text.splitlines()):
-        if i == 0:
-            continue
-        parts = line.split("|")
-        if len(parts) < 4:
-            continue
-        zcode = parts[0].strip().zfill(5)
-        state_fips = parts[2].strip().zfill(2)
-        if zcode in out:
-            continue
-        code = STATE_FIPS.get(state_fips)
-        if code:
-            out[zcode] = code
-    log.info("  → %d ZCTAs with state code", len(out))
     return out
 
 
@@ -417,9 +402,6 @@ def main(argv: list[str] | None = None) -> int:
         GAZETTEER_URL, "Census 2020 ZCTA Gazetteer",
         r"2020_Gaz_zcta_national\.txt$",
     ))
-    zcta_state = parse_zcta_state(fetch_text(
-        ZCTA_STATE_URL, "Census 2020 ZCTA→state crosswalk",
-    ))
     acs = fetch_acs_zcta()
 
     log.info("Joining feeds …")
@@ -459,10 +441,19 @@ def main(argv: list[str] | None = None) -> int:
             "walk_score": walk,
             "restaurant_score": rest,
         })
+        # State + city are in the ZHVI CSV directly. State is a 2-letter
+        # code; we whitelist against the 50+DC set so we don't carry
+        # territories Zillow lists separately. City lets us label rows
+        # as e.g. "Dallas, TX" instead of a bare "ZCTA 75201".
+        state = zh.get("state", "")
+        if state and state not in STATE_FIPS.values():
+            state = ""
+        city = zh.get("city", "")
+        name = f"{city}, {state}" if (city and state) else f"ZCTA {z}"
         rows.append({
             "zip": z,
-            "state": zcta_state.get(z, ""),
-            "name": f"ZCTA {z}",
+            "state": state,
+            "name": name,
             "lat": g["lat"],
             "lng": g["lng"],
             "aland_km2": round(g["aland_km2"], 3),
