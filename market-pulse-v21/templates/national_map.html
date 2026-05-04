@@ -182,6 +182,8 @@
     .pop-actions { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.65rem; }
     .pop-cta { flex: 1 1 auto; text-align: center; padding: 0.5rem 0.85rem; background: var(--accent2); color: #fff !important; border-radius: 6px; font-size: 0.82rem; font-weight: 600; }
     .pop-cta:hover { text-decoration: none; background: #2563eb; }
+    .pop-cta.is-disabled { background: var(--surface2); color: var(--text-dim) !important; cursor: not-allowed; font-style: italic; }
+    .pop-cta.is-disabled:hover { background: var(--surface2); }
     /* Social icon buttons — square, icon-only, brand-colored. Same
        size for visual rhythm, hover lifts each toward its brand color. */
     .pop-social { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex: 0 0 34px; border-radius: 6px; color: #fff !important; }
@@ -671,19 +673,34 @@ document.addEventListener('DOMContentLoaded', () => {
             pane: 'markerPane',
         });
         marker._mpScore = m.top_zip.composite_score;  // used by the cluster icon to compute avg color
+        // Stub metros (one-pin-per-state coverage) get a different
+        // header subtitle ("state estimate") and a disabled CTA — the
+        // /real-estate/{slug}/map page has nothing to render until the
+        // per-ZIP dataset for that state is built. Otherwise the
+        // popup is identical so the rest of the UI stays uniform.
+        const subhead = m.is_stub
+            ? `State estimate · ${m.state}`
+            : `${m.zip_count} ZIPs · ${m.state}`;
+        const topRow = m.is_stub
+            ? `<div class="pop-stat"><span class="label">State composite</span><span style="color:${color}; font-weight:700;">${m.top_zip.composite_score.toFixed(1)}</span></div>` +
+              `<div class="pop-stat"><span class="label">Gross yield</span><span>${m.top_zip.cap_rate_pct.toFixed(2)}%</span></div>`
+            : `<div class="pop-stat"><span class="label">Top ZIP</span><span><strong>${m.top_zip.zip}</strong> ${m.top_zip.name}</span></div>` +
+              `<div class="pop-stat"><span class="label">Top score</span><span style="color:${color}; font-weight:700;">${m.top_zip.composite_score.toFixed(1)}</span></div>` +
+              `<div class="pop-stat"><span class="label">Top cap rate</span><span>${m.top_zip.cap_rate_pct.toFixed(2)}%</span></div>`;
+        const cta = m.is_stub
+            ? `<span class="pop-cta is-disabled" title="Per-ZIP deep-dive not yet available for this state.">Deep-dive coming soon</span>`
+            : `<a href="/real-estate/${m.slug}/map" class="pop-cta">Open metro map &rarr;</a>`;
         const popup =
             `<div style="font-weight:700; font-size:1.0rem; margin-bottom:0.25rem;">${m.metro_label}</div>` +
-            `<div style="font-size:0.72rem; color:var(--text-dim); margin-bottom:0.5rem;">${m.zip_count} ZIPs · ${m.state}</div>` +
-            `<div class="pop-stat"><span class="label">Top ZIP</span><span><strong>${m.top_zip.zip}</strong> ${m.top_zip.name}</span></div>` +
-            `<div class="pop-stat"><span class="label">Top score</span><span style="color:${color}; font-weight:700;">${m.top_zip.composite_score.toFixed(1)}</span></div>` +
-            `<div class="pop-stat"><span class="label">Top cap rate</span><span>${m.top_zip.cap_rate_pct.toFixed(2)}%</span></div>` +
+            `<div style="font-size:0.72rem; color:var(--text-dim); margin-bottom:0.5rem;">${subhead}</div>` +
+            topRow +
             `<div class="pop-stat"><span class="label">Avg home value</span><span>${fmtMoney(m.avg_home_value)}</span></div>` +
             `<div class="pop-stat"><span class="label">Avg rent /mo</span><span>${fmtMoney(m.avg_rent)}</span></div>` +
             // Action bar: primary CTA + social icon buttons all on one
             // line. Social hashtags fall back to a search query if a
             // metro lacks a curated tag (currently every metro has both).
             `<div class="pop-actions">` +
-                `<a href="/real-estate/${m.slug}/map" class="pop-cta">Open metro map &rarr;</a>` +
+                cta +
                 `<a href="${m.tiktok_hashtag ? `https://www.tiktok.com/tag/${m.tiktok_hashtag}` : `https://www.tiktok.com/search?q=${encodeURIComponent(m.metro_label)}`}" target="_blank" rel="noopener noreferrer" class="pop-social pop-social-tiktok" title="Explore on TikTok${m.tiktok_hashtag ? ` (#${m.tiktok_hashtag})` : ''}" aria-label="Explore on TikTok">` +
                     `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5.8 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.84-.1z"/></svg>` +
                 `</a>` +
