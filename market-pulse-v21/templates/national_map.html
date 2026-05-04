@@ -1019,6 +1019,14 @@ const PROFILE_PERSONA = {
     investor:   'investor',
     retirement: 'balanced',
 };
+// Membership in PROFILE_KEYS routes a click into _filterState.activeProfile;
+// everything else lands in _filterState.activeQuick. The two slots live
+// independently so users can stack a profile (Young Pro) with a quick
+// preset (Sunny) — slider rules merge below.
+const PROFILE_KEYS = new Set(['young_pro', 'family', 'investor', 'retirement']);
+function _slotForPreset(key) {
+    return PROFILE_KEYS.has(key) ? 'activeProfile' : 'activeQuick';
+}
 const FILTER_PRESETS = {
     // Profile presets — compound shortcuts that mirror the prior
     // Find-Your-Fit personas. Tuned against the actual data spread.
@@ -1037,7 +1045,7 @@ const FILTER_PRESETS = {
     growth:     { sliders: { state_pop_growth_pct: { useMin: 0.55 } } },
 };
 
-let _filterState = { state: '', sliders: {}, activePreset: null };
+let _filterState = { state: '', sliders: {}, activeProfile: null, activeQuick: null };
 let _filterBounds = {};   // key → { min, max }
 
 function getFilteredMetros() {
@@ -1088,8 +1096,8 @@ function initFilters() {
         stateSel.appendChild(opt);
     });
     stateSel.addEventListener('change', e => {
+        // State filter sits orthogonally to presets — keep both stacked.
         _filterState.state = e.target.value;
-        _filterState.activePreset = null;
         applyFilters();
     });
 
@@ -1133,7 +1141,12 @@ function initFilters() {
                 delete _filterState.sliders[def.key];
             }
             row.classList.toggle('is-narrowed', narrowed);
-            _filterState.activePreset = null;   // manual change clears preset highlight
+            // Manual change "lifts" the user out of preset mode but
+            // keeps the slider state — both highlight slots clear so
+            // the chips bar shows individual slider chips instead.
+            _filterState.activeProfile = null;
+            _filterState.activeQuick = null;
+            refreshPresetHighlight();
             paintFill(def, lo, hi, fill, rangeEl);
             applyFilters();
         };
@@ -1143,18 +1156,13 @@ function initFilters() {
         paintFill(def, b.min, b.max, fill, rangeEl);
     });
 
-    // Preset pills — both profile presets (top row) and quick presets
-    // (second row) share the same handler since they're all entries
-    // in FILTER_PRESETS. Clicking the active one clears it (toggle).
+    // Preset pills — both rows share one handler. Profile presets
+    // route to activeProfile, quick presets to activeQuick (so they
+    // stack: pick Young Pro then Sunny and both apply). Clicking the
+    // pill that's already active toggles it off, leaving the other
+    // slot intact.
     document.querySelectorAll('#profilePresets .filter-preset, #filterPresets .filter-preset').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const key = btn.dataset.preset;
-            if (_filterState.activePreset === key) {
-                resetFilters();
-                return;
-            }
-            applyPreset(key);
-        });
+        btn.addEventListener('click', () => togglePreset(btn.dataset.preset));
     });
 
     // Reset button.
@@ -1174,31 +1182,51 @@ function paintFill(def, lo, hi, fillEl, rangeEl) {
     rangeEl.textContent = `${def.fmt(lo)} – ${def.fmt(hi)}`;
 }
 
-function applyPreset(presetKey) {
-    const preset = FILTER_PRESETS[presetKey];
-    if (!preset) return;
-    // Presets replace the slider state outright (not additive) so toggling
-    // between them feels predictable. State dropdown is preserved.
+// Toggle a preset on its appropriate slot (profile vs quick). Picking
+// the same key again clears just that slot, leaving the other intact.
+// Then rebuild the merged slider state from whatever's left active.
+function togglePreset(key) {
+    const slot = _slotForPreset(key);
+    _filterState[slot] = (_filterState[slot] === key) ? null : key;
+    applyAllPresets();
+}
+
+// Rebuild slider state from BOTH active preset slots. Where two presets
+// touch the same slider key, take the more-restrictive bound (max of
+// the two min-floors, min of the two max-ceilings). If the merge
+// collapses to an empty range (truly contradictory presets, rare in
+// practice), pin to the midpoint so the UI doesn't break.
+function applyAllPresets() {
     _filterState.sliders = {};
-    _filterState.activePreset = presetKey;
-    // Each useMin/useMax is a fraction of the full slider span. Apply
-    // it onto the slider's actual numeric range to derive a min/max.
-    Object.entries(preset.sliders || {}).forEach(([key, rule]) => {
-        const b = _filterBounds[key];
-        if (!b) return;
-        const span = b.max - b.min;
-        let lo = b.min, hi = b.max;
-        if (rule.useMin != null) lo = b.min + span * rule.useMin;
-        if (rule.useMax != null) hi = b.min + span * rule.useMax;
-        _filterState.sliders[key] = { min: lo, max: hi };
-        syncSliderUI(key, lo, hi);
+    [_filterState.activeProfile, _filterState.activeQuick].forEach(presetKey => {
+        if (!presetKey) return;
+        const preset = FILTER_PRESETS[presetKey];
+        if (!preset) return;
+        Object.entries(preset.sliders || {}).forEach(([key, rule]) => {
+            const b = _filterBounds[key];
+            if (!b) return;
+            const span = b.max - b.min;
+            let lo = b.min, hi = b.max;
+            if (rule.useMin != null) lo = b.min + span * rule.useMin;
+            if (rule.useMax != null) hi = b.min + span * rule.useMax;
+            const cur = _filterState.sliders[key];
+            if (cur) {
+                lo = Math.max(cur.min, lo);
+                hi = Math.min(cur.max, hi);
+                if (lo > hi) { const mid = (cur.min + hi) / 2; lo = hi = mid; }
+            }
+            _filterState.sliders[key] = { min: lo, max: hi };
+        });
     });
-    // Reset any sliders not touched by this preset to their defaults so
-    // we don't leave a previous preset's narrowing in place.
+    // Sync every slider — touched ones to the merged values, untouched
+    // ones reset to their full bounds (lifts a stale preset's narrowing).
     FILTER_DEFS.forEach(def => {
-        if (preset.sliders && preset.sliders[def.key]) return;
-        const b = _filterBounds[def.key];
-        if (b) syncSliderUI(def.key, b.min, b.max);
+        const r = _filterState.sliders[def.key];
+        if (r) syncSliderUI(def.key, r.min, r.max);
+        else {
+            const b = _filterBounds[def.key];
+            if (b) syncSliderUI(def.key, b.min, b.max);
+        }
     });
     refreshPresetHighlight();
     applyFilters();
@@ -1222,7 +1250,7 @@ function syncSliderUI(key, lo, hi) {
 }
 
 function resetFilters() {
-    _filterState = { state: '', sliders: {}, activePreset: null };
+    _filterState = { state: '', sliders: {}, activeProfile: null, activeQuick: null };
     document.getElementById('filterState').value = '';
     FILTER_DEFS.forEach(def => {
         const b = _filterBounds[def.key];
@@ -1233,8 +1261,10 @@ function resetFilters() {
 }
 
 function refreshPresetHighlight() {
-    document.querySelectorAll('#profilePresets .filter-preset, #filterPresets .filter-preset').forEach(b =>
-        b.classList.toggle('active', b.dataset.preset === _filterState.activePreset));
+    document.querySelectorAll('#profilePresets .filter-preset, #filterPresets .filter-preset').forEach(b => {
+        const key = b.dataset.preset;
+        b.classList.toggle('active', _filterState[_slotForPreset(key)] === key);
+    });
 }
 
 // Apply current filter state to the map (fade out non-matching pins)
@@ -1285,7 +1315,7 @@ function applyFilters() {
 function renderProfileMatches() {
     const wrap = document.getElementById('profileMatches');
     if (!wrap) return;
-    const persona = PROFILE_PERSONA[_filterState.activePreset];
+    const persona = PROFILE_PERSONA[_filterState.activeProfile];
     if (!persona) {
         wrap.hidden = true;
         wrap.innerHTML = '';
@@ -1296,12 +1326,12 @@ function renderProfileMatches() {
         .slice(0, 3);
     if (!top.length) {
         wrap.hidden = false;
-        wrap.innerHTML = `<div class="match-results-label">Top 3 for ${PRESET_LABELS[_filterState.activePreset]}</div>` +
+        wrap.innerHTML = `<div class="match-results-label">Top 3 for ${PRESET_LABELS[_filterState.activeProfile]}</div>` +
                          `<div style="font-size:0.78rem; color:var(--text-dim); font-style:italic;">No metros match this profile yet — widen a slider.</div>`;
         return;
     }
     wrap.hidden = false;
-    wrap.innerHTML = `<div class="match-results-label">Top 3 for ${PRESET_LABELS[_filterState.activePreset]}</div>` +
+    wrap.innerHTML = `<div class="match-results-label">Top 3 for ${PRESET_LABELS[_filterState.activeProfile]}</div>` +
         top.map((m, i) => {
             const score = compositeForPersona(m, persona);
             const color = scoreColor(score);
@@ -1340,12 +1370,21 @@ function renderActiveChips() {
     const wrap = document.getElementById('activeChips');
     if (!wrap) return;
     const chips = [];
-    if (_filterState.activePreset) {
+    // One chip per active preset slot. Profile + quick can both be
+    // active at once and each removes only its own slot — clicking the
+    // × on "Young Pro profile" leaves "Sunny preset" intact and
+    // recomputes sliders from what's left.
+    [_filterState.activeProfile, _filterState.activeQuick].forEach(k => {
+        if (!k) return;
+        const tag = PROFILE_KEYS.has(k) ? ' profile' : ' preset';
         chips.push({
-            label: (PRESET_LABELS[_filterState.activePreset] || _filterState.activePreset) + ' preset',
-            clear: () => resetFilters(),
+            label: (PRESET_LABELS[k] || k) + tag,
+            clear: () => {
+                _filterState[_slotForPreset(k)] = null;
+                applyAllPresets();
+            },
         });
-    }
+    });
     if (_filterState.state) {
         chips.push({
             label: _filterState.state + ' only',
@@ -1356,10 +1395,13 @@ function renderActiveChips() {
             },
         });
     }
+    // Per-slider chips only appear in manual mode (no preset active).
+    // Otherwise the preset chip already represents the slider bundle —
+    // showing both is noisy and the per-slider × wouldn't make sense
+    // (the preset would just resnap on next applyAllPresets).
+    const presetActive = _filterState.activeProfile || _filterState.activeQuick;
     Object.entries(_filterState.sliders).forEach(([key, range]) => {
-        // Skip per-slider chips when a preset is active — the preset
-        // chip already represents the bundle. Showing both is noisy.
-        if (_filterState.activePreset) return;
+        if (presetActive) return;
         const def = FILTER_DEFS.find(d => d.key === key);
         if (!def) return;
         chips.push({
