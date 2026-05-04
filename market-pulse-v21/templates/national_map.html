@@ -283,6 +283,21 @@
     .active-chip .chip-x { background: transparent; border: none; color: var(--text-dim); cursor: pointer; padding: 0; font-size: 0.95rem; line-height: 1; }
     .active-chip .chip-x:hover { color: var(--text); }
 
+    /* Top-3 match panel — only shown when a profile preset is active.
+       Click a row to fly the map to that pin and open its popup, same
+       as a leaderboard click. Sits above the preset rows so users
+       see the immediate result of picking a profile. */
+    .match-results { padding: 0.55rem 0.85rem 0.95rem; border-bottom: 1px solid var(--border); margin-bottom: 0.85rem; }
+    .match-results[hidden] { display: none; }
+    .match-results-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); font-weight: 600; margin-bottom: 0.45rem; }
+    .match-row { display: flex; align-items: center; gap: 0.55rem; padding: 0.45rem 0.55rem; border-radius: 7px; background: var(--surface2); border: 1px solid var(--border); margin-bottom: 0.35rem; cursor: pointer; transition: border-color 0.12s; }
+    .match-row:hover { border-color: var(--accent2); }
+    .match-row .rank { font-size: 0.78rem; color: var(--text-dim); font-weight: 700; min-width: 1.4rem; text-align: right; }
+    .match-row .meta { flex: 1; min-width: 0; }
+    .match-row .meta .label { font-weight: 700; font-size: 0.85rem; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .match-row .meta .stats { font-size: 0.68rem; color: var(--text-dim); margin-top: 0.1rem; }
+    .match-row .score { font-size: 1rem; font-weight: 700; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
 
     /* ─── Filters pane (right-rail Tab 3) ─────────────────────────── */
     .filter-body { padding: 1rem 1.05rem 0; overflow-y: auto; flex: 1; }
@@ -471,6 +486,7 @@
             <div class="rail-pane" data-pane="filters">
                 <div class="filter-body">
                     <div class="active-chips" id="activeChips" hidden></div>
+                    <div class="match-results" id="profileMatches" hidden></div>
 
                     <div class="filter-section">
                         <span class="filter-section-label">Match a profile</span>
@@ -994,6 +1010,15 @@ const PRESET_LABELS = {
     taxhaven:   'Tax Haven',
     growth:     'Sunbelt Growth',
 };
+// Profile presets only — maps each to the leaderboard persona used
+// to RANK the filtered candidate pool when picking the top-3 matches.
+// Quick presets aren't here because they don't carry a persona intent.
+const PROFILE_PERSONA = {
+    young_pro:  'lifestyle',
+    family:     'balanced',
+    investor:   'investor',
+    retirement: 'balanced',
+};
 const FILTER_PRESETS = {
     // Profile presets — compound shortcuts that mirror the prior
     // Find-Your-Fit personas. Tuned against the actual data spread.
@@ -1247,7 +1272,64 @@ function applyFilters() {
     const tab = document.querySelector('.rail-tab[data-pane="filters"]');
     if (tab) tab.classList.toggle('has-active', anyActive);
     renderActiveChips();
+    renderProfileMatches();
     renderLeaderboard();
+}
+
+// Top-3 matches panel — only rendered when a profile preset is the
+// active narrowing. Ranks the filtered candidate pool by the
+// persona that profile maps to (Investor profile → investor persona,
+// Young Pro → lifestyle, etc.). Click a row to fly + open popup, same
+// behavior as a leaderboard row click. Hidden otherwise so the pane
+// doesn't carry stale matches.
+function renderProfileMatches() {
+    const wrap = document.getElementById('profileMatches');
+    if (!wrap) return;
+    const persona = PROFILE_PERSONA[_filterState.activePreset];
+    if (!persona) {
+        wrap.hidden = true;
+        wrap.innerHTML = '';
+        return;
+    }
+    const top = [...getFilteredMetros()]
+        .sort((a, b) => compositeForPersona(b, persona) - compositeForPersona(a, persona))
+        .slice(0, 3);
+    if (!top.length) {
+        wrap.hidden = false;
+        wrap.innerHTML = `<div class="match-results-label">Top 3 for ${PRESET_LABELS[_filterState.activePreset]}</div>` +
+                         `<div style="font-size:0.78rem; color:var(--text-dim); font-style:italic;">No metros match this profile yet — widen a slider.</div>`;
+        return;
+    }
+    wrap.hidden = false;
+    wrap.innerHTML = `<div class="match-results-label">Top 3 for ${PRESET_LABELS[_filterState.activePreset]}</div>` +
+        top.map((m, i) => {
+            const score = compositeForPersona(m, persona);
+            const color = scoreColor(score);
+            return `<div class="match-row" data-slug="${m.slug}">
+                        <span class="rank">${i + 1}</span>
+                        <div class="meta">
+                            <div class="label">${m.metro_label}</div>
+                            <div class="stats">${fmtMoney(m.avg_home_value)} · ${m.avg_cap_rate_pct.toFixed(1)}% yield</div>
+                        </div>
+                        <span class="score" style="color:${color};">${score.toFixed(0)}</span>
+                    </div>`;
+        }).join('');
+    wrap.querySelectorAll('.match-row').forEach(row => {
+        row.addEventListener('click', () => {
+            const slug = row.dataset.slug;
+            const marker = window._mpMarkers && window._mpMarkers[slug];
+            if (!marker || !window._mpMap) return;
+            const cluster = window._mpClusterLayer;
+            if (cluster && !window._mpMap.hasLayer(cluster)) cluster.addTo(window._mpMap);
+            if (cluster && cluster.zoomToShowLayer) {
+                cluster.zoomToShowLayer(marker, () => marker.openPopup());
+            } else {
+                window._mpMap.flyTo(marker.getLatLng(), Math.max(window._mpMap.getZoom(), 6), { duration: 0.6 });
+                marker.openPopup();
+            }
+            highlightLeaderboardRow(slug);
+        });
+    });
 }
 
 // Build the active-filter chip bar. Each chip names exactly one piece
