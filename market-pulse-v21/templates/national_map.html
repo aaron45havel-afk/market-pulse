@@ -50,6 +50,15 @@
     .rate-stress .reset-btn { background: transparent; border: none; color: var(--accent2); cursor: pointer; font-size: 0.72rem; padding: 0; text-decoration: underline; }
     .rate-stress .reset-btn:hover { color: var(--text); }
 
+    /* ZIP overlay status text inside the toggle label, plus the
+       loading + DB-missing banner that appears at top-center of the
+       map column. Banner is non-dismissible by design — hides as
+       soon as the DB exists or the overlay is toggled off. */
+    .zip-status { font-size: 0.65rem; color: var(--text-dim); font-weight: 400; margin-left: 0.25rem; font-variant-numeric: tabular-nums; }
+    .zip-status.is-loading { color: var(--accent2); }
+    .zip-banner { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(245,158,11,0.95); color: #1f2937; padding: 0.45rem 0.85rem; border-radius: 6px; font-size: 0.78rem; box-shadow: 0 2px 8px rgba(0,0,0,0.25); max-width: 80%; }
+    .zip-banner[hidden] { display: none; }
+
     /* Brief amber pulse used to flag a metric that the stress slider
        just auto-switched to (in the sidebar) and the legend title
        above the choropleth. Makes the change visible since the user's
@@ -389,6 +398,11 @@
                     <span class="cp-toggle-track"></span>
                     <span class="cp-toggle-label">State heatmap</span>
                 </label>
+                <label class="cp-toggle" title="Renders all ZIPs in the viewport at zoom 9+. Powered by Zillow ZHVI/ZORI + Census ACS. National coverage ~30K ZIPs.">
+                    <input type="checkbox" id="zipToggle" checked>
+                    <span class="cp-toggle-track"></span>
+                    <span class="cp-toggle-label">ZIP overlay <span class="zip-status" id="zipStatus"></span></span>
+                </label>
             </div>
             <div class="ds-list" id="dsList"></div>
             <div class="ds-legend" id="cpLegend">
@@ -406,6 +420,7 @@
              sidebar — this one explains the metro PIN colors). -->
         <div class="map-col">
             <div id="nationalMap"></div>
+            <div class="zip-banner" id="zipBanner" hidden></div>
             <div class="legend">
                 <span>Worse</span>
                 <span class="legend-bar"></span>
@@ -756,6 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initFilters();
     initChoropleth();
     initRateStress();
+    initZipLayer();
 });
 
 // Maps user income buckets to a max-affordable home price using the
@@ -801,6 +817,9 @@ function initLeaderboard() {
             btn.classList.add('active');
             _lbPersona = btn.dataset.persona;
             renderLeaderboard();
+            // Re-fetch the national ZIP overlay for the new persona —
+            // the API does the persona-specific ranking server-side.
+            if (typeof fetchZipsForViewport === 'function') fetchZipsForViewport();
         });
     });
     document.getElementById('lbStateClear').addEventListener('click', clearState);
@@ -1735,6 +1754,146 @@ function repaintChoropleth() {
     } else if (bar) {
         bar.style.background = '';   // fall back to the CSS class
     }
+}
+
+// ─── National ZIP overlay (Phase 3 of national rollout) ─────────────
+// Fetches ZIPs in the current viewport from /api/zips on moveend and
+// renders them as circleMarkers colored by persona composite. Phase 1
+// built the data spine (data/zips.db), Phase 2 the endpoint; this
+// closes the loop on the UI side. Hand-curated metro pins still
+// render on top via markerPane — these are background detail.
+const ZIP_FETCH_MIN_ZOOM = 9;       // below this, choropleth + metro pins suffice
+const ZIP_FETCH_DEBOUNCE_MS = 250;  // pause before firing the request
+const ZIP_FETCH_LIMIT = 800;        // matches /api/zips upper-end useful viewport density
+let _zipLayer = null;               // L.LayerGroup of circleMarkers
+let _zipsEnabled = true;
+let _zipFetchAbort = null;          // AbortController for in-flight fetch
+let _zipDebounceTimer = 0;
+let _zipDbMissing = false;          // set true after first 'db_missing' response
+
+function initZipLayer() {
+    _zipLayer = L.layerGroup();
+    if (window._mpMap) _zipLayer.addTo(window._mpMap);
+    const toggle = document.getElementById('zipToggle');
+    if (toggle) {
+        toggle.addEventListener('change', () => {
+            _zipsEnabled = toggle.checked;
+            if (!_zipsEnabled) {
+                if (_zipFetchAbort) _zipFetchAbort.abort();
+                _zipLayer.clearLayers();
+                setZipStatus('');
+            } else {
+                fetchZipsForViewport();
+            }
+        });
+    }
+    // moveend fires after every pan/zoom settle — debounce so a fast
+    // fling-and-release doesn't queue ten requests.
+    window._mpMap.on('moveend', () => {
+        clearTimeout(_zipDebounceTimer);
+        _zipDebounceTimer = setTimeout(fetchZipsForViewport, ZIP_FETCH_DEBOUNCE_MS);
+    });
+    fetchZipsForViewport();
+}
+
+function setZipStatus(text, isLoading = false) {
+    const el = document.getElementById('zipStatus');
+    if (!el) return;
+    el.textContent = text ? `· ${text}` : '';
+    el.classList.toggle('is-loading', isLoading);
+}
+
+function showZipBanner(message) {
+    const b = document.getElementById('zipBanner');
+    if (!b) return;
+    b.textContent = message;
+    b.hidden = !message;
+}
+
+async function fetchZipsForViewport() {
+    if (!_zipsEnabled || !_zipLayer || !window._mpMap) return;
+    const z = window._mpMap.getZoom();
+    if (z < ZIP_FETCH_MIN_ZOOM) {
+        // Too zoomed out — clear any rendered ZIPs so we don't have
+        // 800 dots cluttering a country-level view, and fall back to
+        // the existing choropleth + metro pin treatment.
+        _zipLayer.clearLayers();
+        setZipStatus(`zoom ≥ ${ZIP_FETCH_MIN_ZOOM}`);
+        return;
+    }
+    // Cancel any earlier in-flight request before issuing a new one.
+    // moveend fires before debounce expires sometimes; this keeps the
+    // last viewport's request from arriving after the next one.
+    if (_zipFetchAbort) _zipFetchAbort.abort();
+    _zipFetchAbort = new AbortController();
+    const b = window._mpMap.getBounds();
+    const url = `/api/zips?lat1=${b.getSouth()}&lng1=${b.getWest()}` +
+                `&lat2=${b.getNorth()}&lng2=${b.getEast()}` +
+                `&persona=${encodeURIComponent(_lbPersona)}&limit=${ZIP_FETCH_LIMIT}`;
+    setZipStatus('loading…', true);
+    try {
+        const resp = await fetch(url, { signal: _zipFetchAbort.signal });
+        const data = await resp.json();
+        if (data.meta && data.meta.db_missing) {
+            _zipDbMissing = true;
+            showZipBanner('National ZIP data not yet loaded — only metro pins available. Trigger refresh-national-zips workflow to populate.');
+            setZipStatus('not loaded');
+            _zipLayer.clearLayers();
+            return;
+        }
+        if (_zipDbMissing) {
+            _zipDbMissing = false;
+            showZipBanner('');
+        }
+        renderZipLayer(data.zips || []);
+        setZipStatus(`${data.zips.length} ZIPs`);
+    } catch (e) {
+        if (e.name === 'AbortError') return;   // expected on rapid pans
+        console.error('ZIP fetch failed', e);
+        setZipStatus('error');
+    }
+}
+
+function renderZipLayer(zips) {
+    _zipLayer.clearLayers();
+    const z = window._mpMap.getZoom();
+    // Larger dots at higher zoom so they don't disappear into pixels;
+    // smaller at z9-10 where there are likely many in the viewport.
+    const radius = z >= 13 ? 7 : z >= 11 ? 5 : 4;
+    zips.forEach(z => {
+        if (z.composite == null) return;
+        const m = L.circleMarker([z.lat, z.lng], {
+            radius,
+            color: '#fff',
+            weight: 1,
+            fillColor: scoreColor(z.composite),
+            fillOpacity: 0.85,
+            // Sit above the choropleth (overlayPane=400) but below
+            // the metro pins (markerPane=600). New custom pane keeps
+            // the z-stacking deterministic regardless of add order.
+            pane: 'overlayPane',
+        });
+        const imputedFlag = z.is_imputed
+            ? '<div style="font-size:10px; color:#92400e; margin-top:2px;">⚠ rent imputed (no ZORI)</div>'
+            : '';
+        m.bindTooltip(
+            `<strong>${z.zip}</strong> · ${z.state}<br>` +
+            `${fmtMoney(z.home_value)} · ${fmtMoney(z.rent)}/mo<br>` +
+            `cap ${z.cap_rate_pct.toFixed(1)}% · score <strong>${z.composite.toFixed(0)}</strong>`,
+            { sticky: true, opacity: 0.95, direction: 'top' }
+        );
+        m.bindPopup(
+            `<div style="font-weight:700; font-size:0.95rem;">ZIP ${z.zip}</div>` +
+            `<div style="font-size:0.72rem; color:var(--text-dim); margin-bottom:0.4rem;">${z.name} · ${z.state}</div>` +
+            `<div class="pop-stat"><span class="label">Home value</span><span>${fmtMoney(z.home_value)}</span></div>` +
+            `<div class="pop-stat"><span class="label">Rent /mo</span><span>${fmtMoney(z.rent)}</span></div>` +
+            `<div class="pop-stat"><span class="label">Cap rate</span><span>${z.cap_rate_pct.toFixed(2)}%</span></div>` +
+            `<div class="pop-stat"><span class="label">Composite</span><span style="color:${scoreColor(z.composite)}; font-weight:700;">${z.composite.toFixed(1)}</span></div>` +
+            imputedFlag,
+            { maxWidth: 280 }
+        );
+        _zipLayer.addLayer(m);
+    });
 }
 
 // ─── Find-your-fit pane wiring (right-rail Tab 2) ────────────────────
