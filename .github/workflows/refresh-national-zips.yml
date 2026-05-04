@@ -1,9 +1,8 @@
 name: Refresh national ZIPs database
 
 # Builds market-pulse-v21/data/zips.db from Zillow ZHVI/ZORI per-ZIP
-# CSVs + Census ZCTA Gazetteer + Census ACS 2022 5-year. Runs monthly,
-# right after refresh-zillow.yml has populated the latest values, so
-# this job's input is always at the most recent month available.
+# CSVs + Census ZCTA Gazetteer + Census ACS 2022 5-year. Runs every
+# Monday, after refresh-zillow.yml has populated the latest values.
 #
 # Same auto-commit + push-to-main pattern as refresh-zillow / refresh-
 # redfin / refresh-rates. No app code reads zips.db yet — Phase 2 wires
@@ -11,7 +10,7 @@ name: Refresh national ZIPs database
 
 on:
   schedule:
-    - cron: '0 14 1 * *'   # 14:00 UTC on the 1st (Zillow refresh runs at 12:00)
+    - cron: '0 14 * * 1'   # Mondays 14:00 UTC (Zillow refresh runs at 12:00)
   workflow_dispatch:
 
 permissions:

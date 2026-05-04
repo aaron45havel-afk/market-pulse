@@ -3,11 +3,11 @@ name: Refresh Zillow data
 # Pulls fresh Zillow ZHVI (home values) and ZORI (rents) for every ZIP in the
 # neighborhood maps, writes data/zillow_overrides.json, and commits the result
 # directly to main. Cap-rate scoring picks up the new numbers on the next
-# deploy. Runs on the 1st of every month plus on demand.
+# deploy. Runs every Monday plus on demand.
 
 on:
   schedule:
-    - cron: '0 12 1 * *'   # 12:00 UTC on the 1st of each month
+    - cron: '0 12 * * 1'   # Mondays 12:00 UTC
   workflow_dispatch:        # also run manually from the Actions tab
 
 permissions:

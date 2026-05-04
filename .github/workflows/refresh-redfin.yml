@@ -3,14 +3,11 @@ name: Refresh Redfin data
 # Pulls fresh Redfin state-level Home Sales + Days on Market for the
 # /map state choropleth, writes data/redfin_overrides.json, and commits
 # the result directly to main. Same pattern as refresh-zillow.yml — runs
-# on the 1st of every month plus on demand. The 1st-of-month cadence
-# matches Redfin's data center publishing schedule (they release the
-# previous month's complete data by the 14th, so by the 1st of the
-# following month their data is the freshest possible monthly cut).
+# every Monday plus on demand.
 
 on:
   schedule:
-    - cron: '15 12 1 * *'   # 12:15 UTC on the 1st (15min after Zillow to avoid collision)
+    - cron: '15 12 * * 1'   # Mondays 12:15 UTC (15min after Zillow to avoid collision)
   workflow_dispatch:         # also run manually from the Actions tab
 
 permissions:

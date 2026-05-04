@@ -4,12 +4,11 @@ name: Refresh Growth Outlook data
 # from FRED, computes permits-per-1K and YoY job growth, and commits
 # data/growth_overrides.json. data_providers patches the choropleth +
 # recomputes the growth_score composite at module import. Same pattern
-# as Zillow + Redfin refreshes — runs on the 1st of every month plus
-# on demand.
+# as Zillow + Redfin refreshes — runs every Monday plus on demand.
 
 on:
   schedule:
-    - cron: '30 12 1 * *'   # 12:30 UTC on the 1st (after Zillow + Redfin)
+    - cron: '30 12 * * 1'   # Mondays 12:30 UTC (after Zillow + Redfin)
   workflow_dispatch:         # also run manually from the Actions tab
 
 permissions:
