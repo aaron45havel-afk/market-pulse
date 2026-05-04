@@ -230,6 +230,7 @@ async def national_map(request: Request):
     return templates.TemplateResponse("national_map.html", {
         "request": request,
         "metros": metros,
+        "stub_count": sum(1 for m in metros if m.get("is_stub")),
         "choropleth_states": choropleth_by_fips,
         "choropleth_metrics": CHOROPLETH_METRICS,
         "mortgage_30y_rate": MORTGAGE_30Y_RATE,

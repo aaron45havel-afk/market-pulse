@@ -164,6 +164,8 @@
     .lb-row .name { flex: 1; min-width: 0; }
     .lb-row .name .label { font-weight: 700; font-size: 0.88rem; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .lb-row .name .meta { font-size: 0.7rem; color: var(--text-dim); margin-top: 0.1rem; }
+    .lb-row .stub-tag { display: inline-block; margin-left: 0.35rem; padding: 1px 5px; border-radius: 3px; background: var(--surface2); color: var(--text-dim); font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; vertical-align: 1px; }
+    .lb-footer { padding: 0.55rem 0.5rem; font-size: 0.72rem; color: var(--text-dim); font-style: italic; text-align: center; border-top: 1px solid var(--border); }
     .lb-row .score { font-size: 1rem; font-weight: 700; flex-shrink: 0; font-variant-numeric: tabular-nums; }
     /* Base tiles are CartoDB Dark Matter (already designed for overlays).
        No filter needed — drop the brightness/saturate CSS that was
@@ -357,7 +359,7 @@
     <div class="map-header">
         <div>
             <h1>Neighborhood Investor Map — National</h1>
-            <div class="sub">{{ metros|length }} metros · click any pin or pick from the list on the right to see the metro summary.</div>
+            <div class="sub">{{ metros|length }} metros{% if stub_count %} ({{ stub_count }} state-level estimates){% endif %} · click any pin or pick from the list on the right to see the metro summary.</div>
         </div>
         <div class="rate-controls">
             <div class="rate-chip" title="Current 30-year fixed mortgage rate (Freddie Mac PMMS, FRED MORTGAGE30US). Powers the Cash-on-cash metric + Affordability calc default.">
@@ -931,19 +933,33 @@ function renderLeaderboard() {
         list.innerHTML = '<div style="padding:1rem 0.85rem; font-size:0.82rem; color:var(--text-dim); font-style:italic;">No metros match the current filters. Try widening a slider or hitting Reset.</div>';
         return;
     }
-    list.innerHTML = sorted.slice(0, 12).map((m, i) => {
+    // Cap at 20 (was 12) so a few of the higher-ranking stub metros
+    // have a chance to show up. The rest are still reachable via the
+    // map pin or filter narrowing.
+    const cap = 20;
+    const visible = sorted.slice(0, cap);
+    list.innerHTML = visible.map((m, i) => {
         const score = compositeForPersona(m, _lbPersona);
         const color = scoreColor(score);
+        // Stub rows get an "EST" tag next to the label so users know
+        // the rank is a state-level estimate, not a ZIP-aggregated
+        // number — without it, e.g. NYC at #45 looks worse than it
+        // really is on a like-for-like basis.
+        const tag = m.is_stub ? '<span class="stub-tag" title="State-level estimate (no per-ZIP dataset yet)">est</span>' : '';
         return `
             <div class="lb-row" data-slug="${m.slug}">
                 <span class="rank">${i + 1}</span>
                 <div class="name">
-                    <div class="label">${m.metro_label}</div>
+                    <div class="label">${m.metro_label}${tag}</div>
                     <div class="meta">${fmtMoney(m.avg_home_value)} &middot; ${m.avg_cap_rate_pct.toFixed(1)}% yield</div>
                 </div>
                 <span class="score" style="color:${color};">${score.toFixed(0)}</span>
             </div>`;
     }).join('');
+    if (sorted.length > cap) {
+        list.insertAdjacentHTML('beforeend',
+            `<div class="lb-footer">+${sorted.length - cap} more — narrow with Filters or click a pin on the map.</div>`);
+    }
     list.querySelectorAll('.lb-row').forEach(row => {
         row.addEventListener('click', () => {
             const slug = row.dataset.slug;
