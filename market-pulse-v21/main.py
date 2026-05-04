@@ -1,7 +1,8 @@
 """Market Pulse — Real Estate & Finance Dashboard."""
-import os, logging
+import os, logging, sqlite3
 from contextlib import asynccontextmanager
 from datetime import date
+from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -234,6 +235,140 @@ async def affordability(request: Request):
 @app.get("/finance")
 async def finance(request: Request):
     return templates.TemplateResponse("finance.html", {"request": request})
+
+
+# ─── National ZIPs viewport endpoint (Phase 2 of national rollout) ──
+# Backed by data/zips.db, built monthly by scripts/build_national_zips.py.
+# Phase 3 (Leaflet integration) calls this on `moveend` with the
+# current viewport's bbox to fetch only the ZIPs that need to render.
+
+ZIPS_DB_PATH = Path(__file__).parent / "data" / "zips.db"
+
+# Whitelist of persona → DB column. Looked up by string so the ORDER BY
+# slot can be safely interpolated (the value is never user-supplied).
+PERSONA_COLUMNS = {
+    "balanced":  "composite_balanced",
+    "investor":  "composite_investor",
+    "lifestyle": "composite_lifestyle",
+}
+
+
+def _open_zips_db() -> sqlite3.Connection | None:
+    """Returns a read-only SQLite connection or None if the DB hasn't
+    been built yet. Per-request connections — SQLite open is sub-ms,
+    not worth pooling. Read-only `mode=ro` URI prevents accidental
+    writes from the request handler path."""
+    if not ZIPS_DB_PATH.exists():
+        return None
+    uri = f"file:{ZIPS_DB_PATH}?mode=ro"
+    conn = sqlite3.connect(uri, uri=True)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+@app.get("/api/zips")
+async def api_zips(
+    lat1: float, lng1: float, lat2: float, lng2: float,
+    persona: str = "balanced",
+    limit: int = 500,
+):
+    """Top-N ZIPs within a bbox, ranked by persona composite.
+
+    Query params:
+      lat1,lng1,lat2,lng2 — opposite corners of the viewport (any order).
+      persona             — one of: balanced (default) | investor | lifestyle.
+      limit               — 1-2000, default 500. Caps protect the JSON payload size.
+    """
+    persona_col = PERSONA_COLUMNS.get(persona, "composite_balanced")
+    limit = max(1, min(int(limit), 2000))
+    conn = _open_zips_db()
+    if conn is None:
+        # DB hasn't been built yet — return empty + a clear meta flag
+        # so the frontend can surface "national data not yet loaded"
+        # instead of mis-rendering an empty map.
+        return JSONResponse({
+            "zips": [],
+            "meta": {
+                "count": 0, "limit": limit, "persona": persona,
+                "db_missing": True,
+                "message": "Run the refresh-national-zips workflow to populate data/zips.db.",
+            },
+        })
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT zip, state, name, lat, lng,
+                   median_home_value, median_rent_monthly, cap_rate_pct,
+                   {persona_col} AS composite, rent_source, as_of
+            FROM zips
+            WHERE lat BETWEEN ? AND ?
+              AND lng BETWEEN ? AND ?
+            ORDER BY {persona_col} DESC
+            LIMIT ?
+            """,
+            (
+                min(lat1, lat2), max(lat1, lat2),
+                min(lng1, lng2), max(lng1, lng2),
+                limit,
+            ),
+        ).fetchall()
+    finally:
+        conn.close()
+    zips = [
+        {
+            "zip": r["zip"],
+            "state": r["state"],
+            "name": r["name"],
+            "lat": r["lat"],
+            "lng": r["lng"],
+            "home_value": r["median_home_value"],
+            "rent": r["median_rent_monthly"],
+            "cap_rate_pct": r["cap_rate_pct"],
+            "composite": round(r["composite"], 1) if r["composite"] is not None else None,
+            "is_imputed": r["rent_source"] == "imputed",
+        }
+        for r in rows
+    ]
+    as_of = rows[0]["as_of"] if rows else None
+    return JSONResponse({
+        "zips": zips,
+        "meta": {
+            "count": len(zips),
+            "limit": limit,
+            "persona": persona,
+            "bbox": [lat1, lng1, lat2, lng2],
+            "as_of": as_of,
+            "db_missing": False,
+        },
+    })
+
+
+@app.get("/api/zips/stats")
+async def api_zips_stats():
+    """Health/monitoring endpoint for the national ZIPs DB. Cheap to
+    hit; useful for dashboards and for catching feed regressions
+    after the monthly refresh."""
+    conn = _open_zips_db()
+    if conn is None:
+        return JSONResponse({"db_missing": True}, status_code=503)
+    try:
+        total = conn.execute("SELECT COUNT(*) FROM zips").fetchone()[0]
+        as_of = conn.execute("SELECT MAX(as_of) FROM zips").fetchone()[0]
+        states = conn.execute(
+            "SELECT state, COUNT(*) AS n FROM zips WHERE state != '' GROUP BY state ORDER BY n DESC"
+        ).fetchall()
+        rent_sources = conn.execute(
+            "SELECT rent_source, COUNT(*) AS n FROM zips GROUP BY rent_source"
+        ).fetchall()
+    finally:
+        conn.close()
+    return JSONResponse({
+        "db_missing": False,
+        "total_zips": total,
+        "as_of": as_of,
+        "states": {r["state"]: r["n"] for r in states},
+        "rent_sources": {r["rent_source"]: r["n"] for r in rent_sources},
+    })
 
 
 @app.get("/api/finance/screener")
