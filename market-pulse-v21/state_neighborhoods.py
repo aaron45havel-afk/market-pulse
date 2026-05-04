@@ -5099,7 +5099,7 @@ STATE_METROS: dict[str, dict] = {
            "map_center": {"lat": 34.7465, "lng": -92.2896, "zoom": 11}, "is_stub": True},
     "CT": {"state": "CT", "metro_label": "Hartford", "tiktok_hashtag": "hartford", "instagram_hashtag": "hartford",
            "subtitle": "Connecticut — state-level snapshot pinned at Hartford. Per-ZIP deep-dive not yet available.",
-           "map_center": {"lat": 41.7637, "lng": -72.6851, "zoom": 11}, "is_stub": True},
+           "map_center": {"lat": 41.7637, "lng": -72.6851, "zoom": 11}, "is_stub": True, "value_factor": 0.80},
     "DC": {"state": "DC", "metro_label": "Washington, DC", "tiktok_hashtag": "dc", "instagram_hashtag": "washingtondc",
            "subtitle": "District of Columbia — state-level snapshot. Per-ZIP deep-dive not yet available.",
            "map_center": {"lat": 38.8951, "lng": -77.0364, "zoom": 11}, "is_stub": True},
@@ -5117,7 +5117,7 @@ STATE_METROS: dict[str, dict] = {
            "map_center": {"lat": 43.6150, "lng": -116.2023, "zoom": 11}, "is_stub": True},
     "IL": {"state": "IL", "metro_label": "Chicago", "tiktok_hashtag": "chicago", "instagram_hashtag": "chicago",
            "subtitle": "Illinois — state-level snapshot pinned at Chicago. Per-ZIP deep-dive not yet available.",
-           "map_center": {"lat": 41.8781, "lng": -87.6298, "zoom": 10}, "is_stub": True},
+           "map_center": {"lat": 41.8781, "lng": -87.6298, "zoom": 10}, "is_stub": True, "value_factor": 1.40},
     "KS": {"state": "KS", "metro_label": "Wichita", "tiktok_hashtag": "wichita", "instagram_hashtag": "wichita",
            "subtitle": "Kansas — state-level snapshot pinned at Wichita. Per-ZIP deep-dive not yet available.",
            "map_center": {"lat": 37.6872, "lng": -97.3301, "zoom": 11}, "is_stub": True},
@@ -5129,16 +5129,16 @@ STATE_METROS: dict[str, dict] = {
            "map_center": {"lat": 29.9511, "lng": -90.0715, "zoom": 11}, "is_stub": True},
     "MA": {"state": "MA", "metro_label": "Boston", "tiktok_hashtag": "boston", "instagram_hashtag": "boston",
            "subtitle": "Massachusetts — state-level snapshot pinned at Boston. Per-ZIP deep-dive not yet available.",
-           "map_center": {"lat": 42.3601, "lng": -71.0589, "zoom": 11}, "is_stub": True},
+           "map_center": {"lat": 42.3601, "lng": -71.0589, "zoom": 11}, "is_stub": True, "value_factor": 1.45},
     "MD": {"state": "MD", "metro_label": "Baltimore", "tiktok_hashtag": "baltimore", "instagram_hashtag": "baltimore",
            "subtitle": "Maryland — state-level snapshot pinned at Baltimore. Per-ZIP deep-dive not yet available.",
-           "map_center": {"lat": 39.2904, "lng": -76.6122, "zoom": 11}, "is_stub": True},
+           "map_center": {"lat": 39.2904, "lng": -76.6122, "zoom": 11}, "is_stub": True, "value_factor": 0.85},
     "ME": {"state": "ME", "metro_label": "Portland (ME)", "tiktok_hashtag": "portlandmaine", "instagram_hashtag": "portlandmaine",
            "subtitle": "Maine — state-level snapshot pinned at Portland. Per-ZIP deep-dive not yet available.",
            "map_center": {"lat": 43.6591, "lng": -70.2568, "zoom": 11}, "is_stub": True},
     "MI": {"state": "MI", "metro_label": "Detroit", "tiktok_hashtag": "detroit", "instagram_hashtag": "detroit",
            "subtitle": "Michigan — state-level snapshot pinned at Detroit. Per-ZIP deep-dive not yet available.",
-           "map_center": {"lat": 42.3314, "lng": -83.0458, "zoom": 11}, "is_stub": True},
+           "map_center": {"lat": 42.3314, "lng": -83.0458, "zoom": 11}, "is_stub": True, "value_factor": 0.65},
     "MN": {"state": "MN", "metro_label": "Minneapolis", "tiktok_hashtag": "minneapolis", "instagram_hashtag": "minneapolis",
            "subtitle": "Minnesota — state-level snapshot pinned at Minneapolis. Per-ZIP deep-dive not yet available.",
            "map_center": {"lat": 44.9778, "lng": -93.2650, "zoom": 11}, "is_stub": True},
@@ -5165,13 +5165,13 @@ STATE_METROS: dict[str, dict] = {
            "map_center": {"lat": 42.9956, "lng": -71.4548, "zoom": 11}, "is_stub": True},
     "NJ": {"state": "NJ", "metro_label": "Newark", "tiktok_hashtag": "newarknj", "instagram_hashtag": "newarknj",
            "subtitle": "New Jersey — state-level snapshot pinned at Newark. Per-ZIP deep-dive not yet available.",
-           "map_center": {"lat": 40.7357, "lng": -74.1724, "zoom": 11}, "is_stub": True},
+           "map_center": {"lat": 40.7357, "lng": -74.1724, "zoom": 11}, "is_stub": True, "value_factor": 0.70},
     "NM": {"state": "NM", "metro_label": "Albuquerque", "tiktok_hashtag": "albuquerque", "instagram_hashtag": "albuquerque",
            "subtitle": "New Mexico — state-level snapshot pinned at Albuquerque. Per-ZIP deep-dive not yet available.",
            "map_center": {"lat": 35.0844, "lng": -106.6504, "zoom": 11}, "is_stub": True},
     "NY": {"state": "NY", "metro_label": "New York City", "tiktok_hashtag": "nyc", "instagram_hashtag": "nyc",
            "subtitle": "New York — state-level snapshot pinned at NYC. Per-ZIP deep-dive not yet available.",
-           "map_center": {"lat": 40.7128, "lng": -74.0060, "zoom": 10}, "is_stub": True},
+           "map_center": {"lat": 40.7128, "lng": -74.0060, "zoom": 10}, "is_stub": True, "value_factor": 1.55},
     "OK": {"state": "OK", "metro_label": "Oklahoma City", "tiktok_hashtag": "okc", "instagram_hashtag": "oklahomacity",
            "subtitle": "Oklahoma — state-level snapshot pinned at Oklahoma City. Per-ZIP deep-dive not yet available.",
            "map_center": {"lat": 35.4676, "lng": -97.5164, "zoom": 11}, "is_stub": True},
@@ -5199,6 +5199,125 @@ STATE_METROS: dict[str, dict] = {
     "WY": {"state": "WY", "metro_label": "Cheyenne", "tiktok_hashtag": "cheyenne", "instagram_hashtag": "cheyennewy",
            "subtitle": "Wyoming — state-level snapshot pinned at Cheyenne. Per-ZIP deep-dive not yet available.",
            "map_center": {"lat": 41.1399, "lng": -104.8202, "zoom": 11}, "is_stub": True},
+
+    # ── Second stub per state — adds a real secondary city so users
+    # have a pin near more locations. Each carries a value_factor
+    # reflecting how that metro typically prices vs the state median:
+    # college towns + capitals trend pricier (Madison, Annapolis,
+    # Santa Fe), Rust-Belt + small inland cities trend cheaper
+    # (Buffalo, Trenton, Springfield IL). Cap rate emerges from the
+    # value/rent gap (rent_factor pulls part-way back toward 1.0), so
+    # cheaper metros generally cash flow better. DC is one entity so
+    # there's no second pin for it — the 14 multi-metro states
+    # (TX/CA/FL/etc) already have full coverage and aren't touched.
+    "AK-FAI": {"state": "AK", "metro_label": "Fairbanks", "tiktok_hashtag": "fairbanksalaska", "instagram_hashtag": "fairbanks",
+               "subtitle": "Alaska — Fairbanks (Interior). State-level snapshot scaled to a smaller-city basis.",
+               "map_center": {"lat": 64.8378, "lng": -147.7164, "zoom": 11}, "is_stub": True, "value_factor": 0.75},
+    "AL-HSV": {"state": "AL", "metro_label": "Huntsville", "tiktok_hashtag": "huntsvillealabama", "instagram_hashtag": "huntsvilleal",
+               "subtitle": "Alabama — Huntsville (NASA / aerospace metro). State-level snapshot, tech-corridor adjusted.",
+               "map_center": {"lat": 34.7304, "lng": -86.5861, "zoom": 11}, "is_stub": True, "value_factor": 0.95},
+    "AR-FYV": {"state": "AR", "metro_label": "Fayetteville", "tiktok_hashtag": "fayetteville", "instagram_hashtag": "fayettevillear",
+               "subtitle": "Arkansas — Fayetteville (NW AR / Walmart HQ + U Arkansas). State-level snapshot, college-town premium.",
+               "map_center": {"lat": 36.0625, "lng": -94.1574, "zoom": 11}, "is_stub": True, "value_factor": 1.05},
+    "CT-NHV": {"state": "CT", "metro_label": "New Haven", "tiktok_hashtag": "newhaven", "instagram_hashtag": "newhaven",
+               "subtitle": "Connecticut — New Haven (Yale). State-level snapshot, scaled below the Stamford-pulled state avg.",
+               "map_center": {"lat": 41.3083, "lng": -72.9279, "zoom": 11}, "is_stub": True, "value_factor": 0.65},
+    "DE-DOV": {"state": "DE", "metro_label": "Dover", "tiktok_hashtag": "doverdelaware", "instagram_hashtag": "doverde",
+               "subtitle": "Delaware — Dover (state capital). State-level snapshot, smaller-city basis.",
+               "map_center": {"lat": 39.1582, "lng": -75.5244, "zoom": 11}, "is_stub": True, "value_factor": 0.70},
+    "HI-HIL": {"state": "HI", "metro_label": "Hilo", "tiktok_hashtag": "hilo", "instagram_hashtag": "hilo",
+               "subtitle": "Hawaii — Hilo (Big Island). State-level snapshot, scaled below Oahu metro pricing.",
+               "map_center": {"lat": 19.7041, "lng": -155.0844, "zoom": 11}, "is_stub": True, "value_factor": 0.60},
+    "IA-CID": {"state": "IA", "metro_label": "Cedar Rapids", "tiktok_hashtag": "cedarrapids", "instagram_hashtag": "cedarrapids",
+               "subtitle": "Iowa — Cedar Rapids. State-level snapshot, mid-sized-Midwest basis.",
+               "map_center": {"lat": 41.9779, "lng": -91.6656, "zoom": 11}, "is_stub": True, "value_factor": 0.85},
+    "ID-IDA": {"state": "ID", "metro_label": "Idaho Falls", "tiktok_hashtag": "idahofalls", "instagram_hashtag": "idahofalls",
+               "subtitle": "Idaho — Idaho Falls (Eastern ID). State-level snapshot, below the Boise-pulled state avg.",
+               "map_center": {"lat": 43.4926, "lng": -112.0408, "zoom": 11}, "is_stub": True, "value_factor": 0.80},
+    "IL-SPI": {"state": "IL", "metro_label": "Springfield (IL)", "tiktok_hashtag": "springfieldillinois", "instagram_hashtag": "springfieldil",
+               "subtitle": "Illinois — Springfield (state capital, Central IL). State-level snapshot, well below Chicago metro.",
+               "map_center": {"lat": 39.7990, "lng": -89.6440, "zoom": 11}, "is_stub": True, "value_factor": 0.55},
+    "KS-TOP": {"state": "KS", "metro_label": "Topeka", "tiktok_hashtag": "topeka", "instagram_hashtag": "topeka",
+               "subtitle": "Kansas — Topeka (state capital). State-level snapshot, smaller-city basis.",
+               "map_center": {"lat": 39.0473, "lng": -95.6752, "zoom": 11}, "is_stub": True, "value_factor": 0.75},
+    "KY-LEX": {"state": "KY", "metro_label": "Lexington", "tiktok_hashtag": "lexingtonky", "instagram_hashtag": "lexingtonky",
+               "subtitle": "Kentucky — Lexington (Bluegrass / U Kentucky). State-level snapshot, college-town premium.",
+               "map_center": {"lat": 38.0406, "lng": -84.5037, "zoom": 11}, "is_stub": True, "value_factor": 1.10},
+    "LA-BTR": {"state": "LA", "metro_label": "Baton Rouge", "tiktok_hashtag": "batonrouge", "instagram_hashtag": "batonrouge",
+               "subtitle": "Louisiana — Baton Rouge (state capital + LSU). State-level snapshot, mid-tier basis.",
+               "map_center": {"lat": 30.4515, "lng": -91.1871, "zoom": 11}, "is_stub": True, "value_factor": 0.85},
+    "MA-WOR": {"state": "MA", "metro_label": "Worcester", "tiktok_hashtag": "worcester", "instagram_hashtag": "worcesterma",
+               "subtitle": "Massachusetts — Worcester. State-level snapshot, well below Boston metro.",
+               "map_center": {"lat": 42.2626, "lng": -71.8023, "zoom": 11}, "is_stub": True, "value_factor": 0.70},
+    "MD-ANP": {"state": "MD", "metro_label": "Annapolis", "tiktok_hashtag": "annapolis", "instagram_hashtag": "annapolis",
+               "subtitle": "Maryland — Annapolis (state capital + Naval Academy + Chesapeake Bay). State-level snapshot, premium-coastal basis.",
+               "map_center": {"lat": 38.9784, "lng": -76.4922, "zoom": 12}, "is_stub": True, "value_factor": 1.40},
+    "ME-BGR": {"state": "ME", "metro_label": "Bangor", "tiktok_hashtag": "bangormaine", "instagram_hashtag": "bangormaine",
+               "subtitle": "Maine — Bangor (Eastern ME). State-level snapshot, below the Portland-pulled state avg.",
+               "map_center": {"lat": 44.8016, "lng": -68.7782, "zoom": 11}, "is_stub": True, "value_factor": 0.65},
+    "MI-GRR": {"state": "MI", "metro_label": "Grand Rapids", "tiktok_hashtag": "grandrapids", "instagram_hashtag": "grandrapids",
+               "subtitle": "Michigan — Grand Rapids (West MI / furniture+brewing). State-level snapshot, healthier West-MI basis.",
+               "map_center": {"lat": 42.9634, "lng": -85.6681, "zoom": 11}, "is_stub": True, "value_factor": 1.05},
+    "MN-DLH": {"state": "MN", "metro_label": "Duluth", "tiktok_hashtag": "duluthmn", "instagram_hashtag": "duluthmn",
+               "subtitle": "Minnesota — Duluth (Lake Superior). State-level snapshot, below the Twin-Cities-pulled state avg.",
+               "map_center": {"lat": 46.7867, "lng": -92.1005, "zoom": 11}, "is_stub": True, "value_factor": 0.65},
+    "MO-STL": {"state": "MO", "metro_label": "St. Louis", "tiktok_hashtag": "stl", "instagram_hashtag": "stl",
+               "subtitle": "Missouri — St. Louis (Eastern MO). State-level snapshot, mid-tier basis.",
+               "map_center": {"lat": 38.6270, "lng": -90.1994, "zoom": 11}, "is_stub": True, "value_factor": 0.85},
+    "MS-GPT": {"state": "MS", "metro_label": "Gulfport", "tiktok_hashtag": "gulfport", "instagram_hashtag": "gulfportms",
+               "subtitle": "Mississippi — Gulfport / Biloxi (Gulf Coast). State-level snapshot, coastal-tourism basis.",
+               "map_center": {"lat": 30.3674, "lng": -89.0928, "zoom": 11}, "is_stub": True, "value_factor": 0.85},
+    "MT-MSO": {"state": "MT", "metro_label": "Missoula", "tiktok_hashtag": "missoula", "instagram_hashtag": "missoula",
+               "subtitle": "Montana — Missoula (U of Montana). State-level snapshot, college-town premium.",
+               "map_center": {"lat": 46.8721, "lng": -113.9940, "zoom": 11}, "is_stub": True, "value_factor": 1.10},
+    "NC-RAL": {"state": "NC", "metro_label": "Raleigh", "tiktok_hashtag": "raleigh", "instagram_hashtag": "raleighnc",
+               "subtitle": "North Carolina — Raleigh (Research Triangle). State-level snapshot, tech-corridor premium.",
+               "map_center": {"lat": 35.7796, "lng": -78.6382, "zoom": 11}, "is_stub": True, "value_factor": 1.15},
+    "ND-BIS": {"state": "ND", "metro_label": "Bismarck", "tiktok_hashtag": "bismarck", "instagram_hashtag": "bismarcknd",
+               "subtitle": "North Dakota — Bismarck (state capital). State-level snapshot, mid-state basis.",
+               "map_center": {"lat": 46.8083, "lng": -100.7837, "zoom": 11}, "is_stub": True, "value_factor": 0.95},
+    "NE-LNK": {"state": "NE", "metro_label": "Lincoln", "tiktok_hashtag": "lincolnnebraska", "instagram_hashtag": "lincolnne",
+               "subtitle": "Nebraska — Lincoln (state capital + U Nebraska). State-level snapshot, college-town basis.",
+               "map_center": {"lat": 40.8136, "lng": -96.7026, "zoom": 11}, "is_stub": True, "value_factor": 0.95},
+    "NH-NSH": {"state": "NH", "metro_label": "Nashua", "tiktok_hashtag": "nashuanh", "instagram_hashtag": "nashuanh",
+               "subtitle": "New Hampshire — Nashua (Boston commuter). State-level snapshot, MA-adjacent basis.",
+               "map_center": {"lat": 42.7654, "lng": -71.4676, "zoom": 11}, "is_stub": True, "value_factor": 1.00},
+    "NJ-TTN": {"state": "NJ", "metro_label": "Trenton", "tiktok_hashtag": "trenton", "instagram_hashtag": "trentonnj",
+               "subtitle": "New Jersey — Trenton (state capital, Central NJ). State-level snapshot, below the NYC/Hoboken-pulled state avg.",
+               "map_center": {"lat": 40.2206, "lng": -74.7597, "zoom": 11}, "is_stub": True, "value_factor": 0.55},
+    "NM-SAF": {"state": "NM", "metro_label": "Santa Fe", "tiktok_hashtag": "santafe", "instagram_hashtag": "santafenm",
+               "subtitle": "New Mexico — Santa Fe (state capital, art + tourism). State-level snapshot, premium basis.",
+               "map_center": {"lat": 35.6870, "lng": -105.9378, "zoom": 11}, "is_stub": True, "value_factor": 1.40},
+    "NY-BUF": {"state": "NY", "metro_label": "Buffalo", "tiktok_hashtag": "buffalony", "instagram_hashtag": "buffalony",
+               "subtitle": "New York — Buffalo (Western NY). State-level snapshot, well below the NYC-pulled state avg.",
+               "map_center": {"lat": 42.8864, "lng": -78.8784, "zoom": 11}, "is_stub": True, "value_factor": 0.45},
+    "OK-TUL": {"state": "OK", "metro_label": "Tulsa", "tiktok_hashtag": "tulsa", "instagram_hashtag": "tulsa",
+               "subtitle": "Oklahoma — Tulsa (NE OK / oil + arts). State-level snapshot, mid-tier basis.",
+               "map_center": {"lat": 36.1540, "lng": -95.9928, "zoom": 11}, "is_stub": True, "value_factor": 1.00},
+    "OR-EUG": {"state": "OR", "metro_label": "Eugene", "tiktok_hashtag": "eugene", "instagram_hashtag": "eugeneoregon",
+               "subtitle": "Oregon — Eugene (U of Oregon). State-level snapshot, college-town premium.",
+               "map_center": {"lat": 44.0521, "lng": -123.0868, "zoom": 11}, "is_stub": True, "value_factor": 1.05},
+    "PA-PIT": {"state": "PA", "metro_label": "Pittsburgh", "tiktok_hashtag": "pittsburgh", "instagram_hashtag": "pittsburgh",
+               "subtitle": "Pennsylvania — Pittsburgh (Western PA / steel + tech). State-level snapshot, healthy mid-tier basis.",
+               "map_center": {"lat": 40.4406, "lng": -79.9959, "zoom": 11}, "is_stub": True, "value_factor": 0.75},
+    "SD-RAP": {"state": "SD", "metro_label": "Rapid City", "tiktok_hashtag": "rapidcity", "instagram_hashtag": "rapidcitysd",
+               "subtitle": "South Dakota — Rapid City (Black Hills / tourism). State-level snapshot, mid-state basis.",
+               "map_center": {"lat": 44.0805, "lng": -103.2310, "zoom": 11}, "is_stub": True, "value_factor": 1.00},
+    "VA-VAB": {"state": "VA", "metro_label": "Virginia Beach", "tiktok_hashtag": "virginiabeach", "instagram_hashtag": "virginiabeach",
+               "subtitle": "Virginia — Virginia Beach / Hampton Roads (coastal). State-level snapshot, coastal-tourism basis.",
+               "map_center": {"lat": 36.8529, "lng": -75.9780, "zoom": 11}, "is_stub": True, "value_factor": 1.05},
+    "VT-MPV": {"state": "VT", "metro_label": "Montpelier", "tiktok_hashtag": "montpelier", "instagram_hashtag": "montpelier",
+               "subtitle": "Vermont — Montpelier (state capital, smallest in US). State-level snapshot, smaller-city basis.",
+               "map_center": {"lat": 44.2601, "lng": -72.5754, "zoom": 12}, "is_stub": True, "value_factor": 0.95},
+    "WI-MSN": {"state": "WI", "metro_label": "Madison", "tiktok_hashtag": "madisonwi", "instagram_hashtag": "madisonwi",
+               "subtitle": "Wisconsin — Madison (state capital + UW-Madison). State-level snapshot, college-town premium.",
+               "map_center": {"lat": 43.0731, "lng": -89.4012, "zoom": 11}, "is_stub": True, "value_factor": 1.20},
+    "WV-MGW": {"state": "WV", "metro_label": "Morgantown", "tiktok_hashtag": "morgantown", "instagram_hashtag": "morgantownwv",
+               "subtitle": "West Virginia — Morgantown (West Virginia U). State-level snapshot, college-town basis.",
+               "map_center": {"lat": 39.6295, "lng": -79.9559, "zoom": 11}, "is_stub": True, "value_factor": 0.85},
+    "WY-CPR": {"state": "WY", "metro_label": "Casper", "tiktok_hashtag": "casperwyoming", "instagram_hashtag": "casperwy",
+               "subtitle": "Wyoming — Casper (Central WY / oil + ranching). State-level snapshot, mid-state basis.",
+               "map_center": {"lat": 42.8666, "lng": -106.3131, "zoom": 11}, "is_stub": True, "value_factor": 0.95},
 }
 
 # Ordered list of metro slugs per state. Drives the dashboard's
@@ -5243,13 +5362,22 @@ def metros_for_state(state: str) -> list[dict]:
     ]
 
 
-def _virtual_zip_for_state(state_code: str, metro_label: str, map_center: dict) -> dict | None:
+def _virtual_zip_for_state(state_code: str, metro_label: str, map_center: dict, value_factor: float = 1.0) -> dict | None:
     """Synthesize a single ZIP-shaped dict from CHOROPLETH_STATES so a
     stub state can flow through compute_zip_metrics on the same scoring
     formula as real per-ZIP metros. Without this, stubs used a
     completely different composite calculation and ranked systematically
     below real metros even when the underlying state was strong (e.g.
     NYC, Boston).
+
+    `value_factor` lets a metro flag itself as pricier or cheaper than
+    its state's average — NYC at 1.6, Buffalo at 0.45, Detroit at 0.7,
+    etc. Without it, every stub in a state would score identically and
+    a second-pin-per-state rollout produces visual duplicates. The
+    rent and income factors derive from value_factor with a partial
+    pull-back toward 1.0 (rent + income don't vary as much across
+    cities of the same state as home values do — that pattern is what
+    makes secondary cities cash-flow better than primaries).
 
     Where state-level signal is missing (crime_index, restaurant_score,
     pct_bachelors), we use national-baseline proxies derived from data
@@ -5259,11 +5387,16 @@ def _virtual_zip_for_state(state_code: str, metro_label: str, map_center: dict) 
     sd = CHOROPLETH_STATES.get(state_code)
     if not sd:
         return None
-    median_income = sd.get("median_income") or 70000
+    rent_factor = 0.5 * value_factor + 0.5
+    income_factor = 0.7 * value_factor + 0.3
+    home_value = round((sd.get("home_value") or 350000) * value_factor)
+    rent = round((sd.get("median_rent") or 1500) * rent_factor)
+    median_income = round((sd.get("median_income") or 70000) * income_factor)
     walk = sd.get("walk") or 35
     # pct_bachelors proxy: ~33% national, scale ±1pt per ~$2K of state
     # median income above/below the national median (~$70K). Correlation
     # is real (r≈0.7 across states) and good enough for a coarse proxy.
+    # Uses the metro-adjusted income (richer city = more bachelors).
     pct_bach = max(15, min(60, 33 + (median_income - 70000) / 2000))
     # restaurant_score proxy: walkable cities have a real food scene,
     # rural / car-dependent states don't. Scale walk_score down so a
@@ -5273,8 +5406,8 @@ def _virtual_zip_for_state(state_code: str, metro_label: str, map_center: dict) 
         "name": metro_label,
         "lat": map_center.get("lat"),
         "lng": map_center.get("lng"),
-        "median_home_value": sd.get("home_value") or 350000,
-        "median_rent_monthly": sd.get("median_rent") or 1500,
+        "median_home_value": home_value,
+        "median_rent_monthly": rent,
         "median_household_income": median_income,
         # No state-level crime feed yet — use the 50-mid baseline.
         "crime_index": 50,
@@ -5301,13 +5434,15 @@ def get_state_neighborhoods(slug: str) -> dict | None:
         return None
 
     if metro.get("is_stub") or "zips" not in metro:
-        v = _virtual_zip_for_state(metro["state"], metro["metro_label"], metro["map_center"])
+        v = _virtual_zip_for_state(metro["state"], metro["metro_label"], metro["map_center"],
+                                    value_factor=metro.get("value_factor", 1.0))
         if not v:
             return None
-        # Use the state code as the ZIP key — there's no real ZIP, but
-        # the frontend uses it as a stable identifier per row.
+        # Use the slug as the ZIP key — there's no real ZIP, but the
+        # frontend uses it as a stable identifier per row. (Was using
+        # state code, which collided when two stubs share a state.)
         metrics = compute_zip_metrics(v)
-        enriched = [{"zip": metro["state"], **v, **metrics}]
+        enriched = [{"zip": slug, **v, **metrics}]
     else:
         enriched = []
         for zip_code, raw in metro["zips"].items():
