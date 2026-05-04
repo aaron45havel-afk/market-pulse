@@ -507,6 +507,10 @@
                             <button type="button" class="filter-preset" data-preset="sunny">Sunny</button>
                             <button type="button" class="filter-preset" data-preset="taxhaven">Tax Haven</button>
                             <button type="button" class="filter-preset" data-preset="growth">Sunbelt Growth</button>
+                            <button type="button" class="filter-preset" data-preset="walkable">Walkable</button>
+                            <button type="button" class="filter-preset" data-preset="college_town">College Town</button>
+                            <button type="button" class="filter-preset" data-preset="foodie">Foodie</button>
+                            <button type="button" class="filter-preset" data-preset="safe">Low Crime</button>
                         </div>
                     </div>
 
@@ -989,6 +993,8 @@ const FILTER_DEFS = [
     { key: 'avg_walk_score',         label: 'Walk score',             fmt: v => v.toFixed(0),                       step: 1 },
     { key: 'state_pop_growth_pct',   label: 'Population growth/yr',   fmt: v => v.toFixed(2) + '%',                 step: 0.05 },
     { key: 'avg_pct_bachelors',      label: 'Bachelor\'s degree',     fmt: v => v.toFixed(0) + '%',                 step: 1 },
+    { key: 'avg_restaurant_score',   label: 'Restaurant density',     fmt: v => v.toFixed(0) + '/100',              step: 1 },
+    { key: 'avg_crime_index',        label: 'Crime index (lower=safer)', fmt: v => v.toFixed(0) + '/100',           step: 1 },
 ];
 
 // Filter presets — each one is a partial filter state. Sliders not
@@ -999,16 +1005,20 @@ const FILTER_DEFS = [
 // applied via the active-chip bar above. The second group ("quick")
 // is single-axis pills.
 const PRESET_LABELS = {
-    young_pro:  'Young Pro',
-    family:     'Family',
-    investor:   'Investor',
-    retirement: 'Retirement',
-    cheapest:   'Cheapest',
-    affordable: 'Affordable',
-    yield:      'High Yield',
-    sunny:      'Sunny',
-    taxhaven:   'Tax Haven',
-    growth:     'Sunbelt Growth',
+    young_pro:    'Young Pro',
+    family:       'Family',
+    investor:     'Investor',
+    retirement:   'Retirement',
+    cheapest:     'Cheapest',
+    affordable:   'Affordable',
+    yield:        'High Yield',
+    sunny:        'Sunny',
+    taxhaven:     'Tax Haven',
+    growth:       'Sunbelt Growth',
+    walkable:     'Walkable',
+    college_town: 'College Town',
+    foodie:       'Foodie',
+    safe:         'Low Crime',
 };
 // Profile presets only — maps each to the leaderboard persona used
 // to RANK the filtered candidate pool when picking the top-3 matches.
@@ -1037,12 +1047,20 @@ const FILTER_PRESETS = {
     // Quick presets — single-axis pills. SF/SD push the upper home
     // value bound to ~$1.8M, so "cheapest" needs a low fraction (0.18)
     // to land on genuinely affordable metros, not half the country.
-    cheapest:   { sliders: { avg_home_value: { useMax: 0.18 } } },
-    affordable: { sliders: { state_income_tax_pct: { useMax: 0.25 }, avg_home_value: { useMax: 0.30 } } },
-    yield:      { sliders: { avg_cap_rate_pct: { useMin: 0.55 } } },
-    sunny:      { sliders: { sunshine_days: { useMin: 0.65 } } },
-    taxhaven:   { sliders: { state_income_tax_pct: { useMax: 0.05 } } },
-    growth:     { sliders: { state_pop_growth_pct: { useMin: 0.55 } } },
+    cheapest:     { sliders: { avg_home_value: { useMax: 0.18 } } },
+    affordable:   { sliders: { state_income_tax_pct: { useMax: 0.25 }, avg_home_value: { useMax: 0.30 } } },
+    yield:        { sliders: { avg_cap_rate_pct: { useMin: 0.55 } } },
+    sunny:        { sliders: { sunshine_days: { useMin: 0.65 } } },
+    taxhaven:     { sliders: { state_income_tax_pct: { useMax: 0.05 } } },
+    growth:       { sliders: { state_pop_growth_pct: { useMin: 0.55 } } },
+    // Lifestyle quick presets — single-axis, just like the others.
+    // Walkable subsumes "transit-friendly" since high walk scores
+    // strongly correlate with metro transit coverage. Foodie filters
+    // on the per-metro restaurant density we already aggregate.
+    walkable:     { sliders: { avg_walk_score: { useMin: 0.60 } } },
+    college_town: { sliders: { avg_pct_bachelors: { useMin: 0.65 } } },
+    foodie:       { sliders: { avg_restaurant_score: { useMin: 0.60 } } },
+    safe:         { sliders: { avg_crime_index: { useMax: 0.35 } } },
 };
 
 let _filterState = { state: '', sliders: {}, activeProfile: null, activeQuick: null };
