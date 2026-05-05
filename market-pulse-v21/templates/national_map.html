@@ -153,10 +153,13 @@
     /* State Info card (top of leaderboard pane, shown on state click) */
     .lb-state-info { padding: 0.85rem 0.85rem 0.75rem; border-bottom: 1px solid var(--border); background: linear-gradient(180deg, rgba(59,130,246,0.08), rgba(59,130,246,0)); flex: 0 0 auto; }
     .lb-state-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.65rem; }
-    .lb-state-eyebrow { font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700; }
     .lb-state-name { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-top: 0.1rem; }
-    .lb-state-clear { background: transparent; border: 1px solid var(--border); color: var(--text-dim); width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 0.78rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
-    .lb-state-clear:hover { border-color: var(--red, #ef4444); color: var(--red, #ef4444); }
+    /* Prominent back link replaces the previous ✕ — when a state is
+       selected the user needs an obvious escape hatch. Sized like a
+       link, not a button, so it doesn't compete with primary actions
+       below it (the persona rows + metro list). */
+    .lb-state-back { background: transparent; border: none; color: var(--accent2); cursor: pointer; padding: 0 0 0.15rem 0; font-size: 0.74rem; font-weight: 600; text-align: left; }
+    .lb-state-back:hover { color: var(--accent); text-decoration: underline; }
     /* 2x3 metrics grid: tight, label above value */
     .lb-state-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem 0.55rem; margin-bottom: 0.7rem; }
     .lb-state-metric { display: flex; flex-direction: column; }
@@ -466,11 +469,10 @@
                      and the leaderboard returns to all-metros mode. -->
                 <div class="lb-state-info" id="lbStateInfo" style="display:none;">
                     <div class="lb-state-head">
-                        <div>
-                            <div class="lb-state-eyebrow">Selected state</div>
+                        <div style="flex: 1; min-width: 0;">
+                            <button type="button" class="lb-state-back" id="lbStateClear">← All metros</button>
                             <div class="lb-state-name" id="lbStateName">—</div>
                         </div>
-                        <button type="button" class="lb-state-clear" id="lbStateClear" aria-label="Clear state">✕</button>
                     </div>
                     <div class="lb-state-metrics" id="lbStateMetrics"></div>
                     <div class="lb-state-personas" id="lbStatePersonas"></div>
@@ -670,6 +672,8 @@ document.addEventListener('DOMContentLoaded', () => {
             pane: 'markerPane',
         });
         marker._mpScore = m.top_zip.composite_score;  // used by the cluster icon to compute avg color
+        marker._mpRadius = 10 + Math.min(8, m.zip_count / 2);   // base radius; state-emphasis grows it 1.4×
+        marker._mpState = m.state;                              // cached so applyFilters can scale state's metros
         // Stub metros (one-pin-per-state coverage) get a different
         // header subtitle ("state estimate") and a disabled CTA — the
         // /real-estate/{slug}/map page has nothing to render until the
@@ -1365,13 +1369,18 @@ function refreshPresetHighlight() {
 function applyFilters() {
     const passing = new Set(getFilteredMetros().map(m => m.slug));
     const cluster = window._mpClusterLayer;
+    // When a state is selected, scale its metros up ~1.4× so they pop
+    // out from the surrounding national grid — visual hyper-focus
+    // beyond just fading non-state pins. Restored to base radius when
+    // no state is selected.
+    const focusState = _selectedState ? _selectedState.code : null;
     if (window._mpMarkers) {
         Object.entries(window._mpMarkers).forEach(([slug, marker]) => {
             const ok = passing.has(slug);
             marker.setStyle({ fillOpacity: ok ? 0.95 : 0.12, opacity: ok ? 1 : 0.25 });
-            // Add/remove from the cluster so bubble counts reflect the
-            // filtered set. hasLayer is the supported way to test
-            // membership across versions of leaflet.markercluster.
+            const base = marker._mpRadius || 10;
+            const emphasized = focusState && marker._mpState === focusState;
+            marker.setRadius(emphasized ? Math.round(base * 1.4) : base);
             if (cluster) {
                 const inLayer = cluster.hasLayer(marker);
                 if (ok && !inLayer) cluster.addLayer(marker);
@@ -1935,7 +1944,7 @@ function buildChoroplethLayer(geojson) {
                     [Math.min(...lats), Math.min(...lngs)],
                     [Math.max(...lats), Math.max(...lngs)]
                 );
-                window._mpMap.flyToBounds(bounds, { padding: [60, 60], maxZoom: 7, duration: 0.7 });
+                window._mpMap.flyToBounds(bounds, { padding: [40, 40], maxZoom: 9, duration: 0.7 });
                 selectState(sd.code, sd);
             });
         },
