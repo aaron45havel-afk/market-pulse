@@ -223,13 +223,53 @@ async def state_map(request: Request, slug: str):
     })
 
 
+# 8 states the affordability page hand-curates (with bracket detail,
+# property tax caps, homestead exemptions). The other 43 fall back to
+# simplified defaults synthesized from CHOROPLETH_STATES.
+_AFFORDABILITY_HAND_CURATED = {"NV", "CA", "UT", "TX", "AZ", "FL", "GA", "IN"}
+
+
 @app.get("/affordability")
 async def affordability(request: Request):
-    from data_providers import MORTGAGE_30Y_RATE, MORTGAGE_30Y_OBS_DATE
+    from data_providers import (
+        MORTGAGE_30Y_RATE, MORTGAGE_30Y_OBS_DATE, CHOROPLETH_STATES,
+    )
+    # Synthesize a simplified config for the 43 states that aren't in
+    # the template's hand-curated STATE_DATA. Each gets a flat-rate
+    # bracket from CHOROPLETH_STATES.income_tax, an effective property
+    # tax rate from .property_tax, and an insurance multiplier derived
+    # from insurance / home_value. No bracket detail, no caps, no
+    # homestead exemption — just a directionally-correct default so the
+    # comparison table shows all 51 states instead of 8.
+    state_defaults: dict[str, dict] = {}
+    for code, sd in CHOROPLETH_STATES.items():
+        if code in _AFFORDABILITY_HAND_CURATED:
+            continue   # template's STATE_DATA wins for these
+        prop_tax = sd.get("property_tax")        # already in % form (e.g. 0.40 means 0.40%)
+        income_tax = sd.get("income_tax")        # already in % form
+        insurance = sd.get("insurance")          # annual $ amount
+        home_value = sd.get("home_value")
+        if prop_tax is None or income_tax is None or not home_value:
+            continue
+        ins_mult = (insurance / home_value) if (insurance and home_value > 0) else 0.0035
+        state_defaults[code] = {
+            "name": sd.get("name", code),
+            "propertyTaxEffective": round(prop_tax / 100.0, 5),
+            "propertyTaxCap": None,
+            # Single flat-rate bracket; threshold None means unbounded
+            # (handled by calculateStateIncomeTax).
+            "stateIncomeTaxRates": [{"rate": round(income_tax / 100.0, 5), "threshold": None}],
+            "insuranceMultiplier": round(ins_mult, 5),
+            "primaryResidenceDiscount": False,
+            "homesteadExemption": 0,
+            "_isDefault": True,   # tag so the table can mark approximate rows
+            "notes": "",
+        }
     return templates.TemplateResponse("affordability.html", {
         "request": request,
         "mortgage_30y_rate": MORTGAGE_30Y_RATE,
         "mortgage_30y_obs_date": _fmt_obs_date(MORTGAGE_30Y_OBS_DATE),
+        "state_defaults": state_defaults,
     })
 
 

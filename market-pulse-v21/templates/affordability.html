@@ -432,6 +432,11 @@ details.collapsible[open] .chev { transform:rotate(180deg); }
 {% endblock %}
 
 {% block scripts %}
+<!-- Server-rendered defaults for the 43 states without hand-curated
+     STATE_DATA entries below. Synthesized from CHOROPLETH_STATES
+     (income_tax, property_tax, insurance, home_value). Hand-curated
+     8 below override on conflict. -->
+<script id="state-defaults-data" type="application/json">{{ state_defaults | tojson }}</script>
 <script>
 // State-level tax + insurance defaults. Sources: state DOR / Tax Foundation
 // (income tax brackets 2024), Lincoln Institute / county assessor reports
@@ -524,6 +529,21 @@ const STATE_DATA = {
         notes: "Constitutional 1% cap on homestead property tax. Flat 3.05% state income tax — counties add another 1-2% effective."
     }
 };
+
+// Server-provided defaults for the 43 states that don't have a hand-
+// curated entry above. Hand-curated wins on conflict — these only
+// fill gaps. Each default has a single flat-rate income-tax bracket
+// (no graduated detail) and is tagged _isDefault so the table can
+// mark the row as approximate.
+try {
+    const defaultsEl = document.getElementById('state-defaults-data');
+    if (defaultsEl) {
+        const defaults = JSON.parse(defaultsEl.textContent || '{}');
+        for (const [code, def] of Object.entries(defaults)) {
+            if (!STATE_DATA[code]) STATE_DATA[code] = def;
+        }
+    }
+} catch (e) { console.warn('state defaults merge failed', e); }
 
 // FHA upfront MIP financed into loan; FHA monthly MIP; conventional PMI when
 // down payment < 20%. These are industry-standard simplifications — actual
@@ -640,15 +660,19 @@ function calculateMaxPrice(income, dti, rate, state, loanType, dp, dpMode, hoa, 
 }
 
 // State income tax via graduated brackets. Each entry is the top of a
-// bracket plus the marginal rate applied within that bracket.
+// bracket plus the marginal rate applied within that bracket. Threshold
+// null/undefined means "unbounded" — used by the 43 server-default
+// states that have a single flat rate (no JSON Infinity literal).
 function calculateStateIncomeTax(income, state) {
     const brackets = STATE_DATA[state].stateIncomeTaxRates;
     let tax = 0, prev = 0;
     for (const b of brackets) {
         if (income <= prev) break;
-        const top = Math.min(income, b.threshold);
+        const isUnbounded = (b.threshold == null) || !isFinite(b.threshold);
+        const top = isUnbounded ? income : Math.min(income, b.threshold);
         tax += (top - prev) * b.rate;
-        prev = b.threshold;
+        prev = isUnbounded ? Infinity : b.threshold;
+        if (isUnbounded) break;
     }
     return tax;
 }
