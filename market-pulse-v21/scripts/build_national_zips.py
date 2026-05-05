@@ -236,20 +236,30 @@ def forecast_home_value(history: list[float], alpha: float = 0.5,
         prev_level = level
         level = alpha * history[i] + (1 - alpha) * (level + phi * trend)
         trend = beta * (level - prev_level) + (1 - beta) * phi * trend
-    # Forecast 12 months ahead with geometric damping.
+    if not history[-1]:
+        return None
+    # Multi-horizon: 3mo / 6mo / 12mo / 60mo (5yr) projections via the
+    # geometric damping. Accumulate the damped trend at each horizon.
+    horizons = (3, 6, 12, 60)
+    out: dict = {"forecast_method": "damped_holt_v1"}
     forecast = level
     damp = 1.0
-    for _h in range(1, 13):
+    for h in range(1, max(horizons) + 1):
         damp *= phi
         forecast += damp * trend
-    if forecast <= 0 or not history[-1]:
-        return None
-    pct = (forecast / history[-1] - 1) * 100
-    return {
-        "forecast_home_value_12mo": int(round(forecast)),
-        "forecast_pct_change_12mo": round(pct, 1),
-        "forecast_method": "damped_holt_v1",
-    }
+        if h in horizons:
+            tag = f"forecast_{h}mo" if h < 60 else "forecast_60mo"
+            if forecast <= 0:
+                continue
+            out[f"forecast_{h}mo_value"] = int(round(forecast))
+            out[f"forecast_{h}mo_pct"] = round(
+                (forecast / history[-1] - 1) * 100, 1
+            )
+    # Backwards-compat with P142's column names (used by /api/zips):
+    if "forecast_12mo_value" in out:
+        out["forecast_home_value_12mo"] = out["forecast_12mo_value"]
+        out["forecast_pct_change_12mo"] = out["forecast_12mo_pct"]
+    return out
 
 
 def parse_zori_per_zip(csv_text: str) -> dict[str, int]:
@@ -445,6 +455,18 @@ CREATE TABLE zips (
     -- future versions can A/B without breaking the API contract.
     forecast_home_value_12mo INTEGER,
     forecast_pct_change_12mo REAL,
+    -- Additional horizons (P143). Same model, projected forward N
+    -- months. NULL when history < 12 OR forecast went non-positive.
+    forecast_3mo_value       INTEGER,
+    forecast_3mo_pct         REAL,
+    forecast_6mo_value       INTEGER,
+    forecast_6mo_pct         REAL,
+    forecast_60mo_value      INTEGER,
+    forecast_60mo_pct        REAL,
+    -- Trailing 60 monthly ZHVI values, JSON-encoded list (oldest →
+    -- newest). Powers the historical chart on /zip/{zip}. ~600
+    -- bytes/ZIP × 25K = ~15MB extra in zips.db, acceptable.
+    history_zhvi             TEXT,
     forecast_method          TEXT,
     as_of                    TEXT
 );
@@ -612,6 +634,17 @@ def main(argv: list[str] | None = None) -> int:
             "forecast_home_value_12mo": (zh.get("_forecast") or {}).get("forecast_home_value_12mo"),
             "forecast_pct_change_12mo": (zh.get("_forecast") or {}).get("forecast_pct_change_12mo"),
             "forecast_method":          (zh.get("_forecast") or {}).get("forecast_method"),
+            # Multi-horizon forecasts (P143) — null when no _forecast.
+            "forecast_3mo_value":  (zh.get("_forecast") or {}).get("forecast_3mo_value"),
+            "forecast_3mo_pct":    (zh.get("_forecast") or {}).get("forecast_3mo_pct"),
+            "forecast_6mo_value":  (zh.get("_forecast") or {}).get("forecast_6mo_value"),
+            "forecast_6mo_pct":    (zh.get("_forecast") or {}).get("forecast_6mo_pct"),
+            "forecast_60mo_value": (zh.get("_forecast") or {}).get("forecast_60mo_value"),
+            "forecast_60mo_pct":   (zh.get("_forecast") or {}).get("forecast_60mo_pct"),
+            # Persist the history so /zip/{zip} can chart it. JSON-encoded
+            # list of values, oldest first. None when the ZIP doesn't
+            # have a history (rare; mostly newly-added ZIPs).
+            "history_zhvi": (json.dumps([round(v, 0) for v in zh["history"]]) if zh.get("history") else None),
             "as_of": today,
         })
         if args.limit and len(rows) >= args.limit:

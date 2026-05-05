@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+{% block title %}ZIP {{ zip.zip }} · Market Pulse{% endblock %}
+
+{% block content %}
+<style>
+    .zip-page { max-width: 1200px; margin: 1.5rem auto 3rem; padding: 0 1.25rem; }
+    .zip-back { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--accent2); text-decoration: none; font-size: 0.85rem; margin-bottom: 1rem; }
+    .zip-back:hover { color: var(--accent); text-decoration: underline; }
+
+    /* Hero block — big ZIP + neighborhood + key stats. */
+    .zip-hero { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem 1.75rem; margin-bottom: 1rem; }
+    .zip-hero-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.75rem; }
+    .zip-hero-zip { font-size: 2rem; font-weight: 800; color: var(--text); }
+    .zip-hero-name { font-size: 1.05rem; color: var(--text-dim); }
+    .zip-hero-sub { font-size: 0.78rem; color: var(--text-dim); margin-top: 0.25rem; }
+    .zip-hero-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-top: 1.2rem; padding-top: 1.1rem; border-top: 1px solid var(--border); }
+    .zip-hero-stat { }
+    .zip-hero-stat .label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); font-weight: 600; }
+    .zip-hero-stat .value { font-size: 1.4rem; font-weight: 700; margin-top: 0.15rem; }
+    .zip-hero-stat .delta { font-size: 0.78rem; margin-top: 0.15rem; }
+    .delta.up { color: #10b981; }
+    .delta.down { color: #ef4444; }
+    .beta-tag { background: rgba(245,158,11,0.18); color: #f59e0b; padding: 1px 6px; border-radius: 3px; font-size: 0.62rem; font-weight: 700; vertical-align: middle; margin-left: 0.4rem; }
+
+    /* Chart block. */
+    .zip-chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem 1rem; margin-bottom: 1rem; }
+    .zip-chart-card .head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.85rem; }
+    .zip-chart-card h3 { font-size: 0.95rem; margin: 0; font-weight: 700; }
+    .zip-chart-card .head-meta { font-size: 0.72rem; color: var(--text-dim); }
+    .zip-chart-wrap { position: relative; height: 320px; }
+
+    /* Forecast horizons row. */
+    .horizons-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+    .horizon-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; }
+    .horizon-card .label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); font-weight: 600; }
+    .horizon-card .value { font-size: 1.15rem; font-weight: 700; margin-top: 0.2rem; }
+    .horizon-card .delta { font-size: 0.78rem; margin-top: 0.2rem; }
+
+    /* Comparison strip — three-column table. */
+    .compare-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.5rem; margin-bottom: 1rem; }
+    .compare-card h3 { font-size: 0.95rem; margin: 0 0 0.8rem; font-weight: 700; }
+    .compare-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .compare-table th { text-align: right; padding: 0.45rem 0.6rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); font-weight: 600; border-bottom: 1px solid var(--border); }
+    .compare-table th:first-child { text-align: left; }
+    .compare-table td { text-align: right; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+    .compare-table td:first-child { text-align: left; color: var(--text-dim); font-size: 0.78rem; }
+    .compare-table tr:last-child td { border-bottom: none; }
+    .compare-table .col-zip { color: var(--accent); font-weight: 700; }
+
+    /* Detail cards row. */
+    .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+    .detail-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.4rem; }
+    .detail-card h4 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); font-weight: 700; margin: 0 0 0.7rem; }
+    .detail-row { display: flex; justify-content: space-between; padding: 0.32rem 0; font-size: 0.86rem; border-bottom: 1px solid var(--border); }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-row .l { color: var(--text-dim); }
+
+    .zip-foot { font-size: 0.7rem; color: var(--text-dim); line-height: 1.55; padding: 1rem 0.25rem 0; }
+</style>
+
+<div class="zip-page">
+    <a href="/map" class="zip-back">← Back to map</a>
+
+    <div class="zip-hero">
+        <div class="zip-hero-row">
+            <div class="zip-hero-zip">{{ zip.zip }}</div>
+            {% if zip.neighborhood %}<div class="zip-hero-name">{{ zip.neighborhood }}</div>{% endif %}
+        </div>
+        <div class="zip-hero-sub">
+            {% if zip.name %}{{ zip.name }}{% endif %}
+            {% if zip.county %} · {{ zip.county }}{% endif %}
+        </div>
+        <div class="zip-hero-stats">
+            <div class="zip-hero-stat">
+                <div class="label">Home value</div>
+                <div class="value">{% if zip.median_home_value %}${{ '{:,}'.format(zip.median_home_value) }}{% else %}—{% endif %}</div>
+                {% if zip.home_value_yoy is not none %}
+                <div class="delta {% if zip.home_value_yoy >= 0 %}up{% else %}down{% endif %}">
+                    {% if zip.home_value_yoy >= 0 %}+{% endif %}{{ '%.1f'|format(zip.home_value_yoy) }}% YoY
+                </div>
+                {% endif %}
+            </div>
+            {% if zip.forecast_home_value_12mo %}
+            <div class="zip-hero-stat">
+                <div class="label">12-mo forecast<span class="beta-tag">BETA</span></div>
+                <div class="value">${{ '{:,}'.format(zip.forecast_home_value_12mo) }}</div>
+                {% if zip.forecast_pct_change_12mo is not none %}
+                <div class="delta {% if zip.forecast_pct_change_12mo >= 0 %}up{% else %}down{% endif %}">
+                    {% if zip.forecast_pct_change_12mo >= 0 %}+{% endif %}{{ '%.1f'|format(zip.forecast_pct_change_12mo) }}%
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            <div class="zip-hero-stat">
+                <div class="label">Rent /mo</div>
+                <div class="value">{% if zip.median_rent_monthly %}${{ '{:,}'.format(zip.median_rent_monthly) }}{% else %}—{% endif %}</div>
+                {% if zip.rent_source == 'imputed' %}<div class="delta" style="color:var(--text-dim); font-style:italic;">imputed</div>{% endif %}
+            </div>
+            <div class="zip-hero-stat">
+                <div class="label">Cap rate</div>
+                <div class="value">{% if zip.cap_rate_pct %}{{ '%.2f'|format(zip.cap_rate_pct) }}%{% else %}—{% endif %}</div>
+            </div>
+        </div>
+    </div>
+
+    {% if history_values and schema_has.history %}
+    <div class="zip-chart-card">
+        <div class="head">
+            <h3>Home value history + 12-month forecast<span class="beta-tag">BETA</span></h3>
+            <div class="head-meta">Zillow ZHVI · {{ history_values|length }} months · damped Holt-Winters</div>
+        </div>
+        <div class="zip-chart-wrap"><canvas id="zipChart"></canvas></div>
+    </div>
+    {% endif %}
+
+    {% if schema_has.forecast and zip.forecast_60mo_value %}
+    <div class="horizons-grid">
+        {% for h, v, p in [
+            (3,  zip.forecast_3mo_value,  zip.forecast_3mo_pct),
+            (6,  zip.forecast_6mo_value,  zip.forecast_6mo_pct),
+            (12, zip.forecast_home_value_12mo, zip.forecast_pct_change_12mo),
+            (60, zip.forecast_60mo_value, zip.forecast_60mo_pct),
+        ] if v %}
+        <div class="horizon-card">
+            <div class="label">{% if h == 60 %}5 year{% else %}{{ h }} month{% endif %}</div>
+            <div class="value">${{ '{:,}'.format(v) }}</div>
+            {% if p is not none %}
+            <div class="delta {% if p >= 0 %}up{% else %}down{% endif %}">
+                {% if p >= 0 %}+{% endif %}{{ '%.1f'|format(p) }}%
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if county_agg or state_agg %}
+    <div class="compare-card">
+        <h3>vs. county + state median</h3>
+        <table class="compare-table">
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th class="col-zip">This ZIP</th>
+                    {% if county_agg %}<th>{{ zip.county or 'County' }} <span style="opacity:0.6;">(n={{ county_agg.n }})</span></th>{% endif %}
+                    {% if state_agg %}<th>{{ zip.state }} <span style="opacity:0.6;">(n={{ state_agg.n }})</span></th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Home value</td>
+                    <td class="col-zip">{% if zip.median_home_value %}${{ '{:,}'.format(zip.median_home_value) }}{% endif %}</td>
+                    {% if county_agg %}<td>{% if county_agg.median_home_value %}${{ '{:,}'.format(county_agg.median_home_value|int) }}{% endif %}</td>{% endif %}
+                    {% if state_agg %}<td>{% if state_agg.median_home_value %}${{ '{:,}'.format(state_agg.median_home_value|int) }}{% endif %}</td>{% endif %}
+                </tr>
+                <tr>
+                    <td>YoY change</td>
+                    <td class="col-zip">{% if zip.home_value_yoy is not none %}{{ '%+.1f'|format(zip.home_value_yoy) }}%{% endif %}</td>
+                    {% if county_agg %}<td>{% if county_agg.home_value_yoy is not none %}{{ '%+.1f'|format(county_agg.home_value_yoy) }}%{% endif %}</td>{% endif %}
+                    {% if state_agg %}<td>{% if state_agg.home_value_yoy is not none %}{{ '%+.1f'|format(state_agg.home_value_yoy) }}%{% endif %}</td>{% endif %}
+                </tr>
+                <tr>
+                    <td>Cap rate</td>
+                    <td class="col-zip">{% if zip.cap_rate_pct %}{{ '%.2f'|format(zip.cap_rate_pct) }}%{% endif %}</td>
+                    {% if county_agg %}<td>{% if county_agg.cap_rate_pct %}{{ '%.2f'|format(county_agg.cap_rate_pct) }}%{% endif %}</td>{% endif %}
+                    {% if state_agg %}<td>{% if state_agg.cap_rate_pct %}{{ '%.2f'|format(state_agg.cap_rate_pct) }}%{% endif %}</td>{% endif %}
+                </tr>
+                <tr>
+                    <td>Median income</td>
+                    <td class="col-zip">{% if zip.median_household_income %}${{ '{:,}'.format(zip.median_household_income) }}{% endif %}</td>
+                    {% if county_agg %}<td>{% if county_agg.median_household_income %}${{ '{:,}'.format(county_agg.median_household_income|int) }}{% endif %}</td>{% endif %}
+                    {% if state_agg %}<td>{% if state_agg.median_household_income %}${{ '{:,}'.format(state_agg.median_household_income|int) }}{% endif %}</td>{% endif %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <div class="detail-grid">
+        <div class="detail-card">
+            <h4>Lifestyle</h4>
+            {% if zip.walk_score is not none %}<div class="detail-row"><span class="l">Walk score</span><span>{{ zip.walk_score|int }}</span></div>{% endif %}
+            {% if zip.restaurant_score is not none %}<div class="detail-row"><span class="l">Restaurants</span><span>{{ zip.restaurant_score|int }}/100</span></div>{% endif %}
+            {% if zip.crime_index is not none %}<div class="detail-row"><span class="l">Crime (lower=safer)</span><span>{{ zip.crime_index|int }}</span></div>{% endif %}
+        </div>
+        <div class="detail-card">
+            <h4>Demographics</h4>
+            {% if zip.median_household_income %}<div class="detail-row"><span class="l">Median income</span><span>${{ '{:,}'.format(zip.median_household_income) }}</span></div>{% endif %}
+            {% if zip.pct_bachelors is not none %}<div class="detail-row"><span class="l">Bachelor's+</span><span>{{ zip.pct_bachelors|round|int }}%</span></div>{% endif %}
+            {% if zip.population %}<div class="detail-row"><span class="l">Population</span><span>{{ '{:,}'.format(zip.population) }}</span></div>{% endif %}
+            {% if zip.population_density %}<div class="detail-row"><span class="l">Density /km²</span><span>{{ '{:,}'.format(zip.population_density|int) }}</span></div>{% endif %}
+        </div>
+        <div class="detail-card">
+            <h4>Composite scores</h4>
+            <div class="detail-row"><span class="l">Balanced</span><span>{{ '%.1f'|format(zip.composite_balanced or 0) }}</span></div>
+            <div class="detail-row"><span class="l">Investor</span><span>{{ '%.1f'|format(zip.composite_investor or 0) }}</span></div>
+            <div class="detail-row"><span class="l">Lifestyle</span><span>{{ '%.1f'|format(zip.composite_lifestyle or 0) }}</span></div>
+        </div>
+    </div>
+
+    <div class="zip-foot">
+        Sources: Zillow ZHVI / ZORI (monthly), Census ACS 2022 5-year, Census 2020 ZCTA Gazetteer.
+        Forecast model: damped Holt-Winters (level + trend, phi=0.98). 12-month-ahead forecasts capture
+        ~65-75% of recent trend — directional, not predictive. Confidence band shown is ±5% of forecast,
+        a coarse uncertainty proxy. Snapshot as of {{ history_as_of or '—' }}.
+    </div>
+</div>
+
+{% if history_values and schema_has.history %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(() => {
+    const history = {{ history_values | tojson }};
+    const forecastPoints = {{ forecast_points | tojson }};
+    if (!history.length) return;
+
+    // Build month labels going backward from the snapshot date —
+    // ZHVI is monthly so month-arithmetic is good enough.
+    const asOf = "{{ history_as_of or '' }}";
+    const baseDate = asOf ? new Date(asOf + 'T00:00:00') : new Date();
+    const labels = history.map((_, i) => {
+        const d = new Date(baseDate);
+        d.setMonth(d.getMonth() - (history.length - 1 - i));
+        return d.toLocaleString('en-US', { month: 'short', year: '2-digit' });
+    });
+    // Append forecast labels at +3, +6, +12, +60 months from base.
+    const forecastLabels = forecastPoints.map(p => {
+        const d = new Date(baseDate);
+        d.setMonth(d.getMonth() + p.h);
+        return d.toLocaleString('en-US', { month: 'short', year: '2-digit' });
+    });
+
+    // Two datasets: history (solid line) + forecast (dashed line +
+    // shaded ±5% confidence band). Forecast starts at the last
+    // history value so the line is continuous.
+    const lastVal = history[history.length - 1];
+    const forecastValues = [lastVal, ...forecastPoints.map(p => p.value)];
+    const forecastLabelsExt = [labels[labels.length - 1], ...forecastLabels];
+
+    // Combined x-axis: history labels + forecast labels (ahead).
+    const allLabels = [...labels, ...forecastLabels];
+    // Pad history dataset with nulls beyond the last actual point so
+    // x-axis aligns with combined labels.
+    const historyPadded = [...history, ...Array(forecastPoints.length).fill(null)];
+    // Forecast dataset: nulls for the historical span, then a
+    // continuous line through the horizon points (starting from the
+    // last actual value for visual continuity).
+    const forecastPadded = [
+        ...Array(history.length - 1).fill(null),
+        lastVal,
+        ...forecastPoints.map(p => p.value),
+    ];
+    // ±5% confidence band — bookends of the forecast range.
+    const bandHigh = forecastPadded.map(v => v == null ? null : v * 1.05);
+    const bandLow  = forecastPadded.map(v => v == null ? null : v * 0.95);
+
+    const ctx = document.getElementById('zipChart');
+    const isDark = true;   // app is dark-mode only
+    const grid = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
+    const tick = isDark ? '#9ca3af' : '#4b5563';
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: allLabels,
+            datasets: [
+                {
+                    label: 'High band (+5%)',
+                    data: bandHigh,
+                    borderColor: 'transparent',
+                    backgroundColor: 'rgba(245,158,11,0.10)',
+                    fill: '+1',
+                    pointRadius: 0,
+                    tension: 0.2,
+                },
+                {
+                    label: 'Low band (-5%)',
+                    data: bandLow,
+                    borderColor: 'transparent',
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0.2,
+                },
+                {
+                    label: 'Historical',
+                    data: historyPadded,
+                    borderColor: '#22c55e',
+                    backgroundColor: 'rgba(34,197,94,0.05)',
+                    fill: false,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    borderWidth: 2,
+                    tension: 0.25,
+                },
+                {
+                    label: 'Forecast',
+                    data: forecastPadded,
+                    borderColor: '#f59e0b',
+                    borderDash: [6, 4],
+                    backgroundColor: 'rgba(245,158,11,0.05)',
+                    fill: false,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#f59e0b',
+                    borderWidth: 2,
+                    tension: 0.2,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        color: tick,
+                        filter: (item) => !item.text.includes('band'),  // hide band lines from legend
+                        boxWidth: 12,
+                        font: { size: 11 },
+                    },
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => {
+                            if (ctx.dataset.label.includes('band')) return null;
+                            const v = ctx.parsed.y;
+                            return v == null ? null : `${ctx.dataset.label}: $${Math.round(v).toLocaleString()}`;
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: {
+                    grid: { color: grid },
+                    ticks: {
+                        color: tick,
+                        autoSkip: true,
+                        maxTicksLimit: 12,
+                        font: { size: 10 },
+                    },
+                },
+                y: {
+                    grid: { color: grid },
+                    ticks: {
+                        color: tick,
+                        callback: (v) => '$' + (v >= 1000 ? Math.round(v/1000) + 'K' : v),
+                        font: { size: 10 },
+                    },
+                },
+            },
+        },
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

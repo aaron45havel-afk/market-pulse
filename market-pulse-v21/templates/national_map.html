@@ -2320,7 +2320,11 @@ function renderZipLayer(zips) {
             optStat('Median income', z.income, fmtMoney) +
             optStat("Bachelor's+", z.pct_bachelors, v => v.toFixed(0) + '%') +
             optStat('Population', z.population, v => v.toLocaleString('en-US')) +
-            imputedFlag,
+            imputedFlag +
+            // Full-report link — opens /zip/{zip} with chart + multi-
+            // horizon forecast + county/state comparison. Free for now;
+            // becomes the gated paid feature in Phase B/C.
+            `<div style="margin-top:0.7rem; padding-top:0.5rem; border-top:1px solid var(--border);"><a href="/zip/${z.zip}" class="pop-cta" style="display:block; text-align:center; padding:0.45rem 0.7rem; background:var(--accent); color:#0a0e1a !important; border-radius:6px; font-size:0.78rem; font-weight:700; text-decoration:none;">View full report &rarr;</a></div>`,
             // autoPanPadding [40, 80] leaves 80px from the top edge so
             // the popup doesn't slip behind the map header bar (which
             // sits in flex above the map but Leaflet doesn't know about

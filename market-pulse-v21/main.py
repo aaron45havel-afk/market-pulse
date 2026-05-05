@@ -696,6 +696,107 @@ async def api_search(q: str = "", limit: int = 8):
     })
 
 
+# ─── /zip/{zip} detail page (Phase A.1) ────────────────────────────
+# Server-rendered ZIP detail page with multi-horizon forecast,
+# historical chart, and county/state comparison strip. Linked from
+# the popup's "View full report →" button.
+
+@app.get("/zip/{zip}")
+async def zip_detail(request: Request, zip: str):
+    zip = zip.strip()
+    conn = _open_zips_db()
+    if conn is None:
+        return RedirectResponse(url="/map", status_code=302)
+    try:
+        # Detect schema version once; new columns are optional so older
+        # zips.db (pre-P143) still renders the page (with chart hidden).
+        existing = {r["name"] for r in conn.execute("PRAGMA table_info(zips)").fetchall()}
+        # Pull the full row for this ZIP, plus the county + state aggregates
+        # for the comparison strip. SELECT * because most fields go straight
+        # to the template and listing them all is noisy.
+        row = conn.execute("SELECT * FROM zips WHERE zip = ?", (zip,)).fetchone()
+        if not row:
+            conn.close()
+            return RedirectResponse(url="/map", status_code=302)
+
+        # Aggregates (median across the relevant pool). Median is more
+        # robust than mean against single-ZIP outliers like Beverly Hills.
+        def _median_for(where_clause: str, params: tuple) -> dict:
+            agg = conn.execute(
+                f"""SELECT
+                    median_home_value, home_value_yoy, cap_rate_pct,
+                    median_household_income
+                FROM zips WHERE {where_clause} ORDER BY zip""",
+                params,
+            ).fetchall()
+            if not agg:
+                return {}
+            def _med(key):
+                vals = [r[key] for r in agg if r[key] is not None]
+                if not vals:
+                    return None
+                vals.sort()
+                n = len(vals)
+                return vals[n // 2] if n % 2 else (vals[n // 2 - 1] + vals[n // 2]) / 2
+            return {
+                "n": len(agg),
+                "median_home_value": _med("median_home_value"),
+                "home_value_yoy": _med("home_value_yoy"),
+                "cap_rate_pct": _med("cap_rate_pct"),
+                "median_household_income": _med("median_household_income"),
+            }
+
+        county_agg = _median_for(
+            "county = ? AND state = ?",
+            (row["county"] if "county" in existing else "", row["state"]),
+        ) if (row["county"] if "county" in existing else "") else {}
+        state_agg = _median_for("state = ?", (row["state"],))
+    finally:
+        conn.close()
+
+    # Decode history JSON for the chart. Empty list when missing — the
+    # template hides the chart in that case.
+    import json as _json
+    history_values = []
+    try:
+        if "history_zhvi" in existing and row["history_zhvi"]:
+            history_values = _json.loads(row["history_zhvi"]) or []
+    except (ValueError, TypeError):
+        history_values = []
+
+    # Build the forecast trajectory the chart uses for the band: linear
+    # interpolation between the four horizons (3/6/12/60 months).
+    # Honest about the model's coarseness — we only forecast at those
+    # four points, not every month — but it visualizes the trend.
+    forecast_points: list[dict] = []
+    if "forecast_60mo_value" in existing and row["forecast_60mo_value"]:
+        last = history_values[-1] if history_values else (row["median_home_value"] or 0)
+        for h, v in [
+            (3,  row["forecast_3mo_value"] if "forecast_3mo_value" in existing else None),
+            (6,  row["forecast_6mo_value"] if "forecast_6mo_value" in existing else None),
+            (12, row["forecast_home_value_12mo"]),
+            (60, row["forecast_60mo_value"] if "forecast_60mo_value" in existing else None),
+        ]:
+            if v is not None:
+                forecast_points.append({"h": h, "value": v})
+
+    return templates.TemplateResponse("zip_detail.html", {
+        "request": request,
+        "zip": dict(row),
+        "history_values": history_values,
+        "history_as_of": row["as_of"] if "as_of" in row.keys() else "",
+        "forecast_points": forecast_points,
+        "county_agg": county_agg,
+        "state_agg": state_agg,
+        "schema_has": {
+            "forecast": "forecast_60mo_value" in existing,
+            "history": "history_zhvi" in existing,
+            "neighborhood": "neighborhood" in existing,
+            "county": "county" in existing,
+        },
+    })
+
+
 @app.get("/api/finance/screener")
 async def api_screener():
     """Net-net / deep value screener powered by SEC EDGAR."""
