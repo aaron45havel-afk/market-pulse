@@ -302,12 +302,46 @@ def restaurant_proxy(walk: float) -> float:
     return max(0.0, (walk - 20) * 1.3)
 
 
-def crime_proxy() -> float:
-    """No state-level crime feed is reliably free at ZCTA scale (FBI
-    UCR is county; PD open-data isn't national). Default to the 50
-    mid-baseline so crime_safety contributes a neutral signal until a
-    real source lands. Hand-curated metros override per ZIP."""
-    return 50.0
+def crime_proxy(density: float | None, income: int | None, pct_bach: float | None) -> float:
+    """Heuristic crime index 0-100 (lower=safer) derived from socioeconomic
+    inputs we already have per ZIP. Crime correlates strongly (in aggregate)
+    with population density (urban property crime), low income (more
+    desperate environments), and low education (compounding risk factor).
+
+    This is NOT real crime data — it's a directionally-correct proxy that
+    differentiates ZIPs based on factors that DO predict crime. Phase B
+    of the crime work layers in FBI UCR county anchors so each ZIP is
+    calibrated against its county's real per-100K rate; this proxy then
+    provides within-county variation.
+
+    Three sub-factors, each 0-1, weighted blend onto a 15-75 output range:
+      density:  log10 scale, 0 at <30/km² (rural), 1 at 30K+/km² (NYC core)
+      income:   inverse linear, 1 at $30K, 0 at $200K+
+      edu:      inverse linear, 1 at <10% bachelor's+, 0 at >70%
+
+    Output baseline ~25 (suburban-mid) lets hand-curated ZIPs (which
+    range 18-65 in DALLAS_ZIPS etc.) overlap meaningfully when both
+    flow through the same compute_zip_metrics scoring pipeline.
+    """
+    import math
+    # Density factor — log scale because crime scales sub-linearly with
+    # density, not linearly (LA 3K/km² isn't 6x the crime of suburb 500/km²).
+    if density is None or density <= 0:
+        density_f = 0.0
+    else:
+        density_f = max(0.0, min(1.0, (math.log10(max(density, 1)) - 1.5) / 3.0))
+    # Income factor — inverse linear. National median ~$70K. Map $30K→1.0,
+    # $200K→0.0. Wealthy ZIPs (Moraga $200K+) drop crime below baseline.
+    inc = income if income else 70000
+    income_f = max(0.0, min(1.0, (200000 - inc) / 170000.0))
+    # Education factor — bachelor's rate as a compounding signal.
+    # National avg ~33%, top metros ~60%, lowest <15%. Map 10%→1.0, 70%→0.
+    bach = pct_bach if pct_bach is not None else 30.0
+    edu_f = max(0.0, min(1.0, (70.0 - bach) / 60.0))
+    # Weighted blend. Density and income carry equal weight (both strong
+    # predictors); education adds a smaller corrective. Output range 15-75.
+    blend = 0.40 * density_f + 0.40 * income_f + 0.20 * edu_f
+    return round(15.0 + blend * 60.0, 1)
 
 
 def impute_rent(home_value: int) -> int:
@@ -445,7 +479,7 @@ def main(argv: list[str] | None = None) -> int:
         density = pop / g["aland_km2"] if g["aland_km2"] > 0 else 0
         walk = walk_proxy(density)
         rest = restaurant_proxy(walk)
-        crime = crime_proxy()
+        crime = crime_proxy(density, income, pct_bach)
         rent = zori.get(z)
         rent_source = "zori" if rent else "imputed"
         if not rent:
