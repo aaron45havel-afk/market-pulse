@@ -145,6 +145,7 @@ def parse_zhvi_per_zip(csv_text: str) -> dict[str, dict]:
     zip_idx = header.index("RegionName")
     state_idx = header.index("State") if "State" in header else None
     city_idx = header.index("City") if "City" in header else None
+    county_idx = header.index("CountyName") if "CountyName" in header else None
     date_cols = sorted(
         [(i, h) for i, h in enumerate(header) if re.fullmatch(r"\d{4}-\d{2}-\d{2}", h)],
         key=lambda x: x[1],
@@ -184,6 +185,8 @@ def parse_zhvi_per_zip(csv_text: str) -> dict[str, dict]:
             entry["state"] = row[state_idx].strip().upper()
         if city_idx is not None and city_idx < len(row):
             entry["city"] = row[city_idx].strip()
+        if county_idx is not None and county_idx < len(row):
+            entry["county"] = row[county_idx].strip()
         out[zcode] = entry
     log.info("  → %d ZIPs with ZHVI", len(out))
     return out
@@ -320,7 +323,9 @@ SCHEMA = """
 CREATE TABLE zips (
     zip                      TEXT PRIMARY KEY,
     state                    TEXT,
-    name                     TEXT,
+    name                     TEXT,    -- 'City, ST' from Zillow ZHVI
+    county                   TEXT,    -- 'Franklin County' (etc) from Zillow ZHVI CountyName
+    neighborhood             TEXT,    -- e.g. 'Short North' — populated by enrich_neighborhoods.py
     lat                      REAL,
     lng                      REAL,
     aland_km2                REAL,
@@ -404,6 +409,21 @@ def main(argv: list[str] | None = None) -> int:
     ))
     acs = fetch_acs_zcta()
 
+    # Load the neighborhood enrichment cache. enrich_neighborhoods.py
+    # populates this incrementally via Photon reverse-geocoding — each
+    # ZIP gets a sub-city locality name like "Short North" or "Bexley"
+    # where OSM has it tagged. ZIPs without a cache hit (rural, or not
+    # enriched yet) just miss the field; popup falls back to City+County.
+    neighborhoods_path = REPO_ROOT / "data" / "zip_neighborhoods.json"
+    neighborhoods: dict[str, str] = {}
+    if neighborhoods_path.exists():
+        try:
+            payload = json.loads(neighborhoods_path.read_text())
+            neighborhoods = payload.get("neighborhoods", {})
+            log.info("Loaded %d cached neighborhood names", len(neighborhoods))
+        except (json.JSONDecodeError, OSError):
+            log.warning("Could not load %s — proceeding without neighborhoods", neighborhoods_path)
+
     log.info("Joining feeds …")
     rows: list[dict] = []
     skipped = {"no_centroid": 0, "no_income": 0}
@@ -454,6 +474,8 @@ def main(argv: list[str] | None = None) -> int:
             "zip": z,
             "state": state,
             "name": name,
+            "county": zh.get("county", ""),
+            "neighborhood": neighborhoods.get(z, ""),
             "lat": g["lat"],
             "lng": g["lng"],
             "aland_km2": round(g["aland_km2"], 3),

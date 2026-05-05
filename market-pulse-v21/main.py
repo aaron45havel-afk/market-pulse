@@ -294,10 +294,18 @@ async def api_zips(
                 "message": "Run the refresh-national-zips workflow to populate data/zips.db.",
             },
         })
+    # county + neighborhood are added in the v2 schema (P131). For
+    # backwards-compat with a deployed zips.db that pre-dates the new
+    # columns, peek at table_info first and substitute NULL placeholders
+    # if either column is missing. After the next refresh-national-zips
+    # run rebuilds the DB, this branch goes unused.
     try:
+        existing_cols = {r["name"] for r in conn.execute("PRAGMA table_info(zips)").fetchall()}
+        county_expr = "county" if "county" in existing_cols else "NULL AS county"
+        nbhd_expr = "neighborhood" if "neighborhood" in existing_cols else "NULL AS neighborhood"
         rows = conn.execute(
             f"""
-            SELECT zip, state, name, lat, lng,
+            SELECT zip, state, name, {county_expr}, {nbhd_expr}, lat, lng,
                    median_home_value, home_value_yoy,
                    median_rent_monthly, cap_rate_pct,
                    median_household_income, pct_bachelors,
@@ -322,6 +330,8 @@ async def api_zips(
             "zip": r["zip"],
             "state": r["state"],
             "name": r["name"],
+            "county": r["county"] or None,
+            "neighborhood": r["neighborhood"] or None,
             "lat": r["lat"],
             "lng": r["lng"],
             "home_value": r["median_home_value"],

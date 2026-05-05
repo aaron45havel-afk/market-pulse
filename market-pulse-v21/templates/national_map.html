@@ -1009,10 +1009,13 @@ function renderZipLeaderboard(list) {
         const imputedTag = z.is_imputed
             ? '<span class="stub-tag" title="Rent imputed (no ZORI for this ZIP)">imp</span>'
             : '';
+        // Prefer neighborhood when we have it — same precedence as the popup.
+        // Falls back to the city/state name and finally the ZIP code.
+        const place = z.neighborhood || z.name || z.zip;
         return `<div class="lb-row" data-zip="${z.zip}">
             <span class="rank">${i + 1}</span>
             <div class="name">
-                <div class="label">${z.zip} <span style="font-weight:400; color:var(--text-dim);">${z.name}</span>${imputedTag}</div>
+                <div class="label">${z.zip} <span style="font-weight:400; color:var(--text-dim);">${place}</span>${imputedTag}</div>
                 <div class="meta">${fmtMoney(z.home_value)} &middot; ${z.cap_rate_pct.toFixed(1)}% yield</div>
             </div>
             <span class="score" style="color:${color};">${z.composite.toFixed(0)}</span>
@@ -2220,9 +2223,21 @@ function renderZipLayer(zips) {
         const yoyDisplay = z.home_value_yoy == null
             ? null
             : `<span class="${yoyClass}">${z.home_value_yoy >= 0 ? '+' : ''}${z.home_value_yoy.toFixed(1)}%</span>`;
+        // Title prefers the most-specific name we have:
+        //   neighborhood > city > "ZIP #####"
+        // and the subtitle is City + County. Old popups duplicated state
+        // ("Columbus, OH · OH") since z.name already ends with state —
+        // dropped the redundant state on the subtitle.
+        const titleName = z.neighborhood
+            ? `${z.zip} · ${z.neighborhood}`
+            : `ZIP ${z.zip}`;
+        const subParts = [];
+        if (z.name) subParts.push(z.name);
+        if (z.county) subParts.push(z.county);
+        const subtitle = subParts.join(' · ') || z.state;
         m.bindPopup(
-            `<div style="font-weight:700; font-size:0.95rem;">ZIP ${z.zip}</div>` +
-            `<div style="font-size:0.72rem; color:var(--text-dim); margin-bottom:0.5rem;">${z.name} · ${z.state}</div>` +
+            `<div style="font-weight:700; font-size:0.95rem;">${titleName}</div>` +
+            `<div style="font-size:0.72rem; color:var(--text-dim); margin-bottom:0.5rem;">${subtitle}</div>` +
             // Market section — value, YoY, rent, yield, composite.
             `<div class="pop-section-label">Market</div>` +
             `<div class="pop-stat"><span class="label">Home value</span><span>${fmtMoney(z.home_value)}</span></div>` +
