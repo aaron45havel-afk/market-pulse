@@ -782,9 +782,10 @@ CHOROPLETH_METRICS = [
     # Growth Outlook category — forward-leaning indicators that capture
     # how a state's housing demand pipeline looks 1-3 years out.
     {"key": "growth_score",   "label": "Growth Outlook score",  "unit": "",   "good_when": "high", "decimals": 0, "category": "Growth Outlook", "popular": True},
-    {"key": "permits_per_1k", "label": "Building permits/1K",   "unit": "",   "good_when": "high", "decimals": 1, "category": "Growth Outlook"},
-    {"key": "net_migration",  "label": "Net domestic migration","unit": "/1K","good_when": "high", "decimals": 1, "category": "Growth Outlook"},
-    {"key": "job_growth_yoy", "label": "Job growth YoY",        "unit": "%",  "good_when": "high", "decimals": 1, "category": "Growth Outlook"},
+    {"key": "permits_per_1k",   "label": "Building permits/1K",   "unit": "",   "good_when": "high", "decimals": 1, "category": "Growth Outlook"},
+    {"key": "net_migration",    "label": "Net domestic migration","unit": "/1K","good_when": "high", "decimals": 1, "category": "Growth Outlook"},
+    {"key": "job_growth_yoy",   "label": "Job growth YoY",        "unit": "%",  "good_when": "high", "decimals": 1, "category": "Growth Outlook"},
+    {"key": "unemployment_pct", "label": "Unemployment rate",     "unit": "%",  "good_when": "low",  "decimals": 1, "category": "Growth Outlook"},
     # Fiscal Health category — governance + balance-sheet indicators.
     # All hand-curated annually from public sources (S&P, Truth in
     # Accounting, Pew). Updates yearly — no clean APIs.
@@ -873,9 +874,30 @@ def _apply_growth_overrides() -> None:
             target[key] = val
 
 
+# BLS state unemployment overrides — refreshed monthly via
+# scripts/refresh_bls.py. Unemployment_pct is a new metric (no
+# hardcoded seed in CHOROPLETH_STATES) so it only appears once the
+# refresh has run at least once.
+def _apply_bls_overrides() -> None:
+    overrides_path = Path(__file__).parent / "data" / "bls_overrides.json"
+    if not overrides_path.exists():
+        return
+    try:
+        payload = json.loads(overrides_path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return
+    for state_code, values in payload.get("overrides", {}).items():
+        target = CHOROPLETH_STATES.get(state_code)
+        if not target:
+            continue
+        for key, val in values.items():
+            target[key] = val
+
+
 _apply_redfin_overrides()
 _apply_zillow_state_overrides()
 _apply_growth_overrides()
+_apply_bls_overrides()
 
 
 # Current 30-yr fixed mortgage rate (FRED MORTGAGE30US, refreshed weekly
