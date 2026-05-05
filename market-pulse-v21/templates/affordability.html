@@ -1051,7 +1051,11 @@ function renderScenarioList() {
 // state, paints the table. Highlights the strongest (green) and weakest
 // (red) max-price rows so it's a glance-comparable view.
 
-const STATE_ORDER = ['NV', 'CA', 'UT', 'TX', 'AZ', 'FL', 'GA', 'IN'];
+// Originally hardcoded to 8 hand-curated states. After P138/P139 the
+// server merges in defaults for the other 43, so iterate Object.keys
+// to pick up everything in STATE_DATA. The table sorts by maxPrice
+// anyway so order here doesn't matter.
+const STATE_ORDER = Object.keys(STATE_DATA);
 
 function computeRow(inputs, state) {
     const { income, dti, rate, downPayment, downPaymentMode, loanType, monthlyDebts, hoa, rentalIncome } = inputs;
