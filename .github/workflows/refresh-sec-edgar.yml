@@ -1,0 +1,38 @@
+name: Refresh SEC EDGAR screener
+
+# Pings /api/finance/refresh once a week so the net-net screener
+# (/finance) picks up freshly-filed 10-Q and 10-K data without
+# waiting for a user request to trigger the build. The endpoint
+# clears the /tmp cache + rebuilds, then serves the fresh result
+# to every subsequent request.
+#
+# Cadence: weekly Mondays — most companies file mid-week, so by
+# Monday morning the prior week's filings are settled.
+#
+# Note: cache is /tmp on Railway (ephemeral), so a Railway redeploy
+# between cron runs may wipe it. That's fine — the next user request
+# triggers a rebuild on miss. The cron's value is (a) pre-warming the
+# cache after a weekly cycle and (b) catching new filings.
+
+on:
+  schedule:
+    - cron: '0 13 * * 1'   # Mondays 13:00 UTC
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit the refresh endpoint
+        run: |
+          set -euo pipefail
+          # Production URL — update if Railway domain changes.
+          URL="https://market-pulse-production-628a.up.railway.app/api/finance/refresh"
+          # 90s timeout — building the screener fetches several SEC
+          # ZIPs and joins quarterly facts, can take 30-60s on a cold
+          # cache.
+          curl --fail --max-time 90 --retry 3 --retry-delay 10 "$URL" || {
+            echo "Refresh request failed."
+            exit 1
+          }
+          echo "SEC EDGAR screener refreshed."
