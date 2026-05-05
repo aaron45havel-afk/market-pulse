@@ -14,7 +14,8 @@ from sec_edgar import build_net_net_screener
 from state_neighborhoods import get_state_neighborhoods, STATE_METROS
 from database import (init_db, save_price, save_prices_bulk, get_all_prices, delete_price,
                       lock_portfolio, update_portfolio_prices, exit_holding,
-                      close_portfolio, get_all_portfolios)
+                      close_portfolio, get_all_portfolios,
+                      add_user, get_user_count, list_users)
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -235,6 +236,101 @@ async def affordability(request: Request):
 @app.get("/finance")
 async def finance(request: Request):
     return templates.TemplateResponse("finance.html", {"request": request})
+
+
+# ─── Sign-up (Phase 1 of paywall — email capture only) ──────────────
+# Free for now. Captures email + optional name + source page so we
+# can email people when paid features launch. No login UI, no
+# password — Phase 2 will add magic-link auth when we actually need
+# to gate features per user.
+
+import re
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+@app.get("/signup")
+async def signup_page(request: Request):
+    return templates.TemplateResponse("signup.html", {"request": request})
+
+
+@app.post("/api/signup")
+async def api_signup(request: Request):
+    """Insert a signup. Validates email format, rejects honeypot,
+    de-dupes on email. Returns 201 on new signup, 200 on existing."""
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON body."}, status_code=400)
+
+    # Honeypot — hidden field on the form. Real users never fill it,
+    # bots fill it indiscriminately. Silent-200 (don't tell the bot
+    # we caught it) so they don't adapt.
+    if (body.get("website") or "").strip():
+        return JSONResponse({"created": False, "ignored": True})
+
+    email = (body.get("email") or "").strip().lower()
+    name = (body.get("name") or "").strip() or None
+    source = (body.get("source") or "/signup").strip()[:60]
+    if not EMAIL_RE.match(email):
+        return JSONResponse({"error": "Please enter a valid email."}, status_code=400)
+    if len(email) > 255:
+        return JSONResponse({"error": "Email is too long."}, status_code=400)
+
+    user_agent = request.headers.get("user-agent", "")[:255]
+    created, uid = add_user(email=email, name=name, source=source, user_agent=user_agent)
+    status = 201 if created else 200
+    return JSONResponse({"created": created, "id": uid}, status_code=status)
+
+
+@app.get("/api/signups/count")
+async def api_signups_count():
+    """Public endpoint — useful for a 'join 1,247 others' badge."""
+    return JSONResponse({"count": get_user_count()})
+
+
+def _check_admin_token(request: Request) -> bool:
+    """Token from query string (`?token=`) OR X-Admin-Token header.
+    Compares against ADMIN_TOKEN env var. Returns False when env var
+    is unset (so accidental deploy without the secret refuses access)."""
+    expected = os.environ.get("ADMIN_TOKEN", "").strip()
+    if not expected:
+        return False
+    provided = (
+        request.query_params.get("token", "") or
+        request.headers.get("x-admin-token", "")
+    ).strip()
+    return provided != "" and provided == expected
+
+
+@app.get("/admin/signups")
+async def admin_signups(request: Request, format: str = "json", limit: int = 500):
+    """Admin-gated signup list. Format: 'json' (default) or 'csv'.
+    Hit with ?token=<your-ADMIN_TOKEN> or X-Admin-Token header."""
+    if not _check_admin_token(request):
+        return JSONResponse(
+            {"error": "Unauthorized — pass ?token=<ADMIN_TOKEN> or X-Admin-Token header."},
+            status_code=401,
+        )
+    limit = max(1, min(int(limit), 5000))
+    rows = list_users(limit=limit)
+    total = get_user_count()
+    if format.lower() == "csv":
+        # Tiny inline CSV — avoids importing a heavy dep for a 5-col file.
+        import io, csv
+        buf = io.StringIO()
+        w = csv.writer(buf)
+        w.writerow(["id", "email", "name", "source", "created_at", "user_agent"])
+        for r in rows:
+            w.writerow([r["id"], r["email"], r["name"] or "", r["source"] or "",
+                        r["created_at"] or "", r["user_agent"] or ""])
+        return Response(
+            content=buf.getvalue(),
+            media_type="text/csv",
+            headers={"Content-Disposition": 'attachment; filename="signups.csv"'},
+        )
+    return JSONResponse({"total": total, "limit": limit, "users": rows})
+
 
 
 # ─── National ZIPs viewport endpoint (Phase 2 of national rollout) ──

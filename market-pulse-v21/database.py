@@ -93,6 +93,20 @@ def init_db():
             )
         """)
 
+        # Sign-up list — Phase 1 of going-paid. Free for now, just
+        # capturing emails so we can email people when paid features
+        # launch. source tracks which page/feature drove the signup.
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                name VARCHAR(120),
+                source VARCHAR(60),
+                user_agent VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
         conn.commit()
         cur.close()
         conn.close()
@@ -388,4 +402,82 @@ def get_all_portfolios():
         return snapshots
     except Exception as e:
         logger.error(f"Get portfolios: {e}"); conn.close()
+        return []
+
+
+# ─── Sign-up list (Phase 1 of paywall) ─────────────────────────────────
+# Email capture so we can DM people when paid features launch. No auth,
+# no password — Phase 2 adds magic-link login when we actually need to
+# gate features per user. add_user is idempotent on email (returns
+# False if the email is already registered).
+
+def add_user(email, name=None, source=None, user_agent=None):
+    """Insert a signup. Returns (created: bool, user_id: int|None).
+    On duplicate email, returns (False, existing_id)."""
+    conn = _get_conn()
+    if not conn: return (False, None)
+    try:
+        cur = conn.cursor()
+        # ON CONFLICT DO NOTHING leaves the existing row alone, so a
+        # re-signup is harmless. RETURNING id only fires when a row was
+        # actually inserted; we look up the existing id otherwise.
+        cur.execute(
+            """INSERT INTO users (email, name, source, user_agent)
+               VALUES (%s, %s, %s, %s)
+               ON CONFLICT (email) DO NOTHING
+               RETURNING id""",
+            (email, name, source, user_agent),
+        )
+        row = cur.fetchone()
+        if row:
+            uid = row[0]
+            conn.commit()
+            return (True, uid)
+        # Existed already — fetch the id so admin tooling can correlate.
+        cur.execute("SELECT id FROM users WHERE email=%s", (email,))
+        existing = cur.fetchone()
+        return (False, existing[0] if existing else None)
+    except Exception as e:
+        logger.error(f"add_user failed: {e}")
+        return (False, None)
+    finally:
+        conn.commit(); cur.close(); conn.close()
+
+
+def get_user_count():
+    conn = _get_conn()
+    if not conn: return 0
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM users")
+        n = cur.fetchone()[0]
+        cur.close(); conn.close()
+        return n
+    except Exception as e:
+        logger.error(f"get_user_count: {e}")
+        if conn: conn.close()
+        return 0
+
+
+def list_users(limit=500):
+    """Returns recent N signups as a list of dicts. Used by /admin/signups."""
+    conn = _get_conn()
+    if not conn: return []
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """SELECT id, email, name, source, user_agent, created_at
+               FROM users ORDER BY created_at DESC LIMIT %s""",
+            (limit,),
+        )
+        rows = cur.fetchall()
+        cur.close(); conn.close()
+        return [{
+            "id": r[0], "email": r[1], "name": r[2],
+            "source": r[3], "user_agent": r[4],
+            "created_at": r[5].isoformat() if r[5] else None,
+        } for r in rows]
+    except Exception as e:
+        logger.error(f"list_users: {e}")
+        if conn: conn.close()
         return []
