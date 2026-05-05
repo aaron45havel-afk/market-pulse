@@ -203,6 +203,11 @@
     .leaflet-popup-content { margin: 0.7rem 0.9rem; font-size: 0.85rem; min-width: 220px; }
     .leaflet-container { font-family: inherit; }
     .pop-stat { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.15rem 0; font-size: 0.82rem; }
+    .pop-stat .up { color: #10b981; }
+    .pop-stat .down { color: #ef4444; }
+    /* Section divider in the ZIP popup — separates Market / Lifestyle /
+       Demographics groupings without adding hard rules. */
+    .pop-section-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-dim); font-weight: 700; margin-bottom: 0.18rem; }
     .pop-stat .label { color: var(--text-dim); }
     /* Action bar at the bottom of the popup — primary CTA on the left
        takes the dominant width, social-platform icons sit to the right
@@ -2207,15 +2212,38 @@ function renderZipLayer(zips) {
             `cap ${z.cap_rate_pct.toFixed(1)}% · score <strong>${z.composite.toFixed(0)}</strong>`,
             { sticky: true, opacity: 0.95, direction: 'top' }
         );
+        // Helper: render an optional stat row only if the value is
+        // present (server returns nulls for ZIPs missing that field).
+        const optStat = (label, value, fmt) =>
+            value == null ? '' : `<div class="pop-stat"><span class="label">${label}</span><span>${fmt ? fmt(value) : value}</span></div>`;
+        const yoyClass = z.home_value_yoy == null ? '' : (z.home_value_yoy >= 0 ? 'up' : 'down');
+        const yoyDisplay = z.home_value_yoy == null
+            ? null
+            : `<span class="${yoyClass}">${z.home_value_yoy >= 0 ? '+' : ''}${z.home_value_yoy.toFixed(1)}%</span>`;
         m.bindPopup(
             `<div style="font-weight:700; font-size:0.95rem;">ZIP ${z.zip}</div>` +
-            `<div style="font-size:0.72rem; color:var(--text-dim); margin-bottom:0.4rem;">${z.name} · ${z.state}</div>` +
+            `<div style="font-size:0.72rem; color:var(--text-dim); margin-bottom:0.5rem;">${z.name} · ${z.state}</div>` +
+            // Market section — value, YoY, rent, yield, composite.
+            `<div class="pop-section-label">Market</div>` +
             `<div class="pop-stat"><span class="label">Home value</span><span>${fmtMoney(z.home_value)}</span></div>` +
+            (yoyDisplay ? `<div class="pop-stat"><span class="label">YoY</span><span>${yoyDisplay}</span></div>` : '') +
             `<div class="pop-stat"><span class="label">Rent /mo</span><span>${fmtMoney(z.rent)}</span></div>` +
             `<div class="pop-stat"><span class="label">Cap rate</span><span>${z.cap_rate_pct.toFixed(2)}%</span></div>` +
             `<div class="pop-stat"><span class="label">Composite</span><span style="color:${scoreColor(z.composite)}; font-weight:700;">${z.composite.toFixed(1)}</span></div>` +
+            // Lifestyle section — walk + restaurants + crime. Crime
+            // is shown as "lower=safer" since the underlying value's
+            // direction isn't intuitive without the hint.
+            `<div class="pop-section-label" style="margin-top:0.55rem;">Lifestyle</div>` +
+            optStat('Walk score', z.walk_score, v => v.toFixed(0)) +
+            optStat('Restaurants', z.restaurant_score, v => v.toFixed(0) + '/100') +
+            optStat('Crime (lower=safer)', z.crime_index, v => v.toFixed(0)) +
+            // Demographics — income, education, population.
+            `<div class="pop-section-label" style="margin-top:0.55rem;">Demographics</div>` +
+            optStat('Median income', z.income, fmtMoney) +
+            optStat("Bachelor's+", z.pct_bachelors, v => v.toFixed(0) + '%') +
+            optStat('Population', z.population, v => v.toLocaleString('en-US')) +
             imputedFlag,
-            { maxWidth: 280 }
+            { maxWidth: 300 }
         );
         _zipLayer.addLayer(m);
         _zipMarkers[z.zip] = m;

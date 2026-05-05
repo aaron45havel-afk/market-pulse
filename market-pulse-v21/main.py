@@ -298,7 +298,10 @@ async def api_zips(
         rows = conn.execute(
             f"""
             SELECT zip, state, name, lat, lng,
-                   median_home_value, median_rent_monthly, cap_rate_pct,
+                   median_home_value, home_value_yoy,
+                   median_rent_monthly, cap_rate_pct,
+                   median_household_income, pct_bachelors,
+                   population, walk_score, crime_index, restaurant_score,
                    {persona_col} AS composite, rent_source, as_of
             FROM zips
             WHERE lat BETWEEN ? AND ?
@@ -322,8 +325,15 @@ async def api_zips(
             "lat": r["lat"],
             "lng": r["lng"],
             "home_value": r["median_home_value"],
+            "home_value_yoy": r["home_value_yoy"],
             "rent": r["median_rent_monthly"],
             "cap_rate_pct": r["cap_rate_pct"],
+            "income": r["median_household_income"],
+            "pct_bachelors": r["pct_bachelors"],
+            "population": r["population"],
+            "walk_score": r["walk_score"],
+            "crime_index": r["crime_index"],
+            "restaurant_score": r["restaurant_score"],
             "composite": round(r["composite"], 1) if r["composite"] is not None else None,
             "is_imputed": r["rent_source"] == "imputed",
         }
