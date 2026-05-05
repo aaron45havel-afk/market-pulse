@@ -454,7 +454,7 @@
         <!-- Right rail: leaderboard + find-your-fit, each in its own tab -->
         <aside class="leader-rail">
             <div class="rail-tabs">
-                <button type="button" class="rail-tab active" data-pane="leaderboard">Top Metros</button>
+                <button type="button" class="rail-tab active" data-pane="leaderboard"><span id="lbTabLabel">Top Metros</span></button>
                 <button type="button" class="rail-tab" data-pane="filters">Filter &amp; Match<span class="tab-badge"></span></button>
             </div>
 
@@ -916,6 +916,18 @@ function renderStateInfo() {
 function renderLeaderboard() {
     const list = document.getElementById('lbList');
     if (!list) return;
+    // At city zoom the user is looking at ZIP-level detail — switch
+    // the leaderboard to "top ZIPs in viewport" so they can rank
+    // what they're actually seeing. Falls back to metro mode if no
+    // ZIP fetch has landed yet (DB missing or zoomed in too fast).
+    const z = window._mpMap ? window._mpMap.getZoom() : 5;
+    const cityZoom = z >= ZIP_FETCH_MIN_ZOOM;
+    const tabLabel = document.getElementById('lbTabLabel');
+    if (tabLabel) tabLabel.textContent = cityZoom && _lastZips.length ? 'Top ZIPs' : 'Top Metros';
+    if (cityZoom && _lastZips.length) {
+        renderZipLeaderboard(list);
+        return;
+    }
     // Filters narrow the candidate pool first, then we sort by persona
     // composite. When all filters are cleared, this is just METROS.
     const pool = (typeof getFilteredMetros === 'function') ? getFilteredMetros() : METROS;
@@ -976,6 +988,43 @@ function renderLeaderboard() {
                 marker.openPopup();
             }
             highlightLeaderboardRow(slug);
+        });
+    });
+}
+
+// City-zoom leaderboard: top ZIPs in the current viewport, ranked by
+// the persona composite the API returns (server-side sort). Click a
+// row to fly + open that ZIP's popup. _lastZips is set in
+// fetchZipsForViewport on every moveend.
+function renderZipLeaderboard(list) {
+    const cap = 25;
+    const visible = _lastZips.slice(0, cap);
+    list.innerHTML = visible.map((z, i) => {
+        const color = scoreColor(z.composite);
+        const imputedTag = z.is_imputed
+            ? '<span class="stub-tag" title="Rent imputed (no ZORI for this ZIP)">imp</span>'
+            : '';
+        return `<div class="lb-row" data-zip="${z.zip}">
+            <span class="rank">${i + 1}</span>
+            <div class="name">
+                <div class="label">${z.zip} <span style="font-weight:400; color:var(--text-dim);">${z.name}</span>${imputedTag}</div>
+                <div class="meta">${fmtMoney(z.home_value)} &middot; ${z.cap_rate_pct.toFixed(1)}% yield</div>
+            </div>
+            <span class="score" style="color:${color};">${z.composite.toFixed(0)}</span>
+        </div>`;
+    }).join('');
+    if (_lastZips.length > cap) {
+        list.insertAdjacentHTML('beforeend',
+            `<div class="lb-footer">+${_lastZips.length - cap} more in this view — pan or zoom to refine.</div>`);
+    }
+    list.querySelectorAll('.lb-row').forEach(row => {
+        row.addEventListener('click', () => {
+            const zip = row.dataset.zip;
+            const marker = _zipMarkers[zip];
+            if (!marker || !window._mpMap) return;
+            const ll = marker.getLatLng();
+            window._mpMap.flyTo(ll, Math.max(window._mpMap.getZoom(), 11), { duration: 0.5 });
+            marker.openPopup();
         });
     });
 }
@@ -2032,6 +2081,8 @@ const ZIP_FETCH_MIN_ZOOM = 9;       // below this, choropleth + metro pins suffi
 const ZIP_FETCH_DEBOUNCE_MS = 250;  // pause before firing the request
 const ZIP_FETCH_LIMIT = 800;        // matches /api/zips upper-end useful viewport density
 let _zipLayer = null;               // L.LayerGroup of circleMarkers
+let _zipMarkers = {};               // zip → marker, so leaderboard rows can fly + popup
+let _lastZips = [];                 // last /api/zips response — leaderboard reads this at city zoom
 let _zipsEnabled = true;
 let _zipFetchAbort = null;          // AbortController for in-flight fetch
 let _zipDebounceTimer = 0;
@@ -2111,8 +2162,12 @@ async function fetchZipsForViewport() {
             _zipDbMissing = false;
             showZipBanner('');
         }
-        renderZipLayer(data.zips || []);
-        setZipStatus(`${data.zips.length} ZIPs`);
+        _lastZips = data.zips || [];
+        renderZipLayer(_lastZips);
+        setZipStatus(`${_lastZips.length} ZIPs`);
+        // Leaderboard switches to ZIP-mode at city zoom — refresh
+        // it now that we have fresh viewport data.
+        if (typeof renderLeaderboard === 'function') renderLeaderboard();
     } catch (e) {
         if (e.name === 'AbortError') return;   // expected on rapid pans
         console.error('ZIP fetch failed', e);
@@ -2122,6 +2177,7 @@ async function fetchZipsForViewport() {
 
 function renderZipLayer(zips) {
     _zipLayer.clearLayers();
+    _zipMarkers = {};
     const z = window._mpMap.getZoom();
     // Larger dots + darker stroke at higher zoom so they actually
     // read against the (now-faded) choropleth and the base map.
@@ -2162,6 +2218,7 @@ function renderZipLayer(zips) {
             { maxWidth: 280 }
         );
         _zipLayer.addLayer(m);
+        _zipMarkers[z.zip] = m;
     });
 }
 
