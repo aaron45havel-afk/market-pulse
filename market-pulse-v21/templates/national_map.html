@@ -1369,18 +1369,21 @@ function refreshPresetHighlight() {
 function applyFilters() {
     const passing = new Set(getFilteredMetros().map(m => m.slug));
     const cluster = window._mpClusterLayer;
-    // When a state is selected, scale its metros up ~1.4× so they pop
-    // out from the surrounding national grid — visual hyper-focus
-    // beyond just fading non-state pins. Restored to base radius when
-    // no state is selected.
+    // When a state is selected, scale its metros up so they pop out
+    // from the surrounding national grid. The multiplier tones down
+    // at city zoom — at z≥9 the pin is already prominent without a
+    // boost, and 1.4× starts looking like a giant beach ball over
+    // surrounding pixels (P123 had this bug; fix in P124).
     const focusState = _selectedState ? _selectedState.code : null;
+    const z = window._mpMap ? window._mpMap.getZoom() : 5;
+    const emphasizeMult = z <= 6 ? 1.4 : z <= 8 ? 1.15 : 1.0;
     if (window._mpMarkers) {
         Object.entries(window._mpMarkers).forEach(([slug, marker]) => {
             const ok = passing.has(slug);
             marker.setStyle({ fillOpacity: ok ? 0.95 : 0.12, opacity: ok ? 1 : 0.25 });
             const base = marker._mpRadius || 10;
             const emphasized = focusState && marker._mpState === focusState;
-            marker.setRadius(emphasized ? Math.round(base * 1.4) : base);
+            marker.setRadius(emphasized ? Math.round(base * emphasizeMult) : base);
             if (cluster) {
                 const inLayer = cluster.hasLayer(marker);
                 if (ok && !inLayer) cluster.addLayer(marker);
@@ -1872,17 +1875,19 @@ function colorForState(fips) {
 
 function styleForFeature(feature) {
     const fips = feature.id || (feature.properties && feature.properties.STATE);
+    // Auto-fade at city zoom — at z≥9 the user is looking at street/
+    // ZIP detail and the state-wide green/yellow wash overpowers
+    // both the base map and the ZIP dots. Drop fill way down so the
+    // choropleth is still hinted at (whole-state color is still
+    // useful context) without being the dominant visual layer.
+    const z = window._mpMap ? window._mpMap.getZoom() : 5;
+    const fillOpacity = z >= 9 ? 0.15 : z >= 7 ? 0.45 : 0.7;
     return {
         fillColor: colorForState(fips),
-        // Soft slate-grey borders read on the Positron light base. Fill
-        // opacity at 0.7 lets the diverging palette stay vivid for the
-        // good/bad endpoints while white-ish midtones blend gracefully
-        // into the base — that's how reventure-style maps avoid the
-        // muddy-middle problem.
         weight: 0.8,
-        opacity: 0.6,
+        opacity: z >= 9 ? 0.3 : 0.6,
         color: '#475569',
-        fillOpacity: 0.7,
+        fillOpacity,
     };
 }
 
@@ -1961,6 +1966,16 @@ function buildChoroplethLayer(geojson) {
     // fire reliably during the fly animation, so we close defensively.
     window._mpMap.on('movestart zoomstart', () => {
         _cpLayer.eachLayer(l => l.closeTooltip && l.closeTooltip());
+    });
+
+    // On zoom settle, re-apply zoom-dependent styles: choropleth fade
+    // and metro-pin emphasis multiplier. Without this the user pans
+    // from country zoom (where 1.4× emphasis + 0.7 choropleth opacity
+    // are right) into city zoom (where they're way too loud) and the
+    // visuals don't update until the next filter change.
+    window._mpMap.on('zoomend', () => {
+        if (_cpLayer) _cpLayer.setStyle(styleForFeature);
+        if (typeof applyFilters === 'function') applyFilters();
     });
 
     repaintChoropleth();
@@ -2092,15 +2107,18 @@ async function fetchZipsForViewport() {
 function renderZipLayer(zips) {
     _zipLayer.clearLayers();
     const z = window._mpMap.getZoom();
-    // Larger dots at higher zoom so they don't disappear into pixels;
-    // smaller at z9-10 where there are likely many in the viewport.
-    const radius = z >= 13 ? 7 : z >= 11 ? 5 : 4;
+    // Larger dots + darker stroke at higher zoom so they actually
+    // read against the (now-faded) choropleth and the base map.
+    // Was 4/5/7 with white stroke — too pale at city zoom.
+    const radius = z >= 13 ? 8 : z >= 11 ? 6 : 5;
+    const strokeColor = z >= 11 ? '#1f2937' : '#fff';   // dark stroke pops at city zoom
+    const strokeWeight = z >= 11 ? 1.2 : 1;
     zips.forEach(z => {
         if (z.composite == null) return;
         const m = L.circleMarker([z.lat, z.lng], {
             radius,
-            color: '#fff',
-            weight: 1,
+            color: strokeColor,
+            weight: strokeWeight,
             fillColor: scoreColor(z.composite),
             fillOpacity: 0.85,
             // Sit above the choropleth (overlayPane=400) but below
