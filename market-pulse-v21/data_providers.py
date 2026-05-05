@@ -795,9 +795,10 @@ CHOROPLETH_METRICS = [
     {"key": "pension_funding",   "label": "Pension funded ratio",      "unit": "%",  "good_when": "high", "decimals": 0, "category": "Fiscal Health"},
     {"key": "insurance",     "label": "Home insurance/yr",     "format": "money", "good_when": "low",  "decimals": 0, "category": "Tax & Cost"},
     {"key": "median_rent",   "label": "Median monthly rent",   "format": "money", "good_when": "low",  "decimals": 0, "category": "Tax & Cost"},
-    {"key": "median_income", "label": "Median household income","format": "money","good_when": "high", "decimals": 0, "category": "Demographic"},
-    {"key": "wage_growth",   "label": "Wage growth/yr",        "unit": "%",  "good_when": "high", "decimals": 1, "category": "Demographic"},
-    {"key": "median_age",    "label": "Median age",            "unit": "",   "good_when": "low",  "decimals": 1, "category": "Demographic"},
+    {"key": "median_income",        "label": "Median household income","format": "money","good_when": "high", "decimals": 0, "category": "Demographic"},
+    {"key": "wage_growth",          "label": "Wage growth/yr",         "unit": "%",  "good_when": "high", "decimals": 1, "category": "Demographic"},
+    {"key": "median_age",           "label": "Median age",             "unit": "",   "good_when": "low",  "decimals": 1, "category": "Demographic"},
+    {"key": "pct_bachelors_state",  "label": "Bachelor's+ degree (state)","unit": "%","good_when": "high", "decimals": 1, "category": "Demographic"},
     # Persona composites — see _compute_derived_metrics(). Each blends
     # the dimensions that a specific buyer/lifestyle persona prioritizes.
     # All popular so they surface in the headline section of the sidebar.
@@ -894,10 +895,31 @@ def _apply_bls_overrides() -> None:
             target[key] = val
 
 
+# Census ACS 5-year state-level overrides — refreshed annually via
+# scripts/refresh_census_acs_state.py. Refreshes median_income +
+# median_age (which were hardcoded seed snapshots) and adds a new
+# pct_bachelors_state field.
+def _apply_census_acs_state_overrides() -> None:
+    overrides_path = Path(__file__).parent / "data" / "census_acs_state_overrides.json"
+    if not overrides_path.exists():
+        return
+    try:
+        payload = json.loads(overrides_path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return
+    for state_code, values in payload.get("overrides", {}).items():
+        target = CHOROPLETH_STATES.get(state_code)
+        if not target:
+            continue
+        for key, val in values.items():
+            target[key] = val
+
+
 _apply_redfin_overrides()
 _apply_zillow_state_overrides()
 _apply_growth_overrides()
 _apply_bls_overrides()
+_apply_census_acs_state_overrides()
 
 
 # Current 30-yr fixed mortgage rate (FRED MORTGAGE30US, refreshed weekly
