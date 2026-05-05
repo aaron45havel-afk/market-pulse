@@ -2297,6 +2297,17 @@ function renderZipLayer(zips) {
             `<div class="pop-stat"><span class="label">Rent /mo</span><span>${fmtMoney(z.rent)}</span></div>` +
             `<div class="pop-stat"><span class="label">Cap rate</span><span>${z.cap_rate_pct.toFixed(2)}%</span></div>` +
             `<div class="pop-stat"><span class="label">Composite</span><span style="color:${scoreColor(z.composite)}; font-weight:700;">${z.composite.toFixed(1)}</span></div>` +
+            // 12-month forward forecast (BETA). Shows only when the
+            // ZIP has enough history for the damped Holt-Winters model
+            // to produce a value; null otherwise. Tagged BETA so users
+            // know it's directional, not a prediction.
+            ((z.forecast_12mo != null) ? (
+                `<div class="pop-section-label" style="margin-top:0.55rem;">Forecast (12mo) <span style="background:rgba(245,158,11,0.18); color:#f59e0b; padding:1px 5px; border-radius:3px; font-size:0.6rem; font-weight:700; margin-left:0.3rem;">BETA</span></div>` +
+                `<div class="pop-stat"><span class="label">Target value</span><span>${fmtMoney(z.forecast_12mo)}</span></div>` +
+                ((z.forecast_pct_12mo != null) ?
+                    `<div class="pop-stat"><span class="label">Change</span><span class="${z.forecast_pct_12mo >= 0 ? 'up' : 'down'}">${z.forecast_pct_12mo >= 0 ? '+' : ''}${z.forecast_pct_12mo.toFixed(1)}%</span></div>`
+                    : '')
+            ) : '') +
             // Lifestyle section — walk + restaurants + crime. Crime
             // is shown as "lower=safer" since the underlying value's
             // direction isn't intuitive without the hint.

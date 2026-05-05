@@ -496,6 +496,10 @@ async def api_zips(
         existing_cols = {r["name"] for r in conn.execute("PRAGMA table_info(zips)").fetchall()}
         county_expr = "county" if "county" in existing_cols else "NULL AS county"
         nbhd_expr = "neighborhood" if "neighborhood" in existing_cols else "NULL AS neighborhood"
+        # Phase-A forecast columns (P142). Backwards-compat with old
+        # zips.db via NULL-AS shims, same pattern as county/neighborhood.
+        f_val_expr = "forecast_home_value_12mo" if "forecast_home_value_12mo" in existing_cols else "NULL AS forecast_home_value_12mo"
+        f_pct_expr = "forecast_pct_change_12mo" if "forecast_pct_change_12mo" in existing_cols else "NULL AS forecast_pct_change_12mo"
         rows = conn.execute(
             f"""
             SELECT zip, state, name, {county_expr}, {nbhd_expr}, lat, lng,
@@ -503,6 +507,7 @@ async def api_zips(
                    median_rent_monthly, cap_rate_pct,
                    median_household_income, pct_bachelors,
                    population, walk_score, crime_index, restaurant_score,
+                   {f_val_expr}, {f_pct_expr},
                    {persona_col} AS composite, rent_source, as_of
             FROM zips
             WHERE lat BETWEEN ? AND ?
@@ -529,6 +534,8 @@ async def api_zips(
             "lng": r["lng"],
             "home_value": r["median_home_value"],
             "home_value_yoy": r["home_value_yoy"],
+            "forecast_12mo": r["forecast_home_value_12mo"],
+            "forecast_pct_12mo": r["forecast_pct_change_12mo"],
             "rent": r["median_rent_monthly"],
             "cap_rate_pct": r["cap_rate_pct"],
             "income": r["median_household_income"],

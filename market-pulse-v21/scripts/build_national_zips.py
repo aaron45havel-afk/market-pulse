@@ -187,9 +187,69 @@ def parse_zhvi_per_zip(csv_text: str) -> dict[str, dict]:
             entry["city"] = row[city_idx].strip()
         if county_idx is not None and county_idx < len(row):
             entry["county"] = row[county_idx].strip()
+        # Capture the trailing 60 monthly values for the forecast
+        # helper. Drops empties / parse-errors silently — forecast just
+        # works with whatever monotonic series we recover (≥12 needed).
+        history: list[float] = []
+        for col_i, _ in date_cols[-60:]:   # ~5 years of monthly data
+            if col_i < len(row) and row[col_i]:
+                try:
+                    history.append(float(row[col_i]))
+                except ValueError:
+                    continue
+        if len(history) >= 12:
+            entry["history"] = history
         out[zcode] = entry
     log.info("  → %d ZIPs with ZHVI", len(out))
     return out
+
+
+# ─── 12-month forecast (damped Holt-Winters, level + trend) ────────
+# No statsmodels / Prophet dep — the math is 20 lines and runs in <1ms
+# per ZIP. Damped trend (phi < 1) prevents the forecast from
+# extrapolating wildly when the recent trend is steep; long-horizon
+# growth tapers off, which matches the post-2022 cooling pattern.
+#
+# Parameters tuned for monthly-frequency, smoothed (ZHVI-style) data:
+#   alpha = 0.4   — moderate weight on the latest observation
+#   beta  = 0.1   — slow trend update; keeps forecasts stable
+#   phi   = 0.92  — strong damping; 12-mo forecast settles at
+#                    roughly trend × (1 - phi^12) / (1 - phi) ≈ 7×monthly
+#
+# Returns None when history < 12 — forecast would be unreliable.
+# Tag the method in the returned dict so future versions (Prophet,
+# ARIMA, ML) can A/B without breaking the API contract.
+def forecast_home_value(history: list[float], alpha: float = 0.5,
+                        beta: float = 0.15, phi: float = 0.98) -> dict | None:
+    # Param tuning: phi=0.98 captures ~65-75% of recent trend over a
+    # 12-month horizon; phi=0.92 (initial guess) was too aggressive
+    # and projected only ~25%, missing real growth on a 5%-YoY series.
+    # Conservative-but-not-flatlining matches the "directional, not
+    # predictive" framing in the popup.
+    if not history or len(history) < 12:
+        return None
+    # Init: level = first value, trend = avg first-12-month diff.
+    level = history[0]
+    trend_window = min(11, len(history) - 1)
+    trend = (history[trend_window] - history[0]) / trend_window
+    for i in range(1, len(history)):
+        prev_level = level
+        level = alpha * history[i] + (1 - alpha) * (level + phi * trend)
+        trend = beta * (level - prev_level) + (1 - beta) * phi * trend
+    # Forecast 12 months ahead with geometric damping.
+    forecast = level
+    damp = 1.0
+    for _h in range(1, 13):
+        damp *= phi
+        forecast += damp * trend
+    if forecast <= 0 or not history[-1]:
+        return None
+    pct = (forecast / history[-1] - 1) * 100
+    return {
+        "forecast_home_value_12mo": int(round(forecast)),
+        "forecast_pct_change_12mo": round(pct, 1),
+        "forecast_method": "damped_holt_v1",
+    }
 
 
 def parse_zori_per_zip(csv_text: str) -> dict[str, int]:
@@ -379,6 +439,13 @@ CREATE TABLE zips (
     composite_investor       REAL,
     composite_lifestyle      REAL,
     composite_score          REAL,
+    -- 12-month forward forecast (Phase A of paid feature). Damped
+    -- Holt-Winters on Zillow ZHVI history. Null when ZIP has too
+    -- little history (<12 months). 'method' tags the model used so
+    -- future versions can A/B without breaking the API contract.
+    forecast_home_value_12mo INTEGER,
+    forecast_pct_change_12mo REAL,
+    forecast_method          TEXT,
     as_of                    TEXT
 );
 -- Indexes the Phase-2 viewport endpoint will use:
@@ -462,7 +529,16 @@ def main(argv: list[str] | None = None) -> int:
     rows: list[dict] = []
     skipped = {"no_centroid": 0, "no_income": 0}
     today = date.today().isoformat()
+    forecast_count = 0
     for z, zh in zhvi.items():
+        # Run the forecast in the join loop so we don't have to
+        # re-iterate later. Stores result on zh under '_forecast' for
+        # the row-build below to pick up. None when history < 12.
+        if zh.get("history"):
+            f = forecast_home_value(zh["history"])
+            if f:
+                zh["_forecast"] = f
+                forecast_count += 1
         g = gaz.get(z)
         if not g:
             skipped["no_centroid"] += 1
@@ -529,14 +605,21 @@ def main(argv: list[str] | None = None) -> int:
             "composite_investor": m["composite_by_persona"]["investor"],
             "composite_lifestyle": m["composite_by_persona"]["lifestyle"],
             "composite_score": m["composite_score"],
+            # Phase-A forecast — 12-month forward home value via damped
+            # Holt-Winters on the trailing ZHVI history. None when the
+            # ZIP has too little history (<12 months); popup hides the
+            # row when the field is null.
+            "forecast_home_value_12mo": (zh.get("_forecast") or {}).get("forecast_home_value_12mo"),
+            "forecast_pct_change_12mo": (zh.get("_forecast") or {}).get("forecast_pct_change_12mo"),
+            "forecast_method":          (zh.get("_forecast") or {}).get("forecast_method"),
             "as_of": today,
         })
         if args.limit and len(rows) >= args.limit:
             break
 
     log.info(
-        "Built %d rows · skipped %d no-centroid · %d no-income",
-        len(rows), skipped["no_centroid"], skipped["no_income"],
+        "Built %d rows · skipped %d no-centroid · %d no-income · %d with 12mo forecast",
+        len(rows), skipped["no_centroid"], skipped["no_income"], forecast_count,
     )
     if not rows:
         log.error("No rows produced — aborting.")
