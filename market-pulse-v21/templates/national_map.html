@@ -1575,9 +1575,18 @@ function initChoropleth() {
     toggle.addEventListener('change', () => {
         _cpEnabled = toggle.checked;
         document.getElementById('cpLegend').classList.toggle('is-off', !_cpEnabled);
-        if (_cpLayer) {
-            if (_cpEnabled) _cpLayer.addTo(window._mpMap);
-            else window._mpMap.removeLayer(_cpLayer);
+        // Respect the city-zoom auto-hide: don't force-add the layer
+        // at z≥9 just because the user toggled on. The preference
+        // (_cpEnabled) is saved and the layer will appear when they
+        // zoom back out below 9. Same toggle-off path as before.
+        if (!_cpLayer) return;
+        const z = window._mpMap ? window._mpMap.getZoom() : 5;
+        const onMap = window._mpMap.hasLayer(_cpLayer);
+        if (_cpEnabled && z < 9 && !onMap) {
+            _cpLayer.addTo(window._mpMap);
+            _cpLayer.bringToBack();
+        } else if (!_cpEnabled && onMap) {
+            window._mpMap.removeLayer(_cpLayer);
         }
     });
 
@@ -1875,19 +1884,12 @@ function colorForState(fips) {
 
 function styleForFeature(feature) {
     const fips = feature.id || (feature.properties && feature.properties.STATE);
-    // Auto-fade at city zoom — at z≥9 the user is looking at street/
-    // ZIP detail and the state-wide green/yellow wash overpowers
-    // both the base map and the ZIP dots. Drop fill way down so the
-    // choropleth is still hinted at (whole-state color is still
-    // useful context) without being the dominant visual layer.
-    const z = window._mpMap ? window._mpMap.getZoom() : 5;
-    const fillOpacity = z >= 9 ? 0.15 : z >= 7 ? 0.45 : 0.7;
     return {
         fillColor: colorForState(fips),
         weight: 0.8,
-        opacity: z >= 9 ? 0.3 : 0.6,
+        opacity: 0.6,
         color: '#475569',
-        fillOpacity,
+        fillOpacity: 0.7,
     };
 }
 
@@ -1968,13 +1970,27 @@ function buildChoroplethLayer(geojson) {
         _cpLayer.eachLayer(l => l.closeTooltip && l.closeTooltip());
     });
 
-    // On zoom settle, re-apply zoom-dependent styles: choropleth fade
-    // and metro-pin emphasis multiplier. Without this the user pans
-    // from country zoom (where 1.4× emphasis + 0.7 choropleth opacity
-    // are right) into city zoom (where they're way too loud) and the
-    // visuals don't update until the next filter change.
+    // On zoom settle, hide the state choropleth at city zoom and
+    // restore it when the user zooms back out. The choropleth answers
+    // "which state is best for X" — at z≥9 you're looking at one
+    // city's ZIPs, so a state-wide color wash just smothers the
+    // base map and the ZIP overlay. Toggle visibility instead of
+    // fading because a 0.15-opacity green still washes the city out
+    // (P124 fade attempt didn't go far enough — P125 hides it).
+    // The user's "State heatmap" toggle preference is preserved via
+    // _cpEnabled — when they zoom back to country level it reappears.
     window._mpMap.on('zoomend', () => {
-        if (_cpLayer) _cpLayer.setStyle(styleForFeature);
+        const z = window._mpMap.getZoom();
+        if (_cpLayer) {
+            const onMap = window._mpMap.hasLayer(_cpLayer);
+            const shouldShow = _cpEnabled && z < 9;
+            if (shouldShow && !onMap) {
+                _cpLayer.addTo(window._mpMap);
+                _cpLayer.bringToBack();
+            } else if (!shouldShow && onMap) {
+                window._mpMap.removeLayer(_cpLayer);
+            }
+        }
         if (typeof applyFilters === 'function') applyFilters();
     });
 
