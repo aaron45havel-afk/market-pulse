@@ -2184,6 +2184,20 @@ async function fetchZipsForViewport() {
 }
 
 function renderZipLayer(zips) {
+    // Capture which ZIP currently has its popup open BEFORE we wipe
+    // markers. Without this, every moveend fires fetchZipsForViewport
+    // which calls renderZipLayer → clearLayers, killing the popup
+    // the user was reading even on a one-pixel pan. Re-opening the
+    // popup on the new marker for the same ZIP makes the experience
+    // sticky as long as that ZIP is still in the viewport.
+    let openZip = null;
+    for (const zKey in _zipMarkers) {
+        const mk = _zipMarkers[zKey];
+        if (mk && mk.isPopupOpen && mk.isPopupOpen()) {
+            openZip = zKey;
+            break;
+        }
+    }
     _zipLayer.clearLayers();
     _zipMarkers = {};
     const z = window._mpMap.getZoom();
@@ -2258,11 +2272,22 @@ function renderZipLayer(zips) {
             optStat("Bachelor's+", z.pct_bachelors, v => v.toFixed(0) + '%') +
             optStat('Population', z.population, v => v.toLocaleString('en-US')) +
             imputedFlag,
-            { maxWidth: 300 }
+            // autoPanPadding [40, 80] leaves 80px from the top edge so
+            // the popup doesn't slip behind the map header bar (which
+            // sits in flex above the map but Leaflet doesn't know about
+            // it). keepInView prevents the popup from drifting off the
+            // map when the user pans afterwards.
+            { maxWidth: 300, autoPan: true, autoPanPadding: [40, 80], keepInView: true }
         );
         _zipLayer.addLayer(m);
         _zipMarkers[z.zip] = m;
     });
+    // If the user had a popup open and that ZIP is still in the new
+    // viewport, re-open it on the fresh marker. Sticky reading
+    // experience even as moveend fetches refresh the layer.
+    if (openZip && _zipMarkers[openZip]) {
+        _zipMarkers[openZip].openPopup();
+    }
 }
 
 </script>
