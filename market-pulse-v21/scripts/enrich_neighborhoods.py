@@ -53,32 +53,35 @@ def fetch_neighborhood(lat: float, lng: float) -> str | None:
     locality name we can find. Walks Photon's properties dict in
     decreasing specificity (neighbourhood > suburb > district >
     locality), falling back to None when nothing is tagged.
+
+    Catches any Exception so a single bad response can't take down
+    the long-running enrichment loop. Run #1 failed at exactly the
+    5h cap with exit code 1 — symptom of an exception type the
+    earlier narrow except list (HTTPError, URLError, JSONDecodeError)
+    didn't catch (most likely a TimeoutError / ConnectionResetError /
+    ssl.SSLError sneaking past in some Python 3.10+ paths).
     """
     url = f"{PHOTON_URL}?lat={lat}&lon={lng}&lang=en"
-    req = urllib.request.Request(url, headers={"User-Agent": "market-pulse/1 (national-zips enrichment)"})
     try:
+        req = urllib.request.Request(url, headers={"User-Agent": "market-pulse/1 (national-zips enrichment)"})
         with urllib.request.urlopen(req, timeout=10) as r:
             data = json.loads(r.read())
-    except urllib.error.HTTPError as e:
-        log.warning("  Photon HTTP %s for %s,%s", e.code, lat, lng)
+        feats = data.get("features", []) if isinstance(data, dict) else []
+        if not feats:
+            return None
+        # OSM tags vary per feature. Walk in decreasing specificity.
+        for feat in feats[:3]:   # check up to top 3 results
+            props = (feat or {}).get("properties", {}) or {}
+            for key in ("neighbourhood", "suburb", "district", "locality"):
+                val = props.get(key)
+                if val and isinstance(val, str) and val.strip():
+                    return val.strip()
         return None
-    except urllib.error.URLError as e:
-        log.warning("  Photon network error %s,%s: %s", lat, lng, e.reason)
+    except Exception as e:
+        # Catch-all: log type + message, return None so the loop continues.
+        log.warning("  Photon %s for %s,%s: %s",
+                    type(e).__name__, lat, lng, str(e)[:120])
         return None
-    except (json.JSONDecodeError, ValueError) as e:
-        log.warning("  Photon parse error %s,%s: %s", lat, lng, e)
-        return None
-    feats = data.get("features", []) if isinstance(data, dict) else []
-    if not feats:
-        return None
-    # OSM tags vary per feature. Walk in decreasing specificity.
-    for feat in feats[:3]:   # check up to top 3 results
-        props = (feat or {}).get("properties", {}) or {}
-        for key in ("neighbourhood", "suburb", "district", "locality"):
-            val = props.get(key)
-            if val and isinstance(val, str) and val.strip():
-                return val.strip()
-    return None
 
 
 def load_cache() -> dict:
@@ -154,27 +157,32 @@ def main(argv: list[str] | None = None) -> int:
 
     start = time.monotonic()
     enriched = 0
-    for i, (zcode, lat, lng) in enumerate(pending, 1):
-        if time.monotonic() - start > args.max_runtime:
-            log.info("Hit --max-runtime cap, stopping at %d/%d.", i - 1, len(pending))
-            break
-        if args.limit and enriched >= args.limit:
-            log.info("Hit --limit cap, stopping at %d.", enriched)
-            break
-        name = fetch_neighborhood(lat, lng)
-        if name:
-            cache[zcode] = name
-            enriched += 1
-        # Sleep before the next request even on miss — be polite.
-        time.sleep(RATE_LIMIT_SLEEP)
-        if enriched and enriched % CHECKPOINT_EVERY == 0:
-            write_cache(cache)
-            log.info("  checkpoint @ %d enriched (%d total cached)", enriched, len(cache))
-
-    write_cache(cache)
-    elapsed = int(time.monotonic() - start)
-    log.info("Done. Enriched %d this run · %d cached total · %ds elapsed",
-             enriched, len(cache), elapsed)
+    # try/finally so the cache is ALWAYS persisted before we exit, even
+    # if the loop somehow raises despite fetch_neighborhood's catch-all.
+    # Worst case the runner SIGTERMs us at the 6h hard cap — Python's
+    # finally still runs in that case so the partial progress survives.
+    try:
+        for i, (zcode, lat, lng) in enumerate(pending, 1):
+            if time.monotonic() - start > args.max_runtime:
+                log.info("Hit --max-runtime cap, stopping at %d/%d.", i - 1, len(pending))
+                break
+            if args.limit and enriched >= args.limit:
+                log.info("Hit --limit cap, stopping at %d.", enriched)
+                break
+            name = fetch_neighborhood(lat, lng)
+            if name:
+                cache[zcode] = name
+                enriched += 1
+            # Sleep before the next request even on miss — be polite.
+            time.sleep(RATE_LIMIT_SLEEP)
+            if enriched and enriched % CHECKPOINT_EVERY == 0:
+                write_cache(cache)
+                log.info("  checkpoint @ %d enriched (%d total cached)", enriched, len(cache))
+    finally:
+        write_cache(cache)
+        elapsed = int(time.monotonic() - start)
+        log.info("Done. Enriched %d this run · %d cached total · %ds elapsed",
+                 enriched, len(cache), elapsed)
     return 0
 
 
