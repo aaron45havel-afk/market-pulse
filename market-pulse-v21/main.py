@@ -233,6 +233,7 @@ _AFFORDABILITY_HAND_CURATED = {"NV", "CA", "UT", "TX", "AZ", "FL", "GA", "IN"}
 async def affordability(request: Request):
     from data_providers import (
         MORTGAGE_30Y_RATE, MORTGAGE_30Y_OBS_DATE, CHOROPLETH_STATES,
+        TAX_DATA_AS_OF,
     )
     # Synthesize a simplified config for the 43 states that aren't in
     # the template's hand-curated STATE_DATA. Each gets a flat-rate
@@ -270,6 +271,7 @@ async def affordability(request: Request):
         "mortgage_30y_rate": MORTGAGE_30Y_RATE,
         "mortgage_30y_obs_date": _fmt_obs_date(MORTGAGE_30Y_OBS_DATE),
         "state_defaults": state_defaults,
+        "tax_data_as_of": TAX_DATA_AS_OF,
     })
 
 

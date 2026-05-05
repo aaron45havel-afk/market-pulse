@@ -670,6 +670,34 @@ PERSONAS = {
 #   pop_growth:    Annual population growth %, Census 2023 estimates.
 #   col:           Cost of living index, BEA Regional Price Parities 2023
 #                  (100 = US avg).
+
+# ─── ANNUAL TAX/INSURANCE REVIEW MARKER ─────────────────────────────
+# These fields below are SNAPSHOTS, not auto-refreshed (no clean free
+# API for state-level tax rates or insurance averages). Hand-edit
+# annually when the new Tax Foundation State Tax Climate Index drops,
+# typically late January. Bump TAX_DATA_AS_OF below after each review.
+#
+# Fields to review per state:
+#   income_tax       — Tax Foundation state-rate tables ($80K interp)
+#                       https://taxfoundation.org/data/all/state/state-individual-income-tax-rates-and-brackets/
+#   property_tax     — Tax Foundation effective property-tax rates
+#                       https://taxfoundation.org/data/all/state/property-taxes-by-state-county/
+#   insurance        — III "Average Homeowners Insurance Premiums by State"
+#                       https://www.iii.org/table-archive/21405
+#   col              — BEA Regional Price Parities (released annually each summer)
+#                       https://www.bea.gov/data/prices-inflation/regional-price-parities-state-and-metro-area
+#   credit_rating    — S&P Global state credit ratings (slow-moving, ~3-yr cadence)
+#   pension_funding  — Pew Charitable Trusts state pension funding (annual report)
+#   taxpayer_balance — Truth in Accounting state-by-state report (annual)
+#
+# Also revisit the affordability page's hand-curated 8 (NV/CA/UT/TX/
+# AZ/FL/GA/IN) in templates/affordability.html — the bracket + cap +
+# homestead detail there comes from the same Tax Foundation dataset.
+#
+# Quick sanity-check after edits: load /affordability and confirm the
+# State Comparison table top + bottom values look right.
+TAX_DATA_AS_OF = "2024"   # Tax Foundation 2024 release. Bump to "2025" etc. after Jan review.
+
 CHOROPLETH_STATES = {
     # Static fields:
     #   fips, name, income_tax, property_tax, sunshine, pop_growth, col,
