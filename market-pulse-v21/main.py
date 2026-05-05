@@ -487,6 +487,111 @@ async def api_zips_stats():
     })
 
 
+@app.get("/api/search")
+async def api_search(q: str = "", limit: int = 8):
+    """Free-text search across ZIPs, metros, and states. Used by the
+    /map floating search bar. Returns categorized results in priority
+    order (exact-zip > neighborhood > city > metro > state). Empty
+    query returns nothing — no implicit 'show everything' since that
+    would be a 30K-row dump."""
+    q = (q or "").strip()
+    if len(q) < 2:
+        return JSONResponse({"results": [], "query": q})
+    limit = max(1, min(int(limit), 15))
+
+    results: list[dict] = []
+    qlike = f"%{q}%"
+
+    # ─── ZIPs from zips.db ─────────────────────────────────────────
+    # Backwards-compat with old zips.db that pre-dates county +
+    # neighborhood (P131 schema). PRAGMA the columns and substitute
+    # empty strings for missing ones.
+    from data_providers import CHOROPLETH_STATES as _CP_STATES
+    conn = _open_zips_db()
+    if conn is not None:
+        try:
+            existing = {r["name"] for r in conn.execute("PRAGMA table_info(zips)").fetchall()}
+            nbhd_col = "neighborhood" if "neighborhood" in existing else "''"
+            cnty_col = "county" if "county" in existing else "''"
+            select_cols = (
+                f"zip, state, name, lat, lng, "
+                f"{cnty_col} AS county, {nbhd_col} AS neighborhood"
+            )
+
+            # Exact ZIP match first — instant top result.
+            seen_zips: set[str] = set()
+            if q.isdigit() and len(q) == 5:
+                row = conn.execute(
+                    f"SELECT {select_cols} FROM zips WHERE zip = ?", (q,)
+                ).fetchone()
+                if row:
+                    results.append({
+                        "type": "zip", "zip": row["zip"], "state": row["state"],
+                        "name": row["name"],
+                        "neighborhood": row["neighborhood"] or None,
+                        "county": row["county"] or None,
+                        "lat": row["lat"], "lng": row["lng"],
+                    })
+                    seen_zips.add(row["zip"])
+
+            # Fuzzy match across neighborhood, name, county. Order by
+            # match-priority via UNION: neighborhood hits first, then
+            # name (city), then county. Per-clause LIMIT keeps each
+            # bucket bounded.
+            where_clauses = ["name LIKE ? COLLATE NOCASE"]
+            params = [qlike]
+            if "neighborhood" in existing:
+                where_clauses.insert(0, "neighborhood LIKE ? COLLATE NOCASE")
+                params.insert(0, qlike)
+            if "county" in existing:
+                where_clauses.append("county LIKE ? COLLATE NOCASE")
+                params.append(qlike)
+            where = " OR ".join(where_clauses)
+            sql = f"SELECT {select_cols} FROM zips WHERE {where} LIMIT ?"
+            params.append(limit * 2)   # over-fetch for de-dup against exact-match
+
+            for row in conn.execute(sql, params).fetchall():
+                if row["zip"] in seen_zips:
+                    continue
+                seen_zips.add(row["zip"])
+                results.append({
+                    "type": "zip", "zip": row["zip"], "state": row["state"],
+                    "name": row["name"],
+                    "neighborhood": row["neighborhood"] or None,
+                    "county": row["county"] or None,
+                    "lat": row["lat"], "lng": row["lng"],
+                })
+                if len(results) >= limit:
+                    break
+        finally:
+            conn.close()
+
+    # ─── Metros (in-memory, fast — only 112 of them) ───────────────
+    qlower = q.lower()
+    metros: list[dict] = []
+    for slug, cfg in STATE_METROS.items():
+        if qlower in cfg["metro_label"].lower() or qlower == cfg["state"].lower():
+            metros.append({
+                "type": "metro", "slug": slug, "state": cfg["state"],
+                "label": cfg["metro_label"],
+                "lat": cfg["map_center"]["lat"], "lng": cfg["map_center"]["lng"],
+            })
+    metros.sort(key=lambda m: m["label"])
+
+    # ─── States (in-memory, fast — 51 of them) ─────────────────────
+    states: list[dict] = []
+    for code, sd in _CP_STATES.items():
+        name = sd.get("name", "")
+        if qlower in name.lower() or qlower == code.lower():
+            states.append({"type": "state", "code": code, "name": name})
+    states.sort(key=lambda s: s["name"])
+
+    return JSONResponse({
+        "results": results + metros[:5] + states[:5],
+        "query": q,
+    })
+
+
 @app.get("/api/finance/screener")
 async def api_screener():
     """Net-net / deep value screener powered by SEC EDGAR."""
