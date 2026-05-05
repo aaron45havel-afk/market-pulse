@@ -277,6 +277,12 @@ async def affordability(request: Request):
 
 @app.get("/finance")
 async def finance(request: Request):
+    # Admin-only. Non-admins land back on the home/map view rather than
+    # seeing a 401 — keeps the gating invisible to general visitors,
+    # who don't see the nav link in the first place. Use /admin/login
+    # to set the cookie before visiting.
+    if not _check_admin_token(request):
+        return RedirectResponse(url="/map", status_code=302)
     return templates.TemplateResponse("finance.html", {"request": request})
 
 
@@ -331,18 +337,67 @@ async def api_signups_count():
     return JSONResponse({"count": get_user_count()})
 
 
+ADMIN_COOKIE = "mp_admin"
+
+
 def _check_admin_token(request: Request) -> bool:
-    """Token from query string (`?token=`) OR X-Admin-Token header.
-    Compares against ADMIN_TOKEN env var. Returns False when env var
-    is unset (so accidental deploy without the secret refuses access)."""
+    """Compares against the ADMIN_TOKEN env var. Accepts the token
+    from any of three sources, in order of precedence:
+      • ?token=<...>  query param (programmatic admin endpoints like
+                                    /admin/signups?token=... CSV exports)
+      • X-Admin-Token  request header (same use case via curl)
+      • mp_admin       browser cookie set by /admin/login (UI gating —
+                       hides /finance + /results from non-admins)
+
+    Returns False when ADMIN_TOKEN env var is unset, so an accidental
+    deploy without the secret refuses access rather than letting
+    everyone in."""
     expected = os.environ.get("ADMIN_TOKEN", "").strip()
     if not expected:
         return False
     provided = (
         request.query_params.get("token", "") or
-        request.headers.get("x-admin-token", "")
+        request.headers.get("x-admin-token", "") or
+        request.cookies.get(ADMIN_COOKIE, "")
     ).strip()
     return provided != "" and provided == expected
+
+
+@app.get("/admin/login")
+async def admin_login(request: Request, token: str = "", redirect: str = "/"):
+    """Set the mp_admin cookie if ?token=<ADMIN_TOKEN> matches, then
+    redirect (default: home). Visit /admin/login?token=<your-token>
+    once and the admin nav links + pages unlock for 30 days.
+    Bad/missing token → 401."""
+    expected = os.environ.get("ADMIN_TOKEN", "").strip()
+    if not expected or token != expected:
+        return JSONResponse({"error": "Invalid token."}, status_code=401)
+    resp = RedirectResponse(url=redirect, status_code=302)
+    resp.set_cookie(
+        key=ADMIN_COOKIE,
+        value=token,
+        max_age=60 * 60 * 24 * 30,   # 30 days
+        httponly=True,
+        # secure=True only over HTTPS so dev/test on http://localhost
+        # still round-trips the cookie. Production on Railway is HTTPS
+        # so this lights up automatically.
+        secure=(request.url.scheme == "https"),
+        samesite="lax",
+    )
+    return resp
+
+
+@app.get("/admin/logout")
+async def admin_logout():
+    """Clears the admin cookie. Useful for testing the gated UX."""
+    resp = RedirectResponse(url="/", status_code=302)
+    resp.delete_cookie(key=ADMIN_COOKIE)
+    return resp
+
+
+# Expose to Jinja so base.html can hide admin-only nav links without
+# the route handler having to pass `is_admin` through every render.
+templates.env.globals["is_admin"] = _check_admin_token
 
 
 @app.get("/admin/signups")
@@ -703,6 +758,9 @@ async def api_delete_price(ticker: str):
 
 @app.get("/results")
 async def results_page(request: Request):
+    # Admin-only — same gating pattern as /finance.
+    if not _check_admin_token(request):
+        return RedirectResponse(url="/map", status_code=302)
     return templates.TemplateResponse("results.html", {"request": request})
 
 
