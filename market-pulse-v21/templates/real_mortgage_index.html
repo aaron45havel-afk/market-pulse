@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+{% block title %}Real Cost of Owning a Home — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+    .rmpi-hero { padding: 2rem 0 1rem; max-width: 820px; margin: 0 auto; text-align: center; }
+    .rmpi-hero h1 { font-size: clamp(2rem, 4.5vw, 2.8rem); margin-bottom: 0.6rem; line-height: 1.1; }
+    .rmpi-hero .lede { color: var(--ink-2); font-size: 1.05rem; max-width: 640px; margin: 0 auto 0.5rem; line-height: 1.55; }
+    .rmpi-hero .sub-lede { color: var(--ink-3); font-size: 0.85rem; max-width: 640px; margin: 0 auto; }
+
+    /* ── Big stat cards: TODAY / 2006 PEAK / 2012 TROUGH ── */
+    .rmpi-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap); margin: 1.5rem 0; }
+    @media (max-width: 800px) { .rmpi-stats { grid-template-columns: 1fr; } }
+    .rmpi-stat { padding: 1.25rem 1.25rem 1rem; }
+    .rmpi-stat .tag { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); font-weight: 600; margin-bottom: 0.4rem; }
+    .rmpi-stat .num { font-family: var(--display); font-size: 3rem; font-weight: 600; color: var(--ink); line-height: 1; letter-spacing: -0.02em; }
+    .rmpi-stat .num.now { background: var(--grad-primary); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .rmpi-stat .num.peak { color: var(--coral-ink); }
+    .rmpi-stat .num.trough { color: var(--mint-ink); }
+    .rmpi-stat .meaning { color: var(--ink-2); font-size: 0.92rem; margin-top: 0.55rem; line-height: 1.4; }
+    .rmpi-stat .when { color: var(--ink-4); font-size: 0.75rem; margin-top: 0.4rem; }
+
+    /* ── Chart card + controls ── */
+    .rmpi-chart-card { padding: 1.25rem; }
+    .rmpi-controls { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--line); }
+    .rmpi-controls label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--ink-2); font-weight: 500; }
+    .rmpi-controls select { font-family: var(--sans); }
+    .rmpi-chart-wrap { position: relative; height: 380px; }
+    .rmpi-chart-baseline { font-size: 0.72rem; color: var(--ink-4); margin-top: 0.5rem; text-align: center; }
+
+    /* ── "What does 100 mean?" explainer band ── */
+    .rmpi-explainer { padding: 1.25rem 1.5rem; }
+    .rmpi-explainer h2 { font-size: 1rem; margin-bottom: 0.5rem; }
+    .rmpi-explainer p { color: var(--ink-2); font-size: 0.92rem; line-height: 1.55; margin-bottom: 0.6rem; }
+    .rmpi-explainer p:last-child { margin-bottom: 0; }
+    .rmpi-explainer .key-num { font-family: var(--display); font-style: italic; font-weight: 600; color: var(--primary); }
+
+    /* ── Two-column "story" sections ── */
+    .rmpi-stories { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); margin: 1.5rem 0; }
+    @media (max-width: 800px) { .rmpi-stories { grid-template-columns: 1fr; } }
+    .rmpi-story h2 { font-size: 1rem; margin-bottom: 0.5rem; color: var(--ink); }
+    .rmpi-story p { color: var(--ink-2); font-size: 0.9rem; line-height: 1.55; margin-bottom: 0.6rem; }
+    .rmpi-story p:last-child { margin-bottom: 0; }
+    .rmpi-story .example { background: var(--surface-2); border-left: 3px solid var(--primary); padding: 0.65rem 0.9rem; border-radius: 0 var(--r) var(--r) 0; font-size: 0.88rem; color: var(--ink-2); margin-top: 0.6rem; }
+
+    /* ── Methodology card ── */
+    .rmpi-method { padding: 1.5rem; }
+    .rmpi-method h2 { font-size: 1rem; margin-bottom: 0.75rem; }
+    .rmpi-method ol { padding-left: 1.5rem; color: var(--ink-2); font-size: 0.92rem; line-height: 1.6; }
+    .rmpi-method ol li { margin-bottom: 0.5rem; }
+    .rmpi-method ol li strong { color: var(--ink); font-weight: 600; }
+    .rmpi-method .formula { background: var(--surface-2); padding: 0.75rem 1rem; border-radius: var(--r); font-family: ui-monospace, monospace; font-size: 0.78rem; color: var(--ink-2); margin-top: 0.75rem; overflow-x: auto; }
+
+    .rmpi-sources { color: var(--ink-4); font-size: 0.75rem; text-align: center; margin: 1.5rem auto 1rem; max-width: 720px; line-height: 1.5; }
+    .rmpi-sources a { color: var(--ink-3); }
+
+    .rmpi-loading { text-align: center; padding: 3rem 0; color: var(--ink-3); font-size: 0.9rem; }
+    .rmpi-error { padding: 1rem 1.25rem; background: var(--coral-soft); color: var(--coral-ink); border: 1px solid rgb(224 91 75 / 0.25); border-radius: var(--r); margin: 1rem 0; font-size: 0.9rem; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="rmpi-hero">
+    <h1>How expensive is it <span class="grad-text">really</span> to own a home?</h1>
+    <p class="lede">
+        Home prices alone are misleading. A $400,000 house at 3% interest is a totally different
+        deal from a $400,000 house at 7%. This chart shows what owning a home <em>actually</em>
+        costs each month — after factoring in inflation and the real mortgage rate at every
+        moment in time.
+    </p>
+    <p class="sub-lede"><strong>100</strong> = same monthly cost as January 1990. <strong>200</strong> = twice as expensive. <strong>50</strong> = half as expensive.</p>
+</div>
+
+<!-- Big number row — TODAY / 2006 PEAK / 2012 TROUGH. Filled in by JS. -->
+<div class="rmpi-stats">
+    <div class="card rmpi-stat">
+        <div class="tag">Today</div>
+        <div class="num now" id="statNow">—</div>
+        <div class="meaning" id="statNowMeaning">Loading…</div>
+        <div class="when" id="statNowDate"></div>
+    </div>
+    <div class="card rmpi-stat">
+        <div class="tag">2006 Bubble Peak</div>
+        <div class="num peak" id="statPeak">—</div>
+        <div class="meaning" id="statPeakMeaning">The previous all-time high — when everyone <em>knew</em> housing was expensive.</div>
+        <div class="when" id="statPeakDate"></div>
+    </div>
+    <div class="card rmpi-stat">
+        <div class="tag">2012 Trough</div>
+        <div class="num trough" id="statTrough">—</div>
+        <div class="meaning" id="statTroughMeaning">Best buying opportunity in modern history. Prices crashed, rates dropped to ~3.5%.</div>
+        <div class="when" id="statTroughDate"></div>
+    </div>
+</div>
+
+<!-- Chart card with controls + canvas. -->
+<div class="card rmpi-chart-card">
+    <div class="rmpi-controls">
+        <label>
+            Metro
+            <select id="metroPicker">
+                {% for m in metros %}
+                <option value="{{ m.code }}" {% if m.code == 'US' %}selected{% endif %}>{{ m.label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            Down payment
+            <select id="downPicker">
+                <option value="5">5%</option>
+                <option value="10" selected>10%</option>
+                <option value="20">20%</option>
+            </select>
+        </label>
+        <span style="color: var(--ink-4); font-size: 0.75rem; margin-left: auto;">
+            Drag along the chart to read any month.
+        </span>
+    </div>
+    <div id="errorBox"></div>
+    <div class="rmpi-chart-wrap">
+        <canvas id="rmpiChart"></canvas>
+    </div>
+    <div class="rmpi-chart-baseline">January 1990 = 100 · 30-year fixed mortgage · 80% LTV by default</div>
+</div>
+
+<!-- "What does 100 mean?" — answers the most likely first question. -->
+<div class="card rmpi-explainer" style="margin-top: var(--gap);">
+    <h2>What does the number mean?</h2>
+    <p>
+        Imagine the same buyer in January 1990 vs. today. They earn the same paycheck (in today's
+        dollars). They want the same kind of home. Could they afford it?
+    </p>
+    <p>
+        That's what this index answers. <span class="key-num">100</span> is the cost of owning a
+        home in January 1990. <span class="key-num">150</span> means today's buyer's monthly
+        mortgage payment buys 50% less house, or costs 50% more, in real terms — even after
+        adjusting for inflation, even after the actual rate they'd pay today. <span class="key-num">75</span>
+        would mean the opposite: housing is 25% cheaper than 1990.
+    </p>
+</div>
+
+<!-- Two-column story sections. The "human" part of the page. -->
+<div class="rmpi-stories">
+    <div class="card rmpi-story">
+        <h2>Why this is more honest than "home prices"</h2>
+        <p>
+            Headlines love the median sale price. But that number ignores two huge things:
+            <strong>interest rates</strong> and <strong>inflation</strong>.
+        </p>
+        <p>
+            A house at 3% interest with 1990s inflation is a totally different financial reality
+            from the same house at 7% with 2020s inflation. List prices hide what you'd actually
+            pay each month — which is what people actually feel.
+        </p>
+        <div class="example">
+            <strong>Example:</strong> A $400,000 home at 3% costs ~$1,500/mo (P&amp;I, 10% down).
+            The same home at 7% costs ~$2,400/mo. Same price tag, 60% more expensive to live in.
+        </div>
+    </div>
+    <div class="card rmpi-story">
+        <h2>What 2006 vs. today looks like</h2>
+        <p>
+            In 2006, the housing bubble peaked. Prices were sky-high but rates sat around 6%.
+            Most buyers knew it was getting silly.
+        </p>
+        <p>
+            Today's reading is often <em>higher</em> than 2006 — not because prices are wildly
+            higher (they are, but only somewhat), but because rates went from ~3% in 2021 to
+            ~7% by late 2022. <strong>Both factors moved against buyers at once.</strong> That's
+            what the chart is showing you.
+        </p>
+        <p>
+            That's the punchline. Adjusted for inflation and the rate you'd actually pay,
+            housing has rarely been less affordable in the modern era.
+        </p>
+    </div>
+</div>
+
+<!-- Methodology — the math, in plain English. -->
+<div class="card rmpi-method">
+    <h2>How this is calculated</h2>
+    <ol>
+        <li><strong>Take the typical home's sale price each month</strong> — using the
+            S&amp;P CoreLogic Case-Shiller Home Price Index, the most-cited measure of
+            U.S. home prices.</li>
+        <li><strong>Calculate the actual monthly mortgage payment</strong> at that month's
+            real interest rate (Freddie Mac's 30-year fixed rate, the standard benchmark),
+            assuming the chosen down payment and a 30-year loan.</li>
+        <li><strong>Adjust for inflation since January 1990</strong> using the CPI for
+            "all items less shelter." Why exclude shelter? Because home prices are
+            <em>the thing we're measuring</em> — deflating by an index that includes
+            shelter would mute the very effect we're trying to see.</li>
+        <li><strong>Compare to the same calculation for January 1990</strong> and express it
+            as a percentage. So 148 means owning costs 48% more per month than it did in
+            January 1990, in real, inflation-adjusted, rate-adjusted terms.</li>
+    </ol>
+    <div class="formula">
+        index[t] = (monthly_payment[t] / monthly_payment[Jan&nbsp;1990]) × (cpi[Jan&nbsp;1990] / cpi[t]) × 100
+    </div>
+</div>
+
+<p class="rmpi-sources">
+    Sources: <strong>Case-Shiller</strong> Home Price Index (S&amp;P/CoreLogic, via FRED) ·
+    <strong>Freddie Mac</strong> 30-year fixed mortgage rate · <strong>BLS</strong> CPI-U All Items
+    Less Shelter · Methodology adapted from <a href="https://realestatedecoded.com" target="_blank" rel="noopener noreferrer">John Wake, RealEstateDecoded.com</a>.
+    Updated daily from FRED.
+</p>
+
+<script>
+(function () {
+    const metroSel = document.getElementById('metroPicker');
+    const downSel  = document.getElementById('downPicker');
+    const errorBox = document.getElementById('errorBox');
+    const ctx      = document.getElementById('rmpiChart');
+    let chart = null;
+
+    const fmtPct = (n) => n == null ? '—' : (n >= 0 ? '+' : '') + Math.round(n) + '%';
+    const fmtNum = (n) => n == null ? '—' : n.toFixed(0);
+    const fmtDate = (iso) => {
+        if (!iso) return '';
+        const d = new Date(iso + 'T00:00:00');
+        return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    };
+
+    function showError(msg) {
+        errorBox.innerHTML = '<div class="rmpi-error">' + msg + '</div>';
+    }
+    function clearError() { errorBox.innerHTML = ''; }
+
+    function renderStats(d) {
+        const s = d.stats || {};
+        const c = d.comparison || {};
+        document.getElementById('statNow').textContent       = fmtNum(s.now);
+        document.getElementById('statNowDate').textContent   = s.now_date ? 'as of ' + fmtDate(s.now_date) : '';
+        document.getElementById('statPeak').textContent      = fmtNum(s.peak_2006);
+        document.getElementById('statPeakDate').textContent  = s.peak_2006_date ? fmtDate(s.peak_2006_date) : '';
+        document.getElementById('statTrough').textContent    = fmtNum(s.trough_2012);
+        document.getElementById('statTroughDate').textContent= s.trough_2012_date ? fmtDate(s.trough_2012_date) : '';
+
+        // Plain-language meaning that updates with the metro.
+        const label = d.label || 'this market';
+        const v1990 = c.vs_1990_pct;
+        const v2006 = c.vs_2006_pct;
+        const v2012 = c.vs_2012_pct;
+        document.getElementById('statNowMeaning').innerHTML =
+            v1990 == null ? '' :
+            (v1990 >= 0
+                ? `Owning a home in <strong>${label}</strong> costs <strong>${Math.round(v1990)}% more</strong> per month than January 1990 — adjusted for inflation and rates.`
+                : `Owning a home in <strong>${label}</strong> costs <strong>${Math.abs(Math.round(v1990))}% less</strong> per month than January 1990.`);
+
+        // Augment peak/trough lines with comparison to today.
+        if (v2006 != null) {
+            const verb = v2006 >= 0 ? 'higher' : 'lower';
+            const peakBase = 'The previous all-time high — when everyone <em>knew</em> housing was expensive.';
+            document.getElementById('statPeakMeaning').innerHTML = peakBase +
+                ` Today is <strong>${Math.abs(Math.round(v2006))}% ${verb}</strong>.`;
+        }
+        if (v2012 != null) {
+            const troughBase = 'Best buying opportunity in modern history. Prices crashed, rates dropped to ~3.5%.';
+            const verb = v2012 >= 0 ? 'higher' : 'lower';
+            document.getElementById('statTroughMeaning').innerHTML = troughBase +
+                ` Today is <strong>${Math.abs(Math.round(v2012))}% ${verb}</strong>.`;
+        }
+    }
+
+    function renderChart(d) {
+        if (chart) chart.destroy();
+        const styles = getComputedStyle(document.documentElement);
+        const primary = styles.getPropertyValue('--primary').trim() || '#5b4de0';
+        const grid    = styles.getPropertyValue('--line').trim()    || '#e5e3df';
+        const inkDim  = styles.getPropertyValue('--ink-3').trim()   || '#7a7773';
+
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: d.label,
+                        data: d.series.map(p => ({ x: p.date, y: p.value })),
+                        borderColor: primary,
+                        backgroundColor: primary + '20',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        fill: true,
+                        tension: 0.18,
+                    },
+                    // Reference line at 100 (the "as expensive as 1990" baseline).
+                    {
+                        label: '1990 baseline (100)',
+                        data: d.series.map(p => ({ x: p.date, y: 100 })),
+                        borderColor: inkDim,
+                        borderWidth: 1,
+                        borderDash: [5, 4],
+                        pointRadius: 0,
+                        fill: false,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: inkDim, font: { size: 11 } } },
+                    tooltip: {
+                        mode: 'index', intersect: false,
+                        callbacks: {
+                            title: (items) => {
+                                if (!items.length) return '';
+                                const d = new Date(items[0].parsed.x);
+                                return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+                            },
+                            label: (c) => {
+                                const v = Math.round(c.parsed.y);
+                                if (c.datasetIndex === 1) return null;
+                                const vs1990 = v - 100;
+                                const sign = vs1990 >= 0 ? '+' : '';
+                                return `${c.dataset.label}: ${v}  (${sign}${vs1990}% vs 1990)`;
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    x: { type: 'time', time: { unit: 'year' }, grid: { color: grid }, ticks: { color: inkDim } },
+                    y: {
+                        grid: { color: grid }, ticks: { color: inkDim },
+                        title: { display: true, text: 'index (Jan 1990 = 100)', color: inkDim, font: { size: 11 } },
+                    },
+                },
+                interaction: { mode: 'index', intersect: false },
+            },
+        });
+    }
+
+    async function load() {
+        clearError();
+        const metro = metroSel.value;
+        const down  = downSel.value;
+        document.getElementById('statNow').textContent = '…';
+        document.getElementById('statNowMeaning').textContent = 'Loading…';
+        try {
+            const r = await fetch(`/api/real-mortgage-index?metro=${encodeURIComponent(metro)}&down_pct=${encodeURIComponent(down)}`);
+            const data = await r.json();
+            if (data.error) {
+                showError(data.error);
+                return;
+            }
+            renderStats(data);
+            renderChart(data);
+        } catch (e) {
+            showError('Could not load data: ' + e.message);
+        }
+    }
+
+    metroSel.addEventListener('change', load);
+    downSel.addEventListener('change', load);
+    load();
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+{% endblock %}

@@ -313,6 +313,27 @@ async def api_stock_fundamentals(ticker: str):
     return JSONResponse(get_fundamentals(ticker))
 
 
+# ─── Real Mortgage Payment Price Index (public) ─────────────────────
+# Case-Shiller home prices, deflated by CPI-Less-Shelter, with the
+# mortgage rate at each month baked in. The single best "is housing
+# expensive right now?" chart we have. Originally John Wake's idea
+# at RealEstateDecoded.com.
+
+@app.get("/real-mortgage-index")
+async def real_mortgage_index_page(request: Request):
+    from real_mortgage_index import list_metros
+    return templates.TemplateResponse("real_mortgage_index.html", {
+        "request": request,
+        "metros": list_metros(),
+    })
+
+
+@app.get("/api/real-mortgage-index")
+async def api_real_mortgage_index(metro: str = "US", down_pct: float = 10.0):
+    from real_mortgage_index import compute_index
+    return JSONResponse(compute_index(metro, down_pct))
+
+
 # ─── Sign-up (Phase 1 of paywall — email capture only) ──────────────
 # Free for now. Captures email + optional name + source page so we
 # can email people when paid features launch. No login UI, no
