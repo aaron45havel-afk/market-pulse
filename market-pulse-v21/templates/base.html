@@ -5,25 +5,174 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Market Pulse{% endblock %}</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* ==========================================================================
+           DESIGN TOKENS — System 1 (CSS custom properties)
+           Source of truth for the whole app. Every component reads from these vars,
+           which is what lets density and theme modes swap globally on one attribute.
+           ========================================================================== */
         :root {
-            --bg: #0f1117;
-            --surface: #1a1d27;
-            --surface2: #242736;
-            --border: #2d3044;
-            --text: #e4e4e7;
-            --text-dim: #9ca3af;
-            --accent: #22c55e;
-            --accent2: #3b82f6;
-            --red: #ef4444;
-            --yellow: #eab308;
-            --orange: #f97316;
+            /* Neutrals — warm beige + stone ink */
+            --bg:           #f5f4f1;   /* page background */
+            --surface:      #ffffff;   /* card background */
+            --surface-2:    #f5f4f1;   /* slight depression */
+            --surface-3:    #edecea;   /* deeper depression */
+            --line:         #e5e3df;   /* default border */
+            --line-strong:  #ccc9c3;   /* hover border */
+            --ink:          #1a1917;   /* primary text */
+            --ink-2:        #4a4844;   /* secondary text */
+            --ink-3:        #7a7773;   /* tertiary text (subtitles) */
+            --ink-4:        #aaa89f;   /* faded text (timestamps, helpers) */
+
+            /* warm-* aliases — same hex values, the Tailwind-friendly name */
+            --warm-50:  #f5f4f1;
+            --warm-100: #edecea;
+            --warm-200: #e5e3df;
+            --warm-300: #ccc9c3;
+            --warm-400: #aaa89f;
+            --warm-500: #7a7773;
+
+            /* Brand — electric indigo */
+            --primary:      #5b4de0;   /* CTA fills, links, brand */
+            --primary-2:    #7c6ff0;   /* gradient stop */
+            --primary-soft: #f0effe;   /* tinted backgrounds (CTA hover, badges) */
+            --primary-ink:  #3d32b0;   /* pressed / dark text on brand */
+            --primary-50:   #f0effe;
+            --primary-500:  #5b4de0;
+            --primary-600:  #3d32b0;
+
+            /* Semantic accents — each gets a -soft (tinted bg) and -ink (text-on-tint) sibling */
+            --mint:        #3fb07a;   /* income, on-track, "Connected", buy signal */
+            --mint-soft:   #e6f5ed;
+            --mint-ink:    #1f7a4a;
+
+            --coral:       #e05b4b;   /* errors, debts, danger */
+            --coral-soft:  #fce8e5;
+            --coral-ink:   #a02e22;
+
+            --gold:        #c8961e;   /* behind pace, watchlist */
+            --gold-soft:   #faf0d9;
+            --gold-ink:    #7a5a10;
+
+            /* Quadrant colors (kept for parity with the source design system) */
+            --shared:      #5b4de0;
+            --indy:        #2a9d8f;
+
+            /* Gradients */
+            --grad-primary: linear-gradient(135deg, #5b4de0, #8962e5);
+            --grad-mint:    linear-gradient(135deg, #3fb07a, #2a9d8f);
+            --grad-aurora:  linear-gradient(135deg, #e05b4b, #c8961e, #3fb07a);
+            --grad-soft:    linear-gradient(180deg, #f5f3ff, #ffffff);
+
+            /* Typography */
+            --sans:    'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --display: 'Instrument Serif', 'Playfair Display', Georgia, serif;
+
+            /* Spacing + radius (density-aware) */
+            --gap: 16px;
+            --pad: 18px;
+            --r-sm: 8px;
+            --r:    12px;
+            --r-lg: 16px;
+            --r-xl: 24px;
+
+            /* Shadows — three elevations + brand glow */
+            --shadow-1:    0 1px 2px rgb(26 25 23 / 0.05);
+            --shadow-2:    0 4px 12px rgb(26 25 23 / 0.08);
+            --shadow-3:    0 12px 32px rgb(26 25 23 / 0.12);
+            --shadow-glow: 0 0 0 1px rgb(91 77 224 / 0.12), 0 8px 32px rgb(91 77 224 / 0.18);
+
+            /* ── Legacy aliases ──
+               The 11 existing templates reference --text/--accent/--surface2/etc.
+               Aliasing them to the new tokens means every template inherits the
+               new palette without per-file edits. */
+            --text:     var(--ink);
+            --text-dim: var(--ink-3);
+            --border:   var(--line);
+            --surface2: var(--surface-2);
+            --accent:   var(--mint);     /* was green — still positive (buy/up) */
+            --accent2:  var(--primary);  /* was blue — now the brand indigo */
+            --red:      var(--coral);
+            --yellow:   var(--gold);
+            --orange:   #d97706;
+
             --sidebar-w: 220px;
         }
-        body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-        a { color: var(--accent2); text-decoration: none; }
-        a:hover { text-decoration: underline; }
+
+        /* Density mode — toggle data-density="compact" on <html> or <body> to
+           shrink gaps/padding/radius globally. */
+        [data-density="compact"] {
+            --gap: 10px;
+            --pad: 12px;
+            --r:    8px;
+            --r-lg: 12px;
+        }
+
+        /* Dark theme — opt-in via data-theme="dark". Same tokens, swapped values,
+           so every component flips without per-component changes. */
+        [data-theme="dark"] {
+            --bg:          #0f1117;
+            --surface:     #1a1d27;
+            --surface-2:   #242736;
+            --surface-3:   #2a2e40;
+            --line:        #2d3044;
+            --line-strong: #3a3d52;
+            --ink:         #e4e4e7;
+            --ink-2:       #c4c4c7;
+            --ink-3:       #9ca3af;
+            --ink-4:       #6b7280;
+
+            --warm-50:  #1a1d27;
+            --warm-100: #242736;
+            --warm-200: #2d3044;
+            --warm-300: #3a3d52;
+            --warm-400: #6b7280;
+            --warm-500: #9ca3af;
+
+            --primary:      #7c6ff0;
+            --primary-2:    #a99cf5;
+            --primary-soft: #1f1d3a;
+            --primary-ink:  #c5bef5;
+
+            --mint:        #4dc88a;
+            --mint-soft:   #133724;
+            --mint-ink:    #6dd99c;
+
+            --coral:       #ef4444;
+            --coral-soft:  #3a1817;
+            --coral-ink:   #f87171;
+
+            --gold:        #eab308;
+            --gold-soft:   #2e260a;
+            --gold-ink:    #facc15;
+
+            --grad-soft:   linear-gradient(180deg, #15172a, #0f1117);
+
+            --shadow-1:    0 1px 2px rgb(0 0 0 / 0.4);
+            --shadow-2:    0 4px 12px rgb(0 0 0 / 0.5);
+            --shadow-3:    0 12px 32px rgb(0 0 0 / 0.6);
+            --shadow-glow: 0 0 0 1px rgb(124 111 240 / 0.25), 0 8px 32px rgb(124 111 240 / 0.35);
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--ink);
+            font-family: var(--sans);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        a { color: var(--primary); text-decoration: none; transition: color 0.15s; }
+        a:hover { color: var(--primary-ink); text-decoration: underline; }
+
+        /* iOS auto-zoom guard — Safari zooms inputs <16px on focus. */
+        @media (max-width: 768px) {
+            input, select, textarea { font-size: 16px; }
+        }
 
         /* ── App shell — fixed left sidebar + scrollable main pane ──
            Flexbox instead of CSS grid: under some browser/zoom conditions
@@ -33,18 +182,19 @@
            flex:1 on main is more bulletproof. */
         .app-shell { display: flex; min-height: 100vh; align-items: stretch; }
 
-        .sidebar { width: var(--sidebar-w); flex: 0 0 var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); padding: 1rem 0; position: sticky; top: 0; align-self: flex-start; height: 100vh; display: flex; flex-direction: column; transition: width 0.18s ease; }
-        .sidebar .logo { font-size: 1.25rem; font-weight: 700; color: var(--accent); padding: 0.5rem 1.25rem 1.25rem; border-bottom: 1px solid var(--border); margin-bottom: 0.75rem; white-space: nowrap; overflow: hidden; }
+        .sidebar { width: var(--sidebar-w); flex: 0 0 var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--line); padding: 1rem 0; position: sticky; top: 0; align-self: flex-start; height: 100vh; display: flex; flex-direction: column; transition: width 0.18s ease; }
+        /* Logo wordmark — italic-serif gradient text, the signature brand move. */
+        .sidebar .logo { font-family: var(--display); font-style: italic; font-size: 1.5rem; font-weight: 400; letter-spacing: -0.01em; padding: 0.4rem 1.25rem 1rem; border-bottom: 1px solid var(--line); margin-bottom: 0.75rem; white-space: nowrap; overflow: hidden; background: var(--grad-primary); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
         .sidebar .nav-links { display: flex; flex-direction: column; gap: 0.15rem; padding: 0 0.5rem; flex: 1; }
-        .sidebar .nav-links a { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.85rem; border-radius: 8px; color: var(--text-dim); font-size: 0.92rem; font-weight: 500; transition: all 0.15s; white-space: nowrap; overflow: hidden; }
-        .sidebar .nav-links a:hover { color: var(--text); text-decoration: none; }
+        .sidebar .nav-links a { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.85rem; border-radius: var(--r); color: var(--ink-3); font-size: 0.92rem; font-weight: 500; transition: all 0.15s; white-space: nowrap; overflow: hidden; }
+        .sidebar .nav-links a:hover { color: var(--ink); background: var(--surface-2); text-decoration: none; }
         /* Active item is the only one with a tinted background — hover
            just brightens the text. Otherwise active + hover both showed
            as filled rows and "where am I right now" got ambiguous. */
-        .sidebar .nav-links a.active { background: rgba(34,197,94,0.12); color: var(--accent); font-weight: 600; }
-        .sidebar .nav-links a.active:hover { color: var(--accent); }
+        .sidebar .nav-links a.active { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+        .sidebar .nav-links a.active:hover { color: var(--primary); background: var(--primary-soft); }
         .sidebar .nav-links svg.icon { width: 18px; height: 18px; flex-shrink: 0; stroke: currentColor; }
-        .sidebar .footer-note { font-size: 0.65rem; color: var(--text-dim); padding: 0.75rem 1rem; border-top: 1px solid var(--border); line-height: 1.5; white-space: nowrap; overflow: hidden; }
+        .sidebar .footer-note { font-size: 0.65rem; color: var(--ink-4); padding: 0.75rem 1rem; border-top: 1px solid var(--line); line-height: 1.5; white-space: nowrap; overflow: hidden; }
 
         /* ── Compact-sidebar mode (set on /map) ──
            Sidebar collapses to a 56px icon strip; hovering expands it
@@ -67,7 +217,7 @@
                 /* Beefier shadow + slightly inset shine so the expanded
                    panel reads as a solid floating layer, not a half-open
                    drawer. */
-                box-shadow: 6px 0 32px rgba(0, 0, 0, 0.55);
+                box-shadow: var(--shadow-3);
             }
             /* Labels + footer fade via opacity (animatable) instead of
                display:none (snap). Shrunk to width:0 in collapsed state
@@ -117,7 +267,7 @@
             body.compact-sidebar .sidebar::after {
                 content: '';
                 position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-                background: rgba(0, 0, 0, 0.32);
+                background: rgb(26 25 23 / 0.18);
                 opacity: 0; pointer-events: none;
                 transition: opacity 0.18s ease;
                 z-index: -1;   /* sits behind the sidebar but in front of the map */
@@ -136,67 +286,107 @@
         @media (max-width: 768px) {
             :root { --sidebar-w: 0px; }
             .app-shell { display: block; }   /* mobile: single column, sidebar overlays via fixed positioning */
-            .sidebar { position: fixed; top: 0; left: 0; width: 240px; flex-basis: auto; height: 100vh; z-index: 60; transform: translateX(-100%); transition: transform 0.2s; box-shadow: 4px 0 16px rgba(0,0,0,0.5); }
+            .sidebar { position: fixed; top: 0; left: 0; width: 240px; flex-basis: auto; height: 100vh; z-index: 60; transform: translateX(-100%); transition: transform 0.2s; box-shadow: var(--shadow-3); }
             .sidebar.open { transform: translateX(0); }
-            .mobile-bar { display: flex; align-items: center; gap: 0.75rem; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.6rem 1rem; height: 52px; position: sticky; top: 0; z-index: 50; }
-            .mobile-bar .hamburger { background: transparent; border: none; color: var(--text); font-size: 1.5rem; cursor: pointer; padding: 0.25rem 0.5rem; }
-            .mobile-bar .title { font-weight: 700; color: var(--accent); }
-            .mobile-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 55; }
+            .mobile-bar { display: flex; align-items: center; gap: 0.75rem; background: var(--surface); border-bottom: 1px solid var(--line); padding: 0.6rem 1rem; height: 52px; position: sticky; top: 0; z-index: 50; }
+            .mobile-bar .hamburger { background: transparent; border: none; color: var(--ink); font-size: 1.5rem; cursor: pointer; padding: 0.25rem 0.5rem; }
+            .mobile-bar .title { font-family: var(--display); font-style: italic; font-size: 1.1rem; font-weight: 400; background: var(--grad-primary); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+            .mobile-overlay { display: none; position: fixed; inset: 0; background: rgb(26 25 23 / 0.4); z-index: 55; }
             .mobile-overlay.open { display: block; }
             .container { padding: 1rem; }
         }
 
-        h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem; }
-        h2 { font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: var(--text); }
-        .subtitle { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 1.5rem; }
+        /* ── Headings: display serif for h1 (the signature look), sans for h2 ── */
+        h1 { font-family: var(--display); font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 600; color: var(--ink); margin-bottom: 0.25rem; letter-spacing: -0.015em; line-height: 1.15; }
+        h2 { font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: var(--ink); letter-spacing: -0.005em; }
+        .subtitle { color: var(--ink-3); font-size: 0.9rem; margin-bottom: 1.5rem; }
 
-        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
-        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; }
+        /* ── Italic-serif gradient text — the signature visual move ──
+           Inline-block so background-clip works; padding gives italic ascenders/
+           descenders room (T, f rise above; g, p, y drop below) and the matching
+           negative margin cancels the visual baseline shift the padding causes. */
+        .grad-text {
+            font-family: var(--display); font-style: italic;
+            background: var(--grad-primary);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
+            padding-top: 0.2em; padding-bottom: 0.28em;
+            margin-top: -0.2em; margin-bottom: -0.28em;
+        }
+        .grad-text-aurora { background: var(--grad-aurora); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .grad-text-mint   { background: var(--grad-mint);   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+
+        /* ── Brand button — indigo gradient + the soft brand glow ── */
+        .btn-primary {
+            background: var(--grad-primary); color: white; border: none;
+            padding: 0.6rem 1.25rem; border-radius: var(--r); font-weight: 600;
+            font-family: var(--sans); font-size: 0.9rem;
+            cursor: pointer; box-shadow: var(--shadow-glow);
+            transition: transform 0.1s ease, box-shadow 0.15s ease;
+            display: inline-flex; align-items: center; gap: 0.5rem;
+        }
+        .btn-primary:hover { transform: translateY(-1px); }
+        .btn-primary:active { transform: translateY(0); }
+
+        /* ── .card — the core building block.
+           White surface, warm border, generous radius, subtle elevation.
+           Density mode swaps --pad and --r-lg here in one go. ── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--r-lg);
+            padding: var(--pad);
+            box-shadow: var(--shadow-1);
+        }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--gap); }
+        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: var(--gap); }
 
         .metric-card { text-align: center; padding: 1rem; }
-        .metric-card .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin-bottom: 0.25rem; }
-        .metric-card .value { font-size: 1.5rem; font-weight: 700; }
+        .metric-card .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); margin-bottom: 0.35rem; font-weight: 500; }
+        .metric-card .value { font-size: 1.5rem; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
         .metric-card .change { font-size: 0.8rem; margin-top: 0.25rem; }
-        .up { color: var(--accent); }
-        .down { color: var(--red); }
-        .neutral { color: var(--yellow); }
+        .up { color: var(--mint); }
+        .down { color: var(--coral); }
+        .neutral { color: var(--gold); }
 
-        .signal-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
-        .signal-buy { background: rgba(34,197,94,0.15); color: var(--accent); border: 1px solid rgba(34,197,94,0.3); }
-        .signal-wait { background: rgba(234,179,8,0.15); color: var(--yellow); border: 1px solid rgba(234,179,8,0.3); }
-        .signal-neutral { background: rgba(59,130,246,0.15); color: var(--accent2); border: 1px solid rgba(59,130,246,0.3); }
-        .signal-expensive { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+        /* Signal badges — semantic chips paired -soft / -ink. */
+        .signal-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+        .signal-buy       { background: var(--mint-soft);    color: var(--mint-ink);    border: 1px solid rgb(63 176 122 / 0.25); }
+        .signal-wait      { background: var(--gold-soft);    color: var(--gold-ink);    border: 1px solid rgb(200 150 30 / 0.25); }
+        .signal-neutral   { background: var(--primary-soft); color: var(--primary-ink); border: 1px solid rgb(91 77 224 / 0.2); }
+        .signal-expensive { background: var(--coral-soft);   color: var(--coral-ink);   border: 1px solid rgb(224 91 75 / 0.25); }
 
         .state-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
-        .state-tab { padding: 0.5rem 1.25rem; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); cursor: pointer; font-size: 0.9rem; color: var(--text-dim); font-weight: 500; transition: all 0.2s; }
-        .state-tab:hover { border-color: var(--accent2); color: var(--text); }
-        .state-tab.active { background: var(--accent2); color: white; border-color: var(--accent2); }
+        .state-tab { padding: 0.5rem 1.25rem; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); cursor: pointer; font-size: 0.9rem; color: var(--ink-3); font-weight: 500; transition: all 0.2s; }
+        .state-tab:hover { border-color: var(--line-strong); color: var(--ink); }
+        .state-tab.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: var(--shadow-glow); }
 
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        thead th { text-align: left; padding: 0.75rem 1rem; color: var(--text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap; }
-        thead th:hover { color: var(--text); }
+        thead th { text-align: left; padding: 0.75rem 1rem; color: var(--ink-3); font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--line); cursor: pointer; user-select: none; white-space: nowrap; }
+        thead th:hover { color: var(--ink); }
         thead th.sorted-asc::after { content: " ▲"; }
         thead th.sorted-desc::after { content: " ▼"; }
-        tbody td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
-        tbody tr:hover { background: var(--surface2); }
+        tbody td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--line); white-space: nowrap; color: var(--ink-2); }
+        tbody tr:hover { background: var(--surface-2); }
 
-        .search-bar { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 1rem; color: var(--text); font-size: 0.9rem; width: 250px; outline: none; }
-        .search-bar:focus { border-color: var(--accent2); }
+        .search-bar { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 0.5rem 1rem; color: var(--ink); font-size: 0.9rem; width: 250px; outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+        .search-bar:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
         .filter-row { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
-        select { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; }
+        select { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 0.5rem 0.75rem; color: var(--ink); font-size: 0.85rem; outline: none; transition: border-color 0.15s; }
+        select:focus { border-color: var(--primary); }
 
-        .loading { text-align: center; padding: 3rem; color: var(--text-dim); }
-        .loading .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent2); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 1rem; }
+        .loading { text-align: center; padding: 3rem; color: var(--ink-3); }
+        .loading .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid var(--line); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 1rem; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
         .chart-container { position: relative; height: 300px; }
         .signals-list { list-style: none; }
-        .signals-list li { padding: 0.5rem 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+        .signals-list li { padding: 0.5rem 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); }
         .signals-list li:last-child { border: none; }
 
-        .footer { text-align: center; padding: 1.5rem; color: var(--text-dim); font-size: 0.7rem; border-top: 1px solid var(--border); margin-top: 2rem; }
+        .footer { text-align: center; padding: 1.5rem; color: var(--ink-4); font-size: 0.7rem; border-top: 1px solid var(--line); margin-top: 2rem; }
 
         @media (max-width: 768px) {
             .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
