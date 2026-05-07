@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.middleware.gzip import GZipMiddleware
 from dotenv import load_dotenv
-from data_providers import STATES
+from data_providers import STATES, MORTGAGE_30Y_RATE, qualifying_income
 from sec_edgar import build_net_net_screener
 from state_neighborhoods import get_state_neighborhoods, STATE_METROS
 from database import (init_db, save_price, save_prices_bulk, get_all_prices, delete_price,
@@ -550,6 +550,10 @@ async def api_zips(
         ).fetchall()
     finally:
         conn.close()
+    # Pre-compute qualifying_income per ZIP — annual gross income needed
+    # to buy a home at this ZIP's median value. Same NAR/HSH methodology
+    # as /affordability and the metro popup: 20% down, 30Y at the current
+    # rate, 28% front-end DTI on full PITI (P&I + state tax + state ins).
     zips = [
         {
             "zip": r["zip"],
@@ -573,6 +577,7 @@ async def api_zips(
             "restaurant_score": r["restaurant_score"],
             "composite": round(r["composite"], 1) if r["composite"] is not None else None,
             "is_imputed": r["rent_source"] == "imputed",
+            "qualifying_income": qualifying_income(r["median_home_value"], r["state"], MORTGAGE_30Y_RATE),
         }
         for r in rows
     ]
