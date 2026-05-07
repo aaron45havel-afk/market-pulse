@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block title %}Stock Lookup — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+    .stocks-hero { padding: 2rem 0 1.5rem; max-width: 760px; margin: 0 auto; text-align: center; }
+    .stocks-hero h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); margin-bottom: 0.5rem; line-height: 1.1; }
+    .stocks-hero .lede { color: var(--ink-3); font-size: 0.95rem; max-width: 520px; margin: 0 auto 1.5rem; }
+
+    .search-form { display: flex; gap: 0.5rem; max-width: 460px; margin: 0 auto 2rem; }
+    .ticker-input {
+        flex: 1; background: var(--surface); border: 1px solid var(--line);
+        border-radius: var(--r); padding: 0.7rem 1rem; color: var(--ink);
+        font-size: 1rem; font-family: var(--sans); outline: none;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .ticker-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+
+    /* Results layout — two columns on wide, stacked on narrow. */
+    .results { display: none; }
+    .results.show { display: block; }
+    .quote-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: var(--gap); }
+    @media (max-width: 900px) { .quote-grid { grid-template-columns: 1fr; } }
+
+    /* Quote card — name, ticker, price, day change, and a chart underneath. */
+    .quote-card .quote-head {
+        display: flex; justify-content: space-between; align-items: flex-start;
+        gap: 1rem; margin-bottom: 1rem;
+    }
+    .quote-card .name { font-family: var(--display); font-size: 1.35rem; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; line-height: 1.2; }
+    .quote-card .symbol { color: var(--ink-3); font-size: 0.85rem; margin-top: 0.15rem; }
+    .quote-card .symbol .exch { color: var(--ink-4); }
+    .quote-card .price-block { text-align: right; flex-shrink: 0; }
+    .quote-card .price { font-size: 1.75rem; font-weight: 700; color: var(--ink); letter-spacing: -0.015em; }
+    .quote-card .change { font-size: 0.9rem; font-weight: 600; margin-top: 0.15rem; }
+    .quote-card .change.up   { color: var(--mint-ink); }
+    .quote-card .change.down { color: var(--coral-ink); }
+
+    .quote-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
+    @media (max-width: 600px) { .quote-stats { grid-template-columns: repeat(2, 1fr); } }
+    .quote-stat { background: var(--surface-2); border-radius: var(--r); padding: 0.6rem 0.75rem; }
+    .quote-stat .k { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); font-weight: 500; margin-bottom: 0.2rem; }
+    .quote-stat .v { font-size: 0.95rem; font-weight: 600; color: var(--ink); }
+
+    .chart-wrap { position: relative; height: 240px; }
+
+    /* Fundamentals card. */
+    .fund-card .fund-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); font-weight: 600; margin-bottom: 0.75rem; }
+    .fund-card .fund-table { width: 100%; }
+    .fund-card .fund-table tbody td { padding: 0.5rem 0; border-bottom: 1px solid var(--line); white-space: normal; }
+    .fund-card .fund-table tbody tr:last-child td { border-bottom: none; }
+    .fund-card .fund-label { color: var(--ink-2); font-size: 0.85rem; }
+    .fund-card .fund-value { color: var(--ink); font-weight: 600; text-align: right; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+    .fund-card .fund-meta { color: var(--ink-4); font-size: 0.7rem; margin-top: 0.75rem; }
+
+    .empty-state { color: var(--ink-3); text-align: center; padding: 1rem 0; font-size: 0.85rem; }
+    .err { color: var(--coral-ink); background: var(--coral-soft); border: 1px solid rgb(224 91 75 / 0.25); padding: 0.75rem 1rem; border-radius: var(--r); font-size: 0.9rem; }
+    .pill-row { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; margin: 0 auto 0.5rem; max-width: 460px; }
+    .pill { background: var(--surface); border: 1px solid var(--line); border-radius: 9999px; padding: 0.3rem 0.75rem; color: var(--ink-3); font-size: 0.75rem; cursor: pointer; transition: all 0.15s; font-family: var(--sans); }
+    .pill:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+</style>
+{% endblock %}
+{% block content %}
+<div class="stocks-hero">
+    <h1>Stock <span class="grad-text">Lookup</span></h1>
+    <p class="lede">Enter any US ticker to see live quote, 12-month chart, and the latest annual fundamentals from SEC EDGAR.</p>
+    <form class="search-form" id="searchForm" autocomplete="off">
+        <input type="text" id="tickerInput" class="ticker-input" placeholder="AAPL, MSFT, NVDA…" aria-label="Ticker symbol" maxlength="10" required>
+        <button type="submit" class="btn-primary">Look up</button>
+    </form>
+    <div class="pill-row" id="suggestions">
+        <button type="button" class="pill" data-t="AAPL">AAPL</button>
+        <button type="button" class="pill" data-t="MSFT">MSFT</button>
+        <button type="button" class="pill" data-t="NVDA">NVDA</button>
+        <button type="button" class="pill" data-t="GOOG">GOOG</button>
+        <button type="button" class="pill" data-t="AMZN">AMZN</button>
+        <button type="button" class="pill" data-t="META">META</button>
+        <button type="button" class="pill" data-t="TSLA">TSLA</button>
+        <button type="button" class="pill" data-t="BRK-B">BRK-B</button>
+    </div>
+</div>
+
+<div id="errorBox" style="display:none; max-width: 760px; margin: 0 auto 1.5rem;"></div>
+
+<div id="results" class="results">
+    <div class="quote-grid">
+        <div class="card quote-card">
+            <div class="quote-head">
+                <div>
+                    <div class="name" id="qName">—</div>
+                    <div class="symbol"><span id="qSymbol">—</span> <span class="exch" id="qExch"></span></div>
+                </div>
+                <div class="price-block">
+                    <div class="price" id="qPrice">—</div>
+                    <div class="change" id="qChange">—</div>
+                </div>
+            </div>
+            <div class="quote-stats">
+                <div class="quote-stat"><div class="k">52W High</div><div class="v" id="q52H">—</div></div>
+                <div class="quote-stat"><div class="k">52W Low</div><div class="v" id="q52L">—</div></div>
+                <div class="quote-stat"><div class="k">Market Cap</div><div class="v" id="qMcap">—</div></div>
+                <div class="quote-stat"><div class="k">Volume</div><div class="v" id="qVol">—</div></div>
+            </div>
+            <div class="chart-wrap"><canvas id="priceChart"></canvas></div>
+        </div>
+
+        <div class="card fund-card">
+            <div class="fund-title">Latest Annual Filing (10-K)</div>
+            <table class="fund-table">
+                <tbody id="fundBody">
+                    <tr><td class="empty-state" colspan="2">Enter a ticker above.</td></tr>
+                </tbody>
+            </table>
+            <div class="fund-meta" id="fundMeta"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const form = document.getElementById('searchForm');
+    const input = document.getElementById('tickerInput');
+    const errorBox = document.getElementById('errorBox');
+    const results = document.getElementById('results');
+    let chart = null;
+
+    // Number formatters reused everywhere.
+    const fmtMoney = (n) => {
+        if (n === null || n === undefined || isNaN(n)) return '—';
+        const a = Math.abs(n);
+        if (a >= 1e12) return (n < 0 ? '-' : '') + '$' + (a / 1e12).toFixed(2) + 'T';
+        if (a >= 1e9)  return (n < 0 ? '-' : '') + '$' + (a / 1e9).toFixed(2)  + 'B';
+        if (a >= 1e6)  return (n < 0 ? '-' : '') + '$' + (a / 1e6).toFixed(1)  + 'M';
+        if (a >= 1e3)  return (n < 0 ? '-' : '') + '$' + (a / 1e3).toFixed(0)  + 'K';
+        return (n < 0 ? '-' : '') + '$' + a.toFixed(2);
+    };
+    const fmtNum = (n) => {
+        if (n === null || n === undefined || isNaN(n)) return '—';
+        const a = Math.abs(n);
+        if (a >= 1e12) return (n < 0 ? '-' : '') + (a / 1e12).toFixed(2) + 'T';
+        if (a >= 1e9)  return (n < 0 ? '-' : '') + (a / 1e9).toFixed(2)  + 'B';
+        if (a >= 1e6)  return (n < 0 ? '-' : '') + (a / 1e6).toFixed(1)  + 'M';
+        if (a >= 1e3)  return (n < 0 ? '-' : '') + (a / 1e3).toFixed(0)  + 'K';
+        return n.toLocaleString();
+    };
+    const fmtPrice = (n) => (n === null || n === undefined || isNaN(n)) ? '—' : '$' + Number(n).toFixed(2);
+    const fmtPct = (n) => (n === null || n === undefined || isNaN(n)) ? '—' : (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
+
+    function showError(msg) {
+        errorBox.innerHTML = '<div class="err">' + msg + '</div>';
+        errorBox.style.display = 'block';
+        results.classList.remove('show');
+    }
+    function clearError() {
+        errorBox.style.display = 'none';
+        errorBox.innerHTML = '';
+    }
+
+    async function fetchJSON(url) {
+        const r = await fetch(url);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    }
+
+    function renderQuote(q) {
+        document.getElementById('qName').textContent = q.name || q.symbol;
+        document.getElementById('qSymbol').textContent = q.symbol;
+        document.getElementById('qExch').textContent = q.exchange ? '· ' + q.exchange : '';
+        document.getElementById('qPrice').textContent = fmtPrice(q.price);
+
+        const chgEl = document.getElementById('qChange');
+        if (q.day_change !== null && q.day_change !== undefined) {
+            const sign = q.day_change >= 0 ? '+' : '';
+            chgEl.textContent = sign + fmtPrice(q.day_change).replace('$', '$') + '  (' + fmtPct(q.day_change_pct) + ')';
+            chgEl.classList.toggle('up',   q.day_change >= 0);
+            chgEl.classList.toggle('down', q.day_change <  0);
+        } else {
+            chgEl.textContent = '—';
+            chgEl.classList.remove('up', 'down');
+        }
+
+        document.getElementById('q52H').textContent  = fmtPrice(q.fifty_two_week_high);
+        document.getElementById('q52L').textContent  = fmtPrice(q.fifty_two_week_low);
+        document.getElementById('qMcap').textContent = fmtMoney(q.market_cap);
+        document.getElementById('qVol').textContent  = fmtNum(q.regular_market_volume);
+
+        renderChart(q.history || [], q.day_change >= 0);
+    }
+
+    function renderChart(history, isUp) {
+        const ctx = document.getElementById('priceChart');
+        if (chart) chart.destroy();
+        // Match the design tokens (mint = up, coral = down).
+        const styles = getComputedStyle(document.documentElement);
+        const lineColor = (isUp ? styles.getPropertyValue('--mint') : styles.getPropertyValue('--coral')).trim() || '#5b4de0';
+        const gridColor = styles.getPropertyValue('--line').trim() || '#e5e3df';
+        const inkDim    = styles.getPropertyValue('--ink-3').trim() || '#7a7773';
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: history.map(p => p[0]),
+                datasets: [{
+                    data: history.map(p => p[1]),
+                    borderColor: lineColor,
+                    backgroundColor: lineColor + '20',
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    fill: true,
+                    tension: 0.18,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, callbacks: { label: (c) => fmtPrice(c.parsed.y) } } },
+                scales: {
+                    x: { type: 'time', time: { unit: 'month' }, grid: { color: gridColor, drawBorder: false }, ticks: { color: inkDim, font: { size: 10 } } },
+                    y: { grid: { color: gridColor, drawBorder: false }, ticks: { color: inkDim, font: { size: 10 }, callback: (v) => '$' + Number(v).toFixed(0) } },
+                },
+                interaction: { mode: 'index', intersect: false },
+            },
+        });
+    }
+
+    function renderFundamentals(f) {
+        const body = document.getElementById('fundBody');
+        const meta = document.getElementById('fundMeta');
+        if (f.error) {
+            body.innerHTML = '<tr><td class="empty-state" colspan="2">' + f.error + '</td></tr>';
+            meta.textContent = '';
+            return;
+        }
+        if (!f.items || !f.items.length) {
+            body.innerHTML = '<tr><td class="empty-state" colspan="2">No fundamentals found in SEC filings.</td></tr>';
+            meta.textContent = '';
+            return;
+        }
+        body.innerHTML = f.items.map(item => {
+            let v;
+            if (item.unit === 'USD/shares' || item.unit === 'shares') {
+                v = item.unit === 'USD/shares' ? '$' + Number(item.value).toFixed(2) : fmtNum(item.value);
+            } else {
+                v = fmtMoney(item.value);
+            }
+            return '<tr><td class="fund-label">' + item.label + '</td><td class="fund-value">' + v + '</td></tr>';
+        }).join('');
+        const ends = f.items.map(i => i.end).filter(Boolean).sort();
+        const latest = ends.length ? ends[ends.length - 1] : null;
+        meta.textContent = (f.name || '') + (latest ? ' · period ending ' + latest : '') + (f.cik ? ' · CIK ' + f.cik : '');
+    }
+
+    async function lookup(ticker) {
+        clearError();
+        const t = (ticker || '').trim().toUpperCase();
+        if (!t) return;
+        // Friendly URL — push ?t=TICKER so refresh/share keeps the symbol.
+        const url = new URL(window.location.href);
+        url.searchParams.set('t', t);
+        history.replaceState(null, '', url);
+        input.value = t;
+
+        // Show the layout immediately so the user sees something happening
+        // while the two requests resolve in parallel.
+        results.classList.add('show');
+        document.getElementById('qName').textContent = 'Loading…';
+        document.getElementById('qSymbol').textContent = t;
+        document.getElementById('qPrice').textContent = '—';
+        document.getElementById('qChange').textContent = '—';
+        document.getElementById('fundBody').innerHTML = '<tr><td class="empty-state" colspan="2">Loading…</td></tr>';
+
+        const [quoteRes, fundRes] = await Promise.allSettled([
+            fetchJSON('/api/stock/' + encodeURIComponent(t) + '/quote'),
+            fetchJSON('/api/stock/' + encodeURIComponent(t) + '/fundamentals'),
+        ]);
+
+        if (quoteRes.status === 'fulfilled' && !quoteRes.value.error) {
+            renderQuote(quoteRes.value);
+        } else {
+            const msg = quoteRes.status === 'fulfilled' ? quoteRes.value.error : 'Could not load quote.';
+            showError(msg);
+            return;
+        }
+        renderFundamentals(fundRes.status === 'fulfilled' ? fundRes.value : { error: 'Could not load fundamentals.' });
+    }
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        lookup(input.value);
+    });
+    document.getElementById('suggestions').addEventListener('click', (e) => {
+        const btn = e.target.closest('.pill');
+        if (!btn) return;
+        lookup(btn.dataset.t);
+    });
+
+    // Initial load — if URL has ?t=TICKER, look it up.
+    const initial = new URLSearchParams(window.location.search).get('t');
+    if (initial) lookup(initial);
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+{% endblock %}

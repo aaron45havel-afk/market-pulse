@@ -286,6 +286,27 @@ async def finance(request: Request):
     return templates.TemplateResponse("finance.html", {"request": request})
 
 
+# ─── Stock lookup (public) ──────────────────────────────────────────
+# Single-ticker search: Yahoo Finance for live quote + 1Y chart, SEC
+# EDGAR for latest annual fundamentals. Public — no admin gate.
+
+@app.get("/stocks")
+async def stocks_page(request: Request):
+    return templates.TemplateResponse("stocks.html", {"request": request})
+
+
+@app.get("/api/stock/{ticker}/quote")
+async def api_stock_quote(ticker: str):
+    from stock_lookup import get_quote
+    return JSONResponse(get_quote(ticker))
+
+
+@app.get("/api/stock/{ticker}/fundamentals")
+async def api_stock_fundamentals(ticker: str):
+    from stock_lookup import get_fundamentals
+    return JSONResponse(get_fundamentals(ticker))
+
+
 # ─── Sign-up (Phase 1 of paywall — email capture only) ──────────────
 # Free for now. Captures email + optional name + source page so we
 # can email people when paid features launch. No login UI, no
