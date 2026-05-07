@@ -741,6 +741,13 @@ document.addEventListener('DOMContentLoaded', () => {
             topRow +
             `<div class="pop-stat"><span class="label">Avg home value</span><span>${fmtMoney(m.avg_home_value)}</span></div>` +
             `<div class="pop-stat"><span class="label">Avg rent /mo</span><span>${fmtMoney(m.avg_rent)}</span></div>` +
+            // Salary needed = annual gross income that puts a full PITI
+            // (P&I + state property tax + state insurance) inside a 28%
+            // front-end DTI, assuming 20% down at the current 30Y rate.
+            // Title attribute spells out the formula on hover.
+            (m.qualifying_income
+                ? `<div class="pop-stat" title="Annual gross income needed at 28% DTI, 20% down, 30Y fixed at the current rate. Includes state property tax + insurance."><span class="label">Salary needed</span><span>${fmtMoney(m.qualifying_income)}</span></div>`
+                : '') +
             // Action bar: primary CTA + social icon buttons all on one
             // line. Social hashtags fall back to a search query if a
             // metro lacks a curated tag (currently every metro has both).

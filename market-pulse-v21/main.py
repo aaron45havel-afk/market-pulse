@@ -93,6 +93,7 @@ async def national_map(request: Request):
         STATE_SUNSHINE_DAYS, STATE_INCOME_TAX_EFFECTIVE, STATE_POPULATION_GROWTH,
         CHOROPLETH_STATES, CHOROPLETH_METRICS,
         MORTGAGE_30Y_RATE, MORTGAGE_30Y_OBS_DATE,
+        qualifying_income,
     )
     metros = []
     for slug, cfg in STATE_METROS.items():
@@ -132,6 +133,10 @@ async def national_map(request: Request):
         sunshine = STATE_SUNSHINE_DAYS.get(cfg["state"], 200)
         state_income_tax = STATE_INCOME_TAX_EFFECTIVE.get(cfg["state"], 0.045)
         state_pop_growth = STATE_POPULATION_GROWTH.get(cfg["state"], 0.5)
+        # Salary needed to qualify for the metro's median home — 20% down,
+        # 30Y fixed at the current rate, 28% front-end DTI on full PITI.
+        # Same methodology as the affordability page so numbers stay in sync.
+        qual_income = qualifying_income(avg_home, cfg["state"], MORTGAGE_30Y_RATE)
         metros.append({
             "slug": slug,
             "state": cfg["state"],
@@ -152,6 +157,7 @@ async def national_map(request: Request):
             "avg_cap_rate_pct": round(avg_cap, 2),
             "avg_home_value": round(avg_home),
             "avg_rent": round(avg_rent),
+            "qualifying_income": qual_income,
             "avg_walk_score": round(avg_walk, 1),
             "avg_pct_bachelors": round(avg_school, 1),
             "avg_crime_index": round(avg_crime, 1),

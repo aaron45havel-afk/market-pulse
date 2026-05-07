@@ -1615,6 +1615,36 @@ def _monthly_mortgage_payment(principal, annual_rate_pct, years=30):
     return principal * (r * (1 + r) ** n) / ((1 + r) ** n - 1)
 
 
+def qualifying_income(home_value, state_code, mortgage_rate_pct,
+                      down_pct=0.20, dti=0.28, years=30):
+    """Annual gross income needed to qualify for a home at `home_value`.
+
+    Mirrors the NAR / HSH "salary needed to buy a median home" methodology:
+    20% down, 30-year fixed at the current rate, full PITI within a 28%
+    front-end DTI. Property tax + insurance use the same per-state tables
+    the affordability page already uses, so a number on the map and a
+    number on /affordability stay in sync.
+
+    Returns None if inputs are insufficient.
+    """
+    if not home_value or home_value <= 0 or mortgage_rate_pct is None:
+        return None
+    principal = home_value * (1 - down_pct)
+    p_and_i = _monthly_mortgage_payment(principal, mortgage_rate_pct, years)
+    if p_and_i is None:
+        return None
+    # State-level tax + insurance, with TX/FL homestead exemption applied.
+    tax_rate = STATE_PROPERTY_TAX_RATE.get(state_code, 0.011)  # ~US avg fallback
+    homestead = STATE_HOMESTEAD_EXEMPTION.get(state_code, 0)
+    taxable_value = max(home_value - homestead, 0)
+    monthly_tax = (taxable_value * tax_rate) / 12.0
+    monthly_ins = STATE_INSURANCE_ANNUAL.get(state_code, 1800) / 12.0
+    monthly_piti = p_and_i + monthly_tax + monthly_ins
+    if dti <= 0:
+        return None
+    return round((monthly_piti * 12) / dti)
+
+
 def _domino_status(series: dict | None, peak_window_months: int = 18,
                    pct_below_peak_threshold: float = 3.0) -> dict:
     """
