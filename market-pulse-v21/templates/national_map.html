@@ -607,7 +607,21 @@
            bleed into the tab bar / sheet edges. The card itself is
            the same HTML as the desktop popup so all .pop-* styles
            still apply. */
-        .bsheet-pane-detail { padding: 0.85rem 1rem 1.25rem; }
+        .bsheet-pane-detail { padding: 0.85rem 1rem 0; }
+        /* Pin the "View full report" CTA to the bottom of the pane
+           on mobile so it's always visible regardless of scroll
+           position — without this, the user had to scroll through
+           Forecast/Lifestyle/Demographics to reach it. position:
+           sticky bottom:0 on the wrapping row keeps it in view; the
+           solid background masks any list content scrolling under it. */
+        .bsheet-pane-detail .pop-cta-row {
+            position: sticky;
+            bottom: 0;
+            background: var(--surface);
+            margin: 0.7rem -1rem 0 !important;
+            padding: 0.65rem 1rem 0.85rem !important;
+            z-index: 1;
+        }
         /* The Detail tab carries an inline × so the user has an
            obvious one-tap dismiss without needing to tap the map. */
         .bsheet-tabs button[data-bs="detail"] {
@@ -2927,7 +2941,7 @@ function buildZipDetailHTML(z) {
         optStat("Bachelor's+", z.pct_bachelors, v => v.toFixed(0) + '%') +
         optStat('Population', z.population, v => v.toLocaleString('en-US')) +
         imputedFlag +
-        `<div style="margin-top:0.7rem; padding-top:0.5rem; border-top:1px solid var(--border);"><a href="/zip/${z.zip}" class="pop-cta" style="display:block; text-align:center; padding:0.45rem 0.7rem; background:var(--accent); color:#0a0e1a !important; border-radius:6px; font-size:0.78rem; font-weight:700; text-decoration:none;">View full report &rarr;</a></div>`
+        `<div class="pop-cta-row" style="margin-top:0.7rem; padding-top:0.5rem; border-top:1px solid var(--border);"><a href="/zip/${z.zip}" class="pop-cta" style="display:block; text-align:center; padding:0.45rem 0.7rem; background:var(--accent); color:#0a0e1a !important; border-radius:6px; font-size:0.78rem; font-weight:700; text-decoration:none;">View full report &rarr;</a></div>`
     );
 }
 
