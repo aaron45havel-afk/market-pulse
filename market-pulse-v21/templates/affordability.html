@@ -1412,15 +1412,43 @@ function renderCostChart(rows) {
     if (!canvas || typeof Chart === 'undefined') return;
     const years = 10;
     const labels = Array.from({ length: years }, (_, i) => `Yr ${i + 1}`);
-    const datasets = rows.map(r => ({
-        label: STATE_DATA[r.state].name,
+
+    // Only the eight states in STATE_COLORS get individual lines —
+    // the other 43 produced visually-identical gray lines that
+    // crushed the legend, drowned the colored ones, and flattened
+    // the "diverging lines" story the chart is meant to tell. Roll
+    // the rest into a single dashed median so the highlighted
+    // states have something to diverge *from*.
+    const allSeries = rows.map(r => ({
+        state: r.state,
         data: cumulativeByYear(r.piti, r.piti.annualPropertyTax, PROP_TAX_GROWTH[r.state] || 0.03, years),
-        borderColor: STATE_COLORS[r.state] || '#9ca3af',
-        backgroundColor: STATE_COLORS[r.state] || '#9ca3af',
-        tension: 0.2,
-        borderWidth: 2,
-        pointRadius: 3,
     }));
+    const medianData = labels.map((_, yi) => {
+        const vals = allSeries.map(s => s.data[yi]).sort((a, b) => a - b);
+        return vals[Math.floor(vals.length / 2)];
+    });
+
+    const datasets = allSeries
+        .filter(s => STATE_COLORS[s.state])
+        .map(s => ({
+            label: STATE_DATA[s.state].name,
+            data: s.data,
+            borderColor: STATE_COLORS[s.state],
+            backgroundColor: STATE_COLORS[s.state],
+            tension: 0.2,
+            borderWidth: 2,
+            pointRadius: 3,
+        }));
+    datasets.push({
+        label: 'All states (median)',
+        data: medianData,
+        borderColor: '#9ca3af',
+        backgroundColor: '#9ca3af',
+        borderDash: [5, 5],
+        tension: 0.2,
+        borderWidth: 1.5,
+        pointRadius: 2,
+    });
 
     if (_chart) {
         _chart.data.labels = labels;
