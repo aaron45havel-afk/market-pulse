@@ -411,6 +411,64 @@
     .rail-tab { position: relative; }
     .rail-tab .tab-badge { position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent2); display: none; }
     .rail-tab.has-active .tab-badge { display: block; }
+
+    /* ── Mobile/tablet bottom tab bar ──
+       At ≤1100px the three columns stack vertically. Without intervention
+       the map-col gets squeezed to ~0 height (sidebar 360px + leader rail
+       50vh + map header 80px > viewport on phones). Standard map-app
+       pattern: Map / Data / List tabs, only one pane visible at a time so
+       each gets the full viewport height. Above 1100px the tab bar is
+       hidden and all three panes show side-by-side. */
+    .map-tabs { display: none; }
+    @media (max-width: 1100px) {
+        .map-tabs {
+            display: flex;
+            flex: 0 0 auto;
+            background: var(--surface);
+            border-top: 1px solid var(--line, var(--border));
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .mt-tab {
+            flex: 1; padding: 0.55rem 0.5rem;
+            background: transparent; border: none;
+            color: var(--ink-3, var(--text-dim));
+            font-family: var(--sans);
+            font-size: 0.78rem; font-weight: 500;
+            cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+            border-top: 2px solid transparent;
+            transition: color 0.12s, background 0.12s, border-color 0.12s;
+        }
+        .mt-tab svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .mt-tab:hover { color: var(--ink, var(--text)); }
+        .mt-tab.active {
+            color: var(--primary, var(--accent2));
+            border-top-color: var(--primary, var(--accent2));
+            background: var(--primary-soft, rgba(91, 77, 224, 0.08));
+            font-weight: 600;
+        }
+
+        /* Active-pane discipline. Only the selected pane shows; it gets
+           the full remaining space so children that rely on flex-fill
+           (the map canvas, the lb-list scroll area) work correctly. */
+        .map-body[data-mt="map"] .data-sidebar,
+        .map-body[data-mt="map"] .leader-rail { display: none; }
+        .map-body[data-mt="map"] .map-col {
+            flex: 1 1 auto; height: auto; min-height: 0;
+        }
+
+        .map-body[data-mt="data"] .map-col,
+        .map-body[data-mt="data"] .leader-rail { display: none; }
+        .map-body[data-mt="data"] .data-sidebar {
+            flex: 1 1 auto; height: auto; max-height: none; min-height: 0;
+        }
+
+        .map-body[data-mt="list"] .map-col,
+        .map-body[data-mt="list"] .data-sidebar { display: none; }
+        .map-body[data-mt="list"] .leader-rail {
+            flex: 1 1 auto; height: auto; min-height: 0;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -436,7 +494,11 @@
         </div>
     </div>
 
-    <div class="map-body">
+    <!-- data-mt = active mobile tab. Defaults to "map" so the map pane is
+         visible on first paint at ≤1100px. Above 1100px the attribute has
+         no effect (no media-query rules match) and all three children show
+         in a row. -->
+    <div class="map-body" data-mt="map">
         <!-- Left data sidebar — reventure-style picker. Search filters
              visible metrics; categories are collapsible. The selected
              radio drives the choropleth tint. Built dynamically from
@@ -593,6 +655,25 @@
             </div>
         </aside>
     </div>
+
+    <!-- Mobile/tablet bottom tab bar. Hidden above 1100px (where the
+         three columns fit side-by-side). On phones it's the only way
+         to switch between Map / Data / List without the panes
+         fighting for the same vertical space. -->
+    <nav class="map-tabs" role="tablist" aria-label="Map sections">
+        <button type="button" class="mt-tab active" data-mt="map" role="tab" aria-selected="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span>Map</span>
+        </button>
+        <button type="button" class="mt-tab" data-mt="data" role="tab" aria-selected="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="20" x2="21" y2="20"/><rect x="6" y="10" width="3" height="9"/><rect x="11" y="5" width="3" height="14"/><rect x="16" y="13" width="3" height="6"/></svg>
+            <span>Data</span>
+        </button>
+        <button type="button" class="mt-tab" data-mt="list" role="tab" aria-selected="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
+            <span>List</span>
+        </button>
+    </nav>
 </div>
 
 <script id="metros-data" type="application/json">{{ metros | tojson }}</script>
@@ -807,7 +888,39 @@ document.addEventListener('DOMContentLoaded', () => {
     initRateStress();
     initZipLayer();
     initMapSearch();
+    initMobileTabs();
 });
+
+// ─── Mobile bottom tab bar (Map / Data / List) ──────────────────────
+// Only matters at ≤1100px where the data sidebar + leader rail would
+// otherwise squeeze the map to 0px tall. We toggle data-mt on .map-body
+// to flip CSS rules that hide the inactive panes. Leaflet caches the
+// container size at init time, so when the map pane comes back into
+// view from being display:none we have to call invalidateSize() or it
+// renders blank tiles until the user pans.
+function initMobileTabs() {
+    const mapBody = document.querySelector('.map-body');
+    const tabs = document.querySelectorAll('.map-tabs .mt-tab');
+    if (!mapBody || !tabs.length) return;
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const pane = tab.dataset.mt;
+            tabs.forEach(t => {
+                const active = t === tab;
+                t.classList.toggle('active', active);
+                t.setAttribute('aria-selected', active ? 'true' : 'false');
+            });
+            mapBody.dataset.mt = pane;
+            if (pane === 'map' && window._mpMap) {
+                // Two ticks: first lets layout settle after display
+                // changes, second ensures Leaflet has reloaded tiles.
+                requestAnimationFrame(() => {
+                    window._mpMap.invalidateSize();
+                });
+            }
+        });
+    });
+}
 
 // ─── Right-rail tabs (Top Metros | Filter & Match) ──────────────────
 // Lightweight switcher between the two rail panes. Resizing the
