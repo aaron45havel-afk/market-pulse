@@ -52,9 +52,12 @@
        reads as a single compact strip. */
     @media (max-width: 600px) {
         .horizons-grid { grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
-        .horizon-card { padding: 0.55rem 0.55rem; border-radius: 8px; }
+        .horizon-card { padding: 0.55rem 0.55rem; border-radius: 8px; min-width: 0; }
         .horizon-card .label { font-size: 0.55rem; }
-        .horizon-card .value { font-size: 0.85rem; margin-top: 0.1rem; }
+        /* nowrap + min-width:0 above prevents long values like
+           $3,442,812 (uncompacted form) from forcing the grid to
+           overflow or stretch the cell wider than its 1fr share. */
+        .horizon-card .value { font-size: 0.95rem; margin-top: 0.1rem; white-space: nowrap; }
         .horizon-card .delta { font-size: 0.7rem; margin-top: 0.1rem; }
     }
 
@@ -153,7 +156,10 @@
         {# 12-month tile is intentionally omitted — it already shows in
            the hero card AND in the chart's forecast cap, so a third
            tile here was redundant clutter. 3-/6-/60-month are unique
-           to this row. #}
+           to this row.
+           Values render in compact form ($3.4M, $850K) so 7-digit
+           home values fit in a 3-col mobile strip without overflowing
+           or wrapping. The full number is still in the hero card. #}
         {% for h, v, p in [
             (3,  zip.forecast_3mo_value,  zip.forecast_3mo_pct),
             (6,  zip.forecast_6mo_value,  zip.forecast_6mo_pct),
@@ -161,7 +167,7 @@
         ] if v %}
         <div class="horizon-card">
             <div class="label">{% if h == 60 %}5 year{% else %}{{ h }} month{% endif %}</div>
-            <div class="value">${{ '{:,}'.format(v) }}</div>
+            <div class="value">{% if v >= 1000000 %}${{ '%.2f'|format(v / 1000000) }}M{% elif v >= 1000 %}${{ '%.0f'|format(v / 1000) }}K{% else %}${{ '{:,}'.format(v) }}{% endif %}</div>
             {% if p is not none %}
             <div class="delta {% if p >= 0 %}up{% else %}down{% endif %}">
                 {% if p >= 0 %}+{% endif %}{{ '%.1f'|format(p) }}%
