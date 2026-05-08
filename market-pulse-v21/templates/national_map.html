@@ -2396,7 +2396,13 @@ function renderZipLayer(zips) {
     // Larger dots + darker stroke at higher zoom so they actually
     // read against the (now-faded) choropleth and the base map.
     // Was 4/5/7 with white stroke — too pale at city zoom.
-    const radius = z >= 13 ? 8 : z >= 11 ? 6 : 5;
+    // On touch devices, bump the radius ~70% so each dot is a
+    // finger-sized hit target (CircleMarker's hit area equals its
+    // visual radius — there's no separate interactive radius).
+    const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    const radius = isTouch
+        ? (z >= 13 ? 13 : z >= 11 ? 11 : 9)
+        : (z >= 13 ? 8 : z >= 11 ? 6 : 5);
     const strokeColor = z >= 11 ? '#1f2937' : '#fff';   // dark stroke pops at city zoom
     const strokeWeight = z >= 11 ? 1.2 : 1;
     zips.forEach(z => {
