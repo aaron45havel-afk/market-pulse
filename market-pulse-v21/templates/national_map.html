@@ -1294,28 +1294,45 @@ function initBottomSheet(map) {
     // This is what Apple Maps / Zillow do — the sheet feels like a
     // continuous extension of the content scroll.
     const grip = sheet.querySelector('.bsheet-grip');
-    const contentEl = sheet.querySelector('.bsheet-content');
+    const handleEl = sheet.querySelector('.bsheet-handle');
     const COLLAPSED = 110;
+    // Drag threshold: a tap on a finger-sized button isn't perfectly
+    // still — finger jitter routinely shows 4–8px between touchstart
+    // and touchend. The old 4px threshold was classifying jittery
+    // taps on Match/Metric tabs as drags and suppressing their
+    // synthesized clicks (the tab "didn't respond"). 10px tolerates
+    // jitter while still catching deliberate drags fast.
+    const DRAG_THRESHOLD = 10;
     const expandedH = () => Math.round(window.innerHeight * 0.62);
     let startY = null;
     let startH = null;
     let moved = false;
     let dragging = false;       // committed to a sheet drag (vs letting scroll happen)
     let startedInGrip = false;
+    let startedOnHandle = false;
     let suppressNextClick = false;
 
     function activePane() {
         return sheet.querySelector('.bsheet-pane.active');
     }
     function snap() {
-        if (!moved) {
-            sheet.style.height = '';
-            sheet.classList.toggle('is-expanded');
-        } else {
+        if (moved) {
+            // Real drag → snap to nearest anchor.
             const h = sheet.getBoundingClientRect().height;
             const mid = (COLLAPSED + expandedH()) / 2;
             sheet.style.height = '';
             sheet.classList.toggle('is-expanded', h > mid);
+        } else if (startedOnHandle) {
+            // Tap on the handle (the visual drag indicator) is the
+            // canonical "toggle the sheet" affordance. Tab taps are
+            // NOT routed here — the tab's own click handler manages
+            // expansion. (This used to toggle for any grip tap,
+            // which fought with tab-click expansion logic and caused
+            // visible flicker when tapping Match/Metric.)
+            sheet.style.height = '';
+            sheet.classList.toggle('is-expanded');
+        } else {
+            sheet.style.height = '';
         }
         if (map) requestAnimationFrame(() => map.invalidateSize());
     }
@@ -1325,6 +1342,7 @@ function initBottomSheet(map) {
         startH = sheet.getBoundingClientRect().height;
         moved = false;
         startedInGrip = grip.contains(e.target);
+        startedOnHandle = handleEl && handleEl.contains(e.target);
         dragging = startedInGrip;  // grip → drag immediately; content → wait & see
         if (dragging) sheet.classList.add('is-dragging');
     }
@@ -1333,7 +1351,7 @@ function initBottomSheet(map) {
         const touch = e.touches ? e.touches[0] : e;
         const y = touch.clientY;
         const delta = startY - y;   // + = swiping up, − = swiping down
-        if (Math.abs(delta) < 4) return;
+        if (Math.abs(delta) < DRAG_THRESHOLD) return;
 
         // Decision time for content-started gestures: drag the sheet
         // only if it makes sense (collapsed, or at top of scroll +
@@ -1361,10 +1379,14 @@ function initBottomSheet(map) {
         if (startY == null) return;
         const wasDragging = dragging;
         sheet.classList.remove('is-dragging');
+        // Only suppress the synthesized click on a *real* drag (one
+        // that actually moved past DRAG_THRESHOLD). Otherwise tabs
+        // would silently fail when finger jitter slipped over the
+        // old 4px threshold.
         if (moved && wasDragging && startedInGrip) suppressNextClick = true;
         if (wasDragging) snap();
         startY = null; startH = null; moved = false;
-        dragging = false; startedInGrip = false;
+        dragging = false; startedInGrip = false; startedOnHandle = false;
     }
 
     // Listen on the whole sheet so a drag from anywhere works.
