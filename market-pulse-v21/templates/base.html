@@ -286,12 +286,19 @@
         @media (max-width: 768px) {
             :root { --sidebar-w: 0px; }
             .app-shell { display: block; }   /* mobile: single column, sidebar overlays via fixed positioning */
-            .sidebar { position: fixed; top: 0; left: 0; width: 240px; flex-basis: auto; height: 100vh; z-index: 60; transform: translateX(-100%); transition: transform 0.2s; box-shadow: var(--shadow-3); }
+            /* z-index 1200/1190/1180 sit above the map page's floating
+               UI (map-search + zip-banner are at 1000 and Leaflet
+               controls also live at 1000). .map-page uses
+               position:relative without z-index so it doesn't create
+               a stacking context, which means a sidebar at z:60 would
+               render *behind* the search bar. Drawer + backdrop +
+               topbar must all win over the map chrome. */
+            .sidebar { position: fixed; top: 0; left: 0; width: 240px; flex-basis: auto; height: 100vh; z-index: 1200; transform: translateX(-100%); transition: transform 0.2s; box-shadow: var(--shadow-3); }
             .sidebar.open { transform: translateX(0); }
-            .mobile-bar { display: flex; align-items: center; gap: 0.75rem; background: var(--surface); border-bottom: 1px solid var(--line); padding: 0.6rem 1rem; height: 52px; position: sticky; top: 0; z-index: 50; }
+            .mobile-bar { display: flex; align-items: center; gap: 0.75rem; background: var(--surface); border-bottom: 1px solid var(--line); padding: 0.6rem 1rem; height: 52px; position: sticky; top: 0; z-index: 1180; }
             .mobile-bar .hamburger { background: transparent; border: none; color: var(--ink); font-size: 1.5rem; cursor: pointer; padding: 0.25rem 0.5rem; }
             .mobile-bar .title { font-family: var(--display); font-style: italic; font-size: 1.1rem; font-weight: 400; background: var(--grad-primary); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-            .mobile-overlay { display: none; position: fixed; inset: 0; background: rgb(26 25 23 / 0.4); z-index: 55; }
+            .mobile-overlay { display: none; position: fixed; inset: 0; background: rgb(26 25 23 / 0.4); z-index: 1190; }
             .mobile-overlay.open { display: block; }
             .container { padding: 1rem; }
         }

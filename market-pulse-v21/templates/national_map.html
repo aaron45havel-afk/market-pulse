@@ -224,6 +224,11 @@
     /* Base tiles are CartoDB Dark Matter (already designed for overlays).
        No filter needed — drop the brightness/saturate CSS that was
        darkening OSM in the prior layout. */
+    /* Lift popups above the map's floating UI (map-search + zip-banner
+       at z:1000, Leaflet controls also at z:1000). Default popup pane
+       z-index is 700, so without this override the search bar renders
+       on top of the popup card and clips the title row on mobile. */
+    .leaflet-popup-pane { z-index: 1100; }
     .leaflet-popup-content-wrapper { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
     .leaflet-popup-tip { background: var(--surface); }
     .leaflet-popup-content { margin: 0.7rem 0.9rem; font-size: 0.85rem; min-width: 220px; }
@@ -2279,6 +2284,20 @@ function initZipLayer() {
     fetchZipsForViewport();
 }
 
+// Pop-open guard: opening a popup auto-pans the map (autoPan:true),
+// which fires moveend → fetchZipsForViewport → renderZipLayer →
+// clearLayers, killing the popup mid-read. The reopen logic relies
+// on the same ZIP coming back in the new bbox, which fails near
+// viewport edges on mobile. Skipping the refetch while any popup is
+// open keeps it sticky; the next pan after closing it refreshes.
+function _isAnyZipPopupOpen() {
+    for (const k in _zipMarkers) {
+        const mk = _zipMarkers[k];
+        if (mk && mk.isPopupOpen && mk.isPopupOpen()) return true;
+    }
+    return false;
+}
+
 function setZipStatus(text, isLoading = false) {
     const el = document.getElementById('zipStatus');
     if (!el) return;
@@ -2295,6 +2314,10 @@ function showZipBanner(message) {
 
 async function fetchZipsForViewport() {
     if (!_zipsEnabled || !_zipLayer || !window._mpMap) return;
+    // Don't wipe + rebuild markers while the user is reading a popup —
+    // see _isAnyZipPopupOpen above for why. The next moveend after the
+    // popup closes will pick up any newly-in-view ZIPs.
+    if (_isAnyZipPopupOpen()) return;
     const z = window._mpMap.getZoom();
     if (z < ZIP_FETCH_MIN_ZOOM) {
         // Too zoomed out — clear any rendered ZIPs so we don't have
