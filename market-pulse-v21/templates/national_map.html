@@ -596,6 +596,25 @@
             overscroll-behavior: contain;
         }
         .bsheet-pane.active { display: block; }
+        /* Detail pane gets a bit of padding so the ZIP card doesn't
+           bleed into the tab bar / sheet edges. The card itself is
+           the same HTML as the desktop popup so all .pop-* styles
+           still apply. */
+        .bsheet-pane-detail { padding: 0.85rem 1rem 1.25rem; }
+        /* The Detail tab carries an inline × so the user has an
+           obvious one-tap dismiss without needing to tap the map. */
+        .bsheet-tabs button[data-bs="detail"] {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+        }
+        .bsheet-tab-close {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: var(--surface2); color: var(--text-dim);
+            font-size: 0.85rem; line-height: 1;
+            font-weight: 600;
+        }
+        .bsheet-tabs button[data-bs="detail"][hidden] { display: none; }
 
         /* Override the existing tab-system display:none + width rules
            so the relocated panels fill their bsheet pane. !important
@@ -1126,21 +1145,64 @@ function initBottomSheet(map) {
             '<div class="bsheet-tabs" role="tablist">' +
                 '<button type="button" class="active" data-bs="top" role="tab" aria-selected="true">Top</button>' +
                 '<button type="button" data-bs="filters" role="tab" aria-selected="false">Filters</button>' +
+                '<button type="button" data-bs="detail" role="tab" aria-selected="false" hidden>Detail<span class="bsheet-tab-close" aria-label="Close detail">×</span></button>' +
             '</div>' +
         '</div>' +
         '<div class="bsheet-content">' +
             '<div class="bsheet-pane active" data-bs="top"></div>' +
             '<div class="bsheet-pane" data-bs="filters"></div>' +
+            '<div class="bsheet-pane bsheet-pane-detail" data-bs="detail"></div>' +
         '</div>';
     mapBody.appendChild(sheet);
 
     sheet.querySelector('.bsheet-pane[data-bs="top"]').appendChild(leaderRail);
     sheet.querySelector('.bsheet-pane[data-bs="filters"]').appendChild(dataSidebar);
 
+    // Expose globals for renderZipLayer / metro pin handlers to push
+    // detail content into the sheet without coupling to internals.
+    window._mpSheet = sheet;
+    window.showZipInSheet = function (z) {
+        const pane = sheet.querySelector('.bsheet-pane[data-bs="detail"]');
+        const tab = sheet.querySelector('.bsheet-tabs button[data-bs="detail"]');
+        if (!pane || !tab) return;
+        pane.innerHTML = buildZipDetailHTML(z);
+        pane.scrollTop = 0;
+        tab.hidden = false;
+        // Activate detail tab + expand sheet so user reads the card
+        // immediately. Pane visibility is the same toggle the tab
+        // click handler uses, just done programmatically.
+        sheet.querySelectorAll('.bsheet-tabs button').forEach(b => {
+            const active = b === tab;
+            b.classList.toggle('active', active);
+            b.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        sheet.querySelectorAll('.bsheet-pane').forEach(p => {
+            p.classList.toggle('active', p.dataset.bs === 'detail');
+        });
+        if (!sheet.classList.contains('is-expanded')) {
+            sheet.classList.add('is-expanded');
+            if (map) requestAnimationFrame(() => map.invalidateSize());
+        }
+    };
+    window.closeSheetDetail = function () {
+        const tab = sheet.querySelector('.bsheet-tabs button[data-bs="detail"]');
+        const topTab = sheet.querySelector('.bsheet-tabs button[data-bs="top"]');
+        if (tab) tab.hidden = true;
+        if (topTab) topTab.click();
+    };
+
     // Tab switching. Tapping while collapsed also expands so users
     // don't have to find the (small) drag handle to see content.
+    // The Detail tab's × child closes the tab entirely instead of
+    // just switching to it.
     sheet.querySelectorAll('.bsheet-tabs button').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+            // × click on the Detail tab → close detail, switch to Top.
+            if (e.target.classList.contains('bsheet-tab-close')) {
+                e.stopPropagation();
+                window.closeSheetDetail();
+                return;
+            }
             const target = btn.dataset.bs;
             sheet.querySelectorAll('.bsheet-tabs button').forEach(b => {
                 const active = b === btn;
@@ -1157,19 +1219,39 @@ function initBottomSheet(map) {
         });
     });
 
-    // Drag region = the whole grip (handle + tab bar, ~80px). On
-    // touchend, if the gesture actually moved (>4px) we suppress the
-    // synthesized click that would otherwise fire on whatever tab
-    // button the touch ended over — so dragging from a tab no longer
-    // also switches tabs.
+    // Tap the map (away from any marker) → close any open Detail tab.
+    // map.on('click') fires only when the click hits empty map area,
+    // not when it hits a marker (markers stop propagation), so this
+    // is the right hook for "tapped elsewhere → dismiss".
+    if (map) {
+        map.on('click', () => {
+            const tab = sheet.querySelector('.bsheet-tabs button[data-bs="detail"]');
+            if (tab && !tab.hidden) window.closeSheetDetail();
+        });
+    }
+
+    // Two ways to drag the sheet:
+    //  1. From the grip (handle + tabs, ~80px header) — always drags.
+    //  2. From the content pane — *chained scroll*. If the user swipes
+    //     down while the content is at scrollTop=0, OR the sheet is
+    //     collapsed, hijack the gesture as a sheet drag. Otherwise
+    //     let the browser scroll the list normally.
+    // This is what Apple Maps / Zillow do — the sheet feels like a
+    // continuous extension of the content scroll.
     const grip = sheet.querySelector('.bsheet-grip');
+    const contentEl = sheet.querySelector('.bsheet-content');
     const COLLAPSED = 110;
     const expandedH = () => Math.round(window.innerHeight * 0.62);
     let startY = null;
     let startH = null;
     let moved = false;
+    let dragging = false;       // committed to a sheet drag (vs letting scroll happen)
+    let startedInGrip = false;
     let suppressNextClick = false;
 
+    function activePane() {
+        return sheet.querySelector('.bsheet-pane.active');
+    }
     function snap() {
         if (!moved) {
             sheet.style.height = '';
@@ -1183,40 +1265,67 @@ function initBottomSheet(map) {
         if (map) requestAnimationFrame(() => map.invalidateSize());
     }
     function start(e) {
-        const y = e.touches ? e.touches[0].clientY : e.clientY;
-        startY = y;
+        const touch = e.touches ? e.touches[0] : e;
+        startY = touch.clientY;
         startH = sheet.getBoundingClientRect().height;
         moved = false;
-        sheet.classList.add('is-dragging');
+        startedInGrip = grip.contains(e.target);
+        dragging = startedInGrip;  // grip → drag immediately; content → wait & see
+        if (dragging) sheet.classList.add('is-dragging');
     }
     function move(e) {
         if (startY == null) return;
-        const y = e.touches ? e.touches[0].clientY : e.clientY;
-        const delta = startY - y;
-        if (Math.abs(delta) > 4) moved = true;
+        const touch = e.touches ? e.touches[0] : e;
+        const y = touch.clientY;
+        const delta = startY - y;   // + = swiping up, − = swiping down
+        if (Math.abs(delta) < 4) return;
+
+        // Decision time for content-started gestures: drag the sheet
+        // only if it makes sense (collapsed, or at top of scroll +
+        // swiping down). Otherwise bail and let the content scroll.
+        if (!dragging) {
+            const pane = activePane();
+            const collapsed = !sheet.classList.contains('is-expanded');
+            const atTop = !pane || pane.scrollTop <= 0;
+            const swipingDown = delta < 0;
+            if (collapsed || (atTop && swipingDown)) {
+                dragging = true;
+                sheet.classList.add('is-dragging');
+            } else {
+                startY = null;
+                return;
+            }
+        }
+
+        moved = true;
         const newH = Math.max(COLLAPSED, Math.min(window.innerHeight * 0.85, startH + delta));
         sheet.style.height = newH + 'px';
         if (e.cancelable) e.preventDefault();
     }
     function end() {
         if (startY == null) return;
+        const wasDragging = dragging;
         sheet.classList.remove('is-dragging');
-        if (moved) suppressNextClick = true;
-        snap();
+        if (moved && wasDragging && startedInGrip) suppressNextClick = true;
+        if (wasDragging) snap();
         startY = null; startH = null; moved = false;
+        dragging = false; startedInGrip = false;
     }
 
-    grip.addEventListener('touchstart', start, { passive: true });
-    grip.addEventListener('touchmove', move, { passive: false });
-    grip.addEventListener('touchend', end);
-    grip.addEventListener('touchcancel', end);
-    grip.addEventListener('mousedown', (e) => { start(e); e.preventDefault(); });
+    // Listen on the whole sheet so a drag from anywhere works.
+    // touchmove must be non-passive so we can preventDefault when we
+    // commit to a sheet drag. touchstart stays passive for perf.
+    sheet.addEventListener('touchstart', start, { passive: true });
+    sheet.addEventListener('touchmove', move, { passive: false });
+    sheet.addEventListener('touchend', end);
+    sheet.addEventListener('touchcancel', end);
+    sheet.addEventListener('mousedown', (e) => { start(e); if (startedInGrip) e.preventDefault(); });
     document.addEventListener('mousemove', (e) => { if (startY != null) move(e); });
     document.addEventListener('mouseup', () => { if (startY != null) end(); });
 
-    // Capture-phase click swallow: runs before the tab-button click
-    // handlers so a drag-then-release on a tab doesn't also flip the
-    // active tab. Only swallows the *next* click after a real drag.
+    // Capture-phase click swallow on the grip: a drag-then-release
+    // on a tab shouldn't also flip the active tab. Only suppresses
+    // when the gesture actually started in the grip and moved.
     grip.addEventListener('click', (e) => {
         if (!suppressNextClick) return;
         e.stopPropagation();
@@ -2686,6 +2795,58 @@ async function fetchZipsForViewport() {
     }
 }
 
+// Build the ZIP detail card HTML. Used for both the desktop
+// Leaflet popup and the mobile bottom-sheet Detail pane — single
+// source of truth so the two surfaces never drift.
+function buildZipDetailHTML(z) {
+    const optStat = (label, value, fmt) =>
+        value == null ? '' : `<div class="pop-stat"><span class="label">${label}</span><span>${fmt ? fmt(value) : value}</span></div>`;
+    const yoyClass = z.home_value_yoy == null ? '' : (z.home_value_yoy >= 0 ? 'up' : 'down');
+    const yoyDisplay = z.home_value_yoy == null
+        ? null
+        : `<span class="${yoyClass}">${z.home_value_yoy >= 0 ? '+' : ''}${z.home_value_yoy.toFixed(1)}%</span>`;
+    const titleName = z.neighborhood
+        ? `${z.zip} · ${z.neighborhood}`
+        : `ZIP ${z.zip}`;
+    const subParts = [];
+    if (z.name) subParts.push(z.name);
+    if (z.county) subParts.push(z.county);
+    const subtitle = subParts.join(' · ') || z.state;
+    const imputedFlag = z.is_imputed
+        ? '<div style="font-size:10px; color:#92400e; margin-top:2px;">⚠ rent imputed (no ZORI)</div>'
+        : '';
+    return (
+        `<div style="font-weight:700; font-size:0.95rem;">${titleName}</div>` +
+        `<div style="font-size:0.72rem; color:var(--text-dim); margin-bottom:0.5rem;">${subtitle}</div>` +
+        `<div class="pop-section-label">Market</div>` +
+        `<div class="pop-stat"><span class="label">Home value</span><span>${fmtMoney(z.home_value)}</span></div>` +
+        (yoyDisplay ? `<div class="pop-stat"><span class="label">YoY</span><span>${yoyDisplay}</span></div>` : '') +
+        `<div class="pop-stat"><span class="label">Rent /mo</span><span>${fmtMoney(z.rent)}</span></div>` +
+        `<div class="pop-stat"><span class="label">Cap rate</span><span>${z.cap_rate_pct.toFixed(2)}%</span></div>` +
+        (z.qualifying_income
+            ? `<div class="pop-stat" title="Annual gross income needed at 28% DTI, 20% down, 30Y fixed at the current rate. Includes state property tax + insurance."><span class="label">Salary needed</span><span>${fmtMoney(z.qualifying_income)}</span></div>`
+            : '') +
+        `<div class="pop-stat"><span class="label">Composite</span><span style="color:${scoreColor(z.composite)}; font-weight:700;">${z.composite.toFixed(1)}</span></div>` +
+        ((z.forecast_12mo != null) ? (
+            `<div class="pop-section-label" style="margin-top:0.55rem;">Forecast (12mo) <span style="background:rgba(245,158,11,0.18); color:#f59e0b; padding:1px 5px; border-radius:3px; font-size:0.6rem; font-weight:700; margin-left:0.3rem;">BETA</span></div>` +
+            `<div class="pop-stat"><span class="label">Target value</span><span>${fmtMoney(z.forecast_12mo)}</span></div>` +
+            ((z.forecast_pct_12mo != null) ?
+                `<div class="pop-stat"><span class="label">Change</span><span class="${z.forecast_pct_12mo >= 0 ? 'up' : 'down'}">${z.forecast_pct_12mo >= 0 ? '+' : ''}${z.forecast_pct_12mo.toFixed(1)}%</span></div>`
+                : '')
+        ) : '') +
+        `<div class="pop-section-label" style="margin-top:0.55rem;">Lifestyle</div>` +
+        optStat('Walk score', z.walk_score, v => v.toFixed(0)) +
+        optStat('Restaurants', z.restaurant_score, v => v.toFixed(0) + '/100') +
+        optStat('Crime (lower=safer)', z.crime_index, v => v.toFixed(0)) +
+        `<div class="pop-section-label" style="margin-top:0.55rem;">Demographics</div>` +
+        optStat('Median income', z.income, fmtMoney) +
+        optStat("Bachelor's+", z.pct_bachelors, v => v.toFixed(0) + '%') +
+        optStat('Population', z.population, v => v.toLocaleString('en-US')) +
+        imputedFlag +
+        `<div style="margin-top:0.7rem; padding-top:0.5rem; border-top:1px solid var(--border);"><a href="/zip/${z.zip}" class="pop-cta" style="display:block; text-align:center; padding:0.45rem 0.7rem; background:var(--accent); color:#0a0e1a !important; border-radius:6px; font-size:0.78rem; font-weight:700; text-decoration:none;">View full report &rarr;</a></div>`
+    );
+}
+
 function renderZipLayer(zips) {
     // Capture which ZIP currently has its popup open BEFORE we wipe
     // markers. Without this, every moveend fires fetchZipsForViewport
@@ -2711,6 +2872,7 @@ function renderZipLayer(zips) {
     // finger-sized hit target (CircleMarker's hit area equals its
     // visual radius — there's no separate interactive radius).
     const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    const useSheet = document.body.classList.contains('has-bsheet');
     const radius = isTouch
         ? (z >= 13 ? 13 : z >= 11 ? 11 : 9)
         : (z >= 13 ? 8 : z >= 11 ? 6 : 5);
@@ -2729,108 +2891,25 @@ function renderZipLayer(zips) {
             // the z-stacking deterministic regardless of add order.
             pane: 'overlayPane',
         });
-        const imputedFlag = z.is_imputed
-            ? '<div style="font-size:10px; color:#92400e; margin-top:2px;">⚠ rent imputed (no ZORI)</div>'
-            : '';
         m.bindTooltip(
             `<strong>${z.zip}</strong> · ${z.state}<br>` +
             `${fmtMoney(z.home_value)} · ${fmtMoney(z.rent)}/mo<br>` +
             `cap ${z.cap_rate_pct.toFixed(1)}% · score <strong>${z.composite.toFixed(0)}</strong>`,
             { sticky: true, opacity: 0.95, direction: 'top' }
         );
-        // Helper: render an optional stat row only if the value is
-        // present (server returns nulls for ZIPs missing that field).
-        const optStat = (label, value, fmt) =>
-            value == null ? '' : `<div class="pop-stat"><span class="label">${label}</span><span>${fmt ? fmt(value) : value}</span></div>`;
-        const yoyClass = z.home_value_yoy == null ? '' : (z.home_value_yoy >= 0 ? 'up' : 'down');
-        const yoyDisplay = z.home_value_yoy == null
-            ? null
-            : `<span class="${yoyClass}">${z.home_value_yoy >= 0 ? '+' : ''}${z.home_value_yoy.toFixed(1)}%</span>`;
-        // Title prefers the most-specific name we have:
-        //   neighborhood > city > "ZIP #####"
-        // and the subtitle is City + County. Old popups duplicated state
-        // ("Columbus, OH · OH") since z.name already ends with state —
-        // dropped the redundant state on the subtitle.
-        const titleName = z.neighborhood
-            ? `${z.zip} · ${z.neighborhood}`
-            : `ZIP ${z.zip}`;
-        const subParts = [];
-        if (z.name) subParts.push(z.name);
-        if (z.county) subParts.push(z.county);
-        const subtitle = subParts.join(' · ') || z.state;
-        m.bindPopup(
-            `<div style="font-weight:700; font-size:0.95rem;">${titleName}</div>` +
-            `<div style="font-size:0.72rem; color:var(--text-dim); margin-bottom:0.5rem;">${subtitle}</div>` +
-            // Market section — value, YoY, rent, yield, composite.
-            `<div class="pop-section-label">Market</div>` +
-            `<div class="pop-stat"><span class="label">Home value</span><span>${fmtMoney(z.home_value)}</span></div>` +
-            (yoyDisplay ? `<div class="pop-stat"><span class="label">YoY</span><span>${yoyDisplay}</span></div>` : '') +
-            `<div class="pop-stat"><span class="label">Rent /mo</span><span>${fmtMoney(z.rent)}</span></div>` +
-            `<div class="pop-stat"><span class="label">Cap rate</span><span>${z.cap_rate_pct.toFixed(2)}%</span></div>` +
-            // Salary needed = annual gross income at 28% DTI (full PITI)
-            // assuming 20% down at the current 30Y rate. Drops out for
-            // older zips.db rows that pre-date the qualifying_income field.
-            (z.qualifying_income
-                ? `<div class="pop-stat" title="Annual gross income needed at 28% DTI, 20% down, 30Y fixed at the current rate. Includes state property tax + insurance."><span class="label">Salary needed</span><span>${fmtMoney(z.qualifying_income)}</span></div>`
-                : '') +
-            `<div class="pop-stat"><span class="label">Composite</span><span style="color:${scoreColor(z.composite)}; font-weight:700;">${z.composite.toFixed(1)}</span></div>` +
-            // 12-month forward forecast (BETA). Shows only when the
-            // ZIP has enough history for the damped Holt-Winters model
-            // to produce a value; null otherwise. Tagged BETA so users
-            // know it's directional, not a prediction.
-            ((z.forecast_12mo != null) ? (
-                `<div class="pop-section-label" style="margin-top:0.55rem;">Forecast (12mo) <span style="background:rgba(245,158,11,0.18); color:#f59e0b; padding:1px 5px; border-radius:3px; font-size:0.6rem; font-weight:700; margin-left:0.3rem;">BETA</span></div>` +
-                `<div class="pop-stat"><span class="label">Target value</span><span>${fmtMoney(z.forecast_12mo)}</span></div>` +
-                ((z.forecast_pct_12mo != null) ?
-                    `<div class="pop-stat"><span class="label">Change</span><span class="${z.forecast_pct_12mo >= 0 ? 'up' : 'down'}">${z.forecast_pct_12mo >= 0 ? '+' : ''}${z.forecast_pct_12mo.toFixed(1)}%</span></div>`
-                    : '')
-            ) : '') +
-            // Lifestyle section — walk + restaurants + crime. Crime
-            // is shown as "lower=safer" since the underlying value's
-            // direction isn't intuitive without the hint.
-            `<div class="pop-section-label" style="margin-top:0.55rem;">Lifestyle</div>` +
-            optStat('Walk score', z.walk_score, v => v.toFixed(0)) +
-            optStat('Restaurants', z.restaurant_score, v => v.toFixed(0) + '/100') +
-            optStat('Crime (lower=safer)', z.crime_index, v => v.toFixed(0)) +
-            // Demographics — income, education, population.
-            `<div class="pop-section-label" style="margin-top:0.55rem;">Demographics</div>` +
-            optStat('Median income', z.income, fmtMoney) +
-            optStat("Bachelor's+", z.pct_bachelors, v => v.toFixed(0) + '%') +
-            optStat('Population', z.population, v => v.toLocaleString('en-US')) +
-            imputedFlag +
-            // Full-report link — opens /zip/{zip} with chart + multi-
-            // horizon forecast + county/state comparison. Free for now;
-            // becomes the gated paid feature in Phase B/C.
-            `<div style="margin-top:0.7rem; padding-top:0.5rem; border-top:1px solid var(--border);"><a href="/zip/${z.zip}" class="pop-cta" style="display:block; text-align:center; padding:0.45rem 0.7rem; background:var(--accent); color:#0a0e1a !important; border-radius:6px; font-size:0.78rem; font-weight:700; text-decoration:none;">View full report &rarr;</a></div>`,
-            // autoPanPadding leaves clear space around the popup so it
-            // doesn't slip behind the map header (Leaflet doesn't know
-            // about it). On touch devices the map column is much
-            // smaller (~400–500px) and 80px top+bottom padding starves
-            // the popup of room — autoPan can't satisfy it and the
-            // bottom hides behind the tab bar. keepInView keeps it on
-            // the map when the user pans afterwards.
-            {
+        if (useSheet) {
+            // Mobile: route the tap into the bottom-sheet Detail pane
+            // instead of opening a floating Leaflet popup. Map stays
+            // clear; user reads the card in the sheet, dismisses with
+            // a tab tap or another marker tap.
+            m.on('click', () => showZipInSheet(z));
+        } else {
+            // Desktop: classic Leaflet popup with autoPan padding.
+            m.bindPopup(buildZipDetailHTML(z), {
                 maxWidth: 300,
                 autoPan: true,
-                autoPanPadding: isTouch ? [12, 16] : [40, 80],
+                autoPanPadding: [40, 80],
                 keepInView: true,
-            }
-        );
-        // On touch, step one zoom level out whenever a ZIP popup opens
-        // above the overlay's min zoom (9). The previous threshold
-        // (>=12) never fired at city zooms 10–11 where most taps
-        // happen. After the zoom animation settles we re-trigger
-        // autoPan so the popup re-positions for the wider context.
-        // The _isAnyZipPopupOpen guard stops the moveend from wiping
-        // the popup mid-zoom.
-        if (isTouch) {
-            m.on('popupopen', () => {
-                const cz = window._mpMap.getZoom();
-                if (cz <= ZIP_FETCH_MIN_ZOOM) return;
-                window._mpMap.setZoom(cz - 1, { animate: true });
-                window._mpMap.once('zoomend', () => {
-                    if (m._popup && m._popup._adjustPan) m._popup._adjustPan();
-                });
             });
         }
         _zipLayer.addLayer(m);
