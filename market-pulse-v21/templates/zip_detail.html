@@ -46,6 +46,17 @@
     .horizon-card .label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); font-weight: 600; }
     .horizon-card .value { font-size: 1.15rem; font-weight: 700; margin-top: 0.2rem; }
     .horizon-card .delta { font-size: 0.78rem; margin-top: 0.2rem; }
+    /* On phones the auto-fit grid was orphaning the 3rd horizon
+       card on its own row (2+1 layout) and the cards were oversized.
+       Force a 3-column row + smaller numbers so the forecast row
+       reads as a single compact strip. */
+    @media (max-width: 600px) {
+        .horizons-grid { grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
+        .horizon-card { padding: 0.55rem 0.55rem; border-radius: 8px; }
+        .horizon-card .label { font-size: 0.55rem; }
+        .horizon-card .value { font-size: 0.85rem; margin-top: 0.1rem; }
+        .horizon-card .delta { font-size: 0.7rem; margin-top: 0.1rem; }
+    }
 
     /* Comparison strip — three-column table. */
     .compare-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.5rem; margin-bottom: 1rem; }
@@ -57,10 +68,23 @@
     .compare-table td:first-child { text-align: left; color: var(--text-dim); font-size: 0.78rem; }
     .compare-table tr:last-child td { border-bottom: none; }
     .compare-table .col-zip { color: var(--accent); font-weight: 700; }
+    /* Mobile: shrink card padding + table cells so the comparison
+       isn't 1/3 of the screen. Header column has no truncation —
+       'Median income' and 'YoY change' fit fine at this size. */
+    @media (max-width: 600px) {
+        .compare-card { padding: 0.85rem 0.95rem; }
+        .compare-card h3 { font-size: 0.85rem; margin-bottom: 0.55rem; }
+        .compare-table { font-size: 0.78rem; }
+        .compare-table th, .compare-table td { padding: 0.35rem 0.4rem; }
+    }
 
     /* Detail cards row. */
     .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
     .detail-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.4rem; }
+    @media (max-width: 600px) {
+        .detail-grid { gap: 0.6rem; }
+        .detail-card { padding: 0.85rem 1rem; border-radius: 10px; }
+    }
     .detail-card h4 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); font-weight: 700; margin: 0 0 0.7rem; }
     .detail-row { display: flex; justify-content: space-between; padding: 0.32rem 0; font-size: 0.86rem; border-bottom: 1px solid var(--border); }
     .detail-row:last-child { border-bottom: none; }
