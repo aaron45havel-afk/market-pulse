@@ -549,17 +549,27 @@
         .bsheet.is-expanded { height: 62vh; }
         .bsheet.is-dragging { transition: none; }
 
+        /* The grip is the *entire* drag region — handle plus the
+           tab bar — so users don't have to pixel-hunt the tiny
+           4px line. touch-action:none stops iOS from interpreting
+           a vertical swipe here as page scroll, which would
+           short-circuit the JS drag handler. */
+        .bsheet-grip {
+            flex: 0 0 auto;
+            touch-action: none;
+            cursor: grab;
+            user-select: none; -webkit-user-select: none;
+        }
+        .bsheet.is-dragging .bsheet-grip { cursor: grabbing; }
+
         .bsheet-handle {
             flex: 0 0 auto; height: 22px;
             display: flex; align-items: center; justify-content: center;
-            cursor: grab; touch-action: none;
-            user-select: none; -webkit-user-select: none;
         }
         .bsheet-handle::before {
             content: ''; width: 40px; height: 4px;
             border-radius: 2px; background: var(--text-dim); opacity: 0.5;
         }
-        .bsheet.is-dragging .bsheet-handle { cursor: grabbing; }
 
         .bsheet-tabs {
             flex: 0 0 auto; display: flex;
@@ -1106,11 +1116,17 @@ function initBottomSheet(map) {
     const sheet = document.createElement('aside');
     sheet.className = 'bsheet';
     sheet.id = 'bsheet';
+    // .bsheet-grip wraps the handle + tab bar so the *whole top
+    // ~80px* of the sheet is a drag region, not just the 22px
+    // handle. Tapping a tab still works because we suppress the
+    // synthesized click only when the gesture actually moved.
     sheet.innerHTML =
-        '<div class="bsheet-handle" role="button" aria-label="Drag or tap to expand sheet" tabindex="0"></div>' +
-        '<div class="bsheet-tabs" role="tablist">' +
-            '<button type="button" class="active" data-bs="top" role="tab" aria-selected="true">Top</button>' +
-            '<button type="button" data-bs="filters" role="tab" aria-selected="false">Filters</button>' +
+        '<div class="bsheet-grip">' +
+            '<div class="bsheet-handle" role="button" aria-label="Drag or tap to expand sheet" tabindex="0"></div>' +
+            '<div class="bsheet-tabs" role="tablist">' +
+                '<button type="button" class="active" data-bs="top" role="tab" aria-selected="true">Top</button>' +
+                '<button type="button" data-bs="filters" role="tab" aria-selected="false">Filters</button>' +
+            '</div>' +
         '</div>' +
         '<div class="bsheet-content">' +
             '<div class="bsheet-pane active" data-bs="top"></div>' +
@@ -1141,14 +1157,18 @@ function initBottomSheet(map) {
         });
     });
 
-    // Drag handle → snap to nearest. A drag <4px is treated as a tap
-    // and toggles expansion — common-sense affordance for finger UX.
-    const handle = sheet.querySelector('.bsheet-handle');
+    // Drag region = the whole grip (handle + tab bar, ~80px). On
+    // touchend, if the gesture actually moved (>4px) we suppress the
+    // synthesized click that would otherwise fire on whatever tab
+    // button the touch ended over — so dragging from a tab no longer
+    // also switches tabs.
+    const grip = sheet.querySelector('.bsheet-grip');
     const COLLAPSED = 110;
     const expandedH = () => Math.round(window.innerHeight * 0.62);
     let startY = null;
     let startH = null;
     let moved = false;
+    let suppressNextClick = false;
 
     function snap() {
         if (!moved) {
@@ -1181,17 +1201,28 @@ function initBottomSheet(map) {
     function end() {
         if (startY == null) return;
         sheet.classList.remove('is-dragging');
+        if (moved) suppressNextClick = true;
         snap();
         startY = null; startH = null; moved = false;
     }
 
-    handle.addEventListener('touchstart', start, { passive: true });
-    handle.addEventListener('touchmove', move, { passive: false });
-    handle.addEventListener('touchend', end);
-    handle.addEventListener('touchcancel', end);
-    handle.addEventListener('mousedown', (e) => { start(e); e.preventDefault(); });
+    grip.addEventListener('touchstart', start, { passive: true });
+    grip.addEventListener('touchmove', move, { passive: false });
+    grip.addEventListener('touchend', end);
+    grip.addEventListener('touchcancel', end);
+    grip.addEventListener('mousedown', (e) => { start(e); e.preventDefault(); });
     document.addEventListener('mousemove', (e) => { if (startY != null) move(e); });
     document.addEventListener('mouseup', () => { if (startY != null) end(); });
+
+    // Capture-phase click swallow: runs before the tab-button click
+    // handlers so a drag-then-release on a tab doesn't also flip the
+    // active tab. Only swallows the *next* click after a real drag.
+    grip.addEventListener('click', (e) => {
+        if (!suppressNextClick) return;
+        e.stopPropagation();
+        e.preventDefault();
+        suppressNextClick = false;
+    }, true);
 }
 
 function initMobileTabs() {
