@@ -66,8 +66,31 @@
         .horizon-card .delta { font-size: 0.7rem; margin-top: 0.1rem; }
     }
 
-    /* Comparison strip — three-column table. */
-    .compare-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.5rem; margin-bottom: 1rem; }
+    /* Comparison strip — three-column table. position:relative so
+       the right-edge fade gradient can absolutely position over the
+       scroll wrapper and signal there's more content off-screen. */
+    .compare-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.5rem; margin-bottom: 1rem; position: relative; }
+    /* Header is a flex row so the "swipe" hint sits to the right of
+       the title, only visible on phones where horizontal scroll is
+       actually happening. */
+    .compare-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin: 0 0 0.8rem; }
+    .compare-card-head h3 { font-size: 0.95rem; margin: 0; font-weight: 700; }
+    .compare-swipe-hint { display: none; font-size: 0.7rem; color: var(--text-dim); font-weight: 500; flex-shrink: 0; }
+    @media (max-width: 600px) {
+        .compare-swipe-hint { display: inline; }
+        /* Right-edge gradient fade — surface color blending in from
+           the right tells the eye 'more content off-screen'. */
+        .compare-scroll { position: relative; }
+        .compare-card::after {
+            content: '';
+            position: absolute;
+            top: 3rem; right: 1rem; bottom: 1.1rem;
+            width: 28px;
+            background: linear-gradient(to left, var(--surface), rgba(255,255,255,0));
+            pointer-events: none;
+            border-radius: 0 12px 12px 0;
+        }
+    }
     .compare-card h3 { font-size: 0.95rem; margin: 0 0 0.8rem; font-weight: 700; }
     .compare-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     .compare-table th { text-align: right; padding: 0.45rem 0.6rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); font-weight: 600; border-bottom: 1px solid var(--border); }
@@ -185,7 +208,10 @@
 
     {% if county_agg or state_agg %}
     <div class="compare-card">
-        <h3>vs. county + state median</h3>
+        <div class="compare-card-head">
+            <h3>vs. county + state median</h3>
+            <span class="compare-swipe-hint" aria-hidden="true">swipe →</span>
+        </div>
         {# overflow-x:auto on a wrapping div lets the 4-column table
            (THIS ZIP / county / state) scroll horizontally *within*
            the card on narrow phones. Without this, the table forced
