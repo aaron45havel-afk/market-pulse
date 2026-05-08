@@ -232,6 +232,17 @@
     .leaflet-popup-content-wrapper { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
     .leaflet-popup-tip { background: var(--surface); }
     .leaflet-popup-content { margin: 0.7rem 0.9rem; font-size: 0.85rem; min-width: 220px; }
+
+    /* On mobile the ZIP popup is taller than the map column (header +
+       map-header + bottom tab bar leave ~50% of viewport for the map),
+       so the bottom of the card hides behind the tab bar. Cap the
+       wrapper height and let the content scroll internally. Touch
+       scroll within the popup doesn't pan the map because Leaflet
+       stops the touch on the popup wrapper. */
+    @media (max-width: 768px) {
+        .leaflet-popup-content-wrapper { max-height: 60vh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+        .leaflet-popup-content { margin: 0.6rem 0.75rem; min-width: 200px; }
+    }
     .leaflet-container { font-family: inherit; }
     .pop-stat { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.15rem 0; font-size: 0.82rem; }
     .pop-stat .up { color: #10b981; }
