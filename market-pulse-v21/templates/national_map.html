@@ -233,15 +233,24 @@
     .leaflet-popup-tip { background: var(--surface); }
     .leaflet-popup-content { margin: 0.7rem 0.9rem; font-size: 0.85rem; min-width: 220px; }
 
-    /* On mobile the ZIP popup is taller than the map column (header +
-       map-header + bottom tab bar leave ~50% of viewport for the map),
-       so the bottom of the card hides behind the tab bar. Cap the
-       wrapper height and let the content scroll internally. Touch
-       scroll within the popup doesn't pan the map because Leaflet
-       stops the touch on the popup wrapper. */
+    /* On mobile the ZIP popup is taller than the map column (mobile-bar
+       + map-header + bottom tab bar eat ~190px). Cap to the *actual*
+       available height (using dvh so iOS's collapsing URL bar is
+       handled) and tighten row spacing so most of the card fits
+       without scrolling — the rest scrolls internally.
+       overscroll-behavior:contain stops a finger swipe inside the
+       popup from also panning the map underneath. */
     @media (max-width: 768px) {
-        .leaflet-popup-content-wrapper { max-height: 60vh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
-        .leaflet-popup-content { margin: 0.6rem 0.75rem; min-width: 200px; }
+        .leaflet-popup-content-wrapper {
+            max-height: calc(100dvh - 220px);
+            max-height: calc(100vh - 220px); /* fallback for browsers without dvh */
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+        }
+        .leaflet-popup-content { margin: 0.55rem 0.7rem; font-size: 0.8rem; min-width: 200px; }
+        .pop-stat { font-size: 0.78rem; padding: 0.1rem 0; }
+        .pop-section-label { margin-bottom: 0.1rem; }
     }
     .leaflet-container { font-family: inherit; }
     .pop-stat { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.15rem 0; font-size: 0.82rem; }
@@ -2491,12 +2500,19 @@ function renderZipLayer(zips) {
             // horizon forecast + county/state comparison. Free for now;
             // becomes the gated paid feature in Phase B/C.
             `<div style="margin-top:0.7rem; padding-top:0.5rem; border-top:1px solid var(--border);"><a href="/zip/${z.zip}" class="pop-cta" style="display:block; text-align:center; padding:0.45rem 0.7rem; background:var(--accent); color:#0a0e1a !important; border-radius:6px; font-size:0.78rem; font-weight:700; text-decoration:none;">View full report &rarr;</a></div>`,
-            // autoPanPadding [40, 80] leaves 80px from the top edge so
-            // the popup doesn't slip behind the map header bar (which
-            // sits in flex above the map but Leaflet doesn't know about
-            // it). keepInView prevents the popup from drifting off the
-            // map when the user pans afterwards.
-            { maxWidth: 300, autoPan: true, autoPanPadding: [40, 80], keepInView: true }
+            // autoPanPadding leaves clear space around the popup so it
+            // doesn't slip behind the map header (Leaflet doesn't know
+            // about it). On touch devices the map column is much
+            // smaller (~400–500px) and 80px top+bottom padding starves
+            // the popup of room — autoPan can't satisfy it and the
+            // bottom hides behind the tab bar. keepInView keeps it on
+            // the map when the user pans afterwards.
+            {
+                maxWidth: 300,
+                autoPan: true,
+                autoPanPadding: isTouch ? [12, 16] : [40, 80],
+                keepInView: true,
+            }
         );
         _zipLayer.addLayer(m);
         _zipMarkers[z.zip] = m;
