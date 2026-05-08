@@ -1429,34 +1429,52 @@ function renderCostChart(rows) {
         return;
     }
 
+    // Read design tokens at draw time so the chart stays in sync with
+    // light/dark theme switches.
+    const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    const ink     = cssVar('--ink')     || '#1a1917';
+    const ink2    = cssVar('--ink-2')   || '#4a4844';
+    const ink3    = cssVar('--ink-3')   || '#7a7773';
+    const line    = cssVar('--line')    || '#e5e3df';
+    const isPhone = window.matchMedia('(max-width: 700px)').matches;
+
     _chart = new Chart(canvas, {
         type: 'line',
         data: { labels, datasets },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
+            // 'nearest' instead of 'index' — at index mode the tooltip
+            // dumps all 51 states at once which is unreadable on any
+            // screen. Nearest shows just the line under the cursor.
+            interaction: { mode: 'nearest', intersect: false },
             plugins: {
-                legend: { labels: { color: '#e4e4e7', boxWidth: 12 } },
+                legend: {
+                    // 51 states wrap the legend into a 5+ row block on
+                    // mobile and squeeze the chart out. Hide on phones;
+                    // the tap-tooltip still names the state.
+                    display: !isPhone,
+                    labels: { color: ink2, boxWidth: 12, font: { size: 11 } },
+                },
                 tooltip: {
-                    backgroundColor: '#1a1d27',
-                    borderColor: '#2d3044',
-                    borderWidth: 1,
-                    titleColor: '#e4e4e7',
-                    bodyColor: '#e4e4e7',
+                    mode: 'nearest', intersect: false,
+                    backgroundColor: ink,
+                    titleColor: '#fff', bodyColor: '#fff',
+                    borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1,
+                    padding: 10, displayColors: true, boxWidth: 8, boxHeight: 8,
                     callbacks: {
                         label: c => `${c.dataset.label}: $${Math.round(c.parsed.y).toLocaleString()}`,
                     },
                 },
             },
             scales: {
-                x: { ticks: { color: '#9ca3af' }, grid: { color: '#2d3044' } },
+                x: { ticks: { color: ink3 }, grid: { color: line } },
                 y: {
                     ticks: {
-                        color: '#9ca3af',
+                        color: ink3,
                         callback: v => '$' + Math.round(v / 1000).toLocaleString() + 'k',
                     },
-                    grid: { color: '#2d3044' },
+                    grid: { color: line },
                 },
             },
         },
