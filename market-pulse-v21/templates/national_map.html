@@ -512,6 +512,95 @@
             flex: 1 1 auto; height: auto; min-height: 0;
         }
     }
+
+    /* ── Mobile bottom-sheet pivot (≤768px) ──
+       Replace the Map/Data/List bottom tab bar with a draggable sheet
+       that overlays the map. Map fills the full viewport so spatial
+       context is never lost; "Top" (leader rail) and "Filters"
+       (metric picker) live one swipe away. The sheet is created and
+       populated via JS at load time so the existing leaderboard /
+       metric-picker code (and all its listeners) keeps working
+       untouched — we just relocate their DOM nodes.
+       body.has-bsheet is set by JS when the sheet is active so
+       desktop and tablet layouts stay completely unchanged. */
+    @media (max-width: 768px) {
+        body.has-bsheet .map-tabs { display: none !important; }
+        body.has-bsheet .map-body { position: relative; height: 100%; flex-direction: row; }
+        body.has-bsheet .map-body .map-col { width: 100%; height: 100%; flex: 1 1 auto; min-height: 0; }
+        /* Hide the small bottom-left legend on phones — overlapped by
+           the sheet anyway, and the gradient bar is too small here to
+           read. The pin-color cue is reinforced by the leaderboard. */
+        body.has-bsheet .legend { display: none; }
+
+        .bsheet {
+            position: absolute; left: 0; right: 0; bottom: 0;
+            z-index: 800;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            border-radius: 14px 14px 0 0;
+            box-shadow: 0 -6px 22px rgba(0, 0, 0, 0.4);
+            display: flex; flex-direction: column;
+            height: 110px;
+            max-height: 90vh;
+            overflow: hidden;
+            transition: height 0.22s ease;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .bsheet.is-expanded { height: 62vh; }
+        .bsheet.is-dragging { transition: none; }
+
+        .bsheet-handle {
+            flex: 0 0 auto; height: 22px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: grab; touch-action: none;
+            user-select: none; -webkit-user-select: none;
+        }
+        .bsheet-handle::before {
+            content: ''; width: 40px; height: 4px;
+            border-radius: 2px; background: var(--text-dim); opacity: 0.5;
+        }
+        .bsheet.is-dragging .bsheet-handle { cursor: grabbing; }
+
+        .bsheet-tabs {
+            flex: 0 0 auto; display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+        .bsheet-tabs button {
+            flex: 1; padding: 0.6rem 0.5rem;
+            background: transparent; border: none;
+            color: var(--text-dim); font-size: 0.86rem; font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: color 0.12s, border-color 0.12s;
+        }
+        .bsheet-tabs button.active {
+            color: var(--accent2);
+            border-bottom-color: var(--accent2);
+        }
+
+        .bsheet-content { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+        .bsheet-pane {
+            display: none; height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+        }
+        .bsheet-pane.active { display: block; }
+
+        /* Override the existing tab-system display:none + width rules
+           so the relocated panels fill their bsheet pane. !important
+           because the existing rules (line ~497–513) are scoped to
+           .map-body[data-mt="..."] and would still match descendants. */
+        body.has-bsheet .bsheet-pane .data-sidebar,
+        body.has-bsheet .bsheet-pane .leader-rail {
+            display: flex !important;
+            width: 100% !important;
+            height: 100% !important;
+            max-height: none !important;
+            border: none !important;
+            flex-basis: auto !important;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -801,6 +890,15 @@ document.addEventListener('DOMContentLoaded', () => {
         map.closePopup();
         map.flyTo([lat, lng], 11, { duration: 0.7 });
     });
+
+    // ── Mobile bottom sheet ─────────────────────────────────────────
+    // On phones, ditch the Map/Data/List bottom-tab pattern in favor
+    // of a draggable sheet that sits over the map. Map fills the
+    // viewport; "Top" (leader rail) and "Filters" (metric picker)
+    // live one swipe away. We *move* the existing DOM nodes into
+    // sheet panes (rather than duplicating) so all the existing
+    // listeners / IDs / data bindings keep working untouched.
+    initBottomSheet(map);
     // CartoDB Positron (no labels) — clean light grey base, designed
     // for data viz. White midtones in the choropleth fade gracefully
     // into the base instead of smearing into olive (which the old
@@ -985,6 +1083,117 @@ document.addEventListener('DOMContentLoaded', () => {
 // container size at init time, so when the map pane comes back into
 // view from being display:none we have to call invalidateSize() or it
 // renders blank tiles until the user pans.
+// ─── Mobile bottom sheet (replaces the Map/Data/List tab pattern) ──
+// On phones, the desktop 3-column layout collapses into a fullscreen
+// map plus a draggable sheet at the bottom. We *move* the existing
+// .data-sidebar (metric picker) and .leader-rail (leaderboard) DOM
+// nodes into sheet panes so every listener, ID, and data binding
+// already wired to those elements keeps working without changes.
+//
+// The sheet has two snap points: collapsed (~110px, just the handle
+// + tab bar) and expanded (~62vh). Drag the handle, or tap it to
+// toggle. Tapping a tab while collapsed also expands so the user
+// doesn't have to find the handle to see content.
+function initBottomSheet(map) {
+    if (!window.matchMedia('(max-width: 768px)').matches) return;
+    const mapBody = document.querySelector('.map-body');
+    const dataSidebar = document.querySelector('.data-sidebar');
+    const leaderRail = document.querySelector('.leader-rail');
+    if (!mapBody || !dataSidebar || !leaderRail) return;
+
+    document.body.classList.add('has-bsheet');
+
+    const sheet = document.createElement('aside');
+    sheet.className = 'bsheet';
+    sheet.id = 'bsheet';
+    sheet.innerHTML =
+        '<div class="bsheet-handle" role="button" aria-label="Drag or tap to expand sheet" tabindex="0"></div>' +
+        '<div class="bsheet-tabs" role="tablist">' +
+            '<button type="button" class="active" data-bs="top" role="tab" aria-selected="true">Top</button>' +
+            '<button type="button" data-bs="filters" role="tab" aria-selected="false">Filters</button>' +
+        '</div>' +
+        '<div class="bsheet-content">' +
+            '<div class="bsheet-pane active" data-bs="top"></div>' +
+            '<div class="bsheet-pane" data-bs="filters"></div>' +
+        '</div>';
+    mapBody.appendChild(sheet);
+
+    sheet.querySelector('.bsheet-pane[data-bs="top"]').appendChild(leaderRail);
+    sheet.querySelector('.bsheet-pane[data-bs="filters"]').appendChild(dataSidebar);
+
+    // Tab switching. Tapping while collapsed also expands so users
+    // don't have to find the (small) drag handle to see content.
+    sheet.querySelectorAll('.bsheet-tabs button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.dataset.bs;
+            sheet.querySelectorAll('.bsheet-tabs button').forEach(b => {
+                const active = b === btn;
+                b.classList.toggle('active', active);
+                b.setAttribute('aria-selected', active ? 'true' : 'false');
+            });
+            sheet.querySelectorAll('.bsheet-pane').forEach(p => {
+                p.classList.toggle('active', p.dataset.bs === target);
+            });
+            if (!sheet.classList.contains('is-expanded')) {
+                sheet.classList.add('is-expanded');
+                if (map) requestAnimationFrame(() => map.invalidateSize());
+            }
+        });
+    });
+
+    // Drag handle → snap to nearest. A drag <4px is treated as a tap
+    // and toggles expansion — common-sense affordance for finger UX.
+    const handle = sheet.querySelector('.bsheet-handle');
+    const COLLAPSED = 110;
+    const expandedH = () => Math.round(window.innerHeight * 0.62);
+    let startY = null;
+    let startH = null;
+    let moved = false;
+
+    function snap() {
+        if (!moved) {
+            sheet.style.height = '';
+            sheet.classList.toggle('is-expanded');
+        } else {
+            const h = sheet.getBoundingClientRect().height;
+            const mid = (COLLAPSED + expandedH()) / 2;
+            sheet.style.height = '';
+            sheet.classList.toggle('is-expanded', h > mid);
+        }
+        if (map) requestAnimationFrame(() => map.invalidateSize());
+    }
+    function start(e) {
+        const y = e.touches ? e.touches[0].clientY : e.clientY;
+        startY = y;
+        startH = sheet.getBoundingClientRect().height;
+        moved = false;
+        sheet.classList.add('is-dragging');
+    }
+    function move(e) {
+        if (startY == null) return;
+        const y = e.touches ? e.touches[0].clientY : e.clientY;
+        const delta = startY - y;
+        if (Math.abs(delta) > 4) moved = true;
+        const newH = Math.max(COLLAPSED, Math.min(window.innerHeight * 0.85, startH + delta));
+        sheet.style.height = newH + 'px';
+        if (e.cancelable) e.preventDefault();
+    }
+    function end() {
+        if (startY == null) return;
+        sheet.classList.remove('is-dragging');
+        snap();
+        startY = null; startH = null; moved = false;
+    }
+
+    handle.addEventListener('touchstart', start, { passive: true });
+    handle.addEventListener('touchmove', move, { passive: false });
+    handle.addEventListener('touchend', end);
+    handle.addEventListener('touchcancel', end);
+    handle.addEventListener('mousedown', (e) => { start(e); e.preventDefault(); });
+    document.addEventListener('mousemove', (e) => { if (startY != null) move(e); });
+    document.addEventListener('mouseup', () => { if (startY != null) end(); });
+}
+
 function initMobileTabs() {
     const mapBody = document.querySelector('.map-body');
     const tabs = document.querySelectorAll('.map-tabs .mt-tab');
