@@ -622,12 +622,10 @@
         }
         .bsheet-tabs button[data-bs="detail"][hidden] { display: none; }
 
-        /* When in detail mode, hide Top/Filters and let the Detail
-           tab take the whole row as a title bar — gives the user a
-           clear "you're viewing one thing" signal and reclaims the
-           vertical space those tabs were stealing. */
-        .bsheet.is-detail .bsheet-tabs button[data-bs="top"],
-        .bsheet.is-detail .bsheet-tabs button[data-bs="filters"] {
+        /* When in detail mode, hide every non-detail tab and let the
+           Detail tab take the whole row as a title bar. Catches Top,
+           Match, Metric, and any future tabs without listing each. */
+        .bsheet.is-detail .bsheet-tabs button:not([data-bs="detail"]) {
             display: none;
         }
         .bsheet.is-detail .bsheet-tabs button[data-bs="detail"] {
@@ -652,6 +650,19 @@
             border: none !important;
             flex-basis: auto !important;
         }
+        /* Rail-panes were promoted into bsheet panes; their default
+           display:none/.active toggle would hide the inactive one,
+           but we want both visible (each in its own bsheet pane).
+           Force display:flex always — bsheet-pane's display:none on
+           the wrapper still gates visibility correctly. */
+        body.has-bsheet .bsheet-pane .rail-pane {
+            display: flex !important;
+            flex: 1 !important;
+            min-height: 0 !important;
+        }
+        /* Empty leader-rail wrapper (rail-tabs only, panes were moved
+           out) has no purpose on mobile — hide it. */
+        body.has-bsheet .leader-rail { display: none !important; }
     }
 </style>
 {% endblock %}
@@ -1167,19 +1178,32 @@ function initBottomSheet(map) {
             '<div class="bsheet-handle" role="button" aria-label="Drag or tap to expand sheet" tabindex="0"></div>' +
             '<div class="bsheet-tabs" role="tablist">' +
                 '<button type="button" class="active" data-bs="top" role="tab" aria-selected="true">Top</button>' +
-                '<button type="button" data-bs="filters" role="tab" aria-selected="false">Filters</button>' +
+                '<button type="button" data-bs="match" role="tab" aria-selected="false">Match</button>' +
+                '<button type="button" data-bs="metric" role="tab" aria-selected="false">Metric</button>' +
                 '<button type="button" data-bs="detail" role="tab" aria-selected="false" hidden><span class="bsheet-detail-title">Detail</span><span class="bsheet-tab-close" aria-label="Close detail">×</span></button>' +
             '</div>' +
         '</div>' +
         '<div class="bsheet-content">' +
             '<div class="bsheet-pane active" data-bs="top"></div>' +
-            '<div class="bsheet-pane" data-bs="filters"></div>' +
+            '<div class="bsheet-pane" data-bs="match"></div>' +
+            '<div class="bsheet-pane" data-bs="metric"></div>' +
             '<div class="bsheet-pane bsheet-pane-detail" data-bs="detail"></div>' +
         '</div>';
     mapBody.appendChild(sheet);
 
-    sheet.querySelector('.bsheet-pane[data-bs="top"]').appendChild(leaderRail);
-    sheet.querySelector('.bsheet-pane[data-bs="filters"]').appendChild(dataSidebar);
+    // Flatten the existing two-level tab structure on mobile. The
+    // leader-rail had its own internal rail-tabs (Top Metros /
+    // Filter & Match) which created a redundant second tab row
+    // inside the bsheet's Top pane. Promote each rail-pane to a
+    // top-level bsheet pane so there's only one tab row.
+    const railLeaderboardPane = leaderRail.querySelector('.rail-pane[data-pane="leaderboard"]');
+    const railFiltersPane = leaderRail.querySelector('.rail-pane[data-pane="filters"]');
+    if (railLeaderboardPane) sheet.querySelector('.bsheet-pane[data-bs="top"]').appendChild(railLeaderboardPane);
+    if (railFiltersPane) sheet.querySelector('.bsheet-pane[data-bs="match"]').appendChild(railFiltersPane);
+    sheet.querySelector('.bsheet-pane[data-bs="metric"]').appendChild(dataSidebar);
+    // The rail's own tab bar is no longer needed (tabs got hoisted
+    // into the bsheet). Hide it via CSS rather than removing so
+    // initRailTabs() doesn't error if it tries to bind handlers.
 
     // Expose globals for renderZipLayer / metro pin handlers to push
     // detail content into the sheet without coupling to internals.
