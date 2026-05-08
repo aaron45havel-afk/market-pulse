@@ -604,17 +604,40 @@
         /* The Detail tab carries an inline × so the user has an
            obvious one-tap dismiss without needing to tap the map. */
         .bsheet-tabs button[data-bs="detail"] {
-            display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+            display: inline-flex; align-items: center; gap: 0.4rem;
+        }
+        .bsheet-detail-title {
+            flex: 1;
+            text-align: left;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .bsheet-tab-close {
             display: inline-flex; align-items: center; justify-content: center;
-            width: 18px; height: 18px;
+            width: 22px; height: 22px;
             border-radius: 50%;
             background: var(--surface2); color: var(--text-dim);
-            font-size: 0.85rem; line-height: 1;
+            font-size: 0.95rem; line-height: 1;
             font-weight: 600;
+            flex-shrink: 0;
         }
         .bsheet-tabs button[data-bs="detail"][hidden] { display: none; }
+
+        /* When in detail mode, hide Top/Filters and let the Detail
+           tab take the whole row as a title bar — gives the user a
+           clear "you're viewing one thing" signal and reclaims the
+           vertical space those tabs were stealing. */
+        .bsheet.is-detail .bsheet-tabs button[data-bs="top"],
+        .bsheet.is-detail .bsheet-tabs button[data-bs="filters"] {
+            display: none;
+        }
+        .bsheet.is-detail .bsheet-tabs button[data-bs="detail"] {
+            flex: 1;
+            justify-content: space-between;
+            padding: 0.7rem 1rem;
+            font-size: 0.95rem;
+            color: var(--text);
+            border-bottom-color: transparent;
+        }
 
         /* Override the existing tab-system display:none + width rules
            so the relocated panels fill their bsheet pane. !important
@@ -1145,7 +1168,7 @@ function initBottomSheet(map) {
             '<div class="bsheet-tabs" role="tablist">' +
                 '<button type="button" class="active" data-bs="top" role="tab" aria-selected="true">Top</button>' +
                 '<button type="button" data-bs="filters" role="tab" aria-selected="false">Filters</button>' +
-                '<button type="button" data-bs="detail" role="tab" aria-selected="false" hidden>Detail<span class="bsheet-tab-close" aria-label="Close detail">×</span></button>' +
+                '<button type="button" data-bs="detail" role="tab" aria-selected="false" hidden><span class="bsheet-detail-title">Detail</span><span class="bsheet-tab-close" aria-label="Close detail">×</span></button>' +
             '</div>' +
         '</div>' +
         '<div class="bsheet-content">' +
@@ -1164,13 +1187,20 @@ function initBottomSheet(map) {
     window.showZipInSheet = function (z) {
         const pane = sheet.querySelector('.bsheet-pane[data-bs="detail"]');
         const tab = sheet.querySelector('.bsheet-tabs button[data-bs="detail"]');
-        if (!pane || !tab) return;
+        const titleEl = tab && tab.querySelector('.bsheet-detail-title');
+        if (!pane || !tab || !titleEl) return;
         pane.innerHTML = buildZipDetailHTML(z);
         pane.scrollTop = 0;
+        // Tab text mirrors the marker so the sheet header doubles as
+        // a "you are looking at: X" title bar — no need to read down
+        // into the card content to confirm which ZIP is selected.
+        titleEl.textContent = z.neighborhood
+            ? `${z.zip} · ${z.neighborhood}`
+            : `ZIP ${z.zip}`;
         tab.hidden = false;
-        // Activate detail tab + expand sheet so user reads the card
-        // immediately. Pane visibility is the same toggle the tab
-        // click handler uses, just done programmatically.
+        // is-detail class flips the sheet header into "title bar"
+        // mode (Top/Filters tabs hide, Detail tab takes the row).
+        sheet.classList.add('is-detail');
         sheet.querySelectorAll('.bsheet-tabs button').forEach(b => {
             const active = b === tab;
             b.classList.toggle('active', active);
@@ -1187,6 +1217,7 @@ function initBottomSheet(map) {
     window.closeSheetDetail = function () {
         const tab = sheet.querySelector('.bsheet-tabs button[data-bs="detail"]');
         const topTab = sheet.querySelector('.bsheet-tabs button[data-bs="top"]');
+        sheet.classList.remove('is-detail');
         if (tab) tab.hidden = true;
         if (topTab) topTab.click();
     };
