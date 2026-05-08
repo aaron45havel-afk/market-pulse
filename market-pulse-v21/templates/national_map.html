@@ -2514,15 +2514,21 @@ function renderZipLayer(zips) {
                 keepInView: true,
             }
         );
-        // On touch, drop one zoom level when the popup opens at city
-        // zoom so the visible map area roughly doubles in height —
-        // gives the full card room to land. Capped at 11 so we don't
-        // bounce too far out. The fetch guard above stops the moveend
-        // from wiping the popup mid-zoom.
+        // On touch, step one zoom level out whenever a ZIP popup opens
+        // above the overlay's min zoom (9). The previous threshold
+        // (>=12) never fired at city zooms 10–11 where most taps
+        // happen. After the zoom animation settles we re-trigger
+        // autoPan so the popup re-positions for the wider context.
+        // The _isAnyZipPopupOpen guard stops the moveend from wiping
+        // the popup mid-zoom.
         if (isTouch) {
             m.on('popupopen', () => {
                 const cz = window._mpMap.getZoom();
-                if (cz >= 12) window._mpMap.setZoom(11, { animate: true });
+                if (cz <= ZIP_FETCH_MIN_ZOOM) return;
+                window._mpMap.setZoom(cz - 1, { animate: true });
+                window._mpMap.once('zoomend', () => {
+                    if (m._popup && m._popup._adjustPan) m._popup._adjustPan();
+                });
             });
         }
         _zipLayer.addLayer(m);
