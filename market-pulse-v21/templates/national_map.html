@@ -82,7 +82,14 @@
     .map-search-empty { padding: 0.85rem; font-size: 0.78rem; color: var(--text-dim); font-style: italic; text-align: center; }
     .map-search-hint { font-size: 0.62rem; color: var(--text-dim); padding: 0.45rem 0.85rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 0.4rem; }
     .map-search-hint kbd { background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; padding: 0 0.3rem; font-size: 0.62rem; font-family: ui-monospace, monospace; }
-    @media (max-width: 480px) { .map-search { width: calc(100% - 24px); } }
+    /* On narrow phones, the search bar at width: 100%-24px was
+       overflowing the right edge enough to sit on top of Leaflet's
+       + zoom button — only the − button stayed tappable. Anchor
+       both edges with `right` and let auto-width fill between, so
+       the search stops cleanly before the zoom controls. */
+    @media (max-width: 480px) {
+        .map-search { width: auto; right: 64px; }
+    }
     .zip-banner[hidden] { display: none; }
 
     /* Zoom-in discovery hint — sits just below Leaflet's top-right
