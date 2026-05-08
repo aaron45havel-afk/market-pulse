@@ -3017,7 +3017,14 @@ function renderZipLayer(zips) {
             // instead of opening a floating Leaflet popup. Map stays
             // clear; user reads the card in the sheet, dismisses with
             // a tab tap or another marker tap.
-            m.on('click', () => showZipInSheet(z));
+            // L.DomEvent.stopPropagation prevents the click from also
+            // bubbling to the map's click handler, which would
+            // otherwise immediately closeSheetDetail and the Detail
+            // would flash open then revert to Top.
+            m.on('click', (e) => {
+                L.DomEvent.stopPropagation(e);
+                showZipInSheet(z);
+            });
         } else {
             // Desktop: classic Leaflet popup with autoPan padding.
             m.bindPopup(buildZipDetailHTML(z), {
