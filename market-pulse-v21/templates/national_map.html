@@ -19,8 +19,16 @@
        (position:absolute) and gives the leaflet container a real bounding
        box. Leaflet won't render tiles into a 0-height parent, so the
        explicit flex sizing matters. */
-    .map-page { display: flex; flex-direction: column; height: 100vh; position: relative; }
-    @media (max-width: 768px) { .map-page { height: calc(100vh - 52px); } }
+    .map-page { display: flex; flex-direction: column; height: 100vh; height: 100dvh; position: relative; }
+    /* dvh tracks the visible viewport on iOS Safari (toolbar
+       expanding/collapsing). Without it, map-page extends *behind*
+       Safari's bottom toolbar — and since the bsheet is positioned
+       at bottom:0 inside it, the sheet's bottom (with the pinned
+       CTA) gets dragged behind the toolbar too. vh kept as fallback
+       for older browsers. */
+    @media (max-width: 768px) {
+        .map-page { height: calc(100vh - 52px); height: calc(100dvh - 52px); }
+    }
 
     .map-header { padding: 0.85rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; flex: 0 0 auto; }
     .map-header h1 { font-size: 1.1rem; margin: 0; }
