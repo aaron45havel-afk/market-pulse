@@ -18,6 +18,17 @@
     .zip-hero-stat .label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); font-weight: 600; }
     .zip-hero-stat .value { font-size: 1.4rem; font-weight: 700; margin-top: 0.15rem; }
     .zip-hero-stat .delta { font-size: 0.78rem; margin-top: 0.15rem; }
+    /* On phones the 4 hero stats stacked at full-row height made the
+       hero scroll past two screens before you reached the chart.
+       Force a 2-col grid + smaller numbers so the hero is a quick
+       glance rather than the page itself. */
+    @media (max-width: 600px) {
+        .zip-hero { padding: 1rem 1.1rem; }
+        .zip-hero-zip { font-size: 1.7rem; }
+        .zip-hero-stats { grid-template-columns: repeat(2, 1fr); gap: 0.7rem; margin-top: 0.85rem; padding-top: 0.85rem; }
+        .zip-hero-stat .value { font-size: 1.1rem; }
+        .zip-hero-stat .label { font-size: 0.6rem; }
+    }
     .delta.up { color: #10b981; }
     .delta.down { color: #ef4444; }
     .beta-tag { background: rgba(245,158,11,0.18); color: #f59e0b; padding: 1px 6px; border-radius: 3px; font-size: 0.62rem; font-weight: 700; vertical-align: middle; margin-left: 0.4rem; }
@@ -115,10 +126,13 @@
 
     {% if schema_has.forecast and zip.forecast_60mo_value %}
     <div class="horizons-grid">
+        {# 12-month tile is intentionally omitted — it already shows in
+           the hero card AND in the chart's forecast cap, so a third
+           tile here was redundant clutter. 3-/6-/60-month are unique
+           to this row. #}
         {% for h, v, p in [
             (3,  zip.forecast_3mo_value,  zip.forecast_3mo_pct),
             (6,  zip.forecast_6mo_value,  zip.forecast_6mo_pct),
-            (12, zip.forecast_home_value_12mo, zip.forecast_pct_change_12mo),
             (60, zip.forecast_60mo_value, zip.forecast_60mo_pct),
         ] if v %}
         <div class="horizon-card">
@@ -185,7 +199,9 @@
         </div>
         <div class="detail-card">
             <h4>Demographics</h4>
-            {% if zip.median_household_income %}<div class="detail-row"><span class="l">Median income</span><span>${{ '{:,}'.format(zip.median_household_income) }}</span></div>{% endif %}
+            {# Median income lives in the compare card (vs county +
+               state) where the comparison gives it real meaning;
+               showing the bare number again here was just clutter. #}
             {% if zip.pct_bachelors is not none %}<div class="detail-row"><span class="l">Bachelor's+</span><span>{{ zip.pct_bachelors|round|int }}%</span></div>{% endif %}
             {% if zip.population %}<div class="detail-row"><span class="l">Population</span><span>{{ '{:,}'.format(zip.population) }}</span></div>{% endif %}
             {% if zip.population_density %}<div class="detail-row"><span class="l">Density /km²</span><span>{{ '{:,}'.format(zip.population_density|int) }}</span></div>{% endif %}
