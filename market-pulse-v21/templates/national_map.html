@@ -2514,6 +2514,17 @@ function renderZipLayer(zips) {
                 keepInView: true,
             }
         );
+        // On touch, drop one zoom level when the popup opens at city
+        // zoom so the visible map area roughly doubles in height —
+        // gives the full card room to land. Capped at 11 so we don't
+        // bounce too far out. The fetch guard above stops the moveend
+        // from wiping the popup mid-zoom.
+        if (isTouch) {
+            m.on('popupopen', () => {
+                const cz = window._mpMap.getZoom();
+                if (cz >= 12) window._mpMap.setZoom(11, { animate: true });
+            });
+        }
         _zipLayer.addLayer(m);
         _zipMarkers[z.zip] = m;
     });
