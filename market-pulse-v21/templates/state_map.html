@@ -66,6 +66,9 @@
     .top-list .score { font-weight: 700; flex-shrink: 0; }
 
     /* ─── Leaflet overrides for dark theme ─────────────────────────── */
+    /* Lift popups above map-search/leaflet-control (both z:1000) so
+       they aren't clipped by the search bar on mobile. */
+    .leaflet-popup-pane { z-index: 1100; }
     .leaflet-popup-content-wrapper { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
     .leaflet-popup-tip { background: var(--surface); }
     .leaflet-popup-content { margin: 0.6rem 0.8rem; font-size: 0.85rem; }
