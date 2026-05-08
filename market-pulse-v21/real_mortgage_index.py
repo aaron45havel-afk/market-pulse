@@ -95,6 +95,19 @@ def _rc(k, hrs=24):
     return None
 
 
+def _rc_any(k):
+    """Return cached value regardless of age, for stale-fallback when
+    the upstream (FRED) is down. Used after a fetch fails so the user
+    still gets a chart instead of an error banner."""
+    p = _cp(k)
+    if p.exists():
+        try:
+            return json.loads(p.read_text())
+        except Exception:
+            return None
+    return None
+
+
 def _wc(k, d):
     try:
         _cp(k).write_text(json.dumps(d))
@@ -147,14 +160,37 @@ def compute_index(metro: str = "US", down_pct: float = 10.0) -> dict:
     except Exception as e:
         return {"error": f"Server missing dependency: {e}"}
 
-    try:
-        fred = Fred(api_key=api_key)
-        hpi = fred.get_series(CASE_SHILLER_SERIES[metro], observation_start=START_DATE).dropna()
-        rate = fred.get_series(MORTGAGE_RATE_SERIES, observation_start=START_DATE).dropna()
-        cpi = fred.get_series(CPI_LESS_SHELTER_SERIES, observation_start=START_DATE).dropna()
-    except Exception as e:
-        logger.warning(f"FRED fetch failed for rmpi {metro}: {e}")
-        return {"error": f"FRED fetch failed: {e}"}
+    # FRED occasionally returns 5xx during their own outages. Retry
+    # twice with a short backoff before giving up — most transient
+    # blips clear within a couple of seconds.
+    last_err = None
+    hpi = rate = cpi = None
+    for attempt in range(3):
+        try:
+            fred = Fred(api_key=api_key)
+            hpi = fred.get_series(CASE_SHILLER_SERIES[metro], observation_start=START_DATE).dropna()
+            rate = fred.get_series(MORTGAGE_RATE_SERIES, observation_start=START_DATE).dropna()
+            cpi = fred.get_series(CPI_LESS_SHELTER_SERIES, observation_start=START_DATE).dropna()
+            last_err = None
+            break
+        except Exception as e:
+            last_err = e
+            if attempt < 2:
+                time.sleep(0.5 * (attempt + 1))
+
+    if last_err is not None:
+        logger.warning(f"FRED fetch failed for rmpi {metro}: {last_err}")
+        # Stale-cache fallback: if we have any prior result for this
+        # (metro, down_pct) on disk, serve it with a `stale` flag so
+        # the chart still renders during a FRED outage. The frontend
+        # can show a small "data may be a few days old" notice.
+        stale = _rc_any(cache_key)
+        if stale:
+            stale = dict(stale)
+            stale["stale"] = True
+            stale["stale_reason"] = f"FRED upstream error: {last_err}"
+            return stale
+        return {"error": f"FRED fetch failed: {last_err}"}
 
     # Mortgage rate is weekly (Thursdays); resample to monthly mean so it
     # aligns with HPI + CPI (both monthly).

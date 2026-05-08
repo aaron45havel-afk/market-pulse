@@ -55,6 +55,7 @@
 
     .rmpi-loading { text-align: center; padding: 3rem 0; color: var(--ink-3); font-size: 0.9rem; }
     .rmpi-error { padding: 1rem 1.25rem; background: var(--coral-soft); color: var(--coral-ink); border: 1px solid rgb(224 91 75 / 0.25); border-radius: var(--r); margin: 1rem 0; font-size: 0.9rem; }
+    .rmpi-stale { padding: 0.6rem 1rem; background: rgb(245 158 11 / 0.10); color: #92400e; border: 1px solid rgb(245 158 11 / 0.35); border-radius: var(--r); margin: 0.75rem 0; font-size: 0.82rem; }
 </style>
 {% endblock %}
 {% block content %}
@@ -341,6 +342,12 @@
             if (data.error) {
                 showError(data.error);
                 return;
+            }
+            // Backend serves a stale cache when FRED is down — surface
+            // a soft notice so users know the chart isn't live, but
+            // don't block the render.
+            if (data.stale) {
+                errorBox.innerHTML = '<div class="rmpi-stale">FRED is currently unreachable — showing the most recent cached data. Latest point: ' + data.as_of + '.</div>';
             }
             renderStats(data);
             renderChart(data);
