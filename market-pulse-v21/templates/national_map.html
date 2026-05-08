@@ -548,12 +548,21 @@
             box-shadow: 0 -6px 22px rgba(0, 0, 0, 0.4);
             display: flex; flex-direction: column;
             height: 110px;
+            /* dvh tracks the *visible* viewport on iOS Safari (i.e.
+               accounts for the toolbar). vh resolves against the
+               largest viewport so the sheet's bottom hides behind
+               the Safari toolbar — the pinned CTA was invisible.
+               vh first as fallback, dvh second as the override. */
             max-height: 90vh;
+            max-height: 90dvh;
             overflow: hidden;
             transition: height 0.22s ease;
             padding-bottom: env(safe-area-inset-bottom);
         }
-        .bsheet.is-expanded { height: 62vh; }
+        .bsheet.is-expanded {
+            height: 62vh;
+            height: 62dvh;
+        }
         .bsheet.is-dragging { transition: none; }
 
         /* The grip is the *entire* drag region — handle plus the
