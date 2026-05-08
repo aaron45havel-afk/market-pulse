@@ -155,8 +155,8 @@
 <!-- ─────────────  CUMULATIVE COST CHART  ───────────── -->
 <div class="card" data-tab="affordability" style="margin-top:1rem;">
     <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">10-year cumulative housing cost — at each state's max price</div>
-    <div style="font-size:0.82rem; color:var(--text-dim); margin-bottom:0.85rem;">Running total of cash out the door (PITI + escalating property tax). Diverging lines = the long-run cost of state policy.</div>
-    <div style="position:relative; height:340px;">
+    <div style="font-size:0.82rem; color:var(--text-dim); margin-bottom:0.85rem;">Total cash out the door over 10 years (PITI + escalating property tax). Sorted cheapest → most expensive — the spread is the long-run cost of state policy.</div>
+    <div id="costChartWrap" style="position:relative; height:760px;">
         <canvas id="costChart"></canvas>
     </div>
 </div>
@@ -1411,101 +1411,115 @@ function renderCostChart(rows) {
     const canvas = document.getElementById('costChart');
     if (!canvas || typeof Chart === 'undefined') return;
     const years = 10;
-    const labels = Array.from({ length: years }, (_, i) => `Yr ${i + 1}`);
 
-    // Only the eight states in STATE_COLORS get individual lines —
-    // the other 43 produced visually-identical gray lines that
-    // crushed the legend, drowned the colored ones, and flattened
-    // the "diverging lines" story the chart is meant to tell. Roll
-    // the rest into a single dashed median so the highlighted
-    // states have something to diverge *from*.
-    const allSeries = rows.map(r => ({
+    // Year-10 cumulative cost per state, sorted cheapest first. A
+    // horizontal bar chart accommodates 51 states without overlap and
+    // makes the spread (the actual story) easy to scan. Highlighted
+    // states keep their accent colors; the rest are neutral gray so
+    // the eye lands on the policy outliers (TX, NJ, IL …) first.
+    const series = rows.map(r => ({
         state: r.state,
-        data: cumulativeByYear(r.piti, r.piti.annualPropertyTax, PROP_TAX_GROWTH[r.state] || 0.03, years),
-    }));
-    const medianData = labels.map((_, yi) => {
-        const vals = allSeries.map(s => s.data[yi]).sort((a, b) => a - b);
-        return vals[Math.floor(vals.length / 2)];
-    });
+        name: STATE_DATA[r.state].name,
+        cost: cumulativeByYear(
+            r.piti, r.piti.annualPropertyTax,
+            PROP_TAX_GROWTH[r.state] || 0.03, years,
+        )[years - 1],
+    })).sort((a, b) => a.cost - b.cost);
 
-    const datasets = allSeries
-        .filter(s => STATE_COLORS[s.state])
-        .map(s => ({
-            label: STATE_DATA[s.state].name,
-            data: s.data,
-            borderColor: STATE_COLORS[s.state],
-            backgroundColor: STATE_COLORS[s.state],
-            tension: 0.2,
-            borderWidth: 2,
-            pointRadius: 3,
-        }));
-    datasets.push({
-        label: 'All states (median)',
-        data: medianData,
-        borderColor: '#9ca3af',
-        backgroundColor: '#9ca3af',
-        borderDash: [5, 5],
-        tension: 0.2,
-        borderWidth: 1.5,
-        pointRadius: 2,
-    });
+    const labels = series.map(s => s.name);
+    const data = series.map(s => s.cost);
+    const backgroundColors = series.map(s => STATE_COLORS[s.state] || '#cbd1d9');
+    const borderColors = series.map(s => STATE_COLORS[s.state] || '#9ca3af');
+
+    // Median across all states — drawn as a dashed vertical reference.
+    const sortedCosts = [...data].sort((a, b) => a - b);
+    const median = sortedCosts[Math.floor(sortedCosts.length / 2)];
 
     if (_chart) {
         _chart.data.labels = labels;
-        _chart.data.datasets = datasets;
+        _chart.data.datasets[0].data = data;
+        _chart.data.datasets[0].backgroundColor = backgroundColors;
+        _chart.data.datasets[0].borderColor = borderColors;
+        _chart.options.plugins.medianLine.value = median;
         _chart.update();
         return;
     }
 
-    // Read design tokens at draw time so the chart stays in sync with
-    // light/dark theme switches.
     const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
     const ink     = cssVar('--ink')     || '#1a1917';
-    const ink2    = cssVar('--ink-2')   || '#4a4844';
     const ink3    = cssVar('--ink-3')   || '#7a7773';
     const line    = cssVar('--line')    || '#e5e3df';
-    const isPhone = window.matchMedia('(max-width: 700px)').matches;
+
+    // Median reference line drawn directly on the canvas — avoids
+    // pulling in chartjs-plugin-annotation just for one dashed rule.
+    const medianLinePlugin = {
+        id: 'medianLine',
+        afterDatasetsDraw(chart, args, opts) {
+            const v = opts && opts.value;
+            if (v == null) return;
+            const { ctx, chartArea, scales } = chart;
+            const x = scales.x.getPixelForValue(v);
+            ctx.save();
+            ctx.strokeStyle = ink3;
+            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x, chartArea.top);
+            ctx.lineTo(x, chartArea.bottom);
+            ctx.stroke();
+            ctx.fillStyle = ink3;
+            ctx.font = '11px system-ui, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(`median ${'$' + Math.round(v / 1000).toLocaleString() + 'k'}`, x + 4, chartArea.top + 12);
+            ctx.restore();
+        },
+    };
 
     _chart = new Chart(canvas, {
-        type: 'line',
-        data: { labels, datasets },
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: '10-yr cumulative cost',
+                data,
+                backgroundColor: backgroundColors,
+                borderColor: borderColors,
+                borderWidth: 1,
+                borderRadius: 3,
+            }],
+        },
         options: {
+            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
-            // 'nearest' instead of 'index' — at index mode the tooltip
-            // dumps all 51 states at once which is unreadable on any
-            // screen. Nearest shows just the line under the cursor.
-            interaction: { mode: 'nearest', intersect: false },
             plugins: {
-                legend: {
-                    // 51 states wrap the legend into a 5+ row block on
-                    // mobile and squeeze the chart out. Hide on phones;
-                    // the tap-tooltip still names the state.
-                    display: !isPhone,
-                    labels: { color: ink2, boxWidth: 12, font: { size: 11 } },
-                },
+                legend: { display: false },
                 tooltip: {
-                    mode: 'nearest', intersect: false,
                     backgroundColor: ink,
                     titleColor: '#fff', bodyColor: '#fff',
                     borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1,
-                    padding: 10, displayColors: true, boxWidth: 8, boxHeight: 8,
+                    padding: 10, displayColors: false,
                     callbacks: {
-                        label: c => `${c.dataset.label}: $${Math.round(c.parsed.y).toLocaleString()}`,
+                        label: c => `$${Math.round(c.parsed.x).toLocaleString()} over 10 yr`,
                     },
                 },
+                medianLine: { value: median },
             },
             scales: {
-                x: { ticks: { color: ink3 }, grid: { color: line } },
-                y: {
+                x: {
                     ticks: {
                         color: ink3,
                         callback: v => '$' + Math.round(v / 1000).toLocaleString() + 'k',
                     },
                     grid: { color: line },
                 },
+                y: {
+                    ticks: { color: ink3, font: { size: 11 } },
+                    grid: { display: false },
+                },
             },
         },
+        plugins: [medianLinePlugin],
     });
 }
 
