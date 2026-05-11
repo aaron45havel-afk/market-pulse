@@ -10,7 +10,7 @@ name: Refresh Redfin data
 
 on:
   schedule:
-    - cron: '15 12 1 * *'   # 12:15 UTC on the 1st (15min after Zillow to avoid collision)
+    - cron: '15 12 * * 6'   # 12:15 UTC every Saturday (15min after Zillow to avoid collision)
   workflow_dispatch:         # also run manually from the Actions tab
 
 permissions:
