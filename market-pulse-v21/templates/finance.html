@@ -38,6 +38,19 @@
 </div>
 
 <div id="screener" style="display:none;">
+    <!-- Monthly snapshot picker. Populated from /api/finance/snapshots
+         at load (newest first). 'Live (now)' option falls through to
+         the live SEC EDGAR call for admins who want fresh data
+         outside the monthly cadence. -->
+    <div class="card" style="margin-bottom:1rem; padding:0.7rem 1rem; display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+        <label for="snapshotPicker" style="font-size:0.8rem; color:var(--text-dim); font-weight:600;">Snapshot</label>
+        <select id="snapshotPicker" style="background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.35rem 0.55rem; color:var(--text); font-size:0.85rem;">
+            <option value="">Loading…</option>
+        </select>
+        <span id="snapshotMeta" style="font-size:0.75rem; color:var(--text-dim);"></span>
+        <span style="flex:1;"></span>
+        <button id="refreshLiveBtn" type="button" style="background:transparent; color:var(--accent2); border:1px solid var(--border); padding:0.35rem 0.7rem; border-radius:6px; cursor:pointer; font-size:0.78rem;">Refresh live</button>
+    </div>
     <div class="grid-4" style="margin-bottom:1rem;">
         <div class="card metric-card" style="border-color:var(--accent);">
             <div class="label">Net-Nets Confirmed</div>
@@ -331,33 +344,109 @@ document.querySelectorAll('thead th').forEach(th => {
     document.getElementById(id).addEventListener(id === 'searchInput' ? 'input' : 'change', applyFilters);
 });
 
-fetch('/api/finance/screener')
-    .then(r => r.json())
-    .then(data => {
-        document.getElementById('loading').style.display = 'none';
-        if (!Array.isArray(data) || (data.length === 1 && data[0].error)) {
-            document.getElementById('errorMsg').style.display = 'block';
-            document.getElementById('errorText').textContent = data[0]?.error || 'Failed';
-            return;
-        }
-        allStocks = data;
-        document.getElementById('screener').style.display = 'block';
-        document.getElementById('totalCount').textContent = data.length.toLocaleString();
-        document.querySelector('th[data-col="ncav_per_share"]').classList.add('sorted-desc');
-        loadPricesFromServer();
-        applyFilters();
-        // Load rules
-        fetch('/api/finance/rules').then(r=>r.json()).then(rules => {
-            const el = document.getElementById('rulesContent');
-            el.innerHTML = Object.entries(rules).map(([k,v]) =>
-                `<strong>${k.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase())}:</strong> ${v}`
-            ).join('<br>');
-        }).catch(()=>{});
-    })
-    .catch(err => {
-        document.getElementById('loading').style.display = 'none';
+// ── Snapshot loading ─────────────────────────────────────────
+// Default to the latest monthly snapshot (committed by the GH
+// Action on the 1st of each month). 'live' option falls through
+// to the live SEC EDGAR screener for admin refreshes. Snapshot
+// data has shape { _meta, net_nets }; live data is a flat list of
+// all candidates (net-nets and not). renderScreener normalizes.
+function renderScreener(rows, meta) {
+    document.getElementById('loading').style.display = 'none';
+    if (!Array.isArray(rows) || (rows.length === 1 && rows[0]?.error)) {
         document.getElementById('errorMsg').style.display = 'block';
-        document.getElementById('errorText').textContent = 'Failed: ' + err.message;
+        document.getElementById('errorText').textContent = rows?.[0]?.error || 'Failed';
+        return;
+    }
+    allStocks = rows;
+    document.getElementById('screener').style.display = 'block';
+    document.getElementById('totalCount').textContent = rows.length.toLocaleString();
+    document.querySelector('th[data-col="ncav_per_share"]').classList.add('sorted-desc');
+    // Snapshot metadata line — empty for live mode.
+    const metaEl = document.getElementById('snapshotMeta');
+    if (meta && meta.as_of) {
+        metaEl.textContent = `as of ${meta.as_of} · ${meta.net_nets_count ?? rows.length} net-nets`;
+    } else {
+        metaEl.textContent = '';
+    }
+    loadPricesFromServer();
+    applyFilters();
+}
+
+function loadSnapshot(month) {
+    document.getElementById('loading').style.display = 'flex';
+    document.getElementById('screener').style.display = 'none';
+    document.getElementById('errorMsg').style.display = 'none';
+    const url = month === 'live'
+        ? '/api/finance/screener'
+        : `/api/finance/snapshot/${month}`;
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            // Snapshot payload is wrapped: { _meta, net_nets }; live
+            // is a bare array. Normalize.
+            if (data && Array.isArray(data.net_nets)) {
+                renderScreener(data.net_nets, data._meta);
+            } else {
+                renderScreener(data, null);
+            }
+        })
+        .catch(err => {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('errorMsg').style.display = 'block';
+            document.getElementById('errorText').textContent = 'Failed: ' + err.message;
+        });
+}
+
+// Populate the dropdown from the snapshots API, then load the
+// latest. If no snapshots exist yet (first deploy before the 1st
+// of next month), fall straight through to live so the page isn't
+// empty.
+fetch('/api/finance/snapshots')
+    .then(r => r.json())
+    .then(({ months, latest }) => {
+        const sel = document.getElementById('snapshotPicker');
+        sel.innerHTML = '';
+        if (!months || !months.length) {
+            sel.insertAdjacentHTML('beforeend', '<option value="live">Live (no snapshots yet)</option>');
+            sel.value = 'live';
+            loadSnapshot('live');
+        } else {
+            months.forEach(m => {
+                sel.insertAdjacentHTML('beforeend', `<option value="${m}">${m}</option>`);
+            });
+            sel.insertAdjacentHTML('beforeend', '<option value="live">Live (now)</option>');
+            sel.value = latest;
+            loadSnapshot(latest);
+        }
+        sel.addEventListener('change', () => loadSnapshot(sel.value));
+    })
+    .catch(() => {
+        // Snapshots endpoint failed entirely — fall back to live.
+        loadSnapshot('live');
     });
+
+// Refresh-live button: kicks the live screener after clearing
+// its cache, then re-runs the dropdown handler at 'live'. Doesn't
+// touch snapshots — those are the monthly cron's job.
+document.getElementById('refreshLiveBtn').addEventListener('click', () => {
+    const btn = document.getElementById('refreshLiveBtn');
+    btn.disabled = true; btn.textContent = 'Refreshing…';
+    fetch('/api/finance/refresh')
+        .then(r => r.json())
+        .then(() => {
+            const sel = document.getElementById('snapshotPicker');
+            sel.value = 'live';
+            loadSnapshot('live');
+        })
+        .finally(() => { btn.disabled = false; btn.textContent = 'Refresh live'; });
+});
+
+// Load rules once (independent of snapshot/live selection).
+fetch('/api/finance/rules').then(r=>r.json()).then(rules => {
+    const el = document.getElementById('rulesContent');
+    el.innerHTML = Object.entries(rules).map(([k,v]) =>
+        `<strong>${k.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase())}:</strong> ${v}`
+    ).join('<br>');
+}).catch(()=>{});
 </script>
 {% endblock %}

@@ -1,5 +1,5 @@
 """Market Pulse — Real Estate & Finance Dashboard."""
-import os, logging, sqlite3
+import json, os, logging, sqlite3
 from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
@@ -874,6 +874,50 @@ async def api_refresh():
     count = len(data) if isinstance(data, list) else 0
     net_nets = sum(1 for d in data if isinstance(d, dict) and d.get("is_net_net")) if isinstance(data, list) else 0
     return JSONResponse({"count": count, "net_nets": net_nets, "status": "refreshed"})
+
+
+# ── Monthly screener snapshots ──
+# A GitHub Action runs scripts/refresh_screener.py on the 1st of
+# each month and commits data/screener_snapshots/YYYY-MM.json. These
+# two endpoints expose the historical archive to /finance so users
+# can browse what net-nets looked like in any past month.
+_SNAPSHOT_DIR = Path(__file__).resolve().parent / "data" / "screener_snapshots"
+
+
+@app.get("/api/finance/snapshots")
+async def api_snapshot_list():
+    """List available monthly snapshots, newest first.
+
+    Returns: { "months": ["2026-05", "2026-04", ...], "latest": "2026-05" }.
+    """
+    if not _SNAPSHOT_DIR.exists():
+        return JSONResponse({"months": [], "latest": None})
+    months = sorted(
+        (p.stem for p in _SNAPSHOT_DIR.glob("*.json")),
+        reverse=True,
+    )
+    return JSONResponse({"months": months, "latest": months[0] if months else None})
+
+
+@app.get("/api/finance/snapshot/{month}")
+async def api_snapshot(month: str):
+    """Return the full snapshot payload for a given YYYY-MM.
+
+    Format mirrors what refresh_screener.py wrote:
+        { "_meta": {...}, "net_nets": [...] }
+    """
+    # Defensive: only allow the strict format so a path-traversal
+    # request like /api/finance/snapshot/..%2Fetc%2Fpasswd is rejected
+    # before we touch the filesystem.
+    if len(month) != 7 or month[4] != "-" or not (month[:4].isdigit() and month[5:].isdigit()):
+        return JSONResponse({"error": "month must be YYYY-MM"}, status_code=400)
+    path = _SNAPSHOT_DIR / f"{month}.json"
+    if not path.exists():
+        return JSONResponse({"error": f"no snapshot for {month}"}, status_code=404)
+    try:
+        return JSONResponse(json.loads(path.read_text()))
+    except Exception as e:
+        return JSONResponse({"error": f"failed to read snapshot: {e}"}, status_code=500)
 
 
 
