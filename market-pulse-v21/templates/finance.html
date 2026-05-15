@@ -76,6 +76,19 @@
         <strong>Workflow:</strong> Click ticker → Yahoo Finance opens → copy price → paste in "Price" box → P/NCAV calculates instantly. Green = net-net. Gold = Graham bargain. Work top to bottom — highest NCAV/share first.
     </div>
 
+    <details class="card" style="margin-bottom:1rem; padding:0.6rem 1rem; font-size:0.78rem; cursor:pointer;">
+        <summary style="font-weight:600; color:var(--text); font-size:0.85rem;">What's a net-net? What's a Graham bargain? Which should I buy?</summary>
+        <div style="margin-top:0.65rem; color:var(--text-dim); line-height:1.6;">
+            <p style="margin:0 0 0.5rem;">Both are deep-value tags from Benjamin Graham's playbook. They compare a stock's price to its <strong>NCAV</strong> — Net Current Asset Value, roughly &quot;what you'd get if the company liquidated today&quot; (Current Assets − Total Liabilities − Preferred Stock).</p>
+            <ul style="margin:0 0 0.5rem; padding-left:1.1rem;">
+                <li><span style="color:var(--accent); font-weight:700;">NET-NET ✓</span> — Price below NCAV (P/NCAV &lt; 1.0). You're paying less than the company's break-up value. Graham's minimum margin of safety.</li>
+                <li style="margin-top:0.3rem;"><span style="color:var(--yellow); font-weight:700;">GRAHAM ★</span> — Stricter: price ≤ 67% of NCAV. Graham's classic &quot;buy at two-thirds&quot; rule. Bigger discount → bigger margin of safety.</li>
+            </ul>
+            <p style="margin:0 0 0.5rem;"><strong>Which is better to buy?</strong> All else equal, a Graham bargain has more cushion — academic studies (Oppenheimer 1986, etc.) show Graham-criteria baskets outperform a regular net-net basket on a multi-year horizon.</p>
+            <p style="margin:0;"><strong>Big caveat:</strong> Graham bargains are usually cheaper <em>for a reason</em> — worse business, faster cash burn, going-concern doubts. A clean net-net (cash-rich, no debt, slow burn, no auditor warning) often beats a deeply distressed Graham. Use the Status, Burn, and Debt filters to weed out the broken ones inside either bucket. <em>Not financial advice. Mechanical screens only — DYOR.</em></p>
+        </div>
+    </details>
+
     <details class="card" style="margin-bottom:1rem; padding:0.6rem 1rem; font-size:0.75rem; cursor:pointer;">
         <summary style="font-weight:600; color:var(--text); font-size:0.8rem;">Screening Rules (click to expand)</summary>
         <div style="margin-top:0.5rem; color:var(--text-dim); line-height:1.8;">
@@ -198,10 +211,12 @@ function onPrice(ticker, ncav, el) {
     const r = v / ncav;
     if(pncav) { pncav.innerHTML = `<strong>${r.toFixed(2)}x</strong>`; pncav.className = 'pncav-val ' + (r<=0.67?'up':r<=1?'up':''); }
 
-    if (r <= 0.67) { el.className='price-input graham'; verdict.textContent='GRAHAM ★'; verdict.className='verdict graham'; row.className='row-graham'; }
-    else if (r <= 1.0) { el.className='price-input net-net'; verdict.textContent='NET-NET ✓'; verdict.className='verdict buy'; row.className='row-netnet'; }
-    else if (r <= 1.5) { el.className='price-input'; verdict.textContent=r.toFixed(2)+'x'; verdict.className='verdict'; row.className=''; }
-    else { el.className='price-input'; verdict.textContent='Too high'; verdict.className='verdict expensive'; row.className=''; }
+    // Tooltip strings repeated in the static-render path below (line ~245).
+    // Keep both in sync if you change one.
+    if (r <= 0.67) { el.className='price-input graham'; verdict.textContent='GRAHAM ★'; verdict.className='verdict graham'; verdict.title='Graham bargain: P/NCAV ≤ 0.67. Trades at two-thirds or less of liquidation value — Graham’s classic deep-value cutoff. Bigger margin of safety than a regular net-net, but typically cheaper for a reason.'; row.className='row-graham'; }
+    else if (r <= 1.0) { el.className='price-input net-net'; verdict.textContent='NET-NET ✓'; verdict.className='verdict buy'; verdict.title='Net-net: P/NCAV < 1.0. Trades below break-up value (Current Assets − Total Liabilities − Preferred Stock). Graham’s minimum margin of safety.'; row.className='row-netnet'; }
+    else if (r <= 1.5) { el.className='price-input'; verdict.textContent=r.toFixed(2)+'x'; verdict.className='verdict'; verdict.title='Trades above NCAV. Not a Graham deep-value buy under classical criteria.'; row.className=''; }
+    else { el.className='price-input'; verdict.textContent='Too high'; verdict.className='verdict expensive'; verdict.title='Trades well above NCAV. No margin of safety on a liquidation basis.'; row.className=''; }
     updateCounts();
 
     // Update market cap
@@ -238,14 +253,16 @@ function renderTable(data) {
                      '<span class="signal-badge signal-neutral">—</span>';
         const div = s.pays_dividend ? '<span class="div-badge div-yes">$'+s.dividend_per_share.toFixed(2)+'</span>' : '<span class="div-no">—</span>';
 
-        let pncavHtml = '—', inputClass = 'price-input', vText = '', vClass = 'verdict', rowClass = '';
+        let pncavHtml = '—', inputClass = 'price-input', vText = '', vClass = 'verdict', rowClass = '', vTitle = '';
         if (sp && sp > 0 && s.ncav_per_share > 0) {
             const r = sp / s.ncav_per_share;
             pncavHtml = `<strong>${r.toFixed(2)}x</strong>`;
-            if (r <= 0.67) { inputClass='price-input graham'; vText='GRAHAM ★'; vClass='verdict graham'; rowClass='row-graham'; }
-            else if (r <= 1.0) { inputClass='price-input net-net'; vText='NET-NET ✓'; vClass='verdict buy'; rowClass='row-netnet'; }
-            else if (r <= 1.5) { vText=r.toFixed(2)+'x'; }
-            else { vText='Too high'; vClass='verdict expensive'; }
+            // Tooltip strings mirror the live-recalc path above (line ~214).
+            // Keep both in sync if you change one.
+            if (r <= 0.67) { inputClass='price-input graham'; vText='GRAHAM ★'; vClass='verdict graham'; rowClass='row-graham'; vTitle='Graham bargain: P/NCAV ≤ 0.67. Trades at two-thirds or less of liquidation value — Graham’s classic deep-value cutoff. Bigger margin of safety than a regular net-net, but typically cheaper for a reason.'; }
+            else if (r <= 1.0) { inputClass='price-input net-net'; vText='NET-NET ✓'; vClass='verdict buy'; rowClass='row-netnet'; vTitle='Net-net: P/NCAV < 1.0. Trades below break-up value (Current Assets − Total Liabilities − Preferred Stock). Graham’s minimum margin of safety.'; }
+            else if (r <= 1.5) { vText=r.toFixed(2)+'x'; vTitle='Trades above NCAV. Not a Graham deep-value buy under classical criteria.'; }
+            else { vText='Too high'; vClass='verdict expensive'; vTitle='Trades well above NCAV. No margin of safety on a liquidation basis.'; }
         } else if (!sp) {
             rowClass = 'row-dimmed';
         }
@@ -263,7 +280,7 @@ function renderTable(data) {
             <td class="action-zone">
                 <input type="number" step="0.01" class="${inputClass}" value="${sp||''}" placeholder="$0.00"
                     oninput="onPrice('${s.ticker}',${s.ncav_per_share},this)">
-                <div class="${vClass}">${vText}</div>
+                <div class="${vClass}"${vTitle ? ` title="${vTitle.replace(/"/g,'&quot;')}"` : ''}>${vText}</div>
             </td>
             <td class="action-zone" style="text-align:right;"><strong style="color:var(--accent);">$${s.ncav_per_share.toFixed(2)}</strong></td>
             <td class="action-zone" style="text-align:center;"><span class="pncav-val">${pncavHtml}</span></td>
