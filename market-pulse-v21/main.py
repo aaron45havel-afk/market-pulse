@@ -283,12 +283,10 @@ async def affordability(request: Request):
 
 @app.get("/finance")
 async def finance(request: Request):
-    # Admin-only. Non-admins land back on the home/map view rather than
-    # seeing a 401 — keeps the gating invisible to general visitors,
-    # who don't see the nav link in the first place. Use /admin/login
-    # to set the cookie before visiting.
-    if not _check_admin_token(request):
-        return RedirectResponse(url="/map", status_code=302)
+    # Public. Was admin-gated when the only view was a live SEC EDGAR
+    # screen (admins running fresh fetches at will); now that the
+    # monthly snapshot system makes the page mostly read-only, no
+    # reason to hide it. /results (paper portfolio) is still admin.
     return templates.TemplateResponse("finance.html", {"request": request})
 
 
