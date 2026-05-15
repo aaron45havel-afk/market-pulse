@@ -26,6 +26,7 @@ import json
 import logging
 import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -51,7 +52,13 @@ STATE_CODES = [
 
 def fetch_latest_observation(series_id: str, api_key: str) -> tuple[float, str] | None:
     """Returns (value, observation_date) for the most recent non-empty
-    obs of a FRED series, or None on failure / no data."""
+    obs of a FRED series, or None on failure / no data.
+
+    Retries transient errors (FRED 5xx, network blips) up to 3 times
+    with linear backoff. Without this, a single FRED outage window
+    that lines up with the workflow's cron kills all 51 state fetches
+    and the script exits non-zero — which is what happened the last
+    time this ran on a flaky day."""
     params = urllib.parse.urlencode({
         "series_id": series_id,
         "api_key": api_key,
@@ -61,14 +68,26 @@ def fetch_latest_observation(series_id: str, api_key: str) -> tuple[float, str] 
     })
     url = f"https://api.stlouisfed.org/fred/series/observations?{params}"
     req = urllib.request.Request(url, headers={"User-Agent": "market-pulse/1"})
-    try:
-        with urllib.request.urlopen(req, timeout=20) as r:
-            data = json.loads(r.read())
-    except urllib.error.HTTPError as e:
-        log.warning("  %s: HTTP %s", series_id, e.code)
-        return None
-    except urllib.error.URLError as e:
-        log.warning("  %s: network error %s", series_id, e.reason)
+    data = None
+    last_err: str | None = None
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=20) as r:
+                data = json.loads(r.read())
+            last_err = None
+            break
+        except urllib.error.HTTPError as e:
+            last_err = f"HTTP {e.code}"
+            # 4xx is a permanent error for this series (bad ID, etc.);
+            # only retry 5xx and 429.
+            if not (e.code >= 500 or e.code == 429):
+                break
+        except urllib.error.URLError as e:
+            last_err = f"network error {e.reason}"
+        if attempt < 2:
+            time.sleep(1.5 * (attempt + 1))
+    if data is None:
+        log.warning("  %s: %s (gave up after retries)", series_id, last_err)
         return None
     for obs in data.get("observations", []):
         v = obs.get("value")
