@@ -7,7 +7,7 @@ name: Refresh Zillow data
 
 on:
   schedule:
-    - cron: '0 12 1 * *'   # 12:00 UTC on the 1st of each month
+    - cron: '0 12 * * 2'   # Tuesdays 12:00 UTC (weekly)
   workflow_dispatch:        # also run manually from the Actions tab
 
 permissions:

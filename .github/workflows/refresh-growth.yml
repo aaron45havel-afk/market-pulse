@@ -9,7 +9,7 @@ name: Refresh Growth Outlook data
 
 on:
   schedule:
-    - cron: '30 12 1 * *'   # 12:30 UTC on the 1st (after Zillow + Redfin)
+    - cron: '30 12 * * 3'   # Wednesdays 12:30 UTC (weekly, after Zillow + Redfin)
   workflow_dispatch:         # also run manually from the Actions tab
 
 permissions:
