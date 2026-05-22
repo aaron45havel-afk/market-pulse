@@ -21,6 +21,7 @@ import json
 import logging
 import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -38,7 +39,12 @@ SERIES_ID = "MORTGAGE30US"
 def fetch_latest_rate(api_key: str) -> tuple[float, str] | None:
     """Pulls the most recent non-empty MORTGAGE30US observation. FRED
     returns weekly values; we grab the last 4 to be safe and walk back
-    to the first non-empty. Returns (rate, date_str) or None on failure."""
+    to the first non-empty. Returns (rate, date_str) or None on failure.
+
+    Retries transient errors (FRED 5xx, 429, network blips) up to 3
+    times with linear backoff. The old code called raise SystemExit
+    on the very first error — a single FRED 503 was killing the whole
+    weekly workflow."""
     params = urllib.parse.urlencode({
         "series_id": SERIES_ID,
         "api_key": api_key,
@@ -48,14 +54,28 @@ def fetch_latest_rate(api_key: str) -> tuple[float, str] | None:
     })
     url = f"https://api.stlouisfed.org/fred/series/observations?{params}"
     log.info("Fetching %s", url)
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "market-pulse/1"})
-        with urllib.request.urlopen(req, timeout=20) as r:
-            data = json.loads(r.read())
-    except urllib.error.HTTPError as e:
-        raise SystemExit(f"FRED HTTP {e.code} fetching {SERIES_ID}")
-    except urllib.error.URLError as e:
-        raise SystemExit(f"Network error: {e.reason}")
+    req = urllib.request.Request(url, headers={"User-Agent": "market-pulse/1"})
+    data = None
+    last_err: str | None = None
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=20) as r:
+                data = json.loads(r.read())
+            last_err = None
+            break
+        except urllib.error.HTTPError as e:
+            last_err = f"HTTP {e.code}"
+            # 4xx (e.g. invalid series ID) won't get better with a
+            # retry. Only retry 5xx and rate-limit (429).
+            if not (e.code >= 500 or e.code == 429):
+                break
+        except urllib.error.URLError as e:
+            last_err = f"network error {e.reason}"
+        if attempt < 2:
+            time.sleep(2 * (attempt + 1))
+    if data is None:
+        log.error("FRED %s: %s (gave up after 3 attempts)", SERIES_ID, last_err)
+        return None
     for obs in data.get("observations", []):
         v = obs.get("value")
         if v not in (None, "", "."):

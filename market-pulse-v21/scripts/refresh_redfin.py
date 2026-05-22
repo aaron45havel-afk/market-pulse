@@ -27,6 +27,7 @@ import io
 import json
 import logging
 import sys
+import time
 import urllib.error
 import urllib.request
 from datetime import date
@@ -52,18 +53,29 @@ TARGET_PROPERTY_TYPE = "All Residential"
 
 
 def fetch_gz_tsv(url: str, timeout: int = 90) -> str:
-    """Download a gzipped TSV and return decoded text. Raises a clear
-    error if the URL is broken or unreachable."""
+    """Download a gzipped TSV and return decoded text.
+
+    Retries 5xx and network errors up to 3 times with linear backoff
+    (the old code raised SystemExit on the first transient blip and
+    killed the weekly workflow). 4xx still fails fast — that's a real
+    URL or schema change, not flake."""
     log.info("Fetching %s", url)
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "market-pulse/1"})
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            raw = r.read()
-    except urllib.error.HTTPError as e:
-        raise SystemExit(f"Redfin returned HTTP {e.code} for {url}.")
-    except urllib.error.URLError as e:
-        raise SystemExit(f"Network error fetching {url}: {e.reason}")
-    return gzip.decompress(raw).decode("utf-8")
+    req = urllib.request.Request(url, headers={"User-Agent": "market-pulse/1"})
+    last_err: str | None = None
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                raw = r.read()
+            return gzip.decompress(raw).decode("utf-8")
+        except urllib.error.HTTPError as e:
+            last_err = f"HTTP {e.code}"
+            if not (e.code >= 500 or e.code == 429):
+                break
+        except urllib.error.URLError as e:
+            last_err = f"network error {e.reason}"
+        if attempt < 2:
+            time.sleep(3 * (attempt + 1))
+    raise SystemExit(f"Redfin {url}: {last_err} (after 3 attempts).")
 
 
 def parse_latest_per_state(tsv_text: str) -> dict[str, dict]:
