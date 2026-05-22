@@ -1,21 +1,52 @@
 """Postgres storage for user prices + paper portfolio tracking."""
-import os, logging, json
+import os, logging, json, time
 from datetime import datetime, date
 
 logger = logging.getLogger(__name__)
 
+# Connection retry tuning. Railway's internal DNS / Postgres readiness
+# occasionally lags during a deploy swap — we've seen the app start
+# before postgres.railway.internal accepts TCP. Without retries the
+# very first init_db() failed silently and every DB call for the
+# container's lifetime returned {"error": "No DB connection"} (the
+# code path callers swallow individually). A short retry loop with
+# linear backoff converts that into a transient warning instead of
+# a permanently-degraded container.
+_CONN_RETRIES = 4
+_CONN_BACKOFFS = (2, 4, 6, 10)   # seconds between attempts
+_CONN_TIMEOUT = 8                 # per-attempt socket timeout
+
 
 def _get_conn():
+    """Open a fresh psycopg2 connection. Retries transient network /
+    server-not-ready failures with linear backoff; returns None if
+    DATABASE_URL isn't set or every retry exhausts.
+
+    Per-call connection (not pooled) so this is also the same path
+    individual request handlers take — they benefit from retries too,
+    not just the boot-time init_db().
+    """
     import psycopg2
     url = os.getenv("DATABASE_URL")
     if not url:
         logger.warning("DATABASE_URL not set")
         return None
-    try:
-        return psycopg2.connect(url)
-    except Exception as e:
-        logger.error(f"Postgres connection failed: {e}")
-        return None
+    last_err: Exception | None = None
+    for attempt in range(_CONN_RETRIES):
+        try:
+            return psycopg2.connect(url, connect_timeout=_CONN_TIMEOUT)
+        except Exception as e:
+            last_err = e
+            if attempt < _CONN_RETRIES - 1:
+                wait = _CONN_BACKOFFS[attempt]
+                logger.warning(
+                    "Postgres connect failed (attempt %d/%d): %s — retrying in %ds",
+                    attempt + 1, _CONN_RETRIES, e, wait,
+                )
+                time.sleep(wait)
+    logger.error("Postgres connection failed after %d attempts: %s",
+                 _CONN_RETRIES, last_err)
+    return None
 
 
 def init_db():
