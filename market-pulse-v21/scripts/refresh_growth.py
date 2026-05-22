@@ -34,6 +34,7 @@ import json
 import logging
 import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -78,20 +79,32 @@ def fred_observations(api_key: str, series_id: str, limit: int = 24) -> list[dic
         "limit": limit,
     })
     url = f"https://api.stlouisfed.org/fred/series/observations?{params}"
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "market-pulse/1"})
-        with urllib.request.urlopen(req, timeout=20) as r:
-            data = json.loads(r.read())
-    except urllib.error.HTTPError as e:
-        if e.code == 400:
-            # FRED returns 400 for unknown series IDs. We surface this
-            # as a non-fatal warning so a single missing state doesn't
-            # nuke the whole refresh.
-            log.warning("  ⚠ %s: not found in FRED", series_id)
-            return []
-        raise SystemExit(f"FRED HTTP {e.code} for {series_id}")
-    except urllib.error.URLError as e:
-        raise SystemExit(f"Network error fetching {series_id}: {e.reason}")
+    req = urllib.request.Request(url, headers={"User-Agent": "market-pulse/1"})
+    # Retry 5xx + network blips so a flaky FRED window doesn't take
+    # down the whole monthly run. 400 (unknown series) is a permanent
+    # answer — return [] immediately the same way the old code did.
+    data = None
+    last_err: str | None = None
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=20) as r:
+                data = json.loads(r.read())
+            last_err = None
+            break
+        except urllib.error.HTTPError as e:
+            if e.code == 400:
+                log.warning("  ⚠ %s: not found in FRED", series_id)
+                return []
+            last_err = f"HTTP {e.code}"
+            if not (e.code >= 500 or e.code == 429):
+                break
+        except urllib.error.URLError as e:
+            last_err = f"network error {e.reason}"
+        if attempt < 2:
+            time.sleep(1.5 * (attempt + 1))
+    if data is None:
+        log.warning("  ⚠ %s: %s (gave up after retries)", series_id, last_err)
+        return []
     return data.get("observations", [])
 
 
