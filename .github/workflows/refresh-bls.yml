@@ -5,14 +5,15 @@ name: Refresh state unemployment (BLS via FRED)
 # CHOROPLETH_STATES on import so the new unemployment_pct metric
 # shows up in /map's sidebar without code changes.
 #
-# Cadence: 15th of each month (BLS publishes state UR ~3 weeks after
-# month-end — April data lands around mid-May).
+# Cadence: weekly Mondays — FRED refreshes state UR series whenever BLS
+# publishes; checking weekly ensures we pick up new data within days of
+# release. Commits are skipped when the data hasn't changed.
 #
 # Same auto-commit pattern as refresh-rates / refresh-zillow / etc.
 
 on:
   schedule:
-    - cron: '0 13 15 * *'   # 13:00 UTC on the 15th
+    - cron: '0 13 * * 1'   # Mondays 13:00 UTC
   workflow_dispatch:
 
 permissions:
