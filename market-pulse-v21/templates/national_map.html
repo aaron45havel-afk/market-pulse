@@ -929,6 +929,29 @@
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script>
 const METROS = JSON.parse(document.getElementById('metros-data').textContent);
+
+// Render the negotiating-power chip for a metro popup. Reads the
+// state's Redfin sale-to-list ratio from CP_STATES and buckets it
+// into 5 tiers from strong-buyer's-market (great for an investor)
+// to strong-seller's-market (bidding wars). Returns an empty string
+// when state data is missing so the popup quietly degrades.
+function buildBuyerPowerChip(stateCode) {
+    if (!stateCode || typeof CP_STATES === 'undefined') return '';
+    const sd = Object.values(CP_STATES).find(s => s && s.code === stateCode);
+    const stl = sd && sd.sale_to_list_pct;
+    if (stl == null) return '';
+    let label, bg, fg;
+    if (stl < 97)         { label = "Strong buyer's market"; bg = 'rgba(34,197,94,0.18)';  fg = '#16a34a'; }
+    else if (stl < 99.5)  { label = "Buyer's market";        bg = 'rgba(132,204,22,0.18)'; fg = '#65a30d'; }
+    else if (stl < 100.5) { label = 'Balanced';              bg = 'rgba(156,163,175,0.22)';fg = '#6b7280'; }
+    else if (stl < 102)   { label = "Seller's market";       bg = 'rgba(245,158,11,0.18)'; fg = '#d97706'; }
+    else                  { label = 'Strong seller market';  bg = 'rgba(239,68,68,0.18)';  fg = '#dc2626'; }
+    // Inline-style so the chip works inside Leaflet's popup HTML
+    // (Leaflet sanitizes some attrs but inline style sticks). Title
+    // attribute gives the exact number on hover for power-users.
+    const title = `${stateCode} sale-to-list ratio: ${stl.toFixed(1)}% (Redfin, latest month). >100 = bidding above asking.`;
+    return `<div style="display:inline-block; padding:2px 8px; border-radius:999px; background:${bg}; color:${fg}; font-size:0.68rem; font-weight:700; letter-spacing:0.02em; margin-bottom:0.55rem;" title="${title}">${label}</div>`;
+}
 const CP_STATES = JSON.parse(document.getElementById('cp-states-data').textContent);
 const CP_METRICS = JSON.parse(document.getElementById('cp-metrics-data').textContent);
 
@@ -1102,9 +1125,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const cta = m.is_stub
             ? `<a href="/real-estate/${m.slug}/map" class="pop-cta" title="One-pin state-level estimate. Per-neighborhood breakdown not yet available.">View state estimate &rarr;</a>`
             : `<a href="#" class="pop-cta pop-cta-zoom" data-lat="${c.lat}" data-lng="${c.lng}" data-slug="${m.slug}">View ${m.zip_count} neighborhoods &rarr;</a>`;
+        // Buyer-power chip — single most actionable Redfin signal.
+        // Pulls sale_to_list_pct from the state's CP_STATES entry
+        // (loaded from data_providers, which patches in Redfin's
+        // AVG_SALE_TO_LIST monthly). Renders nothing for stub metros
+        // or states with no Redfin data yet.
+        const buyerPowerChip = buildBuyerPowerChip(m.state);
         const popup =
             `<div style="font-weight:700; font-size:1.0rem; margin-bottom:0.25rem;">${m.metro_label}</div>` +
             `<div style="font-size:0.72rem; color:var(--text-dim); margin-bottom:0.5rem;">${subhead}</div>` +
+            buyerPowerChip +
             topRow +
             `<div class="pop-stat"><span class="label">Avg home value</span><span>${fmtMoney(m.avg_home_value)}</span></div>` +
             `<div class="pop-stat"><span class="label">Avg rent /mo</span><span>${fmtMoney(m.avg_rent)}</span></div>` +

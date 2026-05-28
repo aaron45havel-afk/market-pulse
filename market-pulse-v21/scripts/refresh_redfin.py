@@ -12,6 +12,13 @@ Usage:
 What gets refreshed (per state):
   - ``homes_sold``         most recent monthly count (All Residential)
   - ``dom``                most recent monthly median Days on Market
+  - ``sale_to_list_pct``   avg sale-to-list ratio as %. >100 = bidding
+                           above asking (seller's market); <100 = below
+                           asking (buyer's market). The single best
+                           "negotiating power" proxy in Redfin's feed.
+  - ``price_drops_pct``    share of active listings with price drops,
+                           as %. Spike = sellers capitulating; classic
+                           leading indicator of a cooling market.
   - ``period_end``         the date these values are for (in _meta only)
 
 Run cadence: monthly is appropriate. Suitable for a GitHub Action that
@@ -99,14 +106,20 @@ def parse_latest_per_state(tsv_text: str) -> dict[str, dict]:
         idx_property     = header.index("PROPERTY_TYPE")
         idx_homes_sold   = header.index("HOMES_SOLD")
         idx_median_dom   = header.index("MEDIAN_DOM")
+        idx_sale_to_list = header.index("AVG_SALE_TO_LIST")
+        idx_price_drops  = header.index("PRICE_DROPS")
     except ValueError as e:
         raise SystemExit(f"Redfin TSV missing expected column: {e}")
+
+    # Single max-index for the bounds check below — keeps the row-length
+    # guard right whichever new column we add later.
+    max_idx = max(idx_homes_sold, idx_median_dom, idx_sale_to_list, idx_price_drops)
 
     latest: dict[str, dict] = {}
     rows_seen, rows_kept = 0, 0
     for row in reader:
         rows_seen += 1
-        if len(row) <= idx_median_dom:
+        if len(row) <= max_idx:
             continue
         if (row[idx_region_type].strip('"') != "state" or
                 row[idx_property].strip('"') != TARGET_PROPERTY_TYPE):
@@ -115,9 +128,11 @@ def parse_latest_per_state(tsv_text: str) -> dict[str, dict]:
         period_end = row[idx_period_end].strip('"')
         homes_sold_raw = row[idx_homes_sold]
         dom_raw = row[idx_median_dom]
+        sale_to_list_raw = row[idx_sale_to_list]
+        price_drops_raw = row[idx_price_drops]
         if not state or not period_end:
             continue
-        # Skip rows with missing values — Redfin uses '' for nulls.
+        # Skip rows with missing core values — Redfin uses '' for nulls.
         if homes_sold_raw in ("", "NA") or dom_raw in ("", "NA"):
             continue
         try:
@@ -125,11 +140,25 @@ def parse_latest_per_state(tsv_text: str) -> dict[str, dict]:
             dom = int(round(float(dom_raw)))
         except ValueError:
             continue
+        # AVG_SALE_TO_LIST + PRICE_DROPS are decimals (0.97 = 97%, 0.05 = 5%).
+        # Optional — newly-added columns; tolerate missing values per state
+        # rather than dropping the whole row so homes_sold / dom still land.
+        def _to_pct(raw: str) -> float | None:
+            if raw in ("", "NA"):
+                return None
+            try:
+                return round(float(raw) * 100, 1)
+            except ValueError:
+                return None
+        sale_to_list = _to_pct(sale_to_list_raw)
+        price_drops = _to_pct(price_drops_raw)
         existing = latest.get(state)
         if existing is None or period_end > existing["period_end"]:
             latest[state] = {
                 "homes_sold": homes_sold,
                 "dom": dom,
+                "sale_to_list_pct": sale_to_list,
+                "price_drops_pct": price_drops,
                 "period_end": period_end,
             }
             rows_kept += 1
@@ -151,10 +180,16 @@ def build_overrides(per_state: dict[str, dict]) -> dict:
     log.info("  → primary period_end = %s (%d/%d states)",
              primary_period, counts[primary_period], len(per_state))
 
-    overrides = {
-        state: {"homes_sold": v["homes_sold"], "dom": v["dom"]}
-        for state, v in sorted(per_state.items())
-    }
+    overrides: dict[str, dict] = {}
+    for state, v in sorted(per_state.items()):
+        # None values get dropped so JSON doesn't carry nulls — the
+        # data_providers loader only patches keys that are present.
+        entry = {"homes_sold": v["homes_sold"], "dom": v["dom"]}
+        if v.get("sale_to_list_pct") is not None:
+            entry["sale_to_list_pct"] = v["sale_to_list_pct"]
+        if v.get("price_drops_pct") is not None:
+            entry["price_drops_pct"] = v["price_drops_pct"]
+        overrides[state] = entry
     return {
         "_meta": {
             "as_of": date.today().isoformat(),
