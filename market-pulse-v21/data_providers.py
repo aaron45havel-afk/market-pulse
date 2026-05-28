@@ -805,6 +805,13 @@ CHOROPLETH_METRICS = [
     # opportunity, so good_when=high.
     {"key": "sale_to_list_pct", "label": "Sale-to-list ratio",         "unit": "%", "good_when": "low",  "decimals": 1, "category": "Market", "popular": True},
     {"key": "price_drops_pct",  "label": "Listings with price drops",  "unit": "%", "good_when": "high", "decimals": 1, "category": "Market", "popular": True},
+    {"key": "months_of_supply", "label": "Months of supply",           "unit": " mo","good_when": "high","decimals": 1, "category": "Market", "popular": False},
+    # Composite "market climate" — single 0–100 buyer-friendliness
+    # score that blends sale-to-list, price drops, days-on-market,
+    # and months of supply. Computed in _compute_market_climate()
+    # after all four input series land on CHOROPLETH_STATES.
+    # 0 = scorching seller's market; 100 = arctic buyer's market.
+    {"key": "market_climate_pct","label": "Market climate (buyer-friendliness)","unit": "", "good_when": "high","decimals": 0, "category": "Market", "popular": True},
     # Derived metric — computed in _compute_derived_metrics() from
     # home_value + median_income against the 3.5x national P/I norm.
     {"key": "overvalued_pct","label": "Overvalued vs income",  "unit": "%",  "good_when": "low",  "decimals": 1, "category": "Market", "popular": True},
@@ -956,6 +963,46 @@ _apply_zillow_state_overrides()
 _apply_growth_overrides()
 _apply_bls_overrides()
 _apply_census_acs_state_overrides()
+
+
+# Composite "market climate" score — single buyer-friendliness gauge
+# (0 = scorching seller's market, 100 = arctic buyer's market) built
+# from four Redfin signals. We need *all four* to compute it; a state
+# missing any input gets None (and falls out of the choropleth + chip).
+#
+# Each input is normalised to a 0–1 "coolness" subscore via a fixed
+# floor/ceiling so the scale is stable across refreshes (no z-scoring
+# against the current month's distribution — that would make a state's
+# climate score shift just because its neighbors moved). The four
+# subscores are then averaged equally — no input has more weight than
+# another since they each capture a distinct facet of "is the market
+# cooling for buyers."
+def _compute_market_climate() -> None:
+    def _clamp(x: float, lo: float = 0.0, hi: float = 1.0) -> float:
+        return max(lo, min(hi, x))
+    for code, sd in CHOROPLETH_STATES.items():
+        stl = sd.get("sale_to_list_pct")
+        drops = sd.get("price_drops_pct")
+        dom = sd.get("dom")
+        supply = sd.get("months_of_supply")
+        if stl is None or drops is None or dom is None or supply is None:
+            continue
+        # 100 = at list, 95 = -5% under (great for buyer), 105 = +5%
+        # over (terrible). Anchor at 95–102 so realistic spreads use
+        # most of the 0–1 range.
+        cool_stl = _clamp((102 - stl) / 7)
+        # 0% drops = hot, ~40% drops = cool. Recent Sun Belt readings
+        # hit 30–35%, so 40 is a generous upper anchor.
+        cool_drops = _clamp(drops / 40)
+        # 15 days = hot, 90+ days = cool.
+        cool_dom = _clamp((dom - 15) / 75)
+        # 1 month = hot, 6 months = cool. Above 6 = oversupplied (cap).
+        cool_supply = _clamp(supply / 6)
+        score = (cool_stl + cool_drops + cool_dom + cool_supply) / 4
+        sd["market_climate_pct"] = round(score * 100)
+
+
+_compute_market_climate()
 
 
 # Current 30-yr fixed mortgage rate (FRED MORTGAGE30US, refreshed weekly
