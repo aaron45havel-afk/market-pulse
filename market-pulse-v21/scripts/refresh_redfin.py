@@ -108,12 +108,14 @@ def parse_latest_per_state(tsv_text: str) -> dict[str, dict]:
         idx_median_dom   = header.index("MEDIAN_DOM")
         idx_sale_to_list = header.index("AVG_SALE_TO_LIST")
         idx_price_drops  = header.index("PRICE_DROPS")
+        idx_months_supply = header.index("MONTHS_OF_SUPPLY")
     except ValueError as e:
         raise SystemExit(f"Redfin TSV missing expected column: {e}")
 
     # Single max-index for the bounds check below — keeps the row-length
     # guard right whichever new column we add later.
-    max_idx = max(idx_homes_sold, idx_median_dom, idx_sale_to_list, idx_price_drops)
+    max_idx = max(idx_homes_sold, idx_median_dom, idx_sale_to_list,
+                  idx_price_drops, idx_months_supply)
 
     latest: dict[str, dict] = {}
     rows_seen, rows_kept = 0, 0
@@ -152,6 +154,13 @@ def parse_latest_per_state(tsv_text: str) -> dict[str, dict]:
                 return None
         sale_to_list = _to_pct(sale_to_list_raw)
         price_drops = _to_pct(price_drops_raw)
+        # months_of_supply is already a months value, not a fraction —
+        # 1.5 means 1.5 months. Pass through as float.
+        months_supply_raw = row[idx_months_supply]
+        try:
+            months_supply = round(float(months_supply_raw), 1) if months_supply_raw not in ("", "NA") else None
+        except ValueError:
+            months_supply = None
         existing = latest.get(state)
         if existing is None or period_end > existing["period_end"]:
             latest[state] = {
@@ -159,6 +168,7 @@ def parse_latest_per_state(tsv_text: str) -> dict[str, dict]:
                 "dom": dom,
                 "sale_to_list_pct": sale_to_list,
                 "price_drops_pct": price_drops,
+                "months_of_supply": months_supply,
                 "period_end": period_end,
             }
             rows_kept += 1
@@ -185,10 +195,10 @@ def build_overrides(per_state: dict[str, dict]) -> dict:
         # None values get dropped so JSON doesn't carry nulls — the
         # data_providers loader only patches keys that are present.
         entry = {"homes_sold": v["homes_sold"], "dom": v["dom"]}
-        if v.get("sale_to_list_pct") is not None:
-            entry["sale_to_list_pct"] = v["sale_to_list_pct"]
-        if v.get("price_drops_pct") is not None:
-            entry["price_drops_pct"] = v["price_drops_pct"]
+        for opt in ("sale_to_list_pct", "price_drops_pct", "months_of_supply"):
+            val = v.get(opt)
+            if val is not None:
+                entry[opt] = val
         overrides[state] = entry
     return {
         "_meta": {

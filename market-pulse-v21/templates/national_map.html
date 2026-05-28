@@ -930,27 +930,33 @@
 <script>
 const METROS = JSON.parse(document.getElementById('metros-data').textContent);
 
-// Render the negotiating-power chip for a metro popup. Reads the
-// state's Redfin sale-to-list ratio from CP_STATES and buckets it
-// into 5 tiers from strong-buyer's-market (great for an investor)
-// to strong-seller's-market (bidding wars). Returns an empty string
-// when state data is missing so the popup quietly degrades.
+// Render the Market Climate chip for a metro popup. Composite
+// blends 4 Redfin signals (sale-to-list, price drops, DOM, months
+// of supply) into a single 0–100 buyer-friendliness score. 0 =
+// scorching seller's market; 100 = arctic buyer's market.
+// Tooltip exposes the 4 inputs for power-users. Returns an empty
+// string if the state's composite is missing so the popup degrades
+// quietly.
 function buildBuyerPowerChip(stateCode) {
     if (!stateCode || typeof CP_STATES === 'undefined') return '';
     const sd = Object.values(CP_STATES).find(s => s && s.code === stateCode);
-    const stl = sd && sd.sale_to_list_pct;
-    if (stl == null) return '';
+    const score = sd && sd.market_climate_pct;
+    if (score == null) return '';
     let label, bg, fg;
-    if (stl < 97)         { label = "Strong buyer's market"; bg = 'rgba(34,197,94,0.18)';  fg = '#16a34a'; }
-    else if (stl < 99.5)  { label = "Buyer's market";        bg = 'rgba(132,204,22,0.18)'; fg = '#65a30d'; }
-    else if (stl < 100.5) { label = 'Balanced';              bg = 'rgba(156,163,175,0.22)';fg = '#6b7280'; }
-    else if (stl < 102)   { label = "Seller's market";       bg = 'rgba(245,158,11,0.18)'; fg = '#d97706'; }
-    else                  { label = 'Strong seller market';  bg = 'rgba(239,68,68,0.18)';  fg = '#dc2626'; }
-    // Inline-style so the chip works inside Leaflet's popup HTML
-    // (Leaflet sanitizes some attrs but inline style sticks). Title
-    // attribute gives the exact number on hover for power-users.
-    const title = `${stateCode} sale-to-list ratio: ${stl.toFixed(1)}% (Redfin, latest month). >100 = bidding above asking.`;
-    return `<div style="display:inline-block; padding:2px 8px; border-radius:999px; background:${bg}; color:${fg}; font-size:0.68rem; font-weight:700; letter-spacing:0.02em; margin-bottom:0.55rem;" title="${title}">${label}</div>`;
+    if (score >= 75)      { label = "Buyer's market — cool";    bg = 'rgba(34,197,94,0.18)';  fg = '#16a34a'; }
+    else if (score >= 60) { label = 'Cooling — buyer-leaning';  bg = 'rgba(132,204,22,0.18)'; fg = '#65a30d'; }
+    else if (score >= 40) { label = 'Balanced';                 bg = 'rgba(156,163,175,0.22)';fg = '#6b7280'; }
+    else if (score >= 25) { label = 'Warming — seller-leaning'; bg = 'rgba(245,158,11,0.18)'; fg = '#d97706'; }
+    else                  { label = "Seller's market — hot";    bg = 'rgba(239,68,68,0.18)';  fg = '#dc2626'; }
+    const parts = [
+        `${stateCode}: market climate ${score}/100 (higher = more buyer-friendly).`,
+        sd.sale_to_list_pct != null ? `Sale-to-list ${sd.sale_to_list_pct}%` : null,
+        sd.price_drops_pct  != null ? `Price drops ${sd.price_drops_pct}%`    : null,
+        sd.dom              != null ? `${sd.dom}d on market`                  : null,
+        sd.months_of_supply != null ? `${sd.months_of_supply}mo supply`       : null,
+    ].filter(Boolean);
+    const title = parts.join(' · ') + ' (Redfin, latest month).';
+    return `<div style="display:inline-block; padding:2px 8px; border-radius:999px; background:${bg}; color:${fg}; font-size:0.68rem; font-weight:700; letter-spacing:0.02em; margin-bottom:0.55rem;" title="${title.replace(/"/g,'&quot;')}">${label} · ${score}</div>`;
 }
 const CP_STATES = JSON.parse(document.getElementById('cp-states-data').textContent);
 const CP_METRICS = JSON.parse(document.getElementById('cp-metrics-data').textContent);

@@ -11,307 +11,358 @@
       "homes_sold": 461,
       "dom": 33,
       "sale_to_list_pct": 98.8,
-      "price_drops_pct": 19.1
+      "price_drops_pct": 19.1,
+      "months_of_supply": 2.4
     },
     "AL": {
       "homes_sold": 5295,
       "dom": 69,
       "sale_to_list_pct": 97.6,
-      "price_drops_pct": 23.6
+      "price_drops_pct": 23.6,
+      "months_of_supply": 4.2
     },
     "AR": {
       "homes_sold": 3153,
       "dom": 75,
       "sale_to_list_pct": 97.0,
-      "price_drops_pct": 23.9
+      "price_drops_pct": 23.9,
+      "months_of_supply": 4.2
     },
     "AZ": {
       "homes_sold": 9885,
       "dom": 64,
       "sale_to_list_pct": 97.9,
-      "price_drops_pct": 33.2
+      "price_drops_pct": 33.2,
+      "months_of_supply": 3.8
     },
     "CA": {
       "homes_sold": 23474,
       "dom": 37,
       "sale_to_list_pct": 100.4,
-      "price_drops_pct": 25.0
+      "price_drops_pct": 25.0,
+      "months_of_supply": 3.0
     },
     "CO": {
       "homes_sold": 6559,
       "dom": 45,
       "sale_to_list_pct": 98.6,
-      "price_drops_pct": 30.7
+      "price_drops_pct": 30.7,
+      "months_of_supply": 3.8
     },
     "CT": {
       "homes_sold": 2331,
       "dom": 45,
       "sale_to_list_pct": 101.6,
-      "price_drops_pct": 14.1
+      "price_drops_pct": 14.1,
+      "months_of_supply": 2.2
     },
     "DC": {
       "homes_sold": 529,
       "dom": 68,
       "sale_to_list_pct": 98.7,
-      "price_drops_pct": 24.0
+      "price_drops_pct": 24.0,
+      "months_of_supply": 5.2
     },
     "DE": {
       "homes_sold": 566,
       "dom": 48,
       "sale_to_list_pct": 99.2,
-      "price_drops_pct": 24.8
+      "price_drops_pct": 24.8,
+      "months_of_supply": 2.7
     },
     "FL": {
       "homes_sold": 34168,
       "dom": 77,
       "sale_to_list_pct": 96.4,
-      "price_drops_pct": 31.4
+      "price_drops_pct": 31.4,
+      "months_of_supply": 4.8
     },
     "GA": {
       "homes_sold": 10870,
       "dom": 67,
       "sale_to_list_pct": 97.7,
-      "price_drops_pct": 29.3
+      "price_drops_pct": 29.3,
+      "months_of_supply": 3.9
     },
     "HI": {
       "homes_sold": 1040,
       "dom": 104,
       "sale_to_list_pct": 97.3,
-      "price_drops_pct": 17.6
+      "price_drops_pct": 17.6,
+      "months_of_supply": 6.2
     },
     "IA": {
       "homes_sold": 2932,
       "dom": 72,
       "sale_to_list_pct": 97.6,
-      "price_drops_pct": 24.5
+      "price_drops_pct": 24.5,
+      "months_of_supply": 3.0
     },
     "ID": {
       "homes_sold": 2456,
       "dom": 68,
       "sale_to_list_pct": 98.9,
-      "price_drops_pct": 25.6
+      "price_drops_pct": 25.6,
+      "months_of_supply": 2.7
     },
     "IL": {
       "homes_sold": 10460,
       "dom": 51,
       "sale_to_list_pct": 99.1,
-      "price_drops_pct": 17.0
+      "price_drops_pct": 17.0,
+      "months_of_supply": 2.8
     },
     "IN": {
       "homes_sold": 6506,
       "dom": 49,
       "sale_to_list_pct": 97.7,
-      "price_drops_pct": 32.6
+      "price_drops_pct": 32.6,
+      "months_of_supply": 2.4
     },
     "KS": {
       "homes_sold": 2594,
       "dom": 35,
       "sale_to_list_pct": 98.6,
-      "price_drops_pct": 26.9
+      "price_drops_pct": 26.9,
+      "months_of_supply": 1.5
     },
     "KY": {
       "homes_sold": 3476,
       "dom": 63,
       "sale_to_list_pct": 97.4,
-      "price_drops_pct": 27.9
+      "price_drops_pct": 27.9,
+      "months_of_supply": 3.4
     },
     "LA": {
       "homes_sold": 3535,
       "dom": 81,
       "sale_to_list_pct": 97.2,
-      "price_drops_pct": 27.5
+      "price_drops_pct": 27.5,
+      "months_of_supply": 3.6
     },
     "MA": {
       "homes_sold": 3727,
       "dom": 31,
       "sale_to_list_pct": 99.9,
-      "price_drops_pct": 19.1
+      "price_drops_pct": 19.1,
+      "months_of_supply": 2.7
     },
     "MD": {
       "homes_sold": 4864,
       "dom": 47,
       "sale_to_list_pct": 99.8,
-      "price_drops_pct": 25.2
+      "price_drops_pct": 25.2,
+      "months_of_supply": 2.8
     },
     "ME": {
       "homes_sold": 1154,
       "dom": 67,
       "sale_to_list_pct": 97.5,
-      "price_drops_pct": 20.3
+      "price_drops_pct": 20.3,
+      "months_of_supply": 3.5
     },
     "MI": {
       "homes_sold": 7753,
       "dom": 40,
       "sale_to_list_pct": 98.3,
-      "price_drops_pct": 24.5
+      "price_drops_pct": 24.5,
+      "months_of_supply": 2.6
     },
     "MN": {
       "homes_sold": 4460,
       "dom": 44,
       "sale_to_list_pct": 99.2,
-      "price_drops_pct": 24.3
+      "price_drops_pct": 24.3,
+      "months_of_supply": 2.7
     },
     "MO": {
       "homes_sold": 6256,
       "dom": 44,
       "sale_to_list_pct": 97.6,
-      "price_drops_pct": 26.3
+      "price_drops_pct": 26.3,
+      "months_of_supply": 2.2
     },
     "MS": {
       "homes_sold": 1605,
       "dom": 59,
       "sale_to_list_pct": 96.9,
-      "price_drops_pct": 27.2
+      "price_drops_pct": 27.2,
+      "months_of_supply": 4.5
     },
     "MT": {
       "homes_sold": 921,
       "dom": 115,
       "sale_to_list_pct": 83.3,
-      "price_drops_pct": 16.2
+      "price_drops_pct": 16.2,
+      "months_of_supply": 5.4
     },
     "NC": {
       "homes_sold": 12096,
       "dom": 77,
       "sale_to_list_pct": 97.9,
-      "price_drops_pct": 26.8
+      "price_drops_pct": 26.8,
+      "months_of_supply": 4.0
     },
     "ND": {
       "homes_sold": 319,
       "dom": 73,
       "sale_to_list_pct": 97.1,
-      "price_drops_pct": 16.7
+      "price_drops_pct": 16.7,
+      "months_of_supply": 3.1
     },
     "NE": {
       "homes_sold": 1667,
       "dom": 40,
       "sale_to_list_pct": 99.8,
-      "price_drops_pct": 26.1
+      "price_drops_pct": 26.1,
+      "months_of_supply": 2.0
     },
     "NH": {
       "homes_sold": 1110,
       "dom": 53,
       "sale_to_list_pct": 99.5,
-      "price_drops_pct": 14.4
+      "price_drops_pct": 14.4,
+      "months_of_supply": 2.6
     },
     "NJ": {
       "homes_sold": 5929,
       "dom": 49,
       "sale_to_list_pct": 100.8,
-      "price_drops_pct": 16.3
+      "price_drops_pct": 16.3,
+      "months_of_supply": 3.2
     },
     "NM": {
       "homes_sold": 898,
       "dom": 77,
       "sale_to_list_pct": 98.8,
-      "price_drops_pct": 20.2
+      "price_drops_pct": 20.2,
+      "months_of_supply": 4.5
     },
     "NV": {
       "homes_sold": 3812,
       "dom": 62,
       "sale_to_list_pct": 98.1,
-      "price_drops_pct": 25.8
+      "price_drops_pct": 25.8,
+      "months_of_supply": 3.4
     },
     "NY": {
       "homes_sold": 8271,
       "dom": 57,
       "sale_to_list_pct": 99.9,
-      "price_drops_pct": 18.8
+      "price_drops_pct": 18.8,
+      "months_of_supply": 3.8
     },
     "OH": {
       "homes_sold": 9662,
       "dom": 47,
       "sale_to_list_pct": 98.3,
-      "price_drops_pct": 24.0
+      "price_drops_pct": 24.0,
+      "months_of_supply": 2.6
     },
     "OK": {
       "homes_sold": 4211,
       "dom": 62,
       "sale_to_list_pct": 97.6,
-      "price_drops_pct": 27.9
+      "price_drops_pct": 27.9,
+      "months_of_supply": 3.5
     },
     "OR": {
       "homes_sold": 3839,
       "dom": 46,
       "sale_to_list_pct": 99.0,
-      "price_drops_pct": 29.9
+      "price_drops_pct": 29.9,
+      "months_of_supply": 3.2
     },
     "PA": {
       "homes_sold": 8753,
       "dom": 46,
       "sale_to_list_pct": 98.6,
-      "price_drops_pct": 25.1
+      "price_drops_pct": 25.1,
+      "months_of_supply": 2.8
     },
     "RI": {
       "homes_sold": 701,
       "dom": 42,
       "sale_to_list_pct": 99.6,
-      "price_drops_pct": 15.3
+      "price_drops_pct": 15.3,
+      "months_of_supply": 2.1
     },
     "SC": {
       "homes_sold": 6617,
       "dom": 92,
       "sale_to_list_pct": 97.7,
-      "price_drops_pct": 26.5
+      "price_drops_pct": 26.5,
+      "months_of_supply": 4.6
     },
     "SD": {
       "homes_sold": 669,
       "dom": 85,
       "sale_to_list_pct": 97.3,
-      "price_drops_pct": 17.6
+      "price_drops_pct": 17.6,
+      "months_of_supply": 3.8
     },
     "TN": {
       "homes_sold": 7173,
       "dom": 86,
       "sale_to_list_pct": 97.4,
-      "price_drops_pct": 24.6
+      "price_drops_pct": 24.6,
+      "months_of_supply": 4.8
     },
     "TX": {
       "homes_sold": 27571,
       "dom": 82,
       "sale_to_list_pct": 97.1,
-      "price_drops_pct": 31.6
+      "price_drops_pct": 31.6,
+      "months_of_supply": 4.6
     },
     "UT": {
       "homes_sold": 3328,
       "dom": 53,
       "sale_to_list_pct": 98.8,
-      "price_drops_pct": 29.2
+      "price_drops_pct": 29.2,
+      "months_of_supply": 3.8
     },
     "VA": {
       "homes_sold": 8865,
       "dom": 41,
       "sale_to_list_pct": 99.4,
-      "price_drops_pct": 23.6
+      "price_drops_pct": 23.6,
+      "months_of_supply": 2.3
     },
     "VT": {
       "homes_sold": 447,
       "dom": 95,
       "sale_to_list_pct": 97.1,
-      "price_drops_pct": 13.5
+      "price_drops_pct": 13.5,
+      "months_of_supply": 5.0
     },
     "WA": {
       "homes_sold": 7114,
       "dom": 31,
       "sale_to_list_pct": 99.6,
-      "price_drops_pct": 29.6
+      "price_drops_pct": 29.6,
+      "months_of_supply": 2.6
     },
     "WI": {
       "homes_sold": 4612,
       "dom": 54,
       "sale_to_list_pct": 99.6,
-      "price_drops_pct": 14.1
+      "price_drops_pct": 14.1,
+      "months_of_supply": 2.8
     },
     "WV": {
       "homes_sold": 1081,
       "dom": 80,
       "sale_to_list_pct": 96.6,
-      "price_drops_pct": 21.8
+      "price_drops_pct": 21.8,
+      "months_of_supply": 3.3
     },
     "WY": {
       "homes_sold": 511,
       "dom": 69,
       "sale_to_list_pct": 98.0,
-      "price_drops_pct": 15.0
+      "price_drops_pct": 15.0,
+      "months_of_supply": 3.5
     }
   }
 }
