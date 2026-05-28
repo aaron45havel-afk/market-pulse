@@ -797,6 +797,14 @@ CHOROPLETH_METRICS = [
     # an investor-appreciation lens.
     {"key": "homes_sold",    "label": "Home sales (last month)","unit": "",  "good_when": "high", "decimals": 0, "category": "Market", "popular": True},
     {"key": "dom",           "label": "Days on market",        "unit": " d", "good_when": "low",  "decimals": 0, "category": "Market", "popular": True},
+    # Market-temperature metrics from Redfin (refreshed alongside the
+    # above). sale_to_list >100 = buyers paying above asking (seller's
+    # market) so good_when=low from a *buyer's* point of view. Price
+    # drops are the % of active listings with cut prices — a higher
+    # number means more sellers capitulating, which is a buying
+    # opportunity, so good_when=high.
+    {"key": "sale_to_list_pct", "label": "Sale-to-list ratio",         "unit": "%", "good_when": "low",  "decimals": 1, "category": "Market", "popular": True},
+    {"key": "price_drops_pct",  "label": "Listings with price drops",  "unit": "%", "good_when": "high", "decimals": 1, "category": "Market", "popular": True},
     # Derived metric — computed in _compute_derived_metrics() from
     # home_value + median_income against the 3.5x national P/I norm.
     {"key": "overvalued_pct","label": "Overvalued vs income",  "unit": "%",  "good_when": "low",  "decimals": 1, "category": "Market", "popular": True},
