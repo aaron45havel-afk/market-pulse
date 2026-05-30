@@ -144,7 +144,11 @@ async def national_map(request: Request):
             "map_center": cfg["map_center"],
             "tiktok_hashtag": cfg.get("tiktok_hashtag"),     # TikTok hashtag for popup CTA
             "instagram_hashtag": cfg.get("instagram_hashtag"),  # Instagram hashtag for popup CTA
-            "is_stub": bool(cfg.get("is_stub")),
+            # is_stub now comes from get_state_neighborhoods (which
+            # downgrades to False when a stub was promoted from real
+            # zips.db members). Falls back to the cfg flag if data
+            # didn't bubble it up — preserves old behavior on misses.
+            "is_stub": bool(data.get("is_stub", cfg.get("is_stub"))),
             "top_zip": {
                 "zip": top_zip["zip"],
                 "name": top_zip["name"],
