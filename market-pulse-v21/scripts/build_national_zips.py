@@ -81,7 +81,23 @@ ACS_VARS = (
     "B15003_023E,"   # Master's
     "B15003_024E,"   # Professional
     "B15003_025E,"   # Doctorate
-    "B01003_001E"    # Total population
+    "B01003_001E,"   # Total population
+    # ── Multifamily-investor signals ─────────────────────────────
+    "B25003_001E,"   # Tenure — total occupied (denominator)
+    "B25003_003E,"   # Tenure — renter-occupied (numerator for pct_renter)
+    "B25024_001E,"   # Units in structure — total (denominator)
+    "B25024_004E,"   # Units in structure — 2 units
+    "B25024_005E,"   # Units in structure — 3-4 units
+    "B25024_006E,"   # Units in structure — 5-9 units
+    "B25024_007E,"   # Units in structure — 10-19 units
+    "B25024_008E,"   # Units in structure — 20-49 units
+    "B25024_009E,"   # Units in structure — 50+ units (numerator: sum of 2+ unit categories = pct_multi_unit)
+    "B25070_001E,"   # Rent as % of income — total renter households
+    "B25070_007E,"   # Rent burden 30-34.9%
+    "B25070_008E,"   # Rent burden 35-39.9%
+    "B25070_009E,"   # Rent burden 40-49.9%
+    "B25070_010E,"   # Rent burden 50%+
+    "B25070_011E"    # Rent burden — not computed (subtract from total before computing %)
 )
 
 # State FIPS → 2-letter code. Covers 50 + DC + the 5 territories that
@@ -328,6 +344,23 @@ def fetch_acs_zcta() -> dict[str, dict]:
     prof_idx = headers.index("B15003_024E")
     doc_idx = headers.index("B15003_025E")
     pop_idx = headers.index("B01003_001E")
+    # Multifamily signal indices (B25003 tenure, B25024 units in
+    # structure, B25070 gross rent as % of income).
+    ten_tot_idx   = headers.index("B25003_001E")
+    ten_rent_idx  = headers.index("B25003_003E")
+    units_tot_idx = headers.index("B25024_001E")
+    units_2_idx   = headers.index("B25024_004E")
+    units_34_idx  = headers.index("B25024_005E")
+    units_59_idx  = headers.index("B25024_006E")
+    units_1019_idx= headers.index("B25024_007E")
+    units_2049_idx= headers.index("B25024_008E")
+    units_50p_idx = headers.index("B25024_009E")
+    rb_tot_idx     = headers.index("B25070_001E")
+    rb_30_idx      = headers.index("B25070_007E")
+    rb_35_idx      = headers.index("B25070_008E")
+    rb_40_idx      = headers.index("B25070_009E")
+    rb_50_idx      = headers.index("B25070_010E")
+    rb_notcomp_idx = headers.index("B25070_011E")
 
     def _int(v):
         try:
@@ -343,10 +376,35 @@ def fetch_acs_zcta() -> dict[str, dict]:
         edu_total = _int(row[edu_total_idx])
         ba_count = sum((_int(row[i]) or 0) for i in (ba_idx, ma_idx, prof_idx, doc_idx))
         pct_bach = (ba_count / edu_total * 100) if (edu_total and edu_total > 0) else None
+
+        # ── Multifamily signals ─────────────────────────────────────
+        ten_tot = _int(row[ten_tot_idx])
+        ten_rent = _int(row[ten_rent_idx])
+        pct_renter = (ten_rent / ten_tot * 100) if (ten_tot and ten_rent is not None) else None
+
+        units_tot = _int(row[units_tot_idx])
+        multi_count = sum((_int(row[i]) or 0) for i in
+                          (units_2_idx, units_34_idx, units_59_idx,
+                           units_1019_idx, units_2049_idx, units_50p_idx))
+        pct_multi = (multi_count / units_tot * 100) if (units_tot and units_tot > 0) else None
+
+        # Rent burden denominator excludes "not computed" households so the
+        # percentage reflects share of *renters with computable burden* that
+        # are paying 30%+. Matches how HUD/Census typically report it.
+        rb_tot = _int(row[rb_tot_idx]) or 0
+        rb_notcomp = _int(row[rb_notcomp_idx]) or 0
+        rb_denom = rb_tot - rb_notcomp
+        rb_30plus = sum((_int(row[i]) or 0) for i in
+                        (rb_30_idx, rb_35_idx, rb_40_idx, rb_50_idx))
+        pct_rent_burdened = (rb_30plus / rb_denom * 100) if rb_denom > 0 else None
+
         out[zcode] = {
             "median_household_income": income,
             "pct_bachelors": round(pct_bach, 1) if pct_bach is not None else None,
             "population": _int(row[pop_idx]),
+            "pct_renter_occupied": round(pct_renter, 1) if pct_renter is not None else None,
+            "pct_multi_unit": round(pct_multi, 1) if pct_multi is not None else None,
+            "pct_rent_burdened": round(pct_rent_burdened, 1) if pct_rent_burdened is not None else None,
         }
     log.info("  → %d ZCTAs with ACS data", len(out))
     return out
@@ -441,6 +499,18 @@ CREATE TABLE zips (
     rent_source              TEXT,    -- 'zori' or 'imputed'
     median_household_income  INTEGER,
     pct_bachelors            REAL,
+    -- Multifamily-investor signals (Census ACS 2022 5-yr). Populated
+    -- on the next refresh-national-zips run; NULL on older DBs.
+    --   pct_renter_occupied:    share of occupied units that are
+    --                           rented (high = tenant pool already
+    --                           exists).
+    --   pct_multi_unit:         share of housing stock in 2+ unit
+    --                           buildings (high = existing density).
+    --   pct_rent_burdened:      share of renters paying 30%+ of
+    --                           income on rent (low = stable tenants).
+    pct_renter_occupied      REAL,
+    pct_multi_unit           REAL,
+    pct_rent_burdened        REAL,
     walk_score               REAL,
     crime_index              REAL,
     restaurant_score         REAL,
@@ -619,6 +689,11 @@ def main(argv: list[str] | None = None) -> int:
             "rent_source": rent_source,
             "median_household_income": income,
             "pct_bachelors": pct_bach,
+            # Multifamily fields from ACS — may be None on ZIPs with
+            # tiny renter populations / suppressed Census counts.
+            "pct_renter_occupied": a.get("pct_renter_occupied"),
+            "pct_multi_unit": a.get("pct_multi_unit"),
+            "pct_rent_burdened": a.get("pct_rent_burdened"),
             "walk_score": round(walk, 1),
             "crime_index": crime,
             "restaurant_score": round(rest, 1),

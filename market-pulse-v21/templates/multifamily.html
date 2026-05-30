@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Multifamily ZIPs — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+    /* Mirrors /conditions table styling so the visual language stays
+       consistent across the two leaderboard-style pages. */
+    .mf-page { max-width: 1400px; margin: 0 auto; padding: 0 1.25rem; }
+    .mf-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin: 1rem 0 0.4rem; }
+    .mf-head h1 { font-size: clamp(1.5rem, 3vw, 2rem); margin: 0; }
+    .mf-asof { font-size: 0.78rem; color: var(--ink-3); }
+
+    .mf-controls { display: flex; gap: 0.6rem; align-items: center; margin: 0.75rem 0 1rem; flex-wrap: wrap; }
+    .mf-controls label { font-size: 0.82rem; color: var(--ink-3); font-weight: 600; }
+    .mf-controls select { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.55rem; color: var(--text); font-size: 0.85rem; }
+
+    .mf-banner { padding: 0.7rem 1rem; background: rgb(245 158 11 / 0.10); color: #92400e; border: 1px solid rgb(245 158 11 / 0.35); border-radius: var(--r); font-size: 0.82rem; margin-bottom: 1rem; line-height: 1.5; }
+
+    .mf-explain { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 0.7rem 1rem; margin-bottom: 1rem; font-size: 0.82rem; color: var(--ink-3); line-height: 1.55; }
+    .mf-explain summary { cursor: pointer; font-weight: 600; color: var(--text); font-size: 0.85rem; }
+    .mf-explain .body { margin-top: 0.6rem; }
+    .mf-explain ul { margin: 0.4rem 0 0 1.2rem; }
+
+    .mf-tablewrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+    .mf-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table.mf-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+    .mf-table th, .mf-table td { padding: 0.55rem 0.75rem; text-align: right; white-space: nowrap; }
+    .mf-table th:nth-child(1), .mf-table th:nth-child(2), .mf-table th:nth-child(3),
+    .mf-table td:nth-child(1), .mf-table td:nth-child(2), .mf-table td:nth-child(3) {
+        text-align: left;
+    }
+    .mf-table thead th {
+        background: var(--surface2);
+        font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
+        color: var(--ink-3); font-weight: 700;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer; user-select: none;
+        position: sticky; top: 0;
+    }
+    .mf-table thead th .arrow { display: inline-block; width: 1em; margin-left: 0.15rem; opacity: 0.4; }
+    .mf-table thead th.sorted .arrow { opacity: 1; color: var(--accent2); }
+    .mf-table tbody tr:not(:last-child) td { border-bottom: 1px solid var(--line, var(--border)); }
+    .mf-table tbody tr:hover { background: var(--surface2); }
+    .mf-table td.rank { color: var(--ink-3); font-weight: 600; width: 2.5rem; }
+    .mf-table td.zip-cell { font-weight: 600; }
+    .mf-table td.zip-cell a { color: inherit; text-decoration: none; border-bottom: 1px dotted transparent; }
+    .mf-table td.zip-cell a:hover { border-bottom-color: var(--accent2); color: var(--accent2); }
+    .mf-table td.score-cell { font-weight: 700; color: var(--accent); }
+
+    @media (max-width: 600px) {
+        .mf-page { padding: 0 0.5rem; }
+        .mf-table { font-size: 0.76rem; }
+        .mf-table th, .mf-table td { padding: 0.4rem 0.5rem; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="mf-page">
+    <div class="mf-head">
+        <div>
+            <h1>Best ZIPs for Multifamily</h1>
+            <div class="subtitle">ZIPs ranked by signals a multifamily investor actually cares about. Pick a state. Click any column to sort.</div>
+        </div>
+    </div>
+
+    <form class="mf-controls" method="get" action="/multifamily">
+        <label for="stateSel">State</label>
+        <select name="state" id="stateSel" onchange="this.form.submit()">
+            {% for s in states %}
+            <option value="{{ s }}" {% if s == state %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+        <noscript><button type="submit" style="background:var(--accent); color:white; border:none; padding:0.35rem 0.75rem; border-radius:6px; font-size:0.82rem;">Go</button></noscript>
+    </form>
+
+    {% if data_pending %}
+    <div class="mf-banner">
+        <strong>Multifamily-specific signals (renter density, multi-unit stock, rent burden) populate on the next refresh-national-zips workflow run.</strong>
+        Until then this page ranks ZIPs using a fallback blend of cap rate, population density, and walk score —
+        already useful for spotting urban multifamily candidates, but the dedicated multifamily signals will
+        sharpen it further. <a href="https://github.com/aaron45havel-afk/market-pulse/actions/workflows/refresh-national-zips.yml" target="_blank" rel="noopener">Trigger it manually</a> if you want to skip the wait.
+    </div>
+    {% endif %}
+
+    <details class="mf-explain">
+        <summary>How does Multifamily Score work?</summary>
+        <div class="body">
+            A 0–100 percentile-blended score across all ZIPs in the selected state. Each input ranks the
+            ZIP against its in-state peers, then signals are weighted-averaged. State-relative
+            anchoring means the score answers <em>"which Ohio ZIP is most multifamily-friendly in Ohio"</em>
+            without big-coastal-metro distortion.
+            {% if has_mf_data %}
+            <ul>
+                <li><strong>Cap rate</strong> (30%) — cash flow potential at current rents.</li>
+                <li><strong>% renter-occupied</strong> (25%) — bigger tenant pool, lower marketing cost.</li>
+                <li><strong>% multi-unit housing</strong> (20%) — existing density signals an active market.</li>
+                <li><strong>Population density</strong> (15%) — urban demand pressure.</li>
+                <li><strong>Rent burden (inverted)</strong> (10%) — lower share of renters paying 30%+
+                    of income = more stable tenants, fewer evictions.</li>
+            </ul>
+            {% else %}
+            <ul>
+                <li><strong>Cap rate</strong> (50%) — cash flow at current rents.</li>
+                <li><strong>Population density</strong> (30%) — urban demand pressure (proxy for renter share).</li>
+                <li><strong>Walk score</strong> (20%) — walkable urban form correlates with renter preference.</li>
+            </ul>
+            <p style="margin-top:0.5rem;"><em>The full 5-signal formula switches on automatically once Census ACS data lands.</em></p>
+            {% endif %}
+            <p style="margin-top:0.5rem; font-size:0.78rem;">ZIPs with population &lt;1,500 are excluded (micro-ZCTAs distort percentages).
+            Capped at top 100 results to keep the table scannable.</p>
+        </div>
+    </details>
+
+    {% if not rows %}
+    <div class="mf-explain"><div class="body">No ZIPs with complete scoring data in <strong>{{ state }}</strong>. Try a different state.</div></div>
+    {% else %}
+    <div class="mf-tablewrap">
+        <div class="mf-scroll">
+            <table class="mf-table" id="mfTable">
+                <thead>
+                    <tr>
+                        <th data-col="rank" data-numeric="1" class="sorted">#<span class="arrow">▲</span></th>
+                        <th data-col="zip">ZIP<span class="arrow"></span></th>
+                        <th data-col="name">Area<span class="arrow"></span></th>
+                        <th data-col="score" data-numeric="1">Score<span class="arrow"></span></th>
+                        <th data-col="cap" data-numeric="1">Cap rate<span class="arrow"></span></th>
+                        <th data-col="rent" data-numeric="1">Rent/mo<span class="arrow"></span></th>
+                        <th data-col="hv" data-numeric="1">Home value<span class="arrow"></span></th>
+                        {% if has_mf_data %}
+                        <th data-col="renter" data-numeric="1">% Renter<span class="arrow"></span></th>
+                        <th data-col="multi" data-numeric="1">% Multi-unit<span class="arrow"></span></th>
+                        <th data-col="burden" data-numeric="1">Rent burden<span class="arrow"></span></th>
+                        {% endif %}
+                        <th data-col="pop" data-numeric="1">Pop.<span class="arrow"></span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        <td class="rank" data-sort="{{ loop.index }}">{{ loop.index }}</td>
+                        <td class="zip-cell" data-sort="{{ r.zip }}"><a href="/zip/{{ r.zip }}">{{ r.zip }}</a></td>
+                        <td data-sort="{{ r.name }}">{% if r.neighborhood %}{{ r.neighborhood }} · {% endif %}{{ r.name }}</td>
+                        <td class="score-cell" data-sort="{{ r.mf_score }}">{{ '%.0f'|format(r.mf_score) }}</td>
+                        <td data-sort="{{ r.cap_rate_pct }}">{{ '%.2f'|format(r.cap_rate_pct) }}%</td>
+                        <td data-sort="{{ r.median_rent_monthly }}">${{ '{:,}'.format(r.median_rent_monthly) }}</td>
+                        <td data-sort="{{ r.median_home_value }}">${{ '{:,}'.format(r.median_home_value) }}</td>
+                        {% if has_mf_data %}
+                        <td data-sort="{{ r.pct_renter_occupied if r.pct_renter_occupied is not none else -1 }}">{% if r.pct_renter_occupied is not none %}{{ '%.0f'|format(r.pct_renter_occupied) }}%{% else %}—{% endif %}</td>
+                        <td data-sort="{{ r.pct_multi_unit if r.pct_multi_unit is not none else -1 }}">{% if r.pct_multi_unit is not none %}{{ '%.0f'|format(r.pct_multi_unit) }}%{% else %}—{% endif %}</td>
+                        <td data-sort="{{ r.pct_rent_burdened if r.pct_rent_burdened is not none else -1 }}">{% if r.pct_rent_burdened is not none %}{{ '%.0f'|format(r.pct_rent_burdened) }}%{% else %}—{% endif %}</td>
+                        {% endif %}
+                        <td data-sort="{{ r.population }}">{{ '{:,}'.format(r.population) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Click-to-sort, identical pattern as /conditions. Re-numbers the
+// rank column after each sort so the visible #1 stays the visible #1.
+(function () {
+    const table = document.getElementById('mfTable');
+    if (!table) return;
+    const tbody = table.querySelector('tbody');
+    const headers = table.querySelectorAll('thead th');
+    let curCol = 0, curDir = 1;
+    headers.forEach((th, idx) => {
+        th.addEventListener('click', () => {
+            const isNumeric = th.dataset.numeric === '1';
+            if (curCol === idx) curDir = -curDir;
+            else { curCol = idx; curDir = isNumeric ? -1 : 1; }
+            headers.forEach(h => {
+                h.classList.remove('sorted');
+                const a = h.querySelector('.arrow'); if (a) a.textContent = '';
+            });
+            th.classList.add('sorted');
+            const arrow = th.querySelector('.arrow');
+            if (arrow) arrow.textContent = curDir === 1 ? '▲' : '▼';
+            sortRows();
+        });
+    });
+    function sortRows() {
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const isNumeric = headers[curCol].dataset.numeric === '1';
+        rows.sort((a, b) => {
+            const av = a.children[curCol].dataset.sort;
+            const bv = b.children[curCol].dataset.sort;
+            if (isNumeric) return (parseFloat(av) - parseFloat(bv)) * curDir;
+            return av.localeCompare(bv) * curDir;
+        });
+        rows.forEach((r, i) => {
+            const rankCell = r.querySelector('td.rank');
+            if (rankCell) { rankCell.textContent = i + 1; rankCell.dataset.sort = i + 1; }
+            tbody.appendChild(r);
+        });
+    }
+    const a = headers[0].querySelector('.arrow');
+    if (a) a.textContent = '▲';
+})();
+</script>
+{% endblock %}
