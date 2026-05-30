@@ -9,9 +9,31 @@
     .mf-head h1 { font-size: clamp(1.5rem, 3vw, 2rem); margin: 0; }
     .mf-asof { font-size: 0.78rem; color: var(--ink-3); }
 
-    .mf-controls { display: flex; gap: 0.6rem; align-items: center; margin: 0.75rem 0 1rem; flex-wrap: wrap; }
-    .mf-controls label { font-size: 0.82rem; color: var(--ink-3); font-weight: 600; }
-    .mf-controls select { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.55rem; color: var(--text); font-size: 0.85rem; }
+    .mf-controls { display: flex; gap: 0.8rem; align-items: end; margin: 0.75rem 0 1rem; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 0.85rem 1rem; }
+    .mf-controls .field { display: flex; flex-direction: column; gap: 0.2rem; }
+    .mf-controls label { font-size: 0.72rem; color: var(--ink-3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .mf-controls select, .mf-controls input[type="number"] {
+        background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+        padding: 0.4rem 0.55rem; color: var(--text); font-size: 0.9rem;
+        font-variant-numeric: tabular-nums;
+    }
+    .mf-controls input[type="number"] { width: 7em; }
+    .mf-controls .apply-btn {
+        background: var(--accent); color: white; border: none;
+        padding: 0.45rem 1rem; border-radius: 6px; font-size: 0.85rem;
+        cursor: pointer; font-weight: 600;
+    }
+
+    /* PITI sample card: shows monthly cost breakdown at the user's
+       max price so they can sanity-check the scenario before scanning
+       the table. */
+    .piti-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 0.85rem 1.1rem; margin-bottom: 1rem; font-size: 0.84rem; }
+    .piti-card-head { font-size: 0.72rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.5rem; }
+    .piti-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.6rem 1rem; }
+    .piti-grid .item { display: flex; flex-direction: column; }
+    .piti-grid .item .label { font-size: 0.7rem; color: var(--ink-3); }
+    .piti-grid .item .val { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 0.95rem; }
+    .piti-grid .item.total .val { color: var(--accent); }
 
     .mf-banner { padding: 0.7rem 1rem; background: rgb(245 158 11 / 0.10); color: #92400e; border: 1px solid rgb(245 158 11 / 0.35); border-radius: var(--r); font-size: 0.82rem; margin-bottom: 1rem; line-height: 1.5; }
 
@@ -22,8 +44,8 @@
 
     .mf-tablewrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
     .mf-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    table.mf-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
-    .mf-table th, .mf-table td { padding: 0.55rem 0.75rem; text-align: right; white-space: nowrap; }
+    table.mf-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+    .mf-table th, .mf-table td { padding: 0.5rem 0.7rem; text-align: right; white-space: nowrap; }
     .mf-table th:nth-child(1), .mf-table th:nth-child(2), .mf-table th:nth-child(3),
     .mf-table td:nth-child(1), .mf-table td:nth-child(2), .mf-table td:nth-child(3) {
         text-align: left;
@@ -45,11 +67,19 @@
     .mf-table td.zip-cell a { color: inherit; text-decoration: none; border-bottom: 1px dotted transparent; }
     .mf-table td.zip-cell a:hover { border-bottom-color: var(--accent2); color: var(--accent2); }
     .mf-table td.score-cell { font-weight: 700; color: var(--accent); }
+    .mf-table td.cash-positive { color: var(--accent); font-weight: 700; }
+    .mf-table td.cash-warn { color: #d97706; }
+    .mf-table td.cash-bad { color: #ef4444; }
+    .fha-pill { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 0.62rem; font-weight: 700; margin-left: 0.25rem; }
+    .fha-pill.ok { background: rgba(34,197,94,0.15); color: #16a34a; }
+    .fha-pill.bad { background: rgba(239,68,68,0.15); color: #dc2626; }
 
     @media (max-width: 600px) {
         .mf-page { padding: 0 0.5rem; }
-        .mf-table { font-size: 0.76rem; }
-        .mf-table th, .mf-table td { padding: 0.4rem 0.5rem; }
+        .mf-table { font-size: 0.74rem; }
+        .mf-table th, .mf-table td { padding: 0.4rem 0.45rem; }
+        .mf-controls { padding: 0.65rem; gap: 0.5rem; }
+        .mf-controls input[type="number"] { width: 6em; }
     }
 </style>
 {% endblock %}
@@ -57,61 +87,95 @@
 <div class="mf-page">
     <div class="mf-head">
         <div>
-            <h1>Best ZIPs for Multifamily</h1>
-            <div class="subtitle">ZIPs ranked by signals a multifamily investor actually cares about. Pick a state. Click any column to sort.</div>
+            <h1>Best ZIPs for Small Multifamily</h1>
+            <div class="subtitle">For first-time multifamily investors: 2–4 unit, FHA owner-occupant, house-hack. Tune the inputs to your deal.</div>
         </div>
     </div>
 
     <form class="mf-controls" method="get" action="/multifamily">
-        <label for="stateSel">State</label>
-        <select name="state" id="stateSel" onchange="this.form.submit()">
-            {% for s in states %}
-            <option value="{{ s }}" {% if s == state %}selected{% endif %}>{{ s }}</option>
-            {% endfor %}
-        </select>
-        <noscript><button type="submit" style="background:var(--accent); color:white; border:none; padding:0.35rem 0.75rem; border-radius:6px; font-size:0.82rem;">Go</button></noscript>
+        <div class="field">
+            <label for="stateSel">State</label>
+            <select name="state" id="stateSel" onchange="this.form.submit()">
+                {% for s in states %}
+                <option value="{{ s }}" {% if s == state %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field">
+            <label for="maxPrice">Max price ($)</label>
+            <input type="number" name="max_price" id="maxPrice" value="{{ max_price }}" min="50000" max="2000000" step="10000">
+        </div>
+        <div class="field">
+            <label for="downPct">Down (%)</label>
+            <input type="number" name="down_pct" id="downPct" value="{{ down_pct }}" min="0" max="50" step="0.5">
+        </div>
+        <div class="field">
+            <label for="unitsSel">Units</label>
+            <select name="units" id="unitsSel">
+                <option value="2" {% if units == 2 %}selected{% endif %}>2-unit</option>
+                <option value="3" {% if units == 3 %}selected{% endif %}>3-unit</option>
+                <option value="4" {% if units == 4 %}selected{% endif %}>4-unit</option>
+            </select>
+        </div>
+        <button type="submit" class="apply-btn">Apply</button>
     </form>
+
+    {% if sample_piti %}
+    <div class="piti-card">
+        <div class="piti-card-head">Your scenario: ${{ '{:,}'.format(max_price) }} purchase, {{ down_pct }}% down, {{ units }}-unit, 30-yr at {{ '%.2f'|format(mortgage_rate) }}% (FHA)</div>
+        <div class="piti-grid">
+            <div class="item"><span class="label">Loan amount</span><span class="val">${{ '{:,.0f}'.format(sample_piti.loan) }}</span></div>
+            <div class="item"><span class="label">P&amp;I</span><span class="val">${{ '{:,.0f}'.format(sample_piti.p_and_i) }}</span></div>
+            <div class="item"><span class="label">Prop tax/mo</span><span class="val">${{ '{:,.0f}'.format(sample_piti.monthly_tax) }}</span></div>
+            <div class="item"><span class="label">Insurance/mo</span><span class="val">${{ '{:,.0f}'.format(sample_piti.monthly_ins) }}</span></div>
+            <div class="item"><span class="label">FHA MIP/mo</span><span class="val">${{ '{:,.0f}'.format(sample_piti.monthly_mip) }}</span></div>
+            <div class="item total"><span class="label">PITI/mo</span><span class="val">${{ '{:,.0f}'.format(sample_piti.piti) }}</span></div>
+            <div class="item"><span class="label">Down payment</span><span class="val">${{ '{:,.0f}'.format(sample_piti.down_cash) }}</span></div>
+            <div class="item"><span class="label">Closing est (3%)</span><span class="val">${{ '{:,.0f}'.format(sample_piti.closing_est) }}</span></div>
+        </div>
+    </div>
+    {% endif %}
 
     {% if data_pending %}
     <div class="mf-banner">
         <strong>Multifamily-specific signals (renter density, multi-unit stock, rent burden) populate on the next refresh-national-zips workflow run.</strong>
-        Until then this page ranks ZIPs using a fallback blend of cap rate, population density, and walk score —
-        already useful for spotting urban multifamily candidates, but the dedicated multifamily signals will
-        sharpen it further. <a href="https://github.com/aaron45havel-afk/market-pulse/actions/workflows/refresh-national-zips.yml" target="_blank" rel="noopener">Trigger it manually</a> if you want to skip the wait.
+        Until then this page ranks ZIPs with a fallback blend of cap rate + house-hack cost + density + walk.
+        <a href="https://github.com/aaron45havel-afk/market-pulse/actions/workflows/refresh-national-zips.yml" target="_blank" rel="noopener">Trigger it manually</a> to skip the wait.
     </div>
     {% endif %}
 
     <details class="mf-explain">
-        <summary>How does Multifamily Score work?</summary>
+        <summary>How does Multifamily Score work? (FHA-tuned)</summary>
         <div class="body">
-            A 0–100 percentile-blended score across all ZIPs in the selected state. Each input ranks the
-            ZIP against its in-state peers, then signals are weighted-averaged. State-relative
-            anchoring means the score answers <em>"which Ohio ZIP is most multifamily-friendly in Ohio"</em>
-            without big-coastal-metro distortion.
+            ZIP scores are percentile-blended within the selected state — &quot;best in {{ state }}&quot;, not against the whole country.
+            Weighted toward what matters for a small-and-mighty FHA owner-occupant.
             {% if has_mf_data %}
             <ul>
-                <li><strong>Cap rate</strong> (30%) — cash flow potential at current rents.</li>
-                <li><strong>% renter-occupied</strong> (25%) — bigger tenant pool, lower marketing cost.</li>
-                <li><strong>% multi-unit housing</strong> (20%) — existing density signals an active market.</li>
-                <li><strong>Population density</strong> (15%) — urban demand pressure.</li>
-                <li><strong>Rent burden (inverted)</strong> (10%) — lower share of renters paying 30%+
-                    of income = more stable tenants, fewer evictions.</li>
+                <li><strong>House-hack net cost</strong> (35%) — your monthly PITI minus rent collected from the other units. <em>Lower is better.</em></li>
+                <li><strong>Cap rate</strong> (25%) — cash flow at current local rents.</li>
+                <li><strong>% renter-occupied</strong> (20%) — bigger tenant pool, faster fills.</li>
+                <li><strong>% multi-unit housing</strong> (10%) — existing density signals an active market with 2-4 unit stock to actually buy.</li>
+                <li><strong>Rent burden inverted</strong> (10%) — lower share of cost-burdened renters = more stable tenants.</li>
             </ul>
             {% else %}
             <ul>
-                <li><strong>Cap rate</strong> (50%) — cash flow at current rents.</li>
-                <li><strong>Population density</strong> (30%) — urban demand pressure (proxy for renter share).</li>
-                <li><strong>Walk score</strong> (20%) — walkable urban form correlates with renter preference.</li>
+                <li><strong>House-hack net cost</strong> (40%) — your monthly PITI minus rent collected from the other units. <em>Lower is better.</em></li>
+                <li><strong>Cap rate</strong> (35%) — cash flow at current local rents.</li>
+                <li><strong>Population density</strong> (15%) — proxy for renter share until ACS data lands.</li>
+                <li><strong>Walk score</strong> (10%) — walkable urban form correlates with renter preference.</li>
             </ul>
-            <p style="margin-top:0.5rem;"><em>The full 5-signal formula switches on automatically once Census ACS data lands.</em></p>
             {% endif %}
-            <p style="margin-top:0.5rem; font-size:0.78rem;">ZIPs with population &lt;1,500 are excluded (micro-ZCTAs distort percentages).
-            Capped at top 100 results to keep the table scannable.</p>
+            <p style="margin-top:0.6rem;"><strong>House-hack math:</strong> purchase = min(local median home value, your cap). PITI = P&amp;I + state-level
+            property tax + state-level insurance + FHA MIP (0.55% annual, life-of-loan when down &lt; 10%). Expected rent = (units − 1) × local median rent.
+            <strong>Net monthly cost = PITI − expected rent.</strong> Negative = you live free + cash flow.</p>
+            <p style="margin-top:0.4rem;"><strong>FHA self-sufficiency</strong> (3- and 4-unit only): FHA requires 75% × total rents ≥ PITI for the loan to fund.
+            Two-unit purchases are exempt from this rule. We mark <span class="fha-pill ok">FHA</span> on rows that pass, <span class="fha-pill bad">FHA ✗</span> on rows that fail at your input price.</p>
+            <p style="margin-top:0.5rem; font-size:0.78rem;">ZIPs with population &lt;1,500 or median home value &gt;1.2× your cap are excluded. Capped at top 100 results.</p>
         </div>
     </details>
 
     {% if not rows %}
-    <div class="mf-explain"><div class="body">No ZIPs with complete scoring data in <strong>{{ state }}</strong>. Try a different state.</div></div>
+    <div class="mf-explain"><div class="body">No ZIPs in <strong>{{ state }}</strong> match your filters. Try a higher max price or a different state.</div></div>
     {% else %}
     <div class="mf-tablewrap">
         <div class="mf-scroll">
@@ -122,6 +186,7 @@
                         <th data-col="zip">ZIP<span class="arrow"></span></th>
                         <th data-col="name">Area<span class="arrow"></span></th>
                         <th data-col="score" data-numeric="1">Score<span class="arrow"></span></th>
+                        <th data-col="hh" data-numeric="1">House-hack<span class="arrow"></span></th>
                         <th data-col="cap" data-numeric="1">Cap rate<span class="arrow"></span></th>
                         <th data-col="rent" data-numeric="1">Rent/mo<span class="arrow"></span></th>
                         <th data-col="hv" data-numeric="1">Home value<span class="arrow"></span></th>
@@ -135,11 +200,24 @@
                 </thead>
                 <tbody>
                     {% for r in rows %}
+                    {# Color the house-hack column by burn: <=0 (cash flow), <500/mo (manageable), <1500/mo (livable for many), >=1500/mo (expensive). #}
+                    {% if r.house_hack_net is none %}
+                        {% set hh_class = '' %}{% set hh_text = '—' %}
+                    {% elif r.house_hack_net <= 0 %}
+                        {% set hh_class = 'cash-positive' %}{% set hh_text = '+$' ~ ('%.0f'|format(-r.house_hack_net|float)) %}
+                    {% elif r.house_hack_net < 500 %}
+                        {% set hh_class = 'cash-positive' %}{% set hh_text = '-$' ~ ('%.0f'|format(r.house_hack_net|float)) %}
+                    {% elif r.house_hack_net < 1500 %}
+                        {% set hh_class = 'cash-warn' %}{% set hh_text = '-$' ~ ('%.0f'|format(r.house_hack_net|float)) %}
+                    {% else %}
+                        {% set hh_class = 'cash-bad' %}{% set hh_text = '-$' ~ ('%.0f'|format(r.house_hack_net|float)) %}
+                    {% endif %}
                     <tr>
                         <td class="rank" data-sort="{{ loop.index }}">{{ loop.index }}</td>
                         <td class="zip-cell" data-sort="{{ r.zip }}"><a href="/zip/{{ r.zip }}">{{ r.zip }}</a></td>
                         <td data-sort="{{ r.name }}">{% if r.neighborhood %}{{ r.neighborhood }} · {% endif %}{{ r.name }}</td>
                         <td class="score-cell" data-sort="{{ r.mf_score }}">{{ '%.0f'|format(r.mf_score) }}</td>
+                        <td class="{{ hh_class }}" data-sort="{{ r.house_hack_net if r.house_hack_net is not none else 99999 }}">{{ hh_text }}{% if r.fha_self_suff is not none %}{% if r.fha_self_suff %}<span class="fha-pill ok" title="FHA self-sufficiency test passes at {{ units }} units">FHA</span>{% else %}<span class="fha-pill bad" title="FHA self-sufficiency requires 75% × {{ units }} units × rent ≥ PITI">FHA ✗</span>{% endif %}{% endif %}</td>
                         <td data-sort="{{ r.cap_rate_pct }}">{{ '%.2f'|format(r.cap_rate_pct) }}%</td>
                         <td data-sort="{{ r.median_rent_monthly }}">${{ '{:,}'.format(r.median_rent_monthly) }}</td>
                         <td data-sort="{{ r.median_home_value }}">${{ '{:,}'.format(r.median_home_value) }}</td>
