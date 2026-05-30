@@ -200,13 +200,23 @@
                 </thead>
                 <tbody>
                     {% for r in rows %}
-                    {# Color the house-hack column by burn: <=0 (cash flow), <500/mo (manageable), <1500/mo (livable for many), >=1500/mo (expensive). #}
+                    {# Color encoding rules:
+                       - Green only when the deal actually cash flows
+                         (net <= 0, displayed as +$X). Reading a green
+                         '-$' was confusing — green means money in your
+                         pocket, full stop.
+                       - Small monthly cost (<$500) gets default text
+                         color: it's a manageable house-payment-like
+                         number, not noteworthy enough to flag.
+                       - Amber when the monthly drag enters real-money
+                         territory ($500–$1499).
+                       - Red when PITI dwarfs rents ($1500+). #}
                     {% if r.house_hack_net is none %}
                         {% set hh_class = '' %}{% set hh_text = '—' %}
                     {% elif r.house_hack_net <= 0 %}
                         {% set hh_class = 'cash-positive' %}{% set hh_text = '+$' ~ ('%.0f'|format(-r.house_hack_net|float)) %}
                     {% elif r.house_hack_net < 500 %}
-                        {% set hh_class = 'cash-positive' %}{% set hh_text = '-$' ~ ('%.0f'|format(r.house_hack_net|float)) %}
+                        {% set hh_class = '' %}{% set hh_text = '-$' ~ ('%.0f'|format(r.house_hack_net|float)) %}
                     {% elif r.house_hack_net < 1500 %}
                         {% set hh_class = 'cash-warn' %}{% set hh_text = '-$' ~ ('%.0f'|format(r.house_hack_net|float)) %}
                     {% else %}
