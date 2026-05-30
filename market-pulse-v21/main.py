@@ -330,6 +330,156 @@ async def real_mortgage_index_page(request: Request):
     })
 
 
+@app.get("/multifamily")
+async def multifamily_page(request: Request, state: str = "OH"):
+    """Multifamily ZIP scout. Ranks ZIPs in a chosen state by signals
+    a multifamily investor actually cares about: cap rate, renter
+    density (% of households who rent), existing multi-unit stock
+    (% of buildings with 2+ units), and rent burden (% of renters
+    paying 30%+ of income — lower is better, more stable tenants).
+
+    The Census ACS multifamily columns (pct_renter_occupied,
+    pct_multi_unit, pct_rent_burdened) populate on each monthly
+    refresh-national-zips workflow run; before that lands, the
+    page falls back to the existing density + cap rate signals
+    so it's still useful from day one."""
+    import sqlite3
+    state = (state or "OH").upper()
+    db_path = Path(__file__).resolve().parent / "data" / "zips.db"
+    if not db_path.exists():
+        return templates.TemplateResponse("multifamily.html", {
+            "request": request, "rows": [], "state": state, "states": [],
+            "has_mf_data": False, "data_pending": True,
+        })
+    conn = sqlite3.connect(str(db_path))
+    cur = conn.cursor()
+    # Distinct states for the picker.
+    states = [r[0] for r in cur.execute(
+        "select distinct state from zips where state is not null and state != '' order by state"
+    ).fetchall()]
+    # Detect whether ACS multifamily columns actually have data yet
+    # (the columns exist on a fresh schema but are NULL until the
+    # next rebuild). Skip the join logic if not present.
+    cols = {r[1] for r in cur.execute("PRAGMA table_info(zips)").fetchall()}
+    has_mf_data = {"pct_renter_occupied", "pct_multi_unit", "pct_rent_burdened"} <= cols
+    if has_mf_data:
+        cur.execute("select count(*) from zips where pct_renter_occupied is not null")
+        has_mf_data = cur.fetchone()[0] > 0
+    # Pull all candidate ZIPs in the state with valid scoring inputs.
+    # 1500 population minimum filters out micro-ZCTAs (PO boxes, business
+    # districts, etc.) that have unstable percentages.
+    if has_mf_data:
+        rows_sql = """
+            select zip, name, neighborhood, lat, lng, population, population_density,
+                   median_home_value, median_rent_monthly, cap_rate_pct,
+                   pct_renter_occupied, pct_multi_unit, pct_rent_burdened,
+                   walk_score, crime_index
+            from zips
+            where state = ?
+              and population >= 1500
+              and median_home_value is not null
+              and median_rent_monthly is not null
+              and cap_rate_pct is not null
+            """
+    else:
+        rows_sql = """
+            select zip, name, neighborhood, lat, lng, population, population_density,
+                   median_home_value, median_rent_monthly, cap_rate_pct,
+                   NULL, NULL, NULL,
+                   walk_score, crime_index
+            from zips
+            where state = ?
+              and population >= 1500
+              and median_home_value is not null
+              and median_rent_monthly is not null
+              and cap_rate_pct is not null
+            """
+    rows_raw = cur.execute(rows_sql, (state,)).fetchall()
+    conn.close()
+
+    # Multifamily score. Each input is normalized to 0–100 across the
+    # state's ZIPs (percentile-style) then weighted-averaged. Anchoring
+    # within the state — not nationally — means the score answers
+    # "which OH zip is most multifamily-friendly *in Ohio*" cleanly.
+    # When ACS data isn't loaded yet, fall back to a 3-signal blend
+    # (cap rate, density, walk) so the page still ranks something.
+    def rank_pct(values):
+        """Return per-row rank (1..N) → percentile 0..100."""
+        if not values: return []
+        sorted_vals = sorted((v for v in values if v is not None))
+        n = len(sorted_vals)
+        out = []
+        for v in values:
+            if v is None:
+                out.append(None); continue
+            # Lower-bound rank: count of items < v, scaled to 100.
+            from bisect import bisect_left
+            i = bisect_left(sorted_vals, v)
+            out.append(round(i / max(1, n - 1) * 100, 1))
+        return out
+
+    cap_pcts = rank_pct([r[9] for r in rows_raw])
+    dens_pcts = rank_pct([r[6] for r in rows_raw])
+    if has_mf_data:
+        renter_pcts = rank_pct([r[10] for r in rows_raw])
+        multi_pcts = rank_pct([r[11] for r in rows_raw])
+        # Rent burden is *inverted* — lower burden is better for the
+        # investor (tenants who can comfortably pay).
+        burden_inv = rank_pct([-(r[12]) if r[12] is not None else None for r in rows_raw])
+        weights = (0.30, 0.25, 0.20, 0.15, 0.10)
+    else:
+        renter_pcts = [None] * len(rows_raw)
+        multi_pcts = [None] * len(rows_raw)
+        burden_inv = [None] * len(rows_raw)
+        walk_pcts = rank_pct([r[13] for r in rows_raw])
+        weights = (0.50, 0.30, 0.20)  # cap, density, walk fallback
+
+    rows = []
+    for i, r in enumerate(rows_raw):
+        (zip_code, name, neigh, lat, lng, pop, dens, hv, rent, cap,
+         pct_rent, pct_mu, pct_rb, walk, crime) = r
+        if has_mf_data:
+            inputs = [
+                (cap_pcts[i],   weights[0]),
+                (renter_pcts[i],weights[1]),
+                (multi_pcts[i], weights[2]),
+                (dens_pcts[i],  weights[3]),
+                (burden_inv[i], weights[4]),
+            ]
+        else:
+            inputs = [
+                (cap_pcts[i],  weights[0]),
+                (dens_pcts[i], weights[1]),
+                (walk_pcts[i], weights[2]),
+            ]
+        # Skip rows where any input is missing — incomplete inputs
+        # bias the score. ZIPs with full data are the only ones we
+        # rank.
+        if any(v is None for v, _ in inputs):
+            continue
+        score = round(sum(v * w for v, w in inputs), 1)
+        rows.append({
+            "zip": zip_code, "name": name, "neighborhood": neigh or "",
+            "lat": lat, "lng": lng, "population": pop,
+            "median_home_value": hv, "median_rent_monthly": rent,
+            "cap_rate_pct": cap,
+            "pct_renter_occupied": pct_rent,
+            "pct_multi_unit": pct_mu,
+            "pct_rent_burdened": pct_rb,
+            "mf_score": score,
+        })
+    rows.sort(key=lambda r: r["mf_score"], reverse=True)
+    # Cap at top 100 — a state's leaderboard past that adds noise.
+    return templates.TemplateResponse("multifamily.html", {
+        "request": request,
+        "rows": rows[:100],
+        "state": state,
+        "states": states,
+        "has_mf_data": has_mf_data,
+        "data_pending": not has_mf_data,
+    })
+
+
 @app.get("/conditions")
 async def conditions_page(request: Request):
     """Market Conditions dashboard — ranks states by the 4-signal
