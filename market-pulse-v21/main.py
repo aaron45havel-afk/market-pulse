@@ -326,6 +326,53 @@ async def real_mortgage_index_page(request: Request):
     })
 
 
+@app.get("/conditions")
+async def conditions_page(request: Request):
+    """Market Conditions dashboard — ranks states by the 4-signal
+    Market Climate composite (sale-to-list, price drops, DOM, months
+    of supply) so investors can see which markets are coolest for
+    buyers at a glance. Data flows from data_providers' enriched
+    CHOROPLETH_STATES (Redfin overrides + the _compute_market_climate
+    pass that runs on module load)."""
+    from data_providers import CHOROPLETH_STATES
+    rows = []
+    for code, sd in CHOROPLETH_STATES.items():
+        # Skip states with missing inputs — the composite would be
+        # None and the row would look broken next to populated ones.
+        if sd.get("market_climate_pct") is None:
+            continue
+        rows.append({
+            "code": code,
+            "name": sd.get("name", code),
+            "fips": sd.get("fips"),
+            "market_climate_pct": sd["market_climate_pct"],
+            "sale_to_list_pct": sd.get("sale_to_list_pct"),
+            "price_drops_pct": sd.get("price_drops_pct"),
+            "dom": sd.get("dom"),
+            "months_of_supply": sd.get("months_of_supply"),
+            "home_value": sd.get("home_value"),
+            "home_value_yoy": sd.get("home_value_yoy"),
+        })
+    # Default sort: most buyer-friendly first.
+    rows.sort(key=lambda r: r["market_climate_pct"], reverse=True)
+    # Surface the Redfin period_end so users know how fresh the data
+    # is — read it from the overrides file's _meta the same way the
+    # rest of the site does.
+    redfin_period_end = None
+    try:
+        from pathlib import Path
+        p = Path(__file__).resolve().parent / "data" / "redfin_overrides.json"
+        if p.exists():
+            redfin_period_end = json.loads(p.read_text()).get("_meta", {}).get("primary_period_end")
+    except Exception:
+        pass
+    return templates.TemplateResponse("conditions.html", {
+        "request": request,
+        "rows": rows,
+        "redfin_period_end": redfin_period_end,
+    })
+
+
 @app.get("/api/real-mortgage-index")
 async def api_real_mortgage_index(metro: str = "US", down_pct: float = 10.0):
     from real_mortgage_index import compute_index
