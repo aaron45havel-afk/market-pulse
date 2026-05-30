@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}Market Conditions — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+    /* ── Conditions dashboard. Single sortable table of states ranked
+       by the Market Climate composite (4-signal Redfin blend). Click
+       any column header to re-sort. Tier badge in the Climate column
+       mirrors the metro-popup chip on /map so the visual language is
+       consistent across views. */
+    .cond-page { max-width: 1400px; margin: 0 auto; padding: 0 1.25rem; }
+    .cond-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin: 1rem 0 0.4rem; }
+    .cond-head h1 { font-size: clamp(1.5rem, 3vw, 2rem); margin: 0; }
+    .cond-asof { font-size: 0.78rem; color: var(--ink-3); }
+
+    .cond-explain { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 0.7rem 1rem; margin-bottom: 1rem; font-size: 0.82rem; color: var(--ink-3); line-height: 1.55; }
+    .cond-explain summary { cursor: pointer; font-weight: 600; color: var(--text); font-size: 0.85rem; }
+    .cond-explain .body { margin-top: 0.6rem; }
+
+    .cond-tablewrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+    /* Outer overflow-x lets the table scroll horizontally inside its
+       card on narrow phones rather than pushing the whole page wide
+       (same pattern as /zip/{zip} compare table). */
+    .cond-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table.cond-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+    .cond-table th, .cond-table td { padding: 0.55rem 0.75rem; text-align: right; white-space: nowrap; }
+    .cond-table th:first-child, .cond-table td:first-child { text-align: left; }
+    .cond-table thead th {
+        background: var(--surface2);
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--ink-3);
+        font-weight: 700;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        user-select: none;
+        position: sticky; top: 0;
+    }
+    .cond-table thead th .arrow { display: inline-block; width: 1em; margin-left: 0.15rem; opacity: 0.4; }
+    .cond-table thead th.sorted .arrow { opacity: 1; color: var(--accent2); }
+    .cond-table tbody tr:not(:last-child) td { border-bottom: 1px solid var(--line, var(--border)); }
+    .cond-table tbody tr:hover { background: var(--surface2); }
+    .cond-table td.rank { color: var(--ink-3); font-weight: 600; width: 2.5rem; }
+    .cond-table td.state-name { font-weight: 600; }
+    .cond-table td.state-name a { color: inherit; text-decoration: none; border-bottom: 1px dotted transparent; }
+    .cond-table td.state-name a:hover { border-bottom-color: var(--accent2); color: var(--accent2); }
+    .cond-table td.up { color: var(--accent); }
+    .cond-table td.down { color: #ef4444; }
+
+    /* Climate tier badges — same 5-tier scale + colors as the metro
+       popup chip in national_map.html. Inline so the tooltip-style
+       chip carries its meaning visually. */
+    .climate-cell { display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; }
+    .climate-cell .num { font-weight: 700; min-width: 1.7rem; text-align: right; }
+    .climate-tier { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.02em; }
+    .climate-tier.t-buyers   { background: rgba(34,197,94,0.18);  color: #16a34a; }
+    .climate-tier.t-cooling  { background: rgba(132,204,22,0.18); color: #65a30d; }
+    .climate-tier.t-balanced { background: rgba(156,163,175,0.22);color: #6b7280; }
+    .climate-tier.t-warming  { background: rgba(245,158,11,0.18); color: #d97706; }
+    .climate-tier.t-sellers  { background: rgba(239,68,68,0.18);  color: #dc2626; }
+
+    @media (max-width: 600px) {
+        .cond-page { padding: 0 0.5rem; }
+        .cond-table { font-size: 0.78rem; }
+        .cond-table th, .cond-table td { padding: 0.4rem 0.5rem; }
+        .climate-tier { font-size: 0.62rem; padding: 1px 6px; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="cond-page">
+    <div class="cond-head">
+        <div>
+            <h1>Market Conditions</h1>
+            <div class="subtitle">States ranked by buyer-friendliness. Click any column to sort.</div>
+        </div>
+        {% if redfin_period_end %}
+        <div class="cond-asof">
+            Latest data as of <strong>{{ redfin_period_end }}</strong> · Sourced from
+            <a href="https://www.redfin.com/news/data-center/" target="_blank" rel="noopener">Redfin Data Center</a>.
+        </div>
+        {% endif %}
+    </div>
+
+    <details class="cond-explain">
+        <summary>How is "Market Climate" scored?</summary>
+        <div class="body">
+            A 0–100 composite of four Redfin signals. <strong>0 = scorching seller's market</strong> (bidding wars, no inventory).
+            <strong>100 = arctic buyer's market</strong> (sellers cutting prices, listings sitting). Components, each
+            equally weighted:
+            <ul style="margin: 0.4rem 0 0 1.2rem;">
+                <li><strong>Sale-to-list ratio</strong> — &lt;100% means sellers are accepting under-ask.</li>
+                <li><strong>Listings with price drops</strong> — share of active listings that have cut their price.</li>
+                <li><strong>Days on market</strong> — slower-moving inventory means buyers have leverage.</li>
+                <li><strong>Months of supply</strong> — more inventory relative to demand = cooler market.</li>
+            </ul>
+            Anchors are fixed (not rebalanced each month), so a state's score moves because that state's
+            fundamentals moved, not because its neighbors did.
+        </div>
+    </details>
+
+    {% if not rows %}
+    <div class="cond-explain"><div class="body">No state climate data available yet — the next Redfin refresh should populate the table.</div></div>
+    {% else %}
+    <div class="cond-tablewrap">
+        <div class="cond-scroll">
+            <table class="cond-table" id="condTable">
+                <thead>
+                    <tr>
+                        <th data-col="rank" data-numeric="1" class="sorted">#<span class="arrow">▲</span></th>
+                        <th data-col="state">State<span class="arrow"></span></th>
+                        <th data-col="climate" data-numeric="1">Climate<span class="arrow"></span></th>
+                        <th data-col="stl" data-numeric="1">Sale-to-list<span class="arrow"></span></th>
+                        <th data-col="drops" data-numeric="1">Price drops<span class="arrow"></span></th>
+                        <th data-col="dom" data-numeric="1">DOM<span class="arrow"></span></th>
+                        <th data-col="supply" data-numeric="1">Supply<span class="arrow"></span></th>
+                        <th data-col="hvy" data-numeric="1">Home value YoY<span class="arrow"></span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    {# Tier mapping mirrors buildBuyerPowerChip in national_map.html. #}
+                    {% set s = r.market_climate_pct %}
+                    {% if s >= 75 %}
+                        {% set tier_class = 't-buyers' %}{% set tier_label = "Buyer's mkt" %}
+                    {% elif s >= 60 %}
+                        {% set tier_class = 't-cooling' %}{% set tier_label = 'Cooling' %}
+                    {% elif s >= 40 %}
+                        {% set tier_class = 't-balanced' %}{% set tier_label = 'Balanced' %}
+                    {% elif s >= 25 %}
+                        {% set tier_class = 't-warming' %}{% set tier_label = 'Warming' %}
+                    {% else %}
+                        {% set tier_class = 't-sellers' %}{% set tier_label = "Seller's mkt" %}
+                    {% endif %}
+                    <tr data-state="{{ r.code }}">
+                        <td class="rank" data-sort="{{ loop.index }}">{{ loop.index }}</td>
+                        <td class="state-name" data-sort="{{ r.name }}">{{ r.name }} <span style="color:var(--ink-4); font-weight:500;">({{ r.code }})</span></td>
+                        <td data-sort="{{ s }}">
+                            <div class="climate-cell">
+                                <span class="num">{{ s }}</span>
+                                <span class="climate-tier {{ tier_class }}">{{ tier_label }}</span>
+                            </div>
+                        </td>
+                        <td data-sort="{{ r.sale_to_list_pct if r.sale_to_list_pct is not none else -1 }}">{% if r.sale_to_list_pct is not none %}{{ '%.1f'|format(r.sale_to_list_pct) }}%{% else %}—{% endif %}</td>
+                        <td data-sort="{{ r.price_drops_pct if r.price_drops_pct is not none else -1 }}">{% if r.price_drops_pct is not none %}{{ '%.1f'|format(r.price_drops_pct) }}%{% else %}—{% endif %}</td>
+                        <td data-sort="{{ r.dom if r.dom is not none else -1 }}">{% if r.dom is not none %}{{ r.dom }}d{% else %}—{% endif %}</td>
+                        <td data-sort="{{ r.months_of_supply if r.months_of_supply is not none else -1 }}">{% if r.months_of_supply is not none %}{{ '%.1f'|format(r.months_of_supply) }}{% else %}—{% endif %}</td>
+                        <td class="{% if r.home_value_yoy is not none and r.home_value_yoy >= 0 %}up{% elif r.home_value_yoy is not none %}down{% endif %}" data-sort="{{ r.home_value_yoy if r.home_value_yoy is not none else -999 }}">
+                            {% if r.home_value_yoy is not none %}{% if r.home_value_yoy >= 0 %}+{% endif %}{{ '%.1f'|format(r.home_value_yoy) }}%{% else %}—{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Click-to-sort table. data-sort on each <td> carries the numeric or
+// string sort key; thead arrows update on each click. Default sort
+// is rank (which is climate desc, since rows came pre-sorted from
+// the server). Subsequent clicks toggle asc/desc on the column.
+(function () {
+    const table = document.getElementById('condTable');
+    if (!table) return;
+    const tbody = table.querySelector('tbody');
+    const headers = table.querySelectorAll('thead th');
+    // Track current sort column index + direction.
+    let curCol = 0;      // rank column
+    let curDir = 1;      // 1 = ascending
+    headers.forEach((th, idx) => {
+        th.addEventListener('click', () => {
+            // Toggle direction if re-clicking the same column;
+            // otherwise default to descending for numeric, ascending
+            // for string (most users want 'biggest first' on numbers).
+            const isNumeric = th.dataset.numeric === '1';
+            if (curCol === idx) {
+                curDir = -curDir;
+            } else {
+                curCol = idx;
+                curDir = isNumeric ? -1 : 1;
+            }
+            // Update arrow markers.
+            headers.forEach(h => h.classList.remove('sorted'));
+            headers.forEach(h => {
+                const a = h.querySelector('.arrow');
+                if (a) a.textContent = '';
+            });
+            th.classList.add('sorted');
+            const arrow = th.querySelector('.arrow');
+            if (arrow) arrow.textContent = curDir === 1 ? '▲' : '▼';
+            sortRows();
+        });
+    });
+    function sortRows() {
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const isNumeric = headers[curCol].dataset.numeric === '1';
+        rows.sort((a, b) => {
+            const av = a.children[curCol].dataset.sort;
+            const bv = b.children[curCol].dataset.sort;
+            if (isNumeric) {
+                return (parseFloat(av) - parseFloat(bv)) * curDir;
+            }
+            return av.localeCompare(bv) * curDir;
+        });
+        // Re-number the rank column to match the new visual order.
+        rows.forEach((r, i) => {
+            const rankCell = r.querySelector('td.rank');
+            if (rankCell) {
+                rankCell.textContent = i + 1;
+                rankCell.dataset.sort = i + 1;
+            }
+            tbody.appendChild(r);
+        });
+    }
+    // Set the initial arrow for the default sort.
+    const a = headers[0].querySelector('.arrow');
+    if (a) a.textContent = '▲';
+})();
+</script>
+{% endblock %}
