@@ -14,6 +14,8 @@ directionally correct, not authoritative — see the per-metro caveats below.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 from dallas_neighborhoods import (
     DALLAS_ZIPS,
     DATA_AS_OF,
@@ -5419,36 +5421,139 @@ def _virtual_zip_for_state(state_code: str, metro_label: str, map_center: dict, 
     }
 
 
+def _zips_from_db_around(state: str, lat: float, lng: float,
+                          radius_miles: float = 25.0) -> list[tuple[str, dict]] | None:
+    """Look up real ZIPs from data/zips.db that sit within ``radius_miles``
+    of (lat, lng) AND belong to ``state``. Returns a list of
+    (zip_code, dict) tuples in the same shape compute_zip_metrics() expects,
+    or None if the DB isn't present.
+
+    The state filter keeps multi-state MSAs (NYC tri-state, DC-MD-VA) from
+    leaking into the wrong stub — each stub represents one state, so the
+    ZIPs we promote it with should too.
+
+    Distance is computed with a flat-earth squared-degree approximation;
+    at the metro scales we care about (≤30 miles) the error vs Haversine
+    is well under 1%, and a SQL-side filter beats a Python loop on the
+    ~30K-row table.
+    """
+    import sqlite3
+    db_path = Path(__file__).resolve().parent / "data" / "zips.db"
+    if not db_path.exists():
+        return None
+    # Roughly 69 miles per degree of latitude; longitude shrinks with
+    # cos(lat) but for the bounding box we use the lat-only approximation
+    # — it adds slightly more candidate ZIPs at higher latitudes which we
+    # then narrow with the actual squared-distance filter in the query.
+    r_deg2 = (radius_miles / 69.0) ** 2
+    try:
+        conn = sqlite3.connect(str(db_path))
+        cur = conn.cursor()
+        rows = cur.execute(
+            """
+            select zip, name, neighborhood, lat, lng, population,
+                   median_home_value, home_value_yoy, median_rent_monthly,
+                   median_household_income, pct_bachelors,
+                   walk_score, crime_index, restaurant_score
+            from zips
+            where state = ?
+              and median_home_value is not null
+              and median_rent_monthly is not null
+              and ((lat - ?) * (lat - ?) + (lng - ?) * (lng - ?)) < ?
+            """,
+            (state, lat, lat, lng, lng, r_deg2),
+        ).fetchall()
+        conn.close()
+    except sqlite3.Error:
+        return None
+
+    out: list[tuple[str, dict]] = []
+    for r in rows:
+        (zip_code, zname, neigh, zlat, zlng, pop, hv, hv_yoy, rent,
+         hh_income, bach, walk, crime, rest) = r
+        out.append((zip_code, {
+            "name": neigh or zname or f"ZIP {zip_code}",
+            "lat": zlat, "lng": zlng,
+            "median_home_value": hv,
+            "median_rent_monthly": rent,
+            "median_household_income": hh_income or 0,
+            "population": pop or 0,
+            "pct_bachelors": bach or 0,
+            "walk_score": walk or 0,
+            "crime_index": crime if crime is not None else 50,
+            "restaurant_score": rest or 0,
+            "home_value_yoy": hv_yoy,
+        }))
+    return out
+
+
+# How many real ZIPs a stub needs before we promote it. Below this we
+# fall back to the virtual-ZIP synthesis so the deep-dive page still has
+# *something* to show — six small-rural states (AK, parts of WY/ND/SD)
+# end up here. The 10-ZIP floor was picked empirically: it promotes 67
+# of 73 stubs while keeping aggregates statistically meaningful.
+_PROMOTE_MIN_ZIPS = 10
+_PROMOTE_RADIUS_MI = 25.0
+
+
 def get_state_neighborhoods(slug: str) -> dict | None:
     """Return enriched neighborhoods for a metro slug (e.g. 'TX', 'UT-STG'),
     or None if the slug isn't wired up yet. Shape stays the same as
     get_dallas_neighborhoods() so the Leaflet template can be generic.
 
-    For stub metros (no hand-curated zips dict), synthesize a single
-    virtual ZIP from state-level data so the same scoring pipeline
-    produces a comparable composite. The deep-dive page renders a
-    one-pin map for stubs, which is thin but not broken."""
+    Resolution order:
+      1. Hand-curated metro (has 'zips' dict) → use it.
+      2. Stub metro with ≥10 ZIPs in zips.db near its map_center →
+         build real per-ZIP aggregates from the DB and drop is_stub.
+      3. Stub metro with <10 nearby ZIPs (sparse rural states) →
+         fall back to the synthesized single-ZIP placeholder.
+
+    The is_real flag on the return dict tells callers whether the
+    data came from real per-ZIP records, so /map can hide the EST
+    badge on promoted metros while keeping it on the remaining ones.
+    """
     slug = slug.upper()
     metro = STATE_METROS.get(slug)
     if metro is None:
         return None
 
-    if metro.get("is_stub") or "zips" not in metro:
-        v = _virtual_zip_for_state(metro["state"], metro["metro_label"], metro["map_center"],
-                                    value_factor=metro.get("value_factor", 1.0))
-        if not v:
-            return None
-        # Use the slug as the ZIP key — there's no real ZIP, but the
-        # frontend uses it as a stable identifier per row. (Was using
-        # state code, which collided when two stubs share a state.)
-        metrics = compute_zip_metrics(v)
-        enriched = [{"zip": slug, **v, **metrics}]
-    else:
-        enriched = []
+    enriched: list[dict] = []
+    is_real = False
+
+    if "zips" in metro and not metro.get("is_stub"):
+        # Path 1: hand-curated metro.
         for zip_code, raw in metro["zips"].items():
             metrics = compute_zip_metrics(raw)
             enriched.append({"zip": zip_code, **raw, **metrics})
         enriched.sort(key=lambda x: x["composite_score"], reverse=True)
+        is_real = True
+    else:
+        # Path 2: stub — try to promote from zips.db.
+        db_zips = _zips_from_db_around(
+            metro["state"],
+            metro["map_center"]["lat"],
+            metro["map_center"]["lng"],
+            radius_miles=_PROMOTE_RADIUS_MI,
+        )
+        if db_zips and len(db_zips) >= _PROMOTE_MIN_ZIPS:
+            for zip_code, raw in db_zips:
+                metrics = compute_zip_metrics(raw)
+                enriched.append({"zip": zip_code, **raw, **metrics})
+            enriched.sort(key=lambda x: x["composite_score"], reverse=True)
+            is_real = True
+        else:
+            # Path 3: virtual-ZIP fallback (current behavior).
+            v = _virtual_zip_for_state(
+                metro["state"], metro["metro_label"], metro["map_center"],
+                value_factor=metro.get("value_factor", 1.0),
+            )
+            if not v:
+                return None
+            metrics = compute_zip_metrics(v)
+            # Use the slug as the ZIP key — there's no real ZIP, but the
+            # frontend uses it as a stable identifier per row. (Was using
+            # state code, which collided when two stubs share a state.)
+            enriched = [{"zip": slug, **v, **metrics}]
 
     base_caveats = [
         "% bachelor's+ is a school-quality proxy. Direct district / accountability ratings would be more accurate.",
@@ -5456,13 +5561,18 @@ def get_state_neighborhoods(slug: str) -> dict | None:
         "Walkability + restaurant scores are approximations from public Walk Score / Yelp data; live APIs are a follow-up.",
         f"Snapshot from {DATA_AS_OF}. Refresh sources annually.",
     ]
+    # is_stub semantics post-promotion: a metro is *only* a stub if its
+    # data came from the virtual-ZIP fallback. Hand-curated metros and
+    # promoted-from-db stubs both report is_stub=False so /map drops
+    # the EST badge for them.
     return {
         "slug": slug,
         "state": metro["state"],
         "metro_label": metro["metro_label"],
         "subtitle": metro["subtitle"],
         "map_center": metro["map_center"],
-        "is_stub": bool(metro.get("is_stub")),
+        "is_stub": bool(metro.get("is_stub")) and not is_real,
+        "is_real": is_real,
         "siblings": metros_for_state(metro["state"]),
         "as_of": DATA_AS_OF,
         "personas": PERSONAS,
