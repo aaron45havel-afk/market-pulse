@@ -330,134 +330,247 @@ async def real_mortgage_index_page(request: Request):
     })
 
 
+def _fha_piti(home_value: float, state_code: str, rate_pct: float,
+              down_pct: float = 3.5, years: int = 30) -> dict | None:
+    """FHA-flavored PITI estimate. Mirrors qualifying_income() in
+    data_providers (same state tables for property tax + insurance,
+    same homestead exemption math) plus FHA's monthly mortgage
+    insurance premium (MIP).
+
+    MIP: 0.55% annual when LTV > 90% (i.e. any FHA loan with <10%
+    down), divided by 12 for monthly. For loans originated post-2013
+    with 3.5% down, MIP is required for the life of the loan, not
+    just until 78% LTV. We model that — first-time FHA buyers should
+    plan on it staying.
+
+    Returns a dict with the components broken out so the UI can
+    show the user where their money goes.
+    """
+    from data_providers import (
+        STATE_PROPERTY_TAX_RATE, STATE_INSURANCE_ANNUAL,
+        STATE_HOMESTEAD_EXEMPTION,
+    )
+    if not home_value or home_value <= 0 or not rate_pct or rate_pct <= 0:
+        return None
+    loan = home_value * (1 - down_pct / 100.0)
+    r = (rate_pct / 100.0) / 12.0
+    n = years * 12
+    p_and_i = loan * (r * (1 + r) ** n) / ((1 + r) ** n - 1) if r > 0 else loan / n
+    tax_rate = STATE_PROPERTY_TAX_RATE.get(state_code, 0.011)
+    homestead = STATE_HOMESTEAD_EXEMPTION.get(state_code, 0)
+    taxable = max(home_value - homestead, 0)
+    monthly_tax = (taxable * tax_rate) / 12.0
+    monthly_ins = STATE_INSURANCE_ANNUAL.get(state_code, 1800) / 12.0
+    monthly_mip = (loan * 0.0055) / 12.0 if down_pct < 10 else 0.0
+    return {
+        "loan": loan,
+        "p_and_i": p_and_i,
+        "monthly_tax": monthly_tax,
+        "monthly_ins": monthly_ins,
+        "monthly_mip": monthly_mip,
+        "piti": p_and_i + monthly_tax + monthly_ins + monthly_mip,
+        "down_cash": home_value * (down_pct / 100.0),
+        # Estimate closing costs at 3% of price — FHA buyers
+        # sometimes roll these into the loan, sometimes don't. Show
+        # the un-rolled number so users see total cash to close.
+        "closing_est": home_value * 0.03,
+    }
+
+
 @app.get("/multifamily")
-async def multifamily_page(request: Request, state: str = "OH"):
-    """Multifamily ZIP scout. Ranks ZIPs in a chosen state by signals
-    a multifamily investor actually cares about: cap rate, renter
-    density (% of households who rent), existing multi-unit stock
-    (% of buildings with 2+ units), and rent burden (% of renters
-    paying 30%+ of income — lower is better, more stable tenants).
+async def multifamily_page(
+    request: Request,
+    state: str = "OH",
+    max_price: int = 550000,
+    down_pct: float = 3.5,
+    units: int = 2,
+):
+    """Multifamily ZIP scout, tuned for first-time FHA owner-occupants.
+
+    Default frame: a small-and-mighty investor with ~3.5% FHA cash
+    buying a 2-4 unit under $550k and house-hacking (lives in one
+    unit, rents the others). The page ranks ZIPs by signals that
+    matter for THAT deal: cap rate (cash flow), house-hack net
+    monthly cost (PITI minus rented-unit income), and — once ACS
+    data lands — renter density, 2-4 unit stock share, and rent
+    burden.
+
+    Query params let users stress-test their own deal:
+      state      — 2-letter code (default OH)
+      max_price  — affordability cap in dollars (default 550000)
+      down_pct   — FHA min is 3.5; conventional 5%+ for invest, 25%+
+                   for non-owner-occupant
+      units      — 2 / 3 / 4. Affects expected rent (n-1 units rented).
 
     The Census ACS multifamily columns (pct_renter_occupied,
     pct_multi_unit, pct_rent_burdened) populate on each monthly
     refresh-national-zips workflow run; before that lands, the
-    page falls back to the existing density + cap rate signals
-    so it's still useful from day one."""
+    page falls back to a 3-signal blend that's still useful."""
     import sqlite3
+    from bisect import bisect_left
+    from data_providers import MORTGAGE_30Y_RATE
     state = (state or "OH").upper()
+    # Clamp inputs so a wonky URL param can't blow up the math.
+    max_price = max(50_000, min(2_000_000, int(max_price or 550_000)))
+    down_pct = max(0.0, min(50.0, float(down_pct or 3.5)))
+    units = max(2, min(4, int(units or 2)))
+
     db_path = Path(__file__).resolve().parent / "data" / "zips.db"
     if not db_path.exists():
         return templates.TemplateResponse("multifamily.html", {
             "request": request, "rows": [], "state": state, "states": [],
             "has_mf_data": False, "data_pending": True,
+            "max_price": max_price, "down_pct": down_pct, "units": units,
         })
     conn = sqlite3.connect(str(db_path))
     cur = conn.cursor()
-    # Distinct states for the picker.
     states = [r[0] for r in cur.execute(
         "select distinct state from zips where state is not null and state != '' order by state"
     ).fetchall()]
-    # Detect whether ACS multifamily columns actually have data yet
-    # (the columns exist on a fresh schema but are NULL until the
-    # next rebuild). Skip the join logic if not present.
     cols = {r[1] for r in cur.execute("PRAGMA table_info(zips)").fetchall()}
     has_mf_data = {"pct_renter_occupied", "pct_multi_unit", "pct_rent_burdened"} <= cols
     if has_mf_data:
         cur.execute("select count(*) from zips where pct_renter_occupied is not null")
         has_mf_data = cur.fetchone()[0] > 0
-    # Pull all candidate ZIPs in the state with valid scoring inputs.
-    # 1500 population minimum filters out micro-ZCTAs (PO boxes, business
-    # districts, etc.) that have unstable percentages.
+
+    # Affordability filter: median_home_value must be within
+    # 1.2× of the user's cap. The 20% headroom accounts for the
+    # fact that median is a midpoint — there are cheaper duplexes
+    # *and* the user may stretch slightly above their target.
+    # ZIPs >1.2× the cap are dropped entirely so the table only
+    # shows places the user could plausibly shop in.
+    hv_ceiling = int(max_price * 1.2)
+
     if has_mf_data:
-        rows_sql = """
-            select zip, name, neighborhood, lat, lng, population, population_density,
+        select_cols = """zip, name, neighborhood, lat, lng, population, population_density,
                    median_home_value, median_rent_monthly, cap_rate_pct,
                    pct_renter_occupied, pct_multi_unit, pct_rent_burdened,
-                   walk_score, crime_index
-            from zips
-            where state = ?
-              and population >= 1500
-              and median_home_value is not null
-              and median_rent_monthly is not null
-              and cap_rate_pct is not null
-            """
+                   walk_score"""
     else:
-        rows_sql = """
-            select zip, name, neighborhood, lat, lng, population, population_density,
+        select_cols = """zip, name, neighborhood, lat, lng, population, population_density,
                    median_home_value, median_rent_monthly, cap_rate_pct,
                    NULL, NULL, NULL,
-                   walk_score, crime_index
-            from zips
-            where state = ?
-              and population >= 1500
-              and median_home_value is not null
-              and median_rent_monthly is not null
-              and cap_rate_pct is not null
-            """
-    rows_raw = cur.execute(rows_sql, (state,)).fetchall()
+                   walk_score"""
+    rows_raw = cur.execute(f"""
+        select {select_cols}
+        from zips
+        where state = ?
+          and population >= 1500
+          and median_home_value is not null
+          and median_home_value <= ?
+          and median_rent_monthly is not null
+          and cap_rate_pct is not null
+    """, (state, hv_ceiling)).fetchall()
     conn.close()
 
-    # Multifamily score. Each input is normalized to 0–100 across the
-    # state's ZIPs (percentile-style) then weighted-averaged. Anchoring
-    # within the state — not nationally — means the score answers
-    # "which OH zip is most multifamily-friendly *in Ohio*" cleanly.
-    # When ACS data isn't loaded yet, fall back to a 3-signal blend
-    # (cap rate, density, walk) so the page still ranks something.
-    def rank_pct(values):
-        """Return per-row rank (1..N) → percentile 0..100."""
-        if not values: return []
-        sorted_vals = sorted((v for v in values if v is not None))
+    # ── Per-row FHA house-hack math ───────────────────────────────
+    # Purchase price = min(median home value, user's cap). This
+    # assumes "I'll buy at or below the local median for a 2-4 unit
+    # in this ZIP." Use the cap if median exceeds it (user stretches
+    # to the cap); else use the median (cheaper than user's budget).
+    # Expected rent = (units - 1) × median rent. Conservative
+    # (assumes user rents one unit; we don't have per-unit-count rent
+    # in our data, so this is a reasonable approximation).
+    # Net cost = PITI - expected rent. Negative means the renters
+    # pay more than your full housing cost — you live free + cash flow.
+    house_hack_costs = []
+    fha_passes = []  # only meaningful for units>=3 per FHA rules
+    for r in rows_raw:
+        hv, rent = r[7], r[8]
+        purchase = min(hv, max_price)
+        piti = _fha_piti(purchase, state, MORTGAGE_30Y_RATE, down_pct=down_pct)
+        if not piti:
+            house_hack_costs.append(None)
+            fha_passes.append(None)
+            continue
+        expected_rent = (units - 1) * rent
+        net = piti["piti"] - expected_rent
+        house_hack_costs.append(round(net))
+        # FHA self-sufficiency test (3-4 unit only): 75% of *total*
+        # rents (all units, including owner-occupied) must cover PITI.
+        if units >= 3:
+            qualifying_rent = 0.75 * units * rent
+            fha_passes.append(qualifying_rent >= piti["piti"])
+        else:
+            fha_passes.append(None)
+
+    def rank_pct(values, invert=False):
+        """Return per-row rank → percentile 0–100. invert=True flips
+        so lower input values get higher percentiles (used for
+        cost-style metrics where 'lower is better')."""
+        valid = [v for v in values if v is not None]
+        if not valid:
+            return [None] * len(values)
+        sorted_vals = sorted(valid)
         n = len(sorted_vals)
         out = []
         for v in values:
             if v is None:
                 out.append(None); continue
-            # Lower-bound rank: count of items < v, scaled to 100.
-            from bisect import bisect_left
             i = bisect_left(sorted_vals, v)
-            out.append(round(i / max(1, n - 1) * 100, 1))
+            pct = i / max(1, n - 1) * 100
+            out.append(round(100 - pct, 1) if invert else round(pct, 1))
         return out
 
-    cap_pcts = rank_pct([r[9] for r in rows_raw])
+    cap_pcts  = rank_pct([r[9] for r in rows_raw])
     dens_pcts = rank_pct([r[6] for r in rows_raw])
+    # House-hack net cost is inverted: lower monthly burn = higher
+    # score. This is the single most important signal for a small,
+    # cash-constrained investor — weighted at 35-40% below.
+    hh_pcts = rank_pct(house_hack_costs, invert=True)
+
     if has_mf_data:
         renter_pcts = rank_pct([r[10] for r in rows_raw])
-        multi_pcts = rank_pct([r[11] for r in rows_raw])
-        # Rent burden is *inverted* — lower burden is better for the
-        # investor (tenants who can comfortably pay).
-        burden_inv = rank_pct([-(r[12]) if r[12] is not None else None for r in rows_raw])
-        weights = (0.30, 0.25, 0.20, 0.15, 0.10)
+        multi_pcts  = rank_pct([r[11] for r in rows_raw])
+        burden_inv  = rank_pct([r[12] for r in rows_raw], invert=True)
+        # FHA-tuned weights: cap rate + house-hack cost dominate
+        # because that's what the small-mighty owner-occupant cares
+        # about. Renter % and multi-unit % matter but secondary.
+        weights = (
+            ("cap",    0.25),
+            ("hh",     0.35),
+            ("renter", 0.20),
+            ("multi",  0.10),
+            ("burden", 0.10),
+        )
     else:
         renter_pcts = [None] * len(rows_raw)
-        multi_pcts = [None] * len(rows_raw)
-        burden_inv = [None] * len(rows_raw)
+        multi_pcts  = [None] * len(rows_raw)
+        burden_inv  = [None] * len(rows_raw)
         walk_pcts = rank_pct([r[13] for r in rows_raw])
-        weights = (0.50, 0.30, 0.20)  # cap, density, walk fallback
+        # Fallback (no ACS yet): cap + house-hack still get the
+        # bulk of the weight; density and walk fill in.
+        weights = (
+            ("cap",    0.35),
+            ("hh",     0.40),
+            ("density",0.15),
+            ("walk",   0.10),
+        )
 
     rows = []
     for i, r in enumerate(rows_raw):
         (zip_code, name, neigh, lat, lng, pop, dens, hv, rent, cap,
-         pct_rent, pct_mu, pct_rb, walk, crime) = r
-        if has_mf_data:
-            inputs = [
-                (cap_pcts[i],   weights[0]),
-                (renter_pcts[i],weights[1]),
-                (multi_pcts[i], weights[2]),
-                (dens_pcts[i],  weights[3]),
-                (burden_inv[i], weights[4]),
-            ]
-        else:
-            inputs = [
-                (cap_pcts[i],  weights[0]),
-                (dens_pcts[i], weights[1]),
-                (walk_pcts[i], weights[2]),
-            ]
-        # Skip rows where any input is missing — incomplete inputs
-        # bias the score. ZIPs with full data are the only ones we
-        # rank.
-        if any(v is None for v, _ in inputs):
+         pct_rent, pct_mu, pct_rb, walk) = r
+        if hh_pcts[i] is None or cap_pcts[i] is None:
             continue
-        score = round(sum(v * w for v, w in inputs), 1)
+        if has_mf_data:
+            inputs = {
+                "cap":    cap_pcts[i],
+                "hh":     hh_pcts[i],
+                "renter": renter_pcts[i],
+                "multi":  multi_pcts[i],
+                "burden": burden_inv[i],
+            }
+        else:
+            inputs = {
+                "cap":     cap_pcts[i],
+                "hh":      hh_pcts[i],
+                "density": dens_pcts[i],
+                "walk":    walk_pcts[i],
+            }
+        if any(inputs[k] is None for k, _ in weights):
+            continue
+        score = round(sum(inputs[k] * w for k, w in weights), 1)
         rows.append({
             "zip": zip_code, "name": name, "neighborhood": neigh or "",
             "lat": lat, "lng": lng, "population": pop,
@@ -466,15 +579,23 @@ async def multifamily_page(request: Request, state: str = "OH"):
             "pct_renter_occupied": pct_rent,
             "pct_multi_unit": pct_mu,
             "pct_rent_burdened": pct_rb,
+            "house_hack_net": house_hack_costs[i],
+            "fha_self_suff": fha_passes[i],
             "mf_score": score,
         })
     rows.sort(key=lambda r: r["mf_score"], reverse=True)
-    # Cap at top 100 — a state's leaderboard past that adds noise.
+
+    # PITI breakdown at the user's exact cap — shown above the table
+    # so they can see what their max-price scenario costs.
+    sample_piti = _fha_piti(max_price, state, MORTGAGE_30Y_RATE, down_pct=down_pct)
+
     return templates.TemplateResponse("multifamily.html", {
         "request": request,
         "rows": rows[:100],
-        "state": state,
-        "states": states,
+        "state": state, "states": states,
+        "max_price": max_price, "down_pct": down_pct, "units": units,
+        "sample_piti": sample_piti,
+        "mortgage_rate": MORTGAGE_30Y_RATE,
         "has_mf_data": has_mf_data,
         "data_pending": not has_mf_data,
     })
