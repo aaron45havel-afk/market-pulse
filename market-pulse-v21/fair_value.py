@@ -109,8 +109,19 @@ def _cached_or_fetch(cache_key: str, fetcher, max_age_sec: int = 86400):
     return val
 
 
+# In-process memo for FRED-derived values. The on-disk cache
+# already handles cross-request freshness (24h for CPI, 30d for
+# historical baselines), but the disk read + JSON parse still ran
+# 51 times per /fair-value request because the route called the
+# computation once per state. Process-lifetime memo skips that
+# entirely — CPI doesn't change mid-request.
+_memo: dict = {}
+
+
 def _current_cpi() -> tuple[float, str]:
     """Most recent CPIAUCSL observation. Returns (value, period_label)."""
+    if "current_cpi" in _memo:
+        return _memo["current_cpi"]
     def _do():
         obs = _fred_get("CPIAUCSL")
         if not obs:
@@ -124,9 +135,9 @@ def _current_cpi() -> tuple[float, str]:
                     continue
         return None
     cached = _cached_or_fetch("fv_cpi_current", _do)
-    if cached:
-        return cached["value"], cached["date"]
-    return FALLBACK_CURRENT_CPI, "fallback"
+    result = (cached["value"], cached["date"]) if cached else (FALLBACK_CURRENT_CPI, "fallback")
+    _memo["current_cpi"] = result
+    return result
 
 
 def _baseline_cpi_and_rate() -> tuple[float, float, str]:
@@ -155,19 +166,34 @@ def _baseline_cpi_and_rate() -> tuple[float, float, str]:
             except (ValueError, TypeError): continue
         return round(sum(vals)/len(vals), 2) if vals else None
 
+    if "baseline" in _memo:
+        return _memo["baseline"]
     cpi = _cached_or_fetch("fv_cpi_baseline_jun2021", _do_cpi, max_age_sec=30*86400)
     rate = _cached_or_fetch("fv_rate_baseline_jun2021", _do_rate, max_age_sec=30*86400)
-    return (cpi or FALLBACK_BASELINE_CPI,
-            rate or FALLBACK_BASELINE_RATE,
-            BASELINE_LABEL)
+    result = (cpi or FALLBACK_BASELINE_CPI,
+              rate or FALLBACK_BASELINE_RATE,
+              BASELINE_LABEL)
+    _memo["baseline"] = result
+    return result
 
 
 def _state_baseline_medians() -> dict[str, float]:
     """Aggregate the earliest-month ZHVI per state by taking median
     across all ZIPs (>1000 population) with history. Returns
-    {state_code: median_baseline_value}."""
+    {state_code: median_baseline_value}.
+
+    Process-lifetime cached, with a zips.db mtime check so a
+    workflow that rebuilds the DB invalidates without a restart.
+    Previously /fair-value called this 51 times per request (one
+    per compute_state_fair_value call), parsing 30k history_zhvi
+    JSON arrays each time — that was the entire page latency.
+    """
     if not DB_PATH.exists():
         return {}
+    mtime = DB_PATH.stat().st_mtime
+    cached = _state_baseline_medians._cache  # type: ignore[attr-defined]
+    if cached is not None and cached[0] == mtime:
+        return cached[1]
     conn = sqlite3.connect(str(DB_PATH))
     rows = conn.execute(
         "select state, history_zhvi from zips "
@@ -183,7 +209,12 @@ def _state_baseline_medians() -> dict[str, float]:
         if not h or h[0] is None or h[0] <= 0:
             continue
         by_state.setdefault(st, []).append(float(h[0]))
-    return {st: statistics.median(vals) for st, vals in by_state.items() if len(vals) >= 5}
+    result = {st: statistics.median(vals) for st, vals in by_state.items() if len(vals) >= 5}
+    _state_baseline_medians._cache = (mtime, result)  # type: ignore[attr-defined]
+    return result
+
+
+_state_baseline_medians._cache = None  # type: ignore[attr-defined]
 
 
 def _monthly_factor(rate_pct: float, years: int = 30) -> float:
