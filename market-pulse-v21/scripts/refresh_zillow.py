@@ -35,6 +35,7 @@ import json
 import logging
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from datetime import date
@@ -100,16 +101,29 @@ RENT_ROUND = 10
 
 
 def fetch_csv(url: str, timeout: int = 60) -> str:
-    """Download a CSV. Raises a clear error if the URL is broken or unreachable."""
+    """Download a CSV.
+
+    Retries 5xx/429 + network blips up to 3 times with linear backoff
+    (the old code raised SystemExit on the first transient error, so
+    a single Zillow S3 hiccup nuked the monthly workflow). 4xx still
+    fails fast — that's a real URL or schema change, not flake.
+    """
     log.info("Fetching %s", url)
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "market-pulse/1"})
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return r.read().decode("utf-8")
-    except urllib.error.HTTPError as e:
-        raise SystemExit(f"Zillow returned HTTP {e.code} for {url}. URL may have moved.")
-    except urllib.error.URLError as e:
-        raise SystemExit(f"Network error fetching {url}: {e.reason}")
+    req = urllib.request.Request(url, headers={"User-Agent": "market-pulse/1"})
+    last_err: str | None = None
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read().decode("utf-8")
+        except urllib.error.HTTPError as e:
+            last_err = f"HTTP {e.code}"
+            if not (e.code >= 500 or e.code == 429):
+                break
+        except urllib.error.URLError as e:
+            last_err = f"network error {e.reason}"
+        if attempt < 2:
+            time.sleep(3 * (attempt + 1))
+    raise SystemExit(f"Zillow {url}: {last_err} (after 3 attempts).")
 
 
 def latest_value_per_zip(csv_text: str) -> dict[str, float]:
