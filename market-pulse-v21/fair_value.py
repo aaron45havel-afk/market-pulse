@@ -38,6 +38,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import date
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -46,17 +47,61 @@ CACHE_DIR = Path("/tmp/market_pulse_cache")
 CACHE_DIR.mkdir(exist_ok=True)
 DB_PATH = Path(__file__).resolve().parent / "data" / "zips.db"
 
-# ── Fallback constants if FRED is unreachable ──────────────────────
-# Baseline = June 2021 (matches the earliest month most ZIPs have in
-# their history_zhvi array, which is what we aggregate state medians
-# from). Values: FRED CPIAUCSL June 2021 = 270.5, MORTGAGE30US June
-# 2021 ≈ 2.98% (Freddie PMMS weekly average for the month).
-BASELINE_LABEL = "5 yr ago (~mid-2021)"
+# ── Fallback constants if FRED is unreachable AND zips.db is missing ─
+# Used in two narrow cases:
+#   1. We can't read zips.db to figure out the rolling baseline date.
+#   2. FRED is fully unreachable (rare — refresh-bls / refresh-rates
+#      hit the same API monthly so we'd know).
+# In normal operation the baseline date is *derived* from
+# zips.db's as_of column (history_zhvi has 60 monthly values, so
+# index 0 = as_of − 59 months ≈ a 5-year rolling window). CPI +
+# baseline mortgage rate are pulled from FRED for that specific
+# month, so the inflation arithmetic stays internally consistent
+# even as the window rolls forward each monthly refresh.
 FALLBACK_BASELINE_CPI = 270.5
 FALLBACK_BASELINE_RATE = 3.0
-# CURRENT_CPI is only used if today's CPI fetch fails; refreshed in
-# practice from FRED on each request (24h cache).
 FALLBACK_CURRENT_CPI = 315.0
+
+
+def _baseline_year_month() -> tuple[int, int]:
+    """Derive the rolling baseline date from zips.db. The
+    history_zhvi field stores 60 monthly values, so history_zhvi[0]
+    is 59 months before as_of. Returns (year, month) so the FRED
+    fetcher can pin its observation window. Falls back to June 2021
+    if zips.db is missing or as_of is unreadable."""
+    if "baseline_ym" in _memo:
+        return _memo["baseline_ym"]
+    fallback = (2021, 6)
+    if not DB_PATH.exists():
+        return fallback
+    try:
+        conn = sqlite3.connect(str(DB_PATH))
+        row = conn.execute(
+            "select as_of from zips where as_of is not null limit 1"
+        ).fetchone()
+        conn.close()
+        if not row or not row[0]:
+            return fallback
+        as_of = date.fromisoformat(row[0])
+    except Exception:
+        return fallback
+    # 59 months back from as_of, month-aligned. Use absolute month
+    # math (year*12 + month) to dodge the calendar edge cases that
+    # naive subtraction trips on.
+    n = as_of.year * 12 + as_of.month - 59
+    ym = ((n - 1) // 12, ((n - 1) % 12) + 1)
+    _memo["baseline_ym"] = ym
+    return ym
+
+
+def _baseline_label() -> str:
+    """Human-readable form of the rolling baseline month, e.g.
+    '5 yr ago (Jun 2021)'. Re-derived from the DB on each call;
+    cheap enough not to cache separately from _baseline_year_month."""
+    y, m = _baseline_year_month()
+    month_name = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m]
+    return f"5 yr ago ({month_name} {y})"
 
 
 def _fred_get(series_id: str, params_extra: dict | None = None) -> list[dict] | None:
@@ -141,12 +186,28 @@ def _current_cpi() -> tuple[float, str]:
 
 
 def _baseline_cpi_and_rate() -> tuple[float, float, str]:
-    """Mid-2021 CPI + mortgage rate. These are stationary historical
-    values (they don't change as time passes — June 2021 is what it
-    is), so cache for a very long time. Returns (cpi, rate, label)."""
+    """Pull CPI + mortgage rate for the *rolling* baseline month
+    (5 years before zips.db's as_of). FRED observation_start/end
+    bracket that calendar month, so as the window rolls forward
+    each monthly refresh, the inflation arithmetic stays
+    consistent with the actual per-ZIP baseline values.
+
+    On-disk cache key includes the YYYY-MM so a baseline roll
+    doesn't keep returning stale numbers. Stationary historical
+    data so the cache itself can live for 30 days.
+    """
+    if "baseline" in _memo:
+        return _memo["baseline"]
+    y, m = _baseline_year_month()
+    start = f"{y:04d}-{m:02d}-01"
+    # Last day of the same month — use month+1 day 0 trick, but
+    # day=28 works for FRED since they index by first-of-month.
+    end = f"{y:04d}-{m:02d}-28"
+    cache_suffix = f"{y:04d}_{m:02d}"
+
     def _do_cpi():
-        obs = _fred_get("CPIAUCSL", {"observation_start": "2021-06-01",
-                                      "observation_end": "2021-06-30",
+        obs = _fred_get("CPIAUCSL", {"observation_start": start,
+                                      "observation_end": end,
                                       "sort_order": "asc", "limit": 1})
         if not obs: return None
         v = obs[0].get("value")
@@ -154,9 +215,9 @@ def _baseline_cpi_and_rate() -> tuple[float, float, str]:
         except (ValueError, TypeError): return None
 
     def _do_rate():
-        # Average the 4-5 weekly MORTGAGE30US prints from June 2021.
-        obs = _fred_get("MORTGAGE30US", {"observation_start": "2021-06-01",
-                                          "observation_end": "2021-06-30",
+        # Average the weekly MORTGAGE30US prints from that month.
+        obs = _fred_get("MORTGAGE30US", {"observation_start": start,
+                                          "observation_end": end,
                                           "sort_order": "asc", "limit": 8})
         if not obs: return None
         vals = []
@@ -166,13 +227,11 @@ def _baseline_cpi_and_rate() -> tuple[float, float, str]:
             except (ValueError, TypeError): continue
         return round(sum(vals)/len(vals), 2) if vals else None
 
-    if "baseline" in _memo:
-        return _memo["baseline"]
-    cpi = _cached_or_fetch("fv_cpi_baseline_jun2021", _do_cpi, max_age_sec=30*86400)
-    rate = _cached_or_fetch("fv_rate_baseline_jun2021", _do_rate, max_age_sec=30*86400)
+    cpi = _cached_or_fetch(f"fv_cpi_baseline_{cache_suffix}", _do_cpi, max_age_sec=30*86400)
+    rate = _cached_or_fetch(f"fv_rate_baseline_{cache_suffix}", _do_rate, max_age_sec=30*86400)
     result = (cpi or FALLBACK_BASELINE_CPI,
               rate or FALLBACK_BASELINE_RATE,
-              BASELINE_LABEL)
+              _baseline_label())
     _memo["baseline"] = result
     return result
 
