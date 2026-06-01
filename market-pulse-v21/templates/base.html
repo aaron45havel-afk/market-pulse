@@ -433,6 +433,10 @@
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
                     <span class="label">Multifamily</span>
                 </a>
+                <a href="/fair-value" class="{% if '/fair-value' in request.url.path %}active{% endif %}">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/><path d="M8 18l4 4 4-4"/><path d="M12 22V8"/></svg>
+                    <span class="label">Fair Value</span>
+                </a>
                 <a href="/stocks" class="{% if '/stocks' in request.url.path %}active{% endif %}">
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
                     <span class="label">Stocks</span>

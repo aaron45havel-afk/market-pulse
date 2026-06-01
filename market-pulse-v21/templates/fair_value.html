@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% block title %}Fair Value — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+    .fv-page { max-width: 1400px; margin: 0 auto; padding: 0 1.25rem; }
+    .fv-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin: 1rem 0 0.4rem; }
+    .fv-head h1 { font-size: clamp(1.5rem, 3vw, 2rem); margin: 0; }
+
+    .fv-controls { display: flex; gap: 0.8rem; align-items: end; margin: 0.75rem 0 1rem; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 0.85rem 1rem; }
+    .fv-controls .field { display: flex; flex-direction: column; gap: 0.2rem; }
+    .fv-controls label { font-size: 0.72rem; color: var(--ink-3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .fv-controls select { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.55rem; color: var(--text); font-size: 0.9rem; }
+
+    /* Math card — the visual story of the calculation. Mimics the
+       Twitter post's left-to-right arrow flow but stacked vertically
+       for desktop and mobile. */
+    .math-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 1rem 1.25rem; margin-bottom: 1rem; }
+    .math-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.85rem; }
+    .math-head .picked { font-size: 1.15rem; font-weight: 700; color: var(--text); }
+    .math-head .verdict { font-size: 0.95rem; font-weight: 700; padding: 4px 12px; border-radius: 999px; }
+    .math-head .verdict.over { background: rgba(239,68,68,0.15); color: #dc2626; }
+    .math-head .verdict.under { background: rgba(34,197,94,0.18); color: #16a34a; }
+    .math-head .verdict.fair { background: rgba(156,163,175,0.22); color: #6b7280; }
+
+    .math-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.7rem; }
+    .math-step { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 0.7rem 0.9rem; }
+    .math-step .lab { font-size: 0.7rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+    .math-step .val { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; margin: 0.15rem 0 0.1rem; color: var(--text); }
+    .math-step .sub { font-size: 0.7rem; color: var(--ink-3); }
+    .math-step.compare { border-color: var(--accent2); }
+    .math-step.compare .val { color: var(--accent2); }
+
+    .fv-explain { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 0.7rem 1rem; margin-bottom: 1rem; font-size: 0.82rem; color: var(--ink-3); line-height: 1.55; }
+    .fv-explain summary { cursor: pointer; font-weight: 600; color: var(--text); font-size: 0.85rem; }
+    .fv-explain .body { margin-top: 0.6rem; }
+    .fv-explain ol { margin: 0.4rem 0 0 1.2rem; padding: 0; }
+    .fv-explain ol li { margin-bottom: 0.3rem; }
+
+    .fv-tablewrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+    .fv-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table.fv-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+    .fv-table th, .fv-table td { padding: 0.55rem 0.75rem; text-align: right; white-space: nowrap; }
+    .fv-table th:nth-child(1), .fv-table th:nth-child(2),
+    .fv-table td:nth-child(1), .fv-table td:nth-child(2) { text-align: left; }
+    .fv-table thead th {
+        background: var(--surface2); font-size: 0.72rem; text-transform: uppercase;
+        letter-spacing: 0.05em; color: var(--ink-3); font-weight: 700;
+        border-bottom: 1px solid var(--border); cursor: pointer; user-select: none;
+        position: sticky; top: 0;
+    }
+    .fv-table thead th .arrow { display: inline-block; width: 1em; margin-left: 0.15rem; opacity: 0.4; }
+    .fv-table thead th.sorted .arrow { opacity: 1; color: var(--accent2); }
+    .fv-table tbody tr { cursor: pointer; }
+    .fv-table tbody tr:not(:last-child) td { border-bottom: 1px solid var(--line, var(--border)); }
+    .fv-table tbody tr:hover { background: var(--surface2); }
+    .fv-table tbody tr.active { background: rgba(91,77,224,0.08); }
+    .fv-table td.rank { color: var(--ink-3); font-weight: 600; width: 2.5rem; }
+    .fv-table td.delta.over { color: #dc2626; font-weight: 700; }
+    .fv-table td.delta.under { color: #16a34a; font-weight: 700; }
+    .fv-table td.delta.fair { color: var(--ink-3); }
+
+    @media (max-width: 600px) {
+        .fv-page { padding: 0 0.5rem; }
+        .fv-table { font-size: 0.78rem; }
+        .fv-table th, .fv-table td { padding: 0.4rem 0.5rem; }
+        .math-step .val { font-size: 1rem; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="fv-page">
+    <div class="fv-head">
+        <div>
+            <h1>Fair Value</h1>
+            <div class="subtitle">Methodology by <a href="https://twitter.com/VladTheInflator" target="_blank" rel="noopener">@VladTheInflator</a>: inflation-adjusted PITI vs today's mortgage rates. Click any state to see the math.</div>
+        </div>
+    </div>
+
+    <form class="fv-controls" method="get" action="/fair-value">
+        <div class="field">
+            <label for="stateSel">State</label>
+            <select name="state" id="stateSel" onchange="this.form.submit()">
+                {% for s in states %}
+                <option value="{{ s }}" {% if s == state %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+
+    {% if picked %}
+    {% set d = picked.delta_pct %}
+    {% if d > 5 %}
+        {% set verdict_class = 'over' %}{% set verdict_text = '%+0.1f%% overvalued'|format(d) %}
+    {% elif d < -5 %}
+        {% set verdict_class = 'under' %}{% set verdict_text = '%0.1f%% undervalued'|format(-d) %}
+    {% else %}
+        {% set verdict_class = 'fair' %}{% set verdict_text = 'fairly valued (±%0.1f%%)'|format(d) %}
+    {% endif %}
+    <div class="math-card">
+        <div class="math-head">
+            <div class="picked">{{ picked.name }} ({{ picked.code }}) · the math</div>
+            <div class="verdict {{ verdict_class }}">{{ verdict_text }}</div>
+        </div>
+        <div class="math-steps">
+            <div class="math-step">
+                <div class="lab">1. Baseline</div>
+                <div class="val">${{ '{:,}'.format(picked.baseline_value) }}</div>
+                <div class="sub">{{ picked.baseline_label }} state median</div>
+            </div>
+            <div class="math-step">
+                <div class="lab">2. PITI then @ {{ '%.2f'|format(picked.baseline_rate) }}%</div>
+                <div class="val">${{ '{:,}'.format(picked.baseline_piti) }}/mo</div>
+                <div class="sub">20% down, 30Y fixed + state tax/ins</div>
+            </div>
+            <div class="math-step">
+                <div class="lab">3. Inflate × {{ '%.3f'|format(picked.cpi_factor) }}</div>
+                <div class="val">${{ '{:,}'.format(picked.inflated_piti) }}/mo</div>
+                <div class="sub">CPI {{ picked.baseline_cpi }} → {{ picked.cpi_today }}</div>
+            </div>
+            <div class="math-step compare">
+                <div class="lab">4. Back-solve @ {{ '%.2f'|format(picked.rate_today) }}%</div>
+                <div class="val">${{ '{:,}'.format(picked.fair_value) }}</div>
+                <div class="sub">fair value at today's rate</div>
+            </div>
+            <div class="math-step">
+                <div class="lab">5. Market today</div>
+                <div class="val">${{ '{:,}'.format(picked.market_value) }}</div>
+                <div class="sub">PITI = ${{ '{:,}'.format(picked.piti_today_actual) }}/mo @ {{ '%.2f'|format(picked.rate_today) }}%</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <details class="fv-explain">
+        <summary>How does this work?</summary>
+        <div class="body">
+            <p>What's the home <em>actually</em> worth at today's mortgage rates? Take a baseline price + payment from
+            a year when mortgages were normal (we use ~5 years ago, when the 30-year fixed was ≈3%), inflate the
+            <em>payment</em> by cumulative CPI to today, then ask: what home price produces that inflated payment
+            at today's much higher rate? That's "fair value."</p>
+            <ol>
+                <li><strong>Baseline</strong> — state's median home value 5 years ago.</li>
+                <li><strong>PITI then</strong> — standard 20%-down PITI at the 2021-ish mortgage rate, using state
+                    property tax + insurance.</li>
+                <li><strong>Inflate</strong> — multiply the payment by today's CPI ÷ 2021's CPI. A $1,000 payment in
+                    2021 had the same buying-power claim on a household budget as ~$1,170 today (16-17% cumulative).</li>
+                <li><strong>Back-solve</strong> — given today's mortgage rate, what home price produces the inflated
+                    payment? The math is a one-line linear solve once you have state tax + insurance constants.</li>
+                <li><strong>Compare</strong> — current state median ÷ fair value. &gt;0% = market is asking more than
+                    payment-equivalence justifies (overvalued). &lt;0% = bargain (undervalued).</li>
+            </ol>
+            <p style="margin-top:0.5rem;"><em>Caveats:</em> assumes 20% down + 30Y fixed (FHA/VA buyers face different
+            math). State-level medians smooth over wild ZIP variance — a state at 60% overvalued has cheap ZIPs and
+            expensive ones, but the median is what the median is. CPI + baseline mortgage rate from FRED, cached 24h.</p>
+        </div>
+    </details>
+
+    {% if not rows %}
+    <div class="fv-explain"><div class="body">No state data available yet. Check back after the next monthly Zillow refresh.</div></div>
+    {% else %}
+    <div class="fv-tablewrap">
+        <div class="fv-scroll">
+            <table class="fv-table" id="fvTable">
+                <thead>
+                    <tr>
+                        <th data-col="rank" data-numeric="1" class="sorted">#<span class="arrow">▲</span></th>
+                        <th data-col="state">State<span class="arrow"></span></th>
+                        <th data-col="delta" data-numeric="1">Δ vs fair<span class="arrow"></span></th>
+                        <th data-col="fair" data-numeric="1">Fair value<span class="arrow"></span></th>
+                        <th data-col="market" data-numeric="1">Market<span class="arrow"></span></th>
+                        <th data-col="baseline" data-numeric="1">5-yr-ago<span class="arrow"></span></th>
+                        <th data-col="piti0" data-numeric="1">PITI then<span class="arrow"></span></th>
+                        <th data-col="pitit" data-numeric="1">PITI now<span class="arrow"></span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    {% if r.delta_pct > 5 %}
+                        {% set d_class = 'over' %}{% set d_text = '+%0.1f%%'|format(r.delta_pct) %}
+                    {% elif r.delta_pct < -5 %}
+                        {% set d_class = 'under' %}{% set d_text = '%0.1f%%'|format(r.delta_pct) %}
+                    {% else %}
+                        {% set d_class = 'fair' %}{% set d_text = '%+0.1f%%'|format(r.delta_pct) %}
+                    {% endif %}
+                    <tr data-state="{{ r.code }}" class="{% if r.code == state %}active{% endif %}" onclick="location.href='/fair-value?state={{ r.code }}'">
+                        <td class="rank" data-sort="{{ loop.index }}">{{ loop.index }}</td>
+                        <td data-sort="{{ r.name }}"><strong>{{ r.name }}</strong> <span style="color:var(--ink-4); font-weight:500;">({{ r.code }})</span></td>
+                        <td class="delta {{ d_class }}" data-sort="{{ r.delta_pct }}">{{ d_text }}</td>
+                        <td data-sort="{{ r.fair_value }}">${{ '{:,}'.format(r.fair_value) }}</td>
+                        <td data-sort="{{ r.market_value }}">${{ '{:,}'.format(r.market_value) }}</td>
+                        <td data-sort="{{ r.baseline_value }}">${{ '{:,}'.format(r.baseline_value) }}</td>
+                        <td data-sort="{{ r.baseline_piti }}">${{ '{:,}'.format(r.baseline_piti) }}</td>
+                        <td data-sort="{{ r.piti_today_actual }}">${{ '{:,}'.format(r.piti_today_actual) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Click-to-sort with rank renumbering (same pattern as /conditions, /multifamily).
+(function () {
+    const table = document.getElementById('fvTable');
+    if (!table) return;
+    const tbody = table.querySelector('tbody');
+    const headers = table.querySelectorAll('thead th');
+    let curCol = 0, curDir = 1;
+    headers.forEach((th, idx) => {
+        th.addEventListener('click', () => {
+            const isNumeric = th.dataset.numeric === '1';
+            if (curCol === idx) curDir = -curDir;
+            else { curCol = idx; curDir = isNumeric ? -1 : 1; }
+            headers.forEach(h => {
+                h.classList.remove('sorted');
+                const a = h.querySelector('.arrow'); if (a) a.textContent = '';
+            });
+            th.classList.add('sorted');
+            const arrow = th.querySelector('.arrow');
+            if (arrow) arrow.textContent = curDir === 1 ? '▲' : '▼';
+            sortRows();
+        });
+    });
+    function sortRows() {
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const isNumeric = headers[curCol].dataset.numeric === '1';
+        rows.sort((a, b) => {
+            const av = a.children[curCol].dataset.sort;
+            const bv = b.children[curCol].dataset.sort;
+            if (isNumeric) return (parseFloat(av) - parseFloat(bv)) * curDir;
+            return av.localeCompare(bv) * curDir;
+        });
+        rows.forEach((r, i) => {
+            const rankCell = r.querySelector('td.rank');
+            if (rankCell) { rankCell.textContent = i + 1; rankCell.dataset.sort = i + 1; }
+            tbody.appendChild(r);
+        });
+    }
+    const a = headers[0].querySelector('.arrow');
+    if (a) a.textContent = '▲';
+})();
+</script>
+{% endblock %}
