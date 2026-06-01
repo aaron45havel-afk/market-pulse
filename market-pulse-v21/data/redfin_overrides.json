@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "as_of": "2026-05-28",
+    "as_of": "2026-06-01",
     "source": "Redfin Data Center (state_market_tracker, All Residential)",
     "url": "https://redfin-public-data.s3.us-west-2.amazonaws.com/redfin_market_tracker/state_market_tracker.tsv000.gz",
     "primary_period_end": "2026-03-31",
