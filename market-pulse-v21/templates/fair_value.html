@@ -354,8 +354,30 @@
         return `rgb(${r},${g},${b})`;
     }
 
-    // Render state choropleth from us-states.json (FIPS-keyed feature.id).
+    // Zoom-aware styling for the state polygons. At national view
+    // (zoom ≤5) the fill is heavy — the heatmap IS the story.
+    // Once the user zooms into a state, the flat fill dominates the
+    // canvas and makes the ZIP markers look muddy, so we fade the
+    // fill and darken the border so it reads as a region outline
+    // rather than a colored region.
+    function stateStyle(f, zoom) {
+        const sd = fipsDelta[f.id];
+        const baseOp = zoom >= 7 ? 0.10
+                      : zoom >= 6 ? 0.28
+                      : 0.60;
+        return {
+            fillColor: sd ? colorFor(sd.delta_pct) : '#e5e7eb',
+            weight: zoom >= 6 ? 1.5 : 1,
+            color: zoom >= 6 ? '#475569' : '#fff',
+            fillOpacity: sd ? baseOp : baseOp * 0.4,
+        };
+    }
     let stateLayer = null;
+    function restyleStates() {
+        if (!stateLayer) return;
+        const z = map.getZoom();
+        stateLayer.setStyle(f => stateStyle(f, z));
+    }
     fetch('/static/data/us-states.json')
         .then(r => r.json())
         .then(geo => {
@@ -363,13 +385,7 @@
                 // Drop AK (02) + HI (15) since our map bounds the
                 // continental US. They'd compress the mainland.
                 filter: f => f.id !== '02' && f.id !== '15',
-                style: f => {
-                    const sd = fipsDelta[f.id];
-                    return {
-                        fillColor: sd ? colorFor(sd.delta_pct) : '#e5e7eb',
-                        weight: 1, color: '#fff', fillOpacity: sd ? 0.78 : 0.4,
-                    };
-                },
+                style: f => stateStyle(f, map.getZoom()),
                 onEachFeature: (f, layer) => {
                     const sd = fipsDelta[f.id];
                     if (!sd) return;
@@ -379,7 +395,14 @@
                         `<span style="color:#6b7280;">Market $${sd.market_value.toLocaleString()}</span>`,
                         { sticky: true, opacity: 0.96, direction: 'top' }
                     );
-                    layer.on('mouseover', e => e.target.setStyle({ weight: 2.5, fillOpacity: 0.95 }));
+                    // Hover bump uses an opacity *relative* to the
+                    // current zoom-based base, so a hover at city
+                    // zoom is still subtle.
+                    layer.on('mouseover', e => {
+                        const z = map.getZoom();
+                        const baseOp = z >= 7 ? 0.10 : z >= 6 ? 0.28 : 0.60;
+                        e.target.setStyle({ weight: 2.5, fillOpacity: Math.min(baseOp + 0.18, 0.85) });
+                    });
                     layer.on('mouseout', e => stateLayer.resetStyle(e.target));
                     layer.on('click', () => {
                         // Drill: reload page with this state picked.
@@ -387,7 +410,12 @@
                     });
                 },
             }).addTo(map);
+            // Apply once after layer is built (fitBounds may have
+            // run already from the ZIP markers code below, in which
+            // case the zoom level is past the threshold).
+            restyleStates();
         });
+    map.on('zoomend', restyleStates);
 
     // ZIP markers — only added when a state is picked (server only
     // sends them in that case). Coloring matches the state ramp so
@@ -398,10 +426,12 @@
         const bounds = L.latLngBounds([]);
         zipMarkers.forEach(z => {
             if (z.lat == null || z.lng == null) return;
+            // Slightly bigger radius + stronger dark stroke so dots
+            // pop against the (now-faded) state fill at city zoom.
             const m = L.circleMarker([z.lat, z.lng], {
-                radius: 6,
+                radius: 7,
                 fillColor: colorFor(z.delta_pct),
-                color: '#1f2937', weight: 0.6, fillOpacity: 0.85,
+                color: '#1f2937', weight: 1, fillOpacity: 0.92,
             }).bindTooltip(
                 `<strong>${z.area} · ZIP ${z.zip}</strong><br>` +
                 `${z.delta_pct >= 0 ? '+' : ''}${z.delta_pct.toFixed(1)}% vs fair<br>` +
