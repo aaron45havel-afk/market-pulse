@@ -601,6 +601,39 @@ async def multifamily_page(
     })
 
 
+@app.get("/fair-value")
+async def fair_value_page(request: Request, state: str = "OH"):
+    """Inflation-adjusted-payment fair-value methodology (per
+    @VladTheInflator). Takes a state's median home value from ~5
+    years ago, builds the baseline PITI, inflates the payment by
+    cumulative CPI, then back-solves for the home price today's
+    mortgage rate produces. Compares to current market value to
+    flag % over/undervalued."""
+    from data_providers import CHOROPLETH_STATES
+    from fair_value import compute_state_fair_value
+    state = (state or "OH").upper()
+    rows = []
+    for code, sd in CHOROPLETH_STATES.items():
+        mv = sd.get("home_value")
+        if not mv:
+            continue
+        result = compute_state_fair_value(code, mv)
+        if not result:
+            continue
+        result["code"] = code
+        result["name"] = sd.get("name", code)
+        rows.append(result)
+    rows.sort(key=lambda r: r["delta_pct"], reverse=True)
+    picked = next((r for r in rows if r["code"] == state), None)
+    return templates.TemplateResponse("fair_value.html", {
+        "request": request,
+        "rows": rows,
+        "picked": picked,
+        "state": state,
+        "states": sorted(r["code"] for r in rows),
+    })
+
+
 @app.get("/conditions")
 async def conditions_page(request: Request):
     """Market Conditions dashboard — ranks states by the 4-signal
