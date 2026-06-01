@@ -625,10 +625,13 @@ async def fair_value_page(request: Request, state: str = "OH"):
         rows.append(result)
     rows.sort(key=lambda r: r["delta_pct"], reverse=True)
     picked = next((r for r in rows if r["code"] == state), None)
-    # Per-ZIP drilldown for the picked state. Cap at 250 rows on the
-    # default page so big states (CA/TX) don't dump a 1500-row table;
-    # search box on the front-end can still filter the loaded set.
-    zip_rows = compute_zips_in_state(state, limit=250) if picked else []
+    # Per-ZIP drilldown for the picked state. Send everything — the
+    # search box has to be able to find any ZIP, and capping the
+    # response set hides ZIPs ranked below the cap (Lakewood OH
+    # ranked #404 of 979; +56% overvalued but invisible at cap=250).
+    # 5000-row hard ceiling is a safety net against pathological
+    # states; CA has ~1500 ZIPs which is the realistic upper bound.
+    zip_rows = compute_zips_in_state(state, limit=5000) if picked else []
     return templates.TemplateResponse("fair_value.html", {
         "request": request,
         "rows": rows,
