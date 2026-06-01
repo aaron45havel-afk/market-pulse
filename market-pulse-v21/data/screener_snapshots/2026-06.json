@@ -1,0 +1,27 @@
+{
+  "_meta": {
+    "as_of": "2026-06-01",
+    "snapshot_month": "2026-06",
+    "net_nets_count": 0,
+    "total_candidates": 21,
+    "source": "SEC EDGAR XBRL company facts",
+    "rules": {
+      "total_assets_max": "$500M",
+      "total_ncav_max": "$200M",
+      "ncav_per_share_min": "$0.50",
+      "shares_min": "500K",
+      "shares_max": "100M",
+      "revenue_min": "> $0 (no pre-revenue)",
+      "exchanges": "NYSE, NASDAQ, AMEX only",
+      "excluded_sectors": "Financials (SIC 6000-6999), Pharma/Biotech (SIC 2830-2836), R&D Services (SIC 8731-8734)",
+      "filing_max_age": "18 months",
+      "negative_equity": "Excluded",
+      "critical_burners": "Excluded (< 4 quarters of cash at burn rate)",
+      "warrants": "Excluded (tickers ending in W, WT, WS)",
+      "min_p_ncav": "0.01 (Carlisle outlier filter)",
+      "china_flag": "Flagged (not excluded \u2014 user decides)",
+      "min_revenue": "$1M (real operating businesses only)"
+    }
+  },
+  "net_nets": []
+}
