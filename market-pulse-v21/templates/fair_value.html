@@ -131,6 +131,56 @@
     </div>
     {% endif %}
 
+    {% if zip_rows %}
+    <div class="math-head" style="margin: 1.2rem 0 0.5rem;">
+        <div class="picked">ZIPs in {{ picked.name }} — sorted most-overvalued first</div>
+        <div style="font-size:0.78rem; color:var(--ink-3);">{{ zip_rows|length }} ZIPs shown · type to filter by area, county, or ZIP</div>
+    </div>
+    <div class="fv-tablewrap" style="margin-bottom: 1rem;">
+        <div style="padding: 0.55rem 0.85rem; border-bottom: 1px solid var(--border);">
+            <input id="zipFilter" type="text" placeholder="Lakewood, Cuyahoga, 44107…"
+                style="width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.6rem; color:var(--text); font-size:0.88rem;">
+        </div>
+        <div class="fv-scroll">
+            <table class="fv-table" id="fvZipTable">
+                <thead>
+                    <tr>
+                        <th data-col="rank" data-numeric="1" class="sorted">#<span class="arrow">▲</span></th>
+                        <th data-col="zip">ZIP<span class="arrow"></span></th>
+                        <th data-col="area">Area / County<span class="arrow"></span></th>
+                        <th data-col="delta" data-numeric="1">Δ vs fair<span class="arrow"></span></th>
+                        <th data-col="fair" data-numeric="1">Fair value<span class="arrow"></span></th>
+                        <th data-col="market" data-numeric="1">Market<span class="arrow"></span></th>
+                        <th data-col="baseline" data-numeric="1">5-yr-ago<span class="arrow"></span></th>
+                        <th data-col="pop" data-numeric="1">Pop.<span class="arrow"></span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in zip_rows %}
+                    {% if r.delta_pct > 5 %}
+                        {% set d_class = 'over' %}{% set d_text = '+%0.1f%%'|format(r.delta_pct) %}
+                    {% elif r.delta_pct < -5 %}
+                        {% set d_class = 'under' %}{% set d_text = '%0.1f%%'|format(r.delta_pct) %}
+                    {% else %}
+                        {% set d_class = 'fair' %}{% set d_text = '%+0.1f%%'|format(r.delta_pct) %}
+                    {% endif %}
+                    <tr data-search="{{ (r.area ~ ' ' ~ r.county ~ ' ' ~ r.zip)|lower }}">
+                        <td class="rank" data-sort="{{ loop.index }}">{{ loop.index }}</td>
+                        <td data-sort="{{ r.zip }}"><a href="/zip/{{ r.zip }}" style="color:inherit; border-bottom:1px dotted transparent; text-decoration:none;">{{ r.zip }}</a></td>
+                        <td data-sort="{{ r.area }}"><strong>{{ r.area }}</strong>{% if r.county %} <span style="color:var(--ink-4); font-weight:500;">· {{ r.county }}</span>{% endif %}</td>
+                        <td class="delta {{ d_class }}" data-sort="{{ r.delta_pct }}">{{ d_text }}</td>
+                        <td data-sort="{{ r.fair_value }}">${{ '{:,}'.format(r.fair_value) }}</td>
+                        <td data-sort="{{ r.market_value }}">${{ '{:,}'.format(r.market_value) }}</td>
+                        <td data-sort="{{ r.baseline_value }}">${{ '{:,}'.format(r.baseline_value) }}</td>
+                        <td data-sort="{{ r.population }}">{{ '{:,}'.format(r.population) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
     <details class="fv-explain">
         <summary>How does this work?</summary>
         <div class="body">
@@ -203,9 +253,11 @@
 
 {% block scripts %}
 <script>
-// Click-to-sort with rank renumbering (same pattern as /conditions, /multifamily).
-(function () {
-    const table = document.getElementById('fvTable');
+// Generic click-to-sort + rank renumbering — reused for both the
+// state leaderboard (fvTable) and the per-state ZIP drilldown
+// (fvZipTable). Bind once per table.
+function makeSortable(tableId) {
+    const table = document.getElementById(tableId);
     if (!table) return;
     const tbody = table.querySelector('tbody');
     const headers = table.querySelectorAll('thead th');
@@ -222,26 +274,57 @@
             th.classList.add('sorted');
             const arrow = th.querySelector('.arrow');
             if (arrow) arrow.textContent = curDir === 1 ? '▲' : '▼';
-            sortRows();
+            // Only sort *visible* rows so the filter and sort cooperate.
+            const visible = Array.from(tbody.querySelectorAll('tr'))
+                .filter(r => r.style.display !== 'none');
+            const hidden = Array.from(tbody.querySelectorAll('tr'))
+                .filter(r => r.style.display === 'none');
+            visible.sort((a, b) => {
+                const av = a.children[curCol].dataset.sort;
+                const bv = b.children[curCol].dataset.sort;
+                if (isNumeric) return (parseFloat(av) - parseFloat(bv)) * curDir;
+                return av.localeCompare(bv) * curDir;
+            });
+            visible.forEach((r, i) => {
+                const rankCell = r.querySelector('td.rank');
+                if (rankCell) { rankCell.textContent = i + 1; rankCell.dataset.sort = i + 1; }
+                tbody.appendChild(r);
+            });
+            // Hidden rows appended at the end so they stay hidden but
+            // come back into the right spot if the filter is cleared.
+            hidden.forEach(r => tbody.appendChild(r));
         });
     });
-    function sortRows() {
-        const rows = Array.from(tbody.querySelectorAll('tr'));
-        const isNumeric = headers[curCol].dataset.numeric === '1';
-        rows.sort((a, b) => {
-            const av = a.children[curCol].dataset.sort;
-            const bv = b.children[curCol].dataset.sort;
-            if (isNumeric) return (parseFloat(av) - parseFloat(bv)) * curDir;
-            return av.localeCompare(bv) * curDir;
-        });
-        rows.forEach((r, i) => {
-            const rankCell = r.querySelector('td.rank');
-            if (rankCell) { rankCell.textContent = i + 1; rankCell.dataset.sort = i + 1; }
-            tbody.appendChild(r);
-        });
-    }
     const a = headers[0].querySelector('.arrow');
     if (a) a.textContent = '▲';
+}
+makeSortable('fvTable');
+makeSortable('fvZipTable');
+
+// Drilldown filter — case-insensitive substring match on the
+// pre-baked data-search attribute (area + county + zip joined
+// at render time). Renumbers visible rank on each keystroke.
+(function () {
+    const input = document.getElementById('zipFilter');
+    const table = document.getElementById('fvZipTable');
+    if (!input || !table) return;
+    const tbody = table.querySelector('tbody');
+    input.addEventListener('input', () => {
+        const q = input.value.trim().toLowerCase();
+        let visible = 0;
+        tbody.querySelectorAll('tr').forEach(tr => {
+            const match = !q || (tr.dataset.search || '').indexOf(q) !== -1;
+            tr.style.display = match ? '' : 'none';
+            if (match) {
+                visible += 1;
+                const rankCell = tr.querySelector('td.rank');
+                if (rankCell) rankCell.textContent = visible;
+            }
+        });
+    });
 })();
+
+// Old fvTable IIFE was here. Replaced by the shared makeSortable
+// calls above so we don't double-bind click handlers.
 </script>
 {% endblock %}
