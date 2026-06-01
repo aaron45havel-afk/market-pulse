@@ -610,7 +610,7 @@ async def fair_value_page(request: Request, state: str = "OH"):
     mortgage rate produces. Compares to current market value to
     flag % over/undervalued."""
     from data_providers import CHOROPLETH_STATES
-    from fair_value import compute_state_fair_value
+    from fair_value import compute_state_fair_value, compute_zips_in_state
     state = (state or "OH").upper()
     rows = []
     for code, sd in CHOROPLETH_STATES.items():
@@ -625,10 +625,15 @@ async def fair_value_page(request: Request, state: str = "OH"):
         rows.append(result)
     rows.sort(key=lambda r: r["delta_pct"], reverse=True)
     picked = next((r for r in rows if r["code"] == state), None)
+    # Per-ZIP drilldown for the picked state. Cap at 250 rows on the
+    # default page so big states (CA/TX) don't dump a 1500-row table;
+    # search box on the front-end can still filter the loaded set.
+    zip_rows = compute_zips_in_state(state, limit=250) if picked else []
     return templates.TemplateResponse("fair_value.html", {
         "request": request,
         "rows": rows,
         "picked": picked,
+        "zip_rows": zip_rows,
         "state": state,
         "states": sorted(r["code"] for r in rows),
     })

@@ -276,3 +276,74 @@ def compute_state_fair_value(state_code: str,
         "piti_today_actual": round(piti_today_actual),
         "delta_pct": round(delta_pct, 1),
     }
+
+
+def compute_zips_in_state(state_code: str, limit: int = 500) -> list[dict]:
+    """Per-ZIP fair-value drilldown for one state. Returns rows sorted
+    by % overvalued (descending), capped at ``limit`` to keep the
+    payload manageable on big states like CA / TX / NY.
+
+    Uses each ZIP's own history_zhvi[0] as its individual baseline —
+    no state-level smoothing, so we surface the real spread between
+    overpriced Cleveland suburbs vs. underpriced Cleveland east side."""
+    if not DB_PATH.exists() or not state_code:
+        return []
+    cpi_baseline, rate_baseline, _ = _baseline_cpi_and_rate()
+    cpi_today, _ = _current_cpi()
+    from data_providers import MORTGAGE_30Y_RATE
+    rate_today = MORTGAGE_30Y_RATE
+    cpi_factor = cpi_today / cpi_baseline if cpi_baseline > 0 else 1.0
+
+    conn = sqlite3.connect(str(DB_PATH))
+    rows = conn.execute(
+        # population > 500 filters PO-box ZCTAs whose ZHVI is noisy.
+        # median_home_value not null ensures the ZIP has Zillow coverage.
+        "select zip, name, neighborhood, county, median_home_value, "
+        "       history_zhvi, population "
+        "from zips "
+        "where state = ? and median_home_value is not null "
+        "  and history_zhvi is not null and population > 500",
+        (state_code.upper(),),
+    ).fetchall()
+    conn.close()
+
+    out = []
+    for zip_code, name, neighborhood, county, market_value, hist_json, pop in rows:
+        try:
+            h = json.loads(hist_json)
+        except Exception:
+            continue
+        if not h or h[0] is None or h[0] <= 0:
+            continue
+        baseline_value = float(h[0])
+        if not market_value or market_value <= 0:
+            continue
+        piti_baseline = _piti(baseline_value, rate_baseline, state_code)
+        piti_inflated = piti_baseline * cpi_factor
+        fair_value = _back_solve_price(piti_inflated, rate_today, state_code)
+        if not fair_value:
+            continue
+        delta_pct = (market_value - fair_value) / fair_value * 100
+        # Prefer the most-specific area name we have. neighborhood
+        # is the friendliest (e.g. "Lakewood") when populated by
+        # enrich_neighborhoods.py; falls back to the city in `name`
+        # (e.g. "Cleveland, OH"). Cleans up duplicate state suffix
+        # since users see the state on the page already.
+        clean_name = name or ""
+        if state_code and clean_name.endswith(f", {state_code}"):
+            clean_name = clean_name[: -(len(state_code) + 2)]
+        area = neighborhood or clean_name or f"ZIP {zip_code}"
+        out.append({
+            "zip": zip_code,
+            "area": area,
+            "city": clean_name,
+            "neighborhood": neighborhood or "",
+            "county": county or "",
+            "population": pop or 0,
+            "baseline_value": round(baseline_value),
+            "market_value": round(market_value),
+            "fair_value": round(fair_value),
+            "delta_pct": round(delta_pct, 1),
+        })
+    out.sort(key=lambda r: r["delta_pct"], reverse=True)
+    return out[:limit]
