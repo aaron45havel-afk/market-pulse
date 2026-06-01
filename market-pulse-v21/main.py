@@ -632,6 +632,26 @@ async def fair_value_page(request: Request, state: str = "OH"):
     # 5000-row hard ceiling is a safety net against pathological
     # states; CA has ~1500 ZIPs which is the realistic upper bound.
     zip_rows = compute_zips_in_state(state, limit=5000) if picked else []
+    # FIPS→delta map for the choropleth — us-states.json features
+    # are keyed by FIPS, not by 2-letter code. Pre-build the lookup
+    # so the client doesn't have to do it for every polygon.
+    fips_to_delta = {}
+    for r in rows:
+        fips = CHOROPLETH_STATES.get(r["code"], {}).get("fips")
+        if fips:
+            fips_to_delta[fips] = {
+                "code": r["code"], "name": r["name"],
+                "delta_pct": r["delta_pct"],
+                "fair_value": r["fair_value"], "market_value": r["market_value"],
+            }
+    # ZIP markers — only need the geo + delta_pct for the map; the
+    # full rows already power the table below.
+    zip_markers = [
+        {"zip": r["zip"], "lat": r["lat"], "lng": r["lng"],
+         "delta_pct": r["delta_pct"], "area": r["area"],
+         "market_value": r["market_value"], "fair_value": r["fair_value"]}
+        for r in zip_rows if r.get("lat") is not None and r.get("lng") is not None
+    ]
     return templates.TemplateResponse("fair_value.html", {
         "request": request,
         "rows": rows,
@@ -639,6 +659,8 @@ async def fair_value_page(request: Request, state: str = "OH"):
         "zip_rows": zip_rows,
         "state": state,
         "states": sorted(r["code"] for r in rows),
+        "fips_to_delta": fips_to_delta,
+        "zip_markers": zip_markers,
     })
 
 
