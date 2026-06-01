@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Fair Value — Market Pulse{% endblock %}
 {% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <style>
     .fv-page { max-width: 1400px; margin: 0 auto; padding: 0 1.25rem; }
     .fv-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin: 1rem 0 0.4rem; }
@@ -59,11 +61,34 @@
     .fv-table td.delta.under { color: #16a34a; font-weight: 700; }
     .fv-table td.delta.fair { color: var(--ink-3); }
 
+    /* Map container — sits above the math card so the geographic
+       lens reads first. Picks up the same border-radius / surface
+       treatment as the cards below for consistency. */
+    .fv-map-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: 1rem; position: relative; }
+    #fvMap { width: 100%; height: 440px; background: #0b0d14; }
+    .fv-map-legend {
+        position: absolute; bottom: 10px; left: 10px;
+        background: rgba(255,255,255,0.95); padding: 0.45rem 0.7rem;
+        border-radius: 6px; font-size: 0.72rem;
+        color: var(--ink-3); line-height: 1.4;
+        border: 1px solid var(--border);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        z-index: 500; pointer-events: none;
+    }
+    .fv-map-legend .gradient {
+        display: inline-block; width: 110px; height: 8px;
+        background: linear-gradient(to right, #16a34a, #fbbf24, #dc2626);
+        border-radius: 4px; margin: 0 0.3rem; vertical-align: middle;
+    }
+    .fv-map-legend .row { display: flex; align-items: center; gap: 0.2rem; }
+    .fv-map-legend strong { color: var(--text); }
+
     @media (max-width: 600px) {
         .fv-page { padding: 0 0.5rem; }
         .fv-table { font-size: 0.78rem; }
         .fv-table th, .fv-table td { padding: 0.4rem 0.5rem; }
         .math-step .val { font-size: 1rem; }
+        #fvMap { height: 320px; }
     }
 </style>
 {% endblock %}
@@ -86,6 +111,21 @@
             </select>
         </div>
     </form>
+
+    <script id="fv-state-data" type="application/json">{{ fips_to_delta | tojson }}</script>
+    <script id="fv-zip-data" type="application/json">{{ zip_markers | tojson }}</script>
+    <script id="fv-picked-bbox" type="application/json">{% if picked %}{{ {"code": picked.code} | tojson }}{% else %}null{% endif %}</script>
+
+    <div class="fv-map-wrap">
+        <div id="fvMap"></div>
+        <div class="fv-map-legend">
+            <div class="row"><strong>Δ vs fair</strong></div>
+            <div class="row" style="margin-top:0.15rem;">
+                <span>−</span><span class="gradient"></span><span>+</span>
+            </div>
+            <div class="row" style="font-size:0.66rem; margin-top:0.15rem;">undervalued ←→ overvalued</div>
+        </div>
+    </div>
 
     {% if picked %}
     {% set d = picked.delta_pct %}
@@ -252,7 +292,132 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
+// ── Fair-value map: state choropleth + ZIP markers ──────────────
+// State polygon color = delta_pct on a green→yellow→red ramp,
+// anchored at the realistic spread (every state currently shows
+// +25%+ overvalued; -10 to +130 covers the range with headroom).
+// Picked state zooms in and overlays per-ZIP circle markers
+// colored on the same scale so the inner-vs-outer-suburb spread
+// jumps out visually.
+(function () {
+    const mapEl = document.getElementById('fvMap');
+    if (!mapEl || typeof L === 'undefined') return;
+    const fipsDelta = JSON.parse(document.getElementById('fv-state-data').textContent);
+    const zipMarkers = JSON.parse(document.getElementById('fv-zip-data').textContent);
+    const pickedJson = document.getElementById('fv-picked-bbox').textContent;
+    const picked = pickedJson === 'null' ? null : JSON.parse(pickedJson);
+
+    // Continental-US framing (matches the bounds /map uses). Alaska
+    // + Hawaii are out of frame intentionally — they'd compress the
+    // mainland to unreadable. AK/HI still appear in the table.
+    const map = L.map(mapEl, {
+        zoomControl: true,
+        scrollWheelZoom: false,   // page-friendly default; pinch + buttons still work
+        minZoom: 3,
+        maxBounds: L.latLngBounds([22, -127], [51, -64]),
+        maxBoundsViscosity: 0.6,
+    }).setView([38.5, -96], 4);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+        subdomains: 'abcd', maxZoom: 19,
+        attribution: '© OpenStreetMap, © CARTO',
+    }).addTo(map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+        subdomains: 'abcd', maxZoom: 19, attribution: '',
+        pane: 'shadowPane',
+    }).addTo(map);
+
+    // Green-yellow-red ramp anchored at delta_pct. Returns an RGB
+    // string from a linear interpolation: -10% → green (#16a34a),
+    // 60% → yellow (#fbbf24), 130% → red (#dc2626). Anything
+    // outside the range clamps to the endpoints.
+    function colorFor(delta) {
+        if (delta == null) return '#cbd5e1';
+        const clamped = Math.max(-10, Math.min(130, delta));
+        const t = (clamped + 10) / 140;  // 0..1
+        let r, g, b;
+        if (t < 0.5) {
+            // green → yellow
+            const u = t / 0.5;
+            r = Math.round(22 + (251 - 22) * u);
+            g = Math.round(163 + (191 - 163) * u);
+            b = Math.round(74 + (36 - 74) * u);
+        } else {
+            // yellow → red
+            const u = (t - 0.5) / 0.5;
+            r = Math.round(251 + (220 - 251) * u);
+            g = Math.round(191 + (38 - 191) * u);
+            b = Math.round(36 + (38 - 36) * u);
+        }
+        return `rgb(${r},${g},${b})`;
+    }
+
+    // Render state choropleth from us-states.json (FIPS-keyed feature.id).
+    let stateLayer = null;
+    fetch('/static/data/us-states.json')
+        .then(r => r.json())
+        .then(geo => {
+            stateLayer = L.geoJSON(geo, {
+                // Drop AK (02) + HI (15) since our map bounds the
+                // continental US. They'd compress the mainland.
+                filter: f => f.id !== '02' && f.id !== '15',
+                style: f => {
+                    const sd = fipsDelta[f.id];
+                    return {
+                        fillColor: sd ? colorFor(sd.delta_pct) : '#e5e7eb',
+                        weight: 1, color: '#fff', fillOpacity: sd ? 0.78 : 0.4,
+                    };
+                },
+                onEachFeature: (f, layer) => {
+                    const sd = fipsDelta[f.id];
+                    if (!sd) return;
+                    layer.bindTooltip(
+                        `<strong>${sd.name}</strong><br>` +
+                        `${sd.delta_pct >= 0 ? '+' : ''}${sd.delta_pct.toFixed(1)}% vs fair<br>` +
+                        `<span style="color:#6b7280;">Market $${sd.market_value.toLocaleString()}</span>`,
+                        { sticky: true, opacity: 0.96, direction: 'top' }
+                    );
+                    layer.on('mouseover', e => e.target.setStyle({ weight: 2.5, fillOpacity: 0.95 }));
+                    layer.on('mouseout', e => stateLayer.resetStyle(e.target));
+                    layer.on('click', () => {
+                        // Drill: reload page with this state picked.
+                        window.location.href = `/fair-value?state=${sd.code}`;
+                    });
+                },
+            }).addTo(map);
+        });
+
+    // ZIP markers — only added when a state is picked (server only
+    // sends them in that case). Coloring matches the state ramp so
+    // hot Cleveland ZIPs and cool Appalachian ones are visually
+    // continuous with their containing state.
+    if (picked && zipMarkers.length) {
+        const zipLayer = L.layerGroup().addTo(map);
+        const bounds = L.latLngBounds([]);
+        zipMarkers.forEach(z => {
+            if (z.lat == null || z.lng == null) return;
+            const m = L.circleMarker([z.lat, z.lng], {
+                radius: 6,
+                fillColor: colorFor(z.delta_pct),
+                color: '#1f2937', weight: 0.6, fillOpacity: 0.85,
+            }).bindTooltip(
+                `<strong>${z.area} · ZIP ${z.zip}</strong><br>` +
+                `${z.delta_pct >= 0 ? '+' : ''}${z.delta_pct.toFixed(1)}% vs fair<br>` +
+                `<span style="color:#6b7280;">Market $${z.market_value.toLocaleString()} · Fair $${z.fair_value.toLocaleString()}</span>`,
+                { sticky: true, opacity: 0.96, direction: 'top' }
+            );
+            m.on('click', () => { window.location.href = `/zip/${z.zip}`; });
+            zipLayer.addLayer(m);
+            bounds.extend([z.lat, z.lng]);
+        });
+        if (bounds.isValid()) {
+            map.fitBounds(bounds, { padding: [20, 20], maxZoom: 10 });
+        }
+    }
+})();
+
 // Generic click-to-sort + rank renumbering — reused for both the
 // state leaderboard (fvTable) and the per-state ZIP drilldown
 // (fvZipTable). Bind once per table.

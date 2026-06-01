@@ -298,8 +298,10 @@ def compute_zips_in_state(state_code: str, limit: int = 500) -> list[dict]:
     rows = conn.execute(
         # population > 500 filters PO-box ZCTAs whose ZHVI is noisy.
         # median_home_value not null ensures the ZIP has Zillow coverage.
+        # lat/lng included so the map view can drop a colored marker
+        # per ZIP without a second query.
         "select zip, name, neighborhood, county, median_home_value, "
-        "       history_zhvi, population "
+        "       history_zhvi, population, lat, lng "
         "from zips "
         "where state = ? and median_home_value is not null "
         "  and history_zhvi is not null and population > 500",
@@ -308,7 +310,7 @@ def compute_zips_in_state(state_code: str, limit: int = 500) -> list[dict]:
     conn.close()
 
     out = []
-    for zip_code, name, neighborhood, county, market_value, hist_json, pop in rows:
+    for zip_code, name, neighborhood, county, market_value, hist_json, pop, lat, lng in rows:
         try:
             h = json.loads(hist_json)
         except Exception:
@@ -340,6 +342,8 @@ def compute_zips_in_state(state_code: str, limit: int = 500) -> list[dict]:
             "neighborhood": neighborhood or "",
             "county": county or "",
             "population": pop or 0,
+            "lat": lat,
+            "lng": lng,
             "baseline_value": round(baseline_value),
             "market_value": round(market_value),
             "fair_value": round(fair_value),
