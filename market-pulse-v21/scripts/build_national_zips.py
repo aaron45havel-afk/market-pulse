@@ -39,6 +39,7 @@ import logging
 import re
 import sqlite3
 import sys
+import time
 import urllib.error
 import urllib.request
 from datetime import date
@@ -124,14 +125,22 @@ NATIONAL_PRICE_TO_RENT = 17.0
 
 # ─── Network helpers ────────────────────────────────────────────────
 def _http_get(url: str, timeout: int = 180) -> bytes:
+    """GET with retry on 5xx/429/network errors. 4xx still fails fast."""
     req = urllib.request.Request(url, headers={"User-Agent": "market-pulse/1"})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return r.read()
-    except urllib.error.HTTPError as e:
-        raise SystemExit(f"HTTP {e.code} fetching {url}")
-    except urllib.error.URLError as e:
-        raise SystemExit(f"Network error fetching {url}: {e.reason}")
+    last_err: str | None = None
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            last_err = f"HTTP {e.code}"
+            if not (e.code >= 500 or e.code == 429):
+                raise SystemExit(f"{last_err} fetching {url}")
+        except urllib.error.URLError as e:
+            last_err = f"Network error {e.reason}"
+        if attempt < 2:
+            time.sleep(3 * (attempt + 1))
+    raise SystemExit(f"{last_err} fetching {url} (after 3 attempts)")
 
 
 def fetch_text(url: str, label: str) -> str:
@@ -330,11 +339,28 @@ def parse_gazetteer(text: str) -> dict[str, dict]:
 def fetch_acs_zcta() -> dict[str, dict]:
     """Census ACS 2022 5-year API call — one bulk request returns all
     ~33K ZCTAs. Keys: median_household_income, pct_bachelors, population.
-    Census null markers (negative values) become None."""
+    Census null markers (negative values) become None.
+
+    Census occasionally returns a non-JSON body (HTML throttle page or
+    a truncated empty body) with a 2xx status. Retry up to 3× on JSON
+    parse failure with linear backoff before giving up."""
     url = f"{ACS_API}?get={ACS_VARS}&for=zip%20code%20tabulation%20area:*"
     log.info("Fetching Census ACS 2022 5-year ZCTA data …")
-    raw = _http_get(url)
-    rows = json.loads(raw)
+    rows = None
+    last_err: str | None = None
+    for attempt in range(3):
+        raw = _http_get(url)
+        try:
+            rows = json.loads(raw)
+            break
+        except json.JSONDecodeError as e:
+            preview = raw[:120].decode("utf-8", errors="replace").replace("\n", " ")
+            last_err = f"{e}; body starts with: {preview!r}"
+            log.warning("Census ACS returned non-JSON on attempt %d/3: %s", attempt + 1, last_err)
+            if attempt < 2:
+                time.sleep(5 * (attempt + 1))
+    if rows is None:
+        raise SystemExit(f"Census ACS API kept returning non-JSON after 3 attempts: {last_err}")
     headers = rows[0]
     zcta_idx = headers.index("zip code tabulation area")
     inc_idx = headers.index("B19013_001E")
