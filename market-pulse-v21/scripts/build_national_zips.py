@@ -341,25 +341,37 @@ def _load_acs_from_prior_db() -> dict[str, dict]:
     """Fallback: read the ACS columns from the previous zips.db so a
     Census outage / missing key doesn't tank the monthly refresh. ACS
     is an annual 5-yr survey — carrying values forward a month or two
-    is harmless. Returns the same shape as fetch_acs_zcta()."""
+    is harmless. Returns the same shape as fetch_acs_zcta().
+
+    Defensive about schema drift: the multifamily columns
+    (pct_renter_occupied, pct_multi_unit, pct_rent_burdened) were added
+    recently, so a prior db built before that change won't have them.
+    Pull only columns that actually exist; default the rest to None."""
     if not DB_PATH.exists():
         return {}
+    wanted = [
+        "median_household_income",
+        "pct_bachelors",
+        "population",
+        "pct_renter_occupied",
+        "pct_multi_unit",
+        "pct_rent_burdened",
+    ]
     out: dict[str, dict] = {}
     try:
         conn = sqlite3.connect(DB_PATH)
-        cur = conn.execute(
-            "SELECT zip, median_household_income, pct_bachelors, population, "
-            "pct_renter_occupied, pct_multi_unit, pct_rent_burdened FROM zips"
-        )
-        for zcode, inc, pct_bach, pop, pct_renter, pct_multi, pct_rb in cur:
-            out[zcode] = {
-                "median_household_income": inc,
-                "pct_bachelors": pct_bach,
-                "population": pop,
-                "pct_renter_occupied": pct_renter,
-                "pct_multi_unit": pct_multi,
-                "pct_rent_burdened": pct_rb,
-            }
+        existing = {r[1] for r in conn.execute("PRAGMA table_info(zips)")}
+        available = [c for c in wanted if c in existing]
+        if not available:
+            conn.close()
+            return {}
+        cols_sql = ", ".join(["zip", *available])
+        for row in conn.execute(f"SELECT {cols_sql} FROM zips"):
+            zcode = row[0]
+            entry = {c: None for c in wanted}
+            for col, val in zip(available, row[1:]):
+                entry[col] = val
+            out[zcode] = entry
         conn.close()
     except sqlite3.Error as e:
         log.warning("Could not read prior ACS from zips.db: %s", e)
