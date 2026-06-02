@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 import urllib.error
 import urllib.request
@@ -66,9 +67,16 @@ def fetch_state_acs(vintage: int) -> dict[str, dict]:
     """Single bulk API call → 51 state rows. Returns
     {state_code: {median_income, pct_bachelors, median_age}}.
     Census null markers (negative ints) become None."""
+    api_key = os.environ.get("CENSUS_API_KEY", "").strip()
+    if not api_key:
+        raise SystemExit(
+            "CENSUS_API_KEY is not set. Get one free at "
+            "https://api.census.gov/data/key_signup.html and add it as a "
+            "GitHub repo secret + workflow env var."
+        )
     url = (
         f"https://api.census.gov/data/{vintage}/acs/acs5"
-        f"?get={ACS_VARS}&for=state:*"
+        f"?get={ACS_VARS}&for=state:*&key={api_key}"
     )
     log.info("Fetching ACS %d 5-year for all states …", vintage)
     req = urllib.request.Request(url, headers={"User-Agent": "market-pulse/1"})

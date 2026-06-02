@@ -36,6 +36,7 @@ import csv
 import io
 import json
 import logging
+import os
 import re
 import sqlite3
 import sys
@@ -341,10 +342,25 @@ def fetch_acs_zcta() -> dict[str, dict]:
     ~33K ZCTAs. Keys: median_household_income, pct_bachelors, population.
     Census null markers (negative values) become None.
 
+    Census now requires an API key for ACS bulk queries (used to be
+    optional). Set CENSUS_API_KEY as a GitHub repo secret + workflow
+    env var. Free signup: https://api.census.gov/data/key_signup.html
+
     Census occasionally returns a non-JSON body (HTML throttle page or
     a truncated empty body) with a 2xx status. Retry up to 3× on JSON
     parse failure with linear backoff before giving up."""
-    url = f"{ACS_API}?get={ACS_VARS}&for=zip%20code%20tabulation%20area:*"
+    api_key = os.environ.get("CENSUS_API_KEY", "").strip()
+    if not api_key:
+        raise SystemExit(
+            "CENSUS_API_KEY is not set. Get one free at "
+            "https://api.census.gov/data/key_signup.html and add it as a "
+            "GitHub repo secret + workflow env var."
+        )
+    url = (
+        f"{ACS_API}?get={ACS_VARS}"
+        f"&for=zip%20code%20tabulation%20area:*"
+        f"&key={api_key}"
+    )
     log.info("Fetching Census ACS 2022 5-year ZCTA data …")
     rows = None
     last_err: str | None = None

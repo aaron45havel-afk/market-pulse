@@ -31,6 +31,8 @@ jobs:
           python-version: '3.11'
 
       - name: Build national ZIPs database
+        env:
+          CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
         run: python scripts/build_national_zips.py
 
       - name: Commit + push if changed

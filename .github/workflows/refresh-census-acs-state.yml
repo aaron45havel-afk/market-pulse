@@ -10,7 +10,8 @@ name: Refresh state ACS demographics (Census 5-year)
 # data → Dec 2024). Cron is January 10th — gives Census time to
 # stabilize after release.
 #
-# Single bulk API call, no API key needed at this volume.
+# Census now requires CENSUS_API_KEY for ACS bulk queries
+# (https://api.census.gov/data/key_signup.html — free).
 
 on:
   schedule:
@@ -39,6 +40,8 @@ jobs:
           python-version: '3.11'
 
       - name: Run Census ACS state refresh
+        env:
+          CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
         run: |
           # Use the workflow_dispatch input if provided, else default
           # to the year set in the script (which is bumped manually).
