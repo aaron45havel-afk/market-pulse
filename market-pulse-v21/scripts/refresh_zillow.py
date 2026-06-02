@@ -100,13 +100,17 @@ HOME_VALUE_ROUND = 1_000
 RENT_ROUND = 10
 
 
-def fetch_csv(url: str, timeout: int = 60) -> str:
+def fetch_csv(url: str, timeout: int = 60, optional: bool = False) -> str | None:
     """Download a CSV.
 
     Retries 5xx/429 + network blips up to 3 times with linear backoff
     (the old code raised SystemExit on the first transient error, so
     a single Zillow S3 hiccup nuked the monthly workflow). 4xx still
     fails fast — that's a real URL or schema change, not flake.
+
+    When ``optional=True``, a 4xx return logs a warning and returns
+    ``None`` instead of exiting — used for feeds we can degrade past
+    (e.g. state ZORI, which Zillow has renamed once before).
     """
     log.info("Fetching %s", url)
     req = urllib.request.Request(url, headers={"User-Agent": "market-pulse/1"})
@@ -123,6 +127,9 @@ def fetch_csv(url: str, timeout: int = 60) -> str:
             last_err = f"network error {e.reason}"
         if attempt < 2:
             time.sleep(3 * (attempt + 1))
+    if optional:
+        log.warning("Zillow %s: %s — skipping (optional feed).", url, last_err)
+        return None
     raise SystemExit(f"Zillow {url}: {last_err} (after 3 attempts).")
 
 
@@ -361,9 +368,28 @@ def main(argv: list[str] | None = None) -> int:
     # and median_rent — the three inputs cash_on_cash needs from
     # market data. The data_providers loader already iterates
     # values.items() so any new key flows through to CHOROPLETH_STATES.
-    state_zori = parse_state_zori(fetch_csv(ZORI_STATE_URL))
-    for code, vals in state_zori.items():
-        state_zhvi.setdefault(code, {}).update(vals)
+    state_zori_csv = fetch_csv(ZORI_STATE_URL, optional=True)
+    if state_zori_csv is not None:
+        state_zori = parse_state_zori(state_zori_csv)
+        for code, vals in state_zori.items():
+            state_zhvi.setdefault(code, {}).update(vals)
+    else:
+        # Carry over the prior median_rent values from the existing
+        # overrides JSON so state rent doesn't silently disappear from
+        # CHOROPLETH_STATES on the next deploy.
+        carried = 0
+        if OVERRIDES_PATH.exists():
+            try:
+                prev = json.loads(OVERRIDES_PATH.read_text())
+                for code, vals in (prev.get("state_overrides") or {}).items():
+                    if "median_rent" in vals:
+                        state_zhvi.setdefault(code, {}).setdefault(
+                            "median_rent", vals["median_rent"]
+                        )
+                        carried += 1
+            except (OSError, ValueError) as e:
+                log.warning("Could not read prior state_overrides: %s", e)
+        log.warning("State ZORI unavailable — carried median_rent for %d states from prior JSON.", carried)
 
     payload = build_overrides(target_zips, zhvi, zori, state_zhvi)
     write_overrides(payload, dry_run=args.dry_run)
