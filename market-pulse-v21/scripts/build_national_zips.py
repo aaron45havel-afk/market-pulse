@@ -337,6 +337,35 @@ def parse_gazetteer(text: str) -> dict[str, dict]:
     return out
 
 
+def _load_acs_from_prior_db() -> dict[str, dict]:
+    """Fallback: read the ACS columns from the previous zips.db so a
+    Census outage / missing key doesn't tank the monthly refresh. ACS
+    is an annual 5-yr survey — carrying values forward a month or two
+    is harmless. Returns the same shape as fetch_acs_zcta()."""
+    if not DB_PATH.exists():
+        return {}
+    out: dict[str, dict] = {}
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.execute(
+            "SELECT zip, median_household_income, pct_bachelors, population, "
+            "pct_renter_occupied, pct_multi_unit, pct_rent_burdened FROM zips"
+        )
+        for zcode, inc, pct_bach, pop, pct_renter, pct_multi, pct_rb in cur:
+            out[zcode] = {
+                "median_household_income": inc,
+                "pct_bachelors": pct_bach,
+                "population": pop,
+                "pct_renter_occupied": pct_renter,
+                "pct_multi_unit": pct_multi,
+                "pct_rent_burdened": pct_rb,
+            }
+        conn.close()
+    except sqlite3.Error as e:
+        log.warning("Could not read prior ACS from zips.db: %s", e)
+    return out
+
+
 def fetch_acs_zcta() -> dict[str, dict]:
     """Census ACS 2022 5-year API call — one bulk request returns all
     ~33K ZCTAs. Keys: median_household_income, pct_bachelors, population.
@@ -348,14 +377,21 @@ def fetch_acs_zcta() -> dict[str, dict]:
 
     Census occasionally returns a non-JSON body (HTML throttle page or
     a truncated empty body) with a 2xx status. Retry up to 3× on JSON
-    parse failure with linear backoff before giving up."""
+    parse failure with linear backoff before giving up.
+
+    Graceful fallback: if the key is missing/invalid OR Census keeps
+    returning non-JSON after retries, carry forward the prior ACS
+    values from the existing zips.db so the rest of the refresh still
+    runs. ACS is annual, so a month of staleness costs nothing."""
     api_key = os.environ.get("CENSUS_API_KEY", "").strip()
     if not api_key:
-        raise SystemExit(
-            "CENSUS_API_KEY is not set. Get one free at "
-            "https://api.census.gov/data/key_signup.html and add it as a "
-            "GitHub repo secret + workflow env var."
+        log.warning(
+            "CENSUS_API_KEY not set — carrying forward prior ACS values "
+            "from zips.db. Sign up at https://api.census.gov/data/key_signup.html"
         )
+        prior = _load_acs_from_prior_db()
+        log.info("  → %d ZCTAs carried forward from prior zips.db", len(prior))
+        return prior
     url = (
         f"{ACS_API}?get={ACS_VARS}"
         f"&for=zip%20code%20tabulation%20area:*"
@@ -376,7 +412,13 @@ def fetch_acs_zcta() -> dict[str, dict]:
             if attempt < 2:
                 time.sleep(5 * (attempt + 1))
     if rows is None:
-        raise SystemExit(f"Census ACS API kept returning non-JSON after 3 attempts: {last_err}")
+        log.warning(
+            "Census ACS API kept returning non-JSON after 3 attempts (%s) — "
+            "carrying forward prior ACS values from zips.db.", last_err
+        )
+        prior = _load_acs_from_prior_db()
+        log.info("  → %d ZCTAs carried forward from prior zips.db", len(prior))
+        return prior
     headers = rows[0]
     zcta_idx = headers.index("zip code tabulation area")
     inc_idx = headers.index("B19013_001E")
