@@ -86,18 +86,45 @@ def _fetch_yahoo_last_close(ticker: str) -> float | None:
     """Return Yahoo's most-recent regularMarketPrice for the ticker,
     or None on miss. Stooq used to do this but switched to a captcha
     API-key flow in mid-2026 — Yahoo's v8 chart endpoint is the
-    natural drop-in (same one stock_lookup.py uses)."""
+    natural drop-in (same one stock_lookup.py uses).
+
+    Retries 429s with exponential backoff + jitter — Yahoo throttles
+    cloud IPs aggressively and even with low concurrency a burst can
+    trigger a temporary block."""
     global _price_diag_logged
     url = YAHOO_CHART_URL.format(t=urllib.parse.quote(ticker.upper()))
-    try:
-        req = urllib.request.Request(
-            url, headers={"User-Agent": BROWSER_UA, "Accept": "application/json"}
-        )
-        with urllib.request.urlopen(req, timeout=15) as r:
-            data = json.loads(r.read())
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, ValueError) as e:
+
+    backoffs = (8.0, 24.0, 60.0)
+    last_err: str | None = None
+    for attempt in range(len(backoffs) + 1):
+        try:
+            req = urllib.request.Request(
+                url, headers={"User-Agent": BROWSER_UA, "Accept": "application/json"}
+            )
+            with urllib.request.urlopen(req, timeout=15) as r:
+                data = json.loads(r.read())
+            break  # success
+        except urllib.error.HTTPError as e:
+            last_err = f"HTTP {e.code}"
+            if e.code == 429 and attempt < len(backoffs):
+                # Jittered sleep so parallel workers don't synchronize on retry.
+                import random
+                time.sleep(backoffs[attempt] * (0.8 + 0.4 * random.random()))
+                continue
+            if _price_diag_logged < 2:
+                log.warning("Yahoo diag (%s): %s → %s", ticker, type(e).__name__, e)
+                _price_diag_logged += 1
+            return None
+        except (urllib.error.URLError, TimeoutError, OSError, ValueError) as e:
+            last_err = str(e)
+            if _price_diag_logged < 2:
+                log.warning("Yahoo diag (%s): %s → %s", ticker, type(e).__name__, e)
+                _price_diag_logged += 1
+            return None
+    else:
+        # Exhausted retries.
         if _price_diag_logged < 2:
-            log.warning("Yahoo diag (%s): %s → %s", ticker, type(e).__name__, e)
+            log.warning("Yahoo diag (%s): exhausted retries (%s)", ticker, last_err)
             _price_diag_logged += 1
         return None
 
@@ -125,12 +152,15 @@ def _fetch_yahoo_last_close(ticker: str) -> float | None:
         return None
 
 
-def fetch_prices_bulk(tickers: list[str], max_workers: int = 10) -> dict[str, float]:
+def fetch_prices_bulk(tickers: list[str], max_workers: int = 3) -> dict[str, float]:
     """Parallel Yahoo fetches with a 24h cache. Returns {ticker: close}.
 
-    Cache key is versioned (v2) so the stale Stooq-era cache doesn't
-    survive the source swap."""
-    cached = _rc("lynch_prices_v2", 24) or {}
+    Cache key bumped v2 → v3 so failed-with-Stooq cache entries don't
+    persist. Low concurrency (3 workers) because Yahoo throttles
+    cloud IPs hard — burst >5 req/sec from a single IP triggers 429s
+    for minutes. With 3 workers + per-request backoff, /finance's 20
+    tickers take ~10s and stay under the wire."""
+    cached = _rc("lynch_prices_v3", 24) or {}
     missing = [t for t in tickers if t not in cached]
     if not missing:
         return cached
@@ -153,7 +183,7 @@ def fetch_prices_bulk(tickers: list[str], max_workers: int = 10) -> dict[str, fl
                 log.info("  Yahoo: %d/%d done (%d hits)", done, len(missing), len(fresh))
 
     cached.update(fresh)
-    _wc("lynch_prices_v2", cached)
+    _wc("lynch_prices_v3", cached)
     log.info("Yahoo prices: %d total (%d new, %d misses)",
              len(cached), len(fresh), len(missing) - len(fresh))
     return cached
