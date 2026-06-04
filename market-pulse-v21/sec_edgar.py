@@ -511,14 +511,14 @@ def build_net_net_screener():
 
     logger.info(f"Filters: SIC={sic_excluded}, China/foreign={china_excluded}, keyword={keyword_excluded}. Final: {len(filtered)}")
 
-    # ── Auto-price via Stooq ──
+    # ── Auto-price via Yahoo Finance ──
     # Small-cap net-net candidates often trade thinly (wider spreads,
-    # stale quotes), but daily close is plenty good enough to *classify*
-    # the row — confirmed net-nets are typically 30-60% of NCAV, well
-    # outside any bid-ask noise. Stooq covers NYSE/Nasdaq/AMEX (our
-    # universe via the exchange filter), so misses should be rare; when
-    # they happen we leave price=None and the UI still lets the user
-    # type a price manually. Lazy import to avoid the
+    # stale quotes), but the most recent regularMarketPrice is plenty
+    # good enough to *classify* — confirmed net-nets are typically
+    # 30-60% of NCAV, well outside bid-ask noise. Yahoo's v8 chart
+    # endpoint covers NYSE/Nasdaq/AMEX (our universe via the exchange
+    # filter); misses are rare and leave price=None so the UI can
+    # still take a manual entry. Lazy import to avoid the
     # lynch_screener → sec_edgar circular dependency.
     try:
         from lynch_screener import fetch_prices_bulk
@@ -549,11 +549,11 @@ def build_net_net_screener():
             priced += 1
         misses = len(filtered) - priced
         logger.info(
-            f"Stooq: {priced}/{len(filtered)} priced ({misses} misses) · "
+            f"Auto-price: {priced}/{len(filtered)} priced ({misses} misses) · "
             f"{net_nets_auto} net-nets · {graham_auto} Graham bargains"
         )
     except Exception as e:
-        logger.warning(f"Stooq pricing skipped: {e}")
+        logger.warning(f"Auto-pricing skipped: {e}")
 
     filtered.sort(key=lambda x: x["ncav_per_share"], reverse=True)
     _wc("screener_v5", filtered)

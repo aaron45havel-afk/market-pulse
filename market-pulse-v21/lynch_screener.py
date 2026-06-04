@@ -21,6 +21,7 @@ import json
 import logging
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
@@ -61,82 +62,83 @@ LYNCH_RULES = {
 
 MAJOR_EXCHANGES = {e.upper() for e in LYNCH_RULES["exchanges"]}
 
-# Stooq endpoint for a single ticker's daily CSV. .us suffix is
-# Stooq's convention for US-listed securities. Cheap, no API key.
-STOOQ_DAILY_URL = "https://stooq.com/q/d/l/?s={t}.us&i=d"
+# Yahoo Finance v8 chart endpoint — same one stock_lookup.py uses.
+# No API key, ~stable since 2018, returns most-recent regularMarketPrice
+# in meta + the daily series. Replaced Stooq when Stooq put their free
+# CSV behind a captcha-gated API key in mid-2026.
+YAHOO_CHART_URL = (
+    "https://query1.finance.yahoo.com/v8/finance/chart/{t}"
+    "?range=5d&interval=1d&includePrePost=false"
+)
 
-# Stooq returns a CSV body to browsers, but rejects bot-looking UAs
-# (Python's default urllib UA → "No data" page). A mainstream browser
-# string keeps them happy.
-STOOQ_UA = (
+BROWSER_UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 )
 
-# One-shot sample logger — log the first 2 misses per process so we
-# can diagnose Stooq issues without spamming.
-_stooq_diag_logged = 0
+# Log the first 2 misses per process so we can spot a Yahoo policy
+# change quickly without spamming production.
+_price_diag_logged = 0
 
 
-# ─── Stooq price feed ───────────────────────────────────────────────
-def _fetch_stooq_last_close(ticker: str) -> float | None:
-    """Return the most recent daily close from Stooq, or None on miss.
-
-    Failure modes logged for the first couple misses so we can diagnose
-    UA blocks / format changes; subsequent misses are silent."""
-    global _stooq_diag_logged
-    url = STOOQ_DAILY_URL.format(t=ticker.lower())
+# ─── Yahoo Finance price feed ────────────────────────────────────────
+def _fetch_yahoo_last_close(ticker: str) -> float | None:
+    """Return Yahoo's most-recent regularMarketPrice for the ticker,
+    or None on miss. Stooq used to do this but switched to a captcha
+    API-key flow in mid-2026 — Yahoo's v8 chart endpoint is the
+    natural drop-in (same one stock_lookup.py uses)."""
+    global _price_diag_logged
+    url = YAHOO_CHART_URL.format(t=urllib.parse.quote(ticker.upper()))
     try:
         req = urllib.request.Request(
-            url, headers={"User-Agent": STOOQ_UA, "Accept": "text/csv,*/*"}
+            url, headers={"User-Agent": BROWSER_UA, "Accept": "application/json"}
         )
         with urllib.request.urlopen(req, timeout=15) as r:
-            text = r.read().decode("utf-8", errors="replace")
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as e:
-        if _stooq_diag_logged < 2:
-            log.warning("Stooq diag (%s): %s → %s", ticker, type(e).__name__, e)
-            _stooq_diag_logged += 1
+            data = json.loads(r.read())
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, ValueError) as e:
+        if _price_diag_logged < 2:
+            log.warning("Yahoo diag (%s): %s → %s", ticker, type(e).__name__, e)
+            _price_diag_logged += 1
         return None
 
-    lines = [ln for ln in text.strip().splitlines() if ln]
-    if not lines:
-        if _stooq_diag_logged < 2:
-            log.warning("Stooq diag (%s): empty body", ticker)
-            _stooq_diag_logged += 1
+    chart = (data or {}).get("chart") or {}
+    if chart.get("error"):
         return None
-
-    # Stooq normally returns CSV: "Date,Open,High,Low,Close,Volume\n...".
-    # "No data" is the body when a ticker isn't covered. Anything else
-    # is unexpected — log it.
-    if "Date" not in lines[0]:
-        if _stooq_diag_logged < 2:
-            preview = text[:120].replace("\n", " ")
-            log.warning("Stooq diag (%s): unexpected body: %r", ticker, preview)
-            _stooq_diag_logged += 1
+    results = chart.get("result") or []
+    if not results:
         return None
-
-    if len(lines) < 2:
-        return None  # header-only "No data" — silent (covered above)
-    last = lines[-1].split(",")
-    if len(last) < 5:
+    meta = results[0].get("meta") or {}
+    price = meta.get("regularMarketPrice")
+    if price is None:
+        # Fall back to the last non-null close in the daily series.
+        quotes = ((results[0].get("indicators") or {}).get("quote") or [{}])[0]
+        closes = quotes.get("close") or []
+        for c in reversed(closes):
+            if c is not None:
+                price = c
+                break
+    if price is None:
         return None
     try:
-        return float(last[4])
-    except ValueError:
+        return float(price)
+    except (TypeError, ValueError):
         return None
 
 
-def fetch_prices_bulk(tickers: list[str], max_workers: int = 16) -> dict[str, float]:
-    """Parallel Stooq fetches with a 24h cache. Returns {ticker: close}."""
-    cached = _rc("lynch_prices_v1", 24) or {}
+def fetch_prices_bulk(tickers: list[str], max_workers: int = 10) -> dict[str, float]:
+    """Parallel Yahoo fetches with a 24h cache. Returns {ticker: close}.
+
+    Cache key is versioned (v2) so the stale Stooq-era cache doesn't
+    survive the source swap."""
+    cached = _rc("lynch_prices_v2", 24) or {}
     missing = [t for t in tickers if t not in cached]
     if not missing:
         return cached
 
-    log.info("Stooq prices: %d cached, fetching %d new …", len(cached), len(missing))
+    log.info("Yahoo prices: %d cached, fetching %d new …", len(cached), len(missing))
     fresh: dict[str, float] = {}
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
-        futs = {ex.submit(_fetch_stooq_last_close, t): t for t in missing}
+        futs = {ex.submit(_fetch_yahoo_last_close, t): t for t in missing}
         done = 0
         for fut in as_completed(futs):
             t = futs[fut]
@@ -148,11 +150,11 @@ def fetch_prices_bulk(tickers: list[str], max_workers: int = 16) -> dict[str, fl
                 fresh[t] = price
             done += 1
             if done % 200 == 0:
-                log.info("  Stooq: %d/%d done (%d hits)", done, len(missing), len(fresh))
+                log.info("  Yahoo: %d/%d done (%d hits)", done, len(missing), len(fresh))
 
     cached.update(fresh)
-    _wc("lynch_prices_v1", cached)
-    log.info("Stooq prices: %d total (%d new, %d misses)",
+    _wc("lynch_prices_v2", cached)
+    log.info("Yahoo prices: %d total (%d new, %d misses)",
              len(cached), len(fresh), len(missing) - len(fresh))
     return cached
 
