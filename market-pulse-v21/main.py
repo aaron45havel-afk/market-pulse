@@ -294,6 +294,13 @@ async def finance(request: Request):
     return templates.TemplateResponse("finance.html", {"request": request})
 
 
+@app.get("/lynch")
+async def lynch(request: Request):
+    """Peter Lynch GARP screener — large-cap value growth.
+    Reads from data/lynch_snapshots/ (monthly cron-built)."""
+    return templates.TemplateResponse("lynch.html", {"request": request})
+
+
 # ─── Stock lookup (public) ──────────────────────────────────────────
 # Single-ticker search: Yahoo Finance for live quote + 1Y chart, SEC
 # EDGAR for latest annual fundamentals. Public — no admin gate.
@@ -1295,6 +1302,36 @@ async def api_snapshot(month: str):
     if len(month) != 7 or month[4] != "-" or not (month[:4].isdigit() and month[5:].isdigit()):
         return JSONResponse({"error": "month must be YYYY-MM"}, status_code=400)
     path = _SNAPSHOT_DIR / f"{month}.json"
+    if not path.exists():
+        return JSONResponse({"error": f"no snapshot for {month}"}, status_code=404)
+    try:
+        return JSONResponse(json.loads(path.read_text()))
+    except Exception as e:
+        return JSONResponse({"error": f"failed to read snapshot: {e}"}, status_code=500)
+
+
+# ── Lynch GARP snapshots ──
+# Sibling endpoints to /api/finance/snapshot* — same shape, different
+# folder. Powers the /lynch page's month dropdown.
+_LYNCH_SNAPSHOT_DIR = Path(__file__).resolve().parent / "data" / "lynch_snapshots"
+
+
+@app.get("/api/lynch/snapshots")
+async def api_lynch_snapshot_list():
+    if not _LYNCH_SNAPSHOT_DIR.exists():
+        return JSONResponse({"months": [], "latest": None})
+    months = sorted(
+        (p.stem for p in _LYNCH_SNAPSHOT_DIR.glob("*.json")),
+        reverse=True,
+    )
+    return JSONResponse({"months": months, "latest": months[0] if months else None})
+
+
+@app.get("/api/lynch/snapshot/{month}")
+async def api_lynch_snapshot(month: str):
+    if len(month) != 7 or month[4] != "-" or not (month[:4].isdigit() and month[5:].isdigit()):
+        return JSONResponse({"error": "month must be YYYY-MM"}, status_code=400)
+    path = _LYNCH_SNAPSHOT_DIR / f"{month}.json"
     if not path.exists():
         return JSONResponse({"error": f"no snapshot for {month}"}, status_code=404)
     try:
