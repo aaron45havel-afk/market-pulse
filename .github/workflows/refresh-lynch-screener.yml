@@ -33,6 +33,8 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Snapshot the Lynch screener
+        env:
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
         run: python scripts/refresh_lynch_screener.py
 
       - name: Commit + push if changed
