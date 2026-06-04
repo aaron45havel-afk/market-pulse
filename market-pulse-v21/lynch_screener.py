@@ -65,28 +65,58 @@ MAJOR_EXCHANGES = {e.upper() for e in LYNCH_RULES["exchanges"]}
 # Stooq's convention for US-listed securities. Cheap, no API key.
 STOOQ_DAILY_URL = "https://stooq.com/q/d/l/?s={t}.us&i=d"
 
+# Stooq returns a CSV body to browsers, but rejects bot-looking UAs
+# (Python's default urllib UA → "No data" page). A mainstream browser
+# string keeps them happy.
+STOOQ_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+)
+
+# One-shot sample logger — log the first 2 misses per process so we
+# can diagnose Stooq issues without spamming.
+_stooq_diag_logged = 0
+
 
 # ─── Stooq price feed ───────────────────────────────────────────────
 def _fetch_stooq_last_close(ticker: str) -> float | None:
     """Return the most recent daily close from Stooq, or None on miss.
 
-    Stooq is intentionally tolerant: any 4xx/empty/HTML body → None
-    rather than blowing up. With ~3000 tickers we expect a handful of
-    misses (delisted, ticker change, Stooq doesn't cover) and they
-    just drop out of the screen."""
+    Failure modes logged for the first couple misses so we can diagnose
+    UA blocks / format changes; subsequent misses are silent."""
+    global _stooq_diag_logged
+    url = STOOQ_DAILY_URL.format(t=ticker.lower())
     try:
-        url = STOOQ_DAILY_URL.format(t=ticker.lower())
-        req = urllib.request.Request(url, headers={"User-Agent": "market-pulse/1"})
+        req = urllib.request.Request(
+            url, headers={"User-Agent": STOOQ_UA, "Accept": "text/csv,*/*"}
+        )
         with urllib.request.urlopen(req, timeout=15) as r:
             text = r.read().decode("utf-8", errors="replace")
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError):
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as e:
+        if _stooq_diag_logged < 2:
+            log.warning("Stooq diag (%s): %s → %s", ticker, type(e).__name__, e)
+            _stooq_diag_logged += 1
         return None
-    if not text or "Date" not in text.splitlines()[0]:
-        return None
-    # CSV header: Date,Open,High,Low,Close,Volume — take the last row's Close.
+
     lines = [ln for ln in text.strip().splitlines() if ln]
-    if len(lines) < 2:
+    if not lines:
+        if _stooq_diag_logged < 2:
+            log.warning("Stooq diag (%s): empty body", ticker)
+            _stooq_diag_logged += 1
         return None
+
+    # Stooq normally returns CSV: "Date,Open,High,Low,Close,Volume\n...".
+    # "No data" is the body when a ticker isn't covered. Anything else
+    # is unexpected — log it.
+    if "Date" not in lines[0]:
+        if _stooq_diag_logged < 2:
+            preview = text[:120].replace("\n", " ")
+            log.warning("Stooq diag (%s): unexpected body: %r", ticker, preview)
+            _stooq_diag_logged += 1
+        return None
+
+    if len(lines) < 2:
+        return None  # header-only "No data" — silent (covered above)
     last = lines[-1].split(",")
     if len(last) < 5:
         return None
