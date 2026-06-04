@@ -511,6 +511,50 @@ def build_net_net_screener():
 
     logger.info(f"Filters: SIC={sic_excluded}, China/foreign={china_excluded}, keyword={keyword_excluded}. Final: {len(filtered)}")
 
+    # ── Auto-price via Stooq ──
+    # Small-cap net-net candidates often trade thinly (wider spreads,
+    # stale quotes), but daily close is plenty good enough to *classify*
+    # the row — confirmed net-nets are typically 30-60% of NCAV, well
+    # outside any bid-ask noise. Stooq covers NYSE/Nasdaq/AMEX (our
+    # universe via the exchange filter), so misses should be rare; when
+    # they happen we leave price=None and the UI still lets the user
+    # type a price manually. Lazy import to avoid the
+    # lynch_screener → sec_edgar circular dependency.
+    try:
+        from lynch_screener import fetch_prices_bulk
+        tickers_to_price = [r["ticker"] for r in filtered]
+        prices = fetch_prices_bulk(tickers_to_price)
+        priced = 0
+        net_nets_auto = 0
+        graham_auto = 0
+        for r in filtered:
+            p = prices.get(r["ticker"])
+            if p is None or p <= 0:
+                continue
+            ncav = r.get("ncav_per_share")
+            shares = r.get("shares") or 0
+            r["price"] = round(p, 4)
+            r["has_price"] = True
+            r["market_cap"] = int(p * shares) if shares else None
+            r["market_cap_fmt"] = _fmt(r["market_cap"]) if r["market_cap"] else None
+            if ncav and ncav > 0:
+                pncav = p / ncav
+                r["price_ncav"] = round(pncav, 3)
+                r["is_net_net"] = pncav < 1.0
+                r["is_graham"] = pncav <= 0.67
+                if r["is_net_net"]:
+                    net_nets_auto += 1
+                if r["is_graham"]:
+                    graham_auto += 1
+            priced += 1
+        misses = len(filtered) - priced
+        logger.info(
+            f"Stooq: {priced}/{len(filtered)} priced ({misses} misses) · "
+            f"{net_nets_auto} net-nets · {graham_auto} Graham bargains"
+        )
+    except Exception as e:
+        logger.warning(f"Stooq pricing skipped: {e}")
+
     filtered.sort(key=lambda x: x["ncav_per_share"], reverse=True)
     _wc("screener_v5", filtered)
     return filtered
