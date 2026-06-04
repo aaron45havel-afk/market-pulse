@@ -11,7 +11,7 @@ Criteria (stricter than Lynch's PEG<1.0 classic — user's spec):
   • Excludes SPACs, warrants, and a few junk patterns
 
 Two-stage pipeline to keep API calls manageable across ~10K tickers:
-  Stage 1 — bulk XBRL frames + Stooq prices → cheap filter on cap + P/E
+  Stage 1 — bulk XBRL frames + Finnhub/Yahoo prices → cheap filter on cap + P/E
   Stage 2 — for survivors, pull companyfacts (full XBRL history) →
             compute growth, debt, capex/OCF
 """
@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import time
 import urllib.error
 import urllib.parse
@@ -152,40 +153,94 @@ def _fetch_yahoo_last_close(ticker: str) -> float | None:
         return None
 
 
-def fetch_prices_bulk(tickers: list[str], max_workers: int = 3) -> dict[str, float]:
-    """Parallel Yahoo fetches with a 24h cache. Returns {ticker: close}.
+# ─── Finnhub price feed (preferred — Yahoo 429s cloud IPs hard) ─────
+FINNHUB_QUOTE_URL = "https://finnhub.io/api/v1/quote?symbol={t}&token={k}"
+_finnhub_diag_logged = 0
 
-    Cache key bumped v2 → v3 so failed-with-Stooq cache entries don't
-    persist. Low concurrency (3 workers) because Yahoo throttles
-    cloud IPs hard — burst >5 req/sec from a single IP triggers 429s
-    for minutes. With 3 workers + per-request backoff, /finance's 20
-    tickers take ~10s and stay under the wire."""
-    cached = _rc("lynch_prices_v3", 24) or {}
+
+def _fetch_finnhub_price(ticker: str, api_key: str) -> float | None:
+    """Single-ticker quote from Finnhub. Free tier: 60 req/min, no IP
+    block. Returns the current price (`c` field); falls back to prev
+    close (`pc`) if current is 0 (Finnhub's way of saying 'no data')."""
+    global _finnhub_diag_logged
+    url = FINNHUB_QUOTE_URL.format(t=urllib.parse.quote(ticker.upper()), k=api_key)
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": BROWSER_UA})
+        with urllib.request.urlopen(req, timeout=12) as r:
+            data = json.loads(r.read())
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, ValueError) as e:
+        if _finnhub_diag_logged < 2:
+            log.warning("Finnhub diag (%s): %s → %s", ticker, type(e).__name__, e)
+            _finnhub_diag_logged += 1
+        return None
+    price = data.get("c")
+    if not price or price <= 0:
+        price = data.get("pc")
+    if not price or price <= 0:
+        return None
+    try:
+        return float(price)
+    except (TypeError, ValueError):
+        return None
+
+
+def fetch_prices_bulk(tickers: list[str], max_workers: int = 3) -> dict[str, float]:
+    """Parallel price fetches with a 24h cache. Returns {ticker: close}.
+
+    Source selection:
+      1. Finnhub if FINNHUB_API_KEY env var is set (preferred — works
+         from cloud IPs, free 60 req/min tier). Throttled to ~50/min
+         with a brief sleep so we stay under the limit.
+      2. Yahoo Finance v8 chart endpoint as fallback when no key is
+         set. Works locally; tends to 429 from Railway/GH Actions.
+
+    Cache key bumped v3 → v4 so the all-misses Yahoo entries from the
+    interregnum don't persist."""
+    cached = _rc("lynch_prices_v4", 24) or {}
     missing = [t for t in tickers if t not in cached]
     if not missing:
         return cached
 
-    log.info("Yahoo prices: %d cached, fetching %d new …", len(cached), len(missing))
+    api_key = os.environ.get("FINNHUB_API_KEY", "").strip()
+    source = "Finnhub" if api_key else "Yahoo"
+    log.info("%s prices: %d cached, fetching %d new …", source, len(cached), len(missing))
+
     fresh: dict[str, float] = {}
-    with ThreadPoolExecutor(max_workers=max_workers) as ex:
-        futs = {ex.submit(_fetch_yahoo_last_close, t): t for t in missing}
-        done = 0
-        for fut in as_completed(futs):
-            t = futs[fut]
-            try:
-                price = fut.result()
-            except Exception:
-                price = None
+    if api_key:
+        # Finnhub: 60 req/min free tier. With 2 workers and 1.2s
+        # inter-request sleep, we ride ~50 req/min — well under the
+        # ceiling. Sequential is fine for typical /finance loads (20
+        # tickers ~ 25s).
+        for i, t in enumerate(missing, 1):
+            price = _fetch_finnhub_price(t, api_key)
             if price is not None:
                 fresh[t] = price
-            done += 1
-            if done % 200 == 0:
-                log.info("  Yahoo: %d/%d done (%d hits)", done, len(missing), len(fresh))
+            time.sleep(1.2)
+            if i % 200 == 0:
+                log.info("  Finnhub: %d/%d done (%d hits)", i, len(missing), len(fresh))
+    else:
+        # Fallback: Yahoo with low concurrency + per-request backoff.
+        # Tends to fail on Railway/GH Actions IPs — set FINNHUB_API_KEY
+        # to fix.
+        with ThreadPoolExecutor(max_workers=max_workers) as ex:
+            futs = {ex.submit(_fetch_yahoo_last_close, t): t for t in missing}
+            done = 0
+            for fut in as_completed(futs):
+                t = futs[fut]
+                try:
+                    price = fut.result()
+                except Exception:
+                    price = None
+                if price is not None:
+                    fresh[t] = price
+                done += 1
+                if done % 200 == 0:
+                    log.info("  Yahoo: %d/%d done (%d hits)", done, len(missing), len(fresh))
 
     cached.update(fresh)
-    _wc("lynch_prices_v3", cached)
-    log.info("Yahoo prices: %d total (%d new, %d misses)",
-             len(cached), len(fresh), len(missing) - len(fresh))
+    _wc("lynch_prices_v4", cached)
+    log.info("%s prices: %d total (%d new, %d misses)",
+             source, len(cached), len(fresh), len(missing) - len(fresh))
     return cached
 
 
