@@ -59,6 +59,11 @@ LYNCH_RULES = {
     "capex_to_ocf_max": 0.5,
     "exchanges": ("NYSE", "Nasdaq", "NASDAQ", "AMEX", "NYSE American"),
     "min_eps_years": 3,                       # need at least 3 fiscal years of EPS
+    # Buffett moat (toggle-able client-side; not a hard filter for the
+    # snapshot, so users can flip between "10+ yr holds" and "all Lynch
+    # picks" without a re-run).
+    "moat_roe_min_pct": 15.0,
+    "moat_consecutive_positive_eps_years": 5,
 }
 
 MAJOR_EXCHANGES = {e.upper() for e in LYNCH_RULES["exchanges"]}
@@ -440,6 +445,94 @@ def _cagr(start: float, end: float, years: float) -> float | None:
     return ((end / start) ** (1.0 / years) - 1.0) * 100.0
 
 
+def _annual_values(facts: dict, concept: str, unit: str = "USD") -> list[tuple[str, float]]:
+    """Annual FY values for a single XBRL concept, sorted oldest →
+    newest. Accepts 10-K (US) or 20-F (foreign ADR) annual filings.
+    Used by the moat calc to walk multiple years of NI / equity /
+    margins."""
+    if not facts:
+        return []
+    us_gaap = (facts.get("facts") or {}).get("us-gaap") or {}
+    entries = ((us_gaap.get(concept) or {}).get("units") or {}).get(unit) or []
+    annuals = []
+    for e in entries:
+        if (e.get("fp") == "FY"
+                and e.get("form", "").startswith(("10-K", "20-F"))
+                and e.get("val") is not None):
+            try:
+                annuals.append((e["end"], float(e["val"])))
+            except (TypeError, ValueError):
+                pass
+    if not annuals:
+        return []
+    best: dict[str, float] = {}
+    for end, val in annuals:
+        best[end] = val  # latest amendment wins for each FY end-date
+    return sorted(best.items())
+
+
+def _compute_moat(facts: dict, eps_history: list[tuple[str, float]]) -> dict:
+    """Buffett-style moat indicators from SEC EDGAR data:
+
+      • avg_roe_3yr_pct — average ROE over last 3 fiscal years.
+        Buffett's most-quoted single number; he wants > 15% sustained.
+      • years_positive_eps — how many consecutive years (back from
+        most recent FY) had positive EPS. 5+ = durable earnings.
+      • op_margin_ttm_pct — latest FY operating margin. > 15%
+        signals pricing power. Informational only; some industries
+        legitimately run lower (retailers, distributors).
+
+    has_moat is the AND of the two hard checks: avg ROE ≥ 15% AND
+    5+ consecutive positive EPS years. Operating margin is shown
+    but not gated on (data is too sparse across XBRL filers to make
+    it a hard filter without dropping otherwise-qualifying names)."""
+    ni_history = _annual_values(facts, "NetIncomeLoss")
+    eq_history = _annual_values(facts, "StockholdersEquity")
+    ni_map = dict(ni_history)
+    eq_map = dict(eq_history)
+    common_years = sorted(set(ni_map) & set(eq_map))
+    last_3 = common_years[-3:]
+    roes: list[float] = []
+    for y in last_3:
+        eq = eq_map[y]
+        if eq and eq > 0:
+            roes.append(ni_map[y] / eq * 100)
+    avg_roe = sum(roes) / len(roes) if roes else None
+
+    # Years of consecutive positive EPS, walking from most recent back.
+    pos_yrs = 0
+    for _d, v in reversed(eps_history):
+        if v is not None and v > 0:
+            pos_yrs += 1
+        else:
+            break
+
+    # Operating margin — both numerator + denominator must be reported.
+    op_income_h = _annual_values(facts, "OperatingIncomeLoss")
+    # Revenues sometimes lives under RevenueFromContractWithCustomer*
+    # (post-ASC 606 filers). Try both.
+    rev_h = (_annual_values(facts, "Revenues")
+             or _annual_values(facts, "RevenueFromContractWithCustomerExcludingAssessedTax"))
+    op_margin = None
+    if op_income_h and rev_h:
+        latest_op = op_income_h[-1][1]
+        latest_rev = rev_h[-1][1]
+        if latest_rev and latest_rev > 0:
+            op_margin = latest_op / latest_rev * 100
+
+    has_moat = (
+        avg_roe is not None
+        and avg_roe >= 15.0
+        and pos_yrs >= 5
+    )
+    return {
+        "avg_roe_3yr_pct": round(avg_roe, 1) if avg_roe is not None else None,
+        "years_positive_eps": pos_yrs,
+        "op_margin_ttm_pct": round(op_margin, 1) if op_margin is not None else None,
+        "has_moat": has_moat,
+    }
+
+
 def _is_foreign_issuer(facts: dict) -> bool:
     """True if the company files 20-F (foreign private issuer / ADR)
     but no 10-K. Dual-filers with 10-K count as US since 10-K is the
@@ -520,6 +613,7 @@ def _screen_one(row: dict, price: float, facts: dict) -> dict | None:
         return None
 
     peg = pe / eps_growth if eps_growth > 0 else None
+    moat = _compute_moat(facts, eps_history)
 
     return {
         "ticker": row["ticker"],
@@ -527,6 +621,10 @@ def _screen_one(row: dict, price: float, facts: dict) -> dict | None:
         "exchange": row.get("exchange") or "",
         "sic": row.get("sic"),
         "is_international": _is_foreign_issuer(facts),
+        "has_moat": moat["has_moat"],
+        "avg_roe_3yr_pct": moat["avg_roe_3yr_pct"],
+        "years_positive_eps": moat["years_positive_eps"],
+        "op_margin_ttm_pct": moat["op_margin_ttm_pct"],
         "price": round(price, 2),
         "shares_outstanding": int(shares),
         "market_cap": int(market_cap),
