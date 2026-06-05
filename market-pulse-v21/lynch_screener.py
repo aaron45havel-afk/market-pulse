@@ -272,7 +272,8 @@ def _annual_eps_history(facts: dict) -> list[tuple[str, float]]:
             annuals = [
                 (e["end"], float(e["val"]))
                 for e in entries
-                if e.get("fp") == "FY" and e.get("form", "").startswith("10-K")
+                if e.get("fp") == "FY"
+                and e.get("form", "").startswith(("10-K", "20-F"))
                 and e.get("val") is not None
             ]
             if not annuals:
@@ -331,10 +332,11 @@ def _ttm_capex_and_ocf(facts: dict) -> tuple[float | None, float | None]:
     def latest_fy(concept: str) -> float | None:
         units = (us_gaap.get(concept) or {}).get("units") or {}
         usd = units.get("USD") or []
-        # Annual 10-K, FY frame.
+        # Annual FY frame from 10-K (US issuers) or 20-F (foreign ADRs).
         annuals = [
             e for e in usd
-            if e.get("fp") == "FY" and e.get("form", "").startswith("10-K")
+            if e.get("fp") == "FY"
+            and e.get("form", "").startswith(("10-K", "20-F"))
             and e.get("val") is not None
         ]
         if not annuals:
@@ -438,6 +440,34 @@ def _cagr(start: float, end: float, years: float) -> float | None:
     return ((end / start) ** (1.0 / years) - 1.0) * 100.0
 
 
+def _is_foreign_issuer(facts: dict) -> bool:
+    """True if the company files 20-F (foreign private issuer / ADR)
+    but no 10-K. Dual-filers with 10-K count as US since 10-K is the
+    primary US-domiciled filing."""
+    if not facts:
+        return False
+    us_gaap = (facts.get("facts") or {}).get("us-gaap") or {}
+    has_10k = False
+    has_20f = False
+    # Scan a few high-coverage concepts so we don't miss the signal
+    # because of a single sparse concept.
+    for concept in ("NetIncomeLoss", "Revenues", "Assets",
+                    "EarningsPerShareDiluted", "EarningsPerShareBasic"):
+        cdata = us_gaap.get(concept) or {}
+        for entries in (cdata.get("units") or {}).values():
+            for e in entries:
+                form = e.get("form", "")
+                if not has_10k and form.startswith("10-K"):
+                    has_10k = True
+                elif not has_20f and form.startswith("20-F"):
+                    has_20f = True
+                if has_10k and has_20f:
+                    return False  # dual-filer → treat as US
+        if has_10k:
+            return False
+    return has_20f
+
+
 def _screen_one(row: dict, price: float, facts: dict) -> dict | None:
     """Apply Lynch criteria to one company. Returns a result dict if
     it passes every filter; None otherwise. Returned dict is what
@@ -496,6 +526,7 @@ def _screen_one(row: dict, price: float, facts: dict) -> dict | None:
         "name": row["name"],
         "exchange": row.get("exchange") or "",
         "sic": row.get("sic"),
+        "is_international": _is_foreign_issuer(facts),
         "price": round(price, 2),
         "shares_outstanding": int(shares),
         "market_cap": int(market_cap),

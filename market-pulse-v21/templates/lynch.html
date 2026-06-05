@@ -11,11 +11,11 @@
   .peg-cell { font-weight:700; }
   .peg-best { color:var(--accent); }
   .peg-good { color:var(--yellow); }
-  #lynchTable thead th { padding:0.55rem 0.55rem; font-size:0.7rem; cursor:pointer; user-select:none; white-space:nowrap; }
-  #lynchTable thead th:hover { background:var(--surface2); }
-  #lynchTable thead th .sort-arrow { color:var(--text-dim); font-size:0.65rem; margin-left:3px; }
-  #lynchTable tbody td { padding:0.55rem 0.55rem; font-size:0.83rem; vertical-align:middle; }
-  #lynchTable tbody tr:hover { background:rgba(99,102,241,0.06); }
+  .lynchTable thead th { padding:0.55rem 0.55rem; font-size:0.7rem; cursor:pointer; user-select:none; white-space:nowrap; }
+  .lynchTable thead th:hover { background:var(--surface2); }
+  .lynchTable thead th .sort-arrow { color:var(--text-dim); font-size:0.65rem; margin-left:3px; }
+  .lynchTable tbody td { padding:0.55rem 0.55rem; font-size:0.83rem; vertical-align:middle; }
+  .lynchTable tbody tr:hover { background:rgba(99,102,241,0.06); }
   .ticker-link { font-weight:700; color:var(--accent2); text-decoration:none; }
   .ticker-link:hover { text-decoration:underline; }
   .num { text-align:right; font-variant-numeric:tabular-nums; }
@@ -85,9 +85,10 @@
   </div>
 </div>
 
-<!-- Table -->
+<!-- US table -->
+<h2 style="margin:1.25rem 0 0.5rem; font-size:1.1rem;">United States <span id="usCount" style="font-size:0.8rem; color:var(--text-dim); font-weight:400;"></span></h2>
 <div class="card" style="overflow-x:auto;">
-  <table id="lynchTable" style="width:100%; border-collapse:collapse;">
+  <table class="lynchTable" data-region="us" style="width:100%; border-collapse:collapse;">
     <thead>
       <tr>
         <th data-sort="ticker">Ticker <span class="sort-arrow">↕</span></th>
@@ -102,7 +103,32 @@
         <th data-sort="capex_to_ocf" class="num">CapEx/OCF <span class="sort-arrow">↕</span></th>
       </tr>
     </thead>
-    <tbody id="lynchBody">
+    <tbody id="lynchBodyUS">
+      <tr><td colspan="10" class="empty-state">Loading snapshot…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- International ADRs table -->
+<h2 style="margin:1.5rem 0 0.5rem; font-size:1.1rem;">International ADRs <span id="intlCount" style="font-size:0.8rem; color:var(--text-dim); font-weight:400;"></span></h2>
+<p style="font-size:0.75rem; color:var(--text-dim); margin:0 0 0.6rem;">Foreign-domiciled companies filing 20-F with the SEC and listed on a major US exchange (NYSE / Nasdaq / AMEX). All buyable on Schwab, Fidelity, Chase like any US stock.</p>
+<div class="card" style="overflow-x:auto;">
+  <table class="lynchTable" data-region="intl" style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th data-sort="ticker">Ticker <span class="sort-arrow">↕</span></th>
+        <th data-sort="name">Company <span class="sort-arrow">↕</span></th>
+        <th data-sort="exchange">Exch <span class="sort-arrow">↕</span></th>
+        <th data-sort="market_cap" class="num">Market Cap <span class="sort-arrow">↕</span></th>
+        <th data-sort="price" class="num">Price <span class="sort-arrow">↕</span></th>
+        <th data-sort="pe_ratio" class="num">P/E <span class="sort-arrow">↕</span></th>
+        <th data-sort="eps_3yr_cagr_pct" class="num">3-yr EPS CAGR <span class="sort-arrow">↕</span></th>
+        <th data-sort="peg" class="num">PEG <span class="sort-arrow">↕</span></th>
+        <th data-sort="debt_to_equity" class="num">D/E <span class="sort-arrow">↕</span></th>
+        <th data-sort="capex_to_ocf" class="num">CapEx/OCF <span class="sort-arrow">↕</span></th>
+      </tr>
+    </thead>
+    <tbody id="lynchBodyIntl">
       <tr><td colspan="10" class="empty-state">Loading snapshot…</td></tr>
     </tbody>
   </table>
@@ -149,18 +175,15 @@ function verdictPill(r) {
   return '';
 }
 
-function render() {
-  const q = document.getElementById('lynchSearch').value;
-  const filtered = applySearch(currentRows, q);
-  const sorted = applySort(filtered, currentSort.key, currentSort.asc);
-  const tbody = document.getElementById('lynchBody');
-  if (!sorted.length) {
-    tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No companies match.</td></tr>';
+function renderTable(rows, tbodyId, emptyLabel) {
+  const tbody = document.getElementById(tbodyId);
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="10" class="empty-state">${emptyLabel}</td></tr>`;
     return;
   }
-  tbody.innerHTML = sorted.map(r => {
-    const cik = ''; // SEC EDGAR link by ticker via search
-    const secUrl = `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${encodeURIComponent(r.ticker)}&type=10-K&dateb=&owner=include&count=40`;
+  tbody.innerHTML = rows.map(r => {
+    const secType = r.is_international ? '20-F' : '10-K';
+    const secUrl = `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${encodeURIComponent(r.ticker)}&type=${secType}&dateb=&owner=include&count=40`;
     return `<tr>
       <td><a class="ticker-link" href="${secUrl}" target="_blank" rel="noopener">${r.ticker}</a> ${verdictPill(r)}</td>
       <td>${r.name || ''}</td>
@@ -176,6 +199,18 @@ function render() {
   }).join('');
 }
 
+function render() {
+  const q = document.getElementById('lynchSearch').value;
+  const filtered = applySearch(currentRows, q);
+  const sorted = applySort(filtered, currentSort.key, currentSort.asc);
+  const us = sorted.filter(r => !r.is_international);
+  const intl = sorted.filter(r => r.is_international);
+  renderTable(us, 'lynchBodyUS', 'No US companies match.');
+  renderTable(intl, 'lynchBodyIntl', 'No international ADRs match.');
+  document.getElementById('usCount').textContent = `(${us.length})`;
+  document.getElementById('intlCount').textContent = `(${intl.length})`;
+}
+
 function updateMetrics(rows) {
   document.getElementById('passCount').textContent = rows.length;
   document.getElementById('medPe').textContent = fmtMed(rows.map(r => r.pe_ratio), v => v.toFixed(1));
@@ -183,9 +218,13 @@ function updateMetrics(rows) {
   document.getElementById('medPeg').textContent = fmtMed(rows.map(r => r.peg), v => v.toFixed(2));
 }
 
+function setBothBodies(html) {
+  document.getElementById('lynchBodyUS').innerHTML = html;
+  document.getElementById('lynchBodyIntl').innerHTML = html;
+}
+
 async function loadSnapshot(month) {
-  const tbody = document.getElementById('lynchBody');
-  tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Loading…</td></tr>';
+  setBothBodies('<tr><td colspan="10" class="empty-state">Loading…</td></tr>');
   try {
     const r = await fetch(`/api/lynch/snapshot/${month}`);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -195,7 +234,7 @@ async function loadSnapshot(month) {
     updateMetrics(currentRows);
     render();
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="10" class="empty-state">Failed to load: ${e.message}</td></tr>`;
+    setBothBodies(`<tr><td colspan="10" class="empty-state">Failed to load: ${e.message}</td></tr>`);
   }
 }
 
@@ -206,8 +245,7 @@ async function initSnapshots() {
     const picker = document.getElementById('lynchSnapshotPicker');
     if (!data.months || !data.months.length) {
       picker.innerHTML = '<option>No snapshots yet</option>';
-      document.getElementById('lynchBody').innerHTML =
-        '<tr><td colspan="10" class="empty-state">No snapshots available yet. The first monthly run hasn\'t completed — check the Actions tab.</td></tr>';
+      setBothBodies('<tr><td colspan="10" class="empty-state">No snapshots available yet. The first monthly run hasn\'t completed — check the Actions tab.</td></tr>');
       return;
     }
     picker.innerHTML = data.months.map(m => `<option value="${m}">${m}</option>`).join('');
@@ -215,18 +253,17 @@ async function initSnapshots() {
     picker.addEventListener('change', () => loadSnapshot(picker.value));
     loadSnapshot(data.latest);
   } catch (e) {
-    document.getElementById('lynchBody').innerHTML =
-      `<tr><td colspan="10" class="empty-state">Failed to load snapshot list: ${e.message}</td></tr>`;
+    setBothBodies(`<tr><td colspan="10" class="empty-state">Failed to load snapshot list: ${e.message}</td></tr>`);
   }
 }
 
-document.querySelectorAll('#lynchTable thead th').forEach(th => {
+document.querySelectorAll('.lynchTable thead th').forEach(th => {
   th.addEventListener('click', () => {
     const key = th.dataset.sort;
     if (!key) return;
     if (currentSort.key === key) currentSort.asc = !currentSort.asc;
     else { currentSort.key = key; currentSort.asc = true; }
-    document.querySelectorAll('#lynchTable thead .sort-arrow').forEach(s => s.textContent = '↕');
+    document.querySelectorAll('.lynchTable thead .sort-arrow').forEach(s => s.textContent = '↕');
     th.querySelector('.sort-arrow').textContent = currentSort.asc ? '↑' : '↓';
     render();
   });
