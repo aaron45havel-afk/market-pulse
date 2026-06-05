@@ -1,0 +1,230 @@
+{
+  "_meta": {
+    "as_of": "2026-06-05",
+    "snapshot_month": "2026-06",
+    "passing_count": 5,
+    "source": "SEC EDGAR XBRL company facts + Stooq daily close",
+    "rules": {
+      "market_cap_min": 1000000000,
+      "pe_max": 10.0,
+      "eps_growth_3yr_min_pct": 10.0,
+      "debt_to_equity_max": 0.5,
+      "capex_to_ocf_max": 0.5,
+      "exchanges": [
+        "NYSE",
+        "Nasdaq",
+        "NASDAQ",
+        "AMEX",
+        "NYSE American"
+      ],
+      "min_eps_years": 3
+    }
+  },
+  "companies": [
+    {
+      "ticker": "ANF",
+      "name": "ABERCROMBIE & FITCH CO /DE/",
+      "exchange": "NYSE",
+      "sic": "5651",
+      "price": 77.66,
+      "shares_outstanding": 44924473,
+      "market_cap": 3488834573,
+      "ttm_eps": 10.46,
+      "pe_ratio": 7.42,
+      "eps_3yr_cagr_pct": 493.6,
+      "peg": 0.02,
+      "debt_to_equity": 0.33,
+      "total_debt": 460142000,
+      "equity": 1403895000,
+      "ttm_capex": 240774000,
+      "ttm_ocf": 619142000,
+      "capex_to_ocf": 0.39,
+      "eps_history": [
+        {
+          "fy_end": "2022-01-29",
+          "eps": 4.2
+        },
+        {
+          "fy_end": "2023-01-28",
+          "eps": 0.05
+        },
+        {
+          "fy_end": "2024-02-03",
+          "eps": 6.22
+        },
+        {
+          "fy_end": "2025-02-01",
+          "eps": 10.69
+        },
+        {
+          "fy_end": "2026-01-31",
+          "eps": 10.46
+        }
+      ]
+    },
+    {
+      "ticker": "CALM",
+      "name": "CAL-MAINE FOODS INC",
+      "exchange": "Nasdaq",
+      "sic": "0200",
+      "price": 74.46,
+      "shares_outstanding": 48936000,
+      "market_cap": 3643774559,
+      "ttm_eps": 24.95,
+      "pe_ratio": 2.98,
+      "eps_3yr_cagr_pct": 109.3,
+      "peg": 0.03,
+      "debt_to_equity": 0.0,
+      "total_debt": 2337000,
+      "equity": 2700168000,
+      "ttm_capex": 161255000,
+      "ttm_ocf": 1224734000,
+      "capex_to_ocf": 0.13,
+      "eps_history": [
+        {
+          "fy_end": "2021-05-29",
+          "eps": 0.04
+        },
+        {
+          "fy_end": "2022-05-28",
+          "eps": 2.72
+        },
+        {
+          "fy_end": "2023-06-03",
+          "eps": 15.52
+        },
+        {
+          "fy_end": "2024-06-01",
+          "eps": 5.69
+        },
+        {
+          "fy_end": "2025-05-31",
+          "eps": 24.95
+        }
+      ]
+    },
+    {
+      "ticker": "ASO",
+      "name": "Academy Sports & Outdoors, Inc.",
+      "exchange": "Nasdaq",
+      "sic": "5940",
+      "price": 51.1,
+      "shares_outstanding": 64945953,
+      "market_cap": 3318738198,
+      "ttm_eps": 5.54,
+      "pe_ratio": 9.22,
+      "eps_3yr_cagr_pct": 41.6,
+      "peg": 0.22,
+      "debt_to_equity": 0.22,
+      "total_debt": 480793000,
+      "equity": 2171377000,
+      "ttm_capex": 212668000,
+      "ttm_ocf": 434798000,
+      "capex_to_ocf": 0.49,
+      "eps_history": [
+        {
+          "fy_end": "2024-05-04",
+          "eps": 1.01
+        },
+        {
+          "fy_end": "2024-08-03",
+          "eps": 1.95
+        },
+        {
+          "fy_end": "2024-11-02",
+          "eps": 0.92
+        },
+        {
+          "fy_end": "2025-02-01",
+          "eps": 1.89
+        },
+        {
+          "fy_end": "2026-01-31",
+          "eps": 5.54
+        }
+      ]
+    },
+    {
+      "ticker": "LULU",
+      "name": "lululemon athletica inc.",
+      "exchange": "Nasdaq",
+      "sic": "2300",
+      "price": 124.92,
+      "shares_outstanding": 109308000,
+      "market_cap": 13654755360,
+      "ttm_eps": 13.26,
+      "pe_ratio": 9.42,
+      "eps_3yr_cagr_pct": 25.7,
+      "peg": 0.37,
+      "debt_to_equity": 0.0,
+      "total_debt": 0,
+      "equity": 4825601000,
+      "ttm_capex": 680802000,
+      "ttm_ocf": 1602477000,
+      "capex_to_ocf": 0.42,
+      "eps_history": [
+        {
+          "fy_end": "2022-01-30",
+          "eps": 7.49
+        },
+        {
+          "fy_end": "2023-01-29",
+          "eps": 6.68
+        },
+        {
+          "fy_end": "2024-01-28",
+          "eps": 12.2
+        },
+        {
+          "fy_end": "2025-02-02",
+          "eps": 14.64
+        },
+        {
+          "fy_end": "2026-02-01",
+          "eps": 13.26
+        }
+      ]
+    },
+    {
+      "ticker": "FISV",
+      "name": "FISERV INC",
+      "exchange": "Nasdaq",
+      "sic": "7389",
+      "price": 56.23,
+      "shares_outstanding": 533253986,
+      "market_cap": 29984871632,
+      "ttm_eps": 6.34,
+      "pe_ratio": 8.87,
+      "eps_3yr_cagr_pct": 17.5,
+      "peg": 0.51,
+      "debt_to_equity": 0.17,
+      "total_debt": 4553000000,
+      "equity": 26201000000,
+      "ttm_capex": 1763000000,
+      "ttm_ocf": 6062000000,
+      "capex_to_ocf": 0.29,
+      "eps_history": [
+        {
+          "fy_end": "2021-12-31",
+          "eps": 1.99
+        },
+        {
+          "fy_end": "2022-12-31",
+          "eps": 3.91
+        },
+        {
+          "fy_end": "2023-12-31",
+          "eps": 4.98
+        },
+        {
+          "fy_end": "2024-12-31",
+          "eps": 5.38
+        },
+        {
+          "fy_end": "2025-12-31",
+          "eps": 6.34
+        }
+      ]
+    }
+  ]
+}
