@@ -73,6 +73,7 @@
       <li><strong>CapEx / Operating Cash Flow &lt; 0.5</strong> — asset-light, plenty of FCF for buybacks/dividends</li>
       <li><strong>Listed on NYSE / Nasdaq / AMEX</strong> — includes ADRs (foreign companies you can buy on Schwab, Fidelity, Chase)</li>
     </ul>
+    <p style="margin:0 0 0.5rem;"><strong>Buffett moat toggle:</strong> ON by default, layers a durability filter on top of Lynch's growth-value framework — keep only companies with <strong>3-yr avg ROE ≥ 15%</strong> AND <strong>5+ consecutive years of positive EPS</strong>. ROE ≥ 15% is Buffett's most-quoted single number; consecutive positive earnings filters out cyclicals that crater every recession. Toggle off to see all Lynch picks including shorter-term names.</p>
     <p style="margin:0;"><em>Mechanical screen only — not financial advice. Always DYOR before buying.</em></p>
   </div>
 </details>
@@ -81,6 +82,10 @@
 <div class="card" style="margin-bottom:1rem; padding:0.7rem 1rem;">
   <div class="lynch-toolbar">
     <input id="lynchSearch" type="search" class="lynch-search" placeholder="Filter by ticker or name…" autocomplete="off">
+    <label style="display:flex; align-items:center; gap:0.45rem; font-size:0.8rem; cursor:pointer; user-select:none;" title="Show only companies with 3-yr avg ROE ≥ 15% and 5+ consecutive years of positive EPS — Buffett's durable-business signal.">
+      <input id="moatToggle" type="checkbox" checked style="margin:0;">
+      <span><strong>Buffett moat</strong> <span style="color:var(--text-dim);">— 10+ yr holds</span></span>
+    </label>
     <span style="font-size:0.75rem; color:var(--text-dim);">Click headers to sort. Click ticker for SEC filing.</span>
   </div>
 </div>
@@ -99,12 +104,13 @@
         <th data-sort="pe_ratio" class="num">P/E <span class="sort-arrow">↕</span></th>
         <th data-sort="eps_3yr_cagr_pct" class="num">3-yr EPS CAGR <span class="sort-arrow">↕</span></th>
         <th data-sort="peg" class="num">PEG <span class="sort-arrow">↕</span></th>
+        <th data-sort="avg_roe_3yr_pct" class="num" title="3-yr average return on equity. Buffett-moat threshold ≥ 15%.">ROE 3yr <span class="sort-arrow">↕</span></th>
         <th data-sort="debt_to_equity" class="num">D/E <span class="sort-arrow">↕</span></th>
         <th data-sort="capex_to_ocf" class="num">CapEx/OCF <span class="sort-arrow">↕</span></th>
       </tr>
     </thead>
     <tbody id="lynchBodyUS">
-      <tr><td colspan="10" class="empty-state">Loading snapshot…</td></tr>
+      <tr><td colspan="11" class="empty-state">Loading snapshot…</td></tr>
     </tbody>
   </table>
 </div>
@@ -124,12 +130,13 @@
         <th data-sort="pe_ratio" class="num">P/E <span class="sort-arrow">↕</span></th>
         <th data-sort="eps_3yr_cagr_pct" class="num">3-yr EPS CAGR <span class="sort-arrow">↕</span></th>
         <th data-sort="peg" class="num">PEG <span class="sort-arrow">↕</span></th>
+        <th data-sort="avg_roe_3yr_pct" class="num" title="3-yr average return on equity. Buffett-moat threshold ≥ 15%.">ROE 3yr <span class="sort-arrow">↕</span></th>
         <th data-sort="debt_to_equity" class="num">D/E <span class="sort-arrow">↕</span></th>
         <th data-sort="capex_to_ocf" class="num">CapEx/OCF <span class="sort-arrow">↕</span></th>
       </tr>
     </thead>
     <tbody id="lynchBodyIntl">
-      <tr><td colspan="10" class="empty-state">Loading snapshot…</td></tr>
+      <tr><td colspan="11" class="empty-state">Loading snapshot…</td></tr>
     </tbody>
   </table>
 </div>
@@ -178,14 +185,16 @@ function verdictPill(r) {
 function renderTable(rows, tbodyId, emptyLabel) {
   const tbody = document.getElementById(tbodyId);
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="10" class="empty-state">${emptyLabel}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" class="empty-state">${emptyLabel}</td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map(r => {
     const secType = r.is_international ? '20-F' : '10-K';
     const secUrl = `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${encodeURIComponent(r.ticker)}&type=${secType}&dateb=&owner=include&count=40`;
+    const moatBadge = r.has_moat ? '<span class="verdict-pill strong" style="background:rgba(99,102,241,0.18); color:var(--accent2);" title="3-yr avg ROE ≥ 15% AND 5+ years of positive EPS">MOAT</span>' : '';
+    const roeColor = r.avg_roe_3yr_pct != null && r.avg_roe_3yr_pct >= 15 ? 'var(--accent)' : 'var(--text)';
     return `<tr>
-      <td><a class="ticker-link" href="${secUrl}" target="_blank" rel="noopener">${r.ticker}</a> ${verdictPill(r)}</td>
+      <td><a class="ticker-link" href="${secUrl}" target="_blank" rel="noopener">${r.ticker}</a> ${verdictPill(r)} ${moatBadge}</td>
       <td>${r.name || ''}</td>
       <td><span style="font-size:0.7rem; color:var(--text-dim);">${r.exchange || ''}</span></td>
       <td class="num">${fmtMillions(r.market_cap)}</td>
@@ -193,6 +202,7 @@ function renderTable(rows, tbodyId, emptyLabel) {
       <td class="num"><span class="pe-badge ${r.pe_ratio < 7 ? 'pe-deep' : 'pe-mid'}">${fmtNum(r.pe_ratio)}</span></td>
       <td class="num" style="color:var(--accent); font-weight:600;">${fmtPct(r.eps_3yr_cagr_pct)}</td>
       <td class="num peg-cell ${pegClass(r.peg)}">${fmtNum(r.peg)}</td>
+      <td class="num" style="color:${roeColor}; font-weight:600;">${fmtPct(r.avg_roe_3yr_pct)}</td>
       <td class="num">${fmtNum(r.debt_to_equity)}</td>
       <td class="num">${fmtNum(r.capex_to_ocf)}</td>
     </tr>`;
@@ -201,7 +211,9 @@ function renderTable(rows, tbodyId, emptyLabel) {
 
 function render() {
   const q = document.getElementById('lynchSearch').value;
-  const filtered = applySearch(currentRows, q);
+  const moatOn = document.getElementById('moatToggle').checked;
+  const moatFiltered = moatOn ? currentRows.filter(r => r.has_moat) : currentRows;
+  const filtered = applySearch(moatFiltered, q);
   const sorted = applySort(filtered, currentSort.key, currentSort.asc);
   const us = sorted.filter(r => !r.is_international);
   const intl = sorted.filter(r => r.is_international);
@@ -209,6 +221,7 @@ function render() {
   renderTable(intl, 'lynchBodyIntl', 'No international ADRs match.');
   document.getElementById('usCount').textContent = `(${us.length})`;
   document.getElementById('intlCount').textContent = `(${intl.length})`;
+  updateMetrics(moatFiltered);
 }
 
 function updateMetrics(rows) {
@@ -224,17 +237,16 @@ function setBothBodies(html) {
 }
 
 async function loadSnapshot(month) {
-  setBothBodies('<tr><td colspan="10" class="empty-state">Loading…</td></tr>');
+  setBothBodies('<tr><td colspan="11" class="empty-state">Loading…</td></tr>');
   try {
     const r = await fetch(`/api/lynch/snapshot/${month}`);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
     currentRows = data.companies || [];
-    document.getElementById('lynchMeta').textContent = `as of ${data._meta?.as_of || month} · ${currentRows.length} passing`;
-    updateMetrics(currentRows);
+    document.getElementById('lynchMeta').textContent = `as of ${data._meta?.as_of || month} · ${currentRows.length} passing all Lynch filters`;
     render();
   } catch (e) {
-    setBothBodies(`<tr><td colspan="10" class="empty-state">Failed to load: ${e.message}</td></tr>`);
+    setBothBodies(`<tr><td colspan="11" class="empty-state">Failed to load: ${e.message}</td></tr>`);
   }
 }
 
@@ -245,7 +257,7 @@ async function initSnapshots() {
     const picker = document.getElementById('lynchSnapshotPicker');
     if (!data.months || !data.months.length) {
       picker.innerHTML = '<option>No snapshots yet</option>';
-      setBothBodies('<tr><td colspan="10" class="empty-state">No snapshots available yet. The first monthly run hasn\'t completed — check the Actions tab.</td></tr>');
+      setBothBodies('<tr><td colspan="11" class="empty-state">No snapshots available yet. The first monthly run hasn\'t completed — check the Actions tab.</td></tr>');
       return;
     }
     picker.innerHTML = data.months.map(m => `<option value="${m}">${m}</option>`).join('');
@@ -253,7 +265,7 @@ async function initSnapshots() {
     picker.addEventListener('change', () => loadSnapshot(picker.value));
     loadSnapshot(data.latest);
   } catch (e) {
-    setBothBodies(`<tr><td colspan="10" class="empty-state">Failed to load snapshot list: ${e.message}</td></tr>`);
+    setBothBodies(`<tr><td colspan="11" class="empty-state">Failed to load snapshot list: ${e.message}</td></tr>`);
   }
 }
 
@@ -270,6 +282,7 @@ document.querySelectorAll('.lynchTable thead th').forEach(th => {
 });
 
 document.getElementById('lynchSearch').addEventListener('input', render);
+document.getElementById('moatToggle').addEventListener('change', render);
 
 initSnapshots();
 </script>
