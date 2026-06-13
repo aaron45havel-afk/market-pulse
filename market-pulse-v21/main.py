@@ -697,6 +697,110 @@ async def pipeline_delete_call(request: Request):
     return JSONResponse({"ok": True})
 
 
+# ─── Working-session endpoints (PILOT-stage pressure-test) ──────────
+@app.get("/api/pipeline/session/{contact_id}")
+async def api_pipeline_session_get(request: Request, contact_id: int):
+    """Return the working-session payload for a contact: agenda, four
+    pre-filled prompts, saved artifacts, and the scorecard band."""
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import (WORKING_AGENDA, WORKING_PROMPT_EXTRACT,
+                     WORKING_PROMPT_LOCKED_SCOPE, WORKING_PROMPT_CRITERIA,
+                     WORKING_PROMPT_PROPOSAL, WORKING_SCORECARD_DIMENSIONS,
+                     list_contacts, get_session_for_contact, render_prompt)
+    contact = next((c for c in list_contacts() if c["id"] == contact_id), None)
+    if not contact:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    session = get_session_for_contact(contact_id) or {}
+    transcript = session.get("transcript") or ""
+    extraction = session.get("extraction_json") or ""
+
+    import json as _json
+    scorecard = None
+    if session.get("scorecard_json"):
+        try:
+            scorecard = _json.loads(session["scorecard_json"])
+        except (ValueError, TypeError):
+            scorecard = None
+
+    return JSONResponse({
+        "contact_name":  contact.get("name", ""),
+        "contact_email": contact.get("email", ""),
+        "agenda":        WORKING_AGENDA,
+        "prompts": {
+            "extract":          render_prompt(WORKING_PROMPT_EXTRACT, transcript=transcript),
+            "locked_scope":     render_prompt(WORKING_PROMPT_LOCKED_SCOPE, extraction_json=extraction),
+            "criteria":         render_prompt(WORKING_PROMPT_CRITERIA, extraction_json=extraction),
+            "proposal":         render_prompt(WORKING_PROMPT_PROPOSAL, extraction_json=extraction),
+        },
+        "scorecard_dimensions": [
+            {"key": k, "weight": w, "label": label}
+            for (k, w, label) in WORKING_SCORECARD_DIMENSIONS
+        ],
+        "saved": {
+            "session_date":     session.get("session_date").isoformat() if session.get("session_date") else "",
+            "transcript":       transcript,
+            "extraction_json":  extraction,
+            "locked_scope":     session.get("locked_scope") or "",
+            "success_criteria": session.get("success_criteria") or "",
+            "proposal_draft":   session.get("proposal_draft") or "",
+            "suggested_action": session.get("suggested_action") or "",
+            "scorecard":        scorecard,
+        },
+    })
+
+
+@app.post("/pipeline/session")
+async def pipeline_save_session(request: Request):
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import upsert_session
+    from datetime import datetime as _dt, date as _date
+    form = await request.form()
+    try:
+        cid = int(form.get("contact_id", "0"))
+    except ValueError:
+        cid = 0
+    if not cid:
+        return JSONResponse({"error": "missing contact_id"}, status_code=400)
+
+    session_date = None
+    raw = (form.get("session_date") or "").strip()
+    if raw:
+        try:
+            session_date = _dt.strptime(raw, "%Y-%m-%d").date()
+        except ValueError:
+            session_date = None
+    if session_date is None:
+        session_date = _date.today()
+
+    sc = upsert_session(
+        contact_id=cid,
+        session_date=session_date,
+        transcript=(form.get("transcript") or "").strip(),
+        extraction_json=(form.get("extraction_json") or "").strip(),
+        locked_scope=(form.get("locked_scope") or "").strip(),
+        success_criteria=(form.get("success_criteria") or "").strip(),
+        proposal_draft=(form.get("proposal_draft") or "").strip(),
+    )
+    return JSONResponse({"ok": True, "scorecard": sc})
+
+
+@app.post("/pipeline/session/delete")
+async def pipeline_delete_session(request: Request):
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import delete_session
+    form = await request.form()
+    try:
+        cid = int(form.get("contact_id", "0"))
+    except ValueError:
+        cid = 0
+    if cid:
+        delete_session(cid)
+    return JSONResponse({"ok": True})
+
+
 # ─── Stock lookup (public) ──────────────────────────────────────────
 # Single-ticker search: Yahoo Finance for live quote + 1Y chart, SEC
 # EDGAR for latest annual fundamentals. Public — no admin gate.
