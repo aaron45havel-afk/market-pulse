@@ -15,7 +15,22 @@
   .crm-card .actions { display:flex; gap:0.35rem; flex-wrap:wrap; margin-top:0.45rem; }
   .crm-card .del { background:transparent; color:var(--text-dim); border:none; cursor:pointer; font-size:0.65rem; padding:0.15rem 0.3rem; }
   .crm-card .del:hover { color:#ef4444; }
-  .industry-tag { display:inline-block; font-size:0.65rem; background:rgba(99,102,241,0.14); color:var(--accent2); padding:1px 6px; border-radius:99px; font-weight:600; margin-left:0.35rem; }
+  /* New compact card */
+  .crm-card { cursor:pointer; transition:border-color 0.12s, transform 0.12s; }
+  .crm-card:hover { border-color:var(--accent2); }
+  .crm-card .card-top { display:flex; justify-content:space-between; align-items:center; gap:0.4rem; margin-bottom:2px; }
+  .crm-card .card-top .name { font-weight:700; font-size:0.92rem; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .crm-card .one-line { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .crm-card .money-row { display:flex; gap:0.4rem; align-items:baseline; margin-top:0.25rem; }
+  .crm-card .money-row .money { font-size:0.7rem; color:var(--accent); font-weight:600; white-space:nowrap; }
+  .crm-card .money-row .money.pilot { color:var(--text-dim); font-weight:500; }
+  .crm-card .money-row .next { font-size:0.7rem; color:var(--yellow); margin-left:auto; white-space:nowrap; }
+  .crm-card .actions.compact { display:flex; gap:0.3rem; margin-top:0.45rem; align-items:center; }
+  .crm-card .actions.compact select { width:100%; min-width:0; font-size:0.7rem; padding:0.2rem 0.35rem; }
+  .crm-card .actions.compact .icon-btn { background:var(--surface); border:1px solid var(--border); color:var(--text); padding:0.2rem 0.4rem; border-radius:4px; cursor:pointer; font-size:0.85rem; line-height:1; }
+  .crm-card .actions.compact .icon-btn:hover { background:rgba(99,102,241,0.1); border-color:var(--accent2); }
+
+  .industry-tag { display:inline-block; font-size:0.62rem; background:rgba(99,102,241,0.14); color:var(--accent2); padding:1px 6px; border-radius:99px; font-weight:600; white-space:nowrap; flex-shrink:0; max-width:120px; overflow:hidden; text-overflow:ellipsis; }
   .email-btn { background:transparent; color:var(--accent2); border:1px solid var(--border); padding:0.2rem 0.5rem; border-radius:4px; font-size:0.7rem; cursor:pointer; }
   .email-btn:hover { background:rgba(99,102,241,0.08); }
 
@@ -258,43 +273,32 @@
         <span>{{ contacts_by_stage[s]|length }}</span>
       </div>
       {% for c in contacts_by_stage[s] %}
-        <div class="crm-card">
-          <div class="name">{{ c.name }}{% if c.industry %}<span class="industry-tag">{{ c.industry }}</span>{% endif %}</div>
-          <div class="meta">
-            {{ c.title or '' }}{% if c.title and c.agency %} · {% endif %}{{ c.agency or '' }}
+        <div class="crm-card" data-cid="{{ c.id }}" onclick="openDetailModal({{ c.id }})">
+          <div class="card-top">
+            <span class="name">{{ c.name }}</span>
+            {% if c.industry %}<span class="industry-tag">{{ c.industry.split(' / ')[0] }}</span>{% endif %}
           </div>
-          {% if c.email %}<div class="meta"><a href="mailto:{{ c.email }}" style="color:var(--accent2);">{{ c.email }}</a></div>{% endif %}
-          {% if c.subject %}<div class="meta" style="font-style:italic;">"{{ c.subject }}"</div>{% endif %}
-          {% if c.next_date %}<div class="next">Next: {{ c.next_date.strftime('%b %d') }}</div>{% endif %}
-          <div class="money">
-            {% if c.recurring_value %}${{ "{:,}".format(c.recurring_value) }}/yr{% endif %}
-            {% if c.pilot_value %}{% if c.recurring_value %} · {% endif %}${{ "{:,}".format(c.pilot_value) }} pilot{% endif %}
+          {% if c.title or c.agency %}
+          <div class="meta one-line">{{ c.title or '' }}{% if c.title and c.agency %} · {% endif %}{{ c.agency or '' }}</div>
+          {% endif %}
+          {% if c.recurring_value or c.pilot_value or c.next_date %}
+          <div class="meta one-line money-row">
+            {% if c.recurring_value %}<span class="money">${{ "{:,}".format(c.recurring_value) }}/yr</span>{% endif %}
+            {% if c.pilot_value %}<span class="money pilot">${{ "{:,}".format(c.pilot_value) }} pilot</span>{% endif %}
+            {% if c.next_date %}<span class="next">→ {{ c.next_date.strftime('%b %d') }}</span>{% endif %}
           </div>
-          {% if c.notes %}<div class="meta" style="margin-top:0.35rem; color:var(--text);">{{ c.notes }}</div>{% endif %}
-          <div class="actions">
-            <form method="post" action="/pipeline/stage">
+          {% endif %}
+          <div class="actions compact" onclick="event.stopPropagation()">
+            <form method="post" action="/pipeline/stage" style="flex:1;">
               <input type="hidden" name="contact_id" value="{{ c.id }}">
-              <select name="stage" onchange="this.form.submit()" aria-label="Stage">
+              <select name="stage" onchange="this.form.submit()" aria-label="Stage" style="width:100%;">
                 {% for st in stages %}
                   <option value="{{ st }}" {% if st == c.stage %}selected{% endif %}>{{ stage_labels[st] }}</option>
                 {% endfor %}
               </select>
             </form>
-            <form method="post" action="/pipeline/industry">
-              <input type="hidden" name="contact_id" value="{{ c.id }}">
-              <select name="industry" onchange="this.form.submit()" aria-label="Industry" style="max-width:140px;">
-                <option value="">— industry —</option>
-                {% for ind in industries %}
-                  <option value="{{ ind }}" {% if ind == c.industry %}selected{% endif %}>{{ ind }}</option>
-                {% endfor %}
-              </select>
-            </form>
-            <button type="button" class="email-btn" onclick="openEmailModal({{ c.id }})">📧 Email</button>
-            <button type="button" class="email-btn" onclick="openCallModal({{ c.id }})">📞 Discovery call</button>
-            <form method="post" action="/pipeline/delete" onsubmit="return confirm('Delete {{ c.name }}?');">
-              <input type="hidden" name="contact_id" value="{{ c.id }}">
-              <button type="submit" class="del">delete</button>
-            </form>
+            <button type="button" class="icon-btn" onclick="openEmailModal({{ c.id }})" title="Email">📧</button>
+            <button type="button" class="icon-btn" onclick="openCallModal({{ c.id }})" title="Discovery call">📞</button>
           </div>
         </div>
       {% endfor %}
@@ -358,6 +362,108 @@
 <p style="font-size:0.78rem; color:var(--text-dim); margin:0 0 1rem;">
   <a href="/pipeline/templates" style="color:var(--accent2);">Manage email templates →</a>
 </p>
+
+<!-- ── Contact detail modal ─────────────────────────────────────── -->
+<style>
+  #detailModalBg .modal { max-width:560px; }
+  .detail-grid { display:grid; grid-template-columns:120px 1fr; gap:0.45rem 0.7rem; font-size:0.83rem; align-items:baseline; }
+  .detail-grid .lbl { font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.04em; font-weight:600; padding-top:2px; }
+  .detail-grid .val { color:var(--text); word-break:break-word; }
+  .detail-grid .val a { color:var(--accent2); }
+  .detail-notes { background:var(--surface2); padding:0.55rem 0.7rem; border-radius:6px; font-size:0.82rem; white-space:pre-wrap; line-height:1.5; max-height:240px; overflow-y:auto; }
+  .stage-pill { display:inline-block; font-size:0.65rem; padding:2px 8px; border-radius:99px; background:rgba(99,102,241,0.14); color:var(--accent2); font-weight:700; letter-spacing:0.03em; text-transform:uppercase; }
+</style>
+<div id="detailModalBg" class="modal-bg" onclick="if(event.target===this)closeDetailModal()">
+  <div class="modal">
+    <div style="display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.6rem;">
+      <h3 id="detailName" style="margin:0; font-size:1.1rem;"></h3>
+      <span id="detailStage" class="stage-pill"></span>
+    </div>
+
+    <div class="detail-grid">
+      <div class="lbl">Title</div>      <div class="val" id="detailTitle"></div>
+      <div class="lbl">Agency</div>     <div class="val" id="detailAgency"></div>
+      <div class="lbl">Email</div>      <div class="val" id="detailEmail"></div>
+      <div class="lbl">Industry</div>
+      <div class="val">
+        <form method="post" action="/pipeline/industry" style="display:inline;">
+          <input type="hidden" id="detailIndustryCid" name="contact_id" value="">
+          <select name="industry" onchange="this.form.submit()" id="detailIndustrySel" style="background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.3rem 0.5rem; color:var(--text); font-size:0.8rem;">
+            <option value="">— none —</option>
+            {% for ind in industries %}<option value="{{ ind }}">{{ ind }}</option>{% endfor %}
+          </select>
+        </form>
+      </div>
+      <div class="lbl">Pilot $</div>    <div class="val" id="detailPilot"></div>
+      <div class="lbl">Recurring</div>  <div class="val" id="detailRecurring"></div>
+      <div class="lbl">Date emailed</div><div class="val" id="detailDateEmailed"></div>
+      <div class="lbl">Next date</div>   <div class="val" id="detailNext"></div>
+      <div class="lbl">Subject</div>     <div class="val" id="detailSubject"></div>
+    </div>
+
+    <div style="margin-top:0.7rem;">
+      <div class="lbl" style="font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.04em; font-weight:600; margin-bottom:0.25rem;">Notes</div>
+      <div class="detail-notes" id="detailNotes"></div>
+    </div>
+
+    <div class="row" style="margin-top:0.8rem; display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+      <button class="primary" onclick="emailFromDetail()">📧 Email</button>
+      <button class="primary" onclick="callFromDetail()">📞 Discovery call</button>
+      <span style="flex:1;"></span>
+      <form method="post" action="/pipeline/delete" id="detailDeleteForm" onsubmit="return confirm('Delete this contact?');" style="display:inline;">
+        <input type="hidden" name="contact_id" id="detailDeleteCid" value="">
+        <button type="submit" style="color:#ef4444; background:transparent; border:1px solid var(--border); padding:0.4rem 0.85rem; border-radius:6px; cursor:pointer; font-size:0.8rem;">Delete</button>
+      </form>
+      <button onclick="closeDetailModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Inline contact data for the detail modal — avoids a roundtrip per
+// click. Re-rendered with the page on each stage / industry change
+// since both POST + 303 back to /pipeline.
+const ALL_CONTACTS = {{ contacts_json|tojson }};
+let _detailCid = null;
+
+function openDetailModal(cid) {
+  const c = ALL_CONTACTS.find(x => x.id === cid);
+  if (!c) return;
+  _detailCid = cid;
+  document.getElementById('detailName').textContent = c.name || '';
+  document.getElementById('detailStage').textContent = c.stage || '';
+  document.getElementById('detailTitle').textContent = c.title || '—';
+  document.getElementById('detailAgency').textContent = c.agency || '—';
+  const emailEl = document.getElementById('detailEmail');
+  emailEl.innerHTML = c.email
+    ? `<a href="mailto:${c.email}">${c.email}</a>`
+    : '—';
+  document.getElementById('detailPilot').textContent =
+    c.pilot_value ? `$${c.pilot_value.toLocaleString()}` : '—';
+  document.getElementById('detailRecurring').textContent =
+    c.recurring_value ? `$${c.recurring_value.toLocaleString()}/yr` : '—';
+  document.getElementById('detailDateEmailed').textContent = c.date_emailed || '—';
+  document.getElementById('detailNext').textContent = c.next_date || '—';
+  document.getElementById('detailSubject').textContent = c.subject || '—';
+  document.getElementById('detailNotes').textContent = c.notes || '(no notes)';
+  document.getElementById('detailIndustrySel').value = c.industry || '';
+  document.getElementById('detailIndustryCid').value = cid;
+  document.getElementById('detailDeleteCid').value = cid;
+  document.getElementById('detailModalBg').classList.add('show');
+}
+
+function closeDetailModal() {
+  document.getElementById('detailModalBg').classList.remove('show');
+}
+
+function emailFromDetail() {
+  if (_detailCid) { closeDetailModal(); openEmailModal(_detailCid); }
+}
+
+function callFromDetail() {
+  if (_detailCid) { closeDetailModal(); openCallModal(_detailCid); }
+}
+</script>
 
 <!-- ── Email modal ─────────────────────────────────────────────── -->
 <div id="emailModalBg" class="modal-bg" onclick="if(event.target===this)closeEmailModal()">
@@ -464,11 +570,12 @@ function copyEmail(what) {
   }).catch(() => alert('Copy failed — your browser may have blocked clipboard access.'));
 }
 
-// Close modal on Escape.
+// Close any modal on Escape.
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     closeEmailModal();
     closeCallModal();
+    closeDetailModal();
   }
 });
 
