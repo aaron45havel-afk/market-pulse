@@ -1755,6 +1755,157 @@ def delete_session(contact_id: int) -> bool:
         conn.close()
 
 
+# ─── Anthropic API auto-processing ──────────────────────────────────
+# When ANTHROPIC_API_KEY is set, the Process tabs in the discovery /
+# working-session modals can run the full 4-step chain in one click
+# instead of copy-paste through claude.ai. ~20-30 sec end-to-end.
+# Falls back to the existing paste-prompts flow when the key isn't set.
+ANTHROPIC_MODEL = "claude-sonnet-4-6"
+
+
+def call_claude(prompt: str, *, max_tokens: int = 4096) -> str:
+    """One-shot Claude API call. Returns the assistant's text reply.
+
+    Uses plain urllib to avoid a new dependency. Raises RuntimeError
+    when the key is missing or the API errors so the caller can
+    surface a clean message to the UI."""
+    import os as _os
+    import urllib.request as _urlreq
+    import urllib.error as _urlerr
+    api_key = _os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError(
+            "ANTHROPIC_API_KEY not set — auto-processing disabled. "
+            "Add it to Railway env vars to enable."
+        )
+    body = json.dumps({
+        "model": ANTHROPIC_MODEL,
+        "max_tokens": max_tokens,
+        "messages": [{"role": "user", "content": prompt}],
+    }).encode("utf-8")
+    req = _urlreq.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=body,
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with _urlreq.urlopen(req, timeout=180) as r:
+            response = json.loads(r.read())
+    except _urlerr.HTTPError as e:
+        detail = ""
+        try:
+            detail = e.read().decode("utf-8", errors="replace")[:300]
+        except Exception:
+            pass
+        raise RuntimeError(f"Anthropic API HTTP {e.code}: {detail}")
+    return "".join(b.get("text", "") for b in (response.get("content") or [])
+                   if b.get("type") == "text").strip()
+
+
+def _strip_code_fence(s: str) -> str:
+    """Claude sometimes wraps JSON in ```json …``` despite being told
+    not to. Strip a single leading + trailing fence so the JSON parse
+    downstream doesn't choke."""
+    s = (s or "").strip()
+    if s.startswith("```"):
+        lines = s.split("\n")
+        if lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        s = "\n".join(lines).strip()
+    return s
+
+
+def process_discovery_call_auto(contact_id: int, transcript: str,
+                                call_date_) -> dict:
+    """Full discovery-call chain via Claude API: extract JSON, then
+    exec summary + pain analysis + MVP scope in parallel. Upserts to
+    the DB. Returns everything for the UI."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    extraction = _strip_code_fence(call_claude(
+        render_prompt(DISCOVERY_PROMPT_EXTRACT, transcript=transcript),
+        max_tokens=8192,
+    ))
+    prompts = [
+        ("exec_summary",  render_prompt(DISCOVERY_PROMPT_EXEC_SUMMARY, extraction_json=extraction)),
+        ("pain_analysis", render_prompt(DISCOVERY_PROMPT_PAIN,         extraction_json=extraction)),
+        ("mvp_scope",     render_prompt(DISCOVERY_PROMPT_MVP,          extraction_json=extraction)),
+    ]
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        futures = {key: ex.submit(call_claude, p, max_tokens=2048)
+                   for key, p in prompts}
+        outputs = {k: f.result().strip() for k, f in futures.items()}
+
+    sc = upsert_call(
+        contact_id=contact_id,
+        call_date=call_date_,
+        transcript=transcript,
+        extraction_json=extraction,
+        exec_summary=outputs["exec_summary"],
+        pain_analysis=outputs["pain_analysis"],
+        mvp_scope=outputs["mvp_scope"],
+    )
+    return {
+        "extraction_json": extraction,
+        "exec_summary":    outputs["exec_summary"],
+        "pain_analysis":   outputs["pain_analysis"],
+        "mvp_scope":       outputs["mvp_scope"],
+        "scorecard":       sc,
+    }
+
+
+def process_working_session_auto(contact_id: int, transcript: str,
+                                 session_date_) -> dict:
+    """Same shape as process_discovery_call_auto but for the
+    working-session chain (locked scope + success criteria +
+    proposal draft)."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    extraction = _strip_code_fence(call_claude(
+        render_prompt(WORKING_PROMPT_EXTRACT, transcript=transcript),
+        max_tokens=8192,
+    ))
+    prompts = [
+        ("locked_scope",     render_prompt(WORKING_PROMPT_LOCKED_SCOPE, extraction_json=extraction)),
+        ("success_criteria", render_prompt(WORKING_PROMPT_CRITERIA,    extraction_json=extraction)),
+        ("proposal_draft",   render_prompt(WORKING_PROMPT_PROPOSAL,    extraction_json=extraction)),
+    ]
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        futures = {key: ex.submit(call_claude, p, max_tokens=2048)
+                   for key, p in prompts}
+        outputs = {k: f.result().strip() for k, f in futures.items()}
+
+    sc = upsert_session(
+        contact_id=contact_id,
+        session_date=session_date_,
+        transcript=transcript,
+        extraction_json=extraction,
+        locked_scope=outputs["locked_scope"],
+        success_criteria=outputs["success_criteria"],
+        proposal_draft=outputs["proposal_draft"],
+    )
+    return {
+        "extraction_json":  extraction,
+        "locked_scope":     outputs["locked_scope"],
+        "success_criteria": outputs["success_criteria"],
+        "proposal_draft":   outputs["proposal_draft"],
+        "scorecard":        sc,
+    }
+
+
+def anthropic_configured() -> bool:
+    """Quick check used by the UI to show/hide the auto-process button."""
+    import os as _os
+    return bool(_os.environ.get("ANTHROPIC_API_KEY", "").strip())
+
+
 # ─── Email-template seeds ───────────────────────────────────────────
 # The two emails the user shipped in the build spec — INTRO and the
 # SCHEDULING follow-up. Industry tagged to Government / Municipal

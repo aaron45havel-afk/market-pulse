@@ -913,6 +913,66 @@ async function deleteCall() {
   }
 }
 
+// ── Auto-process via Claude API ──
+let _aiConfigChecked = false;
+let _aiConfigured = false;
+
+async function _checkAiConfig() {
+  if (_aiConfigChecked) return _aiConfigured;
+  try {
+    const r = await fetch('/api/pipeline/ai-config');
+    const d = await r.json();
+    _aiConfigured = !!d.anthropic_configured;
+  } catch {
+    _aiConfigured = false;
+  }
+  _aiConfigChecked = true;
+  // Hide auto buttons if not configured.
+  if (!_aiConfigured) {
+    ['callAutoRow', 'sessionAutoRow'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+  }
+  return _aiConfigured;
+}
+_checkAiConfig();
+
+async function autoProcessCall() {
+  if (!_callCtx) return;
+  const transcript = document.getElementById('callTranscript').value.trim();
+  if (!transcript) { alert('Paste a transcript first.'); return; }
+  const btn = document.getElementById('callAutoBtn');
+  const status = document.getElementById('callAutoStatus');
+  btn.disabled = true; btn.style.opacity = 0.6;
+  status.textContent = 'Running 4-step chain through Claude — about 30 sec…';
+  try {
+    const r = await fetch(`/api/pipeline/call/${_callCtx.contactId}/auto`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        transcript,
+        call_date: document.getElementById('callDate').value,
+      }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    document.getElementById('callExtraction').value = data.extraction_json || '';
+    document.getElementById('callExec').value       = data.exec_summary    || '';
+    document.getElementById('callPain').value       = data.pain_analysis   || '';
+    document.getElementById('callMvp').value        = data.mvp_scope       || '';
+    renderScorecard(data.scorecard);
+    refreshPrompts();
+    showCallTab('artifacts');
+    status.textContent = 'Done ✓ — all 4 artifacts saved';
+    setTimeout(() => { status.textContent = ''; }, 4000);
+  } catch (e) {
+    status.textContent = 'Failed: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.style.opacity = 1;
+  }
+}
+
 // Refresh prompts as user types transcript / extraction.
 document.addEventListener('input', e => {
   if (!_callCtx) return;
@@ -975,9 +1035,12 @@ document.addEventListener('input', e => {
       </div>
       <label style="font-size:0.72rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">Transcript</label>
       <textarea id="callTranscript" placeholder="Paste the full call transcript here…" style="width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.5rem 0.6rem; color:var(--text); font-size:0.82rem; margin-top:0.2rem; min-height:300px; resize:vertical; font-family:inherit; line-height:1.5; outline:none;"></textarea>
-      <p style="font-size:0.72rem; color:var(--text-dim); margin-top:0.4rem;">
-        Then jump to <strong>Process →</strong> to run the AI chain.
-      </p>
+      <div id="callAutoRow" style="display:flex; gap:0.6rem; align-items:center; margin-top:0.55rem; flex-wrap:wrap;">
+        <button id="callAutoBtn" class="primary" onclick="autoProcessCall()" style="background:linear-gradient(135deg, var(--accent2), #9b6dff); color:white; border:none; padding:0.5rem 0.9rem; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.85rem;">✨ Auto-process with AI</button>
+        <span id="callAutoStatus" style="font-size:0.78rem; color:var(--text-dim);"></span>
+        <span style="flex:1;"></span>
+        <span style="font-size:0.7rem; color:var(--text-dim);">Or jump to <strong>Process →</strong> to paste-prompts manually.</span>
+      </div>
     </div>
 
     <!-- Process -->
@@ -1090,9 +1153,12 @@ document.addEventListener('input', e => {
       </div>
       <label style="font-size:0.72rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">Transcript</label>
       <textarea id="sessionTranscript" placeholder="Paste the working-session transcript here…" style="width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.5rem 0.6rem; color:var(--text); font-size:0.82rem; margin-top:0.2rem; min-height:300px; resize:vertical; font-family:inherit; line-height:1.5; outline:none;"></textarea>
-      <p style="font-size:0.72rem; color:var(--text-dim); margin-top:0.4rem;">
-        Then jump to <strong>Process →</strong> to run the AI chain.
-      </p>
+      <div id="sessionAutoRow" style="display:flex; gap:0.6rem; align-items:center; margin-top:0.55rem; flex-wrap:wrap;">
+        <button id="sessionAutoBtn" class="primary" onclick="autoProcessSession()" style="background:linear-gradient(135deg, var(--accent2), #9b6dff); color:white; border:none; padding:0.5rem 0.9rem; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.85rem;">✨ Auto-process with AI</button>
+        <span id="sessionAutoStatus" style="font-size:0.78rem; color:var(--text-dim);"></span>
+        <span style="flex:1;"></span>
+        <span style="font-size:0.7rem; color:var(--text-dim);">Or jump to <strong>Process →</strong> to paste-prompts manually.</span>
+      </div>
     </div>
 
     <!-- Process -->
@@ -1302,5 +1368,40 @@ document.addEventListener('input', e => {
     refreshSessionPrompts();
   }
 });
+
+async function autoProcessSession() {
+  if (!_sessionCtx) return;
+  const transcript = document.getElementById('sessionTranscript').value.trim();
+  if (!transcript) { alert('Paste a transcript first.'); return; }
+  const btn = document.getElementById('sessionAutoBtn');
+  const status = document.getElementById('sessionAutoStatus');
+  btn.disabled = true; btn.style.opacity = 0.6;
+  status.textContent = 'Running 4-step chain through Claude — about 30 sec…';
+  try {
+    const r = await fetch(`/api/pipeline/session/${_sessionCtx.contactId}/auto`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        transcript,
+        session_date: document.getElementById('sessionDate').value,
+      }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    document.getElementById('sessionExtraction').value = data.extraction_json  || '';
+    document.getElementById('sessionScope').value      = data.locked_scope     || '';
+    document.getElementById('sessionCriteria').value   = data.success_criteria || '';
+    document.getElementById('sessionProposal').value   = data.proposal_draft   || '';
+    renderSessionScorecard(data.scorecard);
+    refreshSessionPrompts();
+    showSessionTab('artifacts');
+    status.textContent = 'Done ✓ — all 4 artifacts saved';
+    setTimeout(() => { status.textContent = ''; }, 4000);
+  } catch (e) {
+    status.textContent = 'Failed: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.style.opacity = 1;
+  }
+}
 </script>
 {% endblock %}
