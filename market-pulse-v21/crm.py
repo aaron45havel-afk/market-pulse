@@ -138,6 +138,46 @@ STAGE_LABELS = {
     "LOST":           "Lost",
 }
 
+# ─── Industries + email templates ────────────────────────────────────
+INDUSTRIES = (
+    "Government / Municipal Finance",
+    "Real Estate",
+    "Healthcare",
+    "Manufacturing",
+    "Tech / SaaS",
+    "Nonprofit",
+    "Professional Services",
+    "Other",
+)
+
+# Template triggers — what email you'd send next. Each maps to a
+# natural stage of the funnel; STAGE_TO_NEXT_TRIGGER picks the right
+# one for a contact based on their current stage.
+EMAIL_TRIGGERS = {
+    "INTRO":            "First cold outreach",
+    "BUMP_NO_REPLY":    "Bump after silence",
+    "SCHEDULING":       "Schedule the call (positive reply)",
+    "PRE_CALL_CONFIRM": "Day-before call confirmation",
+    "POST_CALL":        "Post-call summary",
+    "PROPOSAL":         "Pilot proposal",
+    "CHECKIN":          "Mid-pilot check-in",
+    "RENEWAL":          "Renewal nudge",
+}
+
+STAGE_TO_NEXT_TRIGGER = {
+    "QUEUED":         "INTRO",
+    "CONTACTED":      "BUMP_NO_REPLY",
+    "REPLIED":        "SCHEDULING",
+    "DISCOVERY_CALL": "POST_CALL",
+    "PILOT":          "CHECKIN",
+    "RECURRING":      "RENEWAL",
+    "LOST":           None,
+}
+
+# Sender name used in {my_name} substitution. Could move to env var if
+# Jim needs his own outgoing identity later.
+SENDER_NAME = "Aaron Havel"
+
 
 # ─── Date helpers ────────────────────────────────────────────────────
 def iso_week_start(d: date | None = None) -> date:
@@ -165,14 +205,15 @@ def list_contacts() -> list[dict]:
             SELECT id, name, title, agency, email, stage,
                    pilot_value, recurring_value,
                    date_emailed, next_date, subject, notes,
-                   created_at, updated_at
+                   industry, created_at, updated_at
             FROM crm_contacts
             ORDER BY updated_at DESC
         """)
         rows = cur.fetchall()
         cols = ["id", "name", "title", "agency", "email", "stage",
                 "pilot_value", "recurring_value", "date_emailed",
-                "next_date", "subject", "notes", "created_at", "updated_at"]
+                "next_date", "subject", "notes",
+                "industry", "created_at", "updated_at"]
         out = [dict(zip(cols, r)) for r in rows]
         cur.close()
         return out
@@ -184,7 +225,7 @@ def add_contact(*, name: str, title: str | None, agency: str | None,
                 email: str | None, stage: str, pilot_value: int,
                 recurring_value: int, date_emailed: date | None,
                 next_date: date | None, subject: str | None,
-                notes: str | None) -> int | None:
+                notes: str | None, industry: str | None = None) -> int | None:
     """Insert a new contact + initial StageEvent (from_stage=NULL).
     Returns the new contact's id."""
     if stage not in STAGES:
@@ -197,11 +238,11 @@ def add_contact(*, name: str, title: str | None, agency: str | None,
         cur.execute("""
             INSERT INTO crm_contacts
               (name, title, agency, email, stage, pilot_value, recurring_value,
-               date_emailed, next_date, subject, notes)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+               date_emailed, next_date, subject, notes, industry)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             RETURNING id
         """, (name, title, agency, email, stage, pilot_value, recurring_value,
-              date_emailed, next_date, subject, notes))
+              date_emailed, next_date, subject, notes, industry))
         contact_id = cur.fetchone()[0]
         cur.execute("""
             INSERT INTO crm_stage_events (contact_id, from_stage, to_stage)
@@ -586,6 +627,183 @@ def set_weekly_goal(metric: str, target: int,
         conn.close()
 
 
+# ─── Industry update ────────────────────────────────────────────────
+def set_contact_industry(contact_id: int, industry: str | None) -> bool:
+    """Inline industry edit from the pipeline card. None clears it."""
+    if industry is not None and industry not in INDUSTRIES:
+        return False
+    conn = _get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE crm_contacts SET industry = %s, updated_at = NOW()
+            WHERE id = %s
+        """, (industry, contact_id))
+        conn.commit()
+        cur.close()
+        return True
+    finally:
+        conn.close()
+
+
+# ─── Email templates ────────────────────────────────────────────────
+def list_templates() -> list[dict]:
+    conn = _get_conn()
+    if not conn:
+        return []
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, industry, trigger, subject, body,
+                   created_at, updated_at
+            FROM crm_email_templates
+            ORDER BY industry, trigger
+        """)
+        rows = cur.fetchall()
+        cols = ["id", "industry", "trigger", "subject", "body",
+                "created_at", "updated_at"]
+        out = [dict(zip(cols, r)) for r in rows]
+        cur.close()
+        return out
+    finally:
+        conn.close()
+
+
+def get_template(industry: str, trigger: str) -> dict | None:
+    conn = _get_conn()
+    if not conn:
+        return None
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, industry, trigger, subject, body
+            FROM crm_email_templates
+            WHERE industry = %s AND trigger = %s
+        """, (industry, trigger))
+        row = cur.fetchone()
+        cur.close()
+        if not row:
+            return None
+        return dict(zip(["id", "industry", "trigger", "subject", "body"], row))
+    finally:
+        conn.close()
+
+
+def upsert_template(*, industry: str, trigger: str,
+                    subject: str, body: str) -> bool:
+    if industry not in INDUSTRIES or trigger not in EMAIL_TRIGGERS:
+        return False
+    conn = _get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO crm_email_templates
+              (industry, trigger, subject, body)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (industry, trigger) DO UPDATE
+              SET subject = EXCLUDED.subject,
+                  body    = EXCLUDED.body,
+                  updated_at = NOW()
+        """, (industry, trigger, subject, body))
+        conn.commit()
+        cur.close()
+        return True
+    finally:
+        conn.close()
+
+
+def delete_template(template_id: int) -> bool:
+    conn = _get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM crm_email_templates WHERE id = %s", (template_id,))
+        conn.commit()
+        cur.close()
+        return True
+    finally:
+        conn.close()
+
+
+def render_template(template: dict, contact: dict,
+                    sender_name: str = SENDER_NAME) -> dict:
+    """Substitute {first_name} / {name} / {title} / {agency} /
+    {my_name} in subject + body. Falls through to the raw string when
+    a template references something we don't know about."""
+    name = (contact.get("name") or "").strip()
+    first_name = name.split()[0] if name else ""
+    variables = {
+        "first_name": first_name,
+        "name":       name,
+        "title":      contact.get("title") or "",
+        "agency":     contact.get("agency") or "",
+        "my_name":    sender_name,
+    }
+
+    def _sub(s: str) -> str:
+        if not s:
+            return s
+        try:
+            return s.format(**variables)
+        except (KeyError, IndexError, ValueError):
+            return s
+
+    return {
+        "subject": _sub(template.get("subject", "") or ""),
+        "body":    _sub(template.get("body", "") or ""),
+    }
+
+
+def suggest_email_for_contact(contact: dict) -> dict:
+    """Pick the right template for a contact based on their current
+    stage + industry, render it, and report whether we had to fall
+    back. Always returns a payload; callers can render the modal
+    even when no template exists yet."""
+    trigger = STAGE_TO_NEXT_TRIGGER.get(contact.get("stage"))
+    industry = contact.get("industry")
+    template = None
+    fallback_industry = False
+
+    if trigger and industry:
+        template = get_template(industry, trigger)
+    # Fallback: if no template for this industry, try the first
+    # industry that has one for this trigger. Better than empty.
+    if trigger and not template:
+        for ind in INDUSTRIES:
+            t = get_template(ind, trigger)
+            if t:
+                template = t
+                fallback_industry = True
+                break
+
+    if not template:
+        return {
+            "trigger":          trigger,
+            "trigger_label":    EMAIL_TRIGGERS.get(trigger, "") if trigger else "",
+            "industry":         industry,
+            "has_template":     False,
+            "fallback_industry": False,
+            "subject":          "",
+            "body":             "",
+        }
+
+    rendered = render_template(template, contact)
+    return {
+        "trigger":          trigger,
+        "trigger_label":    EMAIL_TRIGGERS.get(trigger, ""),
+        "industry":         template.get("industry"),
+        "has_template":     True,
+        "fallback_industry": fallback_industry,
+        "subject":          rendered["subject"],
+        "body":             rendered["body"],
+    }
+
+
 # ─── Seed data ───────────────────────────────────────────────────────
 SEED_CONTACTS = [
     dict(
@@ -641,4 +859,83 @@ def maybe_seed() -> int:
         except Exception as e:
             logger.warning("Seed contact %s failed: %s", c.get("name"), e)
     logger.info("CRM seed: inserted %d starter contacts", inserted)
+    return inserted
+
+
+# ─── Email-template seeds ───────────────────────────────────────────
+# The two emails the user shipped in the build spec — INTRO and the
+# SCHEDULING follow-up. Industry tagged to Government / Municipal
+# Finance since that's the primary funnel today. Add more industries
+# later from the /pipeline/templates UI.
+SEED_TEMPLATES = [
+    dict(
+        industry="Government / Municipal Finance",
+        trigger="INTRO",
+        subject="20 minutes to scope your contract budgeting tool",
+        body=("Hi {first_name},\n\n"
+              "I build custom software for businesses that run on contracts, "
+              "specifically around the budgeting side, which tends to live in "
+              "a tangle of spreadsheets until a contract goes over and nobody "
+              "catches it in time.\n\n"
+              "I come at this from financial operations, not just the tech "
+              "side, so I care less about the software itself and more about "
+              "how the money actually moves: how you set a budget for each "
+              "contract, track spend against it, see where it's going to land, "
+              "and catch overruns before they hurt.\n\n"
+              "It's not a big platform or a long contract. Whatever I build "
+              "layers onto how you already work and adapts to your structure: "
+              "your contracts, your cost categories, the thresholds you "
+              "actually watch.\n\n"
+              "Before suggesting anything, I'd want to understand how you "
+              "manage a contract's budget today, from signing through "
+              "closeout. Would a short call in the next couple of weeks be "
+              "worth your time?\n\n"
+              "{my_name}"),
+    ),
+    dict(
+        industry="Government / Municipal Finance",
+        trigger="SCHEDULING",
+        subject="Re: 20 minutes to scope your contract budgeting tool",
+        body=("Hi {first_name},\n\n"
+              "Great — let's get it on the calendar. It's about 20 minutes, "
+              "and I'll mostly be asking questions: how you handle contract "
+              "budgets today, where it gets painful, and what you'd actually "
+              "want a tool to do. No pitch — I just want to understand the "
+              "workflow so anything I build fits how you already work.\n\n"
+              "What works in the next week or so? Send me a couple of windows "
+              "and I'll lock one in, or I can propose a few times if that's "
+              "easier.\n\n"
+              "One heads-up: I'll record the call so I can focus on listening "
+              "instead of scribbling notes — good with you?\n\n"
+              "Looking forward to it.\n\n"
+              "{my_name}"),
+    ),
+]
+
+
+def maybe_seed_templates() -> int:
+    """Idempotent: insert only if the templates table is empty. Called
+    once at app start, after init_db."""
+    conn = _get_conn()
+    if not conn:
+        return 0
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM crm_email_templates")
+        if cur.fetchone()[0] > 0:
+            cur.close()
+            return 0
+        cur.close()
+    finally:
+        conn.close()
+
+    inserted = 0
+    for t in SEED_TEMPLATES:
+        try:
+            if upsert_template(**t):
+                inserted += 1
+        except Exception as e:
+            logger.warning("Seed template %s/%s failed: %s",
+                           t.get("industry"), t.get("trigger"), e)
+    logger.info("CRM seed: inserted %d email templates", inserted)
     return inserted

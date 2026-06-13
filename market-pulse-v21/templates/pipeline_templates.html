@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Email templates — Pipeline{% endblock %}
+{% block extra_css %}
+<style>
+  .tpl-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+  .tpl-table th, .tpl-table td { padding:0.55rem 0.6rem; border-bottom:1px solid var(--border); vertical-align:top; text-align:left; }
+  .tpl-table th { font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.04em; }
+  .tpl-table .body-cell { color:var(--text-dim); font-size:0.78rem; line-height:1.5; white-space:pre-wrap; max-width:520px; }
+  .tpl-actions form { display:inline; }
+  .tpl-actions button { background:transparent; border:none; color:var(--text-dim); cursor:pointer; font-size:0.72rem; padding:0.2rem 0.35rem; }
+  .tpl-actions button:hover { color:var(--text); }
+  .tpl-form label { display:flex; flex-direction:column; gap:3px; font-size:0.72rem; color:var(--text-dim); }
+  .tpl-form input, .tpl-form select, .tpl-form textarea {
+    background:var(--surface2); border:1px solid var(--border); border-radius:6px;
+    padding:0.4rem 0.55rem; color:var(--text); font-size:0.85rem; outline:none;
+    font-family:inherit;
+  }
+  .tpl-form textarea { min-height:240px; line-height:1.5; resize:vertical; }
+  .tpl-form .row { display:flex; gap:0.6rem; margin-bottom:0.6rem; flex-wrap:wrap; }
+  .tpl-form .row > label { flex:1; min-width:200px; }
+  .tpl-form button.save { background:var(--accent2); color:white; border:none; padding:0.45rem 1rem; border-radius:6px; cursor:pointer; font-weight:600; }
+</style>
+{% endblock %}
+{% block content %}
+<h1>Email templates</h1>
+<p class="subtitle">
+  Templates per industry × trigger. Variables: <code>{first_name}</code>,
+  <code>{name}</code>, <code>{title}</code>, <code>{agency}</code>,
+  <code>{my_name}</code>. <a href="/pipeline" style="color:var(--accent2);">← back to pipeline</a>
+</p>
+
+<!-- Add / update form -->
+<details class="card" style="margin-bottom:1rem; padding:0.7rem 0.9rem;" {% if not templates_list %}open{% endif %}>
+  <summary style="font-weight:600; font-size:0.9rem; cursor:pointer;">Add or update a template</summary>
+  <form method="post" action="/pipeline/template" class="tpl-form" style="margin-top:0.7rem;">
+    <div class="row">
+      <label>Industry
+        <select name="industry" required>
+          {% for ind in industries %}<option value="{{ ind }}">{{ ind }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Trigger
+        <select name="trigger" required>
+          {% for k, label in email_triggers.items() %}
+            <option value="{{ k }}">{{ k }} — {{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+    <div class="row">
+      <label style="flex:1 0 100%;">Subject
+        <input type="text" name="subject" required placeholder="20 minutes to scope your contract budgeting tool">
+      </label>
+    </div>
+    <div class="row">
+      <label style="flex:1 0 100%;">Body
+        <textarea name="body" required placeholder="Hi {first_name},&#10;&#10;...&#10;&#10;{my_name}"></textarea>
+      </label>
+    </div>
+    <button type="submit" class="save">Save template</button>
+    <p style="font-size:0.7rem; color:var(--text-dim); margin:0.5rem 0 0;">
+      Saving an existing industry + trigger pair overwrites it.
+    </p>
+  </form>
+</details>
+
+<!-- Existing templates -->
+<div class="card" style="overflow-x:auto; padding:0;">
+  {% if templates_list %}
+  <table class="tpl-table">
+    <thead>
+      <tr>
+        <th>Industry</th>
+        <th>Trigger</th>
+        <th>Subject</th>
+        <th>Body</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in templates_list %}
+      <tr>
+        <td>{{ t.industry }}</td>
+        <td><strong>{{ t.trigger }}</strong><br><span style="font-size:0.7rem; color:var(--text-dim);">{{ email_triggers.get(t.trigger, '') }}</span></td>
+        <td style="max-width:240px;">{{ t.subject }}</td>
+        <td class="body-cell">{{ t.body }}</td>
+        <td class="tpl-actions">
+          <form method="post" action="/pipeline/template/delete" onsubmit="return confirm('Delete this template?');">
+            <input type="hidden" name="template_id" value="{{ t.id }}">
+            <button type="submit">delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <div style="padding:1.5rem; text-align:center; color:var(--text-dim); font-size:0.85rem;">
+      No templates yet. Add one above.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
