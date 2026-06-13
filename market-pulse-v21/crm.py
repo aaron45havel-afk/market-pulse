@@ -37,6 +37,17 @@ METRIC_LABELS = {
     "PILOTS_CLOSED": "Pilots closed",
 }
 
+# Auto-applied weekly targets, derived from the playbook funnel rates
+# (reply 17.5% × call 50% × pilot 33%). User doesn't have to set
+# these — they just show up. DB-stored crm_weekly_goals still take
+# precedence per-week so a one-off bump is possible from the UI.
+DEFAULT_WEEKLY_TARGETS = {
+    "NEW_CONTACTS":  5,
+    "EMAILS_SENT":   5,
+    "CALLS_BOOKED":  1,
+    "PILOTS_CLOSED": 1,
+}
+
 STAGE_LABELS = {
     "QUEUED":         "Queued",
     "CONTACTED":      "Contacted",
@@ -348,21 +359,125 @@ def trailing_weekly_kpis(weeks: int = 8) -> list[dict]:
 
 # ─── Weekly goals ────────────────────────────────────────────────────
 def get_weekly_goals(week_start: date | None = None) -> dict[str, int]:
+    """Return effective weekly goals for the given week. DB overrides
+    win; otherwise the DEFAULT_WEEKLY_TARGETS are returned. Always
+    returns all 4 metrics so the UI never has a 'no goal' state."""
     week_start = week_start or iso_week_start()
+    out = dict(DEFAULT_WEEKLY_TARGETS)
     conn = _get_conn()
     if not conn:
-        return {}
+        return out
     try:
         cur = conn.cursor()
         cur.execute("""
             SELECT metric, target FROM crm_weekly_goals
             WHERE week_start = %s
         """, (week_start,))
-        out = {r[0]: r[1] for r in cur.fetchall()}
+        for metric, target in cur.fetchall():
+            out[metric] = target
         cur.close()
         return out
     finally:
         conn.close()
+
+
+def goals_completion_stats() -> dict:
+    """Walk every COMPLETED past ISO week (strictly before current
+    Monday) once, and count goal hits + 'perfect' weeks. Also reports
+    in-progress numbers for the current week so the UI can show
+    'N/4 hit so far'.
+
+    Returns:
+      {
+        "this_week_hits": int 0-4,
+        "perfect_weeks":  int — weeks where all 4 metrics hit target,
+        "total_hits":     int — sum of individual goals hit,
+        "possible_hits":  int — perfect_weeks would be x of /
+                              possible_hits / 4, total_hits of /
+                              possible_hits.
+        "completed_weeks": int — how many past weeks we counted.
+      }
+    """
+    current_monday = iso_week_start()
+    current_monday_dt = datetime.combine(current_monday, datetime.min.time())
+
+    conn = _get_conn()
+    blank = {"this_week_hits": 0, "perfect_weeks": 0, "total_hits": 0,
+             "possible_hits": 0, "completed_weeks": 0}
+    if not conn:
+        return blank
+    try:
+        cur = conn.cursor()
+        # Earliest activity tells us where to start counting weeks.
+        cur.execute("SELECT MIN(created_at) FROM crm_contacts")
+        c_min = cur.fetchone()[0]
+        cur.execute("SELECT MIN(occurred_at) FROM crm_stage_events")
+        e_min = cur.fetchone()[0]
+        anchors = [a for a in (c_min, e_min) if a is not None]
+        if not anchors:
+            cur.close()
+            return blank
+        start_week = iso_week_start(min(a.date() for a in anchors))
+
+        # One-shot weekly aggregations (Postgres date_trunc('week', ...)
+        # returns the Monday of the ISO week — same definition we use).
+        cur.execute("""
+            SELECT date_trunc('week', created_at)::date AS wk, COUNT(*)
+            FROM crm_contacts
+            WHERE created_at >= %s
+            GROUP BY wk
+        """, (datetime.combine(start_week, datetime.min.time()),))
+        new_by_wk = {r[0]: r[1] for r in cur.fetchall()}
+
+        cur.execute("""
+            SELECT date_trunc('week', occurred_at)::date AS wk, to_stage, COUNT(*)
+            FROM crm_stage_events
+            WHERE occurred_at >= %s
+            GROUP BY wk, to_stage
+        """, (datetime.combine(start_week, datetime.min.time()),))
+        ev_by_wk: dict[date, dict[str, int]] = {}
+        for wk, stage, n in cur.fetchall():
+            ev_by_wk.setdefault(wk, {})[stage] = n
+        cur.close()
+    finally:
+        conn.close()
+
+    def _metrics_for_week(wk: date) -> dict[str, int]:
+        events = ev_by_wk.get(wk, {})
+        return {
+            "NEW_CONTACTS":  new_by_wk.get(wk, 0),
+            "EMAILS_SENT":   events.get("CONTACTED", 0),
+            "CALLS_BOOKED":  events.get("DISCOVERY_CALL", 0),
+            "PILOTS_CLOSED": events.get("PILOT", 0) + events.get("RECURRING", 0),
+        }
+
+    # Past completed weeks: start_week ... current_monday - 7 (inclusive)
+    perfect_weeks = 0
+    total_hits = 0
+    completed_weeks = 0
+    wk = start_week
+    while wk < current_monday:
+        completed_weeks += 1
+        goals = get_weekly_goals(wk)
+        metrics = _metrics_for_week(wk)
+        hits = sum(1 for m in METRICS if metrics[m] >= goals[m])
+        total_hits += hits
+        if hits == len(METRICS):
+            perfect_weeks += 1
+        wk = wk + timedelta(days=7)
+
+    # Current week (partial)
+    this_goals = get_weekly_goals(current_monday)
+    this_metrics = _metrics_for_week(current_monday)
+    this_week_hits = sum(1 for m in METRICS if this_metrics[m] >= this_goals[m])
+
+    return {
+        "this_week_hits":   this_week_hits,
+        "perfect_weeks":    perfect_weeks,
+        "total_hits":       total_hits,
+        "possible_hits":    completed_weeks * len(METRICS),
+        "completed_weeks":  completed_weeks,
+    }
 
 
 def set_weekly_goal(metric: str, target: int,

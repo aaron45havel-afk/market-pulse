@@ -67,41 +67,57 @@
 <!-- Weekly KPIs -->
 <h2 style="margin:1.25rem 0 0.5rem; font-size:1.05rem;">This week
   <span style="font-size:0.75rem; color:var(--text-dim); font-weight:400;">{{ week_start.strftime('%b %d') }} – {{ week_end.strftime('%b %d') }}</span>
+  <span style="margin-left:0.6rem; font-size:0.78rem; color:{{ 'var(--accent)' if completion.this_week_hits == 4 else 'var(--yellow)' if completion.this_week_hits >= 2 else 'var(--text-dim)' }}; font-weight:600;">
+    {{ completion.this_week_hits }}/4 goals hit
+  </span>
 </h2>
 <div class="kpi-grid" style="margin-bottom:1rem;">
   {% for m in metrics %}
     {% set actual = kpis[m] %}
-    {% set target = goals.get(m, 0) %}
-    {% set on_pace = (target == 0) or (actual >= target) %}
-    <div class="kpi-card {% if target == 0 %}{% elif on_pace %}on{% else %}behind{% endif %}">
+    {% set target = goals[m] %}
+    {% set on_pace = actual >= target %}
+    <div class="kpi-card {% if on_pace %}on{% else %}behind{% endif %}">
       <div class="label">{{ metric_labels[m] }}</div>
-      <div class="value">{{ actual }}{% if target %}<span style="font-size:0.85rem; color:var(--text-dim);"> / {{ target }}</span>{% endif %}</div>
-      {% if target == 0 %}
-        <div class="target">No goal — set one below</div>
-      {% elif on_pace %}
-        <div class="target">On pace ✓</div>
+      <div class="value">{{ actual }}<span style="font-size:0.85rem; color:var(--text-dim);"> / {{ target }}</span></div>
+      {% if on_pace %}
+        <div class="target">✓ Hit goal</div>
       {% else %}
-        <div class="target">Behind by {{ target - actual }}</div>
+        <div class="target">Need {{ target - actual }} more</div>
       {% endif %}
     </div>
   {% endfor %}
 </div>
 
-<!-- Set weekly goal -->
-<details class="card" style="margin-bottom:1rem; padding:0.6rem 0.9rem;">
-  <summary style="font-weight:600; font-size:0.85rem; cursor:pointer;">Set a weekly goal</summary>
-  <form method="post" action="/pipeline/goal" class="form-row" style="margin-top:0.6rem;">
-    <label>Metric
-      <select name="metric" required>
-        {% for m in metrics %}<option value="{{ m }}">{{ metric_labels[m] }}</option>{% endfor %}
-      </select>
-    </label>
-    <label>Target for this week
-      <input type="number" name="target" min="0" required value="0">
-    </label>
-    <button type="submit">Save goal</button>
-  </form>
-</details>
+<!-- Completion stats (all-time) -->
+{% if completion.completed_weeks > 0 %}
+<div class="grid-4" style="margin-bottom:1rem;">
+  <div class="card metric-card" style="border-color:var(--accent);">
+    <div class="label">🏆 Perfect weeks</div>
+    <div class="value" style="color:var(--accent);">{{ completion.perfect_weeks }}</div>
+    <div class="change">All 4 goals hit · of {{ completion.completed_weeks }} weeks</div>
+  </div>
+  <div class="card metric-card">
+    <div class="label">✓ Total goals hit</div>
+    <div class="value">{{ completion.total_hits }}<span style="font-size:0.85rem; color:var(--text-dim);"> / {{ completion.possible_hits }}</span></div>
+    <div class="change">
+      {% if completion.possible_hits %}
+        {{ ((completion.total_hits / completion.possible_hits) * 100)|round(0)|int }}% hit rate
+      {% endif %}
+    </div>
+  </div>
+  <div class="card metric-card">
+    <div class="label">Weeks tracked</div>
+    <div class="value">{{ completion.completed_weeks }}</div>
+    <div class="change">Since first activity</div>
+  </div>
+  <div class="card metric-card" style="font-size:0.72rem; color:var(--text-dim); padding-top:0.9rem;">
+    <div style="font-weight:600; color:var(--text); margin-bottom:0.3rem;">Weekly targets</div>
+    {% for m in metrics %}
+      <div>{{ metric_labels[m] }}: <strong style="color:var(--text);">{{ goals[m] }}</strong>/wk</div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 
 <!-- ── Trailing 8-week chart ───────────────────────────────────── -->
 <h2 style="margin:1.25rem 0 0.5rem; font-size:1.05rem;">Last 8 weeks
