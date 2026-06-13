@@ -37,8 +37,9 @@ async def lifespan(app: FastAPI):
     logger.info("Market Pulse starting up...")
     init_db()
     try:
-        from crm import maybe_seed
+        from crm import maybe_seed, maybe_seed_templates
         maybe_seed()
+        maybe_seed_templates()
     except Exception as e:
         logger.warning("CRM seed skipped: %s", e)
     yield
@@ -316,6 +317,7 @@ async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = "
         return RedirectResponse("/admin/login?redirect=/pipeline", status_code=303)
     from datetime import date as _date, datetime as _dt, timedelta as _td
     from crm import (STAGES, METRICS, STAGE_LABELS, METRIC_LABELS,
+                     INDUSTRIES, EMAIL_TRIGGERS,
                      list_contacts, arr_rollup, weekly_kpis,
                      get_weekly_goals, iso_week_range,
                      funnel_conversion, trailing_weekly_kpis,
@@ -355,6 +357,8 @@ async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = "
         "trailing": trailing_weekly_kpis(weeks=8),
         "completion": goals_completion_stats(),
         "path": arr_path_to_goal(),
+        "industries": INDUSTRIES,
+        "email_triggers": EMAIL_TRIGGERS,
     })
 
 
@@ -381,6 +385,10 @@ async def pipeline_add_contact(request: Request):
     stage = (form.get("stage") or "QUEUED").strip()
     if stage not in STAGES:
         stage = "QUEUED"
+    industry = (form.get("industry") or "").strip() or None
+    from crm import INDUSTRIES as _INDS
+    if industry and industry not in _INDS:
+        industry = None
     add_contact(
         name=(form.get("name") or "").strip(),
         title=(form.get("title") or "").strip() or None,
@@ -393,6 +401,7 @@ async def pipeline_add_contact(request: Request):
         next_date=_date(form.get("next_date")),
         subject=(form.get("subject") or "").strip() or None,
         notes=(form.get("notes") or "").strip() or None,
+        industry=industry,
     )
     return RedirectResponse("/pipeline", status_code=303)
 
@@ -442,6 +451,85 @@ async def pipeline_set_goal(request: Request):
     if metric in METRICS and target >= 0:
         set_weekly_goal(metric, target)
     return RedirectResponse("/pipeline", status_code=303)
+
+
+@app.post("/pipeline/industry")
+async def pipeline_set_industry(request: Request):
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import set_contact_industry, INDUSTRIES
+    form = await request.form()
+    try:
+        contact_id = int(form.get("contact_id", "0"))
+    except ValueError:
+        contact_id = 0
+    industry = (form.get("industry") or "").strip() or None
+    if industry and industry not in INDUSTRIES:
+        industry = None
+    if contact_id:
+        set_contact_industry(contact_id, industry)
+    return RedirectResponse("/pipeline", status_code=303)
+
+
+@app.get("/api/pipeline/email/{contact_id}")
+async def api_pipeline_email(request: Request, contact_id: int):
+    """Render the suggested next-step email for a contact. Returns
+    JSON the modal can drop into its textareas."""
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import list_contacts, suggest_email_for_contact
+    contact = next((c for c in list_contacts() if c["id"] == contact_id), None)
+    if not contact:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    payload = suggest_email_for_contact(contact)
+    payload["contact_name"]  = contact.get("name", "")
+    payload["contact_email"] = contact.get("email", "")
+    payload["stage"]         = contact.get("stage", "")
+    return JSONResponse(payload)
+
+
+@app.get("/pipeline/templates")
+async def pipeline_templates(request: Request):
+    if not _check_admin_token(request):
+        return RedirectResponse("/admin/login?redirect=/pipeline/templates",
+                                status_code=303)
+    from crm import INDUSTRIES, EMAIL_TRIGGERS, list_templates
+    return templates.TemplateResponse("pipeline_templates.html", {
+        "request": request,
+        "industries": INDUSTRIES,
+        "email_triggers": EMAIL_TRIGGERS,
+        "templates_list": list_templates(),
+    })
+
+
+@app.post("/pipeline/template")
+async def pipeline_save_template(request: Request):
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import upsert_template
+    form = await request.form()
+    upsert_template(
+        industry=(form.get("industry") or "").strip(),
+        trigger=(form.get("trigger") or "").strip(),
+        subject=(form.get("subject") or "").strip(),
+        body=(form.get("body") or "").strip(),
+    )
+    return RedirectResponse("/pipeline/templates", status_code=303)
+
+
+@app.post("/pipeline/template/delete")
+async def pipeline_delete_template(request: Request):
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import delete_template
+    form = await request.form()
+    try:
+        tid = int(form.get("template_id", "0"))
+    except ValueError:
+        tid = 0
+    if tid:
+        delete_template(tid)
+    return RedirectResponse("/pipeline/templates", status_code=303)
 
 
 # ─── Stock lookup (public) ──────────────────────────────────────────

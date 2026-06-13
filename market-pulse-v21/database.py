@@ -183,6 +183,25 @@ def init_db():
                 UNIQUE(week_start, metric)
             )
         """)
+        # Email templates per (industry, trigger).
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS crm_email_templates (
+                id          SERIAL PRIMARY KEY,
+                industry    VARCHAR(80) NOT NULL,
+                trigger     VARCHAR(40) NOT NULL,
+                subject     VARCHAR(255) NOT NULL,
+                body        TEXT NOT NULL,
+                created_at  TIMESTAMP DEFAULT NOW(),
+                updated_at  TIMESTAMP DEFAULT NOW(),
+                UNIQUE(industry, trigger)
+            )
+        """)
+        # Industry tag on existing contacts (added after launch — guard
+        # with ADD COLUMN IF NOT EXISTS so re-init is idempotent).
+        cur.execute("""
+            ALTER TABLE crm_contacts
+            ADD COLUMN IF NOT EXISTS industry VARCHAR(80)
+        """)
 
         conn.commit()
         cur.close()

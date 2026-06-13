@@ -15,6 +15,30 @@
   .crm-card .actions { display:flex; gap:0.35rem; flex-wrap:wrap; margin-top:0.45rem; }
   .crm-card .del { background:transparent; color:var(--text-dim); border:none; cursor:pointer; font-size:0.65rem; padding:0.15rem 0.3rem; }
   .crm-card .del:hover { color:#ef4444; }
+  .industry-tag { display:inline-block; font-size:0.65rem; background:rgba(99,102,241,0.14); color:var(--accent2); padding:1px 6px; border-radius:99px; font-weight:600; margin-left:0.35rem; }
+  .email-btn { background:transparent; color:var(--accent2); border:1px solid var(--border); padding:0.2rem 0.5rem; border-radius:4px; font-size:0.7rem; cursor:pointer; }
+  .email-btn:hover { background:rgba(99,102,241,0.08); }
+
+  /* Email modal */
+  .modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:200; align-items:center; justify-content:center; padding:1rem; }
+  .modal-bg.show { display:flex; }
+  .modal { background:var(--surface); border:1px solid var(--border); border-radius:10px; max-width:680px; width:100%; max-height:92vh; overflow-y:auto; padding:1rem 1.1rem; }
+  .modal h3 { margin:0 0 0.4rem; font-size:1rem; }
+  .modal label { font-size:0.66rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em; }
+  .modal input[type="text"], .modal textarea {
+    width:100%; box-sizing:border-box; background:var(--surface2);
+    border:1px solid var(--border); border-radius:6px;
+    padding:0.5rem 0.6rem; color:var(--text); font-size:0.85rem;
+    margin-top:0.2rem; outline:none; font-family:inherit;
+  }
+  .modal textarea { resize:vertical; min-height:240px; line-height:1.5; white-space:pre-wrap; }
+  .modal .row { display:flex; gap:0.5rem; align-items:center; margin-top:0.6rem; flex-wrap:wrap; }
+  .modal button { padding:0.4rem 0.85rem; border-radius:6px; cursor:pointer; font-size:0.8rem; border:1px solid var(--border); background:var(--surface2); color:var(--text); }
+  .modal button.primary { background:var(--accent2); color:white; border-color:var(--accent2); font-weight:600; }
+  .modal .pill { font-size:0.7rem; color:var(--text-dim); background:var(--surface2); padding:2px 8px; border-radius:99px; }
+  .modal .copy-ok { color:var(--accent); font-size:0.75rem; font-weight:600; margin-left:0.5rem; opacity:0; transition:opacity 0.2s; }
+  .modal .copy-ok.show { opacity:1; }
+  .modal .warn { font-size:0.75rem; color:var(--yellow); margin:0.5rem 0 0; }
 
   .kpi-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:0.7rem; }
   @media (max-width: 760px) { .kpi-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
@@ -235,7 +259,7 @@
       </div>
       {% for c in contacts_by_stage[s] %}
         <div class="crm-card">
-          <div class="name">{{ c.name }}</div>
+          <div class="name">{{ c.name }}{% if c.industry %}<span class="industry-tag">{{ c.industry }}</span>{% endif %}</div>
           <div class="meta">
             {{ c.title or '' }}{% if c.title and c.agency %} · {% endif %}{{ c.agency or '' }}
           </div>
@@ -250,12 +274,22 @@
           <div class="actions">
             <form method="post" action="/pipeline/stage">
               <input type="hidden" name="contact_id" value="{{ c.id }}">
-              <select name="stage" onchange="this.form.submit()">
+              <select name="stage" onchange="this.form.submit()" aria-label="Stage">
                 {% for st in stages %}
                   <option value="{{ st }}" {% if st == c.stage %}selected{% endif %}>{{ stage_labels[st] }}</option>
                 {% endfor %}
               </select>
             </form>
+            <form method="post" action="/pipeline/industry">
+              <input type="hidden" name="contact_id" value="{{ c.id }}">
+              <select name="industry" onchange="this.form.submit()" aria-label="Industry" style="max-width:140px;">
+                <option value="">— industry —</option>
+                {% for ind in industries %}
+                  <option value="{{ ind }}" {% if ind == c.industry %}selected{% endif %}>{{ ind }}</option>
+                {% endfor %}
+              </select>
+            </form>
+            <button type="button" class="email-btn" onclick="openEmailModal({{ c.id }})">📧 Email</button>
             <form method="post" action="/pipeline/delete" onsubmit="return confirm('Delete {{ c.name }}?');">
               <input type="hidden" name="contact_id" value="{{ c.id }}">
               <button type="submit" class="del">delete</button>
@@ -297,6 +331,12 @@
     <label>Title<input type="text" name="title"></label>
     <label>Agency<input type="text" name="agency"></label>
     <label>Email<input type="email" name="email"></label>
+    <label>Industry
+      <select name="industry">
+        <option value="">— none —</option>
+        {% for ind in industries %}<option value="{{ ind }}">{{ ind }}</option>{% endfor %}
+      </select>
+    </label>
     <label>Stage
       <select name="stage">
         {% for s in stages %}<option value="{{ s }}" {% if s == 'QUEUED' %}selected{% endif %}>{{ stage_labels[s] }}</option>{% endfor %}
@@ -313,4 +353,119 @@
     <button type="submit">Add contact</button>
   </form>
 </details>
+
+<p style="font-size:0.78rem; color:var(--text-dim); margin:0 0 1rem;">
+  <a href="/pipeline/templates" style="color:var(--accent2);">Manage email templates →</a>
+</p>
+
+<!-- ── Email modal ─────────────────────────────────────────────── -->
+<div id="emailModalBg" class="modal-bg" onclick="if(event.target===this)closeEmailModal()">
+  <div class="modal">
+    <h3 id="emailTitle">Email</h3>
+    <div class="row" style="margin-top:0;">
+      <span id="emailTrigger" class="pill"></span>
+      <span id="emailIndustry" class="pill"></span>
+      <span id="emailStage" class="pill"></span>
+    </div>
+    <p id="emailWarn" class="warn" style="display:none;"></p>
+
+    <div style="margin-top:0.8rem;">
+      <label>Subject</label>
+      <input type="text" id="emailSubject">
+    </div>
+    <div style="margin-top:0.6rem;">
+      <label>Body</label>
+      <textarea id="emailBody"></textarea>
+    </div>
+
+    <div class="row">
+      <button class="primary" onclick="copyEmail('subject')">Copy subject</button>
+      <button class="primary" onclick="copyEmail('body')">Copy body</button>
+      <button onclick="copyEmail('both')">Copy subject + body</button>
+      <a id="emailMailto" href="#" target="_blank" rel="noopener" style="text-decoration:none;">
+        <button>Open in mail client ↗</button>
+      </a>
+      <span id="copyOk" class="copy-ok">Copied ✓</span>
+      <span style="flex:1;"></span>
+      <button onclick="closeEmailModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let _emailCtx = null;
+
+async function openEmailModal(contactId) {
+  try {
+    const r = await fetch(`/api/pipeline/email/${contactId}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    _emailCtx = data;
+    document.getElementById('emailTitle').textContent =
+      `Email — ${data.contact_name || ''}`;
+    document.getElementById('emailTrigger').textContent =
+      data.trigger ? `${data.trigger} · ${data.trigger_label || ''}` : 'No trigger';
+    document.getElementById('emailIndustry').textContent =
+      data.industry ? data.industry : 'No industry';
+    document.getElementById('emailStage').textContent =
+      data.stage ? `Stage: ${data.stage}` : '';
+    document.getElementById('emailSubject').value = data.subject || '';
+    document.getElementById('emailBody').value = data.body || '';
+
+    const warn = document.getElementById('emailWarn');
+    if (!data.has_template) {
+      warn.style.display = '';
+      warn.textContent = 'No template found for this industry + trigger yet. Add one in Manage email templates.';
+    } else if (data.fallback_industry) {
+      warn.style.display = '';
+      warn.textContent = `Using a template from a different industry as a fallback. Add one for "${_emailCtx.industry || 'this industry'}" to tailor the message.`;
+    } else {
+      warn.style.display = 'none';
+    }
+
+    // Update mailto link.
+    updateMailto();
+
+    document.getElementById('emailModalBg').classList.add('show');
+  } catch (e) {
+    alert('Could not load email: ' + e.message);
+  }
+}
+
+function updateMailto() {
+  if (!_emailCtx) return;
+  const subj = encodeURIComponent(document.getElementById('emailSubject').value);
+  const body = encodeURIComponent(document.getElementById('emailBody').value);
+  const to = encodeURIComponent(_emailCtx.contact_email || '');
+  document.getElementById('emailMailto').href =
+    `mailto:${to}?subject=${subj}&body=${body}`;
+}
+
+['emailSubject', 'emailBody'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateMailto);
+});
+
+function closeEmailModal() {
+  document.getElementById('emailModalBg').classList.remove('show');
+}
+
+function copyEmail(what) {
+  const subject = document.getElementById('emailSubject').value;
+  const body = document.getElementById('emailBody').value;
+  let text = '';
+  if (what === 'subject') text = subject;
+  else if (what === 'body') text = body;
+  else text = `${subject}\n\n${body}`;
+  navigator.clipboard.writeText(text).then(() => {
+    const ok = document.getElementById('copyOk');
+    ok.classList.add('show');
+    setTimeout(() => ok.classList.remove('show'), 1400);
+  }).catch(() => alert('Copy failed — your browser may have blocked clipboard access.'));
+}
+
+// Close modal on Escape.
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeEmailModal();
+});
+</script>
 {% endblock %}
