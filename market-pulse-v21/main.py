@@ -815,68 +815,173 @@ async def api_pipeline_ai_config(request: Request):
     })
 
 
+def _parse_iso_date(s: str, default):
+    from datetime import datetime as _dt
+    raw = (s or "").strip()
+    if not raw:
+        return default
+    try:
+        return _dt.strptime(raw, "%Y-%m-%d").date()
+    except ValueError:
+        return default
+
+
 @app.post("/api/pipeline/call/{contact_id}/auto")
 async def api_pipeline_call_auto(request: Request, contact_id: int):
-    """Run the full 4-step discovery-call chain via Claude API,
-    upsert artifacts + scorecard, return the result."""
+    """Run the full discovery-call chain via Claude API as a streamed
+    NDJSON response so the UI can show per-step progress. Each line
+    is a JSON object: {"step":"…","label":"…"} for progress, then a
+    final {"done": true, "extraction_json": …, ...} payload."""
     if not _check_admin_token(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     body = await request.json()
     transcript = (body.get("transcript") or "").strip()
     if not transcript:
         return JSONResponse({"error": "missing transcript"}, status_code=400)
-    raw_date = (body.get("call_date") or "").strip()
-    from datetime import datetime as _dt, date as _date
-    call_date = _date.today()
-    if raw_date:
+    from datetime import date as _date
+    call_date = _parse_iso_date(body.get("call_date") or "", _date.today())
+
+    async def gen():
+        import json as _json
+        import asyncio as _asyncio
+        from concurrent.futures import ThreadPoolExecutor
+        from crm import (call_claude, _strip_code_fence, render_prompt,
+                         DISCOVERY_PROMPT_EXTRACT, DISCOVERY_PROMPT_EXEC_SUMMARY,
+                         DISCOVERY_PROMPT_PAIN, DISCOVERY_PROMPT_MVP,
+                         upsert_call)
+
+        def emit(obj):
+            return (_json.dumps(obj) + "\n").encode("utf-8")
+
         try:
-            call_date = _dt.strptime(raw_date, "%Y-%m-%d").date()
-        except ValueError:
-            pass
-    from crm import process_discovery_call_auto
-    import asyncio as _asyncio
-    try:
-        result = await _asyncio.to_thread(
-            process_discovery_call_auto, contact_id, transcript, call_date
-        )
-        return JSONResponse({"ok": True, **result})
-    except RuntimeError as e:
-        return JSONResponse({"error": str(e)}, status_code=400)
-    except Exception as e:
-        logger.exception("discovery auto-process failed")
-        return JSONResponse({"error": str(e)}, status_code=500)
+            yield emit({"step": "extract", "label": "Step 1/3 — Extracting structured data"})
+            extraction = await _asyncio.to_thread(
+                lambda: _strip_code_fence(call_claude(
+                    render_prompt(DISCOVERY_PROMPT_EXTRACT, transcript=transcript),
+                    max_tokens=8192,
+                ))
+            )
+
+            yield emit({"step": "artifacts",
+                        "label": "Step 2/3 — Generating exec summary, pain analysis, MVP scope (in parallel)"})
+
+            def run_artifacts():
+                prompts = [
+                    ("exec_summary",  render_prompt(DISCOVERY_PROMPT_EXEC_SUMMARY, extraction_json=extraction)),
+                    ("pain_analysis", render_prompt(DISCOVERY_PROMPT_PAIN,         extraction_json=extraction)),
+                    ("mvp_scope",     render_prompt(DISCOVERY_PROMPT_MVP,          extraction_json=extraction)),
+                ]
+                with ThreadPoolExecutor(max_workers=3) as ex:
+                    futures = {k: ex.submit(call_claude, p, max_tokens=2048) for k, p in prompts}
+                    return {k: f.result().strip() for k, f in futures.items()}
+
+            outputs = await _asyncio.to_thread(run_artifacts)
+
+            yield emit({"step": "save", "label": "Step 3/3 — Saving artifacts + scoring"})
+            sc = await _asyncio.to_thread(upsert_call,
+                contact_id=contact_id,
+                call_date=call_date,
+                transcript=transcript,
+                extraction_json=extraction,
+                exec_summary=outputs["exec_summary"],
+                pain_analysis=outputs["pain_analysis"],
+                mvp_scope=outputs["mvp_scope"],
+            )
+
+            yield emit({
+                "done": True,
+                "extraction_json": extraction,
+                "exec_summary":    outputs["exec_summary"],
+                "pain_analysis":   outputs["pain_analysis"],
+                "mvp_scope":       outputs["mvp_scope"],
+                "scorecard":       sc,
+            })
+        except RuntimeError as e:
+            yield emit({"error": str(e)})
+        except Exception as e:
+            logger.exception("discovery auto-process failed")
+            yield emit({"error": str(e)})
+
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(gen(), media_type="application/x-ndjson")
 
 
 @app.post("/api/pipeline/session/{contact_id}/auto")
 async def api_pipeline_session_auto(request: Request, contact_id: int):
-    """Run the full 4-step working-session chain via Claude API,
-    upsert artifacts + scorecard, return the result."""
+    """Same streamed shape as the discovery-call auto endpoint, but
+    for the working-session chain."""
     if not _check_admin_token(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     body = await request.json()
     transcript = (body.get("transcript") or "").strip()
     if not transcript:
         return JSONResponse({"error": "missing transcript"}, status_code=400)
-    raw_date = (body.get("session_date") or "").strip()
-    from datetime import datetime as _dt, date as _date
-    session_date = _date.today()
-    if raw_date:
+    from datetime import date as _date
+    session_date = _parse_iso_date(body.get("session_date") or "", _date.today())
+
+    async def gen():
+        import json as _json
+        import asyncio as _asyncio
+        from concurrent.futures import ThreadPoolExecutor
+        from crm import (call_claude, _strip_code_fence, render_prompt,
+                         WORKING_PROMPT_EXTRACT, WORKING_PROMPT_LOCKED_SCOPE,
+                         WORKING_PROMPT_CRITERIA, WORKING_PROMPT_PROPOSAL,
+                         upsert_session)
+
+        def emit(obj):
+            return (_json.dumps(obj) + "\n").encode("utf-8")
+
         try:
-            session_date = _dt.strptime(raw_date, "%Y-%m-%d").date()
-        except ValueError:
-            pass
-    from crm import process_working_session_auto
-    import asyncio as _asyncio
-    try:
-        result = await _asyncio.to_thread(
-            process_working_session_auto, contact_id, transcript, session_date
-        )
-        return JSONResponse({"ok": True, **result})
-    except RuntimeError as e:
-        return JSONResponse({"error": str(e)}, status_code=400)
-    except Exception as e:
-        logger.exception("working-session auto-process failed")
-        return JSONResponse({"error": str(e)}, status_code=500)
+            yield emit({"step": "extract", "label": "Step 1/3 — Extracting structured data"})
+            extraction = await _asyncio.to_thread(
+                lambda: _strip_code_fence(call_claude(
+                    render_prompt(WORKING_PROMPT_EXTRACT, transcript=transcript),
+                    max_tokens=8192,
+                ))
+            )
+
+            yield emit({"step": "artifacts",
+                        "label": "Step 2/3 — Generating locked scope, success criteria, proposal draft (in parallel)"})
+
+            def run_artifacts():
+                prompts = [
+                    ("locked_scope",     render_prompt(WORKING_PROMPT_LOCKED_SCOPE, extraction_json=extraction)),
+                    ("success_criteria", render_prompt(WORKING_PROMPT_CRITERIA,    extraction_json=extraction)),
+                    ("proposal_draft",   render_prompt(WORKING_PROMPT_PROPOSAL,    extraction_json=extraction)),
+                ]
+                with ThreadPoolExecutor(max_workers=3) as ex:
+                    futures = {k: ex.submit(call_claude, p, max_tokens=2048) for k, p in prompts}
+                    return {k: f.result().strip() for k, f in futures.items()}
+
+            outputs = await _asyncio.to_thread(run_artifacts)
+
+            yield emit({"step": "save", "label": "Step 3/3 — Saving artifacts + scoring"})
+            sc = await _asyncio.to_thread(upsert_session,
+                contact_id=contact_id,
+                session_date=session_date,
+                transcript=transcript,
+                extraction_json=extraction,
+                locked_scope=outputs["locked_scope"],
+                success_criteria=outputs["success_criteria"],
+                proposal_draft=outputs["proposal_draft"],
+            )
+
+            yield emit({
+                "done": True,
+                "extraction_json":  extraction,
+                "locked_scope":     outputs["locked_scope"],
+                "success_criteria": outputs["success_criteria"],
+                "proposal_draft":   outputs["proposal_draft"],
+                "scorecard":        sc,
+            })
+        except RuntimeError as e:
+            yield emit({"error": str(e)})
+        except Exception as e:
+            logger.exception("working-session auto-process failed")
+            yield emit({"error": str(e)})
+
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(gen(), media_type="application/x-ndjson")
 
 
 # ─── Stock lookup (public) ──────────────────────────────────────────
