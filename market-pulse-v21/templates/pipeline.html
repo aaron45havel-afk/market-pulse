@@ -264,7 +264,10 @@
 </div>
 
 <!-- Pipeline columns -->
-<h2 style="margin:1.25rem 0 0.5rem; font-size:1.05rem;">Pipeline</h2>
+<div style="display:flex; justify-content:space-between; align-items:baseline; margin:1.25rem 0 0.5rem; gap:0.5rem; flex-wrap:wrap;">
+  <h2 style="margin:0; font-size:1.05rem;">Pipeline</h2>
+  <button type="button" onclick="openAddContactModal()" style="background:var(--accent2); color:white; border:none; padding:0.4rem 0.9rem; border-radius:6px; cursor:pointer; font-size:0.82rem; font-weight:600;">+ Add contact</button>
+</div>
 <div class="crm-grid" style="margin-bottom:1rem;">
   {% for s in stages if s != 'LOST' %}
     <div class="crm-col">
@@ -328,36 +331,62 @@
 </details>
 {% endif %}
 
-<!-- Add contact -->
-<details class="card" style="margin-bottom:1rem; padding:0.6rem 0.9rem;">
-  <summary style="font-weight:600; font-size:0.85rem; cursor:pointer;">Add a contact</summary>
-  <form method="post" action="/pipeline/contact" class="form-row" style="margin-top:0.6rem;">
-    <label>Name<input type="text" name="name" required></label>
-    <label>Title<input type="text" name="title"></label>
-    <label>Agency<input type="text" name="agency"></label>
-    <label>Email<input type="email" name="email"></label>
-    <label>Industry
-      <select name="industry">
-        <option value="">— none —</option>
-        {% for ind in industries %}<option value="{{ ind }}">{{ ind }}</option>{% endfor %}
-      </select>
-    </label>
-    <label>Stage
-      <select name="stage">
-        {% for s in stages %}<option value="{{ s }}" {% if s == 'QUEUED' %}selected{% endif %}>{{ stage_labels[s] }}</option>{% endfor %}
-      </select>
-    </label>
-    <label>Pilot $<input type="number" name="pilot_value" min="0" value="0"></label>
-    <label>Recurring $/yr<input type="number" name="recurring_value" min="0" value="0"></label>
-    <label>Date emailed<input type="date" name="date_emailed"></label>
-    <label>Next date<input type="date" name="next_date"></label>
-    <label style="flex:1; min-width:240px;">Subject line<input type="text" name="subject"></label>
-    <label style="flex:1 0 100%; min-width:300px;">Notes
-      <textarea name="notes" rows="2" style="width:100%; resize:vertical;"></textarea>
-    </label>
-    <button type="submit">Add contact</button>
-  </form>
-</details>
+<!-- ── Add contact modal ────────────────────────────────────────── -->
+<style>
+  #addContactModalBg .modal { max-width:560px; }
+  .add-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.55rem 0.75rem; }
+  .add-grid label { display:flex; flex-direction:column; gap:3px; font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em; }
+  .add-grid label.span2 { grid-column:1 / -1; }
+  .add-grid input, .add-grid select, .add-grid textarea {
+    background:var(--surface2); border:1px solid var(--border); border-radius:6px;
+    padding:0.4rem 0.55rem; color:var(--text); font-size:0.85rem; outline:none;
+    font-family:inherit; font-weight:400; text-transform:none; letter-spacing:0;
+  }
+  .add-grid input:focus, .add-grid select:focus, .add-grid textarea:focus { border-color:var(--accent2); }
+  .add-grid textarea { resize:vertical; min-height:70px; line-height:1.5; }
+</style>
+<div id="addContactModalBg" class="modal-bg" onclick="if(event.target===this)closeAddContactModal()">
+  <div class="modal">
+    <h3 style="margin:0 0 0.6rem; font-size:1.05rem;">Add a contact</h3>
+    <form method="post" action="/pipeline/contact" class="add-grid">
+      <label class="span2">Name<input type="text" name="name" required autofocus></label>
+      <label>Title<input type="text" name="title"></label>
+      <label>Agency<input type="text" name="agency"></label>
+      <label class="span2">Email<input type="email" name="email"></label>
+      <label>Industry
+        <select name="industry">
+          <option value="">— none —</option>
+          {% for ind in industries %}<option value="{{ ind }}">{{ ind }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Stage
+        <select name="stage">
+          {% for s in stages %}<option value="{{ s }}" {% if s == 'QUEUED' %}selected{% endif %}>{{ stage_labels[s] }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Pilot $<input type="number" name="pilot_value" min="0" value="0"></label>
+      <label>Recurring $/yr<input type="number" name="recurring_value" min="0" value="0"></label>
+      <label>Date emailed<input type="date" name="date_emailed"></label>
+      <label>Next date<input type="date" name="next_date"></label>
+      <label class="span2">Subject line<input type="text" name="subject" placeholder="The email subject line you used / will use"></label>
+      <label class="span2">Notes<textarea name="notes" rows="3" placeholder="Anything worth remembering — past context, fit signals, hooks"></textarea></label>
+      <div class="span2" style="display:flex; gap:0.5rem; align-items:center; margin-top:0.3rem;">
+        <button type="submit" style="background:var(--accent2); color:white; border:none; padding:0.45rem 1rem; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.85rem;">Add contact</button>
+        <button type="button" onclick="closeAddContactModal()" style="background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:0.45rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem;">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+function openAddContactModal() {
+  document.getElementById('addContactModalBg').classList.add('show');
+  const n = document.querySelector('#addContactModalBg input[name="name"]');
+  if (n) setTimeout(() => n.focus(), 30);
+}
+function closeAddContactModal() {
+  document.getElementById('addContactModalBg').classList.remove('show');
+}
+</script>
 
 <p style="font-size:0.78rem; color:var(--text-dim); margin:0 0 1rem;">
   <a href="/pipeline/templates" style="color:var(--accent2);">Manage email templates →</a>
@@ -576,6 +605,7 @@ document.addEventListener('keydown', e => {
     closeEmailModal();
     closeCallModal();
     closeDetailModal();
+    closeAddContactModal();
   }
 });
 
