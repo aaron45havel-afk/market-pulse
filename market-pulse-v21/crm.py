@@ -777,11 +777,25 @@ def delete_template(template_id: int) -> bool:
 
 def render_template(template: dict, contact: dict,
                     sender_name: str = SENDER_NAME) -> dict:
-    """Substitute {first_name} / {name} / {title} / {agency} /
-    {my_name} in subject + body, plus {call_summary} / {win_condition}
-    from the contact's most recent discovery call when one exists.
-    Falls through to the raw string when a template references
-    something we don't know about."""
+    """Substitute template placeholders.
+
+    Always-available variables: {first_name}, {name}, {title},
+    {agency}, {my_name}.
+
+    Discovery-call variables (filled from the contact's most recent
+    saved call when one exists, else empty strings):
+      {call_summary}    — Stage-2 executive summary
+      {pain_analysis}   — Stage-2 ranked pain analysis
+      {mvp_scope}       — Stage-2 MVP scope markdown
+      {win_condition}   — extraction.win_condition (their words)
+      {root_problem}    — extraction.problems[is_root_problem].description
+      {problem_quote}   — supporting_quote of the root problem
+      {concrete_story}  — extraction.concrete_story
+      {process_name}    — extraction.core_process.name
+      {time_cost}       — first metric formatted as "value unit"
+
+    Falls through to the raw string if a template references a
+    placeholder we don't know about."""
     name = (contact.get("name") or "").strip()
     first_name = name.split()[0] if name else ""
     variables = {
@@ -792,6 +806,13 @@ def render_template(template: dict, contact: dict,
         "my_name":        sender_name,
         "call_summary":   "",
         "win_condition":  "",
+        "root_problem":   "",
+        "problem_quote":  "",
+        "concrete_story": "",
+        "process_name":   "",
+        "time_cost":      "",
+        "pain_analysis":  "",
+        "mvp_scope":      "",
     }
 
     # Pull call data if the contact has had a discovery call.
@@ -800,11 +821,31 @@ def render_template(template: dict, contact: dict,
         try:
             call = get_call_for_contact(cid)
             if call:
-                variables["call_summary"] = (call.get("exec_summary") or "").strip()
+                variables["call_summary"]  = (call.get("exec_summary") or "").strip()
+                variables["pain_analysis"] = (call.get("pain_analysis") or "").strip()
+                variables["mvp_scope"]     = (call.get("mvp_scope") or "").strip()
                 try:
                     import json as _json
                     ex = _json.loads(call.get("extraction_json") or "{}")
-                    variables["win_condition"] = (ex.get("win_condition") or "").strip()
+                    variables["win_condition"]  = (ex.get("win_condition") or "").strip()
+                    variables["concrete_story"] = (ex.get("concrete_story") or "").strip()
+                    cp = ex.get("core_process") or {}
+                    variables["process_name"]   = (cp.get("name") or "").strip()
+                    # Root problem + verbatim quote.
+                    root = next((p for p in (ex.get("problems") or [])
+                                 if p.get("is_root_problem")), None)
+                    if root:
+                        variables["root_problem"]  = (root.get("description") or "").strip()
+                        variables["problem_quote"] = (root.get("supporting_quote") or "").strip()
+                    # First metric with a value+unit gets used as the
+                    # time/cost shorthand. Aaron can edit the email if
+                    # he wants a different metric featured.
+                    for m in (ex.get("metrics") or []):
+                        val  = str(m.get("value") or "").strip()
+                        unit = (m.get("unit") or "").strip()
+                        if val and unit:
+                            variables["time_cost"] = f"{val} {unit}"
+                            break
                 except (ValueError, TypeError):
                     pass
         except Exception:
@@ -1354,32 +1395,64 @@ SEED_TEMPLATES = [
               "Looking forward to it.\n\n"
               "{my_name}"),
     ),
+    dict(
+        industry="Government / Municipal Finance",
+        trigger="POST_CALL",
+        subject="Recap + 30-min working session — {process_name}",
+        body=("Hi {first_name},\n\n"
+              "Thanks for the time today. Quick recap so we're aligned before "
+              "the working session:\n\n"
+              "The core problem in your words: \"{problem_quote}\"\n\n"
+              "What it's costing you today: roughly {time_cost} of focused "
+              "time each month.\n\n"
+              "What a win looks like for you: {win_condition}\n\n"
+              "Where I'd start: a thin visibility layer that pulls from your "
+              "accounting system and a lightweight \"what's coming\" input "
+              "from each project manager — surfaced as one budget-vs-actual "
+              "view per project. No change to how the PMs or accounting work "
+              "today. Goal: make the monthly meetings pointed instead of "
+              "exploratory.\n\n"
+              "Before I scope anything for real, I'd like to pressure-test "
+              "it together. A 30-minute working session — we'd cover:\n"
+              "• Which accounting software you're on and how I'd pull from it\n"
+              "• What dimensions matter most to track (code, project, vendor)\n"
+              "• What defines a \"budget bust\" worth flagging\n"
+              "• Timing — is this for the next monthly meeting or a longer rollout?\n\n"
+              "What works next week? Send me two or three windows and I'll "
+              "lock one in.\n\n"
+              "{my_name}"),
+    ),
 ]
 
 
 def maybe_seed_templates() -> int:
-    """Idempotent: insert only if the templates table is empty. Called
-    once at app start, after init_db."""
+    """Idempotent at the (industry, trigger) level: inserts any seed
+    template not already in the DB. Existing rows are left alone so
+    user-edited copy doesn't get overwritten. Called once at app
+    start, after init_db."""
     conn = _get_conn()
     if not conn:
         return 0
+    existing: set[tuple[str, str]] = set()
     try:
         cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM crm_email_templates")
-        if cur.fetchone()[0] > 0:
-            cur.close()
-            return 0
+        cur.execute("SELECT industry, trigger FROM crm_email_templates")
+        existing = {(r[0], r[1]) for r in cur.fetchall()}
         cur.close()
     finally:
         conn.close()
 
     inserted = 0
     for t in SEED_TEMPLATES:
+        key = (t.get("industry"), t.get("trigger"))
+        if key in existing:
+            continue
         try:
             if upsert_template(**t):
                 inserted += 1
         except Exception as e:
             logger.warning("Seed template %s/%s failed: %s",
                            t.get("industry"), t.get("trigger"), e)
-    logger.info("CRM seed: inserted %d email templates", inserted)
+    if inserted:
+        logger.info("CRM seed: inserted %d new email templates", inserted)
     return inserted
