@@ -439,8 +439,9 @@ function closeAddContactModal() {
     </div>
 
     <div class="row" style="margin-top:0.8rem; display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-      <button class="primary" onclick="saveContactDetails()">Save changes</button>
+      <span style="font-size:0.7rem; color:var(--text-dim);">Auto-saves as you type</span>
       <span id="detailSaveOk">Saved ✓</span>
+      <span style="flex:1;"></span>
       <button class="primary" onclick="emailFromDetail()">📧 Email</button>
       <button class="primary" onclick="callFromDetail()">📞 Discovery call</button>
       <span style="flex:1;"></span>
@@ -482,34 +483,140 @@ function openDetailModal(cid) {
   document.getElementById('detailModalBg').classList.add('show');
 }
 
-async function saveContactDetails() {
-  if (!_detailCid) return;
-  const form = new FormData();
-  form.append('contact_id', _detailCid);
-  form.append('name',            document.getElementById('detailName').value);
-  form.append('title',           document.getElementById('detailTitle').value);
-  form.append('agency',          document.getElementById('detailAgency').value);
-  form.append('email',           document.getElementById('detailEmail').value);
-  form.append('pilot_value',     document.getElementById('detailPilot').value);
-  form.append('recurring_value', document.getElementById('detailRecurring').value);
-  form.append('date_emailed',    document.getElementById('detailDateEmailed').value);
-  form.append('next_date',       document.getElementById('detailNext').value);
-  form.append('subject',         document.getElementById('detailSubject').value);
-  form.append('notes',           document.getElementById('detailNotes').value);
-  try {
-    const r = await fetch('/pipeline/update', { method: 'POST', body: form });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const ok = document.getElementById('detailSaveOk');
-    ok.classList.add('show');
-    setTimeout(() => location.reload(), 700);
-  } catch (e) {
-    alert('Save failed: ' + e.message);
+// Update the in-memory cache + the visible kanban card text so the
+// page stays consistent after a silent save (no reload).
+function _readModalFields() {
+  return {
+    name:            document.getElementById('detailName').value,
+    title:           document.getElementById('detailTitle').value,
+    agency:          document.getElementById('detailAgency').value,
+    email:           document.getElementById('detailEmail').value,
+    pilot_value:     parseInt(document.getElementById('detailPilot').value, 10) || 0,
+    recurring_value: parseInt(document.getElementById('detailRecurring').value, 10) || 0,
+    date_emailed:    document.getElementById('detailDateEmailed').value || null,
+    next_date:       document.getElementById('detailNext').value || null,
+    subject:         document.getElementById('detailSubject').value,
+    notes:           document.getElementById('detailNotes').value,
+  };
+}
+
+function _updateLocalCache(cid, patch) {
+  const c = ALL_CONTACTS.find(x => x.id === cid);
+  if (c) Object.assign(c, patch);
+}
+
+function _formatMoneyRow(c) {
+  const parts = [];
+  if (c.recurring_value)
+    parts.push(`<span class="money">$${c.recurring_value.toLocaleString()}/yr</span>`);
+  if (c.pilot_value)
+    parts.push(`<span class="money pilot">$${c.pilot_value.toLocaleString()} pilot</span>`);
+  if (c.next_date) {
+    const d = new Date(c.next_date + 'T00:00');
+    const lbl = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    parts.push(`<span class="next" style="margin-left:auto;">→ ${lbl}</span>`);
+  }
+  return parts.join('');
+}
+
+// Re-render the visible bits of a kanban card after a save so the
+// user can immediately see edits without a full reload.
+function _refreshKanbanCard(cid) {
+  const c = ALL_CONTACTS.find(x => x.id === cid);
+  if (!c) return;
+  const card = document.querySelector(`.crm-card[data-cid="${cid}"]`);
+  if (!card) return;
+  const nameEl = card.querySelector('.card-top .name');
+  if (nameEl) nameEl.textContent = c.name || '';
+  const metaEl = card.querySelector('.meta.one-line:not(.money-row)');
+  if (metaEl) {
+    const t = (c.title || '').trim();
+    const a = (c.agency || '').trim();
+    metaEl.textContent = t + (t && a ? ' · ' : '') + a;
+  }
+  const moneyEl = card.querySelector('.money-row');
+  const moneyHTML = _formatMoneyRow(c);
+  if (moneyEl) {
+    if (moneyHTML) moneyEl.innerHTML = moneyHTML;
+    else moneyEl.remove();
   }
 }
 
+let _autoSaveTimer = null;
+let _autoSaveInFlight = false;
+
+async function _doSave() {
+  if (!_detailCid) return;
+  const cid = _detailCid;          // snapshot in case user closes mid-save
+  const patch = _readModalFields();
+  const form = new FormData();
+  form.append('contact_id', cid);
+  Object.entries(patch).forEach(([k, v]) => form.append(k, v == null ? '' : v));
+  try {
+    _autoSaveInFlight = true;
+    const r = await fetch('/pipeline/update', { method: 'POST', body: form });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    _updateLocalCache(cid, patch);
+    _refreshKanbanCard(cid);
+    const ok = document.getElementById('detailSaveOk');
+    ok.classList.add('show');
+    setTimeout(() => ok.classList.remove('show'), 1200);
+  } catch (e) {
+    console.warn('Auto-save failed:', e);
+  } finally {
+    _autoSaveInFlight = false;
+  }
+}
+
+function saveContactDetails() {
+  // Force-save now (the explicit "Save changes" button). Skips
+  // debounce, returns the promise so callers can await.
+  if (_autoSaveTimer) { clearTimeout(_autoSaveTimer); _autoSaveTimer = null; }
+  return _doSave();
+}
+
+function scheduleAutoSave() {
+  if (!_detailCid) return;
+  if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(_doSave, 800);
+}
+
+// Wire auto-save listeners once. Inputs of all 10 editable fields
+// share a debounced trigger; the page reloader on industry-change is
+// untouched (it goes through a separate form).
+['detailName','detailTitle','detailAgency','detailEmail',
+ 'detailPilot','detailRecurring','detailDateEmailed','detailNext',
+ 'detailSubject','detailNotes'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input',  scheduleAutoSave);
+  el.addEventListener('change', scheduleAutoSave);
+});
+
 function closeDetailModal() {
+  // If a debounced save is pending, flush it now so we don't lose
+  // the last few keystrokes when the user closes the modal fast.
+  if (_autoSaveTimer) {
+    clearTimeout(_autoSaveTimer);
+    _autoSaveTimer = null;
+    _doSave();
+  }
   document.getElementById('detailModalBg').classList.remove('show');
 }
+
+// Same for navigating away with unsaved changes.
+window.addEventListener('beforeunload', () => {
+  if (_autoSaveTimer && _detailCid) {
+    clearTimeout(_autoSaveTimer);
+    const patch = _readModalFields();
+    const form = new FormData();
+    form.append('contact_id', _detailCid);
+    Object.entries(patch).forEach(([k, v]) => form.append(k, v == null ? '' : v));
+    // Synchronous beacon — doesn't wait for the response but
+    // gets the patch into the server's queue before unload.
+    navigator.sendBeacon('/pipeline/update', form);
+  }
+});
 
 function emailFromDetail() {
   if (_detailCid) { closeDetailModal(); openEmailModal(_detailCid); }
