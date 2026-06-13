@@ -223,6 +223,27 @@ def init_db():
                 updated_at      TIMESTAMP DEFAULT NOW()
             )
         """)
+        # Working-session artifacts — the 30-min pressure-test that
+        # happens between DISCOVERY_CALL and PILOT. Same shape as
+        # discovery calls but different prompts and a different
+        # scorecard band map (≥85 = send proposal, etc.).
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS crm_working_sessions (
+                id                SERIAL PRIMARY KEY,
+                contact_id        INTEGER NOT NULL UNIQUE
+                                    REFERENCES crm_contacts(id) ON DELETE CASCADE,
+                session_date      DATE,
+                transcript        TEXT,
+                extraction_json   TEXT,
+                locked_scope      TEXT,
+                success_criteria  TEXT,
+                proposal_draft    TEXT,
+                scorecard_json    TEXT,
+                suggested_action  VARCHAR(40),
+                created_at        TIMESTAMP DEFAULT NOW(),
+                updated_at        TIMESTAMP DEFAULT NOW()
+            )
+        """)
 
         conn.commit()
         cur.close()

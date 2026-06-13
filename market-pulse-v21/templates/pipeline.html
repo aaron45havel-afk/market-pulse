@@ -302,6 +302,9 @@
             </form>
             <button type="button" class="icon-btn" onclick="openEmailModal({{ c.id }})" title="Email">📧</button>
             <button type="button" class="icon-btn" onclick="openCallModal({{ c.id }})" title="Discovery call">📞</button>
+            {% if c.stage in ('DISCOVERY_CALL', 'PILOT', 'RECURRING') %}
+            <button type="button" class="icon-btn" onclick="openSessionModal({{ c.id }})" title="Working session">📋</button>
+            {% endif %}
           </div>
         </div>
       {% endfor %}
@@ -444,6 +447,7 @@ function closeAddContactModal() {
       <span style="flex:1;"></span>
       <button class="primary" onclick="emailFromDetail()">📧 Email</button>
       <button class="primary" onclick="callFromDetail()">📞 Discovery call</button>
+      <button class="primary" onclick="sessionFromDetail()">📋 Working session</button>
       <span style="flex:1;"></span>
       <form method="post" action="/pipeline/delete" id="detailDeleteForm" onsubmit="return confirm('Delete this contact?');" style="display:inline;">
         <input type="hidden" name="contact_id" id="detailDeleteCid" value="">
@@ -625,6 +629,10 @@ function emailFromDetail() {
 function callFromDetail() {
   if (_detailCid) { closeDetailModal(); openCallModal(_detailCid); }
 }
+
+function sessionFromDetail() {
+  if (_detailCid) { closeDetailModal(); openSessionModal(_detailCid); }
+}
 </script>
 
 <!-- ── Email modal ─────────────────────────────────────────────── -->
@@ -739,6 +747,7 @@ document.addEventListener('keydown', e => {
     closeCallModal();
     closeDetailModal();
     closeAddContactModal();
+    if (typeof closeSessionModal === 'function') closeSessionModal();
   }
 });
 
@@ -1043,4 +1052,255 @@ document.addEventListener('input', e => {
     </div>
   </div>
 </div>
+
+<!-- ── Working session modal ─────────────────────────────────────── -->
+<style>
+  #sessionModalBg .modal { max-width:840px; }
+</style>
+<div id="sessionModalBg" class="modal-bg" onclick="if(event.target===this)closeSessionModal()">
+  <div class="modal">
+    <div style="display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem; flex-wrap:wrap;">
+      <h3 id="sessionTitle">Working session</h3>
+      <div style="display:flex; gap:0.5rem; align-items:center;">
+        <label style="font-size:0.7rem; color:var(--text-dim);">Session date
+          <input type="date" id="sessionDate" style="background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.3rem 0.5rem; color:var(--text); font-size:0.8rem; margin-left:0.3rem;">
+        </label>
+      </div>
+    </div>
+
+    <div class="call-tabs">
+      <button class="call-tab session-tab active" data-tab="agenda"     onclick="showSessionTab('agenda')">📋 Agenda</button>
+      <button class="call-tab session-tab"        data-tab="transcript" onclick="showSessionTab('transcript')">🎙 Transcript</button>
+      <button class="call-tab session-tab"        data-tab="process"    onclick="showSessionTab('process')">⚙️ Process</button>
+      <button class="call-tab session-tab"        data-tab="artifacts"  onclick="showSessionTab('artifacts')">📑 Artifacts</button>
+    </div>
+
+    <!-- Agenda -->
+    <div id="sessionTab-agenda" class="session-tab-pane">
+      <p style="font-size:0.78rem; color:var(--text-dim); margin:0 0 0.6rem;">
+        30-minute working session — pressure-test the picture you sent. Goal: lock in scope, success criteria, timing, and a price anchor.
+      </p>
+      <div id="sessionAgenda"></div>
+    </div>
+
+    <!-- Transcript -->
+    <div id="sessionTab-transcript" class="session-tab-pane" style="display:none;">
+      <div class="meet-hint">
+        <strong>Same Fathom flow as the discovery call.</strong> Open the Fathom transcript when the session ends, copy everything, paste below.
+      </div>
+      <label style="font-size:0.72rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">Transcript</label>
+      <textarea id="sessionTranscript" placeholder="Paste the working-session transcript here…" style="width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.5rem 0.6rem; color:var(--text); font-size:0.82rem; margin-top:0.2rem; min-height:300px; resize:vertical; font-family:inherit; line-height:1.5; outline:none;"></textarea>
+      <p style="font-size:0.72rem; color:var(--text-dim); margin-top:0.4rem;">
+        Then jump to <strong>Process →</strong> to run the AI chain.
+      </p>
+    </div>
+
+    <!-- Process -->
+    <div id="sessionTab-process" class="session-tab-pane" style="display:none;">
+      <p style="font-size:0.78rem; color:var(--text-dim); margin:0 0 0.6rem;">
+        For each step: <strong>copy the prompt</strong>, paste into <a href="https://claude.ai" target="_blank" rel="noopener" style="color:var(--accent2);">claude.ai</a>, then paste Claude's output into the matching artifact field on the Artifacts tab.
+      </p>
+
+      <div class="prompt-card">
+        <h4>Step 1 — Extract structured data (JSON)</h4>
+        <div class="hint">Save the JSON output into <em>Artifacts → Extraction JSON</em>.</div>
+        <textarea id="sessionPromptExtract" readonly></textarea>
+        <div class="row"><button class="primary" onclick="copyToClipboard('sessionPromptExtract')">Copy prompt</button></div>
+      </div>
+
+      <div class="prompt-card">
+        <h4>Step 2 — Locked-in scope</h4>
+        <div class="hint">Save into <em>Artifacts → Locked scope</em>.</div>
+        <textarea id="sessionPromptScope" readonly></textarea>
+        <div class="row"><button class="primary" onclick="copyToClipboard('sessionPromptScope')">Copy prompt</button></div>
+      </div>
+
+      <div class="prompt-card">
+        <h4>Step 3 — Success criteria + pricing</h4>
+        <div class="hint">Save into <em>Artifacts → Success criteria</em>.</div>
+        <textarea id="sessionPromptCriteria" readonly></textarea>
+        <div class="row"><button class="primary" onclick="copyToClipboard('sessionPromptCriteria')">Copy prompt</button></div>
+      </div>
+
+      <div class="prompt-card">
+        <h4>Step 4 — Pilot proposal draft</h4>
+        <div class="hint">Save into <em>Artifacts → Proposal draft</em>, then hit Save session.</div>
+        <textarea id="sessionPromptProposal" readonly></textarea>
+        <div class="row"><button class="primary" onclick="copyToClipboard('sessionPromptProposal')">Copy prompt</button></div>
+      </div>
+    </div>
+
+    <!-- Artifacts -->
+    <div id="sessionTab-artifacts" class="session-tab-pane" style="display:none;">
+      <div style="margin-bottom:0.7rem; padding:0.6rem 0.7rem; background:var(--surface2); border-radius:6px;">
+        <div id="sessionScorecard"></div>
+      </div>
+
+      <label style="font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase;">Extraction JSON (Step 1 output)</label>
+      <textarea id="sessionExtraction" placeholder='{"picture_confirmed": true, ...}' style="width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.55rem; color:var(--text); font-size:0.78rem; font-family:'Menlo','Monaco',monospace; min-height:130px; resize:vertical; line-height:1.45; outline:none; margin-top:0.2rem;"></textarea>
+
+      <label style="font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; display:block; margin-top:0.6rem;">Locked-in scope (Step 2)</label>
+      <textarea id="sessionScope" placeholder="In scope / out of scope / open questions…" style="width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.55rem; color:var(--text); font-size:0.82rem; min-height:120px; resize:vertical; line-height:1.5; outline:none; margin-top:0.2rem; font-family:inherit;"></textarea>
+
+      <label style="font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; display:block; margin-top:0.6rem;">Success criteria + pricing (Step 3)</label>
+      <textarea id="sessionCriteria" placeholder="Metrics, targets, pricing recommendation, decision makers…" style="width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.55rem; color:var(--text); font-size:0.82rem; min-height:130px; resize:vertical; line-height:1.5; outline:none; margin-top:0.2rem; font-family:inherit;"></textarea>
+
+      <label style="font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; display:block; margin-top:0.6rem;">Pilot proposal draft (Step 4)</label>
+      <textarea id="sessionProposal" placeholder="One-page email body proposing the pilot…" style="width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.55rem; color:var(--text); font-size:0.82rem; min-height:160px; resize:vertical; line-height:1.5; outline:none; margin-top:0.2rem; font-family:inherit;"></textarea>
+    </div>
+
+    <div class="row" style="margin-top:0.7rem;">
+      <button class="primary" onclick="saveSession()">Save session</button>
+      <button onclick="deleteSession()" style="color:#ef4444;">Delete</button>
+      <span id="sessionSaveOk" class="copy-ok">Saved ✓</span>
+      <span style="flex:1;"></span>
+      <button onclick="closeSessionModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let _sessionCtx = null;
+
+async function openSessionModal(contactId) {
+  try {
+    const r = await fetch(`/api/pipeline/session/${contactId}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    _sessionCtx = { contactId, data };
+
+    document.getElementById('sessionTitle').textContent =
+      `Working session — ${data.contact_name || ''}`;
+
+    const ag = document.getElementById('sessionAgenda');
+    ag.innerHTML = data.agenda.map(seg => `
+      <div class="agenda-row">
+        <div class="agenda-time">${seg.time}<br><span style="opacity:0.55;">${seg.who}</span></div>
+        <div class="agenda-body">
+          <div class="agenda-title">${seg.title}</div>
+          <div class="agenda-script">${seg.script}</div>
+        </div>
+      </div>
+    `).join('');
+
+    document.getElementById('sessionDate').value =
+      data.saved.session_date || new Date().toISOString().slice(0, 10);
+    document.getElementById('sessionTranscript').value = data.saved.transcript || '';
+
+    refreshSessionPrompts();
+
+    document.getElementById('sessionExtraction').value = data.saved.extraction_json || '';
+    document.getElementById('sessionScope').value      = data.saved.locked_scope || '';
+    document.getElementById('sessionCriteria').value   = data.saved.success_criteria || '';
+    document.getElementById('sessionProposal').value   = data.saved.proposal_draft || '';
+
+    renderSessionScorecard(data.saved.scorecard);
+    showSessionTab('agenda');
+    document.getElementById('sessionModalBg').classList.add('show');
+  } catch (e) {
+    alert('Could not load session: ' + e.message);
+  }
+}
+
+function refreshSessionPrompts() {
+  if (!_sessionCtx) return;
+  const transcript = document.getElementById('sessionTranscript').value;
+  const extraction = document.getElementById('sessionExtraction').value;
+  const orig = _sessionCtx.data.prompts;
+  document.getElementById('sessionPromptExtract').value =
+    orig.extract.replace(/"""[\s\S]*?"""/m, `"""\n${transcript}\n"""`);
+  document.getElementById('sessionPromptScope').value =
+    orig.locked_scope.replace(/EXTRACTION:[\s\S]*$/m, `EXTRACTION:\n${extraction}`);
+  document.getElementById('sessionPromptCriteria').value =
+    orig.criteria.replace(/EXTRACTION:[\s\S]*$/m, `EXTRACTION:\n${extraction}`);
+  document.getElementById('sessionPromptProposal').value =
+    orig.proposal.replace(/EXTRACTION:[\s\S]*$/m, `EXTRACTION:\n${extraction}`);
+}
+
+function showSessionTab(tab) {
+  document.querySelectorAll('.session-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.session-tab-pane').forEach(p => p.style.display = 'none');
+  document.querySelector(`.session-tab[data-tab="${tab}"]`).classList.add('active');
+  document.getElementById(`sessionTab-${tab}`).style.display = '';
+}
+
+function closeSessionModal() {
+  document.getElementById('sessionModalBg').classList.remove('show');
+}
+
+function renderSessionScorecard(sc) {
+  const el = document.getElementById('sessionScorecard');
+  if (!sc) {
+    el.innerHTML = '<div style="color:var(--text-dim); font-size:0.8rem;">Scorecard is computed after you save the extraction JSON.</div>';
+    return;
+  }
+  const dims = _sessionCtx.data.scorecard_dimensions;
+  const rows = dims.map(d => {
+    const got = sc.scores[d.key] ?? 0;
+    return `<tr><td>${d.label}</td><td style="text-align:right;">${got} / ${d.weight}</td></tr>`;
+  }).join('');
+  const totalColor = sc.total >= 85 ? 'var(--accent)' :
+                     sc.total >= 65 ? 'var(--yellow)' : '#ef4444';
+  const action = sc.suggested_action || '';
+  const actionLabel = action === 'SEND_PROPOSAL' ? 'Send the proposal'
+                    : action === 'ONE_MORE_TOUCH' ? 'One more touch first'
+                    : 'Don\'t propose yet';
+  el.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.4rem;">
+      <div style="font-weight:700; font-size:1.05rem;">Score: <span style="color:${totalColor};">${sc.total} / 100</span></div>
+      <div style="font-size:0.78rem; color:var(--text-dim);">${sc.band}</div>
+    </div>
+    <div style="font-size:0.75rem; color:var(--text-dim); margin-bottom:0.4rem;">
+      Suggested next action: <strong style="color:var(--text);">${actionLabel}</strong>
+    </div>
+    <table style="width:100%; font-size:0.8rem; border-collapse:collapse;">${rows}</table>
+  `;
+}
+
+async function saveSession() {
+  if (!_sessionCtx) return;
+  const form = new FormData();
+  form.append('contact_id', _sessionCtx.contactId);
+  form.append('session_date',     document.getElementById('sessionDate').value);
+  form.append('transcript',       document.getElementById('sessionTranscript').value);
+  form.append('extraction_json',  document.getElementById('sessionExtraction').value);
+  form.append('locked_scope',     document.getElementById('sessionScope').value);
+  form.append('success_criteria', document.getElementById('sessionCriteria').value);
+  form.append('proposal_draft',   document.getElementById('sessionProposal').value);
+  try {
+    const r = await fetch('/pipeline/session', { method: 'POST', body: form });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    renderSessionScorecard(data.scorecard);
+    const ok = document.getElementById('sessionSaveOk');
+    ok.classList.add('show');
+    setTimeout(() => ok.classList.remove('show'), 1800);
+    refreshSessionPrompts();
+  } catch (e) {
+    alert('Save failed: ' + e.message);
+  }
+}
+
+async function deleteSession() {
+  if (!_sessionCtx) return;
+  if (!confirm('Delete this working session — transcript and artifacts?')) return;
+  const form = new FormData();
+  form.append('contact_id', _sessionCtx.contactId);
+  try {
+    await fetch('/pipeline/session/delete', { method: 'POST', body: form });
+    closeSessionModal();
+    location.reload();
+  } catch (e) {
+    alert('Delete failed: ' + e.message);
+  }
+}
+
+// Refresh prompts as user types.
+document.addEventListener('input', e => {
+  if (!_sessionCtx) return;
+  if (e.target && (e.target.id === 'sessionTranscript' || e.target.id === 'sessionExtraction')) {
+    refreshSessionPrompts();
+  }
+});
+</script>
 {% endblock %}

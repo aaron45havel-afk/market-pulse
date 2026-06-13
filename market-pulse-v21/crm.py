@@ -1347,6 +1347,414 @@ def render_prompt(template: str, *, transcript: str = "",
             .replace("{extraction_json}", extraction_json or ""))
 
 
+# ─── Working-session framework (PILOT-stage pressure-test) ──────────
+# After the 20-min discovery call, the next step is the 30-min
+# working session: pressure-test the proposed MVP scope, answer the
+# open questions, get a pricing anchor, lock in the pilot proposal.
+# Same paste-prompts pattern as DiscoveryCallFramework — different
+# agenda, different prompts, different scorecard.
+
+WORKING_AGENDA = [
+    {
+        "time": "0:00–2:00",
+        "title": "Frame the session",
+        "who":   "You",
+        "script": (
+            "Thanks again. The goal today is to pressure-test the picture I "
+            "sent. By the end of 30 minutes I want us aligned on four things: "
+            "the scope of a first slice, how we'd measure success, timing, "
+            "and a number that feels reasonable to you. Mind if I record so "
+            "I can focus on listening?"
+        ),
+    },
+    {
+        "time": "2:00–8:00",
+        "title": "Validate the one-pager",
+        "who":   "Them (you probe)",
+        "script": (
+            "• Walk me through the picture I sent — did I get the problem "
+            "right?\n"
+            "• What did I miss, or get wrong, or land too strongly on?\n"
+            "• Of the steps in your current process, anything I described "
+            "that's not how it actually works?"
+        ),
+    },
+    {
+        "time": "8:00–22:00",
+        "title": "Answer the open questions",
+        "who":   "Them",
+        "script": (
+            "Walk through each open question from the MVP scope until you "
+            "have a concrete answer. Typical for a finance/ops tool:\n"
+            "• Which system are you on, and what's the access surface "
+            "(API, export, database read-only)?\n"
+            "• What's the lightest input we could ask of your team to fill "
+            "the visibility gap?\n"
+            "• What dimensions do you need to track against (code, project, "
+            "vendor, time period)?\n"
+            "• What defines a 'this needs attention' flag worth surfacing?\n"
+            "• What's the timing — is this before a specific event, or "
+            "rolling?"
+        ),
+    },
+    {
+        "time": "22:00–26:00",
+        "title": "Define success",
+        "who":   "Them",
+        "script": (
+            "• If we ran this pilot for 4 weeks and it worked, what would "
+            "you be able to do that you can't today?\n"
+            "• What's the metric that tells you it's working — hours back, "
+            "fewer surprises, a number you can show your boss?\n"
+            "• What would have to be true for you to renew at the recurring "
+            "tier?"
+        ),
+    },
+    {
+        "time": "26:00–28:00",
+        "title": "Pricing reality",
+        "who":   "Them",
+        "script": (
+            "• Given the scope we just talked about, what feels reasonable "
+            "as a one-time pilot fee versus what feels crazy?\n"
+            "• Who else has to sign off on a number that size? (If anyone "
+            "new comes up, get their name + role.)"
+        ),
+    },
+    {
+        "time": "28:00–30:00",
+        "title": "Confirm next step",
+        "who":   "You",
+        "script": (
+            "• Recap: scope is [X], success looks like [Y], pilot fee in "
+            "the [Z] range, [N] signs off.\n"
+            "• I'll send a one-page proposal by [date]. If it looks right, "
+            "we sign and kick off [date]. Fair?"
+        ),
+    },
+]
+
+# Stage-1 extraction. Schema tuned to what a working-session
+# transcript should yield — confirmation of the picture, scope
+# deltas, answered open questions, success criteria, pricing anchor,
+# decision makers, timing, and risks.
+WORKING_PROMPT_EXTRACT = '''You are analyzing a 30-minute pilot working-session transcript for a custom-software consulting engagement.
+
+Your job: extract ONLY what was actually said in the transcript. Do not infer, do not guess. If something was implied but not stated, put it in `assumptions[]` with a confidence rating.
+
+Return strict JSON matching this schema exactly:
+{
+  "picture_confirmed": true,
+  "picture_corrections": ["things the prospect corrected from the recap I sent"],
+  "scope_deltas": {
+    "add_to_mvp": ["..."],
+    "remove_from_mvp": ["..."],
+    "explicitly_out": ["..."]
+  },
+  "open_question_answers": [
+    {"question": "...", "answer": "...", "supporting_quote": "..."}
+  ],
+  "success_criteria": [
+    {"metric": "...", "target": "...", "horizon": "...", "supporting_quote": "..."}
+  ],
+  "renewal_trigger": "what they said would have to be true for them to renew at recurring",
+  "price_anchor": {
+    "reasonable_fee": "the number or range they said feels reasonable",
+    "crazy_fee": "the number that feels crazy (if mentioned)",
+    "verbatim_quote": "the line that gave you the anchor"
+  },
+  "decision_makers": [
+    {"name_or_role": "...", "decision_power": "high|medium|low", "newly_introduced": true}
+  ],
+  "timeline": {
+    "kickoff_target": "...",
+    "milestones": ["..."],
+    "hard_deadlines": ["..."]
+  },
+  "open_risks": [
+    {"risk": "...", "supporting_quote": "..."}
+  ],
+  "go_no_go_signal": "go | hold | no-go",
+  "next_step_committed": "what was agreed to verbatim as the next step",
+  "assumptions": [{"text": "...", "confidence": "low|medium|high"}]
+}
+
+Rules:
+- Never fabricate names, numbers, or quotes.
+- If a field has no evidence, return [] or "" or null as appropriate.
+- Output the JSON object only, no preamble, no markdown fence.
+
+TRANSCRIPT:
+"""
+{transcript}
+"""'''
+
+WORKING_PROMPT_LOCKED_SCOPE = '''Using ONLY the extraction object below, write a locked-in pilot scope statement in this Markdown structure:
+
+**In scope (what we will build):**
+- [items reflecting scope_deltas.add_to_mvp + the MVP items that survived picture_corrections; each cites the source field]
+
+**Explicitly out of scope:**
+- [items from scope_deltas.remove_from_mvp + scope_deltas.explicitly_out]
+
+**Open questions that still need answers before kickoff:**
+- [any open_question_answers where answer was vague or marked ASSUMPTION; cite]
+
+Every line must trace to a field in the extraction. Anything not supported, label "ASSUMPTION — confirm".
+
+EXTRACTION:
+{extraction_json}'''
+
+WORKING_PROMPT_CRITERIA = '''Using ONLY the extraction object below, produce the success criteria + pricing recommendation in this Markdown structure:
+
+**Success criteria (locked):**
+- For each item in `success_criteria`: metric, target, horizon, verbatim quote.
+
+**Renewal trigger:** [from `renewal_trigger`]
+
+**Pricing recommendation:**
+- Anchor: [from `price_anchor` — both numbers if available, and the verbatim quote]
+- My recommendation: [a single number or tight range that's at or below "reasonable", and a one-line rationale]
+- Decision makers: [from `decision_makers`, flagging anyone marked `newly_introduced: true` as a risk]
+
+**Timeline target:**
+- Kickoff: [from `timeline.kickoff_target`]
+- Hard deadlines: [from `timeline.hard_deadlines`]
+
+Anything not in the extraction, label "ASSUMPTION — confirm".
+
+EXTRACTION:
+{extraction_json}'''
+
+WORKING_PROMPT_PROPOSAL = '''Using ONLY the extraction object below, draft a one-page pilot proposal email body (no subject line) in this exact structure:
+
+Hi [first_name],
+
+Recap of what we agreed on:
+
+**What we're building:** [1-2 sentences pulled from the locked scope]
+
+**Success criteria:** [2-3 bullet points from success_criteria]
+
+**Investment:** [the recommended fee + duration]
+
+**Timeline:** [kickoff target → first milestone → end-of-pilot date]
+
+**Next step:** [what's needed to start — sign, send, intro to [decision_maker]]
+
+[Verbatim quote from `next_step_committed` woven into a closing line, if available]
+
+Sign-off:
+{my_name}
+
+Rules:
+- Keep it under ~180 words.
+- Cite every claim to the extraction.
+- Anything not supported, leave a "[ASSUMPTION — confirm]" placeholder so the user fixes it before sending.
+- Do not invent numbers, dates, or names.
+
+EXTRACTION:
+{extraction_json}'''
+
+
+# Scorecard for the working session — what makes the prospect
+# ready for a real proposal vs. needs another touch.
+WORKING_SCORECARD_DIMENSIONS = [
+    ("picture_confirmed",     10, "Picture confirmed / corrected"),
+    ("questions_answered",    25, "Open questions answered concretely"),
+    ("success_criteria",      15, "Success criteria defined + measurable"),
+    ("price_anchor",          15, "Pricing anchor (reasonable vs crazy)"),
+    ("decision_makers",       10, "Decision makers identified"),
+    ("timeline_committed",    10, "Timeline + kickoff date committed"),
+    ("risks_surfaced",        10, "≥2 open risks surfaced"),
+    ("next_step_committed",    5, "Specific next step committed"),
+]
+
+
+def compute_working_scorecard(extraction_json: str) -> dict:
+    """Heuristic 0-100 from a working-session extraction JSON.
+    Maps total to band + suggested_action:
+      ≥85 → SEND_PROPOSAL  (proposal-ready, ship the SOW)
+      65-84 → ONE_MORE_TOUCH (one gap to close async first)
+      <65 → DONT_PROPOSE_YET (rerun discovery, this isn't ripe)"""
+    import json as _json
+    try:
+        ex = _json.loads(extraction_json) if extraction_json else {}
+    except (ValueError, TypeError):
+        ex = {}
+
+    scores: dict[str, int] = {}
+
+    # picture_confirmed — explicit True + supporting corrections gets
+    # full credit; bare True gets 5; missing or False gets 0.
+    pc = ex.get("picture_confirmed")
+    if pc is True and ex.get("picture_corrections"):
+        scores["picture_confirmed"] = 10
+    elif pc is True:
+        scores["picture_confirmed"] = 5
+    else:
+        scores["picture_confirmed"] = 0
+
+    # questions_answered — count answers with a verbatim quote.
+    answers = ex.get("open_question_answers") or []
+    answered = sum(1 for a in answers
+                   if (a.get("answer") or "").strip()
+                   and (a.get("supporting_quote") or "").strip())
+    # 5 concrete answers = full marks; scale linearly otherwise.
+    scores["questions_answered"] = min(25, answered * 5)
+
+    # success_criteria — at least one with metric + target.
+    sc = ex.get("success_criteria") or []
+    well_formed = sum(1 for s in sc
+                      if (s.get("metric") or "").strip()
+                      and (s.get("target") or "").strip())
+    if well_formed >= 2:
+        scores["success_criteria"] = 15
+    elif well_formed == 1:
+        scores["success_criteria"] = 10
+    else:
+        scores["success_criteria"] = 0
+
+    # price_anchor — both numbers + quote = full, one = half.
+    pa = ex.get("price_anchor") or {}
+    has_reasonable = bool((pa.get("reasonable_fee") or "").strip())
+    has_crazy      = bool((pa.get("crazy_fee") or "").strip())
+    has_quote      = bool((pa.get("verbatim_quote") or "").strip())
+    if has_reasonable and has_crazy and has_quote:
+        scores["price_anchor"] = 15
+    elif has_reasonable:
+        scores["price_anchor"] = 8
+    else:
+        scores["price_anchor"] = 0
+
+    # decision_makers — at least one with name_or_role.
+    dms = ex.get("decision_makers") or []
+    named = sum(1 for d in dms if (d.get("name_or_role") or "").strip())
+    scores["decision_makers"] = 10 if named >= 1 else 0
+
+    # timeline_committed — kickoff_target OR a hard deadline.
+    tl = ex.get("timeline") or {}
+    if (tl.get("kickoff_target") or "").strip() or (tl.get("hard_deadlines") or []):
+        scores["timeline_committed"] = 10
+    else:
+        scores["timeline_committed"] = 0
+
+    # risks_surfaced — 2+ items.
+    risks = ex.get("open_risks") or []
+    if len(risks) >= 2:
+        scores["risks_surfaced"] = 10
+    elif len(risks) == 1:
+        scores["risks_surfaced"] = 5
+    else:
+        scores["risks_surfaced"] = 0
+
+    # next_step_committed — non-empty.
+    scores["next_step_committed"] = 5 if (ex.get("next_step_committed") or "").strip() else 0
+
+    total = sum(scores.values())
+    go = ex.get("go_no_go_signal") or ""
+    if go == "no-go":
+        band = "no-go — disqualify or rerun discovery"
+        suggested_action = "DONT_PROPOSE_YET"
+    elif total >= 85:
+        band = "proposal-ready — send the SOW"
+        suggested_action = "SEND_PROPOSAL"
+    elif total >= 65:
+        band = "usable — one gap to close async before proposal"
+        suggested_action = "ONE_MORE_TOUCH"
+    else:
+        band = "underperformed — don't write a proposal yet"
+        suggested_action = "DONT_PROPOSE_YET"
+
+    return {
+        "scores":            scores,
+        "total":             total,
+        "band":              band,
+        "suggested_action":  suggested_action,
+    }
+
+
+# ─── Working-session CRUD ───────────────────────────────────────────
+def get_session_for_contact(contact_id: int) -> dict | None:
+    conn = _get_conn()
+    if not conn:
+        return None
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, contact_id, session_date, transcript, extraction_json,
+                   locked_scope, success_criteria, proposal_draft,
+                   scorecard_json, suggested_action,
+                   created_at, updated_at
+            FROM crm_working_sessions
+            WHERE contact_id = %s
+        """, (contact_id,))
+        row = cur.fetchone()
+        cur.close()
+        if not row:
+            return None
+        cols = ["id", "contact_id", "session_date", "transcript",
+                "extraction_json", "locked_scope", "success_criteria",
+                "proposal_draft", "scorecard_json", "suggested_action",
+                "created_at", "updated_at"]
+        return dict(zip(cols, row))
+    finally:
+        conn.close()
+
+
+def upsert_session(*, contact_id: int, session_date: date | None,
+                   transcript: str, extraction_json: str,
+                   locked_scope: str, success_criteria: str,
+                   proposal_draft: str) -> dict | None:
+    sc = compute_working_scorecard(extraction_json)
+    import json as _json
+    sc_json = _json.dumps(sc)
+    conn = _get_conn()
+    if not conn:
+        return None
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO crm_working_sessions
+              (contact_id, session_date, transcript, extraction_json,
+               locked_scope, success_criteria, proposal_draft,
+               scorecard_json, suggested_action)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (contact_id) DO UPDATE
+              SET session_date      = EXCLUDED.session_date,
+                  transcript        = EXCLUDED.transcript,
+                  extraction_json   = EXCLUDED.extraction_json,
+                  locked_scope      = EXCLUDED.locked_scope,
+                  success_criteria  = EXCLUDED.success_criteria,
+                  proposal_draft    = EXCLUDED.proposal_draft,
+                  scorecard_json    = EXCLUDED.scorecard_json,
+                  suggested_action  = EXCLUDED.suggested_action,
+                  updated_at        = NOW()
+        """, (contact_id, session_date, transcript, extraction_json,
+              locked_scope, success_criteria, proposal_draft,
+              sc_json, sc["suggested_action"]))
+        conn.commit()
+        cur.close()
+        return sc
+    finally:
+        conn.close()
+
+
+def delete_session(contact_id: int) -> bool:
+    conn = _get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM crm_working_sessions WHERE contact_id = %s",
+                    (contact_id,))
+        conn.commit()
+        cur.close()
+        return True
+    finally:
+        conn.close()
+
+
 # ─── Email-template seeds ───────────────────────────────────────────
 # The two emails the user shipped in the build spec — INTRO and the
 # SCHEDULING follow-up. Industry tagged to Government / Municipal
