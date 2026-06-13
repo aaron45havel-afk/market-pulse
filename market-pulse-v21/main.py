@@ -532,6 +532,112 @@ async def pipeline_delete_template(request: Request):
     return RedirectResponse("/pipeline/templates", status_code=303)
 
 
+# ─── Discovery-call endpoints ────────────────────────────────────────
+@app.get("/api/pipeline/call/{contact_id}")
+async def api_pipeline_call_get(request: Request, contact_id: int):
+    """Return the call payload for a contact: agenda, the four
+    pre-filled prompts (transcript + extraction_json substituted in),
+    and any saved artifacts + scorecard."""
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import (DISCOVERY_AGENDA, DISCOVERY_PROMPT_EXTRACT,
+                     DISCOVERY_PROMPT_EXEC_SUMMARY,
+                     DISCOVERY_PROMPT_PAIN, DISCOVERY_PROMPT_MVP,
+                     SCORECARD_DIMENSIONS, list_contacts,
+                     get_call_for_contact, render_prompt)
+    contact = next((c for c in list_contacts() if c["id"] == contact_id), None)
+    if not contact:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    call = get_call_for_contact(contact_id) or {}
+    transcript = call.get("transcript") or ""
+    extraction = call.get("extraction_json") or ""
+
+    import json as _json
+    scorecard = None
+    if call.get("scorecard_json"):
+        try:
+            scorecard = _json.loads(call["scorecard_json"])
+        except (ValueError, TypeError):
+            scorecard = None
+
+    return JSONResponse({
+        "contact_name":   contact.get("name", ""),
+        "contact_email":  contact.get("email", ""),
+        "agenda":         DISCOVERY_AGENDA,
+        "prompts": {
+            "extract":      render_prompt(DISCOVERY_PROMPT_EXTRACT, transcript=transcript),
+            "exec_summary": render_prompt(DISCOVERY_PROMPT_EXEC_SUMMARY, extraction_json=extraction),
+            "pain":         render_prompt(DISCOVERY_PROMPT_PAIN, extraction_json=extraction),
+            "mvp":          render_prompt(DISCOVERY_PROMPT_MVP, extraction_json=extraction),
+        },
+        "scorecard_dimensions": [
+            {"key": k, "weight": w, "label": label}
+            for (k, w, label) in SCORECARD_DIMENSIONS
+        ],
+        "saved": {
+            "call_date":       call.get("call_date").isoformat() if call.get("call_date") else "",
+            "transcript":      transcript,
+            "extraction_json": extraction,
+            "exec_summary":    call.get("exec_summary") or "",
+            "pain_analysis":   call.get("pain_analysis") or "",
+            "mvp_scope":       call.get("mvp_scope") or "",
+            "suggested_stage": call.get("suggested_stage") or "",
+            "scorecard":       scorecard,
+        },
+    })
+
+
+@app.post("/pipeline/call")
+async def pipeline_save_call(request: Request):
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import upsert_call
+    from datetime import datetime as _dt, date as _date
+    form = await request.form()
+    try:
+        contact_id = int(form.get("contact_id", "0"))
+    except ValueError:
+        contact_id = 0
+    if not contact_id:
+        return JSONResponse({"error": "missing contact_id"}, status_code=400)
+
+    call_date = None
+    raw = (form.get("call_date") or "").strip()
+    if raw:
+        try:
+            call_date = _dt.strptime(raw, "%Y-%m-%d").date()
+        except ValueError:
+            call_date = None
+    if call_date is None:
+        call_date = _date.today()
+
+    sc = upsert_call(
+        contact_id=contact_id,
+        call_date=call_date,
+        transcript=(form.get("transcript") or "").strip(),
+        extraction_json=(form.get("extraction_json") or "").strip(),
+        exec_summary=(form.get("exec_summary") or "").strip(),
+        pain_analysis=(form.get("pain_analysis") or "").strip(),
+        mvp_scope=(form.get("mvp_scope") or "").strip(),
+    )
+    return JSONResponse({"ok": True, "scorecard": sc})
+
+
+@app.post("/pipeline/call/delete")
+async def pipeline_delete_call(request: Request):
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import delete_call
+    form = await request.form()
+    try:
+        contact_id = int(form.get("contact_id", "0"))
+    except ValueError:
+        contact_id = 0
+    if contact_id:
+        delete_call(contact_id)
+    return JSONResponse({"ok": True})
+
+
 # ─── Stock lookup (public) ──────────────────────────────────────────
 # Single-ticker search: Yahoo Finance for live quote + 1Y chart, SEC
 # EDGAR for latest annual fundamentals. Public — no admin gate.
