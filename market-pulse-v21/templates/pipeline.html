@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Pipeline — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+  .crm-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:0.7rem; }
+  .crm-col { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.6rem 0.7rem; min-height:140px; }
+  .crm-col-head { font-size:0.72rem; font-weight:700; color:var(--text-dim); letter-spacing:0.05em; text-transform:uppercase; margin-bottom:0.55rem; display:flex; justify-content:space-between; align-items:baseline; }
+  .crm-card { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.6rem 0.7rem; margin-bottom:0.55rem; font-size:0.83rem; }
+  .crm-card .name { font-weight:700; font-size:0.92rem; margin-bottom:2px; }
+  .crm-card .meta { font-size:0.72rem; color:var(--text-dim); margin-bottom:0.35rem; }
+  .crm-card .money { font-size:0.7rem; color:var(--accent); font-weight:600; }
+  .crm-card .next { font-size:0.7rem; color:var(--yellow); }
+  .crm-card form { display:inline; }
+  .crm-card select, .crm-card button { font-size:0.7rem; padding:0.2rem 0.4rem; border-radius:4px; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; }
+  .crm-card .actions { display:flex; gap:0.35rem; flex-wrap:wrap; margin-top:0.45rem; }
+  .crm-card .del { background:transparent; color:var(--text-dim); border:none; cursor:pointer; font-size:0.65rem; padding:0.15rem 0.3rem; }
+  .crm-card .del:hover { color:#ef4444; }
+
+  .kpi-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:0.7rem; }
+  @media (max-width: 760px) { .kpi-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+  .kpi-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.7rem 0.9rem; }
+  .kpi-card .label { font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; }
+  .kpi-card .value { font-size:1.4rem; font-weight:700; margin:0.2rem 0; font-variant-numeric:tabular-nums; }
+  .kpi-card .target { font-size:0.72rem; color:var(--text-dim); }
+  .kpi-card.on { border-color:var(--accent); }
+  .kpi-card.behind { border-color:#ef4444; }
+  .kpi-card.on .value { color:var(--accent); }
+  .kpi-card.behind .value { color:#ef4444; }
+
+  .form-row { display:flex; flex-wrap:wrap; gap:0.5rem; align-items:flex-end; }
+  .form-row label { display:flex; flex-direction:column; gap:2px; font-size:0.72rem; color:var(--text-dim); }
+  .form-row input, .form-row select, .form-row textarea {
+    background:var(--surface2); border:1px solid var(--border); border-radius:6px;
+    padding:0.35rem 0.5rem; color:var(--text); font-size:0.83rem; outline:none;
+  }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color:var(--accent2); }
+  .form-row button { padding:0.4rem 0.9rem; border-radius:6px; border:none; background:var(--accent2); color:white; cursor:pointer; font-weight:600; font-size:0.82rem; }
+</style>
+{% endblock %}
+{% block content %}
+<h1>Pipeline</h1>
+<p class="subtitle">Two-person sales tracker for the government-AI consulting funnel. Stage changes are recorded so weekly KPI math reflects real activity, not a stale snapshot.</p>
+
+<!-- ARR rollup -->
+<div class="grid-4" style="margin:1rem 0;">
+  <div class="card metric-card" style="border-color:var(--accent);">
+    <div class="label">Booked ARR</div>
+    <div class="value" style="color:var(--accent);">${{ "{:,}".format(arr.booked_arr) }}</div>
+    <div class="change" style="color:var(--accent);">Stage = Recurring</div>
+  </div>
+  <div class="card metric-card">
+    <div class="label">Pilots in flight</div>
+    <div class="value">{{ arr.pilots_count }}</div>
+    <div class="change">${{ "{:,}".format(arr.pilots_value) }}</div>
+  </div>
+  <div class="card metric-card">
+    <div class="label">Open recurring pipeline</div>
+    <div class="value">${{ "{:,}".format(arr.open_recurring_pipeline) }}</div>
+    <div class="change">Discovery + Pilot</div>
+  </div>
+  <div class="card metric-card">
+    <div class="label">Active contacts</div>
+    <div class="value">{{ contacts|selectattr('stage','ne','LOST')|list|length }}</div>
+  </div>
+</div>
+
+<!-- Weekly KPIs -->
+<h2 style="margin:1.25rem 0 0.5rem; font-size:1.05rem;">This week
+  <span style="font-size:0.75rem; color:var(--text-dim); font-weight:400;">{{ week_start.strftime('%b %d') }} – {{ week_end.strftime('%b %d') }}</span>
+</h2>
+<div class="kpi-grid" style="margin-bottom:1rem;">
+  {% for m in metrics %}
+    {% set actual = kpis[m] %}
+    {% set target = goals.get(m, 0) %}
+    {% set on_pace = (target == 0) or (actual >= target) %}
+    <div class="kpi-card {% if target == 0 %}{% elif on_pace %}on{% else %}behind{% endif %}">
+      <div class="label">{{ metric_labels[m] }}</div>
+      <div class="value">{{ actual }}{% if target %}<span style="font-size:0.85rem; color:var(--text-dim);"> / {{ target }}</span>{% endif %}</div>
+      {% if target == 0 %}
+        <div class="target">No goal — set one below</div>
+      {% elif on_pace %}
+        <div class="target">On pace ✓</div>
+      {% else %}
+        <div class="target">Behind by {{ target - actual }}</div>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+
+<!-- Set weekly goal -->
+<details class="card" style="margin-bottom:1rem; padding:0.6rem 0.9rem;">
+  <summary style="font-weight:600; font-size:0.85rem; cursor:pointer;">Set a weekly goal</summary>
+  <form method="post" action="/pipeline/goal" class="form-row" style="margin-top:0.6rem;">
+    <label>Metric
+      <select name="metric" required>
+        {% for m in metrics %}<option value="{{ m }}">{{ metric_labels[m] }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Target for this week
+      <input type="number" name="target" min="0" required value="0">
+    </label>
+    <button type="submit">Save goal</button>
+  </form>
+</details>
+
+<!-- Pipeline columns -->
+<h2 style="margin:1.25rem 0 0.5rem; font-size:1.05rem;">Pipeline</h2>
+<div class="crm-grid" style="margin-bottom:1rem;">
+  {% for s in stages if s != 'LOST' %}
+    <div class="crm-col">
+      <div class="crm-col-head">
+        <span>{{ stage_labels[s] }}</span>
+        <span>{{ contacts_by_stage[s]|length }}</span>
+      </div>
+      {% for c in contacts_by_stage[s] %}
+        <div class="crm-card">
+          <div class="name">{{ c.name }}</div>
+          <div class="meta">
+            {{ c.title or '' }}{% if c.title and c.agency %} · {% endif %}{{ c.agency or '' }}
+          </div>
+          {% if c.email %}<div class="meta"><a href="mailto:{{ c.email }}" style="color:var(--accent2);">{{ c.email }}</a></div>{% endif %}
+          {% if c.subject %}<div class="meta" style="font-style:italic;">"{{ c.subject }}"</div>{% endif %}
+          {% if c.next_date %}<div class="next">Next: {{ c.next_date.strftime('%b %d') }}</div>{% endif %}
+          <div class="money">
+            {% if c.recurring_value %}${{ "{:,}".format(c.recurring_value) }}/yr{% endif %}
+            {% if c.pilot_value %}{% if c.recurring_value %} · {% endif %}${{ "{:,}".format(c.pilot_value) }} pilot{% endif %}
+          </div>
+          {% if c.notes %}<div class="meta" style="margin-top:0.35rem; color:var(--text);">{{ c.notes }}</div>{% endif %}
+          <div class="actions">
+            <form method="post" action="/pipeline/stage">
+              <input type="hidden" name="contact_id" value="{{ c.id }}">
+              <select name="stage" onchange="this.form.submit()">
+                {% for st in stages %}
+                  <option value="{{ st }}" {% if st == c.stage %}selected{% endif %}>{{ stage_labels[st] }}</option>
+                {% endfor %}
+              </select>
+            </form>
+            <form method="post" action="/pipeline/delete" onsubmit="return confirm('Delete {{ c.name }}?');">
+              <input type="hidden" name="contact_id" value="{{ c.id }}">
+              <button type="submit" class="del">delete</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+      {% if not contacts_by_stage[s] %}
+        <div style="font-size:0.72rem; color:var(--text-dim); padding:0.4rem 0;">empty</div>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+
+<!-- Lost (collapsed) -->
+{% if contacts_by_stage['LOST'] %}
+<details class="card" style="margin-bottom:1rem; padding:0.6rem 0.9rem; font-size:0.8rem;">
+  <summary style="font-weight:600; cursor:pointer;">Lost ({{ contacts_by_stage['LOST']|length }})</summary>
+  <div style="margin-top:0.5rem; color:var(--text-dim);">
+    {% for c in contacts_by_stage['LOST'] %}
+      <div style="padding:0.3rem 0; border-bottom:1px solid var(--border);">
+        {{ c.name }} · {{ c.agency or '—' }}
+        <form method="post" action="/pipeline/stage" style="display:inline; margin-left:0.5rem;">
+          <input type="hidden" name="contact_id" value="{{ c.id }}">
+          <input type="hidden" name="stage" value="QUEUED">
+          <button type="submit" class="del" style="color:var(--accent2);">restore</button>
+        </form>
+      </div>
+    {% endfor %}
+  </div>
+</details>
+{% endif %}
+
+<!-- Add contact -->
+<details class="card" style="margin-bottom:1rem; padding:0.6rem 0.9rem;">
+  <summary style="font-weight:600; font-size:0.85rem; cursor:pointer;">Add a contact</summary>
+  <form method="post" action="/pipeline/contact" class="form-row" style="margin-top:0.6rem;">
+    <label>Name<input type="text" name="name" required></label>
+    <label>Title<input type="text" name="title"></label>
+    <label>Agency<input type="text" name="agency"></label>
+    <label>Email<input type="email" name="email"></label>
+    <label>Stage
+      <select name="stage">
+        {% for s in stages %}<option value="{{ s }}" {% if s == 'QUEUED' %}selected{% endif %}>{{ stage_labels[s] }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Pilot $<input type="number" name="pilot_value" min="0" value="0"></label>
+    <label>Recurring $/yr<input type="number" name="recurring_value" min="0" value="0"></label>
+    <label>Date emailed<input type="date" name="date_emailed"></label>
+    <label>Next date<input type="date" name="next_date"></label>
+    <label style="flex:1; min-width:240px;">Subject line<input type="text" name="subject"></label>
+    <label style="flex:1 0 100%; min-width:300px;">Notes
+      <textarea name="notes" rows="2" style="width:100%; resize:vertical;"></textarea>
+    </label>
+    <button type="submit">Add contact</button>
+  </form>
+</details>
+{% endblock %}

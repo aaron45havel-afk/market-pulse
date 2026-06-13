@@ -36,6 +36,11 @@ def _fmt_obs_date(iso: str) -> str:
 async def lifespan(app: FastAPI):
     logger.info("Market Pulse starting up...")
     init_db()
+    try:
+        from crm import maybe_seed
+        maybe_seed()
+    except Exception as e:
+        logger.warning("CRM seed skipped: %s", e)
     yield
     logger.info("Market Pulse shutting down.")
 
@@ -299,6 +304,122 @@ async def lynch(request: Request):
     """Peter Lynch GARP screener — large-cap value growth.
     Reads from data/lynch_snapshots/ (monthly cron-built)."""
     return templates.TemplateResponse("lynch.html", {"request": request})
+
+
+# ─── Pipeline CRM (admin-only) ──────────────────────────────────────
+# Private two-person sales tracker — see BUILD_SPEC.md. Gated by the
+# same ADMIN_TOKEN cookie used for /results. All write endpoints
+# below also check.
+@app.get("/pipeline")
+async def pipeline(request: Request):
+    if not _check_admin_token(request):
+        return RedirectResponse("/admin", status_code=303)
+    from crm import (STAGES, METRICS, STAGE_LABELS, METRIC_LABELS,
+                     list_contacts, arr_rollup, weekly_kpis,
+                     get_weekly_goals, iso_week_range)
+    contacts = list_contacts()
+    contacts_by_stage = {s: [c for c in contacts if c["stage"] == s] for s in STAGES}
+    week_start, week_end = iso_week_range()
+    return templates.TemplateResponse("pipeline.html", {
+        "request": request,
+        "stages": STAGES,
+        "stage_labels": STAGE_LABELS,
+        "metrics": METRICS,
+        "metric_labels": METRIC_LABELS,
+        "contacts": contacts,
+        "contacts_by_stage": contacts_by_stage,
+        "arr": arr_rollup(contacts),
+        "kpis": weekly_kpis(),
+        "goals": get_weekly_goals(),
+        "week_start": week_start,
+        "week_end": week_end,
+    })
+
+
+@app.post("/pipeline/contact")
+async def pipeline_add_contact(request: Request):
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import add_contact, STAGES
+    form = await request.form()
+    def _date(s: str | None):
+        s = (s or "").strip()
+        if not s:
+            return None
+        try:
+            from datetime import datetime
+            return datetime.strptime(s, "%Y-%m-%d").date()
+        except ValueError:
+            return None
+    def _int(s: str | None) -> int:
+        try:
+            return int((s or "").strip() or 0)
+        except ValueError:
+            return 0
+    stage = (form.get("stage") or "QUEUED").strip()
+    if stage not in STAGES:
+        stage = "QUEUED"
+    add_contact(
+        name=(form.get("name") or "").strip(),
+        title=(form.get("title") or "").strip() or None,
+        agency=(form.get("agency") or "").strip() or None,
+        email=(form.get("email") or "").strip() or None,
+        stage=stage,
+        pilot_value=_int(form.get("pilot_value")),
+        recurring_value=_int(form.get("recurring_value")),
+        date_emailed=_date(form.get("date_emailed")),
+        next_date=_date(form.get("next_date")),
+        subject=(form.get("subject") or "").strip() or None,
+        notes=(form.get("notes") or "").strip() or None,
+    )
+    return RedirectResponse("/pipeline", status_code=303)
+
+
+@app.post("/pipeline/stage")
+async def pipeline_change_stage(request: Request):
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import change_stage
+    form = await request.form()
+    try:
+        contact_id = int(form.get("contact_id", "0"))
+    except ValueError:
+        contact_id = 0
+    new_stage = (form.get("stage") or "").strip()
+    if contact_id and new_stage:
+        change_stage(contact_id, new_stage)
+    return RedirectResponse("/pipeline", status_code=303)
+
+
+@app.post("/pipeline/delete")
+async def pipeline_delete_contact(request: Request):
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import delete_contact
+    form = await request.form()
+    try:
+        contact_id = int(form.get("contact_id", "0"))
+    except ValueError:
+        contact_id = 0
+    if contact_id:
+        delete_contact(contact_id)
+    return RedirectResponse("/pipeline", status_code=303)
+
+
+@app.post("/pipeline/goal")
+async def pipeline_set_goal(request: Request):
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import set_weekly_goal, METRICS
+    form = await request.form()
+    metric = (form.get("metric") or "").strip()
+    try:
+        target = int(form.get("target", "0"))
+    except ValueError:
+        target = 0
+    if metric in METRICS and target >= 0:
+        set_weekly_goal(metric, target)
+    return RedirectResponse("/pipeline", status_code=303)
 
 
 # ─── Stock lookup (public) ──────────────────────────────────────────

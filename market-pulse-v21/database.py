@@ -138,6 +138,52 @@ def init_db():
             )
         """)
 
+        # ── CRM (private sales pipeline) ──
+        # Two-person internal use, admin-gated. Mirrors the data model
+        # in BUILD_SPEC.md for Pipeline CRM. Money fields are integers
+        # in whole dollars. Stage history goes in crm_stage_events so
+        # analytics can compute conversion over any date range.
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS crm_contacts (
+                id              SERIAL PRIMARY KEY,
+                name            VARCHAR(160) NOT NULL,
+                title           VARCHAR(120),
+                agency          VARCHAR(160),
+                email           VARCHAR(255),
+                stage           VARCHAR(32) NOT NULL DEFAULT 'QUEUED',
+                pilot_value     INTEGER NOT NULL DEFAULT 0,
+                recurring_value INTEGER NOT NULL DEFAULT 0,
+                date_emailed    DATE,
+                next_date       DATE,
+                subject         VARCHAR(255),
+                notes           TEXT,
+                created_at      TIMESTAMP DEFAULT NOW(),
+                updated_at      TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS crm_stage_events (
+                id          SERIAL PRIMARY KEY,
+                contact_id  INTEGER NOT NULL REFERENCES crm_contacts(id) ON DELETE CASCADE,
+                from_stage  VARCHAR(32),
+                to_stage    VARCHAR(32) NOT NULL,
+                occurred_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS crm_stage_events_occurred_idx
+            ON crm_stage_events(occurred_at)
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS crm_weekly_goals (
+                id         SERIAL PRIMARY KEY,
+                week_start DATE NOT NULL,
+                metric     VARCHAR(32) NOT NULL,
+                target     INTEGER NOT NULL,
+                UNIQUE(week_start, metric)
+            )
+        """)
+
         conn.commit()
         cur.close()
         conn.close()
