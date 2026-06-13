@@ -313,7 +313,7 @@ async def lynch(request: Request):
 @app.get("/pipeline")
 async def pipeline(request: Request):
     if not _check_admin_token(request):
-        return RedirectResponse("/admin", status_code=303)
+        return RedirectResponse("/admin/login?redirect=/pipeline", status_code=303)
     from crm import (STAGES, METRICS, STAGE_LABELS, METRIC_LABELS,
                      list_contacts, arr_rollup, weekly_kpis,
                      get_weekly_goals, iso_week_range)
