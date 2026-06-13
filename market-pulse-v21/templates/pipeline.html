@@ -41,6 +41,38 @@
 <h1>Pipeline</h1>
 <p class="subtitle">Two-person sales tracker for the government-AI consulting funnel. Stage changes are recorded so weekly KPI math reflects real activity, not a stale snapshot.</p>
 
+<!-- ── Path to $1M ARR ─────────────────────────────────────────── -->
+<div class="card" style="margin:1rem 0; padding:0.9rem 1rem; border-left:3px solid var(--accent2);">
+  <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:0.5rem;">
+    <div>
+      <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; font-weight:700;">Goal</div>
+      <div style="font-size:1.4rem; font-weight:700;">${{ "{:,}".format(path.goal) }} ARR by {{ path.deadline.strftime('%b %Y') }}</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:0.7rem; color:var(--text-dim);">Progress</div>
+      <div style="font-size:1.1rem; font-weight:700; color:var(--accent);">${{ "{:,}".format(path.current_arr) }} <span style="font-size:0.85rem; color:var(--text-dim); font-weight:400;">· {{ path.pct_to_goal }}%</span></div>
+      <div style="font-size:0.7rem; color:var(--text-dim);">{{ path.weeks_left }} weeks left</div>
+    </div>
+  </div>
+  <!-- progress bar -->
+  <div style="height:7px; background:var(--surface2); border-radius:99px; overflow:hidden; margin:0.6rem 0;">
+    <div style="height:100%; background:var(--accent); width:{{ [path.pct_to_goal, 100]|min }}%;"></div>
+  </div>
+  <details style="font-size:0.78rem; color:var(--text-dim);">
+    <summary style="cursor:pointer; font-weight:600; color:var(--text);">Why those weekly targets?</summary>
+    <div style="margin-top:0.5rem; line-height:1.6;">
+      Working backwards from <strong>${{ "{:,}".format(path.goal) }}</strong> over <strong>{{ path.horizon_weeks }} weeks</strong>:
+      <ul style="margin:0.4rem 0; padding-left:1.2rem;">
+        <li>Avg recurring deal: <strong>${{ "{:,}".format(path.avg_deal) }}/yr</strong> {% if path.avg_deal == 22000 %}<span style="color:var(--text-dim);">(seed median — will tighten as you close deals)</span>{% else %}<span style="color:var(--accent);">(live, from your pipeline)</span>{% endif %}</li>
+        <li>Recurring deals needed: <strong>{{ path.deals_needed }}</strong></li>
+        <li>Pilots needed (at ~60% pilot→recurring): <strong>{{ path.pilots_needed }}</strong></li>
+        <li>Pilots/week: <strong>{{ path.targets.PILOTS_CLOSED }}</strong> · Calls: <strong>{{ path.targets.CALLS_BOOKED }}</strong> · Replies: <strong>{{ (path.targets.CALLS_BOOKED / 0.50)|round(0)|int }}</strong> · Emails: <strong>{{ path.targets.EMAILS_SENT }}</strong></li>
+      </ul>
+      As you close higher-value deals, the live avg goes up and the volume targets soften automatically.
+    </div>
+  </details>
+</div>
+
 <!-- ARR rollup -->
 <div class="grid-4" style="margin:1rem 0;">
   <div class="card metric-card" style="border-color:var(--accent);">

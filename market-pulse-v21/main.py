@@ -319,7 +319,7 @@ async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = "
                      list_contacts, arr_rollup, weekly_kpis,
                      get_weekly_goals, iso_week_range,
                      funnel_conversion, trailing_weekly_kpis,
-                     goals_completion_stats)
+                     goals_completion_stats, arr_path_to_goal)
 
     def _parse_date(s: str, default: _date) -> _date:
         try:
@@ -354,6 +354,7 @@ async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = "
         "funnel_end": f_end,
         "trailing": trailing_weekly_kpis(weeks=8),
         "completion": goals_completion_stats(),
+        "path": arr_path_to_goal(),
     })
 
 
