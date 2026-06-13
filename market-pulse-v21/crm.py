@@ -289,6 +289,51 @@ def change_stage(contact_id: int, new_stage: str) -> bool:
         conn.close()
 
 
+def update_contact(contact_id: int, *,
+                   name: str | None = None, title: str | None = None,
+                   agency: str | None = None, email: str | None = None,
+                   pilot_value: int | None = None,
+                   recurring_value: int | None = None,
+                   date_emailed: date | None = None,
+                   next_date: date | None = None,
+                   subject: str | None = None,
+                   notes: str | None = None) -> bool:
+    """Patch any subset of editable fields. None means 'leave as-is' for
+    the scalar fields; pass an explicit empty string to clear text fields
+    or 0 to clear money fields."""
+    conn = _get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        sets = []
+        params: list = []
+        for col, val in [
+            ("name", name), ("title", title), ("agency", agency),
+            ("email", email), ("pilot_value", pilot_value),
+            ("recurring_value", recurring_value),
+            ("date_emailed", date_emailed), ("next_date", next_date),
+            ("subject", subject), ("notes", notes),
+        ]:
+            if val is not None:
+                sets.append(f"{col} = %s")
+                params.append(val)
+        if not sets:
+            cur.close()
+            return True
+        sets.append("updated_at = NOW()")
+        params.append(contact_id)
+        cur.execute(
+            f"UPDATE crm_contacts SET {', '.join(sets)} WHERE id = %s",
+            tuple(params),
+        )
+        conn.commit()
+        cur.close()
+        return True
+    finally:
+        conn.close()
+
+
 def delete_contact(contact_id: int) -> bool:
     conn = _get_conn()
     if not conn:
