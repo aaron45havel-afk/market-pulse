@@ -801,6 +801,84 @@ async def pipeline_delete_session(request: Request):
     return JSONResponse({"ok": True})
 
 
+# ─── Auto-process via Anthropic API ────────────────────────────────
+@app.get("/api/pipeline/ai-config")
+async def api_pipeline_ai_config(request: Request):
+    """Expose whether auto-process is wired up. Used by the modals to
+    show / hide the 'Auto-process with AI' button."""
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import anthropic_configured, ANTHROPIC_MODEL
+    return JSONResponse({
+        "anthropic_configured": anthropic_configured(),
+        "model": ANTHROPIC_MODEL,
+    })
+
+
+@app.post("/api/pipeline/call/{contact_id}/auto")
+async def api_pipeline_call_auto(request: Request, contact_id: int):
+    """Run the full 4-step discovery-call chain via Claude API,
+    upsert artifacts + scorecard, return the result."""
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    body = await request.json()
+    transcript = (body.get("transcript") or "").strip()
+    if not transcript:
+        return JSONResponse({"error": "missing transcript"}, status_code=400)
+    raw_date = (body.get("call_date") or "").strip()
+    from datetime import datetime as _dt, date as _date
+    call_date = _date.today()
+    if raw_date:
+        try:
+            call_date = _dt.strptime(raw_date, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+    from crm import process_discovery_call_auto
+    import asyncio as _asyncio
+    try:
+        result = await _asyncio.to_thread(
+            process_discovery_call_auto, contact_id, transcript, call_date
+        )
+        return JSONResponse({"ok": True, **result})
+    except RuntimeError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except Exception as e:
+        logger.exception("discovery auto-process failed")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/pipeline/session/{contact_id}/auto")
+async def api_pipeline_session_auto(request: Request, contact_id: int):
+    """Run the full 4-step working-session chain via Claude API,
+    upsert artifacts + scorecard, return the result."""
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    body = await request.json()
+    transcript = (body.get("transcript") or "").strip()
+    if not transcript:
+        return JSONResponse({"error": "missing transcript"}, status_code=400)
+    raw_date = (body.get("session_date") or "").strip()
+    from datetime import datetime as _dt, date as _date
+    session_date = _date.today()
+    if raw_date:
+        try:
+            session_date = _dt.strptime(raw_date, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+    from crm import process_working_session_auto
+    import asyncio as _asyncio
+    try:
+        result = await _asyncio.to_thread(
+            process_working_session_auto, contact_id, transcript, session_date
+        )
+        return JSONResponse({"ok": True, **result})
+    except RuntimeError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except Exception as e:
+        logger.exception("working-session auto-process failed")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 # ─── Stock lookup (public) ──────────────────────────────────────────
 # Single-ticker search: Yahoo Finance for live quote + 1Y chart, SEC
 # EDGAR for latest annual fundamentals. Public — no admin gate.
