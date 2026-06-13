@@ -337,6 +337,17 @@ async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = "
 
     contacts = list_contacts()
     contacts_by_stage = {s: [c for c in contacts if c["stage"] == s] for s in STAGES}
+
+    # JSON-safe copy for the detail-modal JS lookup (no Python date /
+    # datetime objects survive tojson otherwise).
+    def _js_safe(c: dict) -> dict:
+        out = dict(c)
+        for k in ("date_emailed", "next_date", "created_at", "updated_at"):
+            v = out.get(k)
+            if v is not None and hasattr(v, "isoformat"):
+                out[k] = v.isoformat()[:10]   # YYYY-MM-DD is enough for the UI
+        return out
+    contacts_json = [_js_safe(c) for c in contacts]
     week_start, week_end = iso_week_range()
     return templates.TemplateResponse("pipeline.html", {
         "request": request,
@@ -345,6 +356,7 @@ async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = "
         "metrics": METRICS,
         "metric_labels": METRIC_LABELS,
         "contacts": contacts,
+        "contacts_json": contacts_json,
         "contacts_by_stage": contacts_by_stage,
         "arr": arr_rollup(contacts),
         "kpis": weekly_kpis(),
