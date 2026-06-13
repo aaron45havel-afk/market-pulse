@@ -202,6 +202,27 @@ def init_db():
             ALTER TABLE crm_contacts
             ADD COLUMN IF NOT EXISTS industry VARCHAR(80)
         """)
+        # Discovery-call artifacts — one row per contact (UNIQUE on
+        # contact_id, upserted). Stores raw transcript + the AI chain
+        # outputs + a derived scorecard. Multiple calls per contact
+        # may come in v2; for now we overwrite the latest.
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS crm_discovery_calls (
+                id              SERIAL PRIMARY KEY,
+                contact_id      INTEGER NOT NULL UNIQUE
+                                  REFERENCES crm_contacts(id) ON DELETE CASCADE,
+                call_date       DATE,
+                transcript      TEXT,
+                extraction_json TEXT,
+                exec_summary    TEXT,
+                pain_analysis   TEXT,
+                mvp_scope       TEXT,
+                scorecard_json  TEXT,
+                suggested_stage VARCHAR(32),
+                created_at      TIMESTAMP DEFAULT NOW(),
+                updated_at      TIMESTAMP DEFAULT NOW()
+            )
+        """)
 
         conn.commit()
         cur.close()

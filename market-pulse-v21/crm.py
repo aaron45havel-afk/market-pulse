@@ -733,17 +733,37 @@ def delete_template(template_id: int) -> bool:
 def render_template(template: dict, contact: dict,
                     sender_name: str = SENDER_NAME) -> dict:
     """Substitute {first_name} / {name} / {title} / {agency} /
-    {my_name} in subject + body. Falls through to the raw string when
-    a template references something we don't know about."""
+    {my_name} in subject + body, plus {call_summary} / {win_condition}
+    from the contact's most recent discovery call when one exists.
+    Falls through to the raw string when a template references
+    something we don't know about."""
     name = (contact.get("name") or "").strip()
     first_name = name.split()[0] if name else ""
     variables = {
-        "first_name": first_name,
-        "name":       name,
-        "title":      contact.get("title") or "",
-        "agency":     contact.get("agency") or "",
-        "my_name":    sender_name,
+        "first_name":     first_name,
+        "name":           name,
+        "title":          contact.get("title") or "",
+        "agency":         contact.get("agency") or "",
+        "my_name":        sender_name,
+        "call_summary":   "",
+        "win_condition":  "",
     }
+
+    # Pull call data if the contact has had a discovery call.
+    cid = contact.get("id")
+    if cid:
+        try:
+            call = get_call_for_contact(cid)
+            if call:
+                variables["call_summary"] = (call.get("exec_summary") or "").strip()
+                try:
+                    import json as _json
+                    ex = _json.loads(call.get("extraction_json") or "{}")
+                    variables["win_condition"] = (ex.get("win_condition") or "").strip()
+                except (ValueError, TypeError):
+                    pass
+        except Exception:
+            pass
 
     def _sub(s: str) -> str:
         if not s:
@@ -860,6 +880,385 @@ def maybe_seed() -> int:
             logger.warning("Seed contact %s failed: %s", c.get("name"), e)
     logger.info("CRM seed: inserted %d starter contacts", inserted)
     return inserted
+
+
+# ─── Discovery-call framework ────────────────────────────────────────
+# The 20-minute discovery-call workflow Aaron wrote. Surfaced in the
+# /pipeline modal as Agenda (live cheat sheet) + Process (prompts to
+# run through Claude.ai) + Artifacts (saved outputs + scorecard).
+
+DISCOVERY_AGENDA = [
+    {
+        "time": "0:00–1:30",
+        "title": "Frame + consent",
+        "who":   "You",
+        "script": (
+            "Thanks for the time. Before we start — I record these so I can "
+            "focus on listening instead of scribbling notes, and so nothing "
+            "gets lost. Are you okay with me recording? [WAIT FOR EXPLICIT "
+            "YES.] Here's how I'd like to use the next 20 minutes: I'm not "
+            "going to pitch anything. I want to understand one process in "
+            "your world well enough to tell you honestly whether it's worth "
+            "automating. I'll ask a lot, you talk a lot, and at the end I'll "
+            "recap. Does that sound good?"
+        ),
+    },
+    {
+        "time": "1:30–4:00",
+        "title": "Context snapshot",
+        "who":   "Them",
+        "script": (
+            "• Give me the 60-second version: what does the business/agency "
+            "do, and where do you personally sit in how the money and the "
+            "work move through it?\n"
+            "• Of everything you do on a day to day basis, what's the part "
+            "that eats the most of your time or causes the most headaches?"
+        ),
+    },
+    {
+        "time": "4:00–11:00",
+        "title": "The core dig — pick the process they just named",
+        "who":   "Them (you probe)",
+        "script": (
+            "• Walk me through [that process] from the very first moment it "
+            "starts to the moment it's finished. Who touches it, and what do "
+            "they do at each step?  [Let them run. Silence is your tool.]\n"
+            "• Where does it break down or back up most often?\n"
+            "• Tell me about the last time it went wrong — what actually "
+            "happened?\n"
+            "• What do you do today to work around that — spreadsheets, "
+            "manual re-keying, other tools?"
+        ),
+    },
+    {
+        "time": "11:00–15:00",
+        "title": "Quantify + implication",
+        "who":   "Them",
+        "script": (
+            "• How many of these do you handle in a typical week or month, "
+            "and how long does each one take?\n"
+            "• When it goes wrong, what does that cost you — hours, dollars, "
+            "a missed deadline, an angry customer?\n"
+            "• What have you already tried to fix it, and why didn't it stick?\n"
+            "• If nothing changes, what does this look like in a year?"
+        ),
+    },
+    {
+        "time": "15:00–18:00",
+        "title": "Decision + money reality",
+        "who":   "Them",
+        "script": (
+            "• Who else touches this, and who would have to sign off to "
+            "actually fix it?\n"
+            "• When you've bought tools or brought in help before, how does "
+            "that decision usually get made — and what's a number that feels "
+            "reasonable versus crazy for solving this?\n"
+            "• Is this a 'this quarter' problem or a 'someday' problem?\n"
+            "• If we built one thing and got it right, what would it have to "
+            "do for you to call it a clear win?"
+        ),
+    },
+    {
+        "time": "18:00–20:00",
+        "title": "Mirror + next step",
+        "who":   "You",
+        "script": (
+            "• Let me play back what I heard: the real problem is [X], it's "
+            "costing you roughly [Y], today it works like [Z], and a win "
+            "looks like [W]. Did I get that right?\n"
+            "• Here's what I'd suggest: I'll turn this into a one-page "
+            "picture of the problem and a proposed first slice, and we book "
+            "a 30-minute working session to pressure-test it. Fair?"
+        ),
+    },
+]
+
+# Stage-1 extraction. Output JSON schema chosen to make every
+# downstream artifact reliable (every claim cites a field). Anything
+# implied but not stated lands in assumptions[] so we never hallucinate.
+DISCOVERY_PROMPT_EXTRACT = '''You are analyzing a 20-minute discovery-call transcript for a custom-software consulting engagement.
+
+Your job: extract ONLY what was actually said in the transcript. Do not infer, do not guess, do not generalize. If something was implied but not stated, put it in `assumptions[]` with a confidence rating.
+
+Return strict JSON matching this schema exactly:
+{
+  "core_process": {
+    "name": "name of the single process they walked through",
+    "steps": ["ordered step in their words", "..."],
+    "breakpoints": ["where it breaks or backs up", "..."]
+  },
+  "problems": [
+    {
+      "description": "...",
+      "is_root_problem": true,
+      "severity_1_to_10": 8,
+      "supporting_quote": "verbatim quote from transcript"
+    }
+  ],
+  "metrics": [
+    {"what": "...", "value": "...", "unit": "hours/dollars/count", "source_quote": "..."}
+  ],
+  "stakeholders": [
+    {"name_or_role": "...", "decision_power": "high|medium|low"}
+  ],
+  "current_tools": ["..."],
+  "failed_solutions": ["..."],
+  "concrete_story": "the 'last time it went wrong' story, paraphrased tightly",
+  "decision_signals": ["who signs off, approval process, etc."],
+  "budget_signals": ["the reasonable/crazy framing, prior spend, etc."],
+  "urgency": "this quarter | someday | unclear",
+  "win_condition": "the prospect's stated 'if we got one thing right, what would it have to do?'",
+  "pain_quotes": ["3-5 verbatim quotes capturing pain"],
+  "assumptions": [
+    {"text": "thing implied but not stated", "confidence": "low|medium|high"}
+  ]
+}
+
+Rules:
+- Never fabricate names, numbers, or quotes.
+- If a field has no evidence, return [] or "".
+- Quotes must be verbatim from the transcript.
+- Output the JSON object only, no preamble, no markdown fence.
+
+TRANSCRIPT:
+"""
+{transcript}
+"""'''
+
+DISCOVERY_PROMPT_EXEC_SUMMARY = '''Using ONLY the extraction object below, produce a 5-sentence executive summary in this exact structure:
+
+1. Who they are (role + organization).
+2. The single core problem, in their words.
+3. The cost (use a real number from metrics[] if available; otherwise mark "ASSUMPTION — confirm").
+4. The proposed first slice that hits their win_condition.
+5. The committed next step.
+
+Every claim must trace to a field in the extraction. Anything not supported by evidence, mark "ASSUMPTION — confirm".
+
+EXTRACTION:
+{extraction_json}
+
+Return the 5 sentences only, numbered. No preamble.'''
+
+DISCOVERY_PROMPT_PAIN = '''Using ONLY the extraction object below, produce a ranked pain analysis.
+
+For each item in `problems[]`:
+- **Severity** (their 1–10 if given, else "ASSUMPTION")
+- **Frequency** (from metrics[] if a count/cadence is mentioned, else "ASSUMPTION — frequency not stated")
+- **Cost** (from metrics[] if a $ or hours figure exists for this problem, else "ASSUMPTION")
+- **Verbatim quote** that captures it
+
+Order: highest severity first, root problem first on ties.
+
+Output as a numbered Markdown list (1., 2., 3., …). No preamble.
+
+EXTRACTION:
+{extraction_json}'''
+
+DISCOVERY_PROMPT_MVP = '''Using ONLY the extraction object below, propose the smallest possible MVP that hits the prospect's stated `win_condition`.
+
+Output in this exact Markdown structure:
+
+**Win condition (their words):** [from win_condition]
+
+**MVP must do:**
+- [3–5 items, each one tied to a problem or breakpoint from the extraction]
+
+**Explicitly OUT of MVP:**
+- [3–5 items, including anything they mentioned as nice-to-have]
+
+**Open questions for the working session:**
+- [3–5 questions that must be answered before scoping the build]
+
+Every MVP item must cite the extraction field it derives from (e.g., "(breakpoints[1])" or "(problems[0])"). Anything not supported, mark "ASSUMPTION — confirm".
+
+EXTRACTION:
+{extraction_json}'''
+
+
+# ─── Scorecard heuristics ───────────────────────────────────────────
+# 8 dimensions from the framework's Part 6. Auto-compute from the
+# extraction JSON; the user can adjust before saving if the
+# transcript fooled the heuristic.
+SCORECARD_DIMENSIONS = [
+    ("talk_ratio",          15, "Talk ratio (prospect ≥70%)"),
+    ("root_problem",        20, "Root problem found"),
+    ("quantified_pain",     15, "Quantified pain (≥1 hard number)"),
+    ("process_mapped",      15, "Process mapped end-to-end"),
+    ("concrete_story",      10, "Concrete past story"),
+    ("decision_money",      15, "Decision + money path known"),
+    ("win_condition",        5, "Win condition defined"),
+    ("next_step",            5, "Next step secured"),
+]
+
+
+def compute_scorecard(extraction_json: str) -> dict:
+    """Heuristic 0–100 from the extracted JSON. Talk-ratio and
+    next-step can't be inferred from the JSON alone — they default to
+    middling values that the user can adjust."""
+    import json as _json
+    try:
+        ex = _json.loads(extraction_json) if extraction_json else {}
+    except (ValueError, TypeError):
+        ex = {}
+
+    scores: dict[str, int] = {}
+
+    # talk_ratio — no signal in JSON, default to ~half credit.
+    scores["talk_ratio"] = 8
+
+    # root_problem — full if any problem is is_root_problem AND has a
+    # supporting quote. Half-credit if just is_root_problem.
+    root = next((p for p in (ex.get("problems") or [])
+                 if p.get("is_root_problem")), None)
+    if root and root.get("supporting_quote"):
+        scores["root_problem"] = 20
+    elif root:
+        scores["root_problem"] = 10
+    else:
+        scores["root_problem"] = 0
+
+    # quantified_pain — full if any metric has a non-empty value.
+    has_metric = any((m.get("value") or "").strip()
+                     for m in (ex.get("metrics") or []))
+    scores["quantified_pain"] = 15 if has_metric else 0
+
+    # process_mapped — full if ≥3 steps walked.
+    steps = (ex.get("core_process") or {}).get("steps") or []
+    if len(steps) >= 3:
+        scores["process_mapped"] = 15
+    elif len(steps) >= 1:
+        scores["process_mapped"] = 8
+    else:
+        scores["process_mapped"] = 0
+
+    # concrete_story — full if concrete_story is non-empty.
+    scores["concrete_story"] = 10 if (ex.get("concrete_story") or "").strip() else 0
+
+    # decision_money — full if both signals present, half if one.
+    has_decision = bool(ex.get("decision_signals"))
+    has_budget   = bool(ex.get("budget_signals"))
+    if has_decision and has_budget:
+        scores["decision_money"] = 15
+    elif has_decision or has_budget:
+        scores["decision_money"] = 8
+    else:
+        scores["decision_money"] = 0
+
+    # win_condition — full if non-empty.
+    scores["win_condition"] = 5 if (ex.get("win_condition") or "").strip() else 0
+
+    # next_step — can't infer; assume secured (5) since the framework
+    # ends with mirror + next-step ask. User can drop to 0 if not.
+    scores["next_step"] = 5
+
+    total = sum(scores.values())
+    if total >= 85:
+        band = "proposal-ready"
+        suggested_stage = "PILOT"
+    elif total >= 65:
+        band = "usable — one gap to close async"
+        suggested_stage = "DISCOVERY_CALL"   # stay; book working session
+    else:
+        band = "underperformed — don't write a proposal yet"
+        suggested_stage = "DISCOVERY_CALL"
+
+    return {
+        "scores":          scores,
+        "total":           total,
+        "band":            band,
+        "suggested_stage": suggested_stage,
+    }
+
+
+# ─── Discovery-call CRUD ────────────────────────────────────────────
+def get_call_for_contact(contact_id: int) -> dict | None:
+    conn = _get_conn()
+    if not conn:
+        return None
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, contact_id, call_date, transcript, extraction_json,
+                   exec_summary, pain_analysis, mvp_scope, scorecard_json,
+                   suggested_stage, created_at, updated_at
+            FROM crm_discovery_calls
+            WHERE contact_id = %s
+        """, (contact_id,))
+        row = cur.fetchone()
+        cur.close()
+        if not row:
+            return None
+        cols = ["id", "contact_id", "call_date", "transcript",
+                "extraction_json", "exec_summary", "pain_analysis",
+                "mvp_scope", "scorecard_json", "suggested_stage",
+                "created_at", "updated_at"]
+        return dict(zip(cols, row))
+    finally:
+        conn.close()
+
+
+def upsert_call(*, contact_id: int, call_date: date | None,
+                transcript: str, extraction_json: str,
+                exec_summary: str, pain_analysis: str, mvp_scope: str) -> dict | None:
+    """Save (or overwrite) the discovery call for a contact. Computes
+    scorecard + suggested_stage server-side."""
+    sc = compute_scorecard(extraction_json)
+    import json as _json
+    sc_json = _json.dumps(sc)
+    conn = _get_conn()
+    if not conn:
+        return None
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO crm_discovery_calls
+              (contact_id, call_date, transcript, extraction_json,
+               exec_summary, pain_analysis, mvp_scope,
+               scorecard_json, suggested_stage)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (contact_id) DO UPDATE
+              SET call_date       = EXCLUDED.call_date,
+                  transcript      = EXCLUDED.transcript,
+                  extraction_json = EXCLUDED.extraction_json,
+                  exec_summary    = EXCLUDED.exec_summary,
+                  pain_analysis   = EXCLUDED.pain_analysis,
+                  mvp_scope       = EXCLUDED.mvp_scope,
+                  scorecard_json  = EXCLUDED.scorecard_json,
+                  suggested_stage = EXCLUDED.suggested_stage,
+                  updated_at      = NOW()
+        """, (contact_id, call_date, transcript, extraction_json,
+              exec_summary, pain_analysis, mvp_scope,
+              sc_json, sc["suggested_stage"]))
+        conn.commit()
+        cur.close()
+        return sc
+    finally:
+        conn.close()
+
+
+def delete_call(contact_id: int) -> bool:
+    conn = _get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM crm_discovery_calls WHERE contact_id = %s",
+                    (contact_id,))
+        conn.commit()
+        cur.close()
+        return True
+    finally:
+        conn.close()
+
+
+def render_prompt(template: str, *, transcript: str = "",
+                  extraction_json: str = "") -> str:
+    """Substitute {transcript} / {extraction_json} into a prompt
+    template without choking on the JSON's curly braces."""
+    return (template
+            .replace("{transcript}", transcript or "")
+            .replace("{extraction_json}", extraction_json or ""))
 
 
 # ─── Email-template seeds ───────────────────────────────────────────

@@ -290,6 +290,7 @@
               </select>
             </form>
             <button type="button" class="email-btn" onclick="openEmailModal({{ c.id }})">📧 Email</button>
+            <button type="button" class="email-btn" onclick="openCallModal({{ c.id }})">📞 Discovery call</button>
             <form method="post" action="/pipeline/delete" onsubmit="return confirm('Delete {{ c.name }}?');">
               <input type="hidden" name="contact_id" value="{{ c.id }}">
               <button type="submit" class="del">delete</button>
@@ -465,7 +466,311 @@ function copyEmail(what) {
 
 // Close modal on Escape.
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeEmailModal();
+  if (e.key === 'Escape') {
+    closeEmailModal();
+    closeCallModal();
+  }
+});
+
+
+// ── Discovery-call modal ──────────────────────────────────────────
+let _callCtx = null;
+
+async function openCallModal(contactId) {
+  try {
+    const r = await fetch(`/api/pipeline/call/${contactId}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    _callCtx = { contactId, data };
+
+    // Header
+    document.getElementById('callTitle').textContent =
+      `Discovery call — ${data.contact_name || ''}`;
+
+    // Agenda tab
+    const ag = document.getElementById('callAgenda');
+    ag.innerHTML = data.agenda.map(seg => `
+      <div class="agenda-row">
+        <div class="agenda-time">${seg.time}<br><span style="opacity:0.55;">${seg.who}</span></div>
+        <div class="agenda-body">
+          <div class="agenda-title">${seg.title}</div>
+          <div class="agenda-script">${seg.script}</div>
+        </div>
+      </div>
+    `).join('');
+
+    // Transcript + date
+    document.getElementById('callDate').value =
+      data.saved.call_date || new Date().toISOString().slice(0, 10);
+    document.getElementById('callTranscript').value = data.saved.transcript || '';
+
+    // Prompts (auto-refreshed when transcript/extraction change)
+    refreshPrompts();
+
+    // Saved artifact slots
+    document.getElementById('callExtraction').value = data.saved.extraction_json || '';
+    document.getElementById('callExec').value = data.saved.exec_summary || '';
+    document.getElementById('callPain').value = data.saved.pain_analysis || '';
+    document.getElementById('callMvp').value = data.saved.mvp_scope || '';
+
+    renderScorecard(data.saved.scorecard);
+
+    // Default to Agenda tab
+    showCallTab('agenda');
+
+    document.getElementById('callModalBg').classList.add('show');
+  } catch (e) {
+    alert('Could not load call data: ' + e.message);
+  }
+}
+
+function refreshPrompts() {
+  if (!_callCtx) return;
+  // Re-render prompts client-side as user edits transcript/extraction
+  // so the Copy buttons always reflect the current state.
+  const transcript = document.getElementById('callTranscript').value;
+  const extraction = document.getElementById('callExtraction').value;
+  const orig = _callCtx.data.prompts;
+  document.getElementById('promptExtract').value =
+    orig.extract.replace(/"""[\s\S]*?"""/m, `"""\n${transcript}\n"""`);
+  document.getElementById('promptExec').value =
+    orig.exec_summary.replace(/EXTRACTION:[\s\S]*$/m, `EXTRACTION:\n${extraction}\n\nReturn the 5 sentences only, numbered. No preamble.`);
+  document.getElementById('promptPain').value =
+    orig.pain.replace(/EXTRACTION:[\s\S]*$/m, `EXTRACTION:\n${extraction}`);
+  document.getElementById('promptMvp').value =
+    orig.mvp.replace(/EXTRACTION:[\s\S]*$/m, `EXTRACTION:\n${extraction}`);
+}
+
+function showCallTab(tab) {
+  document.querySelectorAll('.call-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.call-tab-pane').forEach(p => p.style.display = 'none');
+  document.querySelector(`.call-tab[data-tab="${tab}"]`).classList.add('active');
+  document.getElementById(`callTab-${tab}`).style.display = '';
+}
+
+function closeCallModal() {
+  document.getElementById('callModalBg').classList.remove('show');
+}
+
+function copyToClipboard(textareaId) {
+  const el = document.getElementById(textareaId);
+  navigator.clipboard.writeText(el.value).then(() => {
+    const ok = document.getElementById('callCopyOk');
+    ok.classList.add('show');
+    setTimeout(() => ok.classList.remove('show'), 1400);
+  }).catch(() => alert('Copy failed — your browser may have blocked clipboard access.'));
+}
+
+function renderScorecard(sc) {
+  const el = document.getElementById('callScorecard');
+  if (!sc) {
+    el.innerHTML = '<div style="color:var(--text-dim); font-size:0.8rem;">Scorecard is computed after you save the extraction JSON.</div>';
+    return;
+  }
+  const dims = _callCtx.data.scorecard_dimensions;
+  const rows = dims.map(d => {
+    const got = sc.scores[d.key] ?? 0;
+    return `
+      <tr>
+        <td>${d.label}</td>
+        <td style="text-align:right;">${got} / ${d.weight}</td>
+      </tr>`;
+  }).join('');
+  const totalColor = sc.total >= 85 ? 'var(--accent)' :
+                     sc.total >= 65 ? 'var(--yellow)' : '#ef4444';
+  el.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.4rem;">
+      <div style="font-weight:700; font-size:1.05rem;">Score: <span style="color:${totalColor};">${sc.total} / 100</span></div>
+      <div style="font-size:0.78rem; color:var(--text-dim);">${sc.band}</div>
+    </div>
+    <div style="font-size:0.75rem; color:var(--text-dim); margin-bottom:0.4rem;">
+      Suggested next stage: <strong style="color:var(--text);">${sc.suggested_stage}</strong>
+    </div>
+    <table style="width:100%; font-size:0.8rem; border-collapse:collapse;">
+      ${rows}
+    </table>
+    <p style="font-size:0.7rem; color:var(--text-dim); margin:0.5rem 0 0;">
+      Talk ratio and next-step default to middle values — the JSON can't show those reliably.
+      Override by editing the extraction or re-saving.
+    </p>
+  `;
+}
+
+async function saveCall() {
+  if (!_callCtx) return;
+  const form = new FormData();
+  form.append('contact_id', _callCtx.contactId);
+  form.append('call_date', document.getElementById('callDate').value);
+  form.append('transcript', document.getElementById('callTranscript').value);
+  form.append('extraction_json', document.getElementById('callExtraction').value);
+  form.append('exec_summary', document.getElementById('callExec').value);
+  form.append('pain_analysis', document.getElementById('callPain').value);
+  form.append('mvp_scope', document.getElementById('callMvp').value);
+  try {
+    const r = await fetch('/pipeline/call', { method: 'POST', body: form });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    renderScorecard(data.scorecard);
+    const ok = document.getElementById('callSaveOk');
+    ok.classList.add('show');
+    setTimeout(() => ok.classList.remove('show'), 1800);
+    refreshPrompts();
+  } catch (e) {
+    alert('Save failed: ' + e.message);
+  }
+}
+
+async function deleteCall() {
+  if (!_callCtx) return;
+  if (!confirm('Delete this discovery call — transcript and artifacts?')) return;
+  const form = new FormData();
+  form.append('contact_id', _callCtx.contactId);
+  try {
+    await fetch('/pipeline/call/delete', { method: 'POST', body: form });
+    closeCallModal();
+    location.reload();
+  } catch (e) {
+    alert('Delete failed: ' + e.message);
+  }
+}
+
+// Refresh prompts as user types transcript / extraction.
+document.addEventListener('input', e => {
+  if (!_callCtx) return;
+  if (e.target && (e.target.id === 'callTranscript' || e.target.id === 'callExtraction')) {
+    refreshPrompts();
+  }
 });
 </script>
+
+<!-- ── Discovery call modal ──────────────────────────────────────── -->
+<style>
+  #callModalBg .modal { max-width:840px; }
+  .call-tabs { display:flex; gap:0.3rem; border-bottom:1px solid var(--border); margin:0.6rem 0 0.8rem; flex-wrap:wrap; }
+  .call-tab { background:transparent; border:none; padding:0.45rem 0.8rem; cursor:pointer; font-size:0.8rem; color:var(--text-dim); border-bottom:2px solid transparent; }
+  .call-tab:hover { color:var(--text); }
+  .call-tab.active { color:var(--accent2); border-bottom-color:var(--accent2); font-weight:600; }
+  .agenda-row { display:flex; gap:0.7rem; padding:0.55rem 0; border-bottom:1px solid var(--border); }
+  .agenda-row:last-child { border-bottom:none; }
+  .agenda-time { font-size:0.7rem; color:var(--text-dim); min-width:90px; font-weight:600; }
+  .agenda-title { font-weight:700; font-size:0.85rem; margin-bottom:0.2rem; }
+  .agenda-script { font-size:0.78rem; color:var(--text); line-height:1.55; white-space:pre-wrap; }
+  .prompt-card { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.6rem 0.7rem; margin-bottom:0.7rem; }
+  .prompt-card h4 { margin:0 0 0.3rem; font-size:0.85rem; }
+  .prompt-card .hint { font-size:0.72rem; color:var(--text-dim); margin-bottom:0.4rem; }
+  .prompt-card textarea { width:100%; box-sizing:border-box; background:var(--surface); border:1px solid var(--border); border-radius:5px; padding:0.45rem 0.55rem; color:var(--text); font-size:0.78rem; font-family:'Menlo','Monaco',monospace; min-height:120px; resize:vertical; line-height:1.45; outline:none; }
+  .prompt-card .row { display:flex; gap:0.5rem; align-items:center; margin-top:0.35rem; flex-wrap:wrap; }
+  .meet-hint { background:rgba(99,102,241,0.08); border-left:3px solid var(--accent2); padding:0.5rem 0.7rem; border-radius:4px; font-size:0.78rem; color:var(--text); margin-bottom:0.7rem; line-height:1.5; }
+</style>
+
+<div id="callModalBg" class="modal-bg" onclick="if(event.target===this)closeCallModal()">
+  <div class="modal">
+    <div style="display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem; flex-wrap:wrap;">
+      <h3 id="callTitle">Discovery call</h3>
+      <div style="display:flex; gap:0.5rem; align-items:center;">
+        <label style="font-size:0.7rem; color:var(--text-dim);">Call date
+          <input type="date" id="callDate" style="background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.3rem 0.5rem; color:var(--text); font-size:0.8rem; margin-left:0.3rem;">
+        </label>
+      </div>
+    </div>
+
+    <div class="call-tabs">
+      <button class="call-tab active" data-tab="agenda"     onclick="showCallTab('agenda')">📋 Agenda</button>
+      <button class="call-tab"        data-tab="transcript" onclick="showCallTab('transcript')">🎙 Transcript</button>
+      <button class="call-tab"        data-tab="process"    onclick="showCallTab('process')">⚙️ Process</button>
+      <button class="call-tab"        data-tab="artifacts"  onclick="showCallTab('artifacts')">📑 Artifacts</button>
+    </div>
+
+    <!-- Agenda -->
+    <div id="callTab-agenda" class="call-tab-pane">
+      <p style="font-size:0.78rem; color:var(--text-dim); margin:0 0 0.6rem;">
+        Open this on your second monitor during the call. 20 min total. The 4:00–11:00 block is the whole game.
+      </p>
+      <div id="callAgenda"></div>
+    </div>
+
+    <!-- Transcript -->
+    <div id="callTab-transcript" class="call-tab-pane" style="display:none;">
+      <div class="meet-hint">
+        <strong>Google Meet + Fathom:</strong> install <a href="https://fathom.video" target="_blank" rel="noopener" style="color:var(--accent2);">Fathom</a> (free, unlimited) — the bot joins your Meet automatically. When the call ends, open the Fathom transcript, copy everything, paste below.
+      </div>
+      <label style="font-size:0.72rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">Transcript</label>
+      <textarea id="callTranscript" placeholder="Paste the full call transcript here…" style="width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.5rem 0.6rem; color:var(--text); font-size:0.82rem; margin-top:0.2rem; min-height:300px; resize:vertical; font-family:inherit; line-height:1.5; outline:none;"></textarea>
+      <p style="font-size:0.72rem; color:var(--text-dim); margin-top:0.4rem;">
+        Then jump to <strong>Process →</strong> to run the AI chain.
+      </p>
+    </div>
+
+    <!-- Process -->
+    <div id="callTab-process" class="call-tab-pane" style="display:none;">
+      <p style="font-size:0.78rem; color:var(--text-dim); margin:0 0 0.6rem;">
+        For each step: <strong>copy the prompt</strong>, paste into <a href="https://claude.ai" target="_blank" rel="noopener" style="color:var(--accent2);">claude.ai</a>, then paste Claude's output into the matching artifact field on the Artifacts tab. Each step feeds the next.
+      </p>
+
+      <div class="prompt-card">
+        <h4>Step 1 — Extract structured data (JSON)</h4>
+        <div class="hint">Run on the transcript. Save the JSON output into <em>Artifacts → Extraction JSON</em>. Re-running Steps 2–4 needs that JSON in place.</div>
+        <textarea id="promptExtract" readonly></textarea>
+        <div class="row">
+          <button class="primary" onclick="copyToClipboard('promptExtract')">Copy prompt</button>
+        </div>
+      </div>
+
+      <div class="prompt-card">
+        <h4>Step 2 — Executive summary (5 sentences)</h4>
+        <div class="hint">Save Claude's output into <em>Artifacts → Executive summary</em>.</div>
+        <textarea id="promptExec" readonly></textarea>
+        <div class="row">
+          <button class="primary" onclick="copyToClipboard('promptExec')">Copy prompt</button>
+        </div>
+      </div>
+
+      <div class="prompt-card">
+        <h4>Step 3 — Pain analysis (ranked)</h4>
+        <div class="hint">Save output into <em>Artifacts → Pain analysis</em>.</div>
+        <textarea id="promptPain" readonly></textarea>
+        <div class="row">
+          <button class="primary" onclick="copyToClipboard('promptPain')">Copy prompt</button>
+        </div>
+      </div>
+
+      <div class="prompt-card">
+        <h4>Step 4 — MVP scope</h4>
+        <div class="hint">Save output into <em>Artifacts → MVP scope</em>, then hit Save Call.</div>
+        <textarea id="promptMvp" readonly></textarea>
+        <div class="row">
+          <button class="primary" onclick="copyToClipboard('promptMvp')">Copy prompt</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Artifacts -->
+    <div id="callTab-artifacts" class="call-tab-pane" style="display:none;">
+      <div style="margin-bottom:0.7rem; padding:0.6rem 0.7rem; background:var(--surface2); border-radius:6px;">
+        <div id="callScorecard"></div>
+      </div>
+
+      <label style="font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase;">Extraction JSON (Step 1 output)</label>
+      <textarea id="callExtraction" placeholder='{"core_process": {...}, "problems": [...], ...}' style="width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.55rem; color:var(--text); font-size:0.78rem; font-family:'Menlo','Monaco',monospace; min-height:130px; resize:vertical; line-height:1.45; outline:none; margin-top:0.2rem;"></textarea>
+
+      <label style="font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; display:block; margin-top:0.6rem;">Executive summary (Step 2)</label>
+      <textarea id="callExec" placeholder="5 numbered sentences…" style="width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.55rem; color:var(--text); font-size:0.82rem; min-height:110px; resize:vertical; line-height:1.5; outline:none; margin-top:0.2rem; font-family:inherit;"></textarea>
+
+      <label style="font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; display:block; margin-top:0.6rem;">Pain analysis (Step 3)</label>
+      <textarea id="callPain" placeholder="Ranked Markdown list…" style="width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.55rem; color:var(--text); font-size:0.82rem; min-height:120px; resize:vertical; line-height:1.5; outline:none; margin-top:0.2rem; font-family:inherit;"></textarea>
+
+      <label style="font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; display:block; margin-top:0.6rem;">MVP scope (Step 4)</label>
+      <textarea id="callMvp" placeholder="Win condition, MVP must do, out, open questions…" style="width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.55rem; color:var(--text); font-size:0.82rem; min-height:130px; resize:vertical; line-height:1.5; outline:none; margin-top:0.2rem; font-family:inherit;"></textarea>
+    </div>
+
+    <div class="row" style="margin-top:0.7rem;">
+      <button class="primary" onclick="saveCall()">Save call</button>
+      <button onclick="deleteCall()" style="color:#ef4444;">Delete</button>
+      <span id="callSaveOk" class="copy-ok">Saved ✓</span>
+      <span id="callCopyOk" class="copy-ok">Copied ✓</span>
+      <span style="flex:1;"></span>
+      <button onclick="closeCallModal()">Close</button>
+    </div>
+  </div>
+</div>
 {% endblock %}
