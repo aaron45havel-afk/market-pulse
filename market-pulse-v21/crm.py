@@ -11,6 +11,7 @@ the analytics + seeding.
 from __future__ import annotations
 
 import logging
+import math
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -37,16 +38,95 @@ METRIC_LABELS = {
     "PILOTS_CLOSED": "Pilots closed",
 }
 
-# Auto-applied weekly targets, derived from the playbook funnel rates
-# (reply 17.5% × call 50% × pilot 33%). User doesn't have to set
-# these — they just show up. DB-stored crm_weekly_goals still take
-# precedence per-week so a one-off bump is possible from the UI.
-DEFAULT_WEEKLY_TARGETS = {
-    "NEW_CONTACTS":  5,
-    "EMAILS_SENT":   5,
-    "CALLS_BOOKED":  1,
-    "PILOTS_CLOSED": 1,
-}
+# ─── Path to $1M ARR in 3 years ─────────────────────────────────────
+# These constants are the inputs to the back-calculation that drives
+# the weekly volume targets. Tweak ARR_GOAL or GOAL_HORIZON_WEEKS and
+# the dashboard updates everywhere.
+ARR_GOAL = 1_000_000
+GOAL_HORIZON_WEEKS = 156          # 3 years
+AVG_RECURRING_DEAL_FALLBACK = 22_000   # seed median; live data overrides
+PILOT_TO_RECURRING_RATE = 0.60    # rough industry default for consulting
+
+# Funnel rates used both for the targets in funnel_conversion() and
+# for the volume math here. Keep these in sync.
+PLAYBOOK_REPLY_RATE = 0.175
+PLAYBOOK_CALL_RATE = 0.50
+PLAYBOOK_PILOT_RATE = 0.33
+
+
+def _avg_recurring_deal_live() -> int:
+    """Average recurring_value across all non-zero contacts. Falls back
+    to the seed median when there's no data yet OR when the DB driver
+    isn't available (local dev / test importing the module)."""
+    try:
+        conn = _get_conn()
+    except Exception:
+        return AVG_RECURRING_DEAL_FALLBACK
+    if not conn:
+        return AVG_RECURRING_DEAL_FALLBACK
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT AVG(recurring_value) FROM crm_contacts
+            WHERE recurring_value > 0
+        """)
+        avg = cur.fetchone()[0]
+        cur.close()
+        return int(avg) if avg else AVG_RECURRING_DEAL_FALLBACK
+    finally:
+        conn.close()
+
+
+def _derive_weekly_targets() -> dict[str, int]:
+    """Working backwards from ARR_GOAL through pilot→recurring and the
+    three funnel rates. All four metrics round UP so hitting the
+    target keeps you on pace or ahead."""
+    avg_deal = _avg_recurring_deal_live()
+    deals_needed = ARR_GOAL / avg_deal
+    pilots_needed = deals_needed / PILOT_TO_RECURRING_RATE
+    pilots_per_wk = pilots_needed / GOAL_HORIZON_WEEKS
+    calls_per_wk = pilots_per_wk / PLAYBOOK_PILOT_RATE
+    replies_per_wk = calls_per_wk / PLAYBOOK_CALL_RATE
+    emails_per_wk = replies_per_wk / PLAYBOOK_REPLY_RATE
+    return {
+        "NEW_CONTACTS":  max(1, math.ceil(emails_per_wk)),
+        "EMAILS_SENT":   max(1, math.ceil(emails_per_wk)),
+        "CALLS_BOOKED":  max(1, math.ceil(calls_per_wk)),
+        "PILOTS_CLOSED": max(1, math.ceil(pilots_per_wk)),
+    }
+
+
+def arr_path_to_goal() -> dict:
+    """Snapshot of the path: assumptions, derived targets, current
+    progress, deadline. Powers the 'Path to $1M ARR' panel."""
+    avg_deal = _avg_recurring_deal_live()
+    targets = _derive_weekly_targets()
+
+    # Current booked ARR
+    contacts = list_contacts()
+    booked = sum(c["recurring_value"] or 0 for c in contacts if c["stage"] == "RECURRING")
+    pct = (booked / ARR_GOAL * 100) if ARR_GOAL else 0
+
+    deadline = date.today() + timedelta(days=GOAL_HORIZON_WEEKS * 7)
+    weeks_left = max(0, (deadline - date.today()).days // 7)
+    return {
+        "goal":          ARR_GOAL,
+        "horizon_weeks": GOAL_HORIZON_WEEKS,
+        "deadline":      deadline,
+        "weeks_left":    weeks_left,
+        "current_arr":   booked,
+        "pct_to_goal":   round(pct, 1),
+        "avg_deal":      avg_deal,
+        "deals_needed":  math.ceil(ARR_GOAL / avg_deal),
+        "pilots_needed": math.ceil(ARR_GOAL / avg_deal / PILOT_TO_RECURRING_RATE),
+        "targets":       targets,
+    }
+
+
+# get_weekly_goals() calls _derive_weekly_targets() on each request so
+# the live math (current avg_deal × funnel rates) always reflects the
+# latest pipeline data. No module-level constant — would freeze
+# numbers at import time and force a restart per deal closed.
 
 STAGE_LABELS = {
     "QUEUED":         "Queued",
@@ -359,11 +439,14 @@ def trailing_weekly_kpis(weeks: int = 8) -> list[dict]:
 
 # ─── Weekly goals ────────────────────────────────────────────────────
 def get_weekly_goals(week_start: date | None = None) -> dict[str, int]:
-    """Return effective weekly goals for the given week. DB overrides
-    win; otherwise the DEFAULT_WEEKLY_TARGETS are returned. Always
-    returns all 4 metrics so the UI never has a 'no goal' state."""
+    """Return effective weekly goals for the given week.
+
+    Targets are derived live from the path-to-$1M math each call —
+    so closing a higher-value deal automatically softens the volume
+    targets without a restart. Manual per-week DB overrides still win
+    (no UI surface today; endpoint stays in case we want it back)."""
     week_start = week_start or iso_week_start()
-    out = dict(DEFAULT_WEEKLY_TARGETS)
+    out = _derive_weekly_targets()
     conn = _get_conn()
     if not conn:
         return out
