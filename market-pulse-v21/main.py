@@ -311,12 +311,27 @@ async def lynch(request: Request):
 # same ADMIN_TOKEN cookie used for /results. All write endpoints
 # below also check.
 @app.get("/pipeline")
-async def pipeline(request: Request):
+async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = ""):
     if not _check_admin_token(request):
         return RedirectResponse("/admin/login?redirect=/pipeline", status_code=303)
+    from datetime import date as _date, datetime as _dt, timedelta as _td
     from crm import (STAGES, METRICS, STAGE_LABELS, METRIC_LABELS,
                      list_contacts, arr_rollup, weekly_kpis,
-                     get_weekly_goals, iso_week_range)
+                     get_weekly_goals, iso_week_range,
+                     funnel_conversion, trailing_weekly_kpis)
+
+    def _parse_date(s: str, default: _date) -> _date:
+        try:
+            return _dt.strptime(s.strip(), "%Y-%m-%d").date() if s else default
+        except ValueError:
+            return default
+
+    today = _date.today()
+    f_end = _parse_date(funnel_end, today)
+    f_start = _parse_date(funnel_start, today - _td(days=90))
+    if f_start > f_end:
+        f_start, f_end = f_end, f_start
+
     contacts = list_contacts()
     contacts_by_stage = {s: [c for c in contacts if c["stage"] == s] for s in STAGES}
     week_start, week_end = iso_week_range()
@@ -333,6 +348,10 @@ async def pipeline(request: Request):
         "goals": get_weekly_goals(),
         "week_start": week_start,
         "week_end": week_end,
+        "funnel": funnel_conversion(f_start, f_end),
+        "funnel_start": f_start,
+        "funnel_end": f_end,
+        "trailing": trailing_weekly_kpis(weeks=8),
     })
 
 
