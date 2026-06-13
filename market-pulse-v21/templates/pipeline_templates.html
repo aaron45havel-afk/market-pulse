@@ -24,11 +24,31 @@
 {% block content %}
 <h1>Email templates</h1>
 <p class="subtitle">
-  Templates per industry × trigger. Variables: <code>{first_name}</code>,
-  <code>{name}</code>, <code>{title}</code>, <code>{agency}</code>,
-  <code>{my_name}</code>. After a discovery call is saved, POST_CALL templates can also use
-  <code>{call_summary}</code> and <code>{win_condition}</code> — pulled from that contact's
-  saved artifacts. <a href="/pipeline" style="color:var(--accent2);">← back to pipeline</a>
+  Templates per industry × trigger. <a href="/pipeline" style="color:var(--accent2);">← back to pipeline</a>
+</p>
+<details class="card" style="margin-bottom:1rem; padding:0.6rem 0.9rem; font-size:0.8rem;">
+  <summary style="font-weight:600; cursor:pointer;">Available template variables</summary>
+  <div style="margin-top:0.55rem; color:var(--text-dim); line-height:1.7;">
+    <strong style="color:var(--text);">Always available:</strong>
+    <code>{first_name}</code>, <code>{name}</code>, <code>{title}</code>,
+    <code>{agency}</code>, <code>{my_name}</code>.
+    <br><br>
+    <strong style="color:var(--text);">Pulled from a saved discovery call</strong>
+    (empty for contacts who haven't had one):
+    <ul style="margin:0.3rem 0 0; padding-left:1.2rem;">
+      <li><code>{call_summary}</code> — Stage-2 executive summary</li>
+      <li><code>{pain_analysis}</code> — Stage-2 ranked pain analysis</li>
+      <li><code>{mvp_scope}</code> — Stage-2 MVP scope markdown</li>
+      <li><code>{win_condition}</code> — the prospect's "if you got one thing right, what?" answer</li>
+      <li><code>{root_problem}</code> — root problem description from the extraction</li>
+      <li><code>{problem_quote}</code> — verbatim quote of the root problem (great for opening lines)</li>
+      <li><code>{concrete_story}</code> — the "last time it went wrong" paragraph</li>
+      <li><code>{process_name}</code> — name of the process they walked through</li>
+      <li><code>{time_cost}</code> — first metric, formatted (e.g. "1 week")</li>
+    </ul>
+  </div>
+</details>
+<p class="subtitle" style="display:none;">
 </p>
 
 <!-- Add / update form -->
