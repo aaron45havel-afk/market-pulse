@@ -465,6 +465,53 @@ async def pipeline_set_goal(request: Request):
     return RedirectResponse("/pipeline", status_code=303)
 
 
+@app.post("/pipeline/update")
+async def pipeline_update_contact(request: Request):
+    """Patch a contact from the detail modal. Accepts any subset of
+    editable fields and leaves the rest alone."""
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import update_contact
+    from datetime import datetime as _dt
+    form = await request.form()
+    try:
+        cid = int(form.get("contact_id", "0"))
+    except ValueError:
+        cid = 0
+    if not cid:
+        return JSONResponse({"error": "missing contact_id"}, status_code=400)
+
+    def _date(s: str | None):
+        s = (s or "").strip()
+        if not s:
+            return None
+        try:
+            return _dt.strptime(s, "%Y-%m-%d").date()
+        except ValueError:
+            return None
+
+    def _int_or_zero(s: str | None) -> int:
+        try:
+            return int((s or "").strip() or 0)
+        except ValueError:
+            return 0
+
+    update_contact(
+        cid,
+        name=(form.get("name") or "").strip() or None,   # don't allow blanking the name
+        title=(form.get("title") or "").strip(),
+        agency=(form.get("agency") or "").strip(),
+        email=(form.get("email") or "").strip(),
+        pilot_value=_int_or_zero(form.get("pilot_value")),
+        recurring_value=_int_or_zero(form.get("recurring_value")),
+        date_emailed=_date(form.get("date_emailed")),
+        next_date=_date(form.get("next_date")),
+        subject=(form.get("subject") or "").strip(),
+        notes=(form.get("notes") or "").strip(),
+    )
+    return JSONResponse({"ok": True})
+
+
 @app.post("/pipeline/industry")
 async def pipeline_set_industry(request: Request):
     if not _check_admin_token(request):

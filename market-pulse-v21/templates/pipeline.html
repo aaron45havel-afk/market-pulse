@@ -2,7 +2,7 @@
 {% block title %}Pipeline — Market Pulse{% endblock %}
 {% block extra_css %}
 <style>
-  .crm-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:0.7rem; }
+  .crm-grid { display:grid; grid-template-columns:repeat(6, minmax(220px, 1fr)); gap:0.6rem; overflow-x:auto; padding-bottom:0.5rem; }
   .crm-col { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.6rem 0.7rem; min-height:140px; }
   .crm-col-head { font-size:0.72rem; font-weight:700; color:var(--text-dim); letter-spacing:0.05em; text-transform:uppercase; margin-bottom:0.55rem; display:flex; justify-content:space-between; align-items:baseline; }
   .crm-card { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.6rem 0.7rem; margin-bottom:0.55rem; font-size:0.83rem; }
@@ -394,48 +394,53 @@ function closeAddContactModal() {
 
 <!-- ── Contact detail modal ─────────────────────────────────────── -->
 <style>
-  #detailModalBg .modal { max-width:560px; }
-  .detail-grid { display:grid; grid-template-columns:120px 1fr; gap:0.45rem 0.7rem; font-size:0.83rem; align-items:baseline; }
-  .detail-grid .lbl { font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.04em; font-weight:600; padding-top:2px; }
-  .detail-grid .val { color:var(--text); word-break:break-word; }
-  .detail-grid .val a { color:var(--accent2); }
-  .detail-notes { background:var(--surface2); padding:0.55rem 0.7rem; border-radius:6px; font-size:0.82rem; white-space:pre-wrap; line-height:1.5; max-height:240px; overflow-y:auto; }
+  #detailModalBg .modal { max-width:580px; }
+  .detail-grid { display:grid; grid-template-columns:110px 1fr; gap:0.5rem 0.7rem; font-size:0.82rem; align-items:center; }
+  .detail-grid .lbl { font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.04em; font-weight:600; }
+  .detail-grid input, .detail-grid select, .detail-grid textarea {
+    width:100%; box-sizing:border-box;
+    background:var(--surface2); border:1px solid var(--border); border-radius:6px;
+    padding:0.35rem 0.55rem; color:var(--text); font-size:0.83rem;
+    outline:none; font-family:inherit;
+  }
+  .detail-grid input:focus, .detail-grid select:focus, .detail-grid textarea:focus { border-color:var(--accent2); }
+  .detail-grid textarea { resize:vertical; min-height:90px; line-height:1.5; }
+  .detail-grid .val-static { color:var(--text); padding:0.25rem 0; }
+  .detail-grid .val-static a { color:var(--accent2); }
   .stage-pill { display:inline-block; font-size:0.65rem; padding:2px 8px; border-radius:99px; background:rgba(99,102,241,0.14); color:var(--accent2); font-weight:700; letter-spacing:0.03em; text-transform:uppercase; }
+  #detailSaveOk { color:var(--accent); font-size:0.8rem; font-weight:600; opacity:0; transition:opacity 0.2s; }
+  #detailSaveOk.show { opacity:1; }
 </style>
 <div id="detailModalBg" class="modal-bg" onclick="if(event.target===this)closeDetailModal()">
   <div class="modal">
     <div style="display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.6rem;">
-      <h3 id="detailName" style="margin:0; font-size:1.1rem;"></h3>
+      <h3 style="margin:0; font-size:1.1rem;"><input id="detailName" type="text" style="font-size:1.05rem; font-weight:700; background:transparent; border:1px solid transparent; padding:0.2rem 0.35rem; border-radius:6px; color:var(--text); width:340px; max-width:100%;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--surface2)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></h3>
       <span id="detailStage" class="stage-pill"></span>
     </div>
 
     <div class="detail-grid">
-      <div class="lbl">Title</div>      <div class="val" id="detailTitle"></div>
-      <div class="lbl">Agency</div>     <div class="val" id="detailAgency"></div>
-      <div class="lbl">Email</div>      <div class="val" id="detailEmail"></div>
+      <div class="lbl">Title</div>      <input id="detailTitle" type="text">
+      <div class="lbl">Agency</div>     <input id="detailAgency" type="text">
+      <div class="lbl">Email</div>      <input id="detailEmail" type="email">
       <div class="lbl">Industry</div>
-      <div class="val">
-        <form method="post" action="/pipeline/industry" style="display:inline;">
-          <input type="hidden" id="detailIndustryCid" name="contact_id" value="">
-          <select name="industry" onchange="this.form.submit()" id="detailIndustrySel" style="background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.3rem 0.5rem; color:var(--text); font-size:0.8rem;">
-            <option value="">— none —</option>
-            {% for ind in industries %}<option value="{{ ind }}">{{ ind }}</option>{% endfor %}
-          </select>
-        </form>
-      </div>
-      <div class="lbl">Pilot $</div>    <div class="val" id="detailPilot"></div>
-      <div class="lbl">Recurring</div>  <div class="val" id="detailRecurring"></div>
-      <div class="lbl">Date emailed</div><div class="val" id="detailDateEmailed"></div>
-      <div class="lbl">Next date</div>   <div class="val" id="detailNext"></div>
-      <div class="lbl">Subject</div>     <div class="val" id="detailSubject"></div>
-    </div>
-
-    <div style="margin-top:0.7rem;">
-      <div class="lbl" style="font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.04em; font-weight:600; margin-bottom:0.25rem;">Notes</div>
-      <div class="detail-notes" id="detailNotes"></div>
+      <form method="post" action="/pipeline/industry" style="margin:0;">
+        <input type="hidden" id="detailIndustryCid" name="contact_id" value="">
+        <select name="industry" onchange="this.form.submit()" id="detailIndustrySel">
+          <option value="">— none —</option>
+          {% for ind in industries %}<option value="{{ ind }}">{{ ind }}</option>{% endfor %}
+        </select>
+      </form>
+      <div class="lbl">Pilot $</div>    <input id="detailPilot"     type="number" min="0" step="500">
+      <div class="lbl">Recurring $/yr</div><input id="detailRecurring" type="number" min="0" step="1000">
+      <div class="lbl">Date emailed</div><input id="detailDateEmailed" type="date">
+      <div class="lbl">Next date</div>   <input id="detailNext"        type="date">
+      <div class="lbl">Subject</div>     <input id="detailSubject"     type="text" maxlength="255">
+      <div class="lbl" style="align-self:start; padding-top:0.4rem;">Notes</div><textarea id="detailNotes" rows="4" placeholder="(no notes)"></textarea>
     </div>
 
     <div class="row" style="margin-top:0.8rem; display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+      <button class="primary" onclick="saveContactDetails()">Save changes</button>
+      <span id="detailSaveOk">Saved ✓</span>
       <button class="primary" onclick="emailFromDetail()">📧 Email</button>
       <button class="primary" onclick="callFromDetail()">📞 Discovery call</button>
       <span style="flex:1;"></span>
@@ -459,26 +464,47 @@ function openDetailModal(cid) {
   const c = ALL_CONTACTS.find(x => x.id === cid);
   if (!c) return;
   _detailCid = cid;
-  document.getElementById('detailName').textContent = c.name || '';
+  document.getElementById('detailName').value = c.name || '';
   document.getElementById('detailStage').textContent = c.stage || '';
-  document.getElementById('detailTitle').textContent = c.title || '—';
-  document.getElementById('detailAgency').textContent = c.agency || '—';
-  const emailEl = document.getElementById('detailEmail');
-  emailEl.innerHTML = c.email
-    ? `<a href="mailto:${c.email}">${c.email}</a>`
-    : '—';
-  document.getElementById('detailPilot').textContent =
-    c.pilot_value ? `$${c.pilot_value.toLocaleString()}` : '—';
-  document.getElementById('detailRecurring').textContent =
-    c.recurring_value ? `$${c.recurring_value.toLocaleString()}/yr` : '—';
-  document.getElementById('detailDateEmailed').textContent = c.date_emailed || '—';
-  document.getElementById('detailNext').textContent = c.next_date || '—';
-  document.getElementById('detailSubject').textContent = c.subject || '—';
-  document.getElementById('detailNotes').textContent = c.notes || '(no notes)';
+  document.getElementById('detailTitle').value = c.title || '';
+  document.getElementById('detailAgency').value = c.agency || '';
+  document.getElementById('detailEmail').value = c.email || '';
+  document.getElementById('detailPilot').value = c.pilot_value || 0;
+  document.getElementById('detailRecurring').value = c.recurring_value || 0;
+  document.getElementById('detailDateEmailed').value = c.date_emailed || '';
+  document.getElementById('detailNext').value = c.next_date || '';
+  document.getElementById('detailSubject').value = c.subject || '';
+  document.getElementById('detailNotes').value = c.notes || '';
   document.getElementById('detailIndustrySel').value = c.industry || '';
   document.getElementById('detailIndustryCid').value = cid;
   document.getElementById('detailDeleteCid').value = cid;
+  document.getElementById('detailSaveOk').classList.remove('show');
   document.getElementById('detailModalBg').classList.add('show');
+}
+
+async function saveContactDetails() {
+  if (!_detailCid) return;
+  const form = new FormData();
+  form.append('contact_id', _detailCid);
+  form.append('name',            document.getElementById('detailName').value);
+  form.append('title',           document.getElementById('detailTitle').value);
+  form.append('agency',          document.getElementById('detailAgency').value);
+  form.append('email',           document.getElementById('detailEmail').value);
+  form.append('pilot_value',     document.getElementById('detailPilot').value);
+  form.append('recurring_value', document.getElementById('detailRecurring').value);
+  form.append('date_emailed',    document.getElementById('detailDateEmailed').value);
+  form.append('next_date',       document.getElementById('detailNext').value);
+  form.append('subject',         document.getElementById('detailSubject').value);
+  form.append('notes',           document.getElementById('detailNotes').value);
+  try {
+    const r = await fetch('/pipeline/update', { method: 'POST', body: form });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const ok = document.getElementById('detailSaveOk');
+    ok.classList.add('show');
+    setTimeout(() => location.reload(), 700);
+  } catch (e) {
+    alert('Save failed: ' + e.message);
+  }
 }
 
 function closeDetailModal() {
