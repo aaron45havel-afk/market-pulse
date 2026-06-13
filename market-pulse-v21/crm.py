@@ -1769,6 +1769,7 @@ def call_claude(prompt: str, *, max_tokens: int = 4096) -> str:
     Uses plain urllib to avoid a new dependency. Raises RuntimeError
     when the key is missing or the API errors so the caller can
     surface a clean message to the UI."""
+    import json as _json
     import os as _os
     import urllib.request as _urlreq
     import urllib.error as _urlerr
@@ -1778,7 +1779,7 @@ def call_claude(prompt: str, *, max_tokens: int = 4096) -> str:
             "ANTHROPIC_API_KEY not set — auto-processing disabled. "
             "Add it to Railway env vars to enable."
         )
-    body = json.dumps({
+    body = _json.dumps({
         "model": ANTHROPIC_MODEL,
         "max_tokens": max_tokens,
         "messages": [{"role": "user", "content": prompt}],
@@ -1795,7 +1796,7 @@ def call_claude(prompt: str, *, max_tokens: int = 4096) -> str:
     )
     try:
         with _urlreq.urlopen(req, timeout=180) as r:
-            response = json.loads(r.read())
+            response = _json.loads(r.read())
     except _urlerr.HTTPError as e:
         detail = ""
         try:
