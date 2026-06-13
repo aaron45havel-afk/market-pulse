@@ -103,6 +103,79 @@
   </form>
 </details>
 
+<!-- ── Trailing 8-week chart ───────────────────────────────────── -->
+<h2 style="margin:1.25rem 0 0.5rem; font-size:1.05rem;">Last 8 weeks
+  <span style="font-size:0.75rem; color:var(--text-dim); font-weight:400;">— bars are weekly counts, dotted line is this week's goal</span>
+</h2>
+{% set max_per_metric = {} %}
+{% for m in metrics %}
+  {% set _ = max_per_metric.update({m: ([1] + trailing|map(attribute=m)|list)|max}) %}
+{% endfor %}
+<div class="kpi-grid" style="margin-bottom:1rem;">
+  {% for m in metrics %}
+    {% set target = goals.get(m, 0) %}
+    {% set max_val = max_per_metric[m] %}
+    {% set chart_max = [max_val, target]|max %}
+    <div class="card" style="padding:0.7rem 0.9rem;">
+      <div style="font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; margin-bottom:0.4rem;">
+        {{ metric_labels[m] }}
+      </div>
+      <svg viewBox="0 0 200 70" style="width:100%; height:60px; display:block;">
+        {% if target and chart_max %}
+          {% set ty = 60 - (target / chart_max * 50) %}
+          <line x1="0" y1="{{ ty }}" x2="200" y2="{{ ty }}" stroke="var(--text-dim)" stroke-width="0.5" stroke-dasharray="2,2"/>
+          <text x="200" y="{{ ty - 2 }}" font-size="6" fill="var(--text-dim)" text-anchor="end">goal {{ target }}</text>
+        {% endif %}
+        {% for wk in trailing %}
+          {% set val = wk[m] %}
+          {% set bx = loop.index0 * 25 + 2 %}
+          {% set bh = (val / chart_max * 50) if chart_max else 0 %}
+          {% set by = 60 - bh %}
+          {% set on = (not target) or (val >= target) %}
+          <rect x="{{ bx }}" y="{{ by }}" width="20" height="{{ bh }}" fill="{{ 'var(--accent)' if on else '#ef4444' }}" opacity="{{ '0.7' if loop.last else '0.45' }}"/>
+          <text x="{{ bx + 10 }}" y="68" font-size="5" fill="var(--text-dim)" text-anchor="middle">{{ wk.week_start.strftime('%-m/%-d') }}</text>
+        {% endfor %}
+      </svg>
+      {% set total = trailing|map(attribute=m)|sum %}
+      <div style="font-size:0.7rem; color:var(--text-dim); margin-top:0.25rem;">
+        8-wk total: <strong style="color:var(--text);">{{ total }}</strong>
+        {% if total %} · avg {{ (total / 8)|round(1) }}/wk{% endif %}
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<!-- ── Funnel conversion (date-range) ───────────────────────────── -->
+<h2 style="margin:1.25rem 0 0.5rem; font-size:1.05rem;">Funnel conversion
+  <span style="font-size:0.75rem; color:var(--text-dim); font-weight:400;">— {{ funnel_start.strftime('%b %d, %Y') }} → {{ funnel_end.strftime('%b %d, %Y') }}</span>
+</h2>
+<form method="get" action="/pipeline" class="form-row" style="margin-bottom:0.7rem;">
+  <label>From <input type="date" name="funnel_start" value="{{ funnel_start.isoformat() }}"></label>
+  <label>To <input type="date" name="funnel_end" value="{{ funnel_end.isoformat() }}"></label>
+  <button type="submit">Update range</button>
+</form>
+{% macro funnel_step(label, count, rate, target) %}
+  {% set is_on = rate is none or target is none or rate >= target %}
+  <div class="card" style="padding:0.6rem 0.7rem; {% if rate is not none and target is not none %}border-color:{{ 'var(--accent)' if is_on else '#ef4444' }};{% endif %}">
+    <div style="font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">{{ label }}</div>
+    <div style="font-size:1.4rem; font-weight:700; margin:0.15rem 0; font-variant-numeric:tabular-nums;">{{ count }}</div>
+    {% if rate is not none %}
+      <div style="font-size:0.72rem; color:{{ 'var(--accent)' if is_on else '#ef4444' }}; font-weight:600;">
+        {{ rate }}%{% if target %} <span style="color:var(--text-dim); font-weight:400;">vs target {{ target }}%</span>{% endif %}
+      </div>
+    {% else %}
+      <div style="font-size:0.72rem; color:var(--text-dim);">no conversion data</div>
+    {% endif %}
+  </div>
+{% endmacro %}
+<div class="kpi-grid" style="grid-template-columns:repeat(5, minmax(0, 1fr)); margin-bottom:1rem;">
+  {{ funnel_step("Contacted", funnel.counts.CONTACTED, none, none) }}
+  {{ funnel_step("Replied", funnel.counts.REPLIED, funnel.rates.reply_rate, funnel.targets.reply_rate) }}
+  {{ funnel_step("Discovery call", funnel.counts.DISCOVERY_CALL, funnel.rates.call_rate, funnel.targets.call_rate) }}
+  {{ funnel_step("Pilot", funnel.counts.PILOT, funnel.rates.pilot_rate, funnel.targets.pilot_rate) }}
+  {{ funnel_step("Recurring", funnel.counts.RECURRING, funnel.rates.recurring_rate, none) }}
+</div>
+
 <!-- Pipeline columns -->
 <h2 style="margin:1.25rem 0 0.5rem; font-size:1.05rem;">Pipeline</h2>
 <div class="crm-grid" style="margin-bottom:1rem;">

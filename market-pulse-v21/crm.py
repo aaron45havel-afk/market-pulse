@@ -226,6 +226,126 @@ def weekly_kpis(week_start: date | None = None) -> dict[str, int]:
         conn.close()
 
 
+# ─── Funnel conversion (over any date range) ────────────────────────
+# Lynch's reply-rate / call-rate / pilot-rate targets, used to color
+# the funnel steps green/red. From the team's outbound playbook.
+FUNNEL_TARGETS = {
+    "reply_rate":    17.5,   # REPLIED / CONTACTED
+    "call_rate":     50.0,   # DISCOVERY_CALL / REPLIED
+    "pilot_rate":    33.0,   # PILOT / DISCOVERY_CALL
+}
+
+FUNNEL_STAGES = ("CONTACTED", "REPLIED", "DISCOVERY_CALL", "PILOT", "RECURRING")
+
+
+def funnel_conversion(start: date, end: date) -> dict:
+    """Counts of stage-events landing in each funnel stage between
+    [start, end] inclusive, plus the conversion % at each step.
+
+    Computes from stage history (crm_stage_events), so a contact that
+    was created LOST during this window contributes only to LOST and
+    not to CONTACTED — which is what you want for true conversion."""
+    start_dt = datetime.combine(start, datetime.min.time())
+    end_dt = datetime.combine(end + timedelta(days=1), datetime.min.time())
+    conn = _get_conn()
+    counts = {s: 0 for s in FUNNEL_STAGES}
+    if not conn:
+        return {"counts": counts, "rates": {}, "targets": FUNNEL_TARGETS}
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT to_stage, COUNT(*) FROM crm_stage_events
+            WHERE occurred_at >= %s AND occurred_at < %s
+              AND to_stage = ANY(%s)
+            GROUP BY to_stage
+        """, (start_dt, end_dt, list(FUNNEL_STAGES)))
+        for stage, n in cur.fetchall():
+            counts[stage] = n
+        cur.close()
+    finally:
+        conn.close()
+
+    def _pct(num: int, den: int) -> float | None:
+        if not den:
+            return None
+        return round(num / den * 100, 1)
+
+    rates = {
+        "reply_rate":     _pct(counts["REPLIED"], counts["CONTACTED"]),
+        "call_rate":      _pct(counts["DISCOVERY_CALL"], counts["REPLIED"]),
+        "pilot_rate":     _pct(counts["PILOT"], counts["DISCOVERY_CALL"]),
+        "recurring_rate": _pct(counts["RECURRING"], counts["PILOT"]),
+    }
+    return {"counts": counts, "rates": rates, "targets": FUNNEL_TARGETS}
+
+
+# ─── Trailing 8-week KPI series (per metric) ────────────────────────
+def trailing_weekly_kpis(weeks: int = 8) -> list[dict]:
+    """One row per ISO week (Monday-start) covering the trailing N
+    weeks ending with the current one. Each row has the 4 metrics so
+    the template can render one mini bar chart per metric.
+
+    Returns oldest → newest so chart bars read left-to-right.
+    """
+    today = date.today()
+    current_monday = iso_week_start(today)
+    first_monday = current_monday - timedelta(days=7 * (weeks - 1))
+    end_dt = datetime.combine(current_monday + timedelta(days=7), datetime.min.time())
+    start_dt = datetime.combine(first_monday, datetime.min.time())
+
+    # Build empty weekly buckets
+    series: list[dict] = []
+    for i in range(weeks):
+        wk_start = first_monday + timedelta(days=7 * i)
+        series.append({
+            "week_start": wk_start,
+            "NEW_CONTACTS": 0,
+            "EMAILS_SENT": 0,
+            "CALLS_BOOKED": 0,
+            "PILOTS_CLOSED": 0,
+        })
+
+    def _week_index(dt) -> int | None:
+        d = dt.date() if hasattr(dt, "date") else dt
+        delta = (iso_week_start(d) - first_monday).days // 7
+        return delta if 0 <= delta < weeks else None
+
+    conn = _get_conn()
+    if not conn:
+        return series
+    try:
+        cur = conn.cursor()
+        # New contacts per week (uses created_at).
+        cur.execute("""
+            SELECT created_at FROM crm_contacts
+            WHERE created_at >= %s AND created_at < %s
+        """, (start_dt, end_dt))
+        for (created_at,) in cur.fetchall():
+            i = _week_index(created_at)
+            if i is not None:
+                series[i]["NEW_CONTACTS"] += 1
+
+        # Stage events per week.
+        cur.execute("""
+            SELECT to_stage, occurred_at FROM crm_stage_events
+            WHERE occurred_at >= %s AND occurred_at < %s
+        """, (start_dt, end_dt))
+        for to_stage, occurred_at in cur.fetchall():
+            i = _week_index(occurred_at)
+            if i is None:
+                continue
+            if to_stage == "CONTACTED":
+                series[i]["EMAILS_SENT"] += 1
+            elif to_stage == "DISCOVERY_CALL":
+                series[i]["CALLS_BOOKED"] += 1
+            elif to_stage in ("PILOT", "RECURRING"):
+                series[i]["PILOTS_CLOSED"] += 1
+        cur.close()
+    finally:
+        conn.close()
+    return series
+
+
 # ─── Weekly goals ────────────────────────────────────────────────────
 def get_weekly_goals(week_start: date | None = None) -> dict[str, int]:
     week_start = week_start or iso_week_start()
