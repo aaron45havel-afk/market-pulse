@@ -313,8 +313,8 @@ async def lynch(request: Request):
 # below also check.
 @app.get("/pipeline")
 async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = ""):
-    if not _check_admin_token(request):
-        return RedirectResponse("/admin/login?redirect=/pipeline", status_code=303)
+    if not _check_pipeline_access(request):
+        return RedirectResponse("/sign-in?redirect=/pipeline", status_code=303)
     from datetime import date as _date, datetime as _dt, timedelta as _td
     from crm import (STAGES, METRICS, STAGE_LABELS, METRIC_LABELS,
                      INDUSTRIES, EMAIL_TRIGGERS, ROLES,
@@ -377,7 +377,7 @@ async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = "
 
 @app.post("/pipeline/contact")
 async def pipeline_add_contact(request: Request):
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from crm import (add_contact, STAGES, INDUSTRIES, ROLES,
                      find_contact_by_email)
@@ -435,7 +435,7 @@ async def pipeline_add_contact(request: Request):
 
 @app.post("/pipeline/stage")
 async def pipeline_change_stage(request: Request):
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from crm import change_stage
     form = await request.form()
@@ -451,7 +451,7 @@ async def pipeline_change_stage(request: Request):
 
 @app.post("/pipeline/delete")
 async def pipeline_delete_contact(request: Request):
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from crm import delete_contact
     form = await request.form()
@@ -466,7 +466,7 @@ async def pipeline_delete_contact(request: Request):
 
 @app.post("/pipeline/goal")
 async def pipeline_set_goal(request: Request):
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from crm import set_weekly_goal, METRICS
     form = await request.form()
@@ -484,7 +484,7 @@ async def pipeline_set_goal(request: Request):
 async def pipeline_update_contact(request: Request):
     """Patch a contact from the detail modal. Accepts any subset of
     editable fields and leaves the rest alone."""
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from crm import update_contact
     from datetime import datetime as _dt
@@ -536,7 +536,7 @@ async def pipeline_update_contact(request: Request):
 
 @app.post("/pipeline/industry")
 async def pipeline_set_industry(request: Request):
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from crm import set_contact_industry, INDUSTRIES
     form = await request.form()
@@ -556,7 +556,7 @@ async def pipeline_set_industry(request: Request):
 async def api_pipeline_find_by_email(request: Request, email: str = ""):
     """Returns {exists: bool, contact?: {...}} for the Add Contact
     form's preflight duplicate check."""
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from crm import find_contact_by_email
     hit = find_contact_by_email(email)
@@ -567,7 +567,7 @@ async def api_pipeline_find_by_email(request: Request, email: str = ""):
 async def api_pipeline_email(request: Request, contact_id: int):
     """Render the suggested next-step email for a contact. Returns
     JSON the modal can drop into its textareas."""
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from crm import list_contacts, suggest_email_for_contact
     contact = next((c for c in list_contacts() if c["id"] == contact_id), None)
@@ -582,8 +582,8 @@ async def api_pipeline_email(request: Request, contact_id: int):
 
 @app.get("/pipeline/templates")
 async def pipeline_templates(request: Request):
-    if not _check_admin_token(request):
-        return RedirectResponse("/admin/login?redirect=/pipeline/templates",
+    if not _check_pipeline_access(request):
+        return RedirectResponse("/sign-in?redirect=/pipeline/templates",
                                 status_code=303)
     from crm import INDUSTRIES, EMAIL_TRIGGERS, ROLES, list_templates
     return templates.TemplateResponse("pipeline_templates.html", {
@@ -597,7 +597,7 @@ async def pipeline_templates(request: Request):
 
 @app.post("/pipeline/template")
 async def pipeline_save_template(request: Request):
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from crm import upsert_template
     form = await request.form()
@@ -613,7 +613,7 @@ async def pipeline_save_template(request: Request):
 
 @app.post("/pipeline/template/delete")
 async def pipeline_delete_template(request: Request):
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from crm import delete_template
     form = await request.form()
@@ -632,7 +632,7 @@ async def api_pipeline_call_get(request: Request, contact_id: int):
     """Return the call payload for a contact: agenda, the four
     pre-filled prompts (transcript + extraction_json substituted in),
     and any saved artifacts + scorecard."""
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from crm import (DISCOVERY_AGENDA, DISCOVERY_PROMPT_EXTRACT,
                      DISCOVERY_PROMPT_EXEC_SUMMARY,
@@ -683,7 +683,7 @@ async def api_pipeline_call_get(request: Request, contact_id: int):
 
 @app.post("/pipeline/call")
 async def pipeline_save_call(request: Request):
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from crm import upsert_call
     from datetime import datetime as _dt, date as _date
@@ -719,7 +719,7 @@ async def pipeline_save_call(request: Request):
 
 @app.post("/pipeline/call/delete")
 async def pipeline_delete_call(request: Request):
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from crm import delete_call
     form = await request.form()
@@ -737,7 +737,7 @@ async def pipeline_delete_call(request: Request):
 async def api_pipeline_session_get(request: Request, contact_id: int):
     """Return the working-session payload for a contact: agenda, four
     pre-filled prompts, saved artifacts, and the scorecard band."""
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from crm import (WORKING_AGENDA, WORKING_PROMPT_EXTRACT,
                      WORKING_PROMPT_LOCKED_SCOPE, WORKING_PROMPT_CRITERIA,
@@ -797,7 +797,7 @@ async def api_pipeline_session_get(request: Request, contact_id: int):
 
 @app.post("/pipeline/session")
 async def pipeline_save_session(request: Request):
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from crm import upsert_session
     from datetime import datetime as _dt, date as _date
@@ -834,7 +834,7 @@ async def pipeline_save_session(request: Request):
 
 @app.post("/pipeline/session/delete")
 async def pipeline_delete_session(request: Request):
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from crm import delete_session
     form = await request.form()
@@ -853,7 +853,7 @@ async def api_pipeline_ai_config(request: Request):
     """Expose which optional integrations are wired up. Used by the
     modals to show / hide the 'Auto-process with AI' button and the
     'Send via Resend' button."""
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from crm import (anthropic_configured, ANTHROPIC_MODEL,
                      resend_configured, resend_from_address)
@@ -870,7 +870,7 @@ async def api_pipeline_send_email(request: Request):
     """Send a transactional email via Resend for a CRM contact. On
     success: appends the email to the contact's email_thread, bumps
     a QUEUED contact to CONTACTED, and sets date_emailed=today."""
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     body = await request.json()
     try:
@@ -956,7 +956,7 @@ async def api_pipeline_call_auto(request: Request, contact_id: int):
     NDJSON response so the UI can show per-step progress. Each line
     is a JSON object: {"step":"…","label":"…"} for progress, then a
     final {"done": true, "extraction_json": …, ...} payload."""
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     body = await request.json()
     transcript = (body.get("transcript") or "").strip()
@@ -1034,7 +1034,7 @@ async def api_pipeline_call_auto(request: Request, contact_id: int):
 async def api_pipeline_session_auto(request: Request, contact_id: int):
     """Same streamed shape as the discovery-call auto endpoint, but
     for the working-session chain."""
-    if not _check_admin_token(request):
+    if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     body = await request.json()
     transcript = (body.get("transcript") or "").strip()
@@ -1617,17 +1617,19 @@ ADMIN_COOKIE = "mp_admin"
 
 
 def _check_admin_token(request: Request) -> bool:
-    """Compares against the ADMIN_TOKEN env var. Accepts the token
-    from any of three sources, in order of precedence:
-      • ?token=<...>  query param (programmatic admin endpoints like
-                                    /admin/signups?token=... CSV exports)
-      • X-Admin-Token  request header (same use case via curl)
-      • mp_admin       browser cookie set by /admin/login (UI gating —
-                       hides /finance + /results from non-admins)
+    """Admin access. Accepts (in order):
+      • mp_session cookie with role=admin (Google OAuth path)
+      • ?token=<ADMIN_TOKEN> query param
+      • X-Admin-Token request header
+      • mp_admin browser cookie set by /admin/login
 
-    Returns False when ADMIN_TOKEN env var is unset, so an accidental
-    deploy without the secret refuses access rather than letting
-    everyone in."""
+    Returns False when neither path is satisfied."""
+    # Google OAuth session path.
+    from auth import SESSION_COOKIE, verify_session
+    sess = verify_session(request.cookies.get(SESSION_COOKIE, ""))
+    if sess and sess.get("role") == "admin":
+        return True
+    # Legacy ADMIN_TOKEN path.
     expected = os.environ.get("ADMIN_TOKEN", "").strip()
     if not expected:
         return False
@@ -1663,6 +1665,109 @@ async def admin_login(request: Request, token: str = "", redirect: str = "/"):
     return resp
 
 
+def _check_pipeline_access(request: Request) -> bool:
+    """Pipeline routes: admin OR sales role. Used for /pipeline/* paths
+    so the sales team can sign in via Google and access only that
+    section while admins keep full app access."""
+    if _check_admin_token(request):
+        return True
+    from auth import SESSION_COOKIE, verify_session
+    sess = verify_session(request.cookies.get(SESSION_COOKIE, ""))
+    return bool(sess and sess.get("role") in ("admin", "sales"))
+
+
+def _current_user(request: Request) -> dict | None:
+    """Returns {email, role} from the Google OAuth session, or None.
+    Does NOT return for legacy ADMIN_TOKEN sessions (those have no
+    email); callers handle that via _check_admin_token."""
+    from auth import SESSION_COOKIE, verify_session
+    return verify_session(request.cookies.get(SESSION_COOKIE, ""))
+
+
+@app.get("/auth/google/login")
+async def auth_google_login(request: Request, redirect: str = "/pipeline"):
+    """Start the Google OAuth round-trip. Caches the post-login
+    redirect target + CSRF state in short-lived cookies."""
+    from auth import google_oauth_redirect, new_state, OAUTH_STATE_COOKIE, OAUTH_REDIRECT_COOKIE
+    callback = str(request.url_for("auth_google_callback"))
+    state = new_state()
+    url = google_oauth_redirect(callback, state)
+    if not url:
+        return JSONResponse(
+            {"error": "Google sign-in not configured. Set GOOGLE_CLIENT_ID."},
+            status_code=500,
+        )
+    secure = request.url.scheme == "https"
+    resp = RedirectResponse(url, status_code=303)
+    resp.set_cookie(OAUTH_STATE_COOKIE, state, max_age=600,
+                    httponly=True, secure=secure, samesite="lax")
+    safe_redirect = redirect if redirect.startswith("/") else "/pipeline"
+    resp.set_cookie(OAUTH_REDIRECT_COOKIE, safe_redirect, max_age=600,
+                    httponly=True, secure=secure, samesite="lax")
+    return resp
+
+
+@app.get("/auth/google/callback")
+async def auth_google_callback(request: Request, code: str = "", state: str = "",
+                               error: str = ""):
+    """Google OAuth redirect target. Exchanges code → tokens → userinfo,
+    validates the email against ADMIN_EMAILS / SALES_EMAILS, then sets
+    the mp_session cookie and bounces to the original destination."""
+    from auth import (SESSION_COOKIE, OAUTH_STATE_COOKIE, OAUTH_REDIRECT_COOKIE,
+                      google_exchange_code, google_fetch_userinfo,
+                      role_for_email, make_session)
+    if error:
+        return JSONResponse({"error": f"Google sign-in cancelled: {error}"},
+                            status_code=400)
+    expected_state = request.cookies.get(OAUTH_STATE_COOKIE, "")
+    if not state or state != expected_state:
+        return JSONResponse({"error": "Invalid OAuth state."}, status_code=400)
+    callback = str(request.url_for("auth_google_callback"))
+    tokens = google_exchange_code(code, callback)
+    if not tokens or not tokens.get("access_token"):
+        return JSONResponse({"error": "Failed to exchange code for tokens."},
+                            status_code=400)
+    info = google_fetch_userinfo(tokens["access_token"])
+    if not info or not info.get("email"):
+        return JSONResponse({"error": "Could not load Google profile."},
+                            status_code=400)
+    if info.get("verified_email") is False:
+        return JSONResponse({"error": "Google email not verified."},
+                            status_code=403)
+    email = info["email"].strip().lower()
+    role = role_for_email(email)
+    if not role:
+        return JSONResponse(
+            {"error": f"{email} is not on the access list. Ask Aaron to add it."},
+            status_code=403,
+        )
+    token = make_session(email, role)
+    if not token:
+        return JSONResponse({"error": "SESSION_SECRET not set on server."},
+                            status_code=500)
+    redirect_to = request.cookies.get(OAUTH_REDIRECT_COOKIE, "/pipeline")
+    if not redirect_to.startswith("/"):
+        redirect_to = "/pipeline"
+    secure = request.url.scheme == "https"
+    resp = RedirectResponse(redirect_to, status_code=303)
+    resp.set_cookie(SESSION_COOKIE, token, max_age=60 * 60 * 24 * 30,
+                    httponly=True, secure=secure, samesite="lax")
+    resp.delete_cookie(OAUTH_STATE_COOKIE)
+    resp.delete_cookie(OAUTH_REDIRECT_COOKIE)
+    return resp
+
+
+@app.get("/auth/logout")
+async def auth_logout(request: Request):
+    """Sign the user out of both the Google session AND the legacy
+    admin cookie."""
+    from auth import SESSION_COOKIE
+    resp = RedirectResponse("/admin/login", status_code=303)
+    resp.delete_cookie(SESSION_COOKIE)
+    resp.delete_cookie(ADMIN_COOKIE)
+    return resp
+
+
 @app.get("/admin/logout")
 async def admin_logout():
     """Clears the admin cookie. Useful for testing the gated UX."""
@@ -1674,6 +1779,19 @@ async def admin_logout():
 # Expose to Jinja so base.html can hide admin-only nav links without
 # the route handler having to pass `is_admin` through every render.
 templates.env.globals["is_admin"] = _check_admin_token
+templates.env.globals["current_user"] = _current_user
+templates.env.globals["pipeline_access"] = _check_pipeline_access
+
+
+@app.get("/sign-in")
+async def sign_in_page(request: Request, redirect: str = "/pipeline"):
+    """Lightweight sign-in landing — offers Google OAuth if configured,
+    otherwise falls back to the legacy admin-token URL."""
+    return templates.TemplateResponse("sign_in.html", {
+        "request": request,
+        "redirect": redirect,
+        "google_configured": bool(os.environ.get("GOOGLE_CLIENT_ID", "").strip()),
+    })
 
 
 @app.get("/admin/signups")
