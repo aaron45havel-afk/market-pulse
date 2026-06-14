@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% block title %}Testing — Pipeline{% endblock %}
+{% block extra_css %}
+<style>
+  .test-head { display:flex; justify-content:space-between; align-items:baseline; gap:0.8rem; flex-wrap:wrap; margin-bottom:0.4rem; }
+  .test-sub { color:var(--text-dim); font-size:0.85rem; margin:0 0 1.2rem; }
+  .test-sub a { color:var(--accent2); }
+
+  .proto-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:1rem 1.1rem; margin-bottom:0.85rem;
+  }
+  .proto-top { display:flex; gap:0.7rem; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; margin-bottom:0.55rem; }
+  .proto-name { font-size:1rem; font-weight:700; margin:0; }
+  .proto-contact { font-size:0.75rem; color:var(--text-dim); margin-top:2px; }
+  .proto-contact a { color:var(--text-dim); }
+  .proto-status {
+    font-size:0.66rem; text-transform:uppercase; letter-spacing:0.06em;
+    font-weight:700; padding:2px 8px; border-radius:99px;
+  }
+  .proto-status.BUILDING { background:rgba(245,158,11,0.15); color:#92400e; }
+  .proto-status.LIVE     { background:rgba(34,197,94,0.15);  color:#166534; }
+  .proto-status.PAUSED   { background:rgba(99,102,241,0.15); color:var(--accent2); }
+  .proto-status.CLOSED   { background:rgba(0,0,0,0.06);      color:var(--text-dim); }
+
+  .proto-row { display:flex; gap:0.7rem; align-items:center; flex-wrap:wrap; margin-bottom:0.5rem; font-size:0.82rem; }
+  .proto-row .lbl { font-size:0.66rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; font-weight:700; }
+  .proto-row input, .proto-row select, .proto-row textarea {
+    background:var(--surface2); border:1px solid var(--border); border-radius:5px;
+    padding:0.3rem 0.55rem; color:var(--text); font-size:0.82rem;
+    outline:none; font-family:inherit;
+  }
+  .proto-row input[type="url"]  { flex:1; min-width:200px; }
+  .proto-row input[type="text"] { flex:1; min-width:180px; }
+
+  .proto-grid { display:grid; grid-template-columns: 1fr 1fr; gap:0.7rem; margin-top:0.5rem; }
+  @media (max-width: 720px) { .proto-grid { grid-template-columns: 1fr; } }
+  .proto-grid label { display:flex; flex-direction:column; gap:3px; font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em; }
+  .proto-grid textarea {
+    background:var(--surface2); border:1px solid var(--border); border-radius:6px;
+    padding:0.45rem 0.55rem; color:var(--text); font-size:0.82rem;
+    outline:none; resize:vertical; min-height:80px; line-height:1.5; font-family:inherit; font-weight:400;
+    text-transform:none; letter-spacing:0;
+  }
+
+  .feedback-log {
+    background:var(--surface2); border:1px solid var(--border); border-radius:6px;
+    padding:0.5rem 0.7rem; font-size:0.78rem; line-height:1.55;
+    max-height:200px; overflow-y:auto; white-space:pre-wrap;
+    color:var(--text-dim);
+  }
+  .feedback-log:empty::before { content:"No feedback recorded yet."; font-style:italic; }
+
+  .add-fb-row { display:flex; gap:0.4rem; align-items:flex-end; margin-top:0.5rem; flex-wrap:wrap; }
+  .add-fb-row textarea {
+    flex:1; min-width:240px; background:var(--surface2); border:1px solid var(--border);
+    border-radius:6px; padding:0.4rem 0.55rem; color:var(--text); font-size:0.82rem;
+    outline:none; font-family:inherit; resize:vertical; min-height:54px; line-height:1.4;
+  }
+  .add-fb-row button {
+    background:var(--accent2); color:#fff; border:none; padding:0.5rem 0.85rem;
+    border-radius:6px; cursor:pointer; font-weight:600; font-size:0.82rem;
+  }
+
+  .proto-actions { display:flex; gap:0.4rem; align-items:center; margin-top:0.7rem; flex-wrap:wrap; }
+  .proto-actions a, .proto-actions button {
+    background:var(--surface); border:1px solid var(--border);
+    color:var(--text); padding:0.35rem 0.7rem; border-radius:5px;
+    font-size:0.78rem; cursor:pointer; text-decoration:none;
+    font-family:inherit;
+  }
+  .proto-actions a:hover, .proto-actions button:hover {
+    background:rgba(99,102,241,0.08); border-color:var(--accent2);
+    text-decoration:none;
+  }
+  .proto-actions .danger { color:#ef4444; border-color:transparent; background:transparent; }
+  .proto-actions .danger:hover { background:rgba(239,68,68,0.08); border-color:#ef4444; }
+
+  .save-flash { font-size:0.72rem; color:var(--accent); font-weight:600; opacity:0; transition:opacity 0.2s; }
+  .save-flash.show { opacity:1; }
+
+  .empty-state {
+    padding:2rem 1.2rem; text-align:center; color:var(--text-dim);
+    font-size:0.88rem; background:var(--surface); border:1px dashed var(--border);
+    border-radius:10px;
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="test-head">
+  <h1 style="margin:0;">Testing</h1>
+  <a href="/pipeline" style="font-size:0.85rem; color:var(--accent2);">← back to pipeline</a>
+</div>
+<p class="test-sub">
+  Track each prototype you're showing a client. Set the URL, drop in feedback as
+  they reply, send preview emails from here.
+  Need a host? Deploy each prototype as its own
+  <a href="https://vercel.com/new" target="_blank" rel="noopener">Vercel project</a>.
+</p>
+
+<!-- Add prototype -->
+<details class="card" style="margin-bottom:1rem; padding:0.7rem 0.9rem;" {% if not prototypes %}open{% endif %}>
+  <summary style="font-weight:600; font-size:0.9rem; cursor:pointer;">+ Add a prototype</summary>
+  <form method="post" action="/pipeline/testing/add" style="margin-top:0.7rem; display:grid; grid-template-columns:1fr 1fr; gap:0.55rem 0.75rem;">
+    <label style="grid-column:1 / -1; display:flex; flex-direction:column; gap:3px; font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">Name
+      <input type="text" name="name" required placeholder="e.g. DrawCheck v1"
+             style="background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.55rem; color:var(--text); font-size:0.85rem; font-family:inherit; font-weight:400; text-transform:none; letter-spacing:0;">
+    </label>
+    <label style="display:flex; flex-direction:column; gap:3px; font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">Contact
+      <select name="contact_id"
+              style="background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.55rem; color:var(--text); font-size:0.85rem; font-family:inherit; font-weight:400; text-transform:none; letter-spacing:0;">
+        <option value="">— unassigned —</option>
+        {% for c in contacts %}<option value="{{ c.id }}">{{ c.name }}{% if c.agency %} · {{ c.agency }}{% endif %}</option>{% endfor %}
+      </select>
+    </label>
+    <label style="display:flex; flex-direction:column; gap:3px; font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">Status
+      <select name="status"
+              style="background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.55rem; color:var(--text); font-size:0.85rem; font-family:inherit; font-weight:400; text-transform:none; letter-spacing:0;">
+        {% for s in statuses %}<option value="{{ s }}" {% if s == 'BUILDING' %}selected{% endif %}>{{ status_labels[s] }}</option>{% endfor %}
+      </select>
+    </label>
+    <label style="grid-column:1 / -1; display:flex; flex-direction:column; gap:3px; font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">Public URL
+      <input type="url" name="prototype_url" placeholder="https://drawcheck.vercel.app"
+             style="background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.55rem; color:var(--text); font-size:0.85rem; font-family:inherit; font-weight:400; text-transform:none; letter-spacing:0;">
+    </label>
+    <label style="grid-column:1 / -1; display:flex; flex-direction:column; gap:3px; font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">What's in this version
+      <textarea name="description" rows="3" placeholder="Read-only Sage 300 dashboard + change-order intake. Mock data only."
+                style="background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.55rem; color:var(--text); font-size:0.82rem; resize:vertical; line-height:1.5; font-family:inherit; font-weight:400; text-transform:none; letter-spacing:0;"></textarea>
+    </label>
+    <div style="grid-column:1 / -1;">
+      <button type="submit" style="background:var(--accent2); color:#fff; border:none; padding:0.45rem 1rem; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.85rem;">Add prototype</button>
+    </div>
+  </form>
+</details>
+
+<!-- Prototype cards -->
+{% if prototypes %}
+  {% for p in prototypes %}
+  <div class="proto-card" data-pid="{{ p.id }}">
+    <div class="proto-top">
+      <div>
+        <h3 class="proto-name"><input type="text" data-field="name" value="{{ p.name }}" style="background:transparent; border:none; outline:none; color:var(--text); font-weight:700; font-size:1rem; font-family:inherit; width:100%; min-width:240px;"></h3>
+        <div class="proto-contact">
+          {% if p.contact_id %}
+            <a href="#" onclick="parent.openDetailModal({{ p.contact_id }}); return false;">{{ p.contact_name }}{% if p.agency %} · {{ p.agency }}{% endif %}</a>
+          {% else %}
+            unassigned
+          {% endif %}
+        </div>
+      </div>
+      <select data-field="status" class="proto-status {{ p.status }}" style="border:none; outline:none; font-family:inherit; cursor:pointer;">
+        {% for s in statuses %}<option value="{{ s }}" {% if s == p.status %}selected{% endif %}>{{ status_labels[s] }}</option>{% endfor %}
+      </select>
+    </div>
+
+    <div class="proto-row">
+      <span class="lbl">URL</span>
+      <input type="url" data-field="prototype_url" value="{{ p.prototype_url or '' }}" placeholder="https://…">
+      {% if p.prototype_url %}<a href="{{ p.prototype_url }}" target="_blank" rel="noopener" style="font-size:0.78rem; color:var(--accent2);">Open ↗</a>{% endif %}
+    </div>
+
+    <div class="proto-grid">
+      <label>What's in this version
+        <textarea data-field="description">{{ p.description or '' }}</textarea>
+      </label>
+      <label>Internal notes
+        <textarea data-field="notes">{{ p.notes or '' }}</textarea>
+      </label>
+    </div>
+
+    <div style="margin-top:0.7rem;">
+      <div class="lbl" style="margin-bottom:0.3rem;">Feedback log (newest first)</div>
+      <div class="feedback-log">{{ p.feedback or '' }}</div>
+      <div class="add-fb-row">
+        <textarea class="add-fb" placeholder="Paste a client reply, note something they said on a call, or write your own observation…"></textarea>
+        <button type="button" onclick="appendFeedback({{ p.id }}, this)">Log feedback</button>
+      </div>
+    </div>
+
+    <div class="proto-actions">
+      {% if p.contact_id and p.prototype_url %}
+        <button type="button" onclick="composePreviewEmail({{ p.contact_id }}, '{{ p.name|e }}', '{{ p.prototype_url|e }}')">📧 Compose preview email</button>
+      {% endif %}
+      <span class="save-flash" id="flash-{{ p.id }}">Saved ✓</span>
+      <span style="flex:1;"></span>
+      <form method="post" action="/pipeline/testing/delete" onsubmit="return confirm('Delete this prototype?');" style="margin:0;">
+        <input type="hidden" name="prototype_id" value="{{ p.id }}">
+        <button type="submit" class="danger">Delete</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="empty-state">
+    No prototypes yet. Add one above when you've got a build to show a client.
+  </div>
+{% endif %}
+
+<script>
+let _saveTimer = null;
+function _readCard(card) {
+  return {
+    id: parseInt(card.dataset.pid, 10),
+    name:           card.querySelector('[data-field="name"]').value,
+    prototype_url:  card.querySelector('[data-field="prototype_url"]').value,
+    status:         card.querySelector('[data-field="status"]').value,
+    description:    card.querySelector('[data-field="description"]').value,
+    notes:          card.querySelector('[data-field="notes"]').value,
+  };
+}
+function _flash(pid) {
+  const el = document.getElementById('flash-' + pid);
+  if (!el) return;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 1200);
+}
+async function _save(card) {
+  const patch = _readCard(card);
+  try {
+    const r = await fetch('/pipeline/testing/update', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    _flash(patch.id);
+    // Update the status pill style to match the new value.
+    const sel = card.querySelector('[data-field="status"]');
+    if (sel) {
+      sel.className = 'proto-status ' + sel.value;
+    }
+  } catch (e) { console.warn('Auto-save failed:', e); }
+}
+document.querySelectorAll('.proto-card').forEach(card => {
+  card.querySelectorAll('[data-field]').forEach(el => {
+    el.addEventListener('input',  () => {
+      if (_saveTimer) clearTimeout(_saveTimer);
+      _saveTimer = setTimeout(() => _save(card), 600);
+    });
+    el.addEventListener('change', () => _save(card));
+  });
+});
+
+async function appendFeedback(pid, btn) {
+  const card = btn.closest('.proto-card');
+  const ta = card.querySelector('.add-fb');
+  const txt = (ta.value || '').trim();
+  if (!txt) return;
+  btn.disabled = true;
+  try {
+    const r = await fetch('/pipeline/testing/update', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: pid, append_feedback: txt }),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    ta.value = '';
+    location.reload();
+  } catch (e) {
+    alert('Failed: ' + e.message);
+  } finally { btn.disabled = false; }
+}
+
+function composePreviewEmail(contactId, protoName, url) {
+  // Reuse the existing email modal from /pipeline by opening it in a
+  // new tab. The modal will load the standard template for this
+  // contact's current stage; user pastes the preview link manually.
+  const subject = `Preview: ${protoName}`;
+  const body =
+    `Hi {first_name},\n\n` +
+    `Quick look at where ${protoName} stands — live preview here:\n` +
+    `${url}\n\n` +
+    `It's mock data only for now, but the workflow + screens reflect what I'd build against your real systems. ` +
+    `Two things would really help me before the next iteration:\n\n` +
+    `  1. Anything missing from how you actually do this today?\n` +
+    `  2. Any screen that should be a different shape (different cuts, different timing, different alerts)?\n\n` +
+    `Reply with whatever comes to mind — even rough — and I'll fold it in for the next pass.\n\n` +
+    `{my_name}`;
+  // Open /pipeline with a hash that pipeline.html could consume; for
+  // now just open a mailto with the prefilled draft.
+  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailto;
+}
+</script>
+{% endblock %}

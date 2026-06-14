@@ -139,6 +139,21 @@ STAGE_LABELS = {
     "LOST":           "Lost",
 }
 
+# ─── Prototype tracking ─────────────────────────────────────────────
+PROTOTYPE_STATUSES = (
+    "BUILDING",   # Aaron is iterating, not shareable yet
+    "LIVE",       # Public URL is up, client can view + give feedback
+    "PAUSED",     # Waiting on a decision or client response
+    "CLOSED",     # Wrapped — handed off, abandoned, or rolled into prod
+)
+PROTOTYPE_STATUS_LABELS = {
+    "BUILDING": "Building",
+    "LIVE":     "Live",
+    "PAUSED":   "Paused",
+    "CLOSED":   "Closed",
+}
+
+
 # ─── Industries + email templates ────────────────────────────────────
 INDUSTRIES = (
     "Government / Municipal Finance",
@@ -389,6 +404,134 @@ def delete_contact(contact_id: int) -> bool:
     try:
         cur = conn.cursor()
         cur.execute("DELETE FROM crm_contacts WHERE id = %s", (contact_id,))
+        conn.commit()
+        cur.close()
+        return True
+    finally:
+        conn.close()
+
+
+# ─── Prototype CRUD ─────────────────────────────────────────────────
+def list_prototypes() -> list[dict]:
+    """All prototypes joined with the contact name + agency. Ordered
+    by status (live first), then most-recent update."""
+    conn = _get_conn()
+    if not conn:
+        return []
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT p.id, p.contact_id, c.name AS contact_name, c.agency,
+                   p.name, p.prototype_url, p.status, p.description,
+                   p.feedback, p.notes,
+                   p.created_at, p.updated_at
+            FROM crm_prototypes p
+            LEFT JOIN crm_contacts c ON c.id = p.contact_id
+            ORDER BY
+              CASE p.status
+                WHEN 'LIVE' THEN 0
+                WHEN 'BUILDING' THEN 1
+                WHEN 'PAUSED' THEN 2
+                WHEN 'CLOSED' THEN 3
+                ELSE 4
+              END,
+              p.updated_at DESC
+        """)
+        rows = cur.fetchall()
+        cols = ["id", "contact_id", "contact_name", "agency",
+                "name", "prototype_url", "status", "description",
+                "feedback", "notes", "created_at", "updated_at"]
+        out = [dict(zip(cols, r)) for r in rows]
+        cur.close()
+        return out
+    finally:
+        conn.close()
+
+
+def add_prototype(*, contact_id: int | None, name: str,
+                  prototype_url: str | None = None,
+                  status: str = "BUILDING",
+                  description: str | None = None) -> int | None:
+    if status not in PROTOTYPE_STATUSES:
+        status = "BUILDING"
+    conn = _get_conn()
+    if not conn:
+        return None
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO crm_prototypes
+              (contact_id, name, prototype_url, status, description)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id
+        """, (contact_id or None, name, prototype_url, status, description))
+        new_id = cur.fetchone()[0]
+        conn.commit()
+        cur.close()
+        return new_id
+    finally:
+        conn.close()
+
+
+def update_prototype(prototype_id: int, *,
+                     name: str | None = None,
+                     prototype_url: str | None = None,
+                     status: str | None = None,
+                     description: str | None = None,
+                     notes: str | None = None,
+                     append_feedback: str | None = None) -> bool:
+    """Patch any subset of fields. append_feedback prepends a dated
+    block to the feedback log instead of overwriting it."""
+    if status is not None and status not in PROTOTYPE_STATUSES:
+        return False
+    conn = _get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        sets = []
+        params: list = []
+        for col, val in [
+            ("name", name), ("prototype_url", prototype_url),
+            ("status", status), ("description", description),
+            ("notes", notes),
+        ]:
+            if val is not None:
+                sets.append(f"{col} = %s")
+                params.append(val)
+        if append_feedback is not None and append_feedback.strip():
+            cur.execute("SELECT feedback FROM crm_prototypes WHERE id = %s",
+                        (prototype_id,))
+            row = cur.fetchone()
+            prev = (row[0] if row else "") or ""
+            stamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+            entry = f"--- {stamp} ---\n{append_feedback.strip()}"
+            new_log = (entry + "\n\n" + prev).strip() if prev else entry
+            sets.append("feedback = %s")
+            params.append(new_log)
+        if not sets:
+            cur.close()
+            return True
+        sets.append("updated_at = NOW()")
+        params.append(prototype_id)
+        cur.execute(
+            f"UPDATE crm_prototypes SET {', '.join(sets)} WHERE id = %s",
+            tuple(params),
+        )
+        conn.commit()
+        cur.close()
+        return True
+    finally:
+        conn.close()
+
+
+def delete_prototype(prototype_id: int) -> bool:
+    conn = _get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM crm_prototypes WHERE id = %s", (prototype_id,))
         conn.commit()
         cur.close()
         return True
