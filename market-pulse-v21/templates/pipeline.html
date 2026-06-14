@@ -2067,6 +2067,30 @@ async function saveAgreement() {
           <span style="font-size:0.72rem; color:var(--text-dim);">→ paste into a new Claude Code session to build the prototype</span>
         </div>
       </div>
+
+      <!-- Step 6 — post-review iteration -->
+      <div class="prompt-card" style="border-color:var(--accent2);">
+        <h4>Step 6 — Plan next iteration (post-client review)</h4>
+        <div class="hint">After a client review meeting, paste what they want added/changed. Outputs <strong>two</strong> prompts: one for Claude Code (implement), one for claude.ai chat (design thinking).</div>
+        <label class="step-lbl">Client's feedback (what did they say?)</label>
+        <textarea id="sessionIterationFeedback" placeholder="Paste meeting notes, free-form feedback, or list of requested changes. e.g. 'Jim said the alerts page needs to show vendor name. He wants a column for projected variance. Also wants to be able to filter by project manager.'" style="background:var(--surface); font-family:inherit; min-height:120px; line-height:1.5;"></textarea>
+        <div style="display:flex; gap:0.6rem; align-items:center; margin-top:0.5rem; flex-wrap:wrap;">
+          <button id="sessionIterationAutoBtn" type="button" class="primary" onclick="autoProcessIteration()" style="background:linear-gradient(135deg, var(--accent2), #9b6dff); color:white; border:none; padding:0.5rem 0.9rem; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.85rem;">✨ Run Step 6 (auto)</button>
+          <span id="sessionIterationAutoStatus" style="font-size:0.78rem; color:var(--text-dim);"></span>
+          <span style="flex:1;"></span>
+          <button type="button" onclick="copyIterationMetaPrompt()" style="background:var(--surface); border:1px solid var(--border); color:var(--text); padding:0.4rem 0.75rem; border-radius:6px; cursor:pointer; font-size:0.78rem;">Copy meta-prompt (paste into claude.ai)</button>
+        </div>
+        <label class="step-lbl" style="margin-top:0.7rem;">Output A — Claude Code prompt (paste into Claude Code in the prototype repo)</label>
+        <textarea id="sessionIterationCode" placeholder="Will be filled by Step 6 — implements the data structure + code changes." style="background:var(--surface); font-family:inherit; min-height:200px;"></textarea>
+        <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.35rem;">
+          <button type="button" class="primary" onclick="copyToClipboard('sessionIterationCode')" style="background:var(--accent2); color:white; border:none; padding:0.3rem 0.75rem; border-radius:5px; cursor:pointer; font-weight:600; font-size:0.78rem;">📋 Copy Claude Code prompt</button>
+        </div>
+        <label class="step-lbl" style="margin-top:0.7rem;">Output B — claude.ai design prompt (paste into claude.ai chat)</label>
+        <textarea id="sessionIterationDesign" placeholder="Will be filled by Step 6 — design thinking before code." style="background:var(--surface); font-family:inherit; min-height:200px;"></textarea>
+        <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.35rem;">
+          <button type="button" class="primary" onclick="copyToClipboard('sessionIterationDesign')" style="background:var(--accent2); color:white; border:none; padding:0.3rem 0.75rem; border-radius:5px; cursor:pointer; font-weight:600; font-size:0.78rem;">📋 Copy design prompt</button>
+        </div>
+      </div>
     </div><!-- end Steps pane -->
 
     <div class="row" style="margin-top:0.7rem;">
@@ -2114,6 +2138,9 @@ async function openSessionModal(contactId) {
     document.getElementById('sessionCriteria').value   = data.saved.success_criteria || '';
     document.getElementById('sessionProposal').value   = data.saved.proposal_draft || '';
     document.getElementById('sessionPrototype').value  = data.saved.prototype_brief || '';
+    document.getElementById('sessionIterationFeedback').value = data.saved.iteration_feedback || '';
+    document.getElementById('sessionIterationCode').value     = data.saved.iteration_code_prompt || '';
+    document.getElementById('sessionIterationDesign').value   = data.saved.iteration_design_prompt || '';
 
     // Pre-fill the ready-to-send first-name field from the contact
     // record so the user doesn't retype it for every prospect.
@@ -2173,7 +2200,8 @@ function _flushSessionAutoSave() {
   return Promise.resolve();
 }
 ['sessionTranscript','sessionExtraction','sessionScope','sessionCriteria',
- 'sessionProposal','sessionPrototype','sessionDate'].forEach(id => {
+ 'sessionProposal','sessionPrototype','sessionDate',
+ 'sessionIterationFeedback','sessionIterationCode','sessionIterationDesign'].forEach(id => {
   const el = document.getElementById(id);
   if (!el) return;
   el.addEventListener('input',  _scheduleSessionAutoSave);
@@ -2228,6 +2256,9 @@ async function saveSession(opts) {
   form.append('success_criteria', document.getElementById('sessionCriteria').value);
   form.append('proposal_draft',   document.getElementById('sessionProposal').value);
   form.append('prototype_brief',  document.getElementById('sessionPrototype').value);
+  form.append('iteration_feedback',       document.getElementById('sessionIterationFeedback').value);
+  form.append('iteration_code_prompt',    document.getElementById('sessionIterationCode').value);
+  form.append('iteration_design_prompt',  document.getElementById('sessionIterationDesign').value);
   try {
     const r = await fetch('/pipeline/session', { method: 'POST', body: form });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -2443,6 +2474,64 @@ async function autoProcessSession() {
     status.textContent = 'Failed: ' + e.message;
   } finally {
     btn.disabled = false; btn.style.opacity = 1;
+  }
+}
+
+// ── Step 6: post-review iteration ──────────────────────────────
+async function autoProcessIteration() {
+  if (!_sessionCtx) return;
+  const feedback = document.getElementById('sessionIterationFeedback').value.trim();
+  if (!feedback) { alert('Paste what the client said first.'); return; }
+  const btn = document.getElementById('sessionIterationAutoBtn');
+  const status = document.getElementById('sessionIterationAutoStatus');
+  btn.disabled = true; btn.style.opacity = 0.6;
+  status.textContent = 'Starting…';
+  try {
+    const r = await fetch(`/api/pipeline/session/${_sessionCtx.contactId}/iteration/auto`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ feedback }),
+    });
+    if (!r.ok && r.headers.get('content-type')?.includes('application/json')) {
+      const err = await r.json();
+      throw new Error(err.error || `HTTP ${r.status}`);
+    }
+    let finalData = null, errMsg = null;
+    await _consumeNdjson(r, msg => {
+      if (msg.error) { errMsg = msg.error; return; }
+      if (msg.step)  { status.textContent = msg.label + '…'; }
+      if (msg.done)  { finalData = msg; }
+    });
+    if (errMsg) throw new Error(errMsg);
+    if (!finalData) throw new Error('stream ended without a result');
+    document.getElementById('sessionIterationCode').value   = finalData.iteration_code_prompt   || '';
+    document.getElementById('sessionIterationDesign').value = finalData.iteration_design_prompt || '';
+    status.textContent = 'Done ✓ — paste Output A into Claude Code, Output B into claude.ai chat';
+    setTimeout(() => { status.textContent = ''; }, 5000);
+  } catch (e) {
+    status.textContent = 'Failed: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.style.opacity = 1;
+  }
+}
+
+async function copyIterationMetaPrompt() {
+  if (!_sessionCtx) return;
+  const feedback = document.getElementById('sessionIterationFeedback').value.trim();
+  if (!feedback) { alert('Paste what the client said first.'); return; }
+  try {
+    const r = await fetch(
+      `/api/pipeline/session/${_sessionCtx.contactId}/iteration-prompt?feedback=` +
+      encodeURIComponent(feedback)
+    );
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    await navigator.clipboard.writeText(data.prompt || '');
+    const status = document.getElementById('sessionIterationAutoStatus');
+    status.textContent = 'Meta-prompt copied ✓ — paste into claude.ai, then paste Claude\'s output back into Output A + B below';
+    setTimeout(() => { status.textContent = ''; }, 6000);
+  } catch (e) {
+    alert('Copy failed: ' + e.message);
   }
 }
 

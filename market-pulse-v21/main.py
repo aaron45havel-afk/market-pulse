@@ -1231,15 +1231,18 @@ async def api_pipeline_session_get(request: Request, contact_id: int):
             for (k, w, label) in WORKING_SCORECARD_DIMENSIONS
         ],
         "saved": {
-            "session_date":     session.get("session_date").isoformat() if session.get("session_date") else "",
-            "transcript":       transcript,
-            "extraction_json":  extraction,
-            "locked_scope":     locked_scope,
-            "success_criteria": success_criteria,
-            "proposal_draft":   session.get("proposal_draft") or "",
-            "prototype_brief":  session.get("prototype_brief") or "",
-            "suggested_action": session.get("suggested_action") or "",
-            "scorecard":        scorecard,
+            "session_date":            session.get("session_date").isoformat() if session.get("session_date") else "",
+            "transcript":              transcript,
+            "extraction_json":         extraction,
+            "locked_scope":            locked_scope,
+            "success_criteria":        success_criteria,
+            "proposal_draft":          session.get("proposal_draft") or "",
+            "prototype_brief":         session.get("prototype_brief") or "",
+            "iteration_feedback":      session.get("iteration_feedback") or "",
+            "iteration_code_prompt":   session.get("iteration_code_prompt") or "",
+            "iteration_design_prompt": session.get("iteration_design_prompt") or "",
+            "suggested_action":        session.get("suggested_action") or "",
+            "scorecard":               scorecard,
         },
     })
 
@@ -1277,6 +1280,9 @@ async def pipeline_save_session(request: Request):
         success_criteria=(form.get("success_criteria") or "").strip(),
         proposal_draft=(form.get("proposal_draft") or "").strip(),
         prototype_brief=(form.get("prototype_brief") or "").strip(),
+        iteration_feedback=(form.get("iteration_feedback") or "").strip(),
+        iteration_code_prompt=(form.get("iteration_code_prompt") or "").strip(),
+        iteration_design_prompt=(form.get("iteration_design_prompt") or "").strip(),
     )
     return JSONResponse({"ok": True, "scorecard": sc})
 
@@ -1582,6 +1588,74 @@ async def api_pipeline_session_auto(request: Request, contact_id: int):
             yield emit({"error": str(e)})
         except Exception as e:
             logger.exception("working-session auto-process failed")
+            yield emit({"error": str(e)})
+
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(gen(), media_type="application/x-ndjson")
+
+
+@app.get("/api/pipeline/session/{contact_id}/iteration-prompt")
+async def api_pipeline_iteration_prompt(request: Request, contact_id: int):
+    """Returns the rendered meta-prompt for Step 6 (paste-into-claude.ai
+    fallback when ANTHROPIC_API_KEY isn't set). The UI shows this so
+    the user can copy it manually."""
+    if not _check_pipeline_access(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    feedback = (request.query_params.get("feedback") or "").strip()
+    from crm import (WORKING_PROMPT_ITERATION, render_prompt,
+                     get_session_for_contact, list_prototypes)
+    session = get_session_for_contact(contact_id) or {}
+    protos  = [p for p in list_prototypes() if p.get("contact_id") == contact_id]
+    proto   = protos[0] if protos else {}
+    prompt  = render_prompt(
+        WORKING_PROMPT_ITERATION,
+        locked_scope=session.get("locked_scope") or "",
+        success_criteria=session.get("success_criteria") or "",
+        iteration_feedback=feedback,
+        prototype_name=proto.get("name") or "",
+        prototype_url=proto.get("prototype_url") or "",
+        prototype_description=proto.get("description") or "",
+    )
+    return JSONResponse({"prompt": prompt})
+
+
+@app.post("/api/pipeline/session/{contact_id}/iteration/auto")
+async def api_pipeline_iteration_auto(request: Request, contact_id: int):
+    """Step 6 — auto-process: takes free-form client feedback, sends
+    the meta-prompt to Claude, returns the two split prompts (Claude
+    Code + claude.ai design). Streams NDJSON progress events like the
+    other auto endpoints."""
+    if not _check_pipeline_access(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    body = await request.json()
+    feedback = (body.get("feedback") or "").strip()
+    if not feedback:
+        return JSONResponse({"error": "missing feedback"}, status_code=400)
+
+    async def gen():
+        import json as _json
+        import asyncio as _asyncio
+        from crm import process_iteration_auto
+
+        def emit(obj):
+            return (_json.dumps(obj) + "\n").encode("utf-8")
+
+        try:
+            yield emit({"step": "iterate",
+                        "label": "Step 6 — Asking Claude to think like a senior engineer + designer…"})
+            out = await _asyncio.to_thread(
+                process_iteration_auto, contact_id, feedback,
+            )
+            yield emit({
+                "done": True,
+                "iteration_feedback":      out["iteration_feedback"],
+                "iteration_code_prompt":   out["iteration_code_prompt"],
+                "iteration_design_prompt": out["iteration_design_prompt"],
+            })
+        except RuntimeError as e:
+            yield emit({"error": str(e)})
+        except Exception as e:
+            logger.exception("Step 6 iteration auto-process failed")
             yield emit({"error": str(e)})
 
     from fastapi.responses import StreamingResponse
