@@ -2077,6 +2077,8 @@ def send_via_resend(*, to_email: str, subject: str, body: str,
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type":  "application/json",
+            "User-Agent":    "market-pulse/1.0 (focusedops.io)",
+            "Accept":        "application/json",
         },
         method="POST",
     )
