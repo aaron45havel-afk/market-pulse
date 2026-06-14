@@ -1246,6 +1246,55 @@ document.addEventListener('input', e => {
 
       <label style="font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; display:block; margin-top:0.6rem;">Pilot proposal draft (Step 4)</label>
       <textarea id="sessionProposal" placeholder="One-page email body proposing the pilot…" style="width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.55rem; color:var(--text); font-size:0.82rem; min-height:160px; resize:vertical; line-height:1.5; outline:none; margin-top:0.2rem; font-family:inherit;"></textarea>
+
+      <!-- ── Fill-in-the-blanks → ready-to-send email ─────────── -->
+      <div style="margin-top:0.9rem; padding:0.7rem 0.8rem; background:rgba(99,102,241,0.06); border-left:3px solid var(--accent2); border-radius:6px;">
+        <div style="font-size:0.75rem; font-weight:700; color:var(--text); margin-bottom:0.5rem;">📝 Fill in the placeholders → ready-to-send email below</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:0.5rem;">
+          <label style="font-size:0.65rem; color:var(--text-dim); font-weight:600; text-transform:uppercase;">First name
+            <input id="propFirstName" type="text" placeholder="Jim"
+                   style="width:100%; box-sizing:border-box; background:var(--surface); border:1px solid var(--border); border-radius:5px; padding:0.35rem 0.5rem; color:var(--text); font-size:0.85rem; margin-top:0.2rem; font-family:inherit; font-weight:400; text-transform:none; letter-spacing:0;">
+          </label>
+          <label style="font-size:0.65rem; color:var(--text-dim); font-weight:600; text-transform:uppercase;">Sender name
+            <input id="propMyName" type="text" value="Aaron Havel"
+                   style="width:100%; box-sizing:border-box; background:var(--surface); border:1px solid var(--border); border-radius:5px; padding:0.35rem 0.5rem; color:var(--text); font-size:0.85rem; margin-top:0.2rem; font-family:inherit; font-weight:400; text-transform:none; letter-spacing:0;">
+          </label>
+          <label style="font-size:0.65rem; color:var(--text-dim); font-weight:600; text-transform:uppercase;">Pilot fee ($)
+            <input id="propFee" type="number" min="0" placeholder="500"
+                   style="width:100%; box-sizing:border-box; background:var(--surface); border:1px solid var(--border); border-radius:5px; padding:0.35rem 0.5rem; color:var(--text); font-size:0.85rem; margin-top:0.2rem; font-family:inherit; font-weight:400; text-transform:none; letter-spacing:0;">
+          </label>
+          <label style="font-size:0.65rem; color:var(--text-dim); font-weight:600; text-transform:uppercase;">Duration
+            <input id="propDuration" type="text" value="4 weeks"
+                   style="width:100%; box-sizing:border-box; background:var(--surface); border:1px solid var(--border); border-radius:5px; padding:0.35rem 0.5rem; color:var(--text); font-size:0.85rem; margin-top:0.2rem; font-family:inherit; font-weight:400; text-transform:none; letter-spacing:0;">
+          </label>
+          <label style="font-size:0.65rem; color:var(--text-dim); font-weight:600; text-transform:uppercase;">Kickoff
+            <input id="propKickoff" type="date"
+                   style="width:100%; box-sizing:border-box; background:var(--surface); border:1px solid var(--border); border-radius:5px; padding:0.35rem 0.5rem; color:var(--text); font-size:0.85rem; margin-top:0.2rem; font-family:inherit; font-weight:400; text-transform:none; letter-spacing:0;">
+          </label>
+          <label style="font-size:0.65rem; color:var(--text-dim); font-weight:600; text-transform:uppercase;">Mid-pilot check-in
+            <input id="propMilestone" type="date"
+                   style="width:100%; box-sizing:border-box; background:var(--surface); border:1px solid var(--border); border-radius:5px; padding:0.35rem 0.5rem; color:var(--text); font-size:0.85rem; margin-top:0.2rem; font-family:inherit; font-weight:400; text-transform:none; letter-spacing:0;">
+          </label>
+          <label style="font-size:0.65rem; color:var(--text-dim); font-weight:600; text-transform:uppercase;">Pilot wrap
+            <input id="propWrap" type="date"
+                   style="width:100%; box-sizing:border-box; background:var(--surface); border:1px solid var(--border); border-radius:5px; padding:0.35rem 0.5rem; color:var(--text); font-size:0.85rem; margin-top:0.2rem; font-family:inherit; font-weight:400; text-transform:none; letter-spacing:0;">
+          </label>
+        </div>
+
+        <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.6rem; font-size:0.7rem; color:var(--text-dim);">
+          <span>📅 Setting Kickoff auto-fills Mid-pilot (+2 wks) and Wrap (+4 wks)</span>
+        </div>
+
+        <label style="font-size:0.65rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; display:block; margin-top:0.7rem;">Ready-to-send email body</label>
+        <textarea id="propRendered" readonly placeholder="Fill in the fields above — the final email renders here, ready to copy into Gmail."
+                  style="width:100%; box-sizing:border-box; background:var(--surface); border:1px solid var(--accent2); border-radius:6px; padding:0.5rem 0.6rem; color:var(--text); font-size:0.85rem; min-height:200px; resize:vertical; line-height:1.55; outline:none; margin-top:0.2rem; font-family:inherit;"></textarea>
+
+        <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.5rem;">
+          <button type="button" class="primary" onclick="copyToClipboard('propRendered')"
+                  style="background:var(--accent2); color:white; border:none; padding:0.4rem 0.9rem; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.82rem;">📋 Copy ready-to-send email</button>
+          <span id="propCopyOk" class="copy-ok" style="opacity:0; color:var(--accent); font-weight:600; font-size:0.78rem;">Copied ✓</span>
+        </div>
+      </div>
     </div>
 
     <div class="row" style="margin-top:0.7rem;">
@@ -1292,6 +1341,16 @@ async function openSessionModal(contactId) {
     document.getElementById('sessionScope').value      = data.saved.locked_scope || '';
     document.getElementById('sessionCriteria').value   = data.saved.success_criteria || '';
     document.getElementById('sessionProposal').value   = data.saved.proposal_draft || '';
+
+    // Pre-fill the ready-to-send first-name field from the contact
+    // record so the user doesn't retype it for every prospect.
+    const _c = ALL_CONTACTS.find(x => x.id === contactId);
+    if (_c) {
+      const fn = (_c.name || '').split(' ')[0];
+      const fnEl = document.getElementById('propFirstName');
+      if (fnEl && !fnEl.value) fnEl.value = fn;
+    }
+    renderReadyToSendProposal();
 
     renderSessionScorecard(data.saved.scorecard);
     showSessionTab('agenda');
@@ -1402,6 +1461,105 @@ document.addEventListener('input', e => {
   }
 });
 
+// ── Proposal placeholder → ready-to-send rendering ──
+function _fmtPropDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00');
+  // Date arithmetic returns an "Invalid Date" object for malformed input —
+  // bail rather than emit "Invalid Date" into the email.
+  if (isNaN(d)) return '';
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function _addDays(iso, days) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00');
+  if (isNaN(d)) return '';
+  d.setDate(d.getDate() + days);
+  // back to YYYY-MM-DD
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function renderReadyToSendProposal() {
+  const draft = document.getElementById('sessionProposal');
+  const out   = document.getElementById('propRendered');
+  if (!draft || !out) return;
+  let text = draft.value || '';
+  if (!text.trim()) { out.value = ''; return; }
+
+  const firstName = document.getElementById('propFirstName').value.trim();
+  const myName    = document.getElementById('propMyName').value.trim();
+  const fee       = document.getElementById('propFee').value.trim();
+  const duration  = document.getElementById('propDuration').value.trim();
+  const kickoff   = document.getElementById('propKickoff').value;
+  const milestone = document.getElementById('propMilestone').value;
+  const wrap      = document.getElementById('propWrap').value;
+
+  // Token replacements (new format from updated prompt).
+  const subs = {
+    '<<FIRST_NAME>>':     firstName || '[first_name]',
+    '<<MY_NAME>>':        myName    || 'Aaron Havel',
+    '<<FEE>>':            fee ? '$' + Number(fee).toLocaleString() : '[fee]',
+    '<<DURATION>>':       duration  || '[duration]',
+    '<<KICKOFF_DATE>>':   _fmtPropDate(kickoff)   || '[kickoff date]',
+    '<<MILESTONE_DATE>>': _fmtPropDate(milestone) || '[milestone date]',
+    '<<WRAP_DATE>>':      _fmtPropDate(wrap)      || '[wrap date]',
+  };
+  for (const [k, v] of Object.entries(subs)) text = text.split(k).join(v);
+
+  // Backward-compat: older drafts use {first_name} / {my_name}.
+  text = text.replace(/\{first_name\}/g, subs['<<FIRST_NAME>>']);
+  text = text.replace(/\{my_name\}/g,    subs['<<MY_NAME>>']);
+
+  out.value = text;
+}
+
+// Wire input listeners + kickoff cascade.
+function _initProposalRender() {
+  const ids = ['propFirstName','propMyName','propFee','propDuration','propMilestone','propWrap'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el._propWired) {
+      el.addEventListener('input', renderReadyToSendProposal);
+      el._propWired = true;
+    }
+  });
+  const kickoff = document.getElementById('propKickoff');
+  if (kickoff && !kickoff._propWired) {
+    kickoff.addEventListener('input', () => {
+      // Auto-fill milestone (+14 days) and wrap (+28 days) when empty
+      // or matching the previous cascade. User can override.
+      const k = kickoff.value;
+      const m = document.getElementById('propMilestone');
+      const w = document.getElementById('propWrap');
+      m.value = _addDays(k, 14);
+      w.value = _addDays(k, 28);
+      renderReadyToSendProposal();
+    });
+    kickoff._propWired = true;
+  }
+  // Also re-render whenever the proposal textarea itself changes
+  // (e.g. user edits the AI output).
+  const draft = document.getElementById('sessionProposal');
+  if (draft && !draft._propWired) {
+    draft.addEventListener('input', renderReadyToSendProposal);
+    draft._propWired = true;
+  }
+}
+_initProposalRender();
+
+// Flash "Copied ✓" near the proposal copy button.
+document.addEventListener('click', e => {
+  const t = e.target;
+  if (t && t.tagName === 'BUTTON' && t.getAttribute('onclick') === "copyToClipboard('propRendered')") {
+    const ok = document.getElementById('propCopyOk');
+    if (ok) { ok.style.opacity = 1; setTimeout(() => { ok.style.opacity = 0; }, 1500); }
+  }
+});
+
 async function autoProcessSession() {
   if (!_sessionCtx) return;
   const transcript = document.getElementById('sessionTranscript').value.trim();
@@ -1437,6 +1595,7 @@ async function autoProcessSession() {
     document.getElementById('sessionProposal').value   = finalData.proposal_draft   || '';
     renderSessionScorecard(finalData.scorecard);
     refreshSessionPrompts();
+    renderReadyToSendProposal();
     showSessionTab('artifacts');
     status.textContent = 'Done ✓ — all 4 artifacts saved';
     setTimeout(() => { status.textContent = ''; }, 4000);
