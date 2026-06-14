@@ -165,6 +165,16 @@ EMAIL_TRIGGERS = {
     "RENEWAL":          "Renewal nudge",
 }
 
+ROLES = (
+    "CFO",
+    "Finance Director",
+    "Controller",
+    "Clerk-Treasurer",
+    "Project Manager",
+    "Operations",
+    "Other",
+)
+
 STAGE_TO_NEXT_TRIGGER = {
     "QUEUED":         "INTRO",
     "CONTACTED":      "BUMP_NO_REPLY",
@@ -210,7 +220,7 @@ def list_contacts() -> list[dict]:
             SELECT id, name, title, agency, email, stage,
                    pilot_value, recurring_value,
                    date_emailed, next_date, subject, notes,
-                   industry, email_thread, created_at, updated_at
+                   industry, email_thread, role, created_at, updated_at
             FROM crm_contacts
             ORDER BY updated_at DESC
         """)
@@ -218,7 +228,8 @@ def list_contacts() -> list[dict]:
         cols = ["id", "name", "title", "agency", "email", "stage",
                 "pilot_value", "recurring_value", "date_emailed",
                 "next_date", "subject", "notes",
-                "industry", "email_thread", "created_at", "updated_at"]
+                "industry", "email_thread", "role",
+                "created_at", "updated_at"]
         out = [dict(zip(cols, r)) for r in rows]
         cur.close()
         return out
@@ -230,7 +241,8 @@ def add_contact(*, name: str, title: str | None, agency: str | None,
                 email: str | None, stage: str, pilot_value: int,
                 recurring_value: int, date_emailed: date | None,
                 next_date: date | None, subject: str | None,
-                notes: str | None, industry: str | None = None) -> int | None:
+                notes: str | None, industry: str | None = None,
+                role: str | None = None) -> int | None:
     """Insert a new contact + initial StageEvent (from_stage=NULL).
     Returns the new contact's id."""
     if stage not in STAGES:
@@ -243,11 +255,11 @@ def add_contact(*, name: str, title: str | None, agency: str | None,
         cur.execute("""
             INSERT INTO crm_contacts
               (name, title, agency, email, stage, pilot_value, recurring_value,
-               date_emailed, next_date, subject, notes, industry)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+               date_emailed, next_date, subject, notes, industry, role)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             RETURNING id
         """, (name, title, agency, email, stage, pilot_value, recurring_value,
-              date_emailed, next_date, subject, notes, industry))
+              date_emailed, next_date, subject, notes, industry, role))
         contact_id = cur.fetchone()[0]
         cur.execute("""
             INSERT INTO crm_stage_events (contact_id, from_stage, to_stage)
@@ -303,7 +315,8 @@ def update_contact(contact_id: int, *,
                    next_date: date | None = None,
                    subject: str | None = None,
                    notes: str | None = None,
-                   email_thread: str | None = None) -> bool:
+                   email_thread: str | None = None,
+                   role: str | None = None) -> bool:
     """Patch any subset of editable fields. None means 'leave as-is' for
     the scalar fields; pass an explicit empty string to clear text fields
     or 0 to clear money fields."""
@@ -320,7 +333,7 @@ def update_contact(contact_id: int, *,
             ("recurring_value", recurring_value),
             ("date_emailed", date_emailed), ("next_date", next_date),
             ("subject", subject), ("notes", notes),
-            ("email_thread", email_thread),
+            ("email_thread", email_thread), ("role", role),
         ]:
             if val is not None:
                 sets.append(f"{col} = %s")
@@ -708,13 +721,13 @@ def list_templates() -> list[dict]:
     try:
         cur = conn.cursor()
         cur.execute("""
-            SELECT id, industry, trigger, subject, body,
+            SELECT id, industry, role, trigger, subject, body,
                    created_at, updated_at
             FROM crm_email_templates
-            ORDER BY industry, trigger
+            ORDER BY industry, role, trigger
         """)
         rows = cur.fetchall()
-        cols = ["id", "industry", "trigger", "subject", "body",
+        cols = ["id", "industry", "role", "trigger", "subject", "body",
                 "created_at", "updated_at"]
         out = [dict(zip(cols, r)) for r in rows]
         cur.close()
@@ -723,29 +736,52 @@ def list_templates() -> list[dict]:
         conn.close()
 
 
-def get_template(industry: str, trigger: str) -> dict | None:
+def get_template(industry: str, trigger: str,
+                 role: str | None = None) -> dict | None:
+    """Most-specific-wins lookup with role fallback.
+    1) (industry, role, trigger)
+    2) (industry, '',   trigger) — any-role default
+    Returns the first hit or None."""
     conn = _get_conn()
     if not conn:
         return None
+    cols = ["id", "industry", "role", "trigger", "subject", "body"]
     try:
         cur = conn.cursor()
+        if role:
+            cur.execute("""
+                SELECT id, industry, role, trigger, subject, body
+                FROM crm_email_templates
+                WHERE industry = %s AND role = %s AND trigger = %s
+            """, (industry, role, trigger))
+            row = cur.fetchone()
+            if row:
+                cur.close()
+                return dict(zip(cols, row))
         cur.execute("""
-            SELECT id, industry, trigger, subject, body
+            SELECT id, industry, role, trigger, subject, body
             FROM crm_email_templates
-            WHERE industry = %s AND trigger = %s
+            WHERE industry = %s AND role = '' AND trigger = %s
         """, (industry, trigger))
         row = cur.fetchone()
         cur.close()
         if not row:
             return None
-        return dict(zip(["id", "industry", "trigger", "subject", "body"], row))
+        return dict(zip(cols, row))
     finally:
         conn.close()
 
 
 def upsert_template(*, industry: str, trigger: str,
-                    subject: str, body: str) -> bool:
+                    subject: str, body: str,
+                    role: str | None = None) -> bool:
+    """Upsert a template. Empty/None role acts as the industry-wide
+    default that's used when a contact's role doesn't match anything
+    more specific."""
     if industry not in INDUSTRIES or trigger not in EMAIL_TRIGGERS:
+        return False
+    role = (role or "").strip()
+    if role and role not in ROLES:
         return False
     conn = _get_conn()
     if not conn:
@@ -754,13 +790,13 @@ def upsert_template(*, industry: str, trigger: str,
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO crm_email_templates
-              (industry, trigger, subject, body)
-            VALUES (%s, %s, %s, %s)
-            ON CONFLICT (industry, trigger) DO UPDATE
+              (industry, role, trigger, subject, body)
+            VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT (industry, role, trigger) DO UPDATE
               SET subject = EXCLUDED.subject,
                   body    = EXCLUDED.body,
                   updated_at = NOW()
-        """, (industry, trigger, subject, body))
+        """, (industry, role, trigger, subject, body))
         conn.commit()
         cur.close()
         return True
@@ -879,19 +915,27 @@ def suggest_email_for_contact(contact: dict) -> dict:
     even when no template exists yet."""
     trigger = STAGE_TO_NEXT_TRIGGER.get(contact.get("stage"))
     industry = contact.get("industry")
+    role = contact.get("role")
     template = None
     fallback_industry = False
+    fallback_role = False
 
     if trigger and industry:
-        template = get_template(industry, trigger)
-    # Fallback: if no template for this industry, try the first
-    # industry that has one for this trigger. Better than empty.
+        template = get_template(industry, trigger, role)
+        # If get_template fell back from role-specific to any-role
+        # within the same industry, flag it so the UI can hint.
+        if template and role and (template.get("role") or "") != role:
+            fallback_role = True
+    # Last-resort cross-industry fallback if the contact's industry
+    # has nothing at all for this trigger.
     if trigger and not template:
         for ind in INDUSTRIES:
-            t = get_template(ind, trigger)
+            t = get_template(ind, trigger, role)
             if t:
                 template = t
                 fallback_industry = True
+                if role and (t.get("role") or "") != role:
+                    fallback_role = True
                 break
 
     if not template:
@@ -899,8 +943,10 @@ def suggest_email_for_contact(contact: dict) -> dict:
             "trigger":          trigger,
             "trigger_label":    EMAIL_TRIGGERS.get(trigger, "") if trigger else "",
             "industry":         industry,
+            "role":             role,
             "has_template":     False,
             "fallback_industry": False,
+            "fallback_role":    False,
             "subject":          "",
             "body":             "",
         }
@@ -910,8 +956,10 @@ def suggest_email_for_contact(contact: dict) -> dict:
         "trigger":          trigger,
         "trigger_label":    EMAIL_TRIGGERS.get(trigger, ""),
         "industry":         template.get("industry"),
+        "role":             template.get("role") or "",
         "has_template":     True,
         "fallback_industry": fallback_industry,
+        "fallback_role":    fallback_role,
         "subject":          rendered["subject"],
         "body":             rendered["body"],
     }
@@ -2191,33 +2239,34 @@ SEED_TEMPLATES = [
 
 
 def maybe_seed_templates() -> int:
-    """Idempotent at the (industry, trigger) level: inserts any seed
-    template not already in the DB. Existing rows are left alone so
-    user-edited copy doesn't get overwritten. Called once at app
+    """Idempotent at the (industry, role, trigger) level: inserts any
+    seed template not already in the DB. Existing rows are left alone
+    so user-edited copy doesn't get overwritten. Called once at app
     start, after init_db."""
     conn = _get_conn()
     if not conn:
         return 0
-    existing: set[tuple[str, str]] = set()
+    existing: set[tuple[str, str, str]] = set()
     try:
         cur = conn.cursor()
-        cur.execute("SELECT industry, trigger FROM crm_email_templates")
-        existing = {(r[0], r[1]) for r in cur.fetchall()}
+        cur.execute("SELECT industry, role, trigger FROM crm_email_templates")
+        existing = {(r[0], r[1] or "", r[2]) for r in cur.fetchall()}
         cur.close()
     finally:
         conn.close()
 
     inserted = 0
     for t in SEED_TEMPLATES:
-        key = (t.get("industry"), t.get("trigger"))
+        key = (t.get("industry"), t.get("role", "") or "", t.get("trigger"))
         if key in existing:
             continue
         try:
             if upsert_template(**t):
                 inserted += 1
         except Exception as e:
-            logger.warning("Seed template %s/%s failed: %s",
-                           t.get("industry"), t.get("trigger"), e)
+            logger.warning("Seed template %s/%s/%s failed: %s",
+                           t.get("industry"), t.get("role", ""),
+                           t.get("trigger"), e)
     if inserted:
         logger.info("CRM seed: inserted %d new email templates", inserted)
     return inserted

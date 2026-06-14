@@ -317,7 +317,7 @@ async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = "
         return RedirectResponse("/admin/login?redirect=/pipeline", status_code=303)
     from datetime import date as _date, datetime as _dt, timedelta as _td
     from crm import (STAGES, METRICS, STAGE_LABELS, METRIC_LABELS,
-                     INDUSTRIES, EMAIL_TRIGGERS,
+                     INDUSTRIES, EMAIL_TRIGGERS, ROLES,
                      list_contacts, arr_rollup, weekly_kpis,
                      get_weekly_goals, iso_week_range,
                      funnel_conversion, trailing_weekly_kpis,
@@ -371,6 +371,7 @@ async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = "
         "path": arr_path_to_goal(),
         "industries": INDUSTRIES,
         "email_triggers": EMAIL_TRIGGERS,
+        "roles": ROLES,
     })
 
 
@@ -378,7 +379,7 @@ async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = "
 async def pipeline_add_contact(request: Request):
     if not _check_admin_token(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
-    from crm import add_contact, STAGES
+    from crm import add_contact, STAGES, INDUSTRIES, ROLES
     form = await request.form()
     def _date(s: str | None):
         s = (s or "").strip()
@@ -398,9 +399,11 @@ async def pipeline_add_contact(request: Request):
     if stage not in STAGES:
         stage = "QUEUED"
     industry = (form.get("industry") or "").strip() or None
-    from crm import INDUSTRIES as _INDS
-    if industry and industry not in _INDS:
+    if industry and industry not in INDUSTRIES:
         industry = None
+    role = (form.get("role") or "").strip() or None
+    if role and role not in ROLES:
+        role = None
     add_contact(
         name=(form.get("name") or "").strip(),
         title=(form.get("title") or "").strip() or None,
@@ -414,6 +417,7 @@ async def pipeline_add_contact(request: Request):
         subject=(form.get("subject") or "").strip() or None,
         notes=(form.get("notes") or "").strip() or None,
         industry=industry,
+        role=role,
     )
     return RedirectResponse("/pipeline", status_code=303)
 
@@ -496,6 +500,11 @@ async def pipeline_update_contact(request: Request):
         except ValueError:
             return 0
 
+    from crm import ROLES
+    role_raw = (form.get("role") or "").strip()
+    # Empty string means "clear the role"; valid value means set it;
+    # anything not in ROLES falls back to empty (clear).
+    role_val = role_raw if (role_raw == "" or role_raw in ROLES) else ""
     update_contact(
         cid,
         name=(form.get("name") or "").strip() or None,   # don't allow blanking the name
@@ -509,6 +518,7 @@ async def pipeline_update_contact(request: Request):
         subject=(form.get("subject") or "").strip(),
         notes=(form.get("notes") or "").strip(),
         email_thread=(form.get("email_thread") or "").strip(),
+        role=role_val,
     )
     return JSONResponse({"ok": True})
 
@@ -553,11 +563,12 @@ async def pipeline_templates(request: Request):
     if not _check_admin_token(request):
         return RedirectResponse("/admin/login?redirect=/pipeline/templates",
                                 status_code=303)
-    from crm import INDUSTRIES, EMAIL_TRIGGERS, list_templates
+    from crm import INDUSTRIES, EMAIL_TRIGGERS, ROLES, list_templates
     return templates.TemplateResponse("pipeline_templates.html", {
         "request": request,
         "industries": INDUSTRIES,
         "email_triggers": EMAIL_TRIGGERS,
+        "roles": ROLES,
         "templates_list": list_templates(),
     })
 
@@ -570,6 +581,7 @@ async def pipeline_save_template(request: Request):
     form = await request.form()
     upsert_template(
         industry=(form.get("industry") or "").strip(),
+        role=(form.get("role") or "").strip(),
         trigger=(form.get("trigger") or "").strip(),
         subject=(form.get("subject") or "").strip(),
         body=(form.get("body") or "").strip(),
