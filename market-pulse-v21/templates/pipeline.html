@@ -304,6 +304,9 @@
           {% if c.title or c.agency %}
           <div class="meta one-line">{{ c.title or '' }}{% if c.title and c.agency %} · {% endif %}{{ c.agency or '' }}</div>
           {% endif %}
+          {% if c.stage in ('PILOT', 'VERCEL_PROJECT', 'RECURRING') and (not c.hosting_model or c.hosting_model == 'TBD') %}
+          <div style="font-size:0.65rem; color:#92400e; background:rgba(245,158,11,0.14); padding:1px 6px; border-radius:99px; display:inline-block; margin-top:3px; font-weight:600;">⚠️ ask: hosting model</div>
+          {% endif %}
           {% if c.recurring_value or c.pilot_value or c.next_date %}
           <div class="meta one-line money-row">
             {% if c.recurring_value %}<span class="money">${{ "{:,}".format(c.recurring_value) }}/yr</span>{% endif %}
@@ -520,6 +523,10 @@ function closeAddContactModal() {
         <option value="">— none —</option>
         {% for r in roles %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
       </select>
+      <div class="lbl">Hosting</div>
+      <select id="detailHostingSel">
+        {% for h in hosting_models %}<option value="{{ h }}">{{ hosting_model_labels[h] }}</option>{% endfor %}
+      </select>
       <div class="lbl">Pilot $</div>    <input id="detailPilot"     type="number" min="0" step="500">
       <div class="lbl">Recurring $/yr</div><input id="detailRecurring" type="number" min="0" step="1000">
       <div class="lbl">Date emailed</div><input id="detailDateEmailed" type="date">
@@ -527,6 +534,7 @@ function closeAddContactModal() {
       <div class="lbl">Subject</div>     <input id="detailSubject"     type="text" maxlength="255">
       <div class="lbl" style="align-self:start; padding-top:0.4rem;">Notes</div><textarea id="detailNotes" rows="4" placeholder="(no notes)"></textarea>
       <div class="lbl" style="align-self:start; padding-top:0.4rem;">Email thread</div><textarea id="detailEmailThread" rows="5" placeholder="Paste async correspondence — reply threads, clarifications, anything that's not on a call transcript. Feeds the prototype-brief step."></textarea>
+      <div class="lbl" style="align-self:start; padding-top:0.4rem;">Engagement notes</div><textarea id="detailEngagementNotes" rows="6" placeholder="Pilot terms, contract milestones, hosting decisions, support model. Use the pilot checklist as a starting point."></textarea>
     </div>
 
     <!-- Footer: action buttons grouped, status notice tucked above -->
@@ -576,6 +584,8 @@ function openDetailModal(cid) {
   document.getElementById('detailIndustrySel').value = c.industry || '';
   document.getElementById('detailIndustryCid').value = cid;
   document.getElementById('detailRoleSel').value = c.role || '';
+  document.getElementById('detailHostingSel').value = c.hosting_model || 'TBD';
+  document.getElementById('detailEngagementNotes').value = c.engagement_notes || '';
   document.getElementById('detailDeleteCid').value = cid;
   document.getElementById('detailSaveOk').classList.remove('show');
   document.getElementById('detailModalBg').classList.add('show');
@@ -593,10 +603,12 @@ function _readModalFields() {
     recurring_value: parseInt(document.getElementById('detailRecurring').value, 10) || 0,
     date_emailed:    document.getElementById('detailDateEmailed').value || null,
     next_date:       document.getElementById('detailNext').value || null,
-    subject:         document.getElementById('detailSubject').value,
-    notes:           document.getElementById('detailNotes').value,
-    email_thread:    document.getElementById('detailEmailThread').value,
-    role:            document.getElementById('detailRoleSel').value,
+    subject:          document.getElementById('detailSubject').value,
+    notes:            document.getElementById('detailNotes').value,
+    email_thread:     document.getElementById('detailEmailThread').value,
+    role:             document.getElementById('detailRoleSel').value,
+    hosting_model:    document.getElementById('detailHostingSel').value,
+    engagement_notes: document.getElementById('detailEngagementNotes').value,
   };
 }
 
@@ -686,7 +698,8 @@ function scheduleAutoSave() {
 // untouched (it goes through a separate form).
 ['detailName','detailTitle','detailAgency','detailEmail',
  'detailPilot','detailRecurring','detailDateEmailed','detailNext',
- 'detailSubject','detailNotes','detailEmailThread','detailRoleSel'].forEach(id => {
+ 'detailSubject','detailNotes','detailEmailThread','detailRoleSel',
+ 'detailHostingSel','detailEngagementNotes'].forEach(id => {
   const el = document.getElementById(id);
   if (!el) return;
   el.addEventListener('input',  scheduleAutoSave);
