@@ -585,18 +585,29 @@ async def api_vercel_config(request: Request):
     if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from vercel import configured as _vc
-    return JSONResponse({"configured": bool(_vc())})
+    from github_api import configured as _gc, get_authenticated_user
+    gh_user = None
+    if _gc():
+        u = get_authenticated_user()
+        if u: gh_user = u.get("login")
+    return JSONResponse({
+        "configured":        bool(_vc()),
+        "github_configured": bool(_gc()),
+        "github_user":       gh_user,
+    })
 
 
 @app.post("/api/pipeline/vercel/create")
 async def api_vercel_create(request: Request):
-    """Spin up a Vercel project for a contact, optionally linked to a
-    GitHub repo, and auto-add a Testing-page prototype entry pointing
-    at the default .vercel.app URL."""
+    """Spin up a Vercel project + (optionally) a fresh GitHub repo for
+    a contact. Auto-adds a Testing-page prototype entry pointing at
+    the default .vercel.app URL. Returns a clone URL so the user can
+    `git clone` and start Claude Code immediately."""
     if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
-    from vercel import create_project, configured as _vc, slugify
-    from crm import list_contacts, add_prototype, find_contact_by_email
+    from vercel import create_project, configured as _vc
+    from github_api import (create_repo, configured as _gc)
+    from crm import list_contacts, add_prototype
     if not _vc():
         return JSONResponse({
             "error": ("Vercel sign-in not configured. Create a token at "
@@ -608,10 +619,11 @@ async def api_vercel_create(request: Request):
         contact_id = int(body.get("contact_id") or 0)
     except (TypeError, ValueError):
         contact_id = 0
-    project_name = (body.get("project_name") or "").strip()
-    github_repo  = (body.get("github_repo") or "").strip() or None
-    framework    = (body.get("framework") or "nextjs").strip()
-    proto_label  = (body.get("prototype_label") or "").strip()
+    project_name  = (body.get("project_name") or "").strip()
+    github_repo   = (body.get("github_repo") or "").strip() or None
+    framework     = (body.get("framework") or "other").strip()
+    proto_label   = (body.get("prototype_label") or "").strip()
+    create_github = bool(body.get("create_github"))
 
     contact = next((c for c in list_contacts() if c["id"] == contact_id), None)
     if not contact:
@@ -619,17 +631,48 @@ async def api_vercel_create(request: Request):
     if not project_name:
         project_name = f"{contact['name']}-prototype"
 
-    result = create_project(name=project_name, github_repo=github_repo,
-                            framework=framework)
-    if not result.get("ok"):
-        return JSONResponse({"error": result.get("error", "Vercel API failed"),
-                             "vercel_response": result.get("vercel_response")},
-                            status_code=502)
+    # Step 1: create a fresh GitHub repo if requested
+    github_result: dict | None = None
+    if create_github and not github_repo:
+        if not _gc():
+            return JSONResponse({
+                "error": ("Auto-create GitHub repo requested but GITHUB_TOKEN "
+                          "is not set on Railway. Add a personal access token "
+                          "with 'repo' scope from "
+                          "https://github.com/settings/tokens/new"),
+            }, status_code=400)
+        github_result = create_repo(
+            name=project_name,
+            description=f"Prototype for {contact['name']} ({contact.get('agency') or ''})".strip(" ()"),
+            private=True,
+        )
+        if not github_result.get("ok"):
+            return JSONResponse({
+                "error": "GitHub repo creation failed: " + github_result.get("error", ""),
+                "github_response": github_result.get("raw"),
+            }, status_code=502)
+        github_repo = github_result["full_name"]
 
+    # Step 2: create the Vercel project (linked to repo if we have one)
+    result = create_project(
+        name=project_name, github_repo=github_repo, framework=framework,
+    )
+    if not result.get("ok"):
+        # If we created a repo but Vercel failed, surface both pieces
+        # so the user knows the repo is real and what to do next.
+        return JSONResponse({
+            "error":            result.get("error", "Vercel API failed"),
+            "vercel_response":  result.get("vercel_response"),
+            "github_created":   bool(github_result and github_result.get("ok")),
+            "github_clone_url": github_result and github_result.get("clone_url"),
+            "github_html_url":  github_result and github_result.get("html_url"),
+        }, status_code=502)
+
+    # Step 3: auto-add to Testing page
     label = proto_label or f"{contact['name']} prototype"
     description = (
         f"Vercel project: {result['name']}\n"
-        f"GitHub: {github_repo or '(linked manually)'}\n"
+        f"GitHub: {github_repo or '(not linked)'}\n"
         f"Framework: {framework}"
     )
     proto_id = add_prototype(
@@ -639,11 +682,15 @@ async def api_vercel_create(request: Request):
         status="BUILDING",
         description=description,
     )
+
     return JSONResponse({
-        "ok": True,
-        "project_url": result["project_url"],
-        "project_name": result["name"],
-        "prototype_id": proto_id,
+        "ok":               True,
+        "project_url":      result["project_url"],
+        "project_name":     result["name"],
+        "prototype_id":     proto_id,
+        "github_repo":      github_repo,
+        "github_clone_url": github_result and github_result.get("clone_url"),
+        "github_html_url":  github_result and github_result.get("html_url"),
     })
 
 

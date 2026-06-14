@@ -1433,28 +1433,64 @@ document.addEventListener('input', e => {
   <div class="modal" style="max-width:520px;">
     <h3 id="vercelTitle" style="margin:0 0 0.3rem;">🚀 Create Vercel project</h3>
     <p style="font-size:0.78rem; color:var(--text-dim); margin:0 0 0.85rem;">
-      Spins up a Vercel project for this client and auto-adds it to the Testing page.
-      Needs <code>VERCEL_TOKEN</code> on Railway —
-      <a href="https://vercel.com/account/tokens" target="_blank" rel="noopener" style="color:var(--accent2);">grab one here</a>.
+      Creates a fresh GitHub repo + a Vercel project linked to it. After it finishes you'll get
+      a <code>git clone</code> command ready to run.
     </p>
     <div id="vercelStatus" style="display:none; margin-bottom:0.6rem; padding:0.5rem 0.7rem; border-radius:6px; font-size:0.82rem;"></div>
+
+    <!-- Success card (hidden until create succeeds) -->
+    <div id="vercelSuccess" style="display:none; margin-bottom:0.7rem; padding:0.7rem 0.85rem; background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.35); border-radius:8px; font-size:0.82rem;">
+      <div style="font-weight:700; color:#166534; margin-bottom:0.4rem; font-size:0.88rem;">✓ Project + repo ready</div>
+      <div style="margin-bottom:0.35rem;">
+        <span style="font-size:0.66rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dim);">Vercel URL</span><br>
+        <a id="vercelSuccessUrl" href="#" target="_blank" rel="noopener" style="color:var(--accent2); word-break:break-all;"></a>
+      </div>
+      <div id="vercelSuccessGhRow" style="margin-bottom:0.35rem; display:none;">
+        <span style="font-size:0.66rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dim);">GitHub repo</span><br>
+        <a id="vercelSuccessGh" href="#" target="_blank" rel="noopener" style="color:var(--accent2); word-break:break-all;"></a>
+      </div>
+      <div id="vercelSuccessCloneRow" style="margin-top:0.55rem; display:none;">
+        <span style="font-size:0.66rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dim);">Run this locally</span>
+        <pre id="vercelSuccessClone" style="background:var(--surface2); border:1px solid var(--border); border-radius:5px; padding:0.5rem 0.6rem; margin:0.25rem 0 0; font-size:0.78rem; overflow-x:auto; font-family:'Menlo','Monaco',monospace; line-height:1.45; white-space:pre; color:var(--text);"></pre>
+        <button type="button" onclick="copyClone()" style="margin-top:0.35rem; background:var(--surface); border:1px solid var(--border); color:var(--text); padding:0.3rem 0.65rem; border-radius:5px; font-size:0.74rem; cursor:pointer;">Copy commands</button>
+        <span id="vercelCloneCopied" style="margin-left:0.4rem; font-size:0.72rem; color:var(--accent); display:none;">Copied ✓</span>
+      </div>
+      <div style="margin-top:0.6rem; font-size:0.74rem; color:var(--text-dim); line-height:1.55;">
+        <strong style="color:var(--text);">Next:</strong> paste the commands above into Terminal,
+        then start a fresh Claude Code session in that folder and paste the Step 5 prototype brief.
+      </div>
+      <div style="margin-top:0.55rem;">
+        <a href="/pipeline/testing" style="color:var(--accent2); font-size:0.8rem;">→ View on Testing page</a>
+      </div>
+    </div>
+
     <form id="vercelForm" onsubmit="submitVercel(event)" style="display:grid; gap:0.55rem;">
       <label style="display:flex; flex-direction:column; gap:3px; font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">
         Project name
         <input type="text" id="vercelName" required
                style="background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.55rem; color:var(--text); font-size:0.88rem; font-family:inherit; font-weight:400; text-transform:none; letter-spacing:0;">
         <span style="font-size:0.7rem; color:var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0;">
-          Will be slugified by Vercel (lowercase + hyphens). The default URL becomes <code>&lt;name&gt;.vercel.app</code>.
+          Used as both the GitHub repo name and the Vercel project name. Slugified to lowercase+hyphens.
         </span>
       </label>
-      <label style="display:flex; flex-direction:column; gap:3px; font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">
-        GitHub repo (optional)
+
+      <label style="display:flex; align-items:flex-start; gap:0.5rem; padding:0.55rem 0.7rem; background:var(--surface2); border:1px solid var(--border); border-radius:6px; cursor:pointer; font-size:0.82rem; font-weight:500; color:var(--text); text-transform:none; letter-spacing:0;">
+        <input type="checkbox" id="vercelCreateGh" checked onchange="toggleGhInput()" style="margin-top:2px;">
+        <span style="flex:1;">
+          <strong>Also create a fresh GitHub repo</strong> (private, auto-linked to Vercel).<br>
+          <span style="font-weight:400; color:var(--text-dim); font-size:0.74rem;">
+            Uncheck if you already pushed code to an existing repo you want to link instead.
+          </span>
+        </span>
+      </label>
+
+      <label id="vercelRepoLabel" style="display:none; flex-direction:column; gap:3px; font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">
+        Existing GitHub repo (optional)
         <input type="text" id="vercelRepo" placeholder="username/repo-name"
                style="background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.55rem; color:var(--text); font-size:0.88rem; font-family:inherit; font-weight:400; text-transform:none; letter-spacing:0;">
         <span style="font-size:0.7rem; color:var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0;">
-          If linked, Vercel auto-deploys on every push to <code>main</code>.
-          Skip this to set up Git later. <strong>You must connect your GitHub to Vercel once</strong>
-          at vercel.com → Settings → Integrations before linked repos work.
+          You must have connected your GitHub to Vercel at vercel.com → Settings → Integrations
+          before linked repos work.
         </span>
       </label>
       <label style="display:flex; flex-direction:column; gap:3px; font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">
@@ -1491,45 +1527,82 @@ document.addEventListener('input', e => {
 </div>
 <script>
 let _vercelCid = null;
+let _vercelLastClone = '';
+
+function toggleGhInput() {
+  const checked = document.getElementById('vercelCreateGh').checked;
+  document.getElementById('vercelRepoLabel').style.display = checked ? 'none' : 'flex';
+}
+
 async function openVercelModal(cid, name) {
   _vercelCid = cid;
   document.getElementById('vercelTitle').textContent = `🚀 Create Vercel project — ${name}`;
   document.getElementById('vercelName').value = (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') + '-prototype';
   document.getElementById('vercelRepo').value = '';
-  document.getElementById('vercelFramework').value = 'nextjs';
+  document.getElementById('vercelFramework').value = 'other';
   document.getElementById('vercelProtoLabel').value = `${name} prototype v1`;
-  const status = document.getElementById('vercelStatus');
+  document.getElementById('vercelCreateGh').checked = true;
+  toggleGhInput();
+  const status  = document.getElementById('vercelStatus');
+  const success = document.getElementById('vercelSuccess');
   status.style.display = 'none';
+  success.style.display = 'none';
+  document.getElementById('vercelForm').style.display = '';
   try {
     const r = await fetch('/api/pipeline/vercel/config');
     if (r.ok) {
       const data = await r.json();
+      const warnings = [];
       if (!data.configured) {
+        warnings.push('<strong>VERCEL_TOKEN not set on Railway.</strong> Add it under Variables, then come back.');
+      }
+      if (!data.github_configured) {
+        warnings.push('<strong>GITHUB_TOKEN not set on Railway.</strong> Auto-create GitHub repo is disabled — paste an existing repo instead, or add a token at <a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener" style="color:#92400e; font-weight:600;">github.com/settings/tokens/new</a> (scope: <code>repo</code>).');
+        // Hide the auto-create checkbox if GitHub isn't configured.
+        document.getElementById('vercelCreateGh').checked = false;
+        document.getElementById('vercelCreateGh').disabled = true;
+        toggleGhInput();
+      } else {
+        document.getElementById('vercelCreateGh').disabled = false;
+      }
+      if (warnings.length) {
         status.style.display = '';
         status.style.background = 'rgba(245,158,11,0.10)';
         status.style.border = '1px solid rgba(245,158,11,0.35)';
         status.style.color = '#92400e';
-        status.innerHTML = '⚠️ <strong>VERCEL_TOKEN not set on Railway.</strong> Add it under Variables, then come back. Until then, you can still set up the project manually at <a href="https://vercel.com/new" target="_blank" rel="noopener">vercel.com/new</a> and paste the URL into the Testing card.';
+        status.innerHTML = '⚠️ ' + warnings.join('<br><br>⚠️ ');
       }
     }
   } catch (_) {}
   document.getElementById('vercelModalBg').classList.add('show');
   setTimeout(() => document.getElementById('vercelName').focus(), 30);
 }
+
 function closeVercelModal() {
   document.getElementById('vercelModalBg').classList.remove('show');
 }
+
+function copyClone() {
+  if (!_vercelLastClone) return;
+  navigator.clipboard.writeText(_vercelLastClone).then(() => {
+    const ok = document.getElementById('vercelCloneCopied');
+    ok.style.display = '';
+    setTimeout(() => { ok.style.display = 'none'; }, 1500);
+  });
+}
+
 async function submitVercel(e) {
   e.preventDefault();
   if (!_vercelCid) return;
   const btn = document.getElementById('vercelSubmitBtn');
-  const status = document.getElementById('vercelStatus');
+  const status  = document.getElementById('vercelStatus');
+  const success = document.getElementById('vercelSuccess');
   btn.disabled = true; btn.style.opacity = 0.55;
   status.style.display = '';
   status.style.background = 'rgba(99,102,241,0.10)';
   status.style.border = '1px solid rgba(99,102,241,0.30)';
   status.style.color = 'var(--accent2)';
-  status.textContent = 'Creating project on Vercel…';
+  status.textContent = 'Working… (creating repo + Vercel project)';
   try {
     const r = await fetch('/api/pipeline/vercel/create', {
       method: 'POST',
@@ -1540,15 +1613,40 @@ async function submitVercel(e) {
         github_repo:     document.getElementById('vercelRepo').value.trim(),
         framework:       document.getElementById('vercelFramework').value,
         prototype_label: document.getElementById('vercelProtoLabel').value.trim(),
+        create_github:   document.getElementById('vercelCreateGh').checked,
       }),
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
-    status.style.background = 'rgba(34,197,94,0.10)';
-    status.style.border = '1px solid rgba(34,197,94,0.35)';
-    status.style.color = '#166534';
-    status.innerHTML = `✓ Project created at <a href="${data.project_url}" target="_blank" rel="noopener" style="color:#166534; font-weight:600;">${data.project_url}</a>. Redirecting to Testing…`;
-    setTimeout(() => { location.href = '/pipeline/testing'; }, 1500);
+
+    // Render the success card with both URLs + clone commands.
+    status.style.display = 'none';
+    document.getElementById('vercelForm').style.display = 'none';
+    const vUrl = data.project_url || '';
+    document.getElementById('vercelSuccessUrl').textContent = vUrl;
+    document.getElementById('vercelSuccessUrl').href = vUrl;
+    if (data.github_html_url) {
+      document.getElementById('vercelSuccessGhRow').style.display = '';
+      document.getElementById('vercelSuccessGh').textContent = data.github_html_url;
+      document.getElementById('vercelSuccessGh').href = data.github_html_url;
+    } else {
+      document.getElementById('vercelSuccessGhRow').style.display = 'none';
+    }
+    if (data.github_clone_url) {
+      const repoName = (data.github_repo || '').split('/').pop() || 'project';
+      const cmds =
+        `git clone ${data.github_clone_url}\n` +
+        `cd ${repoName}\n` +
+        `# then start a fresh Claude Code session here\n` +
+        `# and paste the Step 5 prototype brief from the working session`;
+      _vercelLastClone = cmds;
+      document.getElementById('vercelSuccessClone').textContent = cmds;
+      document.getElementById('vercelSuccessCloneRow').style.display = '';
+    } else {
+      _vercelLastClone = '';
+      document.getElementById('vercelSuccessCloneRow').style.display = 'none';
+    }
+    success.style.display = '';
   } catch (e) {
     status.style.background = 'rgba(239,68,68,0.10)';
     status.style.border = '1px solid rgba(239,68,68,0.35)';
