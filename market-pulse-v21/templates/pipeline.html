@@ -371,11 +371,12 @@
 <div id="addContactModalBg" class="modal-bg" onclick="if(event.target===this)closeAddContactModal()">
   <div class="modal">
     <h3 style="margin:0 0 0.6rem; font-size:1.05rem;">Add a contact</h3>
-    <form method="post" action="/pipeline/contact" class="add-grid">
+    <div id="addContactDupWarn" style="display:none; margin-bottom:0.5rem; padding:0.5rem 0.7rem; background:rgba(245,158,11,0.10); border:1px solid rgba(245,158,11,0.35); border-radius:6px; font-size:0.78rem; color:#92400e;"></div>
+    <form id="addContactForm" method="post" action="/pipeline/contact" class="add-grid">
       <label class="span2">Name<input type="text" name="name" required autofocus></label>
       <label>Title<input type="text" name="title"></label>
       <label>Agency<input type="text" name="agency"></label>
-      <label class="span2">Email<input type="email" name="email"></label>
+      <label class="span2">Email<input type="email" name="email" id="addContactEmail"></label>
       <label>Industry
         <select name="industry">
           <option value="">— none —</option>
@@ -409,12 +410,64 @@
 <script>
 function openAddContactModal() {
   document.getElementById('addContactModalBg').classList.add('show');
+  document.getElementById('addContactDupWarn').style.display = 'none';
   const n = document.querySelector('#addContactModalBg input[name="name"]');
   if (n) setTimeout(() => n.focus(), 30);
 }
 function closeAddContactModal() {
   document.getElementById('addContactModalBg').classList.remove('show');
 }
+
+// Duplicate-email preflight: on blur, look up the address and warn
+// inline (with a link to the existing contact) so the user can cancel
+// before submit. Server still rejects on POST as a backstop.
+(function initDupCheck() {
+  const emailInput = document.getElementById('addContactEmail');
+  const warn = document.getElementById('addContactDupWarn');
+  if (!emailInput || !warn) return;
+  let lastChecked = '';
+  async function check() {
+    const v = emailInput.value.trim();
+    if (!v || v === lastChecked) return;
+    lastChecked = v;
+    try {
+      const r = await fetch('/api/pipeline/find-by-email?email=' + encodeURIComponent(v));
+      const data = await r.json();
+      if (data.exists && data.contact) {
+        const c = data.contact;
+        warn.innerHTML =
+          '⚠️ <strong>Already in the pipeline:</strong> ' +
+          (c.name || '(no name)') + ' · ' + (c.stage || '?') +
+          (c.agency ? ' · ' + c.agency : '') +
+          ' &nbsp; <a href="#" onclick="closeAddContactModal(); openDetailModal(' + c.id + '); return false;" style="color:#92400e; font-weight:600;">Open existing →</a>';
+        warn.style.display = '';
+      } else {
+        warn.style.display = 'none';
+      }
+    } catch (_) { /* silent — server-side check is the safety net */ }
+  }
+  emailInput.addEventListener('blur', check);
+  emailInput.addEventListener('change', check);
+})();
+
+// Show a banner if the server bounced us back from a duplicate POST.
+(function showDupBannerFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const dup = params.get('dup_email');
+  const eid = params.get('existing_id');
+  if (!dup) return;
+  const banner = document.createElement('div');
+  banner.style.cssText = 'background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.4); color:#92400e; padding:0.6rem 0.9rem; border-radius:6px; margin:0.6rem 0; font-size:0.85rem;';
+  banner.innerHTML = '⚠️ <strong>Not added:</strong> a contact with email <code>' + dup + '</code> already exists. ' +
+    (eid ? '<a href="#" onclick="openDetailModal(' + parseInt(eid, 10) + '); return false;" style="color:#92400e; font-weight:600;">Open existing →</a>' : '');
+  const main = document.querySelector('main') || document.body;
+  main.insertBefore(banner, main.firstChild);
+  // Clean the URL so a reload doesn't re-show.
+  const url = new URL(window.location.href);
+  url.searchParams.delete('dup_email');
+  url.searchParams.delete('existing_id');
+  history.replaceState({}, '', url.toString());
+})();
 </script>
 
 <p style="font-size:0.78rem; color:var(--text-dim); margin:0 0 1rem;">
