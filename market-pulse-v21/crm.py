@@ -180,7 +180,7 @@ STAGE_TO_NEXT_TRIGGER = {
 # SENDER_NAME (e.g. Jim's outgoing identity).
 SENDER_NAME = os.environ.get(
     "SENDER_NAME",
-    "Aaron Havel\nCEO, FocusedOps"
+    "Aaron Havel\nCEO, FocusedOps\nfocusedops.io"
 )
 
 
