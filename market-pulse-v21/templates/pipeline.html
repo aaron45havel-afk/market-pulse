@@ -1269,6 +1269,10 @@ document.addEventListener('input', e => {
       <div style="margin-top:0.9rem; padding:0.7rem 0.8rem; background:rgba(99,102,241,0.06); border-left:3px solid var(--accent2); border-radius:6px;">
         <div style="font-size:0.75rem; font-weight:700; color:var(--text); margin-bottom:0.5rem;">📝 Fill in the placeholders → ready-to-send email below</div>
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:0.5rem;">
+          <label style="grid-column:1 / -1; font-size:0.65rem; color:var(--text-dim); font-weight:600; text-transform:uppercase;">Subject line
+            <input id="propSubject" type="text" placeholder="Pilot proposal — Sage 300 budget visibility"
+                   style="width:100%; box-sizing:border-box; background:var(--surface); border:1px solid var(--border); border-radius:5px; padding:0.35rem 0.5rem; color:var(--text); font-size:0.85rem; margin-top:0.2rem; font-family:inherit; font-weight:400; text-transform:none; letter-spacing:0;">
+          </label>
           <label style="font-size:0.65rem; color:var(--text-dim); font-weight:600; text-transform:uppercase;">First name
             <input id="propFirstName" type="text" placeholder="Jim"
                    style="width:100%; box-sizing:border-box; background:var(--surface); border:1px solid var(--border); border-radius:5px; padding:0.35rem 0.5rem; color:var(--text); font-size:0.85rem; margin-top:0.2rem; font-family:inherit; font-weight:400; text-transform:none; letter-spacing:0;">
@@ -1511,6 +1515,7 @@ function renderReadyToSendProposal() {
   let text = draft.value || '';
   if (!text.trim()) { out.value = ''; return; }
 
+  const subject   = document.getElementById('propSubject').value.trim();
   const firstName = document.getElementById('propFirstName').value.trim();
   const myName    = document.getElementById('propMyName').value.trim();
   const fee       = document.getElementById('propFee').value.trim();
@@ -1519,28 +1524,60 @@ function renderReadyToSendProposal() {
   const milestone = document.getElementById('propMilestone').value;
   const wrap      = document.getElementById('propWrap').value;
 
-  // Token replacements (new format from updated prompt).
+  const feeStr      = fee ? '$' + Number(fee).toLocaleString() : '';
+  const kickoffStr  = _fmtPropDate(kickoff);
+  const milestoneStr = _fmtPropDate(milestone);
+  const wrapStr     = _fmtPropDate(wrap);
+
+  // Token replacements (current format).
   const subs = {
+    '<<SUBJECT>>':        subject   || '[subject]',
     '<<FIRST_NAME>>':     firstName || '[first_name]',
     '<<MY_NAME>>':        myName    || 'Aaron Havel',
-    '<<FEE>>':            fee ? '$' + Number(fee).toLocaleString() : '[fee]',
+    '<<FEE>>':            feeStr    || '[fee]',
     '<<DURATION>>':       duration  || '[duration]',
-    '<<KICKOFF_DATE>>':   _fmtPropDate(kickoff)   || '[kickoff date]',
-    '<<MILESTONE_DATE>>': _fmtPropDate(milestone) || '[milestone date]',
-    '<<WRAP_DATE>>':      _fmtPropDate(wrap)      || '[wrap date]',
+    '<<KICKOFF_DATE>>':   kickoffStr   || '[kickoff date]',
+    '<<MILESTONE_DATE>>': milestoneStr || '[milestone date]',
+    '<<WRAP_DATE>>':      wrapStr      || '[wrap date]',
   };
   for (const [k, v] of Object.entries(subs)) text = text.split(k).join(v);
 
-  // Backward-compat: older drafts use {first_name} / {my_name}.
+  // Older drafts use {first_name} / {my_name}.
   text = text.replace(/\{first_name\}/g, subs['<<FIRST_NAME>>']);
   text = text.replace(/\{my_name\}/g,    subs['<<MY_NAME>>']);
 
-  out.value = text;
+  // Best-effort backward-compat: older drafts had free-form
+  // [ASSUMPTION — confirm …] placeholders. Substitute the common
+  // ones so the live preview still works without a re-run.
+  if (feeStr) {
+    text = text.replace(/\[ASSUMPTION[^\]]*dollar[^\]]*\]/gi, feeStr);
+    text = text.replace(/\[ASSUMPTION[^\]]*\bfee\b[^\]]*\]/gi, feeStr);
+  }
+  if (duration) {
+    text = text.replace(/\[ASSUMPTION[^\]]*\bduration\b[^\]]*\]/gi, duration);
+    text = text.replace(/\[ASSUMPTION[^\]]*\b\d+-?week[^\]]*\]/gi, duration);
+  }
+  if (kickoffStr) {
+    text = text.replace(/\[ASSUMPTION[^\]]*kickoff[^\]]*\]/gi, kickoffStr);
+    text = text.replace(/\[ASSUMPTION[^\]]*sooner[^\]]*\]/gi, kickoffStr);
+  }
+  if (milestoneStr) {
+    text = text.replace(/\[ASSUMPTION[^\]]*milestone[^\]]*\]/gi, milestoneStr);
+    text = text.replace(/\[ASSUMPTION[^\]]*check-?in[^\]]*\]/gi, milestoneStr);
+  }
+  if (wrapStr) {
+    text = text.replace(/\[ASSUMPTION[^\]]*\bwrap\b[^\]]*\]/gi, wrapStr);
+  }
+
+  // Strip any leading "Subject: …" line Claude included so we can
+  // prepend the user's subject cleanly. Then add the subject line.
+  text = text.replace(/^\s*Subject:[^\n]*\n+/i, '');
+  out.value = (subject ? `Subject: ${subject}\n\n` : '') + text;
 }
 
 // Wire input listeners + kickoff cascade.
 function _initProposalRender() {
-  const ids = ['propFirstName','propMyName','propFee','propDuration','propMilestone','propWrap'];
+  const ids = ['propSubject','propFirstName','propMyName','propFee','propDuration','propMilestone','propWrap'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (el && !el._propWired) {
