@@ -226,6 +226,28 @@ def init_db():
             ALTER TABLE crm_email_templates
             ADD COLUMN IF NOT EXISTS role VARCHAR(40) NOT NULL DEFAULT ''
         """)
+        # Prototype tracking — one row per testable build per contact.
+        # Captures the deployed URL the client can hit, the current
+        # status, and an accumulating feedback log Aaron pastes back
+        # from email replies.
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS crm_prototypes (
+                id              SERIAL PRIMARY KEY,
+                contact_id      INTEGER REFERENCES crm_contacts(id) ON DELETE CASCADE,
+                name            VARCHAR(160) NOT NULL,
+                prototype_url   TEXT,
+                status          VARCHAR(32) NOT NULL DEFAULT 'BUILDING',
+                description     TEXT,
+                feedback        TEXT,
+                notes           TEXT,
+                created_at      TIMESTAMP DEFAULT NOW(),
+                updated_at      TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS crm_prototypes_contact_idx
+            ON crm_prototypes(contact_id)
+        """)
         cur.execute("""
             ALTER TABLE crm_email_templates
             DROP CONSTRAINT IF EXISTS crm_email_templates_industry_trigger_key

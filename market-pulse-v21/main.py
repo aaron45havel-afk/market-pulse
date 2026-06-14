@@ -580,6 +580,91 @@ async def api_pipeline_email(request: Request, contact_id: int):
     return JSONResponse(payload)
 
 
+@app.get("/pipeline/testing")
+async def pipeline_testing(request: Request):
+    """Testing view — list of prototypes the client can be shown."""
+    if not _check_pipeline_access(request):
+        return RedirectResponse("/sign-in?redirect=/pipeline/testing",
+                                status_code=303)
+    from crm import (list_prototypes, list_contacts,
+                     PROTOTYPE_STATUSES, PROTOTYPE_STATUS_LABELS)
+    contacts = [c for c in list_contacts() if c["stage"] != "LOST"]
+    return templates.TemplateResponse("pipeline_testing.html", {
+        "request":          request,
+        "prototypes":       list_prototypes(),
+        "contacts":         contacts,
+        "statuses":         PROTOTYPE_STATUSES,
+        "status_labels":    PROTOTYPE_STATUS_LABELS,
+    })
+
+
+@app.post("/pipeline/testing/add")
+async def pipeline_testing_add(request: Request):
+    if not _check_pipeline_access(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import add_prototype, PROTOTYPE_STATUSES
+    form = await request.form()
+    try:
+        cid_raw = (form.get("contact_id") or "").strip()
+        cid = int(cid_raw) if cid_raw else None
+    except ValueError:
+        cid = None
+    name = (form.get("name") or "").strip()
+    if not name:
+        return RedirectResponse("/pipeline/testing", status_code=303)
+    status = (form.get("status") or "BUILDING").strip()
+    if status not in PROTOTYPE_STATUSES:
+        status = "BUILDING"
+    add_prototype(
+        contact_id=cid,
+        name=name,
+        prototype_url=(form.get("prototype_url") or "").strip() or None,
+        status=status,
+        description=(form.get("description") or "").strip() or None,
+    )
+    return RedirectResponse("/pipeline/testing", status_code=303)
+
+
+@app.post("/pipeline/testing/update")
+async def pipeline_testing_update(request: Request):
+    """Patch a prototype. Used by inline edits + feedback-append."""
+    if not _check_pipeline_access(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import update_prototype
+    body = await request.json()
+    try:
+        pid = int(body.get("id") or 0)
+    except (TypeError, ValueError):
+        pid = 0
+    if not pid:
+        return JSONResponse({"error": "missing id"}, status_code=400)
+    update_prototype(
+        pid,
+        name=body.get("name"),
+        prototype_url=body.get("prototype_url"),
+        status=body.get("status"),
+        description=body.get("description"),
+        notes=body.get("notes"),
+        append_feedback=body.get("append_feedback"),
+    )
+    return JSONResponse({"ok": True})
+
+
+@app.post("/pipeline/testing/delete")
+async def pipeline_testing_delete(request: Request):
+    if not _check_pipeline_access(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import delete_prototype
+    form = await request.form()
+    try:
+        pid = int(form.get("prototype_id", "0"))
+    except ValueError:
+        pid = 0
+    if pid:
+        delete_prototype(pid)
+    return RedirectResponse("/pipeline/testing", status_code=303)
+
+
 @app.get("/pipeline/templates")
 async def pipeline_templates(request: Request):
     if not _check_pipeline_access(request):
