@@ -1684,12 +1684,21 @@ def _current_user(request: Request) -> dict | None:
     return verify_session(request.cookies.get(SESSION_COOKIE, ""))
 
 
+def _callback_url(request: Request) -> str:
+    """Build the OAuth callback URL, respecting X-Forwarded-Proto so
+    Railway's HTTPS terminator doesn't make us hand Google an http://
+    URL that won't match the registered redirect URI."""
+    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
+    return f"{scheme}://{host}/auth/google/callback"
+
+
 @app.get("/auth/google/login")
 async def auth_google_login(request: Request, redirect: str = "/pipeline"):
     """Start the Google OAuth round-trip. Caches the post-login
     redirect target + CSRF state in short-lived cookies."""
     from auth import google_oauth_redirect, new_state, OAUTH_STATE_COOKIE, OAUTH_REDIRECT_COOKIE
-    callback = str(request.url_for("auth_google_callback"))
+    callback = _callback_url(request)
     state = new_state()
     url = google_oauth_redirect(callback, state)
     if not url:
@@ -1697,7 +1706,7 @@ async def auth_google_login(request: Request, redirect: str = "/pipeline"):
             {"error": "Google sign-in not configured. Set GOOGLE_CLIENT_ID."},
             status_code=500,
         )
-    secure = request.url.scheme == "https"
+    secure = callback.startswith("https://")
     resp = RedirectResponse(url, status_code=303)
     resp.set_cookie(OAUTH_STATE_COOKIE, state, max_age=600,
                     httponly=True, secure=secure, samesite="lax")
@@ -1722,7 +1731,7 @@ async def auth_google_callback(request: Request, code: str = "", state: str = ""
     expected_state = request.cookies.get(OAUTH_STATE_COOKIE, "")
     if not state or state != expected_state:
         return JSONResponse({"error": "Invalid OAuth state."}, status_code=400)
-    callback = str(request.url_for("auth_google_callback"))
+    callback = _callback_url(request)
     tokens = google_exchange_code(code, callback)
     if not tokens or not tokens.get("access_token"):
         return JSONResponse({"error": "Failed to exchange code for tokens."},

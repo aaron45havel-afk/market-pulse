@@ -398,6 +398,11 @@
         @media (max-width: 768px) {
             .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
         }
+
+        /* Bare auth shell — no sidebar, no footer, no mobile bar. */
+        .app-shell--bare { grid-template-columns: 1fr !important; }
+        .app-shell--bare .main-pane { padding: 0; }
+        body:has(.app-shell--bare) .mobile-bar { display: none !important; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -409,7 +414,9 @@
         <span class="title">Market Pulse</span>
     </div>
 
-    <div class="app-shell">
+    {% set _hide_chrome = request.url.path == '/sign-in' %}
+    <div class="app-shell{% if _hide_chrome %} app-shell--bare{% endif %}">
+        {% if not _hide_chrome %}
         <aside class="sidebar" id="sidebar">
             <div class="logo">Market Pulse</div>
             {% set _cu = current_user(request) %}
@@ -485,6 +492,7 @@
             </nav>
             <div class="footer-note">FRED · SEC EDGAR · Yahoo Finance · Zillow Research. Not financial advice.</div>
         </aside>
+        {% endif %}
 
         <div class="mobile-overlay" id="mobileOverlay"></div>
 
@@ -492,9 +500,11 @@
             <div class="container">
                 {% block content %}{% endblock %}
             </div>
+            {% if not _hide_chrome %}
             <div class="footer">
                 Market Pulse &mdash; Data from FRED (Federal Reserve), SEC EDGAR &amp; Yahoo Finance. Updated periodically. Not financial advice.
             </div>
+            {% endif %}
         </main>
     </div>
 
