@@ -367,6 +367,12 @@
           {% for ind in industries %}<option value="{{ ind }}">{{ ind }}</option>{% endfor %}
         </select>
       </label>
+      <label>Role
+        <select name="role">
+          <option value="">— none —</option>
+          {% for r in roles %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+        </select>
+      </label>
       <label>Stage
         <select name="stage">
           {% for s in stages %}<option value="{{ s }}" {% if s == 'QUEUED' %}selected{% endif %}>{{ stage_labels[s] }}</option>{% endfor %}
@@ -438,6 +444,11 @@ function closeAddContactModal() {
           {% for ind in industries %}<option value="{{ ind }}">{{ ind }}</option>{% endfor %}
         </select>
       </form>
+      <div class="lbl">Role</div>
+      <select id="detailRoleSel">
+        <option value="">— none —</option>
+        {% for r in roles %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+      </select>
       <div class="lbl">Pilot $</div>    <input id="detailPilot"     type="number" min="0" step="500">
       <div class="lbl">Recurring $/yr</div><input id="detailRecurring" type="number" min="0" step="1000">
       <div class="lbl">Date emailed</div><input id="detailDateEmailed" type="date">
@@ -493,6 +504,7 @@ function openDetailModal(cid) {
   document.getElementById('detailEmailThread').value = c.email_thread || '';
   document.getElementById('detailIndustrySel').value = c.industry || '';
   document.getElementById('detailIndustryCid').value = cid;
+  document.getElementById('detailRoleSel').value = c.role || '';
   document.getElementById('detailDeleteCid').value = cid;
   document.getElementById('detailSaveOk').classList.remove('show');
   document.getElementById('detailModalBg').classList.add('show');
@@ -513,6 +525,7 @@ function _readModalFields() {
     subject:         document.getElementById('detailSubject').value,
     notes:           document.getElementById('detailNotes').value,
     email_thread:    document.getElementById('detailEmailThread').value,
+    role:            document.getElementById('detailRoleSel').value,
   };
 }
 
@@ -602,7 +615,7 @@ function scheduleAutoSave() {
 // untouched (it goes through a separate form).
 ['detailName','detailTitle','detailAgency','detailEmail',
  'detailPilot','detailRecurring','detailDateEmailed','detailNext',
- 'detailSubject','detailNotes','detailEmailThread'].forEach(id => {
+ 'detailSubject','detailNotes','detailEmailThread','detailRoleSel'].forEach(id => {
   const el = document.getElementById(id);
   if (!el) return;
   el.addEventListener('input',  scheduleAutoSave);

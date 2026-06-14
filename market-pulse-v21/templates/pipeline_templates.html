@@ -61,6 +61,12 @@
           {% for ind in industries %}<option value="{{ ind }}">{{ ind }}</option>{% endfor %}
         </select>
       </label>
+      <label>Role <span style="color:var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0;">(blank = any role)</span>
+        <select name="role">
+          <option value="">— any role —</option>
+          {% for r in roles %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+        </select>
+      </label>
       <label>Trigger
         <select name="trigger" required>
           {% for k, label in email_triggers.items() %}
@@ -81,28 +87,78 @@
     </div>
     <button type="submit" class="save">Save template</button>
     <p style="font-size:0.7rem; color:var(--text-dim); margin:0.5rem 0 0;">
-      Saving an existing industry + trigger pair overwrites it.
+      Saving an existing industry + role + trigger triplet overwrites it.
+      A blank role acts as the default for that industry when a contact's role
+      doesn't match a more specific template.
     </p>
   </form>
 </details>
 
-<!-- Existing templates -->
-<div class="card" style="overflow-x:auto; padding:0;">
-  {% if templates_list %}
-  <table class="tpl-table">
-    <thead>
-      <tr>
-        <th>Industry</th>
-        <th>Trigger</th>
-        <th>Subject</th>
-        <th>Body</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for t in templates_list %}
-      <tr>
-        <td>{{ t.industry }}</td>
+<!-- Filter bar -->
+{% if templates_list %}
+<div class="card" style="padding:0.6rem 0.9rem; margin-bottom:0.6rem; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+  <span style="font-size:0.72rem; color:var(--text-dim); font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Filter:</span>
+  <input type="text" id="tplSearch" placeholder="Search subject or body…"
+         style="flex:1; min-width:180px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.35rem 0.55rem; color:var(--text); font-size:0.82rem;">
+  <select id="tplFilterIndustry"
+          style="background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.35rem 0.55rem; color:var(--text); font-size:0.82rem;">
+    <option value="">All industries</option>
+    {% for ind in industries %}<option value="{{ ind }}">{{ ind }}</option>{% endfor %}
+  </select>
+  <select id="tplFilterRole"
+          style="background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.35rem 0.55rem; color:var(--text); font-size:0.82rem;">
+    <option value="">All roles</option>
+    <option value="__any__">— any role (default) —</option>
+    {% for r in roles %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+  </select>
+  <select id="tplFilterTrigger"
+          style="background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.35rem 0.55rem; color:var(--text); font-size:0.82rem;">
+    <option value="">All triggers</option>
+    {% for k, label in email_triggers.items() %}
+      <option value="{{ k }}">{{ k }}</option>
+    {% endfor %}
+  </select>
+  <span id="tplCount" style="font-size:0.72rem; color:var(--text-dim);"></span>
+</div>
+{% endif %}
+
+<!-- Existing templates, grouped by industry -->
+{% if templates_list %}
+  {% set ns = namespace(prev_industry='') %}
+  {% for t in templates_list %}
+    {% if t.industry != ns.prev_industry %}
+      {% if not loop.first %}
+      </tbody></table></div>
+      {% endif %}
+      <div class="card tpl-group" data-industry="{{ t.industry }}" style="margin-bottom:0.8rem; padding:0;">
+        <div style="padding:0.55rem 0.85rem; background:var(--surface2); border-bottom:1px solid var(--border); font-weight:700; font-size:0.85rem;">
+          {{ t.industry }}
+        </div>
+        <table class="tpl-table">
+          <thead>
+            <tr>
+              <th style="width:130px;">Role</th>
+              <th style="width:130px;">Trigger</th>
+              <th>Subject</th>
+              <th>Body</th>
+              <th style="width:60px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+      {% set ns.prev_industry = t.industry %}
+    {% endif %}
+      <tr class="tpl-row"
+          data-industry="{{ t.industry }}"
+          data-role="{{ t.role or '__any__' }}"
+          data-trigger="{{ t.trigger }}"
+          data-search="{{ (t.subject + ' ' + t.body)|lower }}">
+        <td>
+          {% if t.role %}
+            <span style="display:inline-block; padding:1px 6px; background:rgba(99,102,241,0.14); color:var(--accent2); border-radius:99px; font-size:0.7rem; font-weight:600;">{{ t.role }}</span>
+          {% else %}
+            <span style="font-size:0.7rem; color:var(--text-dim); font-style:italic;">any role</span>
+          {% endif %}
+        </td>
         <td><strong>{{ t.trigger }}</strong><br><span style="font-size:0.7rem; color:var(--text-dim);">{{ email_triggers.get(t.trigger, '') }}</span></td>
         <td style="max-width:240px;">{{ t.subject }}</td>
         <td class="body-cell">{{ t.body }}</td>
@@ -113,13 +169,54 @@
           </form>
         </td>
       </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-    <div style="padding:1.5rem; text-align:center; color:var(--text-dim); font-size:0.85rem;">
-      No templates yet. Add one above.
-    </div>
-  {% endif %}
-</div>
+    {% if loop.last %}
+      </tbody></table></div>
+    {% endif %}
+  {% endfor %}
+{% else %}
+  <div class="card" style="padding:1.5rem; text-align:center; color:var(--text-dim); font-size:0.85rem;">
+    No templates yet. Add one above.
+  </div>
+{% endif %}
+
+<script>
+(function initTemplateFilters() {
+  const search = document.getElementById('tplSearch');
+  const fInd   = document.getElementById('tplFilterIndustry');
+  const fRole  = document.getElementById('tplFilterRole');
+  const fTrig  = document.getElementById('tplFilterTrigger');
+  const count  = document.getElementById('tplCount');
+  if (!search || !fInd || !fRole || !fTrig) return;
+
+  function apply() {
+    const q = search.value.trim().toLowerCase();
+    const wantInd  = fInd.value;
+    const wantRole = fRole.value;
+    const wantTrig = fTrig.value;
+    let visible = 0;
+    document.querySelectorAll('.tpl-row').forEach(row => {
+      const ind  = row.dataset.industry;
+      const role = row.dataset.role;
+      const trig = row.dataset.trigger;
+      const text = row.dataset.search;
+      const ok = (!wantInd  || ind  === wantInd) &&
+                 (!wantRole || role === wantRole) &&
+                 (!wantTrig || trig === wantTrig) &&
+                 (!q || text.includes(q));
+      row.style.display = ok ? '' : 'none';
+      if (ok) visible++;
+    });
+    document.querySelectorAll('.tpl-group').forEach(group => {
+      const anyVisible = group.querySelector('.tpl-row:not([style*="display: none"])');
+      group.style.display = anyVisible ? '' : 'none';
+    });
+    count.textContent = `${visible} shown`;
+  }
+  [search, fInd, fRole, fTrig].forEach(el => {
+    el.addEventListener('input', apply);
+    el.addEventListener('change', apply);
+  });
+  apply();
+})();
+</script>
 {% endblock %}

@@ -214,6 +214,34 @@ def init_db():
             ALTER TABLE crm_working_sessions
             ADD COLUMN IF NOT EXISTS prototype_brief TEXT
         """)
+        # Role enum on contact + templates. Templates can now be keyed
+        # on (industry, role, trigger) — empty role acts as "any role"
+        # fallback. Drop the old (industry, trigger) unique constraint
+        # and replace with a 3-column one. Idempotent.
+        cur.execute("""
+            ALTER TABLE crm_contacts
+            ADD COLUMN IF NOT EXISTS role VARCHAR(40)
+        """)
+        cur.execute("""
+            ALTER TABLE crm_email_templates
+            ADD COLUMN IF NOT EXISTS role VARCHAR(40) NOT NULL DEFAULT ''
+        """)
+        cur.execute("""
+            ALTER TABLE crm_email_templates
+            DROP CONSTRAINT IF EXISTS crm_email_templates_industry_trigger_key
+        """)
+        cur.execute("""
+            DO $$ BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint
+                    WHERE conname = 'crm_email_templates_industry_role_trigger_key'
+                ) THEN
+                    ALTER TABLE crm_email_templates
+                    ADD CONSTRAINT crm_email_templates_industry_role_trigger_key
+                    UNIQUE (industry, role, trigger);
+                END IF;
+            END $$;
+        """)
         # Discovery-call artifacts — one row per contact (UNIQUE on
         # contact_id, upserted). Stores raw transcript + the AI chain
         # outputs + a derived scorecard. Multiple calls per contact
