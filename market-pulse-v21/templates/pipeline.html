@@ -2,11 +2,20 @@
 {% block title %}Pipeline — Market Pulse{% endblock %}
 {% block extra_css %}
 <style>
-  .crm-grid { display:grid; grid-template-columns:repeat(7, minmax(220px, 1fr)); gap:0.6rem; overflow-x:auto; padding-bottom:0.5rem; }
-  .crm-col { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.6rem 0.7rem; min-height:140px; }
-  .crm-col-head { font-size:0.72rem; font-weight:700; color:var(--text-dim); letter-spacing:0.05em; text-transform:uppercase; margin-bottom:0.55rem; display:flex; justify-content:space-between; align-items:baseline; }
-  .crm-card { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.6rem 0.7rem; margin-bottom:0.55rem; font-size:0.83rem; }
-  .crm-card .name { font-weight:700; font-size:0.92rem; margin-bottom:2px; }
+  /* Pipeline-only: break out of the global 1400px container so the 7
+     kanban columns can stretch across the full content area on any
+     monitor. (extra_css is only loaded on /pipeline so this scopes
+     automatically — other pages keep their 1400px max-width.) */
+  main .container { max-width: none; padding-left: 1.25rem; padding-right: 1.25rem; }
+
+  /* 7 columns sized to fit any viewport. minmax(0, 1fr) lets the
+     grid shrink columns equally instead of overflowing; overflow-x
+     stays as a safety net for ultra-narrow windows. */
+  .crm-grid { display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:0.5rem; overflow-x:auto; padding-bottom:0.5rem; }
+  .crm-col { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.5rem 0.55rem; min-height:140px; min-width:0; }
+  .crm-col-head { font-size:0.68rem; font-weight:700; color:var(--text-dim); letter-spacing:0.05em; text-transform:uppercase; margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:baseline; }
+  .crm-card { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.5rem 0.6rem; margin-bottom:0.5rem; font-size:0.78rem; min-width:0; }
+  .crm-card .name { font-weight:700; font-size:0.88rem; margin-bottom:2px; }
   .crm-card .meta { font-size:0.72rem; color:var(--text-dim); margin-bottom:0.35rem; }
   .crm-card .money { font-size:0.7rem; color:var(--accent); font-weight:600; }
   .crm-card .next { font-size:0.7rem; color:var(--yellow); }
@@ -19,7 +28,7 @@
   .crm-card { cursor:pointer; transition:border-color 0.12s, transform 0.12s; }
   .crm-card:hover { border-color:var(--accent2); }
   .crm-card .card-top { display:flex; justify-content:space-between; align-items:center; gap:0.4rem; margin-bottom:2px; }
-  .crm-card .card-top .name { font-weight:700; font-size:0.92rem; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .crm-card .card-top .name { font-weight:700; font-size:0.88rem; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
   .crm-card .one-line { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .crm-card .money-row { display:flex; gap:0.4rem; align-items:baseline; margin-top:0.25rem; }
   .crm-card .money-row .money { font-size:0.7rem; color:var(--accent); font-weight:600; white-space:nowrap; }
