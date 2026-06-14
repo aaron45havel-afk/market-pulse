@@ -442,19 +442,23 @@ function closeAddContactModal() {
       <div class="lbl" style="align-self:start; padding-top:0.4rem;">Email thread</div><textarea id="detailEmailThread" rows="5" placeholder="Paste async correspondence — reply threads, clarifications, anything that's not on a call transcript. Feeds the prototype-brief step."></textarea>
     </div>
 
-    <div class="row" style="margin-top:0.8rem; display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-      <span style="font-size:0.7rem; color:var(--text-dim);">Auto-saves as you type</span>
-      <span id="detailSaveOk">Saved ✓</span>
-      <span style="flex:1;"></span>
-      <button class="primary" onclick="emailFromDetail()">📧 Email</button>
-      <button class="primary" onclick="callFromDetail()">📞 Discovery call</button>
-      <button class="primary" onclick="sessionFromDetail()">📋 Working session</button>
-      <span style="flex:1;"></span>
-      <form method="post" action="/pipeline/delete" id="detailDeleteForm" onsubmit="return confirm('Delete this contact?');" style="display:inline;">
-        <input type="hidden" name="contact_id" id="detailDeleteCid" value="">
-        <button type="submit" style="color:#ef4444; background:transparent; border:1px solid var(--border); padding:0.4rem 0.85rem; border-radius:6px; cursor:pointer; font-size:0.8rem;">Delete</button>
-      </form>
-      <button onclick="closeDetailModal()">Close</button>
+    <!-- Footer: action buttons grouped, status notice tucked above -->
+    <div style="margin-top:0.7rem; padding-top:0.7rem; border-top:1px solid var(--border);">
+      <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; font-size:0.7rem; color:var(--text-dim);">
+        <span>💾 Auto-saves as you type</span>
+        <span id="detailSaveOk" style="color:var(--accent); font-weight:600;">Saved ✓</span>
+      </div>
+      <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
+        <button class="primary" onclick="emailFromDetail()">📧 Email</button>
+        <button class="primary" onclick="callFromDetail()">📞 Discovery call</button>
+        <button class="primary" onclick="sessionFromDetail()">📋 Working session</button>
+        <span style="flex:1;"></span>
+        <form method="post" action="/pipeline/delete" id="detailDeleteForm" onsubmit="return confirm('Delete this contact?');" style="display:inline;">
+          <input type="hidden" name="contact_id" id="detailDeleteCid" value="">
+          <button type="submit" style="color:#ef4444; background:transparent; border:1px solid var(--border); padding:0.4rem 0.85rem; border-radius:6px; cursor:pointer; font-size:0.8rem;">Delete</button>
+        </form>
+        <button onclick="closeDetailModal()">Close</button>
+      </div>
     </div>
   </div>
 </div>
@@ -658,7 +662,13 @@ function sessionFromDetail() {
       <textarea id="emailBody"></textarea>
     </div>
 
-    <div class="row">
+    <div class="row" style="flex-wrap:wrap;">
+      <button id="resendSendBtn" onclick="sendEmailViaResend()"
+              style="display:none; background:linear-gradient(135deg, var(--accent2), #9b6dff); color:white; border:none; padding:0.45rem 0.95rem; border-radius:6px; cursor:pointer; font-weight:700; font-size:0.85rem;">
+        ✉️ Send via Resend
+      </button>
+      <span id="resendStatus" style="font-size:0.78rem; color:var(--text-dim);"></span>
+      <span id="resendSeparator" style="display:none; color:var(--text-dim); font-size:0.85rem; padding:0 0.2rem;">·</span>
       <button class="primary" onclick="copyEmail('subject')">Copy subject</button>
       <button class="primary" onclick="copyEmail('body')">Copy body</button>
       <button onclick="copyEmail('both')">Copy subject + body</button>
@@ -680,7 +690,7 @@ async function openEmailModal(contactId) {
     const r = await fetch(`/api/pipeline/email/${contactId}`);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
-    _emailCtx = data;
+    _emailCtx = { ...data, contact_id: contactId };
     document.getElementById('emailTitle').textContent =
       `Email — ${data.contact_name || ''}`;
     document.getElementById('emailTrigger').textContent =
@@ -916,9 +926,10 @@ async function deleteCall() {
   }
 }
 
-// ── Auto-process via Claude API ──
+// ── Integrations config (Anthropic + Resend) ──
 let _aiConfigChecked = false;
 let _aiConfigured = false;
+let _resendConfigured = false;
 
 async function _checkAiConfig() {
   if (_aiConfigChecked) return _aiConfigured;
@@ -926,20 +937,75 @@ async function _checkAiConfig() {
     const r = await fetch('/api/pipeline/ai-config');
     const d = await r.json();
     _aiConfigured = !!d.anthropic_configured;
+    _resendConfigured = !!d.resend_configured;
   } catch {
     _aiConfigured = false;
+    _resendConfigured = false;
   }
   _aiConfigChecked = true;
-  // Hide auto buttons if not configured.
+  // Hide auto-process rows when Anthropic isn't configured.
   if (!_aiConfigured) {
     ['callAutoRow', 'sessionAutoRow'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
   }
+  // Show the Send-via-Resend button only when Resend is configured.
+  if (_resendConfigured) {
+    const btn = document.getElementById('resendSendBtn');
+    const sep = document.getElementById('resendSeparator');
+    if (btn) btn.style.display = '';
+    if (sep) sep.style.display = '';
+  }
   return _aiConfigured;
 }
 _checkAiConfig();
+
+async function sendEmailViaResend() {
+  if (!_emailCtx) return;
+  if (!_resendConfigured) {
+    alert('RESEND_API_KEY is not set on Railway.');
+    return;
+  }
+  if (!_emailCtx.contact_email) {
+    alert('This contact has no email address on file — set one in the contact detail modal.');
+    return;
+  }
+  const subject = document.getElementById('emailSubject').value.trim();
+  const body    = document.getElementById('emailBody').value.trim();
+  if (!subject || !body) {
+    alert('Subject and body both need a value before sending.');
+    return;
+  }
+  if (!confirm(`Send this email to ${_emailCtx.contact_email}?\n\nSubject: ${subject}`)) return;
+
+  const btn = document.getElementById('resendSendBtn');
+  const status = document.getElementById('resendStatus');
+  btn.disabled = true; btn.style.opacity = 0.6;
+  status.textContent = 'Sending…';
+  try {
+    const r = await fetch('/api/pipeline/send-email', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        contact_id: _emailCtx.contact_id,
+        subject, body,
+      }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    status.textContent = data.stage_advanced
+      ? 'Sent ✓ — stage moved to CONTACTED'
+      : 'Sent ✓';
+    setTimeout(() => {
+      closeEmailModal();
+      location.reload();   // refresh kanban + ALL_CONTACTS so email_thread + stage reflect
+    }, 1200);
+  } catch (e) {
+    status.textContent = 'Failed: ' + e.message;
+    btn.disabled = false; btn.style.opacity = 1;
+  }
+}
 
 // Read a newline-delimited-JSON stream, calling onMsg for each parsed line.
 async function _consumeNdjson(response, onMsg) {

@@ -816,14 +816,80 @@ async def pipeline_delete_session(request: Request):
 # ─── Auto-process via Anthropic API ────────────────────────────────
 @app.get("/api/pipeline/ai-config")
 async def api_pipeline_ai_config(request: Request):
-    """Expose whether auto-process is wired up. Used by the modals to
-    show / hide the 'Auto-process with AI' button."""
+    """Expose which optional integrations are wired up. Used by the
+    modals to show / hide the 'Auto-process with AI' button and the
+    'Send via Resend' button."""
     if not _check_admin_token(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
-    from crm import anthropic_configured, ANTHROPIC_MODEL
+    from crm import (anthropic_configured, ANTHROPIC_MODEL,
+                     resend_configured, resend_from_address)
     return JSONResponse({
         "anthropic_configured": anthropic_configured(),
         "model": ANTHROPIC_MODEL,
+        "resend_configured":    resend_configured(),
+        "resend_from":          resend_from_address() if resend_configured() else "",
+    })
+
+
+@app.post("/api/pipeline/send-email")
+async def api_pipeline_send_email(request: Request):
+    """Send a transactional email via Resend for a CRM contact. On
+    success: appends the email to the contact's email_thread, bumps
+    a QUEUED contact to CONTACTED, and sets date_emailed=today."""
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    body = await request.json()
+    try:
+        contact_id = int(body.get("contact_id") or 0)
+    except (TypeError, ValueError):
+        contact_id = 0
+    subject = (body.get("subject") or "").strip()
+    body_text = (body.get("body") or "").strip()
+    if not contact_id or not subject or not body_text:
+        return JSONResponse({"error": "missing contact_id / subject / body"},
+                            status_code=400)
+
+    from crm import (list_contacts, send_via_resend, update_contact,
+                     change_stage, resend_configured)
+    if not resend_configured():
+        return JSONResponse({"error": "RESEND_API_KEY not set"}, status_code=400)
+
+    contact = next((c for c in list_contacts() if c["id"] == contact_id), None)
+    if not contact:
+        return JSONResponse({"error": "contact not found"}, status_code=404)
+    to_email = (contact.get("email") or "").strip()
+    if not to_email:
+        return JSONResponse({"error": "contact has no email address"},
+                            status_code=400)
+
+    result = send_via_resend(
+        to_email=to_email,
+        subject=subject,
+        body=body_text,
+    )
+    if not result.get("ok"):
+        return JSONResponse({"error": result.get("error", "send failed")},
+                            status_code=502)
+
+    # Append to email_thread with a timestamp marker.
+    from datetime import datetime as _dt, date as _date
+    ts = _dt.now().strftime("%Y-%m-%d %H:%M")
+    entry = f"--- Sent {ts} (via Resend, id={result.get('id','')}) ---\n" \
+            f"Subject: {subject}\n\n{body_text}"
+    prev = (contact.get("email_thread") or "").strip()
+    new_thread = (prev + "\n\n" + entry).strip() if prev else entry
+    update_contact(
+        contact_id,
+        email_thread=new_thread,
+        date_emailed=_date.today(),
+    )
+    if (contact.get("stage") or "") == "QUEUED":
+        change_stage(contact_id, "CONTACTED")
+
+    return JSONResponse({
+        "ok": True,
+        "id": result.get("id", ""),
+        "stage_advanced": (contact.get("stage") or "") == "QUEUED",
     })
 
 
