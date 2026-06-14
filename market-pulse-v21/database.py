@@ -223,6 +223,14 @@ def init_db():
             ADD COLUMN IF NOT EXISTS role VARCHAR(40)
         """)
         cur.execute("""
+            ALTER TABLE crm_contacts
+            ADD COLUMN IF NOT EXISTS hosting_model VARCHAR(32) DEFAULT 'TBD'
+        """)
+        cur.execute("""
+            ALTER TABLE crm_contacts
+            ADD COLUMN IF NOT EXISTS engagement_notes TEXT
+        """)
+        cur.execute("""
             ALTER TABLE crm_email_templates
             ADD COLUMN IF NOT EXISTS role VARCHAR(40) NOT NULL DEFAULT ''
         """)

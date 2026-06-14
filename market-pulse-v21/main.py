@@ -318,6 +318,7 @@ async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = "
     from datetime import date as _date, datetime as _dt, timedelta as _td
     from crm import (STAGES, METRICS, STAGE_LABELS, METRIC_LABELS,
                      INDUSTRIES, EMAIL_TRIGGERS, ROLES,
+                     HOSTING_MODELS, HOSTING_MODEL_LABELS,
                      list_contacts, arr_rollup, weekly_kpis,
                      get_weekly_goals, iso_week_range,
                      funnel_conversion, trailing_weekly_kpis,
@@ -372,6 +373,8 @@ async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = "
         "industries": INDUSTRIES,
         "email_triggers": EMAIL_TRIGGERS,
         "roles": ROLES,
+        "hosting_models": HOSTING_MODELS,
+        "hosting_model_labels": HOSTING_MODEL_LABELS,
     })
 
 
@@ -511,14 +514,14 @@ async def pipeline_update_contact(request: Request):
         except ValueError:
             return 0
 
-    from crm import ROLES
+    from crm import ROLES, HOSTING_MODELS
     role_raw = (form.get("role") or "").strip()
-    # Empty string means "clear the role"; valid value means set it;
-    # anything not in ROLES falls back to empty (clear).
     role_val = role_raw if (role_raw == "" or role_raw in ROLES) else ""
+    host_raw = (form.get("hosting_model") or "").strip()
+    host_val = host_raw if host_raw in HOSTING_MODELS else "TBD"
     update_contact(
         cid,
-        name=(form.get("name") or "").strip() or None,   # don't allow blanking the name
+        name=(form.get("name") or "").strip() or None,
         title=(form.get("title") or "").strip(),
         agency=(form.get("agency") or "").strip(),
         email=(form.get("email") or "").strip(),
@@ -530,6 +533,8 @@ async def pipeline_update_contact(request: Request):
         notes=(form.get("notes") or "").strip(),
         email_thread=(form.get("email_thread") or "").strip(),
         role=role_val,
+        hosting_model=host_val,
+        engagement_notes=(form.get("engagement_notes") or "").strip(),
     )
     return JSONResponse({"ok": True})
 

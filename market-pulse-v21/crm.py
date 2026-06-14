@@ -194,6 +194,14 @@ ROLES = (
     "Other",
 )
 
+HOSTING_MODELS = ("TBD", "Managed", "Client-hosted", "Hybrid")
+HOSTING_MODEL_LABELS = {
+    "TBD":           "TBD (ask client)",
+    "Managed":       "Managed by us",
+    "Client-hosted": "Client-hosted",
+    "Hybrid":        "Hybrid",
+}
+
 STAGE_TO_NEXT_TRIGGER = {
     "QUEUED":         "INTRO",
     "CONTACTED":      "BUMP_NO_REPLY",
@@ -240,7 +248,9 @@ def list_contacts() -> list[dict]:
             SELECT id, name, title, agency, email, stage,
                    pilot_value, recurring_value,
                    date_emailed, next_date, subject, notes,
-                   industry, email_thread, role, created_at, updated_at
+                   industry, email_thread, role,
+                   hosting_model, engagement_notes,
+                   created_at, updated_at
             FROM crm_contacts
             ORDER BY updated_at DESC
         """)
@@ -249,6 +259,7 @@ def list_contacts() -> list[dict]:
                 "pilot_value", "recurring_value", "date_emailed",
                 "next_date", "subject", "notes",
                 "industry", "email_thread", "role",
+                "hosting_model", "engagement_notes",
                 "created_at", "updated_at"]
         out = [dict(zip(cols, r)) for r in rows]
         cur.close()
@@ -362,7 +373,9 @@ def update_contact(contact_id: int, *,
                    subject: str | None = None,
                    notes: str | None = None,
                    email_thread: str | None = None,
-                   role: str | None = None) -> bool:
+                   role: str | None = None,
+                   hosting_model: str | None = None,
+                   engagement_notes: str | None = None) -> bool:
     """Patch any subset of editable fields. None means 'leave as-is' for
     the scalar fields; pass an explicit empty string to clear text fields
     or 0 to clear money fields."""
@@ -380,6 +393,8 @@ def update_contact(contact_id: int, *,
             ("date_emailed", date_emailed), ("next_date", next_date),
             ("subject", subject), ("notes", notes),
             ("email_thread", email_thread), ("role", role),
+            ("hosting_model", hosting_model),
+            ("engagement_notes", engagement_notes),
         ]:
             if val is not None:
                 sets.append(f"{col} = %s")
