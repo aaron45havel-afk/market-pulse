@@ -845,6 +845,7 @@ async def api_pipeline_send_email(request: Request):
         contact_id = 0
     subject = (body.get("subject") or "").strip()
     body_text = (body.get("body") or "").strip()
+    scheduled_at = (body.get("scheduled_at") or "").strip() or None
     if not contact_id or not subject or not body_text:
         return JSONResponse({"error": "missing contact_id / subject / body"},
                             status_code=400)
@@ -871,6 +872,7 @@ async def api_pipeline_send_email(request: Request):
         to_email=to_email,
         subject=subject,
         body=body_text,
+        scheduled_at=scheduled_at,
     )
     if not result.get("ok"):
         return JSONResponse({"error": result.get("error", "send failed")},
@@ -879,8 +881,12 @@ async def api_pipeline_send_email(request: Request):
     # Append to email_thread with a timestamp marker.
     from datetime import datetime as _dt, date as _date
     ts = _dt.now().strftime("%Y-%m-%d %H:%M")
-    entry = f"--- Sent {ts} (via Resend, id={result.get('id','')}) ---\n" \
-            f"Subject: {subject}\n\n{body_text}"
+    if scheduled_at:
+        marker = f"--- Scheduled for {scheduled_at} (queued {ts}, " \
+                 f"via Resend, id={result.get('id','')}) ---"
+    else:
+        marker = f"--- Sent {ts} (via Resend, id={result.get('id','')}) ---"
+    entry = f"{marker}\nSubject: {subject}\n\n{body_text}"
     prev = (contact.get("email_thread") or "").strip()
     new_thread = (prev + "\n\n" + entry).strip() if prev else entry
     update_contact(
@@ -894,6 +900,7 @@ async def api_pipeline_send_email(request: Request):
     return JSONResponse({
         "ok": True,
         "id": result.get("id", ""),
+        "scheduled_at": scheduled_at or "",
         "stage_advanced": (contact.get("stage") or "") == "QUEUED",
     })
 

@@ -667,6 +667,19 @@ function sessionFromDetail() {
       <textarea id="emailBody"></textarea>
     </div>
 
+    <div id="scheduleRow" style="display:none; margin-top:0.6rem; gap:0.4rem; align-items:center; flex-wrap:wrap; font-size:0.78rem; color:var(--text-dim);">
+      <label for="scheduleWhen" style="font-weight:600;">Send:</label>
+      <select id="scheduleWhen" onchange="onScheduleChange()" style="background:var(--surface2); border:1px solid var(--border); border-radius:4px; padding:0.25rem 0.45rem; color:var(--text); font-size:0.78rem;">
+        <option value="now">Now</option>
+        <option value="tomorrow-9">Tomorrow 9:00 AM</option>
+        <option value="tomorrow-14">Tomorrow 2:00 PM</option>
+        <option value="monday-9">Next Monday 9:00 AM</option>
+        <option value="custom">Pick date & time…</option>
+      </select>
+      <input type="datetime-local" id="scheduleCustom" style="display:none; background:var(--surface2); border:1px solid var(--border); border-radius:4px; padding:0.25rem 0.45rem; color:var(--text); font-size:0.78rem;">
+      <span id="scheduleHint" style="color:var(--text-dim);"></span>
+    </div>
+
     <div class="row" style="flex-wrap:wrap;">
       <button id="resendSendBtn" onclick="sendEmailViaResend()"
               style="display:none; background:linear-gradient(135deg, var(--accent2), #9b6dff); color:white; border:none; padding:0.45rem 0.95rem; border-radius:6px; cursor:pointer; font-weight:700; font-size:0.85rem;">
@@ -959,12 +972,65 @@ async function _checkAiConfig() {
   if (_resendConfigured) {
     const btn = document.getElementById('resendSendBtn');
     const sep = document.getElementById('resendSeparator');
+    const sched = document.getElementById('scheduleRow');
     if (btn) btn.style.display = '';
     if (sep) sep.style.display = '';
+    if (sched) sched.style.display = 'flex';
   }
   return _aiConfigured;
 }
 _checkAiConfig();
+
+// ── Schedule-send helpers ──────────────────────────────────────
+function _computeScheduledDate() {
+  const sel = document.getElementById('scheduleWhen');
+  if (!sel) return null;
+  const v = sel.value;
+  if (v === 'now') return null;
+  const now = new Date();
+  if (v === 'tomorrow-9' || v === 'tomorrow-14') {
+    const d = new Date(now); d.setDate(d.getDate() + 1);
+    d.setHours(v === 'tomorrow-9' ? 9 : 14, 0, 0, 0);
+    return d;
+  }
+  if (v === 'monday-9') {
+    const d = new Date(now);
+    const day = d.getDay();                // 0 Sun .. 6 Sat
+    const add = day === 1 ? 7 : (8 - day) % 7 || 7;
+    d.setDate(d.getDate() + add);
+    d.setHours(9, 0, 0, 0);
+    return d;
+  }
+  if (v === 'custom') {
+    const raw = document.getElementById('scheduleCustom').value;
+    if (!raw) return null;
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return null;
+    return d;
+  }
+  return null;
+}
+
+function _fmtScheduleHint(d) {
+  if (!d) return '';
+  const opts = { weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' };
+  return '→ ' + d.toLocaleString(undefined, opts);
+}
+
+function onScheduleChange() {
+  const sel = document.getElementById('scheduleWhen');
+  const cust = document.getElementById('scheduleCustom');
+  const hint = document.getElementById('scheduleHint');
+  const btn = document.getElementById('resendSendBtn');
+  if (!sel) return;
+  cust.style.display = sel.value === 'custom' ? '' : 'none';
+  const d = _computeScheduledDate();
+  hint.textContent = _fmtScheduleHint(d);
+  if (btn) btn.textContent = sel.value === 'now' ? '✉️ Send via Resend' : '🕒 Schedule send';
+}
+document.addEventListener('input', (e) => {
+  if (e.target && e.target.id === 'scheduleCustom') onScheduleChange();
+});
 
 async function sendEmailViaResend() {
   if (!_emailCtx) return;
@@ -982,12 +1048,17 @@ async function sendEmailViaResend() {
     alert('Subject and body both need a value before sending.');
     return;
   }
-  if (!confirm(`Send this email to ${_emailCtx.contact_email}?\n\nSubject: ${subject}`)) return;
+  const schedDate = _computeScheduledDate();
+  const schedIso = schedDate ? schedDate.toISOString() : null;
+  const when = schedDate
+    ? `scheduled for ${schedDate.toLocaleString()}`
+    : 'send now';
+  if (!confirm(`Send this email to ${_emailCtx.contact_email}?\n${when}\n\nSubject: ${subject}`)) return;
 
   const btn = document.getElementById('resendSendBtn');
   const status = document.getElementById('resendStatus');
   btn.disabled = true; btn.style.opacity = 0.6;
-  status.textContent = 'Sending…';
+  status.textContent = schedIso ? 'Scheduling…' : 'Sending…';
   try {
     const r = await fetch('/api/pipeline/send-email', {
       method: 'POST',
@@ -995,13 +1066,15 @@ async function sendEmailViaResend() {
       body: JSON.stringify({
         contact_id: _emailCtx.contact_id,
         subject, body,
+        scheduled_at: schedIso,
       }),
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    const verb = data.scheduled_at ? 'Scheduled ✓' : 'Sent ✓';
     status.textContent = data.stage_advanced
-      ? 'Sent ✓ — stage moved to CONTACTED'
-      : 'Sent ✓';
+      ? verb + ' — stage moved to CONTACTED'
+      : verb;
     setTimeout(() => {
       closeEmailModal();
       location.reload();   // refresh kanban + ALL_CONTACTS so email_thread + stage reflect

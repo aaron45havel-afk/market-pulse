@@ -2049,10 +2049,14 @@ def resend_from_address() -> str:
 
 def send_via_resend(*, to_email: str, subject: str, body: str,
                     from_email: str | None = None,
-                    reply_to: str | None = None) -> dict:
+                    reply_to: str | None = None,
+                    scheduled_at: str | None = None) -> dict:
     """POST to resend.com/api/v1/emails. Returns
-    {ok: bool, id?: str, error?: str}. Does not raise — caller can
-    surface the error to the UI."""
+    {ok: bool, id?: str, scheduled_at?: str, error?: str}. Does not
+    raise — caller can surface the error to the UI.
+
+    scheduled_at: ISO8601 UTC timestamp (e.g. "2026-06-15T17:00:00Z")
+    or natural-language string Resend accepts (e.g. "in 1 hour")."""
     import json as _json
     import os as _os
     import urllib.request as _urlreq
@@ -2075,6 +2079,8 @@ def send_via_resend(*, to_email: str, subject: str, body: str,
     }
     if reply_to:
         payload["reply_to"] = reply_to
+    if scheduled_at:
+        payload["scheduled_at"] = scheduled_at
 
     req = _urlreq.Request(
         "https://api.resend.com/emails",
@@ -2090,7 +2096,11 @@ def send_via_resend(*, to_email: str, subject: str, body: str,
     try:
         with _urlreq.urlopen(req, timeout=30) as r:
             data = _json.loads(r.read())
-            return {"ok": True, "id": data.get("id", "")}
+            return {
+                "ok": True,
+                "id": data.get("id", ""),
+                "scheduled_at": scheduled_at or "",
+            }
     except _urlerr.HTTPError as e:
         detail = ""
         try:
