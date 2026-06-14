@@ -1979,6 +1979,8 @@ EXTRACTION:
 
 WORKING_PROMPT_PROTOTYPE = '''You are designing a working prototype the prospect can interact with to give us feedback BEFORE we build the full pilot.
 
+The prototype will be deployed via Vercel. The user already pre-created the GitHub repo and Vercel project from the CRM's 🚀 button, then ran `git clone` locally and started a fresh Claude Code session inside the cloned folder. So the executing Claude Code session lands inside an empty repo that is already wired: the GitHub remote is configured, and every `git push` triggers a Vercel auto-deploy.
+
 Use the discovery + working-session extractions, the locked scope, the success criteria, and any email correspondence the user pastes in. Output a build brief structured in TWO parts.
 
 # PART A — Build brief (for the engineering team)
@@ -1987,10 +1989,11 @@ Use the discovery + working-session extractions, the locked scope, the success c
 
 **One-line pitch:** [what the prototype lets the prospect do, in their domain language]
 
-**Stack (lightweight — this is a prototype, not production):**
-- Frontend: [recommendation, e.g. FastAPI + Jinja2 + vanilla JS, or Streamlit]
-- Data: [recommendation, e.g. SQLite with seeded sample data]
-- Hosting: [recommendation, e.g. Railway free tier]
+**Stack (Vercel-friendly — pick one):**
+- **Recommended:** Next.js (App Router) + Tailwind + simple in-memory mock data — Vercel auto-detects and deploys with zero config
+- Alternative: Vite + React + Tailwind
+- Alternative: Plain HTML + CSS + JS (for very small UIs)
+- Avoid: FastAPI / Django / Flask — these don't deploy cleanly as a standard Vercel project for a prototype
 
 **Data model (cite source extraction fields):**
 - [entity 1 — fields — source]
@@ -2020,9 +2023,17 @@ A self-contained prompt that, when pasted into Claude Code, will build the proto
 ```
 Build a working prototype for [prospect first-name's] team called [prototype_name].
 
+CONTEXT FOR YOU (the Claude Code session):
+You are inside an empty Git repository that is already wired up:
+- The folder was just cloned from a private GitHub repo
+- The GitHub repo is linked to a Vercel project
+- Every `git push` to `main` auto-deploys to a live Vercel URL
+- DO NOT try to set up a new git repo. DO NOT change the remote.
+- DO NOT spend time configuring local dev servers beyond what's needed for build-time verification
+
 Goal: [one-line pitch, plus 'so they can give us feedback on scope and pain points'].
 
-Stack: [stack details]
+Stack: [stack details — bias toward Next.js with App Router unless something specific argues otherwise]
 
 Data model:
 [the data model from Part A, concrete column types]
@@ -2031,12 +2042,19 @@ Build these screens:
 [screen list with key features]
 
 Mock these integrations:
-[mocked integration list with shape of fake data]
+[mocked integration list with shape of fake data — no real API calls]
 
-Seed the database with this sample data:
+Seed in-app data (or a JSON file in the repo) with this sample data:
 [sample data list]
 
-When done, run locally on http://localhost:8000 and tell me how to start it.
+When the build is working:
+1. Verify it locally one time with `npm run dev` (or equivalent) — quick smoke test
+2. Stage all changes: `git add -A`
+3. Commit with a clear message: `git commit -m "Prototype v1: <one-line summary of what's in it>"`
+4. Push to deploy: `git push origin main` (use `--force` if Vercel's auto-init README is in the way of your first commit — that README is throwaway)
+5. Tell me when the push succeeds. Vercel auto-deploys in ~30 seconds. The live URL is in the Vercel dashboard.
+
+For every subsequent change I ask for: edit → `git add -A && git commit -m "<change>" && git push`. The client sees the change live ~30 sec later by refreshing the same URL.
 ```
 
 RULES:
@@ -2046,6 +2064,7 @@ RULES:
 - Every claim in Part A must cite the extraction, locked_scope, success_criteria, or email_thread field it derives from.
 - Anything not supported by those inputs, label "ASSUMPTION — confirm".
 - Part B is a literal copy-paste prompt — write it as if Claude Code will execute it verbatim.
+- The Part B prompt MUST tell Claude Code to commit + push instead of running locally as a final deliverable — Vercel hosts the running version.
 
 EXTRACTION (Stage 1):
 {extraction_json}
