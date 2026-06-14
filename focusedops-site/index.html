@@ -47,15 +47,16 @@
       display: flex; justify-content: space-between; align-items: center;
     }
     .brand {
+      display: inline-flex; align-items: center; gap: 0.5rem;
       font-weight: 700; font-size: 1.05rem; letter-spacing: -0.01em;
       color: var(--ink);
     }
     .brand-mark {
-      display: inline-block; width: 22px; height: 22px;
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px;
       background: var(--ink); color: #fff;
-      border-radius: 4px; text-align: center; font-size: 0.78rem;
-      line-height: 22px; margin-right: 0.45rem;
-      vertical-align: -4px; font-weight: 700;
+      border-radius: 5px; font-size: 0.82rem; font-weight: 700;
+      line-height: 1;
     }
     header nav a {
       color: var(--ink-dim); font-size: 0.88rem; margin-left: 1.2rem;
@@ -97,6 +98,11 @@
       background: var(--accent); text-decoration: none;
       transform: translateY(-1px);
     }
+    .hero-fallback {
+      margin: 0.85rem 0 0;
+      font-size: 0.85rem; color: var(--ink-dim);
+    }
+    .hero-fallback a { color: var(--accent-2); font-weight: 600; }
 
     /* Section spacing */
     section.block { padding: 4rem 0; border-top: 1px solid var(--line); }
@@ -168,7 +174,8 @@
     /* About */
     .about { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
     @media (max-width: 720px) { .about { grid-template-columns: 1fr; } }
-    .bio h3 { margin: 0 0 0.35rem; font-size: 1rem; font-weight: 700; }
+    .bio h3 { margin: 0; font-size: 1rem; font-weight: 700; }
+    .bio .title { font-size: 0.78rem; color: var(--accent-2); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin: 0.15rem 0 0.5rem; }
     .bio p  { margin: 0; color: var(--ink-dim); font-size: 0.97rem; }
 
     /* Footer */
@@ -189,7 +196,7 @@
 <header>
   <div class="wrap">
     <div class="brand">
-      <span class="brand-mark">F</span>FocusedOps
+      <span class="brand-mark">F</span><span>FocusedOps</span>
     </div>
     <nav>
       <a href="#what">What we build</a>
@@ -204,6 +211,7 @@
     <h1>Custom software for contract-heavy finance teams.</h1>
     <p class="lede">We build the budget-tracking, change-order intake, and spend-visibility tools your team has been hacking together in spreadsheets. Short engagements. You own the code.</p>
     <a class="btn" href="mailto:aaron@focusedops.io?subject=Scoping%20call">Start with an email →</a>
+    <p class="hero-fallback">Or copy: <a href="mailto:aaron@focusedops.io?subject=Scoping%20call">aaron@focusedops.io</a></p>
   </div>
 </section>
 
@@ -265,10 +273,12 @@
     <div class="about">
       <div class="bio">
         <h3>Aaron Havel</h3>
+        <p class="title">CEO</p>
         <p>Financial operations background. Builds custom software for finance teams who've outgrown their spreadsheets.</p>
       </div>
       <div class="bio">
         <h3>Jim Cimino</h3>
+        <p class="title">CTO</p>
         <p>Real estate and construction industry background. Brings hands-on knowledge of how contract-driven projects actually run.</p>
       </div>
     </div>
