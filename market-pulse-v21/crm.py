@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import math
+import os
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -174,9 +175,13 @@ STAGE_TO_NEXT_TRIGGER = {
     "LOST":           None,
 }
 
-# Sender name used in {my_name} substitution. Could move to env var if
-# Jim needs his own outgoing identity later.
-SENDER_NAME = "Aaron Havel"
+# Sender block used in {my_name} substitution. Multiline OK — Resend
+# preserves newlines in the text body. Override per-user via env var
+# SENDER_NAME (e.g. Jim's outgoing identity).
+SENDER_NAME = os.environ.get(
+    "SENDER_NAME",
+    "Aaron Havel\nCEO, FocusedOps"
+)
 
 
 # ─── Date helpers ────────────────────────────────────────────────────
