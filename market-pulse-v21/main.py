@@ -580,6 +580,73 @@ async def api_pipeline_email(request: Request, contact_id: int):
     return JSONResponse(payload)
 
 
+@app.get("/api/pipeline/vercel/config")
+async def api_vercel_config(request: Request):
+    if not _check_pipeline_access(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from vercel import configured as _vc
+    return JSONResponse({"configured": bool(_vc())})
+
+
+@app.post("/api/pipeline/vercel/create")
+async def api_vercel_create(request: Request):
+    """Spin up a Vercel project for a contact, optionally linked to a
+    GitHub repo, and auto-add a Testing-page prototype entry pointing
+    at the default .vercel.app URL."""
+    if not _check_pipeline_access(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from vercel import create_project, configured as _vc, slugify
+    from crm import list_contacts, add_prototype, find_contact_by_email
+    if not _vc():
+        return JSONResponse({
+            "error": ("Vercel sign-in not configured. Create a token at "
+                      "https://vercel.com/account/tokens and add VERCEL_TOKEN "
+                      "to Railway."),
+        }, status_code=400)
+    body = await request.json()
+    try:
+        contact_id = int(body.get("contact_id") or 0)
+    except (TypeError, ValueError):
+        contact_id = 0
+    project_name = (body.get("project_name") or "").strip()
+    github_repo  = (body.get("github_repo") or "").strip() or None
+    framework    = (body.get("framework") or "nextjs").strip()
+    proto_label  = (body.get("prototype_label") or "").strip()
+
+    contact = next((c for c in list_contacts() if c["id"] == contact_id), None)
+    if not contact:
+        return JSONResponse({"error": "contact not found"}, status_code=404)
+    if not project_name:
+        project_name = f"{contact['name']}-prototype"
+
+    result = create_project(name=project_name, github_repo=github_repo,
+                            framework=framework)
+    if not result.get("ok"):
+        return JSONResponse({"error": result.get("error", "Vercel API failed"),
+                             "vercel_response": result.get("vercel_response")},
+                            status_code=502)
+
+    label = proto_label or f"{contact['name']} prototype"
+    description = (
+        f"Vercel project: {result['name']}\n"
+        f"GitHub: {github_repo or '(linked manually)'}\n"
+        f"Framework: {framework}"
+    )
+    proto_id = add_prototype(
+        contact_id=contact_id,
+        name=label,
+        prototype_url=result["project_url"],
+        status="BUILDING",
+        description=description,
+    )
+    return JSONResponse({
+        "ok": True,
+        "project_url": result["project_url"],
+        "project_name": result["name"],
+        "prototype_id": proto_id,
+    })
+
+
 @app.get("/pipeline/testing")
 async def pipeline_testing(request: Request):
     """Testing view — list of prototypes the client can be shown."""
