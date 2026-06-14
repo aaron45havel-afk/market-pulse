@@ -587,15 +587,116 @@ async def pipeline_testing(request: Request):
         return RedirectResponse("/sign-in?redirect=/pipeline/testing",
                                 status_code=303)
     from crm import (list_prototypes, list_contacts,
-                     PROTOTYPE_STATUSES, PROTOTYPE_STATUS_LABELS)
+                     PROTOTYPE_STATUSES, PROTOTYPE_STATUS_LABELS,
+                     ensure_feedback_tokens)
+    # Backfill feedback tokens for any prototype missing one (e.g.
+    # created before this column existed). Idempotent + fast.
+    ensure_feedback_tokens()
     contacts = [c for c in list_contacts() if c["stage"] != "LOST"]
+    base_url = _public_base_url(request)
     return templates.TemplateResponse("pipeline_testing.html", {
         "request":          request,
         "prototypes":       list_prototypes(),
         "contacts":         contacts,
         "statuses":         PROTOTYPE_STATUSES,
         "status_labels":    PROTOTYPE_STATUS_LABELS,
+        "base_url":         base_url,
     })
+
+
+def _public_base_url(request: Request) -> str:
+    """Build the public origin for outbound URLs (feedback links in
+    emails, etc.). Honors x-forwarded-* for Railway HTTPS."""
+    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
+    return f"{scheme}://{host}"
+
+
+@app.get("/feedback/{token}")
+async def feedback_page(request: Request, token: str):
+    """Public client-facing feedback form. No auth — the token IS the
+    auth. Client submits text + optional screenshot."""
+    from crm import find_prototype_by_token
+    p = find_prototype_by_token(token)
+    if not p:
+        return templates.TemplateResponse("feedback.html", {
+            "request": request, "prototype": None, "token": token,
+        }, status_code=404)
+    return templates.TemplateResponse("feedback.html", {
+        "request": request, "prototype": p, "token": token,
+    })
+
+
+@app.post("/feedback/{token}")
+async def feedback_submit(request: Request, token: str):
+    """Accept a feedback submission. Appends to the prototype's
+    feedback log + emails the team via Resend (if configured)."""
+    from crm import (find_prototype_by_token, update_prototype,
+                     send_via_resend, resend_configured, resend_from_address,
+                     SENDER_NAME)
+    import os as _os
+    p = find_prototype_by_token(token)
+    if not p:
+        return JSONResponse({"error": "Invalid feedback link."}, status_code=404)
+    form = await request.form()
+    text = (form.get("feedback") or "").strip()
+    sender_name = (form.get("name") or "").strip()
+    sender_email = (form.get("email") or "").strip()
+    if not text:
+        return JSONResponse({"error": "Feedback text is required."}, status_code=400)
+
+    # Append to the prototype's feedback log with attribution.
+    who = sender_name or sender_email or "Anonymous"
+    if sender_email and sender_name:
+        who = f"{sender_name} <{sender_email}>"
+    log_entry = f"From: {who}\n\n{text}"
+    update_prototype(p["id"], append_feedback=log_entry)
+
+    # Try to grab a screenshot file (image/*) for the email attachment.
+    attachments: list[dict] = []
+    try:
+        upload = form.get("screenshot")
+        if upload and hasattr(upload, "read"):
+            raw = await upload.read()
+            if raw and len(raw) <= 5 * 1024 * 1024:  # 5 MB cap
+                import base64 as _b64
+                fname = getattr(upload, "filename", "screenshot.png") or "screenshot.png"
+                attachments.append({
+                    "filename": fname,
+                    "content": _b64.b64encode(raw).decode("ascii"),
+                })
+    except Exception:
+        attachments = []
+
+    # Notify the team via Resend.
+    if resend_configured():
+        notify_to = (_os.environ.get("ADMIN_EMAILS", "").split(",") or [""])[0].strip() \
+                    or resend_from_address()
+        base_url = _public_base_url(request)
+        subject = f"[FocusedOps] Feedback on {p['name']} — from {who}"
+        body = (
+            f"New feedback from {who}\n"
+            f"Prototype: {p['name']}\n"
+            f"{('Prototype URL: ' + p['prototype_url']) if p.get('prototype_url') else ''}\n\n"
+            f"--- Feedback ---\n{text}\n\n"
+            f"Manage at: {base_url}/pipeline/testing\n\n"
+            f"{SENDER_NAME}"
+        )
+        try:
+            send_via_resend(
+                to_email=notify_to,
+                subject=subject,
+                body=body,
+                reply_to=sender_email or None,
+                **({"attachments": attachments} if attachments else {}),
+            )
+        except TypeError:
+            # send_via_resend may not yet accept attachments — fall
+            # back to plain text without screenshot.
+            send_via_resend(to_email=notify_to, subject=subject,
+                            body=body, reply_to=sender_email or None)
+
+    return RedirectResponse(f"/feedback/{token}?ok=1", status_code=303)
 
 
 @app.post("/pipeline/testing/add")

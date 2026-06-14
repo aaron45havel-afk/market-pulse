@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if prototype %}Feedback — {{ prototype.name }}{% else %}Feedback{% endif %} · FocusedOps</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230F1A2C'/%3E%3Ctext x='50%25' y='58%25' text-anchor='middle' font-family='system-ui,sans-serif' font-size='20' font-weight='700' fill='%23E8ECF5'%3EF%3C/text%3E%3C/svg%3E">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{margin:0;padding:0;}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;
+      background:#FAFAF7;color:#0F1A2C;line-height:1.5;
+      -webkit-font-smoothing:antialiased;
+    }
+    .wrap{max-width:600px;margin:0 auto;padding:2.5rem 1.25rem 3rem;}
+    .brand{display:inline-flex;align-items:center;gap:0.5rem;font-weight:700;font-size:0.95rem;color:#0F1A2C;text-decoration:none;}
+    .brand-mark{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#0F1A2C;color:#fff;border-radius:5px;font-size:0.78rem;font-weight:700;line-height:1;}
+    .card{
+      background:#fff;border:1px solid #E5E7EB;border-radius:12px;
+      padding:1.75rem 1.6rem;margin-top:1.5rem;
+      box-shadow:0 4px 14px rgba(0,0,0,0.03);
+    }
+    h1{margin:0 0 0.4rem;font-size:1.45rem;letter-spacing:-0.018em;}
+    .sub{color:#4B5563;margin:0 0 1.3rem;font-size:0.95rem;}
+    .meta{background:#F3F4F6;border-radius:8px;padding:0.6rem 0.85rem;margin-bottom:1.2rem;font-size:0.85rem;color:#4B5563;}
+    .meta a{color:#4F46E5;font-weight:600;}
+    label{display:block;margin:1rem 0 0.25rem;font-size:0.72rem;font-weight:700;color:#4B5563;text-transform:uppercase;letter-spacing:0.05em;}
+    input[type="text"],input[type="email"],textarea{
+      width:100%;background:#fff;border:1px solid #D1D5DB;border-radius:8px;
+      padding:0.6rem 0.75rem;font-size:0.95rem;color:#0F1A2C;
+      font-family:inherit;outline:none;
+      transition:border-color 0.12s;
+    }
+    input:focus,textarea:focus{border-color:#4F46E5;}
+    textarea{min-height:160px;resize:vertical;line-height:1.55;}
+    input[type="file"]{font-family:inherit;font-size:0.85rem;padding:0.4rem 0;}
+    .row{display:flex;gap:0.8rem;flex-wrap:wrap;}
+    .row > *{flex:1;min-width:180px;}
+    .submit-btn{
+      display:inline-block;background:#0F1A2C;color:#fff;
+      border:none;padding:0.85rem 1.5rem;border-radius:8px;
+      font-size:0.95rem;font-weight:600;cursor:pointer;
+      transition:background 0.15s,transform 0.08s;
+      margin-top:1.3rem;
+    }
+    .submit-btn:hover{background:#1E3A8A;transform:translateY(-1px);}
+    .submit-btn:disabled{opacity:0.55;cursor:wait;transform:none;background:#0F1A2C;}
+    .ok-banner{
+      background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.35);
+      color:#166534;padding:0.8rem 1rem;border-radius:8px;
+      font-size:0.92rem;font-weight:500;margin-bottom:1.2rem;
+    }
+    .err-banner{
+      background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);
+      color:#991B1B;padding:0.8rem 1rem;border-radius:8px;
+      font-size:0.92rem;margin-bottom:1.2rem;
+    }
+    footer{margin-top:1.5rem;text-align:center;color:#9CA3AF;font-size:0.78rem;}
+    footer a{color:#9CA3AF;}
+    .hint{font-size:0.78rem;color:#6B7280;margin:0.3rem 0 0;}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <a class="brand" href="https://focusedops.io"><span class="brand-mark">F</span>FocusedOps</a>
+
+  {% if not prototype %}
+    <div class="card">
+      <div class="err-banner">This feedback link doesn't match any active prototype. Double-check the URL or ask your point of contact for a new link.</div>
+    </div>
+  {% else %}
+    <div class="card">
+      {% if request.query_params.get('ok') == '1' %}
+        <div class="ok-banner">✓ Thanks — your feedback is in. The team will take a look and respond shortly.</div>
+      {% endif %}
+
+      <h1>Feedback — {{ prototype.name }}</h1>
+      <p class="sub">Tell us what's working, what's missing, or what should be different. Anything you flag here goes straight to the team.</p>
+
+      {% if prototype.prototype_url %}
+        <div class="meta">
+          <strong>Live preview:</strong> <a href="{{ prototype.prototype_url }}" target="_blank" rel="noopener">{{ prototype.prototype_url }}</a>
+        </div>
+      {% endif %}
+
+      <form method="post" action="/feedback/{{ token }}" enctype="multipart/form-data">
+        <div class="row">
+          <div>
+            <label for="name">Your name (optional)</label>
+            <input type="text" id="name" name="name" placeholder="Jim Cimino">
+          </div>
+          <div>
+            <label for="email">Email (optional, for follow-up)</label>
+            <input type="email" id="email" name="email" placeholder="you@company.com">
+          </div>
+        </div>
+
+        <label for="feedback">What's on your mind?</label>
+        <textarea id="feedback" name="feedback" required placeholder="e.g. 'The alerts page should show vendor name next to each line item — that's how we sort in real life.'"></textarea>
+        <p class="hint">Plain English. Rough is fine. The team would rather see 5 quick ideas than 1 polished one.</p>
+
+        <label for="screenshot">Screenshot (optional)</label>
+        <input type="file" id="screenshot" name="screenshot" accept="image/*">
+        <p class="hint">Drag an image here from your screen, or paste it from your clipboard into the box above. Max 5 MB.</p>
+
+        <button type="submit" class="submit-btn" id="submitBtn">Send feedback →</button>
+      </form>
+    </div>
+  {% endif %}
+
+  <footer>
+    FocusedOps · <a href="mailto:aaron@focusedops.io">aaron@focusedops.io</a>
+  </footer>
+</div>
+
+<script>
+// Paste-image-into-textarea convenience: when the user pastes an image
+// from their clipboard, attach it to the screenshot input.
+(function () {
+  const ta = document.getElementById('feedback');
+  const file = document.getElementById('screenshot');
+  if (!ta || !file) return;
+  ta.addEventListener('paste', (e) => {
+    if (!e.clipboardData || !e.clipboardData.items) return;
+    for (const item of e.clipboardData.items) {
+      if (item.type && item.type.startsWith('image/')) {
+        const blob = item.getAsFile();
+        if (!blob) continue;
+        const dt = new DataTransfer();
+        dt.items.add(blob);
+        file.files = dt.files;
+        // Inline confirmation so the user knows it landed.
+        const hint = file.parentElement.querySelector('.hint');
+        if (hint) hint.textContent = '✓ Screenshot attached (' + Math.round(blob.size/1024) + ' KB)';
+        break;
+      }
+    }
+  });
+})();
+
+// Disable submit button on click so double-submit doesn't double-post.
+(function () {
+  const btn = document.getElementById('submitBtn');
+  if (!btn) return;
+  btn.form && btn.form.addEventListener('submit', () => {
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+  });
+})();
+</script>
+</body>
+</html>
