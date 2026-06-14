@@ -699,6 +699,106 @@ async def feedback_submit(request: Request, token: str):
     return RedirectResponse(f"/feedback/{token}?ok=1", status_code=303)
 
 
+# CORS-friendly JSON endpoint for the embeddable widget. Same logic
+# as the form POST above but accepts JSON + screenshot_b64. Permissive
+# CORS because the widget runs from arbitrary prototype domains
+# (localtunnel, Vercel, custom domains, …) — the security model is
+# the unguessable feedback token, not origin allowlisting.
+@app.options("/api/feedback/{token}")
+async def feedback_api_preflight(token: str):
+    return JSONResponse({"ok": True}, headers={
+        "Access-Control-Allow-Origin":  "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Max-Age":       "600",
+    })
+
+
+@app.post("/api/feedback/{token}")
+async def feedback_api(request: Request, token: str):
+    from crm import (find_prototype_by_token, update_prototype,
+                     send_via_resend, resend_configured, resend_from_address,
+                     SENDER_NAME)
+    import os as _os
+    import base64 as _b64
+
+    cors_headers = {
+        "Access-Control-Allow-Origin": "*",
+    }
+    p = find_prototype_by_token(token)
+    if not p:
+        return JSONResponse({"error": "Invalid feedback link."},
+                            status_code=404, headers=cors_headers)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    text = (body.get("feedback") or "").strip()
+    if not text:
+        return JSONResponse({"error": "feedback required"},
+                            status_code=400, headers=cors_headers)
+    sender_name  = (body.get("name") or "").strip()
+    sender_email = (body.get("email") or "").strip()
+    page_url     = (body.get("page_url") or "").strip()
+
+    who = sender_name or sender_email or "Anonymous"
+    if sender_email and sender_name:
+        who = f"{sender_name} <{sender_email}>"
+    header_lines = [f"From: {who}"]
+    if page_url:
+        header_lines.append(f"Page: {page_url}")
+    log_entry = "\n".join(header_lines) + "\n\n" + text
+    update_prototype(p["id"], append_feedback=log_entry)
+
+    attachments: list[dict] = []
+    shot_b64 = body.get("screenshot_b64") or ""
+    if shot_b64 and len(shot_b64) < 7_000_000:  # ~5 MB raw
+        try:
+            _b64.b64decode(shot_b64, validate=True)
+            attachments.append({
+                "filename": (body.get("screenshot_filename")
+                             or "screenshot.png"),
+                "content":  shot_b64,
+            })
+        except Exception:
+            attachments = []
+
+    if resend_configured():
+        notify_to = (_os.environ.get("ADMIN_EMAILS", "").split(",") or [""])[0].strip() \
+                    or resend_from_address()
+        base_url = _public_base_url(request)
+        subject = f"[FocusedOps] Feedback on {p['name']} — from {who}"
+        body_lines = [
+            f"New feedback from {who}",
+            f"Prototype: {p['name']}",
+        ]
+        if page_url:
+            body_lines.append(f"Page they were on: {page_url}")
+        if p.get("prototype_url"):
+            body_lines.append(f"Prototype URL: {p['prototype_url']}")
+        body_lines.append("")
+        body_lines.append("--- Feedback ---")
+        body_lines.append(text)
+        body_lines.append("")
+        body_lines.append(f"Manage at: {base_url}/pipeline/testing")
+        body_lines.append("")
+        body_lines.append(SENDER_NAME)
+        notify_body = "\n".join(body_lines)
+        try:
+            send_via_resend(
+                to_email=notify_to,
+                subject=subject,
+                body=notify_body,
+                reply_to=sender_email or None,
+                attachments=attachments or None,
+            )
+        except Exception as e:
+            # Don't fail the widget on email failure — the log is saved.
+            print(f"[feedback-api] Resend notify failed: {e}", flush=True)
+
+    return JSONResponse({"ok": True}, headers=cors_headers)
+
+
 @app.post("/pipeline/testing/add")
 async def pipeline_testing_add(request: Request):
     if not _check_pipeline_access(request):
