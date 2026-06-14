@@ -850,7 +850,7 @@ async def api_pipeline_send_email(request: Request):
                             status_code=400)
 
     from crm import (list_contacts, send_via_resend, update_contact,
-                     change_stage, resend_configured)
+                     change_stage, resend_configured, SENDER_NAME)
     if not resend_configured():
         return JSONResponse({"error": "RESEND_API_KEY not set"}, status_code=400)
 
@@ -861,6 +861,11 @@ async def api_pipeline_send_email(request: Request):
     if not to_email:
         return JSONResponse({"error": "contact has no email address"},
                             status_code=400)
+
+    body_text = body_text.replace("{my_name}", SENDER_NAME)
+    sig_first_line = SENDER_NAME.split("\n", 1)[0].strip()
+    if sig_first_line and sig_first_line not in body_text:
+        body_text = body_text.rstrip() + "\n\n" + SENDER_NAME
 
     result = send_via_resend(
         to_email=to_email,
