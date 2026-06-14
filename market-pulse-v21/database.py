@@ -248,6 +248,18 @@ def init_db():
             CREATE INDEX IF NOT EXISTS crm_prototypes_contact_idx
             ON crm_prototypes(contact_id)
         """)
+        # Feedback token — random URL-safe string the client uses to
+        # submit feedback without auth (the token IS the auth). Added
+        # post-launch so guard with ADD COLUMN IF NOT EXISTS.
+        cur.execute("""
+            ALTER TABLE crm_prototypes
+            ADD COLUMN IF NOT EXISTS feedback_token VARCHAR(64)
+        """)
+        cur.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS crm_prototypes_feedback_token_idx
+            ON crm_prototypes(feedback_token)
+            WHERE feedback_token IS NOT NULL
+        """)
         cur.execute("""
             ALTER TABLE crm_email_templates
             DROP CONSTRAINT IF EXISTS crm_email_templates_industry_trigger_key

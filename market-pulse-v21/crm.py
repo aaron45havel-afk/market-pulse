@@ -423,7 +423,7 @@ def list_prototypes() -> list[dict]:
         cur.execute("""
             SELECT p.id, p.contact_id, c.name AS contact_name, c.agency,
                    p.name, p.prototype_url, p.status, p.description,
-                   p.feedback, p.notes,
+                   p.feedback, p.notes, p.feedback_token,
                    p.created_at, p.updated_at
             FROM crm_prototypes p
             LEFT JOIN crm_contacts c ON c.id = p.contact_id
@@ -440,10 +440,39 @@ def list_prototypes() -> list[dict]:
         rows = cur.fetchall()
         cols = ["id", "contact_id", "contact_name", "agency",
                 "name", "prototype_url", "status", "description",
-                "feedback", "notes", "created_at", "updated_at"]
+                "feedback", "notes", "feedback_token",
+                "created_at", "updated_at"]
         out = [dict(zip(cols, r)) for r in rows]
         cur.close()
         return out
+    finally:
+        conn.close()
+
+
+def find_prototype_by_token(token: str) -> dict | None:
+    """Public lookup for the feedback page. Token is the auth."""
+    if not token or not token.strip():
+        return None
+    conn = _get_conn()
+    if not conn:
+        return None
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT p.id, p.contact_id, c.name AS contact_name,
+                   p.name, p.prototype_url, p.status, p.description
+            FROM crm_prototypes p
+            LEFT JOIN crm_contacts c ON c.id = p.contact_id
+            WHERE p.feedback_token = %s
+            LIMIT 1
+        """, (token.strip(),))
+        row = cur.fetchone()
+        cur.close()
+        if not row:
+            return None
+        cols = ["id", "contact_id", "contact_name",
+                "name", "prototype_url", "status", "description"]
+        return dict(zip(cols, row))
     finally:
         conn.close()
 
@@ -452,8 +481,10 @@ def add_prototype(*, contact_id: int | None, name: str,
                   prototype_url: str | None = None,
                   status: str = "BUILDING",
                   description: str | None = None) -> int | None:
+    import secrets as _secrets
     if status not in PROTOTYPE_STATUSES:
         status = "BUILDING"
+    token = _secrets.token_urlsafe(16)
     conn = _get_conn()
     if not conn:
         return None
@@ -461,14 +492,36 @@ def add_prototype(*, contact_id: int | None, name: str,
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO crm_prototypes
-              (contact_id, name, prototype_url, status, description)
-            VALUES (%s, %s, %s, %s, %s)
+              (contact_id, name, prototype_url, status, description, feedback_token)
+            VALUES (%s, %s, %s, %s, %s, %s)
             RETURNING id
-        """, (contact_id or None, name, prototype_url, status, description))
+        """, (contact_id or None, name, prototype_url, status, description, token))
         new_id = cur.fetchone()[0]
         conn.commit()
         cur.close()
         return new_id
+    finally:
+        conn.close()
+
+
+def ensure_feedback_tokens() -> int:
+    """Backfill feedback tokens for any prototype that doesn't have
+    one yet (i.e. created before the column existed). Idempotent —
+    returns the count of rows updated."""
+    import secrets as _secrets
+    conn = _get_conn()
+    if not conn:
+        return 0
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM crm_prototypes WHERE feedback_token IS NULL")
+        ids = [r[0] for r in cur.fetchall()]
+        for pid in ids:
+            cur.execute("UPDATE crm_prototypes SET feedback_token = %s WHERE id = %s",
+                        (_secrets.token_urlsafe(16), pid))
+        conn.commit()
+        cur.close()
+        return len(ids)
     finally:
         conn.close()
 
@@ -2269,7 +2322,8 @@ def resend_from_address() -> str:
 def send_via_resend(*, to_email: str, subject: str, body: str,
                     from_email: str | None = None,
                     reply_to: str | None = None,
-                    scheduled_at: str | None = None) -> dict:
+                    scheduled_at: str | None = None,
+                    attachments: list | None = None) -> dict:
     """POST to resend.com/api/v1/emails. Returns
     {ok: bool, id?: str, scheduled_at?: str, error?: str}. Does not
     raise — caller can surface the error to the UI.
@@ -2300,6 +2354,8 @@ def send_via_resend(*, to_email: str, subject: str, body: str,
         payload["reply_to"] = reply_to
     if scheduled_at:
         payload["scheduled_at"] = scheduled_at
+    if attachments:
+        payload["attachments"] = attachments
 
     req = _urlreq.Request(
         "https://api.resend.com/emails",
