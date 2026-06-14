@@ -1461,12 +1461,16 @@ document.addEventListener('input', e => {
         Framework
         <select id="vercelFramework"
                 style="background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.55rem; color:var(--text); font-size:0.88rem; font-family:inherit;">
-          <option value="nextjs" selected>Next.js</option>
+          <option value="other" selected>Auto-detect (recommended)</option>
+          <option value="nextjs">Next.js</option>
           <option value="vite">Vite</option>
           <option value="react">Create React App</option>
           <option value="static">Static HTML</option>
-          <option value="other">Other / detect</option>
         </select>
+        <span style="font-size:0.7rem; color:var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0;">
+          Auto-detect reads your <code>package.json</code> on first deploy and picks the right
+          build setup. Only override if Vercel guesses wrong — you can change it later in Vercel → Settings → General.
+        </span>
       </label>
       <label style="display:flex; flex-direction:column; gap:3px; font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">
         Prototype label (Testing page)
