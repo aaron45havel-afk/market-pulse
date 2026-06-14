@@ -104,6 +104,19 @@
     }
     .hero-fallback a { color: var(--accent-2); font-weight: 600; }
 
+    /* Clipboard toast */
+    .toast {
+      position: fixed; left: 50%; bottom: 2rem; transform: translateX(-50%) translateY(20px);
+      background: var(--ink); color: #fff;
+      padding: 0.7rem 1.1rem; border-radius: 8px;
+      font-size: 0.88rem; font-weight: 600;
+      box-shadow: 0 8px 24px rgba(15,26,44,0.25);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.18s, transform 0.18s;
+      z-index: 50;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
     /* Section spacing */
     section.block { padding: 4rem 0; border-top: 1px solid var(--line); }
     section.block h2 {
@@ -201,7 +214,7 @@
     <nav>
       <a href="#what">What we build</a>
       <a href="#how">How we work</a>
-      <a href="mailto:aaron@focusedops.io?subject=Scoping%20call">Contact</a>
+      <a href="mailto:aaron@focusedops.io?subject=Scoping%20call" data-copy-email>Contact</a>
     </nav>
   </div>
 </header>
@@ -210,8 +223,8 @@
   <div class="wrap">
     <h1>Custom software for contract-heavy finance teams.</h1>
     <p class="lede">We build the budget-tracking, change-order intake, and spend-visibility tools your team has been hacking together in spreadsheets. Short engagements. You own the code.</p>
-    <a class="btn" href="mailto:aaron@focusedops.io?subject=Scoping%20call">Start with an email →</a>
-    <p class="hero-fallback">Or copy: <a href="mailto:aaron@focusedops.io?subject=Scoping%20call">aaron@focusedops.io</a></p>
+    <a class="btn" href="mailto:aaron@focusedops.io?subject=Scoping%20call" data-copy-email>Start with an email →</a>
+    <p class="hero-fallback">Or click here: <a href="mailto:aaron@focusedops.io?subject=Scoping%20call" data-copy-email>aaron@focusedops.io</a></p>
   </div>
 </section>
 
@@ -285,12 +298,58 @@
   </div>
 </section>
 
+<div id="emailToast" class="toast" role="status" aria-live="polite">Email copied to clipboard ✓</div>
+
 <footer id="contact">
   <div class="wrap">
-    <p class="cta">Have a process that should be a tool? <a href="mailto:aaron@focusedops.io?subject=Scoping%20call">aaron@focusedops.io</a></p>
+    <p class="cta">Have a process that should be a tool? <a href="mailto:aaron@focusedops.io?subject=Scoping%20call" data-copy-email>aaron@focusedops.io</a></p>
     <p><small>FocusedOps · California · © 2026</small></p>
   </div>
 </footer>
+
+<script>
+(function () {
+  var EMAIL = 'aaron@focusedops.io';
+  var toast = document.getElementById('emailToast');
+  var toastTimer = null;
+
+  function showToast(msg) {
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      toast.classList.remove('show');
+    }, 2200);
+  }
+
+  function copyEmail() {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(EMAIL);
+    }
+    // Older-browser fallback.
+    var ta = document.createElement('textarea');
+    ta.value = EMAIL; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    return Promise.resolve();
+  }
+
+  document.querySelectorAll('[data-copy-email]').forEach(function (el) {
+    el.addEventListener('click', function (e) {
+      // Always copy. Let the mailto fire too — if the browser has a
+      // handler, it'll open the mail client; if not, the toast tells
+      // the user the address is on their clipboard.
+      copyEmail().then(function () {
+        showToast('Email copied to clipboard ✓');
+      }).catch(function () {
+        showToast('Email: ' + EMAIL);
+      });
+    });
+  });
+})();
+</script>
 
 </body>
 </html>
