@@ -239,6 +239,32 @@ def list_contacts() -> list[dict]:
         conn.close()
 
 
+def find_contact_by_email(email: str) -> dict | None:
+    """Case-insensitive lookup by email. Returns minimal contact dict
+    (id, name, stage, agency) or None. Used by the Add Contact form
+    to warn before creating a duplicate."""
+    if not email or not email.strip():
+        return None
+    conn = _get_conn()
+    if not conn:
+        return None
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, name, stage, agency
+            FROM crm_contacts
+            WHERE LOWER(email) = LOWER(%s)
+            LIMIT 1
+        """, (email.strip(),))
+        row = cur.fetchone()
+        cur.close()
+        if not row:
+            return None
+        return {"id": row[0], "name": row[1], "stage": row[2], "agency": row[3]}
+    finally:
+        conn.close()
+
+
 def add_contact(*, name: str, title: str | None, agency: str | None,
                 email: str | None, stage: str, pilot_value: int,
                 recurring_value: int, date_emailed: date | None,

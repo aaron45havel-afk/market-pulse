@@ -379,8 +379,19 @@ async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = "
 async def pipeline_add_contact(request: Request):
     if not _check_admin_token(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
-    from crm import add_contact, STAGES, INDUSTRIES, ROLES
+    from crm import (add_contact, STAGES, INDUSTRIES, ROLES,
+                     find_contact_by_email)
     form = await request.form()
+    # Duplicate-email guard. If the supplied email already exists,
+    # bounce back to /pipeline with a flag the page can surface.
+    incoming_email = (form.get("email") or "").strip()
+    if incoming_email:
+        existing = find_contact_by_email(incoming_email)
+        if existing:
+            return RedirectResponse(
+                f"/pipeline?dup_email={incoming_email}&existing_id={existing['id']}",
+                status_code=303,
+            )
     def _date(s: str | None):
         s = (s or "").strip()
         if not s:
@@ -539,6 +550,17 @@ async def pipeline_set_industry(request: Request):
     if contact_id:
         set_contact_industry(contact_id, industry)
     return RedirectResponse("/pipeline", status_code=303)
+
+
+@app.get("/api/pipeline/find-by-email")
+async def api_pipeline_find_by_email(request: Request, email: str = ""):
+    """Returns {exists: bool, contact?: {...}} for the Add Contact
+    form's preflight duplicate check."""
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import find_contact_by_email
+    hit = find_contact_by_email(email)
+    return JSONResponse({"exists": bool(hit), "contact": hit})
 
 
 @app.get("/api/pipeline/email/{contact_id}")
