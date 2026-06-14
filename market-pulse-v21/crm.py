@@ -142,6 +142,8 @@ STAGE_LABELS = {
 # ─── Industries + email templates ────────────────────────────────────
 INDUSTRIES = (
     "Government / Municipal Finance",
+    "Construction",
+    "Architecture & Engineering",
     "Real Estate",
     "Healthcare",
     "Manufacturing",
@@ -2233,6 +2235,169 @@ SEED_TEMPLATES = [
               "• Timing — is this for the next monthly meeting or a longer rollout?\n\n"
               "What works next week? Send me two or three windows and I'll "
               "lock one in.\n\n"
+              "{my_name}"),
+    ),
+    # ── Construction (default + role-specific INTRO) ───────────────
+    dict(
+        industry="Construction",
+        role="",
+        trigger="INTRO",
+        subject="Job-cost variance you only see at month-close",
+        body=("Hi {first_name},\n\n"
+              "Most construction finance teams I talk to have the same "
+              "blind spot: by the time job-cost variance shows up in your "
+              "monthly close, the overruns are already booked. Field PMs "
+              "see it 6 weeks earlier in change-order intake — but their "
+              "view rarely makes it back to finance in time to act.\n\n"
+              "I build small, custom tools that close that loop. Not a "
+              "platform — a thin layer over Sage 300 / Procore / whatever "
+              "your PMs are actually using, surfaced as one variance-vs-"
+              "budget view per active job.\n\n"
+              "Worth 20 minutes to walk through how your team handles this "
+              "today? No pitch — I just want to understand the workflow "
+              "before suggesting anything.\n\n"
+              "{my_name}"),
+    ),
+    dict(
+        industry="Construction",
+        role="CFO",
+        trigger="INTRO",
+        subject="Job-cost variance you only see at month-close",
+        body=("Hi {first_name},\n\n"
+              "Most construction CFOs I talk to have the same blind spot: "
+              "by the time you see job-cost variance in your monthly close, "
+              "the overruns are already booked. Field PMs see it 6 weeks "
+              "earlier in change-order intake — but their view never makes "
+              "it into the finance picture in time.\n\n"
+              "I build small, custom tools that close that loop. Not a "
+              "platform — a thin layer over Sage 300 / Procore / whatever "
+              "your PMs are actually using, surfaced as one variance-vs-"
+              "budget view per active job.\n\n"
+              "Worth 20 minutes to walk through how your team handles this "
+              "today? No pitch — I just want to understand the workflow "
+              "before suggesting anything. If a few weeks of build effort "
+              "could surface overruns 30+ days earlier, that's the "
+              "conversation.\n\n"
+              "{my_name}"),
+    ),
+    dict(
+        industry="Construction",
+        role="Project Manager",
+        trigger="INTRO",
+        subject="Change orders that disappear into email threads",
+        body=("Hi {first_name},\n\n"
+              "I keep hearing the same story from PMs in construction "
+              "finance: a change request comes in via text or email, gets "
+              "verbally approved, the work happens — and three weeks later "
+              "nobody can find the paper trail when it's time to bill.\n\n"
+              "I build small tools that capture change orders out of email "
+              "threads, route them through whatever approval flow your firm "
+              "uses, and surface the ones that have stalled. Not a new "
+              "system — a layer that catches what's slipping today.\n\n"
+              "I'd like 20 minutes to hear how your team handles change-"
+              "order intake on a typical job. No pitch. If there's a fit, "
+              "I can show you specifically what I'd build before you "
+              "commit a dollar.\n\n"
+              "{my_name}"),
+    ),
+    dict(
+        industry="Construction",
+        role="Operations",
+        trigger="INTRO",
+        subject="Schedule slips that don't surface until billing",
+        body=("Hi {first_name},\n\n"
+              "Most construction operations leads I talk to live with the "
+              "same gap: schedule slippage is visible to the field weeks "
+              "before it shows up as a billing problem. By the time finance "
+              "flags an underbilled job, the recovery window is already "
+              "gone.\n\n"
+              "I build small custom tools — not platforms — that pull "
+              "schedule and budget signals into one early-warning view per "
+              "job. Layers onto Sage / Procore / whatever you already use. "
+              "Goal: surface the ones at risk while there's still time to "
+              "intervene.\n\n"
+              "Worth 20 minutes to walk through how your team catches this "
+              "today? No pitch — I'd rather understand the workflow first.\n\n"
+              "{my_name}"),
+    ),
+    # ── Government / Municipal Finance — role-specific INTROs ──────
+    dict(
+        industry="Government / Municipal Finance",
+        role="CFO",
+        trigger="INTRO",
+        subject="Contract spend visibility before the council meeting",
+        body=("Hi {first_name},\n\n"
+              "Most municipal CFOs I talk to track vendor contracts in "
+              "three places at once: the GL, a Sharepoint folder of POs, "
+              "and a spreadsheet someone updates by hand. By month-end "
+              "nothing reconciles, and the $50k overrun gets caught a "
+              "quarter too late — usually right before a council meeting.\n\n"
+              "I build small custom tools — not platforms — that pull all "
+              "three into one budget-vs-actual view per contract. The PMs "
+              "and accounting team keep working how they work; you just "
+              "get the picture you need before the next public session.\n\n"
+              "Worth 20 minutes to walk through how your team handles this "
+              "today? I'd rather understand your workflow than pitch you "
+              "anything generic.\n\n"
+              "{my_name}"),
+    ),
+    dict(
+        industry="Government / Municipal Finance",
+        role="Finance Director",
+        trigger="INTRO",
+        subject="Contract spend tracking outside the GL",
+        body=("Hi {first_name},\n\n"
+              "Most municipal finance directors I work with track vendor "
+              "contracts in three places at once: the GL, a Sharepoint "
+              "folder of POs, and a spreadsheet someone updates by hand. "
+              "By month-end nothing reconciles, and a $50k overrun gets "
+              "caught a quarter too late.\n\n"
+              "I build small custom tools — not platforms — that pull all "
+              "three into one budget-vs-actual view per contract. The PMs "
+              "and accounting team keep working how they work; you just "
+              "get the picture you need before the council meeting.\n\n"
+              "Worth 20 minutes to walk through how your team handles this "
+              "today? I'd rather understand your workflow than pitch you "
+              "anything generic.\n\n"
+              "{my_name}"),
+    ),
+    # ── Architecture & Engineering — Controller INTRO ──────────────
+    dict(
+        industry="Architecture & Engineering",
+        role="Controller",
+        trigger="INTRO",
+        subject="Project margins you only see when it's too late",
+        body=("Hi {first_name},\n\n"
+              "Most A&E controllers I talk to live with the same gap: "
+              "project margins look fine on the timesheet rollup until "
+              "month-close, when utilization, write-downs, and out-of-scope "
+              "hours all hit at once. By then the project's already "
+              "underwater.\n\n"
+              "I build small custom tools — not platforms — that pull "
+              "utilization, fee burn, and scope-creep signals into one "
+              "project-level margin view that updates weekly. Layers onto "
+              "Deltek / BST / whatever your firm already runs.\n\n"
+              "Worth 20 minutes to walk through how your team tracks "
+              "project profitability today? No pitch — I just want to "
+              "understand the workflow before suggesting anything.\n\n"
+              "{my_name}"),
+    ),
+    dict(
+        industry="Architecture & Engineering",
+        role="",
+        trigger="INTRO",
+        subject="Project margins you only see when it's too late",
+        body=("Hi {first_name},\n\n"
+              "Most A&E firms I work with live with the same gap: project "
+              "margins look fine on the timesheet rollup until month-close, "
+              "when utilization, write-downs, and out-of-scope hours all "
+              "hit at once. By then the project's already underwater.\n\n"
+              "I build small custom tools — not platforms — that pull "
+              "utilization, fee burn, and scope-creep signals into one "
+              "project-level margin view that updates weekly. Layers onto "
+              "Deltek / BST / whatever your firm already runs.\n\n"
+              "Worth 20 minutes to walk through how your team tracks "
+              "project profitability today?\n\n"
               "{my_name}"),
     ),
 ]
