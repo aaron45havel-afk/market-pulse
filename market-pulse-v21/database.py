@@ -214,6 +214,21 @@ def init_db():
             ALTER TABLE crm_working_sessions
             ADD COLUMN IF NOT EXISTS prototype_brief TEXT
         """)
+        # Step 6 — post-review iteration planning. Free-form feedback
+        # the user pastes from a client review call, plus the AI's two
+        # output prompts (Claude Code + claude.ai design).
+        cur.execute("""
+            ALTER TABLE crm_working_sessions
+            ADD COLUMN IF NOT EXISTS iteration_feedback TEXT
+        """)
+        cur.execute("""
+            ALTER TABLE crm_working_sessions
+            ADD COLUMN IF NOT EXISTS iteration_code_prompt TEXT
+        """)
+        cur.execute("""
+            ALTER TABLE crm_working_sessions
+            ADD COLUMN IF NOT EXISTS iteration_design_prompt TEXT
+        """)
         # Role enum on contact + templates. Templates can now be keyed
         # on (industry, role, trigger) — empty role acts as "any role"
         # fallback. Drop the old (industry, trigger) unique constraint

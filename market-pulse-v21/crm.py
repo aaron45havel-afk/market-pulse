@@ -1785,17 +1785,28 @@ def delete_call(contact_id: int) -> bool:
 
 def render_prompt(template: str, *, transcript: str = "",
                   extraction_json: str = "", locked_scope: str = "",
-                  success_criteria: str = "", email_thread: str = "") -> str:
-    """Substitute {transcript} / {extraction_json} / {locked_scope} /
-    {success_criteria} / {email_thread} into a prompt template
-    without choking on the JSON's curly braces. Plain string.replace
-    so JSON braces in the values don't get reinterpreted."""
+                  success_criteria: str = "", email_thread: str = "",
+                  iteration_feedback: str = "",
+                  prototype_name: str = "",
+                  prototype_url: str = "",
+                  prototype_description: str = "",
+                  github_repo: str = "",
+                  framework: str = "") -> str:
+    """Substitute named placeholders into a prompt template without
+    choking on JSON braces. Plain string.replace so JSON braces in the
+    values don't get reinterpreted."""
     return (template
             .replace("{transcript}", transcript or "")
             .replace("{extraction_json}", extraction_json or "")
             .replace("{locked_scope}", locked_scope or "")
             .replace("{success_criteria}", success_criteria or "")
-            .replace("{email_thread}", email_thread or ""))
+            .replace("{email_thread}", email_thread or "")
+            .replace("{iteration_feedback}", iteration_feedback or "")
+            .replace("{prototype_name}", prototype_name or "(not set)")
+            .replace("{prototype_url}", prototype_url or "(not deployed yet)")
+            .replace("{prototype_description}", prototype_description or "(no description)")
+            .replace("{github_repo}", github_repo or "(not linked)")
+            .replace("{framework}", framework or "(auto-detect)"))
 
 
 # ─── Working-session framework (PILOT-stage pressure-test) ──────────
@@ -2078,6 +2089,97 @@ SUCCESS CRITERIA + PRICING (Stage 3):
 EMAIL CORRESPONDENCE (async info gathered between calls):
 {email_thread}'''
 
+# Step 6 — post-review iteration. Take free-form feedback from a
+# client review of the deployed prototype, plus all the context we
+# already have (prototype repo, locked scope, original success
+# criteria), and output TWO ready-to-paste prompts:
+#   • PART A — a Claude Code prompt that implements the changes
+#   • PART B — a claude.ai design prompt for UX thinking
+WORKING_PROMPT_ITERATION = '''You are a senior software engineer + product designer reviewing a client's post-review feedback on a working prototype. Turn their feedback into TWO ready-to-execute prompts:
+
+  PART A — a Claude Code prompt the user will paste into a Claude Code session running inside the prototype's GitHub repo. It implements the requested changes end-to-end (data model, code, deploy).
+  PART B — a claude.ai design prompt the user will paste into the claude.ai chat interface. It asks Claude to think through the UX BEFORE code: flows, screens, components. Output should be markdown reasoning, not code.
+
+CONTEXT — THE PROTOTYPE
+- Prototype name:    {prototype_name}
+- Live URL:          {prototype_url}
+- GitHub repo:       {github_repo}
+- Framework:         {framework}
+- What it does now:  {prototype_description}
+
+CONTEXT — ORIGINAL SCOPE
+- Locked scope (Stage 2): {locked_scope}
+- Success criteria (Stage 3): {success_criteria}
+
+CLIENT'S POST-REVIEW FEEDBACK (their words, do not edit):
+"""
+{iteration_feedback}
+"""
+
+# PART A — Claude Code prompt (paste into a Claude Code session inside the prototype repo)
+
+```
+You are inside the GitHub repository for {prototype_name}, deployed to {prototype_url} via Vercel. Every push to main auto-deploys.
+
+A client review just happened. They want the following added or changed:
+
+[bullet list of every requested feature or change, citing the client's verbatim phrase from their feedback where possible]
+
+DATA MODEL CHANGES (be specific about types and relationships):
+[for each new field / table / relationship — name, type, what it stores, where it lives in the schema, how it relates to existing data]
+
+SCREEN / COMPONENT CHANGES:
+[for each affected screen — what changes, what's added, what's removed; cite the client's words]
+
+RULES:
+- Minimal additive changes. Do not refactor existing working features.
+- Use the client's terminology / vendor names / domain language wherever they spoke it.
+- Mock new integrations rather than calling real APIs.
+- When done:
+    npm run dev (or equivalent) — quick smoke test
+    git add -A
+    git commit -m "Iteration: <one-line summary of what was added>"
+    git push origin main
+  Vercel auto-deploys. Tell me when the push succeeded.
+```
+
+# PART B — claude.ai design prompt (paste into claude.ai chat, NOT Claude Code)
+
+```
+You are a senior product designer. I'm iterating on a small consulting prototype called {prototype_name} (currently live at {prototype_url}). The original scope was:
+
+  [one-paragraph summary of the locked scope, in the client's words]
+
+After a review with the client, they want these additions:
+
+  [bullet list of requested changes, in the client's verbatim language]
+
+Think through the UX BEFORE I write any code. Don't generate code — give me design reasoning in markdown.
+
+Specifically:
+
+1. **Flow** — for each new feature, walk me through what the user does step-by-step. Where do they enter the system? What screen are they on when the change matters? Where do they go next?
+
+2. **Screen-level changes** — for each screen of the prototype that's affected, describe what's added / removed / reorganized. Sketch the layout in words (top bar, left column, table, right rail, etc.).
+
+3. **Component-level decisions** — name the specific UI patterns (data table vs. card grid vs. timeline; modal vs. side panel vs. inline edit). Explain why each pattern fits this client's mental model.
+
+4. **Data-shape implications** — if a feature implies a new field, table, or relationship in the data model, call it out so the engineer's prompt can pick it up. You don't have to design the schema — just flag where data structure matters.
+
+5. **Open questions to ask the client before building** — anything ambiguous in their feedback that you'd want clarified.
+
+Use their domain language (vendor names, terminology) where they used it. Cite quotes from their feedback to ground each recommendation.
+```
+
+RULES FOR YOU (the meta-AI):
+- Every claim in Part A or B must cite the client's feedback, the locked scope, the success criteria, or the prototype description. Don't invent.
+- Anything not supported by the inputs, label `[ASSUMPTION — confirm with client]`.
+- Part A is a literal copy-paste prompt for Claude Code. Write it as if Claude Code will execute it verbatim.
+- Part B is a literal copy-paste prompt for claude.ai. Write it as if claude.ai will respond to it verbatim.
+- Be CONCRETE about data structure decisions (column types, relationships). The whole reason for this meta-prompt is the client asked you to think about how to "structure the data for smooth operation."
+- Use the client's actual words wherever you can.
+'''
+
 WORKING_PROMPT_PROPOSAL = '''Using ONLY the extraction object below, draft a one-page pilot proposal email — both subject and body — in this exact structure:
 
 Subject: <<SUBJECT>>
@@ -2239,6 +2341,8 @@ def get_session_for_contact(contact_id: int) -> dict | None:
             SELECT id, contact_id, session_date, transcript, extraction_json,
                    locked_scope, success_criteria, proposal_draft,
                    prototype_brief,
+                   iteration_feedback, iteration_code_prompt,
+                   iteration_design_prompt,
                    scorecard_json, suggested_action,
                    created_at, updated_at
             FROM crm_working_sessions
@@ -2251,6 +2355,8 @@ def get_session_for_contact(contact_id: int) -> dict | None:
         cols = ["id", "contact_id", "session_date", "transcript",
                 "extraction_json", "locked_scope", "success_criteria",
                 "proposal_draft", "prototype_brief",
+                "iteration_feedback", "iteration_code_prompt",
+                "iteration_design_prompt",
                 "scorecard_json", "suggested_action",
                 "created_at", "updated_at"]
         return dict(zip(cols, row))
@@ -2262,7 +2368,10 @@ def upsert_session(*, contact_id: int, session_date: date | None,
                    transcript: str, extraction_json: str,
                    locked_scope: str, success_criteria: str,
                    proposal_draft: str,
-                   prototype_brief: str = "") -> dict | None:
+                   prototype_brief: str = "",
+                   iteration_feedback: str = "",
+                   iteration_code_prompt: str = "",
+                   iteration_design_prompt: str = "") -> dict | None:
     sc = compute_working_scorecard(extraction_json)
     import json as _json
     sc_json = _json.dumps(sc)
@@ -2276,22 +2385,29 @@ def upsert_session(*, contact_id: int, session_date: date | None,
               (contact_id, session_date, transcript, extraction_json,
                locked_scope, success_criteria, proposal_draft,
                prototype_brief,
+               iteration_feedback, iteration_code_prompt,
+               iteration_design_prompt,
                scorecard_json, suggested_action)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             ON CONFLICT (contact_id) DO UPDATE
-              SET session_date      = EXCLUDED.session_date,
-                  transcript        = EXCLUDED.transcript,
-                  extraction_json   = EXCLUDED.extraction_json,
-                  locked_scope      = EXCLUDED.locked_scope,
-                  success_criteria  = EXCLUDED.success_criteria,
-                  proposal_draft    = EXCLUDED.proposal_draft,
-                  prototype_brief   = EXCLUDED.prototype_brief,
-                  scorecard_json    = EXCLUDED.scorecard_json,
-                  suggested_action  = EXCLUDED.suggested_action,
-                  updated_at        = NOW()
+              SET session_date            = EXCLUDED.session_date,
+                  transcript              = EXCLUDED.transcript,
+                  extraction_json         = EXCLUDED.extraction_json,
+                  locked_scope            = EXCLUDED.locked_scope,
+                  success_criteria        = EXCLUDED.success_criteria,
+                  proposal_draft          = EXCLUDED.proposal_draft,
+                  prototype_brief         = EXCLUDED.prototype_brief,
+                  iteration_feedback      = EXCLUDED.iteration_feedback,
+                  iteration_code_prompt   = EXCLUDED.iteration_code_prompt,
+                  iteration_design_prompt = EXCLUDED.iteration_design_prompt,
+                  scorecard_json          = EXCLUDED.scorecard_json,
+                  suggested_action        = EXCLUDED.suggested_action,
+                  updated_at              = NOW()
         """, (contact_id, session_date, transcript, extraction_json,
               locked_scope, success_criteria, proposal_draft,
               prototype_brief,
+              iteration_feedback, iteration_code_prompt,
+              iteration_design_prompt,
               sc_json, sc["suggested_action"]))
         conn.commit()
         cur.close()
@@ -2479,6 +2595,97 @@ def process_working_session_auto(contact_id: int, transcript: str,
         "proposal_draft":   outputs["proposal_draft"],
         "prototype_brief":  prototype_brief,
         "scorecard":        sc,
+    }
+
+
+def _split_iteration_output(text: str) -> tuple[str, str]:
+    """Split Claude's combined Part A / Part B output into the two
+    prompts. Looks for the `# PART A` and `# PART B` markers; falls
+    back to splitting on the first `# PART B` if `# PART A` isn't
+    explicit. Returns (code_prompt, design_prompt) — each fenced
+    code block extracted when present."""
+    import re as _re
+    if not text:
+        return "", ""
+    # Cut anything before "# PART A" if present, then split on "# PART B".
+    body = text
+    a_match = _re.search(r"#\s*PART A[^\n]*\n", body)
+    if a_match:
+        body = body[a_match.start():]
+    b_match = _re.search(r"#\s*PART B[^\n]*\n", body)
+    if not b_match:
+        return body.strip(), ""
+    part_a_raw = body[:b_match.start()].strip()
+    part_b_raw = body[b_match.start():].strip()
+
+    def _strip_header(s: str) -> str:
+        s = _re.sub(r"^#\s*PART [AB][^\n]*\n", "", s)
+        return s.strip()
+
+    def _extract_fenced(s: str) -> str:
+        # Prefer the FIRST ``` block — that's the literal copy-paste prompt.
+        m = _re.search(r"```(?:[a-zA-Z0-9_-]*\n)?([\s\S]+?)```", s)
+        if m:
+            return m.group(1).strip()
+        return s.strip()
+
+    code_prompt   = _extract_fenced(_strip_header(part_a_raw))
+    design_prompt = _extract_fenced(_strip_header(part_b_raw))
+    return code_prompt, design_prompt
+
+
+def process_iteration_auto(contact_id: int,
+                           iteration_feedback: str) -> dict:
+    """Step 6 — pull the contact's session context + their most
+    recently updated prototype, send everything to Claude with the
+    iteration meta-prompt, split the response into Part A (Claude
+    Code prompt) and Part B (claude.ai design prompt), persist, and
+    return both."""
+    if not iteration_feedback.strip():
+        raise RuntimeError("No feedback provided.")
+
+    session = get_session_for_contact(contact_id) or {}
+    locked_scope     = session.get("locked_scope") or ""
+    success_criteria = session.get("success_criteria") or ""
+
+    # Most recent prototype for this contact, for context.
+    protos = [p for p in list_prototypes()
+              if p.get("contact_id") == contact_id]
+    proto = protos[0] if protos else {}
+
+    prompt = render_prompt(
+        WORKING_PROMPT_ITERATION,
+        locked_scope=locked_scope,
+        success_criteria=success_criteria,
+        iteration_feedback=iteration_feedback,
+        prototype_name=proto.get("name") or "",
+        prototype_url=proto.get("prototype_url") or "",
+        prototype_description=proto.get("description") or "",
+        github_repo="",  # not stored on prototype yet
+        framework="",
+    )
+    reply = call_claude(prompt, max_tokens=4096)
+    code_prompt, design_prompt = _split_iteration_output(reply)
+
+    # Persist alongside the other session artifacts.
+    upsert_session(
+        contact_id=contact_id,
+        session_date=session.get("session_date"),
+        transcript=session.get("transcript") or "",
+        extraction_json=session.get("extraction_json") or "",
+        locked_scope=locked_scope,
+        success_criteria=success_criteria,
+        proposal_draft=session.get("proposal_draft") or "",
+        prototype_brief=session.get("prototype_brief") or "",
+        iteration_feedback=iteration_feedback,
+        iteration_code_prompt=code_prompt,
+        iteration_design_prompt=design_prompt,
+    )
+    return {
+        "iteration_feedback":      iteration_feedback,
+        "iteration_code_prompt":   code_prompt,
+        "iteration_design_prompt": design_prompt,
+        "raw":                     reply,
     }
 
 
