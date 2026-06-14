@@ -508,6 +508,7 @@ async def pipeline_update_contact(request: Request):
         next_date=_date(form.get("next_date")),
         subject=(form.get("subject") or "").strip(),
         notes=(form.get("notes") or "").strip(),
+        email_thread=(form.get("email_thread") or "").strip(),
     )
     return JSONResponse({"ok": True})
 
@@ -706,7 +707,8 @@ async def api_pipeline_session_get(request: Request, contact_id: int):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from crm import (WORKING_AGENDA, WORKING_PROMPT_EXTRACT,
                      WORKING_PROMPT_LOCKED_SCOPE, WORKING_PROMPT_CRITERIA,
-                     WORKING_PROMPT_PROPOSAL, WORKING_SCORECARD_DIMENSIONS,
+                     WORKING_PROMPT_PROPOSAL, WORKING_PROMPT_PROTOTYPE,
+                     WORKING_SCORECARD_DIMENSIONS,
                      list_contacts, get_session_for_contact, render_prompt)
     contact = next((c for c in list_contacts() if c["id"] == contact_id), None)
     if not contact:
@@ -714,6 +716,9 @@ async def api_pipeline_session_get(request: Request, contact_id: int):
     session = get_session_for_contact(contact_id) or {}
     transcript = session.get("transcript") or ""
     extraction = session.get("extraction_json") or ""
+    locked_scope = session.get("locked_scope") or ""
+    success_criteria = session.get("success_criteria") or ""
+    email_thread = contact.get("email_thread") or ""
 
     import json as _json
     scorecard = None
@@ -732,6 +737,11 @@ async def api_pipeline_session_get(request: Request, contact_id: int):
             "locked_scope":     render_prompt(WORKING_PROMPT_LOCKED_SCOPE, extraction_json=extraction),
             "criteria":         render_prompt(WORKING_PROMPT_CRITERIA, extraction_json=extraction),
             "proposal":         render_prompt(WORKING_PROMPT_PROPOSAL, extraction_json=extraction),
+            "prototype":        render_prompt(WORKING_PROMPT_PROTOTYPE,
+                                              extraction_json=extraction,
+                                              locked_scope=locked_scope,
+                                              success_criteria=success_criteria,
+                                              email_thread=email_thread),
         },
         "scorecard_dimensions": [
             {"key": k, "weight": w, "label": label}
@@ -741,9 +751,10 @@ async def api_pipeline_session_get(request: Request, contact_id: int):
             "session_date":     session.get("session_date").isoformat() if session.get("session_date") else "",
             "transcript":       transcript,
             "extraction_json":  extraction,
-            "locked_scope":     session.get("locked_scope") or "",
-            "success_criteria": session.get("success_criteria") or "",
+            "locked_scope":     locked_scope,
+            "success_criteria": success_criteria,
             "proposal_draft":   session.get("proposal_draft") or "",
+            "prototype_brief":  session.get("prototype_brief") or "",
             "suggested_action": session.get("suggested_action") or "",
             "scorecard":        scorecard,
         },
@@ -782,6 +793,7 @@ async def pipeline_save_session(request: Request):
         locked_scope=(form.get("locked_scope") or "").strip(),
         success_criteria=(form.get("success_criteria") or "").strip(),
         proposal_draft=(form.get("proposal_draft") or "").strip(),
+        prototype_brief=(form.get("prototype_brief") or "").strip(),
     )
     return JSONResponse({"ok": True, "scorecard": sc})
 
@@ -926,13 +938,14 @@ async def api_pipeline_session_auto(request: Request, contact_id: int):
         from crm import (call_claude, _strip_code_fence, render_prompt,
                          WORKING_PROMPT_EXTRACT, WORKING_PROMPT_LOCKED_SCOPE,
                          WORKING_PROMPT_CRITERIA, WORKING_PROMPT_PROPOSAL,
-                         upsert_session)
+                         WORKING_PROMPT_PROTOTYPE,
+                         list_contacts, upsert_session)
 
         def emit(obj):
             return (_json.dumps(obj) + "\n").encode("utf-8")
 
         try:
-            yield emit({"step": "extract", "label": "Step 1/3 — Extracting structured data"})
+            yield emit({"step": "extract", "label": "Step 1/4 — Extracting structured data"})
             extraction = await _asyncio.to_thread(
                 lambda: _strip_code_fence(call_claude(
                     render_prompt(WORKING_PROMPT_EXTRACT, transcript=transcript),
@@ -941,7 +954,7 @@ async def api_pipeline_session_auto(request: Request, contact_id: int):
             )
 
             yield emit({"step": "artifacts",
-                        "label": "Step 2/3 — Generating locked scope, success criteria, proposal draft (in parallel)"})
+                        "label": "Step 2/4 — Generating locked scope, success criteria, proposal draft (parallel)"})
 
             def run_artifacts():
                 prompts = [
@@ -955,7 +968,35 @@ async def api_pipeline_session_auto(request: Request, contact_id: int):
 
             outputs = await _asyncio.to_thread(run_artifacts)
 
-            yield emit({"step": "save", "label": "Step 3/3 — Saving artifacts + scoring"})
+            yield emit({"step": "prototype",
+                        "label": "Step 3/4 — Generating prototype build brief (pulls in email_thread too)"})
+
+            # Pull email_thread from contact record so the prototype
+            # brief has the full async context.
+            email_thread = ""
+            try:
+                contact = await _asyncio.to_thread(
+                    lambda: next((c for c in list_contacts() if c["id"] == contact_id), None)
+                )
+                if contact:
+                    email_thread = contact.get("email_thread") or ""
+            except Exception:
+                pass
+
+            prototype_brief = await _asyncio.to_thread(
+                lambda: call_claude(
+                    render_prompt(
+                        WORKING_PROMPT_PROTOTYPE,
+                        extraction_json=extraction,
+                        locked_scope=outputs["locked_scope"],
+                        success_criteria=outputs["success_criteria"],
+                        email_thread=email_thread,
+                    ),
+                    max_tokens=4096,
+                ).strip()
+            )
+
+            yield emit({"step": "save", "label": "Step 4/4 — Saving artifacts + scoring"})
             sc = await _asyncio.to_thread(upsert_session,
                 contact_id=contact_id,
                 session_date=session_date,
@@ -964,6 +1005,7 @@ async def api_pipeline_session_auto(request: Request, contact_id: int):
                 locked_scope=outputs["locked_scope"],
                 success_criteria=outputs["success_criteria"],
                 proposal_draft=outputs["proposal_draft"],
+                prototype_brief=prototype_brief,
             )
 
             yield emit({
@@ -972,6 +1014,7 @@ async def api_pipeline_session_auto(request: Request, contact_id: int):
                 "locked_scope":     outputs["locked_scope"],
                 "success_criteria": outputs["success_criteria"],
                 "proposal_draft":   outputs["proposal_draft"],
+                "prototype_brief":  prototype_brief,
                 "scorecard":        sc,
             })
         except RuntimeError as e:

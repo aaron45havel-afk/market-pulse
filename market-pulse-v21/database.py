@@ -202,6 +202,18 @@ def init_db():
             ALTER TABLE crm_contacts
             ADD COLUMN IF NOT EXISTS industry VARCHAR(80)
         """)
+        # Email-thread / async-correspondence bank per contact. Free
+        # text the user pastes from email threads between calls so the
+        # AI prototype-brief step has the full picture.
+        cur.execute("""
+            ALTER TABLE crm_contacts
+            ADD COLUMN IF NOT EXISTS email_thread TEXT
+        """)
+        # Prototype brief artifact — Step 5 of the working-session chain.
+        cur.execute("""
+            ALTER TABLE crm_working_sessions
+            ADD COLUMN IF NOT EXISTS prototype_brief TEXT
+        """)
         # Discovery-call artifacts — one row per contact (UNIQUE on
         # contact_id, upserted). Stores raw transcript + the AI chain
         # outputs + a derived scorecard. Multiple calls per contact

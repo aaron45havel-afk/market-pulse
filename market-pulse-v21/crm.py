@@ -205,7 +205,7 @@ def list_contacts() -> list[dict]:
             SELECT id, name, title, agency, email, stage,
                    pilot_value, recurring_value,
                    date_emailed, next_date, subject, notes,
-                   industry, created_at, updated_at
+                   industry, email_thread, created_at, updated_at
             FROM crm_contacts
             ORDER BY updated_at DESC
         """)
@@ -213,7 +213,7 @@ def list_contacts() -> list[dict]:
         cols = ["id", "name", "title", "agency", "email", "stage",
                 "pilot_value", "recurring_value", "date_emailed",
                 "next_date", "subject", "notes",
-                "industry", "created_at", "updated_at"]
+                "industry", "email_thread", "created_at", "updated_at"]
         out = [dict(zip(cols, r)) for r in rows]
         cur.close()
         return out
@@ -297,7 +297,8 @@ def update_contact(contact_id: int, *,
                    date_emailed: date | None = None,
                    next_date: date | None = None,
                    subject: str | None = None,
-                   notes: str | None = None) -> bool:
+                   notes: str | None = None,
+                   email_thread: str | None = None) -> bool:
     """Patch any subset of editable fields. None means 'leave as-is' for
     the scalar fields; pass an explicit empty string to clear text fields
     or 0 to clear money fields."""
@@ -314,6 +315,7 @@ def update_contact(contact_id: int, *,
             ("recurring_value", recurring_value),
             ("date_emailed", date_emailed), ("next_date", next_date),
             ("subject", subject), ("notes", notes),
+            ("email_thread", email_thread),
         ]:
             if val is not None:
                 sets.append(f"{col} = %s")
@@ -1339,12 +1341,18 @@ def delete_call(contact_id: int) -> bool:
 
 
 def render_prompt(template: str, *, transcript: str = "",
-                  extraction_json: str = "") -> str:
-    """Substitute {transcript} / {extraction_json} into a prompt
-    template without choking on the JSON's curly braces."""
+                  extraction_json: str = "", locked_scope: str = "",
+                  success_criteria: str = "", email_thread: str = "") -> str:
+    """Substitute {transcript} / {extraction_json} / {locked_scope} /
+    {success_criteria} / {email_thread} into a prompt template
+    without choking on the JSON's curly braces. Plain string.replace
+    so JSON braces in the values don't get reinterpreted."""
     return (template
             .replace("{transcript}", transcript or "")
-            .replace("{extraction_json}", extraction_json or ""))
+            .replace("{extraction_json}", extraction_json or "")
+            .replace("{locked_scope}", locked_scope or "")
+            .replace("{success_criteria}", success_criteria or "")
+            .replace("{email_thread}", email_thread or ""))
 
 
 # ─── Working-session framework (PILOT-stage pressure-test) ──────────
@@ -1526,6 +1534,88 @@ Anything not in the extraction, label "ASSUMPTION — confirm".
 EXTRACTION:
 {extraction_json}'''
 
+WORKING_PROMPT_PROTOTYPE = '''You are designing a working prototype the prospect can interact with to give us feedback BEFORE we build the full pilot.
+
+Use the discovery + working-session extractions, the locked scope, the success criteria, and any email correspondence the user pastes in. Output a build brief structured in TWO parts.
+
+# PART A — Build brief (for the engineering team)
+
+**Prototype name:** [short memorable name]
+
+**One-line pitch:** [what the prototype lets the prospect do, in their domain language]
+
+**Stack (lightweight — this is a prototype, not production):**
+- Frontend: [recommendation, e.g. FastAPI + Jinja2 + vanilla JS, or Streamlit]
+- Data: [recommendation, e.g. SQLite with seeded sample data]
+- Hosting: [recommendation, e.g. Railway free tier]
+
+**Data model (cite source extraction fields):**
+- [entity 1 — fields — source]
+- [entity 2 — fields — source]
+
+**Screens / interactions:**
+For each screen, cite which problem or success criterion it addresses.
+1. [screen — what the user does — which problem from extraction it solves]
+2. ...
+
+**Mocked integrations:**
+- [integration — what's faked — how the prototype simulates it]
+
+**Sample data to seed (must look real in the prospect's domain):**
+- [3-5 example records using their vendor / code / project naming conventions if mentioned anywhere]
+
+**Acceptance criteria (maps the prototype back to the prospect's stated success_criteria):**
+- For each item in success_criteria → which prototype feature proves it.
+
+**Open questions / risks for this prototype:**
+- [things still ambiguous; cite which extraction or email_thread line raised them]
+
+# PART B — Claude Code prompt (drop into a NEW Claude Code session)
+
+A self-contained prompt that, when pasted into Claude Code, will build the prototype end-to-end. Format:
+
+```
+Build a working prototype for [prospect first-name's] team called [prototype_name].
+
+Goal: [one-line pitch, plus 'so they can give us feedback on scope and pain points'].
+
+Stack: [stack details]
+
+Data model:
+[the data model from Part A, concrete column types]
+
+Build these screens:
+[screen list with key features]
+
+Mock these integrations:
+[mocked integration list with shape of fake data]
+
+Seed the database with this sample data:
+[sample data list]
+
+When done, run locally on http://localhost:8000 and tell me how to start it.
+```
+
+RULES:
+- Use the prospect's own terminology (their vendor names, code formats, scope words) wherever the extraction or email_thread provides them.
+- Keep the prototype SCOPE MINIMAL — the goal is feedback, not a finished product.
+- Mock anything that would require real API credentials.
+- Every claim in Part A must cite the extraction, locked_scope, success_criteria, or email_thread field it derives from.
+- Anything not supported by those inputs, label "ASSUMPTION — confirm".
+- Part B is a literal copy-paste prompt — write it as if Claude Code will execute it verbatim.
+
+EXTRACTION (Stage 1):
+{extraction_json}
+
+LOCKED SCOPE (Stage 2):
+{locked_scope}
+
+SUCCESS CRITERIA + PRICING (Stage 3):
+{success_criteria}
+
+EMAIL CORRESPONDENCE (async info gathered between calls):
+{email_thread}'''
+
 WORKING_PROMPT_PROPOSAL = '''Using ONLY the extraction object below, draft a one-page pilot proposal email body (no subject line) in this exact structure:
 
 Hi <<FIRST_NAME>>,
@@ -1684,6 +1774,7 @@ def get_session_for_contact(contact_id: int) -> dict | None:
         cur.execute("""
             SELECT id, contact_id, session_date, transcript, extraction_json,
                    locked_scope, success_criteria, proposal_draft,
+                   prototype_brief,
                    scorecard_json, suggested_action,
                    created_at, updated_at
             FROM crm_working_sessions
@@ -1695,7 +1786,8 @@ def get_session_for_contact(contact_id: int) -> dict | None:
             return None
         cols = ["id", "contact_id", "session_date", "transcript",
                 "extraction_json", "locked_scope", "success_criteria",
-                "proposal_draft", "scorecard_json", "suggested_action",
+                "proposal_draft", "prototype_brief",
+                "scorecard_json", "suggested_action",
                 "created_at", "updated_at"]
         return dict(zip(cols, row))
     finally:
@@ -1705,7 +1797,8 @@ def get_session_for_contact(contact_id: int) -> dict | None:
 def upsert_session(*, contact_id: int, session_date: date | None,
                    transcript: str, extraction_json: str,
                    locked_scope: str, success_criteria: str,
-                   proposal_draft: str) -> dict | None:
+                   proposal_draft: str,
+                   prototype_brief: str = "") -> dict | None:
     sc = compute_working_scorecard(extraction_json)
     import json as _json
     sc_json = _json.dumps(sc)
@@ -1718,8 +1811,9 @@ def upsert_session(*, contact_id: int, session_date: date | None,
             INSERT INTO crm_working_sessions
               (contact_id, session_date, transcript, extraction_json,
                locked_scope, success_criteria, proposal_draft,
+               prototype_brief,
                scorecard_json, suggested_action)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             ON CONFLICT (contact_id) DO UPDATE
               SET session_date      = EXCLUDED.session_date,
                   transcript        = EXCLUDED.transcript,
@@ -1727,11 +1821,13 @@ def upsert_session(*, contact_id: int, session_date: date | None,
                   locked_scope      = EXCLUDED.locked_scope,
                   success_criteria  = EXCLUDED.success_criteria,
                   proposal_draft    = EXCLUDED.proposal_draft,
+                  prototype_brief   = EXCLUDED.prototype_brief,
                   scorecard_json    = EXCLUDED.scorecard_json,
                   suggested_action  = EXCLUDED.suggested_action,
                   updated_at        = NOW()
         """, (contact_id, session_date, transcript, extraction_json,
               locked_scope, success_criteria, proposal_draft,
+              prototype_brief,
               sc_json, sc["suggested_action"]))
         conn.commit()
         cur.close()
@@ -1866,7 +1962,7 @@ def process_working_session_auto(contact_id: int, transcript: str,
                                  session_date_) -> dict:
     """Same shape as process_discovery_call_auto but for the
     working-session chain (locked scope + success criteria +
-    proposal draft)."""
+    proposal draft + prototype brief)."""
     from concurrent.futures import ThreadPoolExecutor
 
     extraction = _strip_code_fence(call_claude(
@@ -1883,6 +1979,25 @@ def process_working_session_auto(contact_id: int, transcript: str,
                    for key, p in prompts}
         outputs = {k: f.result().strip() for k, f in futures.items()}
 
+    # Step 5 (sequential — needs outputs from Step 2). Pulls in the
+    # contact's email_thread so async context lands in the brief too.
+    email_thread = ""
+    try:
+        contact = next((c for c in list_contacts() if c["id"] == contact_id), None)
+        if contact:
+            email_thread = contact.get("email_thread") or ""
+    except Exception:
+        pass
+
+    prototype_brief = call_claude(
+        render_prompt(WORKING_PROMPT_PROTOTYPE,
+                      extraction_json=extraction,
+                      locked_scope=outputs["locked_scope"],
+                      success_criteria=outputs["success_criteria"],
+                      email_thread=email_thread),
+        max_tokens=4096,
+    ).strip()
+
     sc = upsert_session(
         contact_id=contact_id,
         session_date=session_date_,
@@ -1891,12 +2006,14 @@ def process_working_session_auto(contact_id: int, transcript: str,
         locked_scope=outputs["locked_scope"],
         success_criteria=outputs["success_criteria"],
         proposal_draft=outputs["proposal_draft"],
+        prototype_brief=prototype_brief,
     )
     return {
         "extraction_json":  extraction,
         "locked_scope":     outputs["locked_scope"],
         "success_criteria": outputs["success_criteria"],
         "proposal_draft":   outputs["proposal_draft"],
+        "prototype_brief":  prototype_brief,
         "scorecard":        sc,
     }
 
