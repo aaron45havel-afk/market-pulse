@@ -1528,7 +1528,7 @@ EXTRACTION:
 
 WORKING_PROMPT_PROPOSAL = '''Using ONLY the extraction object below, draft a one-page pilot proposal email body (no subject line) in this exact structure:
 
-Hi [first_name],
+Hi <<FIRST_NAME>>,
 
 Recap of what we agreed on:
 
@@ -1536,22 +1536,22 @@ Recap of what we agreed on:
 
 **Success criteria:** [2-3 bullet points from success_criteria]
 
-**Investment:** [the recommended fee + duration]
+**Investment:** <<FEE>> fixed pilot fee, <<DURATION>>.
 
-**Timeline:** [kickoff target → first milestone → end-of-pilot date]
+**Timeline:** Kickoff <<KICKOFF_DATE>> → mid-pilot check-in <<MILESTONE_DATE>> → pilot wrap <<WRAP_DATE>>.
 
 **Next step:** [what's needed to start — sign, send, intro to [decision_maker]]
 
-[Verbatim quote from `next_step_committed` woven into a closing line, if available]
+[One-line closer that weaves the prospect's verbatim `next_step_committed` quote in, if available]
 
-Sign-off:
-{my_name}
+<<MY_NAME>>
 
 Rules:
-- Keep it under ~180 words.
-- Cite every claim to the extraction.
-- Anything not supported, leave a "[ASSUMPTION — confirm]" placeholder so the user fixes it before sending.
+- Use the LITERAL placeholder tokens `<<FIRST_NAME>>`, `<<FEE>>`, `<<DURATION>>`, `<<KICKOFF_DATE>>`, `<<MILESTONE_DATE>>`, `<<WRAP_DATE>>`, `<<MY_NAME>>` exactly as shown. The user's UI fills them in. Do NOT replace, paraphrase, or rewrite any of these tokens — leave them as `<<TOKEN_NAME>>` so the find-and-replace works.
+- For everything ELSE (scope, success criteria, next step, closing line), cite each claim to the extraction.
+- Anything not supported by the extraction, leave a `[ASSUMPTION — confirm]` placeholder so the user fixes it before sending.
 - Do not invent numbers, dates, or names.
+- Keep it under ~180 words.
 
 EXTRACTION:
 {extraction_json}'''
