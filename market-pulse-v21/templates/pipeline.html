@@ -2,7 +2,7 @@
 {% block title %}Pipeline — Market Pulse{% endblock %}
 {% block extra_css %}
 <style>
-  .crm-grid { display:grid; grid-template-columns:repeat(6, minmax(220px, 1fr)); gap:0.6rem; overflow-x:auto; padding-bottom:0.5rem; }
+  .crm-grid { display:grid; grid-template-columns:repeat(7, minmax(220px, 1fr)); gap:0.6rem; overflow-x:auto; padding-bottom:0.5rem; }
   .crm-col { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.6rem 0.7rem; min-height:140px; }
   .crm-col-head { font-size:0.72rem; font-weight:700; color:var(--text-dim); letter-spacing:0.05em; text-transform:uppercase; margin-bottom:0.55rem; display:flex; justify-content:space-between; align-items:baseline; }
   .crm-card { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.6rem 0.7rem; margin-bottom:0.55rem; font-size:0.83rem; }
@@ -322,7 +322,7 @@
             </form>
             <button type="button" class="icon-btn" onclick="openEmailModal({{ c.id }})" title="Email">📧</button>
             <button type="button" class="icon-btn" onclick="openCallModal({{ c.id }})" title="Discovery call">📞</button>
-            {% if c.stage in ('DISCOVERY_CALL', 'PILOT', 'RECURRING') %}
+            {% if c.stage in ('DISCOVERY_CALL', 'PILOT', 'VERCEL_PROJECT', 'RECURRING') %}
             <button type="button" class="icon-btn" onclick="openSessionModal({{ c.id }})" title="Working session">📋</button>
             {% endif %}
           </div>

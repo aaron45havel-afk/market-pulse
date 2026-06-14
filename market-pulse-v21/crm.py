@@ -26,6 +26,7 @@ STAGES = (
     "REPLIED",
     "DISCOVERY_CALL",
     "PILOT",
+    "VERCEL_PROJECT",
     "RECURRING",
     "LOST",
 )
@@ -135,6 +136,7 @@ STAGE_LABELS = {
     "REPLIED":        "Replied",
     "DISCOVERY_CALL": "Discovery call",
     "PILOT":          "Pilot",
+    "VERCEL_PROJECT": "Vercel project",
     "RECURRING":      "Recurring",
     "LOST":           "Lost",
 }
@@ -198,6 +200,7 @@ STAGE_TO_NEXT_TRIGGER = {
     "REPLIED":        "SCHEDULING",
     "DISCOVERY_CALL": "POST_CALL",
     "PILOT":          "CHECKIN",
+    "VERCEL_PROJECT": "CHECKIN",
     "RECURRING":      "RENEWAL",
     "LOST":           None,
 }
