@@ -307,6 +307,12 @@
           {% if c.stage in ('PILOT', 'VERCEL_PROJECT', 'RECURRING') and (not c.hosting_model or c.hosting_model == 'TBD') %}
           <div style="font-size:0.65rem; color:#92400e; background:rgba(245,158,11,0.14); padding:1px 6px; border-radius:99px; display:inline-block; margin-top:3px; font-weight:600;">⚠️ ask: hosting model</div>
           {% endif %}
+          {% if c.stage in ('DISCOVERY_CALL', 'PILOT', 'VERCEL_PROJECT', 'RECURRING') %}
+            {% set _ag = c.pilot_agreement %}
+            {% if not _ag or _ag == '{}' %}
+            <div style="font-size:0.65rem; color:var(--text-dim); background:var(--surface2); padding:1px 6px; border-radius:99px; display:inline-block; margin-top:3px; font-weight:600;">🤝 agreement: not started</div>
+            {% endif %}
+          {% endif %}
           {% if c.recurring_value or c.pilot_value or c.next_date %}
           <div class="meta one-line money-row">
             {% if c.recurring_value %}<span class="money">${{ "{:,}".format(c.recurring_value) }}/yr</span>{% endif %}
@@ -327,6 +333,7 @@
             <button type="button" class="icon-btn" onclick="openCallModal({{ c.id }})" title="Discovery call">📞</button>
             {% if c.stage in ('DISCOVERY_CALL', 'PILOT', 'VERCEL_PROJECT', 'RECURRING') %}
             <button type="button" class="icon-btn" onclick="openSessionModal({{ c.id }})" title="Working session">📋</button>
+            <button type="button" class="icon-btn" onclick="openAgreementModal({{ c.id }}, '{{ c.name|e }}')" title="Pilot agreement checklist">🤝</button>
             {% endif %}
             {% if c.stage == 'VERCEL_PROJECT' %}
             <button type="button" class="icon-btn" onclick="openVercelModal({{ c.id }}, '{{ c.name|e }}')" title="Create Vercel project">🚀</button>
@@ -1670,6 +1677,239 @@ async function submitVercel(e) {
 }
 </script>
 <!-- ── End Vercel modal ─────────────────────────────────────────── -->
+
+<!-- ── Pilot Agreement Checklist modal ──────────────────────────── -->
+<style>
+  #agreementModalBg .modal { max-width:760px; }
+  .ag-progress { display:flex; align-items:center; gap:0.6rem; margin-bottom:0.7rem; font-size:0.78rem; color:var(--text-dim); }
+  .ag-progress-bar { flex:1; height:6px; background:var(--surface2); border-radius:99px; overflow:hidden; }
+  .ag-progress-fill { height:100%; background:linear-gradient(90deg, var(--accent2), var(--accent)); transition:width 0.25s; }
+  .ag-section { background:var(--surface); border:1px solid var(--border); border-radius:8px; margin-bottom:0.55rem; }
+  .ag-section summary { padding:0.55rem 0.85rem; font-weight:700; font-size:0.86rem; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; }
+  .ag-section summary::-webkit-details-marker { display:none; }
+  .ag-section summary::after { content:"▼"; font-size:0.65rem; color:var(--text-dim); transition:transform 0.15s; }
+  .ag-section[open] summary::after { transform:rotate(180deg); }
+  .ag-section .ag-body { padding:0.2rem 0.85rem 0.7rem; display:flex; flex-direction:column; gap:0.45rem; }
+  .ag-item { display:flex; align-items:flex-start; gap:0.5rem; padding:0.4rem 0; border-top:1px solid var(--border); font-size:0.85rem; }
+  .ag-item:first-child { border-top:none; }
+  .ag-item input[type="checkbox"] { margin-top:3px; cursor:pointer; }
+  .ag-item label { flex:1; cursor:pointer; line-height:1.4; }
+  .ag-item-input { display:flex; flex-direction:column; gap:3px; margin-top:0.3rem; }
+  .ag-item-input input, .ag-item-input select {
+    background:var(--surface2); border:1px solid var(--border); border-radius:5px;
+    padding:0.3rem 0.5rem; color:var(--text); font-size:0.82rem;
+    font-family:inherit; outline:none; max-width:340px;
+  }
+  .ag-save-flash { font-size:0.72rem; color:var(--accent); opacity:0; transition:opacity 0.2s; }
+  .ag-save-flash.show { opacity:1; }
+</style>
+<div id="agreementModalBg" class="modal-bg" onclick="if(event.target===this) closeAgreementModal();">
+  <div class="modal">
+    <div style="display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem; flex-wrap:wrap;">
+      <h3 id="agreementTitle" style="margin:0;">🤝 Pilot agreement</h3>
+      <div style="font-size:0.7rem; color:var(--text-dim);">
+        💾 Auto-saves as you type · <span id="agreementSaveOk" class="ag-save-flash">Saved ✓</span>
+      </div>
+    </div>
+    <p style="font-size:0.76rem; color:var(--text-dim); margin:0.3rem 0 0.6rem;">
+      Walk this with the client before the pilot starts. Items become a checklist you can paste into the actual contract.
+      Tick them as you confirm; fill the inline fields with the actual values.
+    </p>
+    <div class="ag-progress">
+      <span id="agreementProgressText">0 / 0 confirmed</span>
+      <div class="ag-progress-bar"><div id="agreementProgressFill" class="ag-progress-fill" style="width:0;"></div></div>
+      <span id="agreementProgressPct">0%</span>
+    </div>
+    <div id="agreementSections"></div>
+    <div class="row" style="margin-top:0.6rem;">
+      <button onclick="closeAgreementModal()">Close</button>
+    </div>
+  </div>
+</div>
+<script>
+let _agCid = null;
+let _agState = {};
+let _agSections = [];
+let _agSaveTimer = null;
+
+async function openAgreementModal(cid, name) {
+  _agCid = cid;
+  document.getElementById('agreementTitle').textContent = `🤝 Pilot agreement — ${name}`;
+  document.getElementById('agreementModalBg').classList.add('show');
+  try {
+    const r = await fetch(`/api/pipeline/agreement/${cid}`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    _agSections = data.sections || [];
+    try { _agState = data.saved ? JSON.parse(data.saved) : {}; }
+    catch (_) { _agState = {}; }
+    renderAgreementSections();
+    renderAgreementProgress(data.progress);
+  } catch (e) {
+    document.getElementById('agreementSections').innerHTML =
+      `<div style="color:#991B1B; font-size:0.85rem;">Could not load checklist: ${e.message}</div>`;
+  }
+}
+
+function closeAgreementModal() {
+  if (_agSaveTimer) { clearTimeout(_agSaveTimer); _agSaveTimer = null; saveAgreement(); }
+  document.getElementById('agreementModalBg').classList.remove('show');
+}
+
+function _agValue(sectionKey, itemKey) {
+  const s = _agState[sectionKey] || {};
+  return s[itemKey];
+}
+
+function _agSet(sectionKey, itemKey, value) {
+  if (!_agState[sectionKey]) _agState[sectionKey] = {};
+  _agState[sectionKey][itemKey] = value;
+  if (_agSaveTimer) clearTimeout(_agSaveTimer);
+  _agSaveTimer = setTimeout(saveAgreement, 500);
+}
+
+function renderAgreementSections() {
+  const container = document.getElementById('agreementSections');
+  container.innerHTML = '';
+  _agSections.forEach((section, idx) => {
+    const sec = document.createElement('details');
+    sec.className = 'ag-section';
+    if (idx === 0) sec.open = true;
+    const sum = document.createElement('summary');
+    sum.innerHTML = `${section.title} <span style="font-size:0.7rem; color:var(--text-dim); font-weight:500;" id="ag-sec-${section.key}-count"></span>`;
+    sec.appendChild(sum);
+    const body = document.createElement('div');
+    body.className = 'ag-body';
+    section.items.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'ag-item';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.id = `ag-${section.key}-${item.key}`;
+      const current = _agValue(section.key, item.key);
+      const currentChecked = current && (current === true || current.checked === true);
+      const currentInput   = (current && typeof current === 'object') ? (current.value || '') : '';
+      checkbox.checked = currentChecked;
+      checkbox.addEventListener('change', () => {
+        const val = item.input ? { checked: checkbox.checked, value: currentInputValue(section.key, item.key) || currentInput }
+                               : checkbox.checked;
+        _agSet(section.key, item.key, val);
+        updateSectionCount(section.key);
+        recomputeProgress();
+      });
+      const label = document.createElement('label');
+      label.htmlFor = checkbox.id;
+      label.textContent = item.label;
+      row.appendChild(checkbox);
+      row.appendChild(label);
+      if (item.input) {
+        const inputWrap = document.createElement('div');
+        inputWrap.className = 'ag-item-input';
+        inputWrap.style.flex = '1 0 100%';
+        let inp;
+        if (item.input === 'select') {
+          inp = document.createElement('select');
+          (item.options || []).forEach(opt => {
+            const o = document.createElement('option');
+            o.value = opt; o.textContent = opt;
+            if (opt === currentInput) o.selected = true;
+            inp.appendChild(o);
+          });
+        } else {
+          inp = document.createElement('input');
+          inp.type = item.input;
+          inp.placeholder = item.placeholder || '';
+          inp.value = currentInput || '';
+        }
+        inp.id = `ag-${section.key}-${item.key}-val`;
+        inp.addEventListener('input',  () => onInputChange(section.key, item.key));
+        inp.addEventListener('change', () => onInputChange(section.key, item.key));
+        inputWrap.appendChild(inp);
+        // Put input below label, full width
+        const stackedRow = document.createElement('div');
+        stackedRow.style.flex = '1';
+        stackedRow.appendChild(label);
+        stackedRow.appendChild(inputWrap);
+        row.innerHTML = '';
+        row.appendChild(checkbox);
+        row.appendChild(stackedRow);
+      }
+      body.appendChild(row);
+    });
+    sec.appendChild(body);
+    container.appendChild(sec);
+    updateSectionCount(section.key);
+  });
+}
+
+function currentInputValue(sectionKey, itemKey) {
+  const el = document.getElementById(`ag-${sectionKey}-${itemKey}-val`);
+  return el ? el.value : '';
+}
+
+function onInputChange(sectionKey, itemKey) {
+  const cb = document.getElementById(`ag-${sectionKey}-${itemKey}`);
+  const val = currentInputValue(sectionKey, itemKey);
+  _agSet(sectionKey, itemKey, { checked: cb && cb.checked, value: val });
+  updateSectionCount(sectionKey);
+  recomputeProgress();
+}
+
+function updateSectionCount(sectionKey) {
+  const section = _agSections.find(s => s.key === sectionKey);
+  if (!section) return;
+  let done = 0;
+  section.items.forEach(item => {
+    const v = _agValue(section.key, item.key);
+    if (v === true) done++;
+    else if (v && typeof v === 'object' && (v.checked || (v.value && v.value !== ''))) done++;
+    else if (v && typeof v !== 'object' && v !== '') done++;
+  });
+  const el = document.getElementById(`ag-sec-${sectionKey}-count`);
+  if (el) el.textContent = `${done}/${section.items.length}`;
+}
+
+function recomputeProgress() {
+  let done = 0, total = 0;
+  _agSections.forEach(section => {
+    section.items.forEach(item => {
+      total++;
+      const v = _agValue(section.key, item.key);
+      if (v === true) done++;
+      else if (v && typeof v === 'object' && (v.checked || (v.value && v.value !== ''))) done++;
+      else if (v && typeof v !== 'object' && v !== '') done++;
+    });
+  });
+  const pct = total ? Math.round(100 * done / total) : 0;
+  renderAgreementProgress({ done, total, pct });
+}
+
+function renderAgreementProgress(p) {
+  document.getElementById('agreementProgressText').textContent = `${p.done} / ${p.total} confirmed`;
+  document.getElementById('agreementProgressPct').textContent = `${p.pct}%`;
+  document.getElementById('agreementProgressFill').style.width = `${p.pct}%`;
+}
+
+async function saveAgreement() {
+  if (!_agCid) return;
+  try {
+    const r = await fetch('/api/pipeline/agreement/save', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ contact_id: _agCid, agreement: _agState }),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const ok = document.getElementById('agreementSaveOk');
+    ok.classList.add('show');
+    setTimeout(() => ok.classList.remove('show'), 1100);
+    if (data.progress) renderAgreementProgress(data.progress);
+  } catch (e) {
+    console.warn('Agreement auto-save failed:', e);
+  }
+}
+</script>
+<!-- ── End Pilot Agreement modal ───────────────────────────────── -->
 <div id="sessionModalBg" class="modal-bg" onclick="if(event.target===this) closeSessionModal();">
   <div class="modal">
     <div style="display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem; flex-wrap:wrap;">

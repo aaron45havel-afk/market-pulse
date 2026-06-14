@@ -585,6 +585,50 @@ async def api_pipeline_email(request: Request, contact_id: int):
     return JSONResponse(payload)
 
 
+@app.get("/api/pipeline/agreement/{contact_id}")
+async def api_get_agreement(request: Request, contact_id: int):
+    """Returns the pilot agreement template + the contact's saved
+    state so the modal can render."""
+    if not _check_pipeline_access(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import (list_contacts, PILOT_AGREEMENT_SECTIONS,
+                     agreement_progress)
+    contact = next((c for c in list_contacts() if c["id"] == contact_id), None)
+    if not contact:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    saved = contact.get("pilot_agreement") or ""
+    return JSONResponse({
+        "contact_name":  contact.get("name"),
+        "sections":      PILOT_AGREEMENT_SECTIONS,
+        "saved":         saved,
+        "progress":      agreement_progress(saved),
+    })
+
+
+@app.post("/api/pipeline/agreement/save")
+async def api_save_agreement(request: Request):
+    """Persist the pilot_agreement JSON. The frontend posts the entire
+    blob each call (the modal is small enough that this is fine)."""
+    if not _check_pipeline_access(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    import json as _json
+    from crm import save_pilot_agreement, agreement_progress
+    body = await request.json()
+    try:
+        contact_id = int(body.get("contact_id") or 0)
+    except (TypeError, ValueError):
+        contact_id = 0
+    if not contact_id:
+        return JSONResponse({"error": "missing contact_id"}, status_code=400)
+    agreement = body.get("agreement") or {}
+    if not isinstance(agreement, dict):
+        return JSONResponse({"error": "agreement must be an object"},
+                            status_code=400)
+    blob = _json.dumps(agreement, separators=(",", ":"))
+    save_pilot_agreement(contact_id, blob)
+    return JSONResponse({"ok": True, "progress": agreement_progress(blob)})
+
+
 @app.get("/api/pipeline/vercel/config")
 async def api_vercel_config(request: Request):
     if not _check_pipeline_access(request):

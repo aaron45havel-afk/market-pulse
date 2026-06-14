@@ -230,6 +230,12 @@ def init_db():
             ALTER TABLE crm_contacts
             ADD COLUMN IF NOT EXISTS engagement_notes TEXT
         """)
+        # Pilot Agreement Checklist — stored as JSON text so we can
+        # iterate the schema without a migration each time.
+        cur.execute("""
+            ALTER TABLE crm_contacts
+            ADD COLUMN IF NOT EXISTS pilot_agreement TEXT
+        """)
         cur.execute("""
             ALTER TABLE crm_email_templates
             ADD COLUMN IF NOT EXISTS role VARCHAR(40) NOT NULL DEFAULT ''
