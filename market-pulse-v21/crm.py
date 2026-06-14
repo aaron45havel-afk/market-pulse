@@ -1616,7 +1616,9 @@ SUCCESS CRITERIA + PRICING (Stage 3):
 EMAIL CORRESPONDENCE (async info gathered between calls):
 {email_thread}'''
 
-WORKING_PROMPT_PROPOSAL = '''Using ONLY the extraction object below, draft a one-page pilot proposal email body (no subject line) in this exact structure:
+WORKING_PROMPT_PROPOSAL = '''Using ONLY the extraction object below, draft a one-page pilot proposal email — both subject and body — in this exact structure:
+
+Subject: <<SUBJECT>>
 
 Hi <<FIRST_NAME>>,
 
@@ -1637,7 +1639,7 @@ Recap of what we agreed on:
 <<MY_NAME>>
 
 Rules:
-- Use the LITERAL placeholder tokens `<<FIRST_NAME>>`, `<<FEE>>`, `<<DURATION>>`, `<<KICKOFF_DATE>>`, `<<MILESTONE_DATE>>`, `<<WRAP_DATE>>`, `<<MY_NAME>>` exactly as shown. The user's UI fills them in. Do NOT replace, paraphrase, or rewrite any of these tokens — leave them as `<<TOKEN_NAME>>` so the find-and-replace works.
+- Use the LITERAL placeholder tokens `<<SUBJECT>>`, `<<FIRST_NAME>>`, `<<FEE>>`, `<<DURATION>>`, `<<KICKOFF_DATE>>`, `<<MILESTONE_DATE>>`, `<<WRAP_DATE>>`, `<<MY_NAME>>` exactly as shown. The user's UI fills them in. Do NOT replace, paraphrase, or rewrite any of these tokens — leave them as `<<TOKEN_NAME>>` so the find-and-replace works.
 - For everything ELSE (scope, success criteria, next step, closing line), cite each claim to the extraction.
 - Anything not supported by the extraction, leave a `[ASSUMPTION — confirm]` placeholder so the user fixes it before sending.
 - Do not invent numbers, dates, or names.
