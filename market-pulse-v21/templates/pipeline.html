@@ -30,6 +30,11 @@
   .crm-card .actions.compact .icon-btn { background:var(--surface); border:1px solid var(--border); color:var(--text); padding:0.2rem 0.4rem; border-radius:4px; cursor:pointer; font-size:0.85rem; line-height:1; }
   .crm-card .actions.compact .icon-btn:hover { background:rgba(99,102,241,0.1); border-color:var(--accent2); }
 
+  /* Drag & drop */
+  .crm-card[draggable="true"] { cursor:grab; }
+  .crm-card.dragging { opacity:0.45; cursor:grabbing; }
+  .crm-col.drop-target { background:rgba(99,102,241,0.10); border-color:var(--accent2); box-shadow:inset 0 0 0 2px var(--accent2); }
+
   .industry-tag { display:inline-block; font-size:0.62rem; background:rgba(99,102,241,0.14); color:var(--accent2); padding:1px 6px; border-radius:99px; font-weight:600; white-space:nowrap; flex-shrink:0; max-width:120px; overflow:hidden; text-overflow:ellipsis; }
   .email-btn { background:transparent; color:var(--accent2); border:1px solid var(--border); padding:0.2rem 0.5rem; border-radius:4px; font-size:0.7rem; cursor:pointer; }
   .email-btn:hover { background:rgba(99,102,241,0.08); }
@@ -270,13 +275,13 @@
 </div>
 <div class="crm-grid" style="margin-bottom:1rem;">
   {% for s in stages if s != 'LOST' %}
-    <div class="crm-col">
+    <div class="crm-col" data-stage="{{ s }}">
       <div class="crm-col-head">
         <span>{{ stage_labels[s] }}</span>
         <span>{{ contacts_by_stage[s]|length }}</span>
       </div>
       {% for c in contacts_by_stage[s] %}
-        <div class="crm-card" data-cid="{{ c.id }}" onclick="openDetailModal({{ c.id }})">
+        <div class="crm-card" data-cid="{{ c.id }}" data-stage="{{ c.stage }}" draggable="true" onclick="openDetailModal({{ c.id }})">
           <div class="card-top">
             <span class="name">{{ c.name }}</span>
             {% if c.industry %}<span class="industry-tag">{{ c.industry.split(' / ')[0] }}</span>{% endif %}
@@ -1730,5 +1735,65 @@ async function autoProcessSession() {
     btn.disabled = false; btn.style.opacity = 1;
   }
 }
+
+// ── Kanban drag & drop ──────────────────────────────────────────
+(function initKanbanDnD() {
+  let dragCid = null;
+  let dragFromStage = null;
+
+  document.addEventListener('dragstart', (e) => {
+    const card = e.target.closest('.crm-card[draggable="true"]');
+    if (!card) return;
+    dragCid = card.dataset.cid;
+    dragFromStage = card.dataset.stage;
+    card.classList.add('dragging');
+    try {
+      e.dataTransfer.setData('text/plain', dragCid);
+      e.dataTransfer.effectAllowed = 'move';
+    } catch (_) {}
+  });
+
+  document.addEventListener('dragend', () => {
+    document.querySelectorAll('.crm-card.dragging')
+      .forEach(c => c.classList.remove('dragging'));
+    document.querySelectorAll('.crm-col.drop-target')
+      .forEach(c => c.classList.remove('drop-target'));
+    dragCid = null;
+    dragFromStage = null;
+  });
+
+  document.addEventListener('dragover', (e) => {
+    const col = e.target.closest('.crm-col[data-stage]');
+    if (!col || !dragCid) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!col.classList.contains('drop-target')) {
+      document.querySelectorAll('.crm-col.drop-target')
+        .forEach(c => c.classList.remove('drop-target'));
+      col.classList.add('drop-target');
+    }
+  });
+
+  document.addEventListener('drop', async (e) => {
+    const col = e.target.closest('.crm-col[data-stage]');
+    if (!col || !dragCid) return;
+    e.preventDefault();
+    const newStage = col.dataset.stage;
+    col.classList.remove('drop-target');
+    if (!newStage || newStage === dragFromStage) return;
+
+    const cid = dragCid;
+    const fd = new FormData();
+    fd.append('contact_id', cid);
+    fd.append('stage', newStage);
+    try {
+      const r = await fetch('/pipeline/stage', { method: 'POST', body: fd });
+      if (!r.ok && r.status !== 303) throw new Error('HTTP ' + r.status);
+      location.reload();
+    } catch (err) {
+      alert('Failed to move card: ' + err.message);
+    }
+  });
+})();
 </script>
 {% endblock %}
