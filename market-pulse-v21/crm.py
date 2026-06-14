@@ -202,6 +202,154 @@ HOSTING_MODEL_LABELS = {
     "Hybrid":        "Hybrid",
 }
 
+# ─── Pilot Agreement Checklist template ────────────────────────────
+# Used to render the structured form on the contact card. Each section
+# becomes a collapsible group; each item is a checkbox plus optional
+# inline inputs (text / number / select).
+PILOT_AGREEMENT_SECTIONS = [
+    {
+        "key": "scope", "title": "A. Scope & deliverable",
+        "items": [
+            {"key": "problem_statement", "label": "Problem statement (one sentence, in client's words)", "input": "text", "placeholder": "Their words, not yours"},
+            {"key": "deliverable",       "label": "Pilot deliverable (what gets built — be specific)", "input": "text"},
+            {"key": "success_criteria",  "label": "Success criteria (3 measurable outcomes)", "input": "text", "placeholder": "e.g. close cycle 5 days → 2 days"},
+            {"key": "mock_data_only",    "label": "Mock data only flag (pilot uses NO production data)"},
+        ],
+    },
+    {
+        "key": "money", "title": "B. Money",
+        "items": [
+            {"key": "pilot_fee",         "label": "Pilot fee $", "input": "number", "placeholder": "12000"},
+            {"key": "billing_terms",     "label": "Billing terms (e.g. 50% upfront / 50% on delivery)", "input": "text"},
+            {"key": "duration_weeks",    "label": "Pilot duration (weeks)", "input": "number", "placeholder": "3"},
+            {"key": "post_pilot_pricing","label": "Post-pilot pricing discussed (monthly managed-hosting retainer)", "input": "text", "placeholder": "$1,500/mo, includes 4 hrs/mo changes"},
+            {"key": "out_of_scope_rate", "label": "Out-of-scope hourly rate $", "input": "number", "placeholder": "200"},
+        ],
+    },
+    {
+        "key": "ownership", "title": "C. Code & IP ownership",
+        "items": [
+            {"key": "client_owns_code",        "label": "Client owns all code at end of pilot"},
+            {"key": "focusedops_keeps_patterns","label": "FocusedOps retains right to reuse generic patterns / prompts"},
+            {"key": "repo_destination",        "label": "GitHub repo destination", "input": "select", "options": ["TBD", "Client GitHub org", "FocusedOps (managed)"]},
+            {"key": "source_escrow",           "label": "Source-code escrow offered (paranoid clients only)"},
+        ],
+    },
+    {
+        "key": "hosting", "title": "D. Hosting model",
+        "items": [
+            {"key": "model_decided", "label": "Hosting model agreed in writing (set in contact's Hosting field)"},
+            {"key": "monthly_fee",   "label": "Managed-hosting monthly fee $", "input": "number", "placeholder": "1500"},
+        ],
+    },
+    {
+        "key": "auth", "title": "E. Auth & access — triggers for Tier 2",
+        "items": [
+            {"key": "credentials_in",    "label": "Client wants to plug in real credentials → add auth"},
+            {"key": "colleagues_in",     "label": "Client wants colleagues to use it → add auth"},
+            {"key": "real_data_in",      "label": "Client wants real data flowing → Tier 3, contract first"},
+            {"key": "url_stays",         "label": "Client says 'we'll just keep using your URL' → contract first"},
+            {"key": "auth_method",       "label": "Auth method picked", "input": "select", "options": ["TBD", "Google OAuth", "Magic link (Resend)", "Vercel Authentication"]},
+        ],
+    },
+    {
+        "key": "data", "title": "F. Data handling — when real data flows",
+        "items": [
+            {"key": "dpa_signed",          "label": "Data Processing Agreement (DPA) signed"},
+            {"key": "data_residency",      "label": "Data residency confirmed (US / EU / other)"},
+            {"key": "retention_policy",    "label": "Data retention policy documented (how long after end?)"},
+            {"key": "backup_model",        "label": "Backup model documented"},
+            {"key": "incident_response",   "label": "Incident response plan written (who to call if breach)"},
+        ],
+    },
+    {
+        "key": "liability", "title": "G. Liability & insurance",
+        "items": [
+            {"key": "liability_cap",   "label": "Liability cap = 12 months of fees paid"},
+            {"key": "cyber_insurance", "label": "FocusedOps carries cyber insurance (Hiscox / Thimble)"},
+            {"key": "cgl_insurance",   "label": "FocusedOps carries CGL insurance"},
+            {"key": "indemnification", "label": "Mutual indemnification clause (you for code, them for their data)"},
+        ],
+    },
+    {
+        "key": "support", "title": "H. Support & SLA (post-pilot, managed only)",
+        "items": [
+            {"key": "response_sla",      "label": "Response time SLA (e.g. 4 business hours)", "input": "text"},
+            {"key": "uptime_target",     "label": "Uptime target (don't promise 99.9%)", "input": "text"},
+            {"key": "monthly_hours",     "label": "Included monthly change hours", "input": "number", "placeholder": "4"},
+            {"key": "maintenance_window","label": "Maintenance window agreed", "input": "text"},
+        ],
+    },
+    {
+        "key": "exit", "title": "I. Exit terms",
+        "items": [
+            {"key": "notice_period",     "label": "Notice period (30 or 60 days)", "input": "text"},
+            {"key": "repo_handoff",      "label": "Repo handoff included on notice"},
+            {"key": "vercel_transfer",   "label": "Vercel project transfer included on notice"},
+            {"key": "knowledge_handoff", "label": "30-day knowledge handoff offered"},
+            {"key": "no_noncompete",     "label": "NO punitive non-compete language"},
+        ],
+    },
+]
+
+
+def list_agreement_keys() -> list[str]:
+    """Flat list of every item key across all sections — used by the
+    progress calculator and the form serializer."""
+    keys = []
+    for section in PILOT_AGREEMENT_SECTIONS:
+        for item in section["items"]:
+            keys.append(f"{section['key']}.{item['key']}")
+    return keys
+
+
+def agreement_progress(agreement_json: str | None) -> dict:
+    """Returns {done, total, pct} from a pilot_agreement JSON blob.
+    Counts a key as 'done' if its checkbox is true OR its inline input
+    has a non-empty value."""
+    import json as _json
+    total = sum(len(s["items"]) for s in PILOT_AGREEMENT_SECTIONS)
+    if not agreement_json:
+        return {"done": 0, "total": total, "pct": 0}
+    try:
+        data = _json.loads(agreement_json)
+    except Exception:
+        return {"done": 0, "total": total, "pct": 0}
+    done = 0
+    for section in PILOT_AGREEMENT_SECTIONS:
+        sd = data.get(section["key"], {}) or {}
+        for item in section["items"]:
+            v = sd.get(item["key"])
+            if isinstance(v, bool):
+                if v: done += 1
+            elif isinstance(v, dict):
+                if v.get("checked") or (v.get("value") not in (None, "")):
+                    done += 1
+            elif v not in (None, "", 0):
+                done += 1
+    return {"done": done, "total": total,
+            "pct": round(100 * done / total) if total else 0}
+
+
+def save_pilot_agreement(contact_id: int, agreement_json: str) -> bool:
+    """Overwrite the contact's pilot_agreement column. Caller validates
+    the JSON before passing it in."""
+    conn = _get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE crm_contacts
+            SET pilot_agreement = %s, updated_at = NOW()
+            WHERE id = %s
+        """, (agreement_json, contact_id))
+        conn.commit()
+        cur.close()
+        return True
+    finally:
+        conn.close()
+
 STAGE_TO_NEXT_TRIGGER = {
     "QUEUED":         "INTRO",
     "CONTACTED":      "BUMP_NO_REPLY",
@@ -249,7 +397,7 @@ def list_contacts() -> list[dict]:
                    pilot_value, recurring_value,
                    date_emailed, next_date, subject, notes,
                    industry, email_thread, role,
-                   hosting_model, engagement_notes,
+                   hosting_model, engagement_notes, pilot_agreement,
                    created_at, updated_at
             FROM crm_contacts
             ORDER BY updated_at DESC
@@ -259,7 +407,7 @@ def list_contacts() -> list[dict]:
                 "pilot_value", "recurring_value", "date_emailed",
                 "next_date", "subject", "notes",
                 "industry", "email_thread", "role",
-                "hosting_model", "engagement_notes",
+                "hosting_model", "engagement_notes", "pilot_agreement",
                 "created_at", "updated_at"]
         out = [dict(zip(cols, r)) for r in rows]
         cur.close()
