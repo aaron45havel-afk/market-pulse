@@ -439,6 +439,7 @@ function closeAddContactModal() {
       <div class="lbl">Next date</div>   <input id="detailNext"        type="date">
       <div class="lbl">Subject</div>     <input id="detailSubject"     type="text" maxlength="255">
       <div class="lbl" style="align-self:start; padding-top:0.4rem;">Notes</div><textarea id="detailNotes" rows="4" placeholder="(no notes)"></textarea>
+      <div class="lbl" style="align-self:start; padding-top:0.4rem;">Email thread</div><textarea id="detailEmailThread" rows="5" placeholder="Paste async correspondence — reply threads, clarifications, anything that's not on a call transcript. Feeds the prototype-brief step."></textarea>
     </div>
 
     <div class="row" style="margin-top:0.8rem; display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
@@ -480,6 +481,7 @@ function openDetailModal(cid) {
   document.getElementById('detailNext').value = c.next_date || '';
   document.getElementById('detailSubject').value = c.subject || '';
   document.getElementById('detailNotes').value = c.notes || '';
+  document.getElementById('detailEmailThread').value = c.email_thread || '';
   document.getElementById('detailIndustrySel').value = c.industry || '';
   document.getElementById('detailIndustryCid').value = cid;
   document.getElementById('detailDeleteCid').value = cid;
@@ -501,6 +503,7 @@ function _readModalFields() {
     next_date:       document.getElementById('detailNext').value || null,
     subject:         document.getElementById('detailSubject').value,
     notes:           document.getElementById('detailNotes').value,
+    email_thread:    document.getElementById('detailEmailThread').value,
   };
 }
 
@@ -590,7 +593,7 @@ function scheduleAutoSave() {
 // untouched (it goes through a separate form).
 ['detailName','detailTitle','detailAgency','detailEmail',
  'detailPilot','detailRecurring','detailDateEmailed','detailNext',
- 'detailSubject','detailNotes'].forEach(id => {
+ 'detailSubject','detailNotes','detailEmailThread'].forEach(id => {
   const el = document.getElementById(id);
   if (!el) return;
   el.addEventListener('input',  scheduleAutoSave);
@@ -1223,9 +1226,16 @@ document.addEventListener('input', e => {
 
       <div class="prompt-card">
         <h4>Step 4 — Pilot proposal draft</h4>
-        <div class="hint">Save into <em>Artifacts → Proposal draft</em>, then hit Save session.</div>
+        <div class="hint">Save into <em>Artifacts → Proposal draft</em>.</div>
         <textarea id="sessionPromptProposal" readonly></textarea>
         <div class="row"><button class="primary" onclick="copyToClipboard('sessionPromptProposal')">Copy prompt</button></div>
+      </div>
+
+      <div class="prompt-card">
+        <h4>Step 5 — Prototype build brief</h4>
+        <div class="hint">Synthesizes extraction + locked scope + success criteria + the contact's email_thread. Save into <em>Artifacts → Prototype brief</em>, then hit Save session.</div>
+        <textarea id="sessionPromptPrototype" readonly></textarea>
+        <div class="row"><button class="primary" onclick="copyToClipboard('sessionPromptPrototype')">Copy prompt</button></div>
       </div>
     </div>
 
@@ -1246,6 +1256,14 @@ document.addEventListener('input', e => {
 
       <label style="font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; display:block; margin-top:0.6rem;">Pilot proposal draft (Step 4)</label>
       <textarea id="sessionProposal" placeholder="One-page email body proposing the pilot…" style="width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.55rem; color:var(--text); font-size:0.82rem; min-height:160px; resize:vertical; line-height:1.5; outline:none; margin-top:0.2rem; font-family:inherit;"></textarea>
+
+      <label style="font-size:0.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; display:block; margin-top:0.6rem;">🛠 Prototype build brief (Step 5)</label>
+      <p style="font-size:0.72rem; color:var(--text-dim); margin:0.2rem 0;">Two parts: (A) a build brief, (B) a literal Claude Code prompt at the bottom you can paste into a fresh Claude Code session to actually build the prototype.</p>
+      <textarea id="sessionPrototype" placeholder="Build brief + Claude Code prompt…" style="width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.55rem; color:var(--text); font-size:0.82rem; min-height:240px; resize:vertical; line-height:1.5; outline:none; margin-top:0.2rem; font-family:inherit;"></textarea>
+      <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.4rem;">
+        <button type="button" class="primary" onclick="copyToClipboard('sessionPrototype')" style="background:var(--accent2); color:white; border:none; padding:0.35rem 0.85rem; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.8rem;">📋 Copy prototype brief</button>
+        <span style="font-size:0.72rem; color:var(--text-dim);">→ paste into a new Claude Code session to build the prototype</span>
+      </div>
 
       <!-- ── Fill-in-the-blanks → ready-to-send email ─────────── -->
       <div style="margin-top:0.9rem; padding:0.7rem 0.8rem; background:rgba(99,102,241,0.06); border-left:3px solid var(--accent2); border-radius:6px;">
@@ -1341,6 +1359,7 @@ async function openSessionModal(contactId) {
     document.getElementById('sessionScope').value      = data.saved.locked_scope || '';
     document.getElementById('sessionCriteria').value   = data.saved.success_criteria || '';
     document.getElementById('sessionProposal').value   = data.saved.proposal_draft || '';
+    document.getElementById('sessionPrototype').value  = data.saved.prototype_brief || '';
 
     // Pre-fill the ready-to-send first-name field from the contact
     // record so the user doesn't retype it for every prospect.
@@ -1373,6 +1392,7 @@ function refreshSessionPrompts() {
     orig.criteria.replace(/EXTRACTION:[\s\S]*$/m, `EXTRACTION:\n${extraction}`);
   document.getElementById('sessionPromptProposal').value =
     orig.proposal.replace(/EXTRACTION:[\s\S]*$/m, `EXTRACTION:\n${extraction}`);
+  document.getElementById('sessionPromptPrototype').value = orig.prototype || '';
 }
 
 function showSessionTab(tab) {
@@ -1425,6 +1445,7 @@ async function saveSession() {
   form.append('locked_scope',     document.getElementById('sessionScope').value);
   form.append('success_criteria', document.getElementById('sessionCriteria').value);
   form.append('proposal_draft',   document.getElementById('sessionProposal').value);
+  form.append('prototype_brief',  document.getElementById('sessionPrototype').value);
   try {
     const r = await fetch('/pipeline/session', { method: 'POST', body: form });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -1593,6 +1614,7 @@ async function autoProcessSession() {
     document.getElementById('sessionScope').value      = finalData.locked_scope     || '';
     document.getElementById('sessionCriteria').value   = finalData.success_criteria || '';
     document.getElementById('sessionProposal').value   = finalData.proposal_draft   || '';
+    document.getElementById('sessionPrototype').value  = finalData.prototype_brief  || '';
     renderSessionScorecard(finalData.scorecard);
     refreshSessionPrompts();
     renderReadyToSendProposal();
