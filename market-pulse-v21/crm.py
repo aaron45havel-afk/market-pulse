@@ -2026,6 +2026,75 @@ def anthropic_configured() -> bool:
     return bool(_os.environ.get("ANTHROPIC_API_KEY", "").strip())
 
 
+# ─── Resend (transactional email) ───────────────────────────────────
+# When RESEND_API_KEY is set, the 📧 Email modal can send directly
+# via the Resend API instead of opening mailto:. After send, we
+# append the email to the contact's email_thread and (optionally)
+# bump QUEUED → CONTACTED.
+def resend_configured() -> bool:
+    import os as _os
+    return bool(_os.environ.get("RESEND_API_KEY", "").strip())
+
+
+def resend_from_address() -> str:
+    import os as _os
+    return _os.environ.get("RESEND_FROM_EMAIL", "aaron@focusedops.io").strip() \
+        or "aaron@focusedops.io"
+
+
+def send_via_resend(*, to_email: str, subject: str, body: str,
+                    from_email: str | None = None,
+                    reply_to: str | None = None) -> dict:
+    """POST to resend.com/api/v1/emails. Returns
+    {ok: bool, id?: str, error?: str}. Does not raise — caller can
+    surface the error to the UI."""
+    import json as _json
+    import os as _os
+    import urllib.request as _urlreq
+    import urllib.error as _urlerr
+
+    api_key = _os.environ.get("RESEND_API_KEY", "").strip()
+    if not api_key:
+        return {"ok": False, "error": "RESEND_API_KEY not set"}
+    if not to_email:
+        return {"ok": False, "error": "missing recipient email"}
+    if not subject:
+        return {"ok": False, "error": "missing subject"}
+    from_email = (from_email or resend_from_address()).strip()
+
+    payload = {
+        "from":    from_email,
+        "to":      [to_email],
+        "subject": subject,
+        "text":    body or "",
+    }
+    if reply_to:
+        payload["reply_to"] = reply_to
+
+    req = _urlreq.Request(
+        "https://api.resend.com/emails",
+        data=_json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type":  "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with _urlreq.urlopen(req, timeout=30) as r:
+            data = _json.loads(r.read())
+            return {"ok": True, "id": data.get("id", "")}
+    except _urlerr.HTTPError as e:
+        detail = ""
+        try:
+            detail = e.read().decode("utf-8", errors="replace")[:300]
+        except Exception:
+            pass
+        return {"ok": False, "error": f"HTTP {e.code}: {detail}"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 # ─── Email-template seeds ───────────────────────────────────────────
 # The two emails the user shipped in the build spec — INTRO and the
 # SCHEDULING follow-up. Industry tagged to Government / Municipal
