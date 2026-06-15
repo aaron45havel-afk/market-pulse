@@ -229,6 +229,18 @@ def init_db():
             ALTER TABLE crm_working_sessions
             ADD COLUMN IF NOT EXISTS iteration_design_prompt TEXT
         """)
+        # NURTURE play — after a prospect replies but says they've signed
+        # with a competitor. We stash a follow_up_date (default +4 mo)
+        # so we can reach back out with a "gaps in their new tool" pitch.
+        cur.execute("""
+            ALTER TABLE crm_contacts
+            ADD COLUMN IF NOT EXISTS follow_up_date DATE
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS crm_contacts_follow_up_idx
+            ON crm_contacts(follow_up_date)
+            WHERE follow_up_date IS NOT NULL
+        """)
         # A/B testing — multiple subject/body variants per (industry,
         # role, trigger). The existing UNIQUE(industry, role, trigger)
         # constraint gets dropped and replaced with (industry, role,

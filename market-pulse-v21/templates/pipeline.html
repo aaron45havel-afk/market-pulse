@@ -8,10 +8,10 @@
      automatically — other pages keep their 1400px max-width.) */
   main .container { max-width: none; padding-left: 1.25rem; padding-right: 1.25rem; }
 
-  /* 7 columns sized to fit any viewport. minmax(0, 1fr) lets the
+  /* 8 columns sized to fit any viewport. minmax(0, 1fr) lets the
      grid shrink columns equally instead of overflowing; overflow-x
      stays as a safety net for ultra-narrow windows. */
-  .crm-grid { display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:0.5rem; overflow-x:auto; padding-bottom:0.5rem; }
+  .crm-grid { display:grid; grid-template-columns:repeat(8, minmax(0, 1fr)); gap:0.5rem; overflow-x:auto; padding-bottom:0.5rem; }
   .crm-col { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.5rem 0.55rem; min-height:140px; min-width:0; }
   .crm-col-head { font-size:0.68rem; font-weight:700; color:var(--text-dim); letter-spacing:0.05em; text-transform:uppercase; margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:baseline; }
   .crm-card { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.5rem 0.6rem; margin-bottom:0.5rem; font-size:0.78rem; min-width:0; }
@@ -61,7 +61,7 @@
        so swipes land on the next stage cleanly. Negative margin lets
        the scroll area touch screen edges. */
     .crm-grid {
-      grid-template-columns: repeat(7, 88vw);
+      grid-template-columns: repeat(8, 88vw);
       gap: 0.6rem;
       scroll-snap-type: x mandatory;
       -webkit-overflow-scrolling: touch;
@@ -346,6 +346,17 @@
   {{ funnel_step("Recurring", funnel.counts.RECURRING, funnel.rates.recurring_rate, none) }}
 </div>
 
+<!-- Follow-up due banner (NURTURE prospects whose date has hit today) -->
+{% if followup_due %}
+<div style="margin:1rem 0 0.5rem; padding:0.65rem 0.85rem; background:rgba(34,197,94,0.10); border:1px solid rgba(34,197,94,0.35); border-radius:8px; font-size:0.85rem; color:var(--text);">
+  🔔 <strong>{{ followup_due|length }} prospect{% if followup_due|length != 1 %}s{% endif %} ready for follow-up today:</strong>
+  {% for c in followup_due[:5] %}
+    <a href="#" onclick="openDetailModal({{ c.id }}); return false;" style="color:var(--accent2); font-weight:600;">{{ c.name }}</a>{% if not loop.last %}, {% endif %}
+  {% endfor %}
+  {% if followup_due|length > 5 %} (+{{ followup_due|length - 5 }} more in NURTURE){% endif %}
+</div>
+{% endif %}
+
 <!-- Pipeline columns -->
 <div style="display:flex; justify-content:space-between; align-items:baseline; margin:1.25rem 0 0.5rem; gap:0.5rem; flex-wrap:wrap;">
   <h2 style="margin:0; font-size:1.05rem;">Pipeline</h2>
@@ -370,6 +381,13 @@
           {% endif %}
           {% if c.stage in ('PILOT', 'VERCEL_PROJECT', 'RECURRING') and (not c.hosting_model or c.hosting_model == 'TBD') %}
           <div style="font-size:0.65rem; color:#92400e; background:rgba(245,158,11,0.14); padding:1px 6px; border-radius:99px; display:inline-block; margin-top:3px; font-weight:600;">⚠️ ask: hosting model</div>
+          {% endif %}
+          {% if c.stage == 'NURTURE' and c.follow_up_date %}
+            {% if c.follow_up_date <= today %}
+            <div style="font-size:0.65rem; color:#166534; background:rgba(34,197,94,0.16); padding:1px 6px; border-radius:99px; display:inline-block; margin-top:3px; font-weight:700;">🔔 follow up now</div>
+            {% else %}
+            <div style="font-size:0.66rem; color:var(--text-dim); margin-top:3px;">📅 follow up: {{ c.follow_up_date.strftime('%b %d') }}</div>
+            {% endif %}
           {% endif %}
           {% if c.stage in ('DISCOVERY_CALL', 'PILOT', 'VERCEL_PROJECT', 'RECURRING') %}
             {% set _ag = c.pilot_agreement %}
@@ -602,6 +620,8 @@ function closeAddContactModal() {
       <div class="lbl">Recurring $/yr</div><input id="detailRecurring" type="number" min="0" step="1000">
       <div class="lbl">Date emailed</div><input id="detailDateEmailed" type="date">
       <div class="lbl">Next date</div>   <input id="detailNext"        type="date">
+      <div class="lbl">Follow-up date <span style="font-weight:400; color:var(--text-dim); text-transform:none; letter-spacing:0;">(NURTURE)</span></div>
+      <input id="detailFollowUp" type="date">
       <div class="lbl">Subject</div>     <input id="detailSubject"     type="text" maxlength="255">
       <div class="lbl" style="align-self:start; padding-top:0.4rem;">Notes</div><textarea id="detailNotes" rows="4" placeholder="(no notes)"></textarea>
       <div class="lbl" style="align-self:start; padding-top:0.4rem;">Email thread</div><textarea id="detailEmailThread" rows="5" placeholder="Paste async correspondence — reply threads, clarifications, anything that's not on a call transcript. Feeds the prototype-brief step."></textarea>
@@ -657,6 +677,7 @@ function openDetailModal(cid) {
   document.getElementById('detailRoleSel').value = c.role || '';
   document.getElementById('detailHostingSel').value = c.hosting_model || 'TBD';
   document.getElementById('detailEngagementNotes').value = c.engagement_notes || '';
+  document.getElementById('detailFollowUp').value = c.follow_up_date || '';
   document.getElementById('detailDeleteCid').value = cid;
   document.getElementById('detailSaveOk').classList.remove('show');
   document.getElementById('detailModalBg').classList.add('show');
@@ -680,6 +701,7 @@ function _readModalFields() {
     role:             document.getElementById('detailRoleSel').value,
     hosting_model:    document.getElementById('detailHostingSel').value,
     engagement_notes: document.getElementById('detailEngagementNotes').value,
+    follow_up_date:   document.getElementById('detailFollowUp').value || null,
   };
 }
 
@@ -770,7 +792,7 @@ function scheduleAutoSave() {
 ['detailName','detailTitle','detailAgency','detailEmail',
  'detailPilot','detailRecurring','detailDateEmailed','detailNext',
  'detailSubject','detailNotes','detailEmailThread','detailRoleSel',
- 'detailHostingSel','detailEngagementNotes'].forEach(id => {
+ 'detailHostingSel','detailEngagementNotes','detailFollowUp'].forEach(id => {
   const el = document.getElementById(id);
   if (!el) return;
   el.addEventListener('input',  scheduleAutoSave);

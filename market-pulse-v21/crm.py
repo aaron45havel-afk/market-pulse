@@ -28,8 +28,14 @@ STAGES = (
     "PILOT",
     "VERCEL_PROJECT",
     "RECURRING",
+    "NURTURE",
     "LOST",
 )
+
+# Default follow-up window when a contact lands in NURTURE. 4 months
+# is the sweet spot per B2B SaaS literature: honeymoon over, pain
+# vocal, before they're locked-in.
+DEFAULT_FOLLOWUP_MONTHS = 4
 ACTIVE_STAGES = tuple(s for s in STAGES if s != "LOST")
 METRICS = ("NEW_CONTACTS", "EMAILS_SENT", "CALLS_BOOKED", "PILOTS_CLOSED")
 
@@ -138,6 +144,7 @@ STAGE_LABELS = {
     "PILOT":          "Pilot",
     "VERCEL_PROJECT": "Vercel project",
     "RECURRING":      "Recurring",
+    "NURTURE":        "Nurture",
     "LOST":           "Lost",
 }
 
@@ -182,6 +189,7 @@ EMAIL_TRIGGERS = {
     "PROPOSAL":         "Pilot proposal",
     "CHECKIN":          "Mid-pilot check-in",
     "RENEWAL":          "Renewal nudge",
+    "GAP_CHECKIN":      "Gap check-in (after they signed elsewhere)",
 }
 
 ROLES = (
@@ -358,6 +366,7 @@ STAGE_TO_NEXT_TRIGGER = {
     "PILOT":          "CHECKIN",
     "VERCEL_PROJECT": "CHECKIN",
     "RECURRING":      "RENEWAL",
+    "NURTURE":        "GAP_CHECKIN",
     "LOST":           None,
 }
 
@@ -398,6 +407,7 @@ def list_contacts() -> list[dict]:
                    date_emailed, next_date, subject, notes,
                    industry, email_thread, role,
                    hosting_model, engagement_notes, pilot_agreement,
+                   follow_up_date,
                    created_at, updated_at
             FROM crm_contacts
             ORDER BY updated_at DESC
@@ -408,6 +418,7 @@ def list_contacts() -> list[dict]:
                 "next_date", "subject", "notes",
                 "industry", "email_thread", "role",
                 "hosting_model", "engagement_notes", "pilot_agreement",
+                "follow_up_date",
                 "created_at", "updated_at"]
         out = [dict(zip(cols, r)) for r in rows]
         cur.close()
@@ -504,6 +515,19 @@ def change_stage(contact_id: int, new_stage: str) -> bool:
             INSERT INTO crm_stage_events (contact_id, from_stage, to_stage)
             VALUES (%s, %s, %s)
         """, (contact_id, old_stage, new_stage))
+        # When dropping into NURTURE (typically because they signed
+        # elsewhere), seed follow_up_date = today + DEFAULT_FOLLOWUP_MONTHS
+        # unless the user has already set one.
+        if new_stage == "NURTURE":
+            cur.execute("""
+                UPDATE crm_contacts
+                SET follow_up_date = CASE
+                    WHEN follow_up_date IS NULL
+                    THEN (CURRENT_DATE + (%s || ' months')::interval)::date
+                    ELSE follow_up_date
+                END
+                WHERE id = %s
+            """, (DEFAULT_FOLLOWUP_MONTHS, contact_id))
         conn.commit()
         cur.close()
         # A/B attribution: any transition INTO REPLIED counts the
@@ -531,7 +555,8 @@ def update_contact(contact_id: int, *,
                    email_thread: str | None = None,
                    role: str | None = None,
                    hosting_model: str | None = None,
-                   engagement_notes: str | None = None) -> bool:
+                   engagement_notes: str | None = None,
+                   follow_up_date: date | None = None) -> bool:
     """Patch any subset of editable fields. None means 'leave as-is' for
     the scalar fields; pass an explicit empty string to clear text fields
     or 0 to clear money fields."""
@@ -550,6 +575,7 @@ def update_contact(contact_id: int, *,
             ("subject", subject), ("notes", notes),
             ("email_thread", email_thread), ("role", role),
             ("hosting_model", hosting_model),
+            ("follow_up_date", follow_up_date),
             ("engagement_notes", engagement_notes),
         ]:
             if val is not None:
@@ -767,6 +793,20 @@ def delete_prototype(prototype_id: int) -> bool:
 
 
 # ─── Analytics ───────────────────────────────────────────────────────
+def followup_due(contacts: list[dict], today: date | None = None) -> list[dict]:
+    """NURTURE-stage contacts whose follow_up_date is on or before
+    today. Used by the /pipeline dashboard widget so we don't forget
+    to send the gap-checkin."""
+    today = today or date.today()
+    out = []
+    for c in contacts:
+        if (c.get("stage") == "NURTURE"
+                and c.get("follow_up_date")
+                and c["follow_up_date"] <= today):
+            out.append(c)
+    return out
+
+
 def arr_rollup(contacts: list[dict]) -> dict:
     """Top-of-page money summary."""
     booked = sum(c["recurring_value"] or 0 for c in contacts if c["stage"] == "RECURRING")
@@ -3060,6 +3100,69 @@ def send_via_resend(*, to_email: str, subject: str, body: str,
 # Finance since that's the primary funnel today. Add more industries
 # later from the /pipeline/templates UI.
 SEED_TEMPLATES = [
+    # ── GAP_CHECKIN — the "they signed elsewhere" follow-up ───────
+    # Sent ~4 months after they told us they went with a competitor.
+    # Goal: surface specific gaps in their new tool that we can fill
+    # without asking them to switch.
+    dict(
+        industry="Government / Municipal Finance",
+        role="",
+        trigger="GAP_CHECKIN",
+        subject="Quick check — what's still missing?",
+        body=("Hi {first_name},\n\n"
+              "It's been about four months since you went with another vendor "
+              "for the budgeting / contract-tracking piece — long enough that "
+              "the honeymoon's over and the real workflow patterns have "
+              "shown up.\n\n"
+              "I'm not here to pitch you. Most municipal finance teams I talk "
+              "to at this stage have one or two specific things they wish their "
+              "new tool did better — usually around how it connects to the "
+              "rest of the workflow (vendor onboarding, change-order intake, "
+              "reconciliation at month-end).\n\n"
+              "If there's a gap, I build small custom tools that layer onto "
+              "what you already have rather than replacing it. Even a 20-min "
+              "call to hear what's working and what isn't would be useful — "
+              "no pressure either way.\n\n"
+              "{my_name}"),
+    ),
+    dict(
+        industry="Construction",
+        role="",
+        trigger="GAP_CHECKIN",
+        subject="Four months in — what's the new tool still missing?",
+        body=("Hi {first_name},\n\n"
+              "It's been about four months since you went with another vendor "
+              "for the budgeting / job-cost piece. Long enough that the "
+              "honeymoon's over and you know exactly what it does well and "
+              "what it doesn't.\n\n"
+              "I'm not pitching you on switching. Most construction finance "
+              "teams I talk to at this stage have one or two specific things "
+              "they wish the new tool did — usually around change-order "
+              "intake, real-time variance to PM, or how it talks to whatever "
+              "you already had in place.\n\n"
+              "If there's a gap, I build small custom tools that layer onto "
+              "what you already use. Even a 20-min call to hear what's "
+              "working and what isn't would be useful — no pressure either "
+              "way.\n\n"
+              "{my_name}"),
+    ),
+    dict(
+        industry="Real Estate",
+        role="",
+        trigger="GAP_CHECKIN",
+        subject="Four months in — what's the new tool still missing?",
+        body=("Hi {first_name},\n\n"
+              "It's been about four months since you went with another vendor. "
+              "Long enough that you know exactly what's working and where the "
+              "rough edges are.\n\n"
+              "I'm not pitching you on switching. Most teams at this stage "
+              "have one or two specific things they wish the new tool did — "
+              "usually around how it integrates with the rest of the workflow "
+              "rather than the core feature itself.\n\n"
+              "If there's a gap I could fill with a small custom layer on top "
+              "of what you have, I'd love to hear about it. Worth 20 min?\n\n"
+              "{my_name}"),
+    ),
     dict(
         industry="Government / Municipal Finance",
         trigger="INTRO",

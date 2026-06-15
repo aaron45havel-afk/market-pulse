@@ -319,7 +319,7 @@ async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = "
     from crm import (STAGES, METRICS, STAGE_LABELS, METRIC_LABELS,
                      INDUSTRIES, EMAIL_TRIGGERS, ROLES,
                      HOSTING_MODELS, HOSTING_MODEL_LABELS,
-                     list_contacts, arr_rollup, weekly_kpis,
+                     list_contacts, arr_rollup, weekly_kpis, followup_due,
                      get_weekly_goals, iso_week_range,
                      funnel_conversion, trailing_weekly_kpis,
                      goals_completion_stats, arr_path_to_goal)
@@ -360,6 +360,8 @@ async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = "
         "contacts_json": contacts_json,
         "contacts_by_stage": contacts_by_stage,
         "arr": arr_rollup(contacts),
+        "followup_due": followup_due(contacts),
+        "today": today,
         "kpis": weekly_kpis(),
         "goals": get_weekly_goals(),
         "week_start": week_start,
@@ -535,6 +537,7 @@ async def pipeline_update_contact(request: Request):
         role=role_val,
         hosting_model=host_val,
         engagement_notes=(form.get("engagement_notes") or "").strip(),
+        follow_up_date=_date(form.get("follow_up_date")),
     )
     return JSONResponse({"ok": True})
 
