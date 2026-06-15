@@ -519,15 +519,18 @@ def change_stage(contact_id: int, new_stage: str) -> bool:
         # elsewhere), seed follow_up_date = today + DEFAULT_FOLLOWUP_MONTHS
         # unless the user has already set one.
         if new_stage == "NURTURE":
+            import calendar as _calendar
+            today = date.today()
+            tm = today.month + DEFAULT_FOLLOWUP_MONTHS
+            ty = today.year + (tm - 1) // 12
+            tm = ((tm - 1) % 12) + 1
+            td = min(today.day, _calendar.monthrange(ty, tm)[1])
+            new_followup = date(ty, tm, td)
             cur.execute("""
                 UPDATE crm_contacts
-                SET follow_up_date = CASE
-                    WHEN follow_up_date IS NULL
-                    THEN (CURRENT_DATE + (%s || ' months')::interval)::date
-                    ELSE follow_up_date
-                END
+                SET follow_up_date = COALESCE(follow_up_date, %s)
                 WHERE id = %s
-            """, (DEFAULT_FOLLOWUP_MONTHS, contact_id))
+            """, (new_followup, contact_id))
         conn.commit()
         cur.close()
         # A/B attribution: any transition INTO REPLIED counts the
