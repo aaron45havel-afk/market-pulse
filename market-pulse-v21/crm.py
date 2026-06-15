@@ -3163,6 +3163,75 @@ SEED_TEMPLATES = [
               "of what you have, I'd love to hear about it. Worth 20 min?\n\n"
               "{my_name}"),
     ),
+    # ── GAP_CHECKIN Variant B — "specific-claim" angle ────────────
+    # Tests against the empathetic open-ended Variant A. Leads with
+    # a concrete observation about what most tools in this space
+    # don't do, names two specific gaps the prospect can self-check
+    # against, then makes a tight time-bounded ask. Hypothesis:
+    # specificity beats openness for replies because the prospect
+    # can react YES/NO instantly instead of having to articulate
+    # their own gaps.
+    dict(
+        industry="Government / Municipal Finance",
+        role="",
+        trigger="GAP_CHECKIN",
+        variant_label="B",
+        subject="2 things your new tool probably doesn't do",
+        body=("Hi {first_name},\n\n"
+              "Most procurement / contract platforms I see in municipal "
+              "finance do the core thing well — PO tracking, vendor "
+              "management, basic reporting. They almost universally don't "
+              "do two things:\n\n"
+              "1. Surface variance vs encumbrance at the line-item level "
+              "early enough to act, not just at month-close\n"
+              "2. Capture change-order requests out of email threads "
+              "without forcing the PM to enter them in the system\n\n"
+              "If either of those is a gap for you four months in, that's "
+              "exactly the kind of thin custom layer I build on top of "
+              "existing tools — not a replacement, not a long contract.\n\n"
+              "20 minutes if it lands?\n\n"
+              "{my_name}"),
+    ),
+    dict(
+        industry="Construction",
+        role="",
+        trigger="GAP_CHECKIN",
+        variant_label="B",
+        subject="2 things your job-cost tool probably doesn't do",
+        body=("Hi {first_name},\n\n"
+              "Most job-cost tools (Sage 300, Procore, etc.) handle the core "
+              "well — actual costs flow through, AR/AP reconciles. They "
+              "almost universally miss two things:\n\n"
+              "1. Real-time variance per active job that PMs can see, "
+              "not just finance at month-close\n"
+              "2. Change-order intake captured out of email threads and "
+              "texts, not requiring the PM to open the system\n\n"
+              "If either is showing up as a gap four months in, that's the "
+              "kind of thin custom layer I build on top — not a replacement, "
+              "not a long contract.\n\n"
+              "20 minutes if it lands?\n\n"
+              "{my_name}"),
+    ),
+    dict(
+        industry="Real Estate",
+        role="",
+        trigger="GAP_CHECKIN",
+        variant_label="B",
+        subject="2 things your portfolio tool probably doesn't do",
+        body=("Hi {first_name},\n\n"
+              "Most portfolio / asset-management tools handle the core "
+              "well — rent rolls, tenant records, basic financial reports. "
+              "They almost universally miss two things:\n\n"
+              "1. Project-level pro-formas alongside operations data so "
+              "you can see both pictures on one screen\n"
+              "2. Lightweight intake for one-off requests (legal, capital "
+              "spend, vendor exceptions) that don't fit the main flows\n\n"
+              "If either is showing up as a gap four months in, that's the "
+              "kind of thin custom layer I build on top — not a replacement, "
+              "not a long contract.\n\n"
+              "20 minutes if it lands?\n\n"
+              "{my_name}"),
+    ),
     dict(
         industry="Government / Municipal Finance",
         trigger="INTRO",
@@ -3399,25 +3468,26 @@ SEED_TEMPLATES = [
 
 
 def maybe_seed_templates() -> int:
-    """Idempotent at the (industry, role, trigger) level: inserts any
-    seed template not already in the DB. Existing rows are left alone
-    so user-edited copy doesn't get overwritten. Called once at app
-    start, after init_db."""
+    """Idempotent at the (industry, role, trigger, variant_label) level:
+    inserts any seed template not already in the DB. Existing rows are
+    left alone so user-edited copy doesn't get overwritten. Called once
+    at app start, after init_db."""
     conn = _get_conn()
     if not conn:
         return 0
-    existing: set[tuple[str, str, str]] = set()
+    existing: set[tuple[str, str, str, str]] = set()
     try:
         cur = conn.cursor()
-        cur.execute("SELECT industry, role, trigger FROM crm_email_templates")
-        existing = {(r[0], r[1] or "", r[2]) for r in cur.fetchall()}
+        cur.execute("SELECT industry, role, trigger, variant_label FROM crm_email_templates")
+        existing = {(r[0], r[1] or "", r[2], r[3] or "A") for r in cur.fetchall()}
         cur.close()
     finally:
         conn.close()
 
     inserted = 0
     for t in SEED_TEMPLATES:
-        key = (t.get("industry"), t.get("role", "") or "", t.get("trigger"))
+        key = (t.get("industry"), t.get("role", "") or "", t.get("trigger"),
+               (t.get("variant_label") or "A"))
         if key in existing:
             continue
         try:
