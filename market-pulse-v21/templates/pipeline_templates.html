@@ -74,6 +74,12 @@
           {% endfor %}
         </select>
       </label>
+      <label>Variant <span style="color:var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0;">(blank = auto next letter)</span>
+        <select name="variant_label">
+          <option value="">— auto —</option>
+          {% for v in ['A','B','C','D','E','F'] %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
+        </select>
+      </label>
     </div>
     <div class="row">
       <label style="flex:1 0 100%;">Subject
@@ -137,8 +143,10 @@
         <table class="tpl-table">
           <thead>
             <tr>
-              <th style="width:130px;">Role</th>
-              <th style="width:130px;">Trigger</th>
+              <th style="width:80px;">Role</th>
+              <th style="width:115px;">Trigger</th>
+              <th style="width:62px;">Variant</th>
+              <th style="width:110px;">Perf</th>
               <th>Subject</th>
               <th>Body</th>
               <th style="width:60px;"></th>
@@ -160,10 +168,26 @@
           {% endif %}
         </td>
         <td><strong>{{ t.trigger }}</strong><br><span style="font-size:0.7rem; color:var(--text-dim);">{{ email_triggers.get(t.trigger, '') }}</span></td>
+        <td>
+          <span style="display:inline-block; padding:2px 8px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:99px; font-size:0.78rem; font-weight:700;">{{ t.variant_label or 'A' }}</span>
+        </td>
+        <td style="font-size:0.74rem;">
+          {% set sends = (t.sends_count or 0) %}
+          {% set replies = (t.replies_count or 0) %}
+          {% if sends %}
+            {% set rate = (100.0 * replies / sends) | round(1) %}
+            <strong style="color:{% if rate >= 25 %}var(--accent){% elif rate >= 10 %}var(--yellow){% else %}#ef4444{% endif %};">{{ rate }}%</strong>
+            <br><span style="color:var(--text-dim);">{{ replies }} / {{ sends }}</span>
+          {% else %}
+            <span style="color:var(--text-dim);">no sends</span>
+          {% endif %}
+        </td>
         <td style="max-width:240px;">{{ t.subject }}</td>
         <td class="body-cell">{{ t.body }}</td>
         <td class="tpl-actions">
-          <form method="post" action="/pipeline/template/delete" onsubmit="return confirm('Delete this template?');">
+          {% if loop.first or t.industry != ns.prev_industry %}{% endif %}
+          <button type="button" onclick="abAnalyze('{{ t.industry|e }}', '{{ (t.role or '')|e }}', '{{ t.trigger|e }}')" title="Analyze A/B + suggest next variant" style="margin-bottom:3px;">🤖 AI</button>
+          <form method="post" action="/pipeline/template/delete" onsubmit="return confirm('Delete this variant?');">
             <input type="hidden" name="template_id" value="{{ t.id }}">
             <button type="submit">delete</button>
           </form>
@@ -218,5 +242,93 @@
   });
   apply();
 })();
+
+// ── A/B AI analysis modal ─────────────────────────────────────────
+let _abCtx = null;
+async function abAnalyze(industry, role, trigger) {
+  _abCtx = { industry, role, trigger };
+  const bg = document.getElementById('abModalBg');
+  document.getElementById('abModalTitle').textContent =
+    `🤖 A/B analysis — ${industry} · ${role || '(any role)'} · ${trigger}`;
+  document.getElementById('abAnalysisOut').innerHTML =
+    '<div style="color:var(--text-dim); font-size:0.85rem;">Asking Claude to analyze the variants…</div>';
+  document.getElementById('abSuggestSubject').value = '';
+  document.getElementById('abSuggestBody').value = '';
+  document.getElementById('abAcceptBtn').style.display = 'none';
+  bg.classList.add('show');
+  try {
+    const r = await fetch('/api/pipeline/ab/analyze', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ industry, role, trigger }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+    const md = (data.analysis_md || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    document.getElementById('abAnalysisOut').innerHTML =
+      `<pre style="white-space:pre-wrap; font-family:inherit; font-size:0.85rem; line-height:1.55; margin:0;">${md}</pre>`;
+    if (data.next_variant_subject || data.next_variant_body) {
+      document.getElementById('abSuggestSubject').value = data.next_variant_subject || '';
+      document.getElementById('abSuggestBody').value    = data.next_variant_body    || '';
+      document.getElementById('abAcceptLabel').textContent =
+        `Accept as variant ${data.next_variant_label}`;
+      document.getElementById('abAcceptBtn').style.display = '';
+      _abCtx.next_label = data.next_variant_label;
+    }
+  } catch (e) {
+    document.getElementById('abAnalysisOut').innerHTML =
+      '<div style="color:#ef4444; font-size:0.85rem;">Failed: ' + (e.message || e) + '</div>';
+  }
+}
+async function abAcceptSuggested() {
+  if (!_abCtx) return;
+  const subject = document.getElementById('abSuggestSubject').value.trim();
+  const body    = document.getElementById('abSuggestBody').value.trim();
+  if (!subject || !body) { alert('Need subject and body.'); return; }
+  try {
+    const r = await fetch('/api/pipeline/ab/accept-variant', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        industry: _abCtx.industry, role: _abCtx.role, trigger: _abCtx.trigger,
+        subject, body,
+        variant_label: _abCtx.next_label,
+      }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+    location.reload();
+  } catch (e) { alert('Save failed: ' + (e.message || e)); }
+}
+function abClose() { document.getElementById('abModalBg').classList.remove('show'); }
 </script>
+
+<!-- ── A/B AI analysis modal ──────────────────────────────────────── -->
+<div id="abModalBg" class="modal-bg" onclick="if(event.target===this) abClose();" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:200; align-items:center; justify-content:center; padding:1rem;">
+  <div class="modal" style="background:var(--surface); border:1px solid var(--border); border-radius:10px; max-width:780px; width:100%; max-height:92vh; overflow-y:auto; padding:1rem 1.1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem; flex-wrap:wrap;">
+      <h3 id="abModalTitle" style="margin:0; font-size:1.02rem;">🤖 A/B analysis</h3>
+      <button onclick="abClose()" style="background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:0.3rem 0.7rem; border-radius:5px; cursor:pointer; font-size:0.78rem;">Close</button>
+    </div>
+    <div id="abAnalysisOut" style="margin-top:0.7rem; padding:0.6rem 0.8rem; background:var(--surface2); border:1px solid var(--border); border-radius:6px; max-height:340px; overflow-y:auto;"></div>
+
+    <div style="margin-top:0.85rem;">
+      <div style="font-size:0.72rem; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.3rem;">Suggested next variant</div>
+      <label style="display:block; font-size:0.7rem; color:var(--text-dim); font-weight:600;">Subject</label>
+      <input id="abSuggestSubject" type="text"
+             style="width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.55rem; color:var(--text); font-size:0.88rem; font-family:inherit; margin-top:3px;">
+      <label style="display:block; font-size:0.7rem; color:var(--text-dim); font-weight:600; margin-top:0.5rem;">Body</label>
+      <textarea id="abSuggestBody"
+                style="width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.55rem; color:var(--text); font-size:0.85rem; min-height:200px; resize:vertical; line-height:1.5; font-family:inherit; margin-top:3px;"></textarea>
+      <div style="margin-top:0.55rem;">
+        <button id="abAcceptBtn" onclick="abAcceptSuggested()" style="background:var(--accent2); color:white; border:none; padding:0.45rem 1rem; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.85rem; display:none;">
+          <span id="abAcceptLabel">Accept as next variant</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+  .modal-bg.show { display:flex !important; }
+</style>
 {% endblock %}

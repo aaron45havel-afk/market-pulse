@@ -892,6 +892,18 @@ async function openEmailModal(contactId) {
       data.industry ? data.industry : 'No industry';
     document.getElementById('emailStage').textContent =
       data.stage ? `Stage: ${data.stage}` : '';
+    // Variant badge — shows which A/B variant the bandit picked.
+    let variantBadge = document.getElementById('emailVariant');
+    if (!variantBadge) {
+      variantBadge = document.createElement('span');
+      variantBadge.id = 'emailVariant';
+      variantBadge.className = 'pill';
+      variantBadge.style.cssText = 'background:rgba(99,102,241,0.14); color:var(--accent2); font-weight:700;';
+      document.getElementById('emailStage').after(variantBadge);
+    }
+    variantBadge.textContent = data.variant_label
+      ? `Variant ${data.variant_label}` : '';
+    variantBadge.style.display = data.variant_label ? '' : 'none';
     document.getElementById('emailSubject').value = data.subject || '';
     document.getElementById('emailBody').value = data.body || '';
 
@@ -1277,6 +1289,7 @@ async function sendEmailViaResend() {
         contact_id: _emailCtx.contact_id,
         subject, body,
         scheduled_at: schedIso,
+        template_id: _emailCtx.template_id || null,
       }),
     });
     const data = await r.json();
