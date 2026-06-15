@@ -229,6 +229,63 @@ def init_db():
             ALTER TABLE crm_working_sessions
             ADD COLUMN IF NOT EXISTS iteration_design_prompt TEXT
         """)
+        # A/B testing — multiple subject/body variants per (industry,
+        # role, trigger). The existing UNIQUE(industry, role, trigger)
+        # constraint gets dropped and replaced with (industry, role,
+        # trigger, variant_label) so we can store A, B, C, ... per
+        # template. Existing rows backfill to variant_label='A'.
+        cur.execute("""
+            ALTER TABLE crm_email_templates
+            ADD COLUMN IF NOT EXISTS variant_label VARCHAR(8) NOT NULL DEFAULT 'A'
+        """)
+        cur.execute("""
+            ALTER TABLE crm_email_templates
+            ADD COLUMN IF NOT EXISTS variant_status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE'
+        """)
+        cur.execute("""
+            ALTER TABLE crm_email_templates
+            ADD COLUMN IF NOT EXISTS sends_count INTEGER NOT NULL DEFAULT 0
+        """)
+        cur.execute("""
+            ALTER TABLE crm_email_templates
+            ADD COLUMN IF NOT EXISTS replies_count INTEGER NOT NULL DEFAULT 0
+        """)
+        cur.execute("""
+            ALTER TABLE crm_email_templates
+            DROP CONSTRAINT IF EXISTS crm_email_templates_industry_role_trigger_key
+        """)
+        cur.execute("""
+            DO $$ BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint
+                    WHERE conname = 'crm_email_templates_irtv_key'
+                ) THEN
+                    ALTER TABLE crm_email_templates
+                    ADD CONSTRAINT crm_email_templates_irtv_key
+                    UNIQUE (industry, role, trigger, variant_label);
+                END IF;
+            END $$;
+        """)
+        # Send-level log so we can attribute replies back to the
+        # specific variant. One row per attempted send.
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS crm_email_sends (
+                id              SERIAL PRIMARY KEY,
+                contact_id      INTEGER NOT NULL REFERENCES crm_contacts(id) ON DELETE CASCADE,
+                template_id     INTEGER REFERENCES crm_email_templates(id) ON DELETE SET NULL,
+                sent_at         TIMESTAMP DEFAULT NOW(),
+                replied         BOOLEAN NOT NULL DEFAULT FALSE,
+                replied_at      TIMESTAMP
+            )
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS crm_email_sends_contact_idx
+            ON crm_email_sends(contact_id)
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS crm_email_sends_template_idx
+            ON crm_email_sends(template_id)
+        """)
         # Role enum on contact + templates. Templates can now be keyed
         # on (industry, role, trigger) — empty role acts as "any role"
         # fallback. Drop the old (industry, trigger) unique constraint

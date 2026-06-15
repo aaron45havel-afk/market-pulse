@@ -1056,6 +1056,7 @@ async def pipeline_save_template(request: Request):
         trigger=(form.get("trigger") or "").strip(),
         subject=(form.get("subject") or "").strip(),
         body=(form.get("body") or "").strip(),
+        variant_label=(form.get("variant_label") or "").strip() or None,
     )
     return RedirectResponse("/pipeline/templates", status_code=303)
 
@@ -1335,12 +1336,17 @@ async def api_pipeline_send_email(request: Request):
     subject = (body.get("subject") or "").strip()
     body_text = (body.get("body") or "").strip()
     scheduled_at = (body.get("scheduled_at") or "").strip() or None
+    try:
+        template_id = int(body.get("template_id") or 0) or None
+    except (TypeError, ValueError):
+        template_id = None
     if not contact_id or not subject or not body_text:
         return JSONResponse({"error": "missing contact_id / subject / body"},
                             status_code=400)
 
     from crm import (list_contacts, send_via_resend, update_contact,
-                     change_stage, resend_configured, SENDER_NAME)
+                     change_stage, resend_configured, SENDER_NAME,
+                     record_email_send)
     if not resend_configured():
         return JSONResponse({"error": "RESEND_API_KEY not set"}, status_code=400)
 
@@ -1385,6 +1391,9 @@ async def api_pipeline_send_email(request: Request):
     )
     if (contact.get("stage") or "") == "QUEUED":
         change_stage(contact_id, "CONTACTED")
+    # A/B: record the send keyed to the variant used, so a future
+    # transition into REPLIED can be attributed to this variant.
+    record_email_send(contact_id, template_id)
 
     return JSONResponse({
         "ok": True,
@@ -1392,6 +1401,63 @@ async def api_pipeline_send_email(request: Request):
         "scheduled_at": scheduled_at or "",
         "stage_advanced": (contact.get("stage") or "") == "QUEUED",
     })
+
+
+@app.get("/api/pipeline/ab/stats")
+async def api_ab_stats(request: Request):
+    """A/B testing stats — grouped by (industry, role, trigger).
+    Backs the Templates page Performance section."""
+    if not _check_pipeline_access(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import variant_stats_grouped
+    return JSONResponse({"groups": variant_stats_grouped()})
+
+
+@app.post("/api/pipeline/ab/analyze")
+async def api_ab_analyze(request: Request):
+    """Run Claude on a specific (industry, role, trigger) group's
+    stats. Returns markdown analysis + a parsed next-variant suggestion."""
+    if not _check_pipeline_access(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import ab_analyze_group
+    body = await request.json()
+    industry = (body.get("industry") or "").strip()
+    role     = (body.get("role") or "").strip()
+    trigger  = (body.get("trigger") or "").strip()
+    if not industry or not trigger:
+        return JSONResponse({"error": "industry + trigger required"},
+                            status_code=400)
+    try:
+        result = ab_analyze_group(industry, role, trigger)
+        return JSONResponse({"ok": True, **result})
+    except RuntimeError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except Exception as e:
+        logger.exception("ab analyze failed")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/pipeline/ab/accept-variant")
+async def api_ab_accept_variant(request: Request):
+    """Persist the AI-suggested next variant as a new ACTIVE template."""
+    if not _check_pipeline_access(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from crm import upsert_template
+    body = await request.json()
+    industry = (body.get("industry") or "").strip()
+    role     = (body.get("role") or "").strip()
+    trigger  = (body.get("trigger") or "").strip()
+    subject  = (body.get("subject") or "").strip()
+    body_text = (body.get("body") or "").strip()
+    variant_label = (body.get("variant_label") or "").strip()
+    if not industry or not trigger or not subject or not body_text:
+        return JSONResponse({"error": "missing required fields"}, status_code=400)
+    ok = upsert_template(industry=industry, role=role, trigger=trigger,
+                         subject=subject, body=body_text,
+                         variant_label=variant_label or None)
+    if not ok:
+        return JSONResponse({"error": "save failed"}, status_code=400)
+    return JSONResponse({"ok": True})
 
 
 def _parse_iso_date(s: str, default):

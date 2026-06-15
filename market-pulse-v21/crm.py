@@ -506,6 +506,14 @@ def change_stage(contact_id: int, new_stage: str) -> bool:
         """, (contact_id, old_stage, new_stage))
         conn.commit()
         cur.close()
+        # A/B attribution: any transition INTO REPLIED counts the
+        # most recent send for this contact as a win.
+        if new_stage == "REPLIED":
+            try:
+                attribute_reply_to_latest_send(contact_id)
+            except Exception as e:
+                logger.warning("A/B reply attribution failed for contact %d: %s",
+                               contact_id, e)
         return True
     finally:
         conn.close()
@@ -1105,6 +1113,8 @@ def set_contact_industry(contact_id: int, industry: str | None) -> bool:
 
 # ─── Email templates ────────────────────────────────────────────────
 def list_templates() -> list[dict]:
+    """All template VARIANTS (one row per A/B/C variant). Sorted so
+    that the templates UI can group cleanly."""
     conn = _get_conn()
     if not conn:
         return []
@@ -1112,12 +1122,16 @@ def list_templates() -> list[dict]:
         cur = conn.cursor()
         cur.execute("""
             SELECT id, industry, role, trigger, subject, body,
+                   variant_label, variant_status,
+                   sends_count, replies_count,
                    created_at, updated_at
             FROM crm_email_templates
-            ORDER BY industry, role, trigger
+            ORDER BY industry, role, trigger, variant_label
         """)
         rows = cur.fetchall()
         cols = ["id", "industry", "role", "trigger", "subject", "body",
+                "variant_label", "variant_status",
+                "sends_count", "replies_count",
                 "created_at", "updated_at"]
         out = [dict(zip(cols, r)) for r in rows]
         cur.close()
@@ -1126,52 +1140,96 @@ def list_templates() -> list[dict]:
         conn.close()
 
 
-def get_template(industry: str, trigger: str,
-                 role: str | None = None) -> dict | None:
-    """Most-specific-wins lookup with role fallback.
-    1) (industry, role, trigger)
-    2) (industry, '',   trigger) — any-role default
-    Returns the first hit or None."""
+def _list_variants_for(industry: str, role: str, trigger: str) -> list[dict]:
+    """All ACTIVE variants for a triple. Used by the bandit picker."""
     conn = _get_conn()
     if not conn:
-        return None
-    cols = ["id", "industry", "role", "trigger", "subject", "body"]
+        return []
     try:
         cur = conn.cursor()
-        if role:
-            cur.execute("""
-                SELECT id, industry, role, trigger, subject, body
-                FROM crm_email_templates
-                WHERE industry = %s AND role = %s AND trigger = %s
-            """, (industry, role, trigger))
-            row = cur.fetchone()
-            if row:
-                cur.close()
-                return dict(zip(cols, row))
         cur.execute("""
-            SELECT id, industry, role, trigger, subject, body
+            SELECT id, industry, role, trigger, subject, body,
+                   variant_label, sends_count, replies_count
             FROM crm_email_templates
-            WHERE industry = %s AND role = '' AND trigger = %s
-        """, (industry, trigger))
-        row = cur.fetchone()
+            WHERE industry = %s AND role = %s AND trigger = %s
+              AND variant_status = 'ACTIVE'
+            ORDER BY variant_label
+        """, (industry, role, trigger))
+        rows = cur.fetchall()
+        cols = ["id", "industry", "role", "trigger", "subject", "body",
+                "variant_label", "sends_count", "replies_count"]
+        out = [dict(zip(cols, r)) for r in rows]
         cur.close()
-        if not row:
-            return None
-        return dict(zip(cols, row))
+        return out
     finally:
         conn.close()
 
 
+def _next_variant_label(industry: str, role: str, trigger: str) -> str:
+    """Return the next free variant label (A, B, C, ...) for this triple."""
+    used = {v["variant_label"] for v in _list_variants_for(industry, role, trigger)}
+    for ch in "ABCDEFGHIJKLMNOP":
+        if ch not in used:
+            return ch
+    return "Z"
+
+
+def _thompson_pick(variants: list[dict]) -> dict | None:
+    """Multi-armed bandit: pick one variant via Thompson sampling on
+    Beta(replies + 1, non-replies + 1). Naturally exploits the leader
+    while still exploring weaker variants when their data is sparse."""
+    import random as _random
+    if not variants:
+        return None
+    if len(variants) == 1:
+        return variants[0]
+    best, best_score = None, -1.0
+    for v in variants:
+        wins = max(0, int(v.get("replies_count", 0) or 0))
+        losses = max(0, int(v.get("sends_count", 0) or 0) - wins)
+        score = _random.betavariate(wins + 1, losses + 1)
+        if score > best_score:
+            best_score = score
+            best = v
+    return best
+
+
+def get_template(industry: str, trigger: str,
+                 role: str | None = None) -> dict | None:
+    """Most-specific-wins lookup with role fallback. When multiple
+    ACTIVE variants exist for the matched triple, returns one picked
+    via the multi-armed bandit. Returns dict with `variant_label` so
+    the caller can record which variant was sent.
+
+    Fallback order:
+      1) (industry, role, trigger)            — bandit-picked across variants
+      2) (industry, '',   trigger)            — any-role default, same bandit
+      3) None
+    """
+    if role:
+        variants = _list_variants_for(industry, role, trigger)
+        if variants:
+            return _thompson_pick(variants)
+    variants = _list_variants_for(industry, "", trigger)
+    if variants:
+        return _thompson_pick(variants)
+    return None
+
+
 def upsert_template(*, industry: str, trigger: str,
                     subject: str, body: str,
-                    role: str | None = None) -> bool:
-    """Upsert a template. Empty/None role acts as the industry-wide
-    default that's used when a contact's role doesn't match anything
-    more specific."""
+                    role: str | None = None,
+                    variant_label: str | None = None) -> bool:
+    """Upsert a template variant. If variant_label is omitted, we
+    either UPDATE the existing default variant 'A' or INSERT a new
+    one with the next free label."""
     if industry not in INDUSTRIES or trigger not in EMAIL_TRIGGERS:
         return False
     role = (role or "").strip()
     if role and role not in ROLES:
+        return False
+    variant_label = (variant_label or "").strip().upper() or _next_variant_label(industry, role, trigger)
+    if variant_label not in list("ABCDEFGHIJKLMNOP"):
         return False
     conn = _get_conn()
     if not conn:
@@ -1180,18 +1238,233 @@ def upsert_template(*, industry: str, trigger: str,
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO crm_email_templates
-              (industry, role, trigger, subject, body)
-            VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (industry, role, trigger) DO UPDATE
+              (industry, role, trigger, subject, body, variant_label)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (industry, role, trigger, variant_label) DO UPDATE
               SET subject = EXCLUDED.subject,
                   body    = EXCLUDED.body,
                   updated_at = NOW()
-        """, (industry, role, trigger, subject, body))
+        """, (industry, role, trigger, subject, body, variant_label))
         conn.commit()
         cur.close()
         return True
     finally:
         conn.close()
+
+
+# ─── Send tracking + win attribution ─────────────────────────────────
+def record_email_send(contact_id: int, template_id: int | None) -> int | None:
+    """Log a send. Increments the variant's sends_count."""
+    if not contact_id:
+        return None
+    conn = _get_conn()
+    if not conn:
+        return None
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO crm_email_sends (contact_id, template_id)
+            VALUES (%s, %s)
+            RETURNING id
+        """, (contact_id, template_id))
+        send_id = cur.fetchone()[0]
+        if template_id:
+            cur.execute("""
+                UPDATE crm_email_templates
+                SET sends_count = sends_count + 1
+                WHERE id = %s
+            """, (template_id,))
+        conn.commit()
+        cur.close()
+        return send_id
+    finally:
+        conn.close()
+
+
+def attribute_reply_to_latest_send(contact_id: int) -> bool:
+    """Called when a contact moves into REPLIED stage. Marks the most
+    recent un-replied send as `replied`, and bumps the variant's
+    replies_count. Idempotent — re-running doesn't double-count."""
+    if not contact_id:
+        return False
+    conn = _get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, template_id
+            FROM crm_email_sends
+            WHERE contact_id = %s AND replied = FALSE
+            ORDER BY sent_at DESC
+            LIMIT 1
+        """, (contact_id,))
+        row = cur.fetchone()
+        if not row:
+            cur.close()
+            return False
+        send_id, template_id = row
+        cur.execute("""
+            UPDATE crm_email_sends
+            SET replied = TRUE, replied_at = NOW()
+            WHERE id = %s
+        """, (send_id,))
+        if template_id:
+            cur.execute("""
+                UPDATE crm_email_templates
+                SET replies_count = replies_count + 1
+                WHERE id = %s
+            """, (template_id,))
+        conn.commit()
+        cur.close()
+        return True
+    finally:
+        conn.close()
+
+
+def variant_stats_grouped() -> list[dict]:
+    """Roll up A/B variant performance by (industry, role, trigger).
+    Returns one dict per (industry, role, trigger) with a list of its
+    variants and aggregate stats. Used by the templates page."""
+    templates = list_templates()
+    groups: dict[tuple, dict] = {}
+    for t in templates:
+        key = (t["industry"], t["role"] or "", t["trigger"])
+        g = groups.setdefault(key, {
+            "industry": key[0], "role": key[1], "trigger": key[2],
+            "variants": [],
+            "total_sends": 0, "total_replies": 0,
+        })
+        sends = int(t.get("sends_count") or 0)
+        replies = int(t.get("replies_count") or 0)
+        rate = round(100 * replies / sends, 1) if sends else None
+        g["variants"].append({**t, "reply_rate": rate})
+        g["total_sends"] += sends
+        g["total_replies"] += replies
+    out = list(groups.values())
+    for g in out:
+        g["total_rate"] = round(100 * g["total_replies"] / g["total_sends"], 1) if g["total_sends"] else None
+    return out
+
+
+# ─── A/B AI analysis & variant generation ────────────────────────────
+AB_ANALYSIS_PROMPT = '''You are a senior B2B copywriter analyzing an A/B test result.
+
+GROUP: {industry} · {role} · {trigger}
+TOTAL SENDS: {total_sends}
+TOTAL REPLIES: {total_replies}  ({total_rate}% reply rate)
+
+VARIANTS:
+{variants_block}
+
+Output two sections:
+
+# Analysis (~80 words)
+
+Which variant is winning and by how much? Why — what specifically in the copy (hook, angle, length, CTA, tone) is driving the difference? If sample size is too small to be confident, say so explicitly ("under 20 sends per variant, not yet meaningful").
+
+# Suggested next variant (Variant {next_label})
+
+Generate one NEW variant that takes the winning variant's strongest element and pushes it further OR tests a clear alternative angle. Output in this exact format:
+
+Subject: <subject line>
+
+<body — use the same template placeholder tokens the existing variants use: {{first_name}}, {{name}}, {{title}}, {{agency}}, {{my_name}}>
+
+RULES:
+- Don't copy an existing variant verbatim.
+- Keep the same target persona and industry hooks.
+- One concrete hypothesis you're testing in the new variant — call it out in the Analysis section.
+'''
+
+
+def ab_analyze_group(industry: str, role: str, trigger: str) -> dict:
+    """Run Claude against the A/B stats for a group. Returns dict
+    with `analysis_md` (string) + `next_variant_subject` + `next_variant_body`
+    parsed from the response. Caller decides whether to auto-create
+    the new variant or just show the suggestion."""
+    variants = sorted(_list_variants_for_inactive_too(industry, role, trigger),
+                      key=lambda v: v["variant_label"])
+    if not variants:
+        raise RuntimeError("No variants exist for this group yet.")
+    total_sends = sum(int(v.get("sends_count") or 0) for v in variants)
+    total_replies = sum(int(v.get("replies_count") or 0) for v in variants)
+    total_rate = round(100 * total_replies / total_sends, 1) if total_sends else 0
+
+    def _fmt_v(v):
+        sends = int(v.get("sends_count") or 0)
+        replies = int(v.get("replies_count") or 0)
+        rate = f"{round(100 * replies / sends, 1)}%" if sends else "—"
+        return (
+            f"## Variant {v['variant_label']}  ({sends} sends · {replies} replies · {rate})\n"
+            f"Subject: {v['subject']}\n\n"
+            f"{v['body']}\n"
+        )
+    variants_block = "\n---\n".join(_fmt_v(v) for v in variants)
+    next_label = _next_variant_label(industry, role, trigger)
+    prompt = (AB_ANALYSIS_PROMPT
+              .replace("{industry}", industry)
+              .replace("{role}", role or "(any)")
+              .replace("{trigger}", trigger)
+              .replace("{total_sends}", str(total_sends))
+              .replace("{total_replies}", str(total_replies))
+              .replace("{total_rate}", str(total_rate))
+              .replace("{variants_block}", variants_block)
+              .replace("{next_label}", next_label))
+    reply = call_claude(prompt, max_tokens=2048)
+    next_subject, next_body = _parse_suggested_variant(reply)
+    return {
+        "analysis_md":         reply,
+        "next_variant_label":  next_label,
+        "next_variant_subject": next_subject,
+        "next_variant_body":    next_body,
+    }
+
+
+def _list_variants_for_inactive_too(industry: str, role: str, trigger: str) -> list[dict]:
+    """Same as _list_variants_for but includes PAUSED + RETIRED variants
+    so the analysis prompt has full history."""
+    conn = _get_conn()
+    if not conn:
+        return []
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, industry, role, trigger, subject, body,
+                   variant_label, variant_status,
+                   sends_count, replies_count
+            FROM crm_email_templates
+            WHERE industry = %s AND role = %s AND trigger = %s
+            ORDER BY variant_label
+        """, (industry, role, trigger))
+        rows = cur.fetchall()
+        cols = ["id", "industry", "role", "trigger", "subject", "body",
+                "variant_label", "variant_status",
+                "sends_count", "replies_count"]
+        out = [dict(zip(cols, r)) for r in rows]
+        cur.close()
+        return out
+    finally:
+        conn.close()
+
+
+def _parse_suggested_variant(reply: str) -> tuple[str, str]:
+    """Find the suggested-variant block in Claude's reply. We look for
+    a `Subject:` line followed by body text. Returns (subject, body)
+    or ("", "") if it doesn't parse cleanly."""
+    import re as _re
+    if not reply:
+        return "", ""
+    # Find the first "Subject:" line. Everything after it (until end
+    # of message or a closing fence) is the body.
+    m = _re.search(r"(?im)^Subject:\s*(.+?)\s*\n+([\s\S]+?)\Z", reply)
+    if not m:
+        return "", ""
+    subject = m.group(1).strip()
+    body = m.group(2).strip()
+    # Trim trailing markdown / explanation that isn't part of the body.
+    body = _re.split(r"\n#{1,6}\s", body, maxsplit=1)[0].strip()
+    return subject, body
 
 
 def delete_template(template_id: int) -> bool:
@@ -1347,6 +1620,8 @@ def suggest_email_for_contact(contact: dict) -> dict:
         "trigger_label":    EMAIL_TRIGGERS.get(trigger, ""),
         "industry":         template.get("industry"),
         "role":             template.get("role") or "",
+        "template_id":      template.get("id"),
+        "variant_label":    template.get("variant_label") or "",
         "has_template":     True,
         "fallback_industry": fallback_industry,
         "fallback_role":    fallback_role,
