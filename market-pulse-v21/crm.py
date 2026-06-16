@@ -1822,6 +1822,128 @@ DISCOVERY_AGENDA = [
     },
 ]
 
+# ── Persona library (curated typical topics per industry × role) ─
+# Hand-curated. Keep entries tight — these get inlined into the
+# gap-analysis prompt and bloat will hurt the AI's signal/noise.
+# Add new personas as new industries / roles enter the funnel.
+PERSONA_LIBRARY = {
+    ("Government / Municipal Finance", "CFO"): {
+        "typical_topics": [
+            "Council / board presentation cycle and how budget data flows in",
+            "Year-end close and audit prep (single audit, GFOA cert)",
+            "Capital budget vs operating budget split + capital-project tracking",
+            "ERP transitions or legacy ERP pain (Tyler / Munis / OpenGov / etc.)",
+            "Restricted vs unrestricted fund accounting concerns",
+            "Vendor onboarding bottleneck (procurement bandwidth)",
+            "Staff turnover + institutional-knowledge loss",
+            "Public-records / transparency requests pulling staff time",
+        ],
+        "typical_unspoken_pains": [
+            "Manual reconciliation between procurement and GL",
+            "Quiet anxiety about audit findings",
+            "Dependency on one or two senior staff who 'know the system'",
+        ],
+    },
+    ("Government / Municipal Finance", "Finance Director"): {
+        "typical_topics": [
+            "Day-to-day reconciliation and month-end close",
+            "Department head requests for ad-hoc reports",
+            "Restricted / grant fund tracking and compliance",
+            "Working with the procurement function on RFPs and contracts",
+            "Reporting up to the CFO / Council with consistent numbers",
+            "Tools that don't talk to each other (Excel-as-glue)",
+        ],
+        "typical_unspoken_pains": [
+            "Late nights at month-end because of manual data wrangling",
+            "Fear of a number being wrong in a public document",
+        ],
+    },
+    ("Government / Municipal Finance", "Clerk-Treasurer"): {
+        "typical_topics": [
+            "Small-city generalist workload (finance + records + meetings)",
+            "Bank reconciliation and basic bookkeeping",
+            "Board reporting / meeting minutes turnaround",
+            "Vendor payments and AP processing",
+            "State reporting compliance (annual reports)",
+        ],
+        "typical_unspoken_pains": [
+            "No backup if they're out sick — entire finance function pauses",
+            "Doing things manually because no time to evaluate new tools",
+        ],
+    },
+    ("Construction", "CFO"): {
+        "typical_topics": [
+            "Job-cost variance + percentage-of-completion accounting",
+            "WIP (work-in-progress) schedule and how often it's updated",
+            "Retainage tracking — receivable from owner, payable to subs",
+            "Surety bonding capacity and what the surety needs to see",
+            "Lender / bank reporting cadence",
+            "Joint venture accounting if they do JVs",
+            "Equipment depreciation + cost allocation to jobs",
+        ],
+        "typical_unspoken_pains": [
+            "Real-time vs month-close gap on job profitability",
+            "Subcontractor lien risk if AP gets sloppy",
+        ],
+    },
+    ("Construction", "Project Manager"): {
+        "typical_topics": [
+            "Change-order intake — capture out of email/text threads",
+            "Daily field reports + photos",
+            "Subcontractor management — RFIs, submittals, schedules",
+            "Schedule slippage detection and recovery",
+            "Owner / client communication cadence",
+            "Field-to-office data flow (timesheets, deliveries, equipment)",
+        ],
+        "typical_unspoken_pains": [
+            "Lost change orders because nothing systemic captures them",
+            "PM acting as a tracking layer between the field and accounting",
+        ],
+    },
+    ("Construction", "Operations"): {
+        "typical_topics": [
+            "Resource allocation across active jobs",
+            "Equipment utilization tracking",
+            "Schedule consolidation across PMs",
+            "Safety reporting + OSHA compliance",
+            "Certified payroll / prevailing wage on public jobs",
+            "Crew planning and labor cost allocation",
+        ],
+        "typical_unspoken_pains": [
+            "Wasted equipment time invisible until month-end report",
+            "Schedule conflicts surfacing too late",
+        ],
+    },
+    ("Real Estate", "CFO"): {
+        "typical_topics": [
+            "Pro-forma vs actual at the asset level",
+            "Debt service coverage ratios + lender reporting",
+            "NOI and same-store NOI tracking",
+            "Capex budgeting and unit-turn cost forecasting",
+            "Joint-venture allocations and waterfall math",
+        ],
+        "typical_unspoken_pains": [
+            "Operations data and finance data living in separate systems",
+            "Investor reporting eating week of every quarter",
+        ],
+    },
+    ("Architecture & Engineering", "Controller"): {
+        "typical_topics": [
+            "Utilization tracking (billable vs non-billable hours)",
+            "Project margin at the active-project level",
+            "Fee burn vs schedule",
+            "Scope creep / out-of-scope hours tracking",
+            "Subconsultant management and pass-through billing",
+            "Project setup / WBS conventions",
+        ],
+        "typical_unspoken_pains": [
+            "Underwater projects discovered at close-out, not in flight",
+            "Principals' time eaten by reporting instead of design",
+        ],
+    },
+}
+
+
 # Stage-1 extraction. Output JSON schema chosen to make every
 # downstream artifact reliable (every claim cites a field). Anything
 # implied but not stated lands in assumptions[] so we never hallucinate.
@@ -1888,6 +2010,49 @@ EXTRACTION:
 {extraction_json}
 
 Return the 5 sentences only, numbered. No preamble.'''
+
+DISCOVERY_PROMPT_GAP_ANALYSIS = '''You are a senior B2B consultant doing post-call analysis. Compare what the prospect ACTUALLY brought up against what someone in their role + industry TYPICALLY brings up. Surface the gaps — what they DIDN'T mention that you'd expect them to.
+
+CONTACT:
+- Industry: {industry}
+- Role:     {role}
+
+WHAT THE PROSPECT ACTUALLY BROUGHT UP (from the extraction):
+{extraction_json}
+
+WHAT'S TYPICAL FOR SOMEONE IN THIS PERSONA:
+Topics: {persona_topics}
+Often-unspoken pains: {persona_unspoken}
+
+Output in this exact markdown structure (no extra prose before/after):
+
+## Topics they didn't bring up
+
+For each typical topic the prospect did NOT mention, output a bullet:
+
+- **<topic name>** — why this gap matters in 1 sentence. Suggested follow-up question to ask next touch: "<a real question, in their domain language>"
+
+Cite the persona-typical topics that they did NOT cover. Don't list topics they DID cover — those go in the next section.
+
+## Topics they covered (for completeness)
+
+A flat bullet list of the persona-typical topics they DID bring up. One line each.
+
+## Often-unspoken pains worth probing
+
+For each typical-unspoken pain that wasn't surfaced in the extraction, output a bullet with one sentence on why it matters and one probing question to ask next touch.
+
+## Hidden signals from THIS transcript
+
+Anything in the extraction that hints at a pain the prospect HASN'T fully named yet — quote the extraction field that hints at it and write the follow-up question that surfaces it.
+
+RULES:
+- Use their domain language wherever possible (their vendor names, terminology, anything in the extraction).
+- Don't invent gaps not on the persona list and not in the extraction.
+- If a typical topic is partially covered but not deeply, that counts as covered — say so briefly.
+- If the persona library is empty for this (industry, role), say "no curated persona yet — add one in crm.py PERSONA_LIBRARY" and then do your best from general knowledge.
+'''
+
 
 DISCOVERY_PROMPT_PAIN = '''Using ONLY the extraction object below, produce a ranked pain analysis.
 

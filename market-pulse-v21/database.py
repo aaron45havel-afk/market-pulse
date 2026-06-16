@@ -229,6 +229,11 @@ def init_db():
             ALTER TABLE crm_working_sessions
             ADD COLUMN IF NOT EXISTS iteration_design_prompt TEXT
         """)
+        # Gap-analysis artifact — Step 2 of the discovery-call chain.
+        cur.execute("""
+            ALTER TABLE crm_discovery_calls
+            ADD COLUMN IF NOT EXISTS gap_analysis_md TEXT
+        """)
         # NURTURE play — after a prospect replies but says they've signed
         # with a competitor. We stash a follow_up_date (default +4 mo)
         # so we can reach back out with a "gaps in their new tool" pitch.
