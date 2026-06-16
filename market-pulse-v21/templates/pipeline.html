@@ -848,7 +848,15 @@ function sessionFromDetail() {
     </div>
     <p id="emailWarn" class="warn" style="display:none;"></p>
 
-    <div style="margin-top:0.8rem;">
+    <div style="margin-top:0.7rem;">
+      <label style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+        <span>Template</span>
+        <span style="font-size:0.66rem; color:var(--text-dim); font-weight:400;">(bandit picked this — switch to any other variant or trigger for this contact)</span>
+      </label>
+      <select id="emailTemplatePicker" onchange="onTemplatePicked()" style="width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.55rem; color:var(--text); font-size:0.85rem; font-family:inherit; margin-top:0.25rem;"></select>
+    </div>
+
+    <div style="margin-top:0.6rem;">
       <label>Subject</label>
       <input type="text" id="emailSubject">
     </div>
@@ -900,6 +908,88 @@ function sessionFromDetail() {
 <script>
 let _emailCtx = null;
 
+// Build the template-picker dropdown from the /api/pipeline/email
+// response. Groups by trigger, marks which one the bandit picked, and
+// shows variant + subject preview per option.
+function _populateEmailTemplatePicker(data) {
+  const sel = document.getElementById('emailTemplatePicker');
+  if (!sel) return;
+  const all = data.all_templates || [];
+  const pickedId = data.template_id || null;
+  // Group by trigger so the dropdown reads as "INTRO → Variant A · Variant B"
+  const byTrigger = {};
+  for (const t of all) {
+    (byTrigger[t.trigger] = byTrigger[t.trigger] || []).push(t);
+  }
+  // Order triggers in the natural funnel order, with anything matching
+  // the suggested trigger first so the bandit pick lives at the top.
+  const triggerOrder = [data.trigger,
+    'INTRO','BUMP_NO_REPLY','SCHEDULING','PRE_CALL_CONFIRM',
+    'POST_CALL','PROPOSAL','CHECKIN','RENEWAL','GAP_CHECKIN'];
+  const seen = new Set();
+  sel.innerHTML = '';
+  if (!all.length) {
+    const o = document.createElement('option');
+    o.value = '';
+    o.textContent = '— no templates yet for this contact —';
+    o.disabled = true;
+    sel.appendChild(o);
+    return;
+  }
+  for (const trig of triggerOrder) {
+    if (!trig || seen.has(trig)) continue;
+    seen.add(trig);
+    const variants = byTrigger[trig] || [];
+    if (!variants.length) continue;
+    const grp = document.createElement('optgroup');
+    const trigLabel = variants[0].trigger_label || trig;
+    grp.label = `${trig} — ${trigLabel}`;
+    for (const t of variants) {
+      const o = document.createElement('option');
+      o.value = t.id;
+      const persona = t.role ? t.role : 'any role';
+      const subjectPreview = (t.subject || '').slice(0, 70);
+      const perf = t.sends_count
+        ? ` · ${t.replies_count}/${t.sends_count} replies`
+        : '';
+      o.textContent = `Variant ${t.variant_label} (${persona})${perf} — ${subjectPreview}`;
+      if (t.id === pickedId) o.selected = true;
+      grp.appendChild(o);
+    }
+    sel.appendChild(grp);
+  }
+}
+
+function onTemplatePicked() {
+  if (!_emailCtx) return;
+  const sel = document.getElementById('emailTemplatePicker');
+  const tid = parseInt(sel.value, 10);
+  const t = (_emailCtx.all_templates || []).find(x => x.id === tid);
+  if (!t) return;
+  // Reapply the contact's substitutions so we don't lose first_name/agency/etc.
+  const c = ALL_CONTACTS.find(x => x.id === _emailCtx.contact_id) || {};
+  const subs = {
+    first_name: (c.name || '').split(' ')[0],
+    name:       c.name    || '',
+    title:      c.title   || '',
+    agency:     c.agency  || '',
+  };
+  const fill = s => (s || '').replace(/\{(\w+)\}/g, (m, k) =>
+    subs[k] !== undefined ? subs[k] : m);
+  document.getElementById('emailSubject').value = fill(t.subject);
+  document.getElementById('emailBody').value    = fill(t.body);
+  _emailCtx.template_id   = t.id;
+  _emailCtx.variant_label = t.variant_label;
+  _emailCtx.trigger       = t.trigger;
+  const badge = document.getElementById('emailVariant');
+  if (badge) {
+    badge.textContent = `Variant ${t.variant_label}`;
+    badge.style.display = '';
+  }
+  const trigEl = document.getElementById('emailTrigger');
+  if (trigEl) trigEl.textContent = `${t.trigger} · ${t.trigger_label || ''}`;
+}
+
 async function openEmailModal(contactId) {
   try {
     const r = await fetch(`/api/pipeline/email/${contactId}`);
@@ -926,6 +1016,9 @@ async function openEmailModal(contactId) {
     variantBadge.textContent = data.variant_label
       ? `Variant ${data.variant_label}` : '';
     variantBadge.style.display = data.variant_label ? '' : 'none';
+    // Populate the template picker with every template that matches
+    // this contact's industry+role (or industry default).
+    _populateEmailTemplatePicker(data);
     document.getElementById('emailSubject').value = data.subject || '';
     document.getElementById('emailBody').value = data.body || '';
 
