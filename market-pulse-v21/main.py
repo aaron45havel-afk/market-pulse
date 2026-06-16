@@ -586,6 +586,32 @@ async def api_pipeline_email(request: Request, contact_id: int):
     payload["contact_name"]  = contact.get("name", "")
     payload["contact_email"] = contact.get("email", "")
     payload["stage"]         = contact.get("stage", "")
+    # Build the full list of templates the user can pick from. Anything
+    # matching this contact's industry/role at any trigger, plus the
+    # industry default ('' role) as a fallback set. Lets the user
+    # easily switch from the bandit-picked variant to something else.
+    from crm import list_templates as _list_t, EMAIL_TRIGGERS
+    industry = contact.get("industry") or ""
+    role     = contact.get("role") or ""
+    options = []
+    for t in _list_t():
+        if t.get("industry") != industry:
+            continue
+        if t.get("role") not in (role, "", None):
+            continue
+        options.append({
+            "id":            t["id"],
+            "industry":      t["industry"],
+            "role":          t["role"] or "",
+            "trigger":       t["trigger"],
+            "trigger_label": EMAIL_TRIGGERS.get(t["trigger"], ""),
+            "variant_label": t.get("variant_label") or "A",
+            "subject":       t["subject"],
+            "body":          t["body"],
+            "sends_count":   t.get("sends_count") or 0,
+            "replies_count": t.get("replies_count") or 0,
+        })
+    payload["all_templates"] = options
     return JSONResponse(payload)
 
 
