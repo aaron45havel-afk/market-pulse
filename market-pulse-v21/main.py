@@ -343,7 +343,8 @@ async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = "
     # datetime objects survive tojson otherwise).
     def _js_safe(c: dict) -> dict:
         out = dict(c)
-        for k in ("date_emailed", "next_date", "created_at", "updated_at"):
+        for k in ("date_emailed", "next_date", "follow_up_date",
+                  "created_at", "updated_at"):
             v = out.get(k)
             if v is not None and hasattr(v, "isoformat"):
                 out[k] = v.isoformat()[:10]   # YYYY-MM-DD is enough for the UI
