@@ -15,7 +15,7 @@ name: Refresh net-net screener snapshot
 
 on:
   schedule:
-    - cron: '0 10 1 * *'
+    - cron: '0 10 * * 1'   # 10:00 UTC every Monday
   workflow_dispatch:
 
 permissions:

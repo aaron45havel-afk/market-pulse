@@ -11,7 +11,7 @@ name: Refresh national ZIPs database
 
 on:
   schedule:
-    - cron: '0 14 1 * *'   # 14:00 UTC on the 1st (Zillow refresh runs at 12:00)
+    - cron: '0 14 * * 1'   # 14:00 UTC every Monday (Zillow refresh runs at 12:00)
   workflow_dispatch:
 
 permissions:
