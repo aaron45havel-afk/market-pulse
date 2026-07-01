@@ -1,0 +1,533 @@
+{
+  "_meta": {
+    "as_of": "2026-07-01",
+    "snapshot_month": "2026-07",
+    "passing_count": 11,
+    "source": "SEC EDGAR XBRL company facts + Stooq daily close",
+    "rules": {
+      "market_cap_min": 1000000000,
+      "pe_max": 10.0,
+      "eps_growth_3yr_min_pct": 10.0,
+      "debt_to_equity_max": 0.5,
+      "capex_to_ocf_max": 0.5,
+      "exchanges": [
+        "NYSE",
+        "Nasdaq",
+        "NASDAQ",
+        "AMEX",
+        "NYSE American"
+      ],
+      "min_eps_years": 3,
+      "moat_roe_min_pct": 15.0,
+      "moat_consecutive_positive_eps_years": 5
+    }
+  },
+  "companies": [
+    {
+      "ticker": "VIPS",
+      "name": "Vipshop Holdings Ltd",
+      "exchange": "NYSE",
+      "sic": "5961",
+      "is_international": true,
+      "has_moat": true,
+      "avg_roe_3yr_pct": 30.1,
+      "years_positive_eps": 12,
+      "op_margin_ttm_pct": 7.7,
+      "price": 13.52,
+      "shares_outstanding": 111665972,
+      "market_cap": 1509723941,
+      "ttm_eps": 70.74,
+      "pe_ratio": 0.19,
+      "eps_3yr_cagr_pct": 12.9,
+      "peg": 0.01,
+      "debt_to_equity": 0.14,
+      "total_debt": 845037000,
+      "equity": 5863599000,
+      "ttm_capex": 283961000,
+      "ttm_ocf": 1065943000,
+      "capex_to_ocf": 0.27,
+      "eps_history": [
+        {
+          "fy_end": "2021-12-31",
+          "eps": 33.74
+        },
+        {
+          "fy_end": "2022-12-31",
+          "eps": 49.15
+        },
+        {
+          "fy_end": "2023-12-31",
+          "eps": 72.11
+        },
+        {
+          "fy_end": "2024-12-31",
+          "eps": 71.76
+        },
+        {
+          "fy_end": "2025-12-31",
+          "eps": 70.74
+        }
+      ]
+    },
+    {
+      "ticker": "XNET",
+      "name": "Xunlei Ltd",
+      "exchange": "Nasdaq",
+      "sic": "7372",
+      "is_international": true,
+      "has_moat": true,
+      "avg_roe_3yr_pct": 27.0,
+      "years_positive_eps": 5,
+      "op_margin_ttm_pct": 1.4,
+      "price": 6.02,
+      "shares_outstanding": 314277001,
+      "market_cap": 1891947546,
+      "ttm_eps": 3.31,
+      "pe_ratio": 1.82,
+      "eps_3yr_cagr_pct": 273.1,
+      "peg": 0.01,
+      "debt_to_equity": 0.06,
+      "total_debt": 75622000,
+      "equity": 1373491000,
+      "ttm_capex": 5349000,
+      "ttm_ocf": 32479000,
+      "capex_to_ocf": 0.16,
+      "eps_history": [
+        {
+          "fy_end": "2021-12-31",
+          "eps": 0.0
+        },
+        {
+          "fy_end": "2022-12-31",
+          "eps": 0.06
+        },
+        {
+          "fy_end": "2023-12-31",
+          "eps": 0.04
+        },
+        {
+          "fy_end": "2024-12-31",
+          "eps": 0.0
+        },
+        {
+          "fy_end": "2025-12-31",
+          "eps": 3.31
+        }
+      ]
+    },
+    {
+      "ticker": "BZ",
+      "name": "Kanzhun Ltd",
+      "exchange": "Nasdaq",
+      "sic": "7370",
+      "is_international": true,
+      "has_moat": false,
+      "avg_roe_3yr_pct": 1.5,
+      "years_positive_eps": 4,
+      "op_margin_ttm_pct": 29.8,
+      "price": 13.25,
+      "shares_outstanding": 100080000,
+      "market_cap": 1326060000,
+      "ttm_eps": 2.95,
+      "pe_ratio": 4.49,
+      "eps_3yr_cagr_pct": 190.8,
+      "peg": 0.02,
+      "debt_to_equity": 0.0,
+      "total_debt": 0,
+      "equity": 2864362000,
+      "ttm_capex": 17034000,
+      "ttm_ocf": 650980000,
+      "capex_to_ocf": 0.03,
+      "eps_history": [
+        {
+          "fy_end": "2021-12-31",
+          "eps": -2.33
+        },
+        {
+          "fy_end": "2022-12-31",
+          "eps": 0.12
+        },
+        {
+          "fy_end": "2023-12-31",
+          "eps": 1.22
+        },
+        {
+          "fy_end": "2024-12-31",
+          "eps": 1.74
+        },
+        {
+          "fy_end": "2025-12-31",
+          "eps": 2.95
+        }
+      ]
+    },
+    {
+      "ticker": "ANF",
+      "name": "ABERCROMBIE & FITCH CO /DE/",
+      "exchange": "NYSE",
+      "sic": "5651",
+      "is_international": false,
+      "has_moat": true,
+      "avg_roe_3yr_pct": 36.7,
+      "years_positive_eps": 5,
+      "op_margin_ttm_pct": 13.3,
+      "price": 90.13,
+      "shares_outstanding": 44431710,
+      "market_cap": 4004630022,
+      "ttm_eps": 10.46,
+      "pe_ratio": 8.62,
+      "eps_3yr_cagr_pct": 493.6,
+      "peg": 0.02,
+      "debt_to_equity": 0.34,
+      "total_debt": 460142000,
+      "equity": 1340090000,
+      "ttm_capex": 240774000,
+      "ttm_ocf": 619142000,
+      "capex_to_ocf": 0.39,
+      "eps_history": [
+        {
+          "fy_end": "2022-01-29",
+          "eps": 4.2
+        },
+        {
+          "fy_end": "2023-01-28",
+          "eps": 0.05
+        },
+        {
+          "fy_end": "2024-02-03",
+          "eps": 6.22
+        },
+        {
+          "fy_end": "2025-02-01",
+          "eps": 10.69
+        },
+        {
+          "fy_end": "2026-01-31",
+          "eps": 10.46
+        }
+      ]
+    },
+    {
+      "ticker": "CALM",
+      "name": "CAL-MAINE FOODS INC",
+      "exchange": "Nasdaq",
+      "sic": "0200",
+      "is_international": false,
+      "has_moat": true,
+      "avg_roe_3yr_pct": 36.7,
+      "years_positive_eps": 7,
+      "op_margin_ttm_pct": 338.9,
+      "price": 81.63,
+      "shares_outstanding": 48936000,
+      "market_cap": 3994645680,
+      "ttm_eps": 24.95,
+      "pe_ratio": 3.27,
+      "eps_3yr_cagr_pct": 109.3,
+      "peg": 0.03,
+      "debt_to_equity": 0.0,
+      "total_debt": 2337000,
+      "equity": 2700168000,
+      "ttm_capex": 161255000,
+      "ttm_ocf": 1224734000,
+      "capex_to_ocf": 0.13,
+      "eps_history": [
+        {
+          "fy_end": "2021-05-29",
+          "eps": 0.04
+        },
+        {
+          "fy_end": "2022-05-28",
+          "eps": 2.72
+        },
+        {
+          "fy_end": "2023-06-03",
+          "eps": 15.52
+        },
+        {
+          "fy_end": "2024-06-01",
+          "eps": 5.69
+        },
+        {
+          "fy_end": "2025-05-31",
+          "eps": 24.95
+        }
+      ]
+    },
+    {
+      "ticker": "ATAT",
+      "name": "Atour Lifestyle Holdings Ltd",
+      "exchange": "Nasdaq",
+      "sic": "7011",
+      "is_international": true,
+      "has_moat": true,
+      "avg_roe_3yr_pct": 41.3,
+      "years_positive_eps": 5,
+      "op_margin_ttm_pct": 23.6,
+      "price": 33.4,
+      "shares_outstanding": 412380886,
+      "market_cap": 13773521592,
+      "ttm_eps": 3.87,
+      "pe_ratio": 8.63,
+      "eps_3yr_cagr_pct": 146.0,
+      "peg": 0.06,
+      "debt_to_equity": 0.07,
+      "total_debt": 36036000,
+      "equity": 513860000,
+      "ttm_capex": 12266000,
+      "ttm_ocf": 284969000,
+      "capex_to_ocf": 0.04,
+      "eps_history": [
+        {
+          "fy_end": "2021-12-31",
+          "eps": 0.4
+        },
+        {
+          "fy_end": "2022-12-31",
+          "eps": 0.26
+        },
+        {
+          "fy_end": "2023-12-31",
+          "eps": 1.78
+        },
+        {
+          "fy_end": "2024-12-31",
+          "eps": 3.06
+        },
+        {
+          "fy_end": "2025-12-31",
+          "eps": 3.87
+        }
+      ]
+    },
+    {
+      "ticker": "PDD",
+      "name": "PDD Holdings Inc.",
+      "exchange": "Nasdaq",
+      "sic": "7389",
+      "is_international": true,
+      "has_moat": true,
+      "avg_roe_3yr_pct": 30.5,
+      "years_positive_eps": 5,
+      "op_margin_ttm_pct": 21.6,
+      "price": 80.49,
+      "shares_outstanding": 5693585848,
+      "market_cap": 458276724905,
+      "ttm_eps": 16.5,
+      "pe_ratio": 4.88,
+      "eps_3yr_cagr_pct": 44.4,
+      "peg": 0.11,
+      "debt_to_equity": 0.0,
+      "total_debt": 0,
+      "equity": 59113291000,
+      "ttm_capex": 6597000,
+      "ttm_ocf": 15292029000,
+      "capex_to_ocf": 0.0,
+      "eps_history": [
+        {
+          "fy_end": "2021-12-31",
+          "eps": 1.36
+        },
+        {
+          "fy_end": "2022-12-31",
+          "eps": 5.48
+        },
+        {
+          "fy_end": "2023-12-31",
+          "eps": 10.29
+        },
+        {
+          "fy_end": "2024-12-31",
+          "eps": 19.0
+        },
+        {
+          "fy_end": "2025-12-31",
+          "eps": 16.5
+        }
+      ]
+    },
+    {
+      "ticker": "ASO",
+      "name": "Academy Sports & Outdoors, Inc.",
+      "exchange": "Nasdaq",
+      "sic": "5940",
+      "is_international": false,
+      "has_moat": false,
+      "avg_roe_3yr_pct": 10.9,
+      "years_positive_eps": 20,
+      "op_margin_ttm_pct": 8.5,
+      "price": 47.16,
+      "shares_outstanding": 63507116,
+      "market_cap": 2994995590,
+      "ttm_eps": 5.54,
+      "pe_ratio": 8.51,
+      "eps_3yr_cagr_pct": 41.6,
+      "peg": 0.2,
+      "debt_to_equity": 0.23,
+      "total_debt": 480320000,
+      "equity": 2120966000,
+      "ttm_capex": 212668000,
+      "ttm_ocf": 434798000,
+      "capex_to_ocf": 0.49,
+      "eps_history": [
+        {
+          "fy_end": "2024-05-04",
+          "eps": 1.01
+        },
+        {
+          "fy_end": "2024-08-03",
+          "eps": 1.95
+        },
+        {
+          "fy_end": "2024-11-02",
+          "eps": 0.92
+        },
+        {
+          "fy_end": "2025-02-01",
+          "eps": 1.89
+        },
+        {
+          "fy_end": "2026-01-31",
+          "eps": 5.54
+        }
+      ]
+    },
+    {
+      "ticker": "LDOS",
+      "name": "Leidos Holdings, Inc.",
+      "exchange": "NYSE",
+      "sic": "7373",
+      "is_international": false,
+      "has_moat": true,
+      "avg_roe_3yr_pct": 20.9,
+      "years_positive_eps": 18,
+      "op_margin_ttm_pct": 12.3,
+      "price": 104.94,
+      "shares_outstanding": 125783512,
+      "market_cap": 13199721749,
+      "ttm_eps": 11.14,
+      "pe_ratio": 9.42,
+      "eps_3yr_cagr_pct": 31.0,
+      "peg": 0.3,
+      "debt_to_equity": 0.23,
+      "total_debt": 1163000000,
+      "equity": 5013000000,
+      "ttm_capex": 121000000,
+      "ttm_ocf": 1750000000,
+      "capex_to_ocf": 0.07,
+      "eps_history": [
+        {
+          "fy_end": "2021-12-31",
+          "eps": 5.27
+        },
+        {
+          "fy_end": "2022-12-30",
+          "eps": 4.96
+        },
+        {
+          "fy_end": "2023-12-29",
+          "eps": 1.44
+        },
+        {
+          "fy_end": "2025-01-03",
+          "eps": 9.22
+        },
+        {
+          "fy_end": "2026-01-02",
+          "eps": 11.14
+        }
+      ]
+    },
+    {
+      "ticker": "LULU",
+      "name": "lululemon athletica inc.",
+      "exchange": "Nasdaq",
+      "sic": "2300",
+      "is_international": false,
+      "has_moat": true,
+      "avg_roe_3yr_pct": 36.8,
+      "years_positive_eps": 48,
+      "op_margin_ttm_pct": 19.9,
+      "price": 115.87,
+      "shares_outstanding": 109308000,
+      "market_cap": 12665517960,
+      "ttm_eps": 13.26,
+      "pe_ratio": 8.74,
+      "eps_3yr_cagr_pct": 25.7,
+      "peg": 0.34,
+      "debt_to_equity": 0.0,
+      "total_debt": 0,
+      "equity": 4825601000,
+      "ttm_capex": 680802000,
+      "ttm_ocf": 1602477000,
+      "capex_to_ocf": 0.42,
+      "eps_history": [
+        {
+          "fy_end": "2022-01-30",
+          "eps": 7.49
+        },
+        {
+          "fy_end": "2023-01-29",
+          "eps": 6.68
+        },
+        {
+          "fy_end": "2024-01-28",
+          "eps": 12.2
+        },
+        {
+          "fy_end": "2025-02-02",
+          "eps": 14.64
+        },
+        {
+          "fy_end": "2026-02-01",
+          "eps": 13.26
+        }
+      ]
+    },
+    {
+      "ticker": "FISV",
+      "name": "FISERV INC",
+      "exchange": "Nasdaq",
+      "sic": "7389",
+      "is_international": false,
+      "has_moat": false,
+      "avg_roe_3yr_pct": 11.8,
+      "years_positive_eps": 19,
+      "op_margin_ttm_pct": 27.5,
+      "price": 50.65,
+      "shares_outstanding": 533253986,
+      "market_cap": 27009314390,
+      "ttm_eps": 6.34,
+      "pe_ratio": 7.99,
+      "eps_3yr_cagr_pct": 17.5,
+      "peg": 0.46,
+      "debt_to_equity": 0.17,
+      "total_debt": 4553000000,
+      "equity": 26201000000,
+      "ttm_capex": 1763000000,
+      "ttm_ocf": 6062000000,
+      "capex_to_ocf": 0.29,
+      "eps_history": [
+        {
+          "fy_end": "2021-12-31",
+          "eps": 1.99
+        },
+        {
+          "fy_end": "2022-12-31",
+          "eps": 3.91
+        },
+        {
+          "fy_end": "2023-12-31",
+          "eps": 4.98
+        },
+        {
+          "fy_end": "2024-12-31",
+          "eps": 5.38
+        },
+        {
+          "fy_end": "2025-12-31",
+          "eps": 6.34
+        }
+      ]
+    }
+  ]
+}
