@@ -307,6 +307,24 @@ async def lynch(request: Request):
     return templates.TemplateResponse("lynch.html", {"request": request})
 
 
+@app.get("/global-values")
+async def global_values(request: Request):
+    """Country-level valuation vs OECD business cycle. Renders a
+    ranked buy list + 2x2 quadrant chart + full sortable table.
+
+    Snapshot data lives in country_data.py — hand-refreshed quarterly
+    from Damodaran / OECD."""
+    from country_data import composite_scores, buy_list, LAST_UPDATED, COUNTRIES
+    scored = composite_scores()
+    return templates.TemplateResponse("global_values.html", {
+        "request":       request,
+        "countries":     scored,
+        "buy_list":      buy_list(scored),
+        "last_updated":  LAST_UPDATED,
+        "total_countries": len(COUNTRIES),
+    })
+
+
 # ─── Pipeline CRM (admin-only) ──────────────────────────────────────
 # Private two-person sales tracker — see BUILD_SPEC.md. Gated by the
 # same ADMIN_TOKEN cookie used for /results. All write endpoints
