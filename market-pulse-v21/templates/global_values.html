@@ -30,6 +30,35 @@
   .gv-buy-card .subline { font-size:0.72rem; color:var(--ink-3); }
   .gv-buy-empty { color:var(--ink-3); font-size:0.82rem; font-style:italic; padding:0.5rem 0; }
 
+  .gv-picks {
+    margin-top:0.5rem; padding-top:0.5rem;
+    border-top:1px dashed var(--line);
+    font-size:0.75rem; line-height:1.55;
+  }
+  .gv-picks .picks-lbl { font-size:0.62rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-3); margin-bottom:0.3rem; }
+  .gv-picks ul { list-style:none; padding:0; margin:0; }
+  .gv-picks li {
+    display:flex; justify-content:space-between; gap:0.5rem;
+    padding:2px 0; align-items:baseline;
+  }
+  .gv-picks li .ticker { font-family:'Menlo','Monaco',monospace; font-weight:700; color:var(--gv-emerging); flex-shrink:0; min-width:60px; }
+  .gv-picks li .desc { color:var(--ink-3); font-size:0.72rem; text-align:right; }
+  .gv-picks li .name { flex:1; color:var(--ink-2); }
+  .gv-picks .etf-first { display:flex; justify-content:space-between; padding:2px 0; align-items:baseline; }
+  .gv-picks .etf-first .ticker { font-family:'Menlo','Monaco',monospace; font-weight:700; color:var(--gv-developed); font-size:0.85rem; }
+  .gv-picks .etf-first .lbl { font-size:0.65rem; color:var(--ink-3); text-transform:uppercase; letter-spacing:0.04em; }
+
+  details.gv-picks-details summary {
+    cursor:pointer; font-size:0.72rem; color:var(--gv-emerging); font-weight:600;
+    list-style:none; user-select:none;
+  }
+  details.gv-picks-details summary::-webkit-details-marker { display:none; }
+  details.gv-picks-details[open] summary { margin-bottom:0.4rem; }
+  details.gv-picks-details {
+    background:var(--surface-2); border:1px solid var(--line); border-radius:6px;
+    padding:0.4rem 0.6rem; margin-top:0.35rem;
+  }
+
   /* Chart card */
   .gv-chart-card {
     background:var(--surface); border:1px solid var(--line); border-radius:10px;
@@ -142,7 +171,7 @@
 
 <div class="gv-hero">
   <h1>Global Values</h1>
-  <span class="gv-refresh">Snapshot: {{ last_updated }} · {{ total_countries }} countries</span>
+  <span class="gv-refresh">Valuation: {{ last_updated }} · CLI: {{ cli_source }} · {{ total_countries }} countries</span>
 </div>
 <p class="gv-sub">
   Timing country stock markets by valuation and business-cycle position. The
@@ -177,6 +206,28 @@
         <div class="subline" style="margin-top:0.15rem;">
           Val <strong>{{ c.valuation_score }}</strong> · Cycle <strong>{{ c.cycle_score }}</strong>
           · CAPE {{ c.cape }} <span style="color:var(--ink-3);">({{ c.cape_pct }}th %)</span>
+        </div>
+        <div class="gv-picks">
+          <div class="etf-first">
+            <span class="ticker">{{ c.etf }}</span>
+            <span class="lbl">ETF — one-click access</span>
+          </div>
+          {% if c.picks %}
+          <details class="gv-picks-details">
+            <summary>▸ Top {{ c.picks|length }} single-stock picks (Schwab-tradeable)</summary>
+            <ul>
+              {% for p in c.picks %}
+              <li>
+                <span class="ticker">{{ p.ticker }}</span>
+                <span class="name">{{ p.name }}</span>
+                <span class="desc">{{ p.note }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+          </details>
+          {% else %}
+          <div class="picks-lbl" style="margin-top:0.35rem;">No liquid US-listed single-stock ADRs — the {{ c.etf }} ETF is the cleanest access.</div>
+          {% endif %}
         </div>
       </div>
       {% endfor %}

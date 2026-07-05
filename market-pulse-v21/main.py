@@ -314,13 +314,15 @@ async def global_values(request: Request):
 
     Snapshot data lives in country_data.py — hand-refreshed quarterly
     from Damodaran / OECD."""
-    from country_data import composite_scores, buy_list, LAST_UPDATED, COUNTRIES
+    from country_data import (composite_scores, buy_list, LAST_UPDATED,
+                              COUNTRIES, _cli_source_label)
     scored = composite_scores()
     return templates.TemplateResponse("global_values.html", {
-        "request":       request,
-        "countries":     scored,
-        "buy_list":      buy_list(scored),
-        "last_updated":  LAST_UPDATED,
+        "request":         request,
+        "countries":       scored,
+        "buy_list":        buy_list(scored),
+        "last_updated":    LAST_UPDATED,
+        "cli_source":      _cli_source_label(),
         "total_countries": len(COUNTRIES),
     })
 

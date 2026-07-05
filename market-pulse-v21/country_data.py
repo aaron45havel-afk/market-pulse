@@ -15,7 +15,36 @@ Don't paper-trade off this without pulling fresh numbers first.
 """
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 LAST_UPDATED = "2026-Q1"
+
+# Optional monthly overlay written by scripts/refresh_oecd_cli.py.
+# When present, its CLI values override the hard-coded ones in COUNTRIES.
+_OVERLAY_PATH = Path(__file__).resolve().parent / "data" / "oecd_cli.json"
+
+
+def _load_cli_overlay() -> dict:
+    """Read the OECD CLI overlay JSON if present. Returns
+    {'as_of': str, 'series': {code: {'value', 'prev', 'trend'}}} or {}
+    when the file is missing or malformed (fall back to hard-coded)."""
+    try:
+        with open(_OVERLAY_PATH, encoding="utf-8") as fh:
+            data = json.load(fh)
+        if isinstance(data, dict) and "series" in data:
+            return data
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        pass
+    return {}
+
+
+def _cli_source_label() -> str:
+    """Where the current CLI numbers came from, for display in the UI."""
+    overlay = _load_cli_overlay()
+    if overlay:
+        return f"OECD API — {overlay.get('as_of') or 'latest'}"
+    return f"snapshot ({LAST_UPDATED})"
 
 
 # Region tags used for coloring the quadrant chart and grouping in the table.
@@ -121,6 +150,151 @@ COUNTRIES = [
 ]
 
 
+# ── Top-10 Schwab-tradeable picks per country ─────────────────────
+# Every ticker is directly buyable on Schwab (no international-desk
+# required): major-exchange ADRs (BABA, PBR, etc.) OR OTC ADRs that
+# Schwab supports (SAP is NYSE; the 'Y'-suffix tickers like SIEGY,
+# BAYRY, DTEGY are OTC ADRs — Schwab treats them like normal stocks).
+#
+# Only populated for countries where liquid US-listed access exists.
+# Where the country ETF is the cleanest access (Thailand, most of
+# Hong Kong-domiciled), the picks list is short + we lean on the ETF.
+#
+# Refresh cadence: revisit quarterly. Political / delisting risk noted
+# in the note field where relevant (esp. Chinese ADRs).
+COUNTRY_PICKS = {
+    "CN": [  # China — heavy Chinese-ADR delisting risk; ETF (MCHI, KWEB) is often the cleaner play
+        {"ticker": "BABA",  "name": "Alibaba Group",           "note": "e-commerce, cloud, Ant stake"},
+        {"ticker": "PDD",   "name": "PDD Holdings (Temu)",     "note": "e-commerce, fastest grower"},
+        {"ticker": "JD",    "name": "JD.com",                  "note": "e-commerce, self-op logistics"},
+        {"ticker": "BIDU",  "name": "Baidu",                   "note": "search + AI (Ernie), autonomous"},
+        {"ticker": "TCEHY", "name": "Tencent (OTC ADR)",       "note": "games, WeChat, Fintech"},
+        {"ticker": "NTES",  "name": "NetEase",                 "note": "games, music streaming"},
+        {"ticker": "LI",    "name": "Li Auto",                 "note": "EV — profitable, extended-range"},
+        {"ticker": "BILI",  "name": "Bilibili",                "note": "Gen-Z video platform"},
+        {"ticker": "ZTO",   "name": "ZTO Express",             "note": "delivery, secular winner"},
+        {"ticker": "YUMC",  "name": "Yum China",               "note": "KFC/Pizza Hut operator, defensive"},
+    ],
+    "BR": [  # Brazil — deep, liquid ADR market
+        {"ticker": "VALE",  "name": "Vale",                    "note": "iron ore, global commodity"},
+        {"ticker": "PBR",   "name": "Petrobras",               "note": "oil major, 12% div yield"},
+        {"ticker": "ITUB",  "name": "Itaú Unibanco",           "note": "top LatAm bank"},
+        {"ticker": "BBD",   "name": "Banco Bradesco",          "note": "#2 private bank"},
+        {"ticker": "ABEV",  "name": "Ambev",                   "note": "AB InBev subsidiary, beer + soft drinks"},
+        {"ticker": "ERJ",   "name": "Embraer",                 "note": "regional jets + defense"},
+        {"ticker": "NU",    "name": "Nu Holdings",             "note": "digital bank, LatAm-wide"},
+        {"ticker": "GGB",   "name": "Gerdau",                  "note": "steel producer"},
+        {"ticker": "SBS",   "name": "Sabesp",                  "note": "São Paulo water utility"},
+        {"ticker": "CIG",   "name": "Cemig",                   "note": "Minas Gerais utility, high yield"},
+    ],
+    "HK": [  # Hong Kong — mostly HKEX-only. ETF (EWH) is the main play. Handful of ADRs listed.
+        {"ticker": "HSBC",  "name": "HSBC Holdings",           "note": "HK-domiciled bank, NYSE-listed"},
+        {"ticker": "PPRUY", "name": "Prudential plc (OTC ADR)","note": "insurer, HK/Asia-heavy"},
+        {"ticker": "SWRAY", "name": "Swire Pacific (OTC ADR)", "note": "conglomerate — property, Cathay"},
+    ],
+    "DE": [  # Germany — huge liquid ADR market
+        {"ticker": "SAP",   "name": "SAP SE",                  "note": "enterprise software, NYSE-listed"},
+        {"ticker": "SIEGY", "name": "Siemens (OTC ADR)",       "note": "industrial giant, digital + energy"},
+        {"ticker": "BAYRY", "name": "Bayer (OTC ADR)",         "note": "pharma + crop science, Monsanto legal overhang"},
+        {"ticker": "BASFY", "name": "BASF (OTC ADR)",          "note": "chemicals, cyclical"},
+        {"ticker": "ADDYY", "name": "Adidas (OTC ADR)",        "note": "sports apparel turnaround"},
+        {"ticker": "ALIZY", "name": "Allianz (OTC ADR)",       "note": "insurer, high dividend"},
+        {"ticker": "DTEGY", "name": "Deutsche Telekom (OTC ADR)","note": "owns T-Mobile US majority"},
+        {"ticker": "MBGYY", "name": "Mercedes-Benz (OTC ADR)", "note": "luxury autos"},
+        {"ticker": "BMWYY", "name": "BMW (OTC ADR)",           "note": "premium autos"},
+        {"ticker": "VLKAF", "name": "Volkswagen (OTC ADR)",    "note": "mass + luxury autos, EV transition"},
+    ],
+    "MX": [  # Mexico — solid ADR liquidity
+        {"ticker": "FMX",   "name": "Fomento Económico (FEMSA)","note": "OXXO retail + Coke bottler"},
+        {"ticker": "AMX",   "name": "América Móvil",           "note": "LatAm telecom leader"},
+        {"ticker": "KOF",   "name": "Coca-Cola FEMSA",         "note": "largest Coke bottler globally"},
+        {"ticker": "CX",    "name": "Cemex",                   "note": "cement, infrastructure play"},
+        {"ticker": "ASR",   "name": "Grupo Aeroportuario Sureste","note": "Cancún airports"},
+        {"ticker": "PAC",   "name": "Grupo Aeroportuario Pacífico","note": "Guadalajara airports"},
+        {"ticker": "WMMVY", "name": "Walmart de México (OTC ADR)","note": "dominant retailer"},
+        {"ticker": "GBOOY", "name": "Grupo Banorte (OTC ADR)", "note": "large Mexican bank"},
+        {"ticker": "GRBMF", "name": "Grupo Bimbo (OTC ADR)",   "note": "global bakery"},
+        {"ticker": "GMBXF", "name": "Gruma (OTC ADR)",         "note": "corn flour + tortillas globally"},
+    ],
+    "CL": [  # Chile — mid-liquidity ADR set
+        {"ticker": "SQM",   "name": "Soc. Química y Minera",   "note": "lithium, iodine, specialty chem"},
+        {"ticker": "BCH",   "name": "Banco de Chile",          "note": "top Chilean bank"},
+        {"ticker": "BSAC",  "name": "Banco Santander Chile",   "note": "#2 bank, Santander subsidiary"},
+        {"ticker": "CCU",   "name": "Cía Cervecerías Unidas",  "note": "beer + beverages"},
+        {"ticker": "ENIC",  "name": "Enel Chile",              "note": "electricity utility"},
+        {"ticker": "EOCC",  "name": "Empresa Nacional Electricidad","note": "generation"},
+        {"ticker": "ITCB",  "name": "Itaú CorpBanca",          "note": "Chile-Colombia bank"},
+        {"ticker": "LTM",   "name": "LATAM Airlines",          "note": "post-restructuring airline"},
+        {"ticker": "AKO.A", "name": "Embotelladora Andina",    "note": "Coke bottler for Chile/Brazil/Arg"},
+        {"ticker": "VCO",   "name": "Viña Concha y Toro",      "note": "largest LatAm wine producer"},
+    ],
+    "ZA": [  # South Africa — commodity + financial ADRs
+        {"ticker": "GFI",   "name": "Gold Fields",             "note": "gold miner"},
+        {"ticker": "AU",    "name": "AngloGold Ashanti",       "note": "gold miner, US-domiciled since 2023"},
+        {"ticker": "HMY",   "name": "Harmony Gold",            "note": "gold miner"},
+        {"ticker": "SBSW",  "name": "Sibanye Stillwater",      "note": "PGMs + gold + battery metals"},
+        {"ticker": "IMPUY", "name": "Impala Platinum (OTC ADR)","note": "PGM miner"},
+        {"ticker": "NPSNY", "name": "Naspers (OTC ADR)",       "note": "owns big Tencent stake"},
+        {"ticker": "PROSY", "name": "Prosus (OTC ADR)",        "note": "Naspers' international vehicle"},
+        {"ticker": "MTNOY", "name": "MTN Group (OTC ADR)",     "note": "African telecom, Nigeria-heavy"},
+        {"ticker": "SSLZY", "name": "Sasol (OTC ADR)",         "note": "coal-to-liquids energy"},
+        {"ticker": "BTIVY", "name": "Bidvest (OTC ADR)",       "note": "diversified services conglomerate"},
+    ],
+    "TH": [  # Thailand — very limited ADRs. ETF (THD) is basically the play.
+        # Almost no Thai companies with US ADRs. THD ETF holds the SET50.
+    ],
+    # ── Non-buy-zone but user might want to browse ─────────────
+    "JP": [
+        {"ticker": "TM",    "name": "Toyota Motor",            "note": "hybrid + BEV leader"},
+        {"ticker": "SONY",  "name": "Sony Group",              "note": "gaming + music + imaging"},
+        {"ticker": "HMC",   "name": "Honda Motor",             "note": "autos + motorcycles"},
+        {"ticker": "MUFG",  "name": "Mitsubishi UFJ Financial","note": "megabank, rising rates play"},
+        {"ticker": "SMFG",  "name": "Sumitomo Mitsui Financial","note": "megabank"},
+        {"ticker": "MFG",   "name": "Mizuho Financial",        "note": "megabank"},
+        {"ticker": "MITSY", "name": "Mitsui (OTC ADR)",        "note": "trading house, Buffett stake"},
+        {"ticker": "SSUMY", "name": "Sumitomo Corp (OTC ADR)", "note": "trading house, Buffett stake"},
+        {"ticker": "NTDOY", "name": "Nintendo (OTC ADR)",      "note": "Switch 2 cycle"},
+        {"ticker": "KYOCY", "name": "Kyocera (OTC ADR)",       "note": "electronics components"},
+    ],
+    "UK": [
+        {"ticker": "SHEL",  "name": "Shell",                   "note": "supermajor, US-listed"},
+        {"ticker": "BP",    "name": "BP",                      "note": "supermajor"},
+        {"ticker": "AZN",   "name": "AstraZeneca",             "note": "pharma, oncology heavy"},
+        {"ticker": "GSK",   "name": "GSK",                     "note": "pharma + consumer split"},
+        {"ticker": "UL",    "name": "Unilever",                "note": "consumer staples"},
+        {"ticker": "BCS",   "name": "Barclays",                "note": "UK + IB bank"},
+        {"ticker": "HSBC",  "name": "HSBC Holdings",           "note": "global bank, Asia-heavy"},
+        {"ticker": "DEO",   "name": "Diageo",                  "note": "spirits (Johnnie Walker etc.)"},
+        {"ticker": "RIO",   "name": "Rio Tinto",               "note": "mining major"},
+        {"ticker": "LYG",   "name": "Lloyds Banking",          "note": "UK retail bank"},
+    ],
+    "US": [
+        # US doesn't need ETF-vs-stock discussion for our purposes — SPY/VOO
+        # is the default; single-stock picks aren't the point of this page.
+    ],
+}
+
+
+def picks_for(code: str) -> list[dict]:
+    """Return the picks for a country code (empty list if none)."""
+    return COUNTRY_PICKS.get(code, [])
+
+
+def _apply_cli_overlay(countries: list[dict]) -> list[dict]:
+    """Return a new list with cli / cli_trend replaced from the overlay
+    JSON where available. Non-destructive to the module constant."""
+    overlay = _load_cli_overlay().get("series") or {}
+    if not overlay:
+        return countries
+    out = []
+    for c in countries:
+        entry = overlay.get(c["code"])
+        if entry and entry.get("value") is not None:
+            c = {**c, "cli": entry["value"], "cli_trend": entry.get("trend") or c["cli_trend"]}
+        out.append(c)
+    return out
+
+
 def composite_scores(countries: list[dict] | None = None) -> list[dict]:
     """Compute the two composite scores per country (0-100 scale, both
     'higher is better for buying'):
@@ -138,6 +312,7 @@ def composite_scores(countries: list[dict] | None = None) -> list[dict]:
     score (valuation + cycle) descending.
     """
     src = countries if countries is not None else COUNTRIES
+    src = _apply_cli_overlay(src)
     out = []
     for c in src:
         # Valuation: lower percentile = cheaper. For div_yield we invert.
@@ -166,6 +341,7 @@ def composite_scores(countries: list[dict] | None = None) -> list[dict]:
             "cycle_score":     cycle_score,
             "combined_score":  combined,
             "quadrant":        _quadrant(valuation_score, cycle_score),
+            "picks":           picks_for(c["code"]),
         })
     out.sort(key=lambda x: x["combined_score"], reverse=True)
     return out
