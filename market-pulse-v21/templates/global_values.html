@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+{% block title %}Global Values — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+  main .container { max-width: 1400px; }
+
+  .gv-hero { display:flex; justify-content:space-between; align-items:baseline; gap:1rem; flex-wrap:wrap; margin-bottom:0.3rem; }
+  .gv-hero h1 { margin:0; font-size:1.35rem; letter-spacing:-0.01em; }
+  .gv-sub { color:var(--ink-3); font-size:0.9rem; margin:0 0 0.55rem; line-height:1.55; max-width:820px; }
+  .gv-refresh {
+    font-size:0.72rem; color:var(--ink-3);
+    background:var(--surface-2); border:1px solid var(--line);
+    padding:0.25rem 0.55rem; border-radius:99px; white-space:nowrap;
+  }
+
+  .gv-buy-list {
+    background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding:0.85rem 1rem; margin:1rem 0;
+  }
+  .gv-buy-list h2 { margin:0 0 0.25rem; font-size:1rem; }
+  .gv-buy-list .desc { font-size:0.78rem; color:var(--ink-3); margin:0 0 0.65rem; }
+  .gv-buy-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:0.55rem; }
+  .gv-buy-card {
+    background:var(--surface-2); border:1px solid var(--line); border-radius:8px;
+    padding:0.6rem 0.75rem; display:flex; flex-direction:column; gap:0.15rem;
+  }
+  .gv-buy-card .top { display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem; }
+  .gv-buy-card .country { font-weight:700; font-size:0.9rem; }
+  .gv-buy-card .ticker { font-family:'Menlo','Monaco',monospace; font-size:0.8rem; color:var(--gv-emerging); font-weight:700; }
+  .gv-buy-card .subline { font-size:0.72rem; color:var(--ink-3); }
+  .gv-buy-empty { color:var(--ink-3); font-size:0.82rem; font-style:italic; padding:0.5rem 0; }
+
+  /* Chart card */
+  .gv-chart-card {
+    background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding:1rem 1.1rem; margin:1rem 0;
+  }
+  .gv-chart-card h2 { margin:0 0 0.15rem; font-size:1rem; }
+  .gv-chart-card .desc { font-size:0.78rem; color:var(--ink-3); margin:0 0 0.7rem; }
+  .gv-chart-wrap { position:relative; width:100%; }
+  .gv-chart-legend {
+    display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:0.5rem;
+    font-size:0.75rem; color:var(--ink-2);
+  }
+  .gv-legend-swatch { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:1px; }
+
+  /* Palette — validated for AA contrast + CVD separation against both
+     light and dark surfaces; developed=cool, emerging=warm. */
+  :root {
+    --gv-developed: #2563eb;   /* blue-600 */
+    --gv-emerging:  #ea580c;   /* orange-600 */
+    --gv-quad-buy:      rgba(34,197,94,0.10);
+    --gv-quad-momentum: rgba(37,99,235,0.08);
+    --gv-quad-watch:    rgba(245,158,11,0.09);
+    --gv-quad-avoid:    rgba(239,68,68,0.08);
+  }
+  :root[data-theme="dark"] {
+    --gv-developed: #60a5fa;
+    --gv-emerging:  #fb923c;
+  }
+
+  .gv-quadrant-label {
+    font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;
+    fill: var(--ink-3);
+  }
+  .gv-country-dot {
+    stroke: var(--surface); stroke-width: 1.5;
+    cursor: pointer; transition: r 0.12s;
+  }
+  .gv-country-dot:hover { stroke-width: 2.5; }
+  .gv-country-label {
+    font-size:9.5px; font-weight:700; fill:var(--ink); pointer-events:none;
+    dominant-baseline:middle;
+  }
+
+  /* Table */
+  .gv-table-card {
+    background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding:1rem 1.1rem; margin:1rem 0 2rem;
+  }
+  .gv-table-card h2 { margin:0 0 0.15rem; font-size:1rem; }
+  .gv-table-card .desc { font-size:0.78rem; color:var(--ink-3); margin:0 0 0.7rem; }
+  .gv-table {
+    width:100%; border-collapse:collapse; font-size:0.82rem;
+  }
+  .gv-table th, .gv-table td {
+    padding:0.45rem 0.55rem; border-bottom:1px solid var(--line);
+    text-align:left;
+  }
+  .gv-table th {
+    font-size:0.7rem; color:var(--ink-3); font-weight:700;
+    text-transform:uppercase; letter-spacing:0.04em;
+    cursor:pointer; user-select:none; white-space:nowrap;
+  }
+  .gv-table th:hover { color:var(--ink); }
+  .gv-table th.sorted::after { content:" ↓"; }
+  .gv-table th.sorted-asc::after { content:" ↑"; }
+  .gv-table td.num, .gv-table th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .gv-table td.ticker { font-family:'Menlo','Monaco',monospace; font-weight:700; }
+  .gv-region-dot { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:6px; vertical-align:1px; }
+  .gv-quad-pill {
+    display:inline-block; padding:2px 8px; border-radius:99px;
+    font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.03em;
+  }
+  .gv-quad-pill.BUY      { background:rgba(34,197,94,0.16);  color:#166534; }
+  .gv-quad-pill.MOMENTUM { background:rgba(37,99,235,0.14);  color:#1e40af; }
+  .gv-quad-pill.WATCH    { background:rgba(245,158,11,0.15); color:#92400e; }
+  .gv-quad-pill.AVOID    { background:rgba(239,68,68,0.14);  color:#991b1b; }
+  :root[data-theme="dark"] .gv-quad-pill.BUY      { color:#4ade80; }
+  :root[data-theme="dark"] .gv-quad-pill.MOMENTUM { color:#93c5fd; }
+  :root[data-theme="dark"] .gv-quad-pill.WATCH    { color:#fbbf24; }
+  :root[data-theme="dark"] .gv-quad-pill.AVOID    { color:#f87171; }
+
+  .gv-cli-trend { font-size:0.7rem; }
+  .gv-cli-rising  { color:#166534; }
+  .gv-cli-falling { color:#991b1b; }
+  .gv-cli-flat    { color:var(--ink-3); }
+  :root[data-theme="dark"] .gv-cli-rising  { color:#4ade80; }
+  :root[data-theme="dark"] .gv-cli-falling { color:#f87171; }
+
+  .gv-tooltip {
+    position:absolute; pointer-events:none;
+    background:var(--surface); border:1px solid var(--line); border-radius:6px;
+    padding:0.55rem 0.7rem; font-size:0.78rem; color:var(--ink);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.14);
+    opacity:0; transition:opacity 0.1s;
+    max-width:260px; z-index:5;
+  }
+  .gv-tooltip.show { opacity:1; }
+  .gv-tooltip .name { font-weight:700; margin-bottom:0.2rem; }
+  .gv-tooltip .row { display:flex; justify-content:space-between; gap:1rem; font-size:0.72rem; color:var(--ink-2); }
+
+  @media (max-width: 720px) {
+    .gv-buy-grid { grid-template-columns:1fr; }
+    .gv-table { font-size:0.75rem; }
+    .gv-table th, .gv-table td { padding:0.35rem 0.4rem; }
+    .gv-table .hide-mobile { display:none; }
+  }
+</style>
+{% endblock %}
+{% block content %}
+
+<div class="gv-hero">
+  <h1>Global Values</h1>
+  <span class="gv-refresh">Snapshot: {{ last_updated }} · {{ total_countries }} countries</span>
+</div>
+<p class="gv-sub">
+  Timing country stock markets by valuation and business-cycle position. The
+  <strong>Buy zone</strong> below combines the two: countries whose valuation is
+  cheap relative to their own 20-year history AND whose OECD leading indicators
+  are turning up. That's the historical setup for the best forward returns.
+  <span style="color:var(--gv-emerging);">Refresh required quarterly</span> —
+  numbers are hand-curated from public sources.
+</p>
+
+<!-- ── Buy list ────────────────────────────────────────────────── -->
+<div class="gv-buy-list">
+  <h2>🎯 Buy zone — cheap + accelerating</h2>
+  <p class="desc">
+    Currently in the top-right quadrant: valuation percentile below the country's own median
+    AND OECD CLI rising. Ranked by combined score.
+  </p>
+  {% if buy_list %}
+    <div class="gv-buy-grid">
+      {% for c in buy_list %}
+      <div class="gv-buy-card">
+        <div class="top">
+          <span class="country">
+            <span class="gv-region-dot" style="background:{% if c.region == 'Developed' %}var(--gv-developed){% else %}var(--gv-emerging){% endif %};"></span>
+            {{ c.name }}
+          </span>
+          <span class="ticker">{{ c.etf }}</span>
+        </div>
+        <div class="subline">
+          {{ c.etf_name }}
+        </div>
+        <div class="subline" style="margin-top:0.15rem;">
+          Val <strong>{{ c.valuation_score }}</strong> · Cycle <strong>{{ c.cycle_score }}</strong>
+          · CAPE {{ c.cape }} <span style="color:var(--ink-3);">({{ c.cape_pct }}th %)</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="gv-buy-empty">No countries currently in the cheap + accelerating quadrant. Watch the quadrant chart below for movement toward the top-right.</div>
+  {% endif %}
+</div>
+
+<!-- ── 2x2 quadrant chart ─────────────────────────────────────── -->
+<div class="gv-chart-card">
+  <h2>Valuation vs cycle — 2x2 quadrant</h2>
+  <p class="desc">
+    Horizontal = valuation (right = cheaper vs own history). Vertical = cycle (top = accelerating).
+    Hover any dot for details.
+  </p>
+  <div class="gv-chart-legend">
+    <span><span class="gv-legend-swatch" style="background:var(--gv-developed);"></span> Developed</span>
+    <span><span class="gv-legend-swatch" style="background:var(--gv-emerging);"></span> Emerging</span>
+    <span style="margin-left:auto; color:var(--ink-3);">
+      🎯 Buy zone = top-right · ⚠️ Avoid = bottom-left
+    </span>
+  </div>
+  <div class="gv-chart-wrap" id="gvChartWrap">
+    {% set W = 780 %}
+    {% set H = 560 %}
+    {% set PL = 55 %}   {# padding left #}
+    {% set PR = 25 %}   {# padding right #}
+    {% set PT = 25 %}   {# padding top #}
+    {% set PB = 45 %}   {# padding bottom #}
+    <svg viewBox="0 0 {{ W }} {{ H }}" width="100%" style="max-height:640px; display:block;" role="img" aria-label="Country valuation vs business cycle scatter">
+      <!-- Quadrant background tints -->
+      <rect x="{{ PL }}" y="{{ PT }}" width="{{ ((W - PL - PR) / 2)|round(0,'floor') }}" height="{{ ((H - PT - PB) / 2)|round(0,'floor') }}" fill="var(--gv-quad-momentum)"/>
+      <rect x="{{ (PL + (W - PL - PR) / 2)|round(0,'floor') }}" y="{{ PT }}" width="{{ ((W - PL - PR) / 2)|round(0,'ceil') }}" height="{{ ((H - PT - PB) / 2)|round(0,'floor') }}" fill="var(--gv-quad-buy)"/>
+      <rect x="{{ PL }}" y="{{ (PT + (H - PT - PB) / 2)|round(0,'floor') }}" width="{{ ((W - PL - PR) / 2)|round(0,'floor') }}" height="{{ ((H - PT - PB) / 2)|round(0,'ceil') }}" fill="var(--gv-quad-avoid)"/>
+      <rect x="{{ (PL + (W - PL - PR) / 2)|round(0,'floor') }}" y="{{ (PT + (H - PT - PB) / 2)|round(0,'floor') }}" width="{{ ((W - PL - PR) / 2)|round(0,'ceil') }}" height="{{ ((H - PT - PB) / 2)|round(0,'ceil') }}" fill="var(--gv-quad-watch)"/>
+
+      <!-- Center dividing lines -->
+      <line x1="{{ (PL + (W - PL - PR) / 2)|round(1) }}" y1="{{ PT }}" x2="{{ (PL + (W - PL - PR) / 2)|round(1) }}" y2="{{ H - PB }}" stroke="var(--line)" stroke-width="1" stroke-dasharray="3,3"/>
+      <line x1="{{ PL }}" y1="{{ (PT + (H - PT - PB) / 2)|round(1) }}" x2="{{ W - PR }}" y2="{{ (PT + (H - PT - PB) / 2)|round(1) }}" stroke="var(--line)" stroke-width="1" stroke-dasharray="3,3"/>
+
+      <!-- Outer frame -->
+      <rect x="{{ PL }}" y="{{ PT }}" width="{{ W - PL - PR }}" height="{{ H - PT - PB }}" fill="none" stroke="var(--line)" stroke-width="1"/>
+
+      <!-- Quadrant labels (in each corner) -->
+      <text x="{{ PL + 8 }}"           y="{{ PT + 18 }}"          class="gv-quadrant-label">Momentum · expensive + accelerating</text>
+      <text x="{{ W - PR - 8 }}"       y="{{ PT + 18 }}"          class="gv-quadrant-label" text-anchor="end">🎯 Buy · cheap + accelerating</text>
+      <text x="{{ PL + 8 }}"           y="{{ H - PB - 8 }}"       class="gv-quadrant-label">Avoid · expensive + contracting</text>
+      <text x="{{ W - PR - 8 }}"       y="{{ H - PB - 8 }}"       class="gv-quadrant-label" text-anchor="end">Watch · cheap + contracting</text>
+
+      <!-- X axis labels -->
+      <text x="{{ PL }}"       y="{{ H - PB + 20 }}" class="gv-quadrant-label">← expensive</text>
+      <text x="{{ W - PR }}"   y="{{ H - PB + 20 }}" class="gv-quadrant-label" text-anchor="end">cheap →</text>
+      <text x="{{ (PL + W - PR) / 2 }}" y="{{ H - 8 }}" class="gv-quadrant-label" text-anchor="middle" style="font-size:0.72rem;">Valuation percentile (own history)</text>
+
+      <!-- Y axis labels -->
+      <text transform="translate({{ PL - 30 }},{{ (PT + H - PB) / 2 }}) rotate(-90)" class="gv-quadrant-label" text-anchor="middle" style="font-size:0.72rem;">Business cycle (OECD CLI)</text>
+      <text x="{{ PL - 8 }}"   y="{{ PT + 10 }}"          class="gv-quadrant-label" text-anchor="end">↑ accelerating</text>
+      <text x="{{ PL - 8 }}"   y="{{ H - PB - 2 }}"        class="gv-quadrant-label" text-anchor="end">↓ contracting</text>
+
+      <!-- Country dots -->
+      {% for c in countries %}
+        {% set cx = (PL + (c.valuation_score / 100) * (W - PL - PR)) | round(1) %}
+        {% set cy = (PT + (1 - (c.cycle_score / 100)) * (H - PT - PB)) | round(1) %}
+        <g class="gv-dot-group" data-country="{{ c.name|e }}" data-region="{{ c.region }}"
+           data-etf="{{ c.etf }}" data-quadrant="{{ c.quadrant }}"
+           data-cape="{{ c.cape }}" data-cape-pct="{{ c.cape_pct }}"
+           data-cli="{{ c.cli }}" data-cli-trend="{{ c.cli_trend }}"
+           data-val-score="{{ c.valuation_score }}" data-cycle-score="{{ c.cycle_score }}">
+          <circle cx="{{ cx }}" cy="{{ cy }}" r="6.5"
+                  fill="{% if c.region == 'Developed' %}var(--gv-developed){% else %}var(--gv-emerging){% endif %}"
+                  class="gv-country-dot"/>
+          <text x="{{ cx + 9 }}" y="{{ cy + 1 }}" class="gv-country-label">{{ c.code }}</text>
+        </g>
+      {% endfor %}
+    </svg>
+    <div id="gvTooltip" class="gv-tooltip"></div>
+  </div>
+</div>
+
+<!-- ── Full table ─────────────────────────────────────────────── -->
+<div class="gv-table-card">
+  <h2>All countries — sortable</h2>
+  <p class="desc">Click any column header to sort. Percentiles are vs each country's own 20-year range (100 = most expensive/attractive it's been).</p>
+  <div style="overflow-x:auto;">
+    <table class="gv-table" id="gvTable">
+      <thead>
+        <tr>
+          <th data-key="name">Country</th>
+          <th data-key="etf" class="hide-mobile">ETF</th>
+          <th data-key="combined_score" class="num sorted">Score</th>
+          <th data-key="valuation_score" class="num">Val</th>
+          <th data-key="cycle_score" class="num">Cycle</th>
+          <th data-key="cape" class="num hide-mobile">CAPE</th>
+          <th data-key="cape_pct" class="num hide-mobile">%ile</th>
+          <th data-key="pb" class="num hide-mobile">P/B</th>
+          <th data-key="div_yield" class="num hide-mobile">Div %</th>
+          <th data-key="buffett" class="num hide-mobile">Buffett</th>
+          <th data-key="cli" class="num hide-mobile">CLI</th>
+          <th data-key="quadrant">Zone</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in countries %}
+        <tr data-country="{{ c.name|e }}">
+          <td>
+            <span class="gv-region-dot" style="background:{% if c.region == 'Developed' %}var(--gv-developed){% else %}var(--gv-emerging){% endif %};"></span>
+            {{ c.name }}
+          </td>
+          <td class="ticker hide-mobile">{{ c.etf }}</td>
+          <td class="num"><strong>{{ c.combined_score }}</strong></td>
+          <td class="num">{{ c.valuation_score }}</td>
+          <td class="num">{{ c.cycle_score }}</td>
+          <td class="num hide-mobile">{{ c.cape }}</td>
+          <td class="num hide-mobile">{{ c.cape_pct }}</td>
+          <td class="num hide-mobile">{{ c.pb }}</td>
+          <td class="num hide-mobile">{{ c.div_yield }}</td>
+          <td class="num hide-mobile">{{ c.buffett }}</td>
+          <td class="num hide-mobile">
+            {{ c.cli }}
+            <span class="gv-cli-trend gv-cli-{{ c.cli_trend }}">
+              {% if c.cli_trend == 'rising' %}↑{% elif c.cli_trend == 'falling' %}↓{% else %}→{% endif %}
+            </span>
+          </td>
+          <td><span class="gv-quad-pill {{ c.quadrant }}">{{ c.quadrant }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:0.7rem; color:var(--ink-3); margin-top:0.8rem;">
+    Sources: Aswath Damodaran (CAPE, P/B, div yield — updated quarterly),
+    World Bank + FRED (market cap and GDP for Buffett indicator),
+    <a href="https://data.oecd.org/leadind/composite-leading-indicator-cli.htm" style="color:var(--gv-emerging);">OECD CLI</a>
+    (business-cycle turning-point indicator, monthly). Not investment advice —
+    verify with primary sources before allocating.
+  </p>
+</div>
+
+<script>
+// ── Interactivity: hover tooltip on chart + sortable table ────────
+(function () {
+  // Tooltip
+  const wrap = document.getElementById('gvChartWrap');
+  const tip  = document.getElementById('gvTooltip');
+  if (wrap && tip) {
+    wrap.querySelectorAll('.gv-dot-group').forEach(g => {
+      g.addEventListener('mouseenter', () => {
+        const d = g.dataset;
+        tip.innerHTML =
+          `<div class="name">${d.country} <span style="color:var(--ink-3); font-weight:400;">· ${d.region}</span></div>` +
+          `<div class="row"><span>ETF</span><strong>${d.etf}</strong></div>` +
+          `<div class="row"><span>Zone</span><strong>${d.quadrant}</strong></div>` +
+          `<div class="row"><span>Valuation score</span><strong>${d.valScore}</strong></div>` +
+          `<div class="row"><span>Cycle score</span><strong>${d.cycleScore}</strong></div>` +
+          `<div class="row"><span>CAPE</span><strong>${d.cape} (${d.capePct}th %)</strong></div>` +
+          `<div class="row"><span>OECD CLI</span><strong>${d.cli} · ${d.cliTrend}</strong></div>`;
+        tip.classList.add('show');
+      });
+      g.addEventListener('mousemove', (e) => {
+        const r = wrap.getBoundingClientRect();
+        const x = e.clientX - r.left + 12;
+        const y = e.clientY - r.top + 12;
+        // Keep inside the wrap
+        const tw = tip.offsetWidth, th = tip.offsetHeight;
+        tip.style.left = Math.min(x, r.width - tw - 8) + 'px';
+        tip.style.top  = Math.min(y, r.height - th - 8) + 'px';
+      });
+      g.addEventListener('mouseleave', () => tip.classList.remove('show'));
+    });
+  }
+
+  // Sortable table
+  const table = document.getElementById('gvTable');
+  if (!table) return;
+  const tbody = table.tBodies[0];
+  const rowData = Array.from(tbody.querySelectorAll('tr')).map(tr => {
+    const cells = tr.querySelectorAll('td');
+    return {
+      tr,
+      name: cells[0].innerText.trim(),
+      etf: cells[1].innerText.trim(),
+      combined_score: parseFloat(cells[2].innerText),
+      valuation_score: parseFloat(cells[3].innerText),
+      cycle_score: parseFloat(cells[4].innerText),
+      cape: parseFloat(cells[5].innerText),
+      cape_pct: parseFloat(cells[6].innerText),
+      pb: parseFloat(cells[7].innerText),
+      div_yield: parseFloat(cells[8].innerText),
+      buffett: parseFloat(cells[9].innerText),
+      cli: parseFloat(cells[10].innerText),
+      quadrant: cells[11].innerText.trim(),
+    };
+  });
+  let sortKey = 'combined_score', sortAsc = false;
+  table.querySelectorAll('th[data-key]').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.key;
+      if (sortKey === key) sortAsc = !sortAsc;
+      else { sortKey = key; sortAsc = false; }
+      // reset header state
+      table.querySelectorAll('th').forEach(h => {
+        h.classList.remove('sorted', 'sorted-asc');
+      });
+      th.classList.add(sortAsc ? 'sorted-asc' : 'sorted');
+      // sort
+      const dir = sortAsc ? 1 : -1;
+      rowData.sort((a, b) => {
+        const va = a[key], vb = b[key];
+        if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
+        return String(va).localeCompare(String(vb)) * dir;
+      });
+      rowData.forEach(r => tbody.appendChild(r.tr));
+    });
+  });
+})();
+</script>
+{% endblock %}
