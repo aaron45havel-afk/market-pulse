@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "as_of": "2026-06-28",
-    "count": 6651,
+    "as_of": "2026-07-05",
+    "count": 6659,
     "source": "Photon (komoot.io OSM reverse-geocoder), neighbourhood/suburb/district tags"
   },
   "neighborhoods": {
@@ -1448,6 +1448,7 @@
     "12873": "Shushan",
     "12883": "Chilson",
     "12884": "Victory",
+    "12914": "Akwesasne",
     "12917": "Burke",
     "12918": "Elsinore",
     "12919": "Champlain",
@@ -1456,6 +1457,7 @@
     "12930": "Dickinson",
     "12934": "Ellenburg Center",
     "12936": "Essex",
+    "12937": "Fort Covington",
     "12953": "Chasm Falls",
     "12962": "Woods Mills",
     "12967": "Coteys Corner",
@@ -6419,6 +6421,7 @@
     "92139": "Paradise Hills",
     "92154": "Otay Mesa",
     "92173": "San Ysidro",
+    "92210": "Eldorado Country Club",
     "92242": "Earp",
     "92253": "PGA West",
     "92282": "Bonnie Bell",
@@ -6655,6 +6658,11 @@
     "95628": "Fair Oaks",
     "95634": "Balderson Station",
     "95642": "Scottsville",
-    "95655": "Independence at Mather Community"
+    "95655": "Independence at Mather Community",
+    "95659": "Catlett",
+    "95660": "North Highlands",
+    "95662": "Orangevale",
+    "95665": "Pine Acres",
+    "95668": "Pleasant Grove"
   }
 }
