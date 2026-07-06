@@ -1,5 +1,26 @@
 # Maintenance scripts
 
+## check_data_freshness.py
+
+Weekly audit of every auto-refreshed data source. Reads back each
+source's `as_of`/`fetched_at` timestamp and flags anything missing or
+older than its expected refresh cadence.
+
+```bash
+python scripts/check_data_freshness.py
+```
+
+Runs via `.github/workflows/check-data-freshness.yml` (Sundays 09:00
+UTC). On failure it opens (or updates) a `data-freshness`-labeled GitHub
+issue with the report; once every source is fresh again it closes the
+issue. This exists because a refresh workflow can report "success" while
+its commit step silently no-ops — see `refresh-growth.yml`'s history:
+`git diff --quiet` doesn't see untracked files, so every scheduled run
+from May-July 2026 "succeeded" without ever committing
+`growth_overrides.json`. Every refresh workflow now stages the file
+before diffing (`git add` then `git diff --staged --quiet`) to avoid
+that trap, and this script is the backstop in case it recurs.
+
 ## refresh_zillow.py
 
 Refreshes ZIP-level home values + rents in the neighborhood maps.

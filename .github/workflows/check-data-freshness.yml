@@ -1,0 +1,81 @@
+name: Check data freshness
+
+# Weekly audit of every auto-refreshed data source (Zillow, Redfin,
+# growth outlook, BLS, OECD, rates, screeners, national ZIPs, census,
+# neighborhoods). Each refresh_*.py workflow can report "success" while
+# silently no-op'ing its commit step — that's exactly what happened to
+# refresh-growth.yml for two months (git diff on an untracked file
+# always looks clean). This job re-reads every source's as_of/fetched_at
+# timestamp and opens a GitHub issue if anything is missing or older
+# than its expected cadence, so a silent failure doesn't go unnoticed.
+#
+# Cadence: weekly, Sundays 09:00 UTC (after the 07:00 neighborhoods run).
+
+on:
+  schedule:
+    - cron: '0 9 * * 0'   # Sundays 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: market-pulse-v21
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run freshness check
+        id: check
+        shell: bash
+        run: |
+          set +e
+          python scripts/check_data_freshness.py | tee /tmp/freshness_report.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure the data-freshness label exists
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create data-freshness \
+            --repo "$GITHUB_REPOSITORY" \
+            --color FBCA04 \
+            --description "Automated weekly data-refresh freshness alerts" \
+            --force
+
+      - name: Open or update issue on stale/missing data
+        if: steps.check.outputs.exit_code != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --label data-freshness --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body-file /tmp/freshness_report.txt
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "Site data is stale — weekly freshness check failed" \
+              --label data-freshness \
+              --body-file /tmp/freshness_report.txt
+          fi
+
+      - name: Close issue once everything is fresh again
+        if: steps.check.outputs.exit_code == '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --label data-freshness --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "All data sources are fresh again as of $(date -u +%F). Closing."
+            gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
+          fi
