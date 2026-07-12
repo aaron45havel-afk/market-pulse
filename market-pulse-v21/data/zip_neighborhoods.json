@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "as_of": "2026-07-05",
-    "count": 6659,
+    "as_of": "2026-07-12",
+    "count": 6668,
     "source": "Photon (komoot.io OSM reverse-geocoder), neighbourhood/suburb/district tags"
   },
   "neighborhoods": {
@@ -3598,6 +3598,7 @@
     "33301": "Nurmi Isles",
     "33304": "Bay Harbor",
     "33305": "North Bal Harbor",
+    "33306": "Coral Ridge",
     "33314": "Playland Village",
     "33316": "Port Everglades",
     "33325": "Paradise Village",
@@ -4310,6 +4311,7 @@
     "43952": "Pleasant Hill",
     "43953": "Winterdale",
     "43963": "Highland City",
+    "43964": "Knoxville",
     "43971": "Glen Robbins",
     "43976": "Liggett Crossing",
     "44001": "Kendeigh Corner",
@@ -4870,6 +4872,7 @@
     "50312": "Grand Stratford Apartments",
     "50313": "Marquisville",
     "50315": "Watrous Heights",
+    "50317": "Sheridan Gardens",
     "50322": "Northwest Country Club Manor",
     "50324": "Crestwood",
     "50327": "Gladbury Park",
@@ -5134,6 +5137,7 @@
     "60012": "Shenandoah Estates",
     "60018": "O'Hare",
     "60020": "Kings Island",
+    "60025": "Swainwood",
     "60040": "Fort Sheridan",
     "60047": "Sanctuary Club",
     "60050": "Winding Creek",
@@ -5854,6 +5858,7 @@
     "77807": "Fountain",
     "77845": "Southern Plantation",
     "77904": "Willow Creek Ranches",
+    "77995": "Terryville",
     "78002": "Atascosa",
     "78010": "Verde Park Estates",
     "78015": "The Fairways",
@@ -6663,6 +6668,10 @@
     "95660": "North Highlands",
     "95662": "Orangevale",
     "95665": "Pine Acres",
-    "95668": "Pleasant Grove"
+    "95668": "Pleasant Grove",
+    "95670": "Soudan",
+    "95682": "Bullard",
+    "95684": "Omo Ranch",
+    "95690": "Snug Harbor"
   }
 }
