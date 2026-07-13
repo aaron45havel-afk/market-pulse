@@ -85,11 +85,13 @@ def _avg_recurring_deal_live() -> int:
         conn.close()
 
 
-def _derive_weekly_targets() -> dict[str, int]:
+def _derive_weekly_targets(avg_deal: int | None = None) -> dict[str, int]:
     """Working backwards from ARR_GOAL through pilot→recurring and the
     three funnel rates. All four metrics round UP so hitting the
-    target keeps you on pace or ahead."""
-    avg_deal = _avg_recurring_deal_live()
+    target keeps you on pace or ahead. Accepts a pre-computed avg_deal
+    so callers that already fetched it don't hit the DB twice."""
+    if avg_deal is None:
+        avg_deal = _avg_recurring_deal_live()
     deals_needed = ARR_GOAL / avg_deal
     pilots_needed = deals_needed / PILOT_TO_RECURRING_RATE
     pilots_per_wk = pilots_needed / GOAL_HORIZON_WEEKS
@@ -104,14 +106,17 @@ def _derive_weekly_targets() -> dict[str, int]:
     }
 
 
-def arr_path_to_goal() -> dict:
+def arr_path_to_goal(contacts: list[dict] | None = None) -> dict:
     """Snapshot of the path: assumptions, derived targets, current
-    progress, deadline. Powers the 'Path to $1M ARR' panel."""
+    progress, deadline. Powers the 'Path to $1M ARR' panel. Accepts a
+    pre-fetched contacts list so the /pipeline render doesn't scan
+    crm_contacts a second time."""
     avg_deal = _avg_recurring_deal_live()
-    targets = _derive_weekly_targets()
+    targets = _derive_weekly_targets(avg_deal)
 
     # Current booked ARR
-    contacts = list_contacts()
+    if contacts is None:
+        contacts = list_contacts()
     booked = sum(c["recurring_value"] or 0 for c in contacts if c["stage"] == "RECURRING")
     pct = (booked / ARR_GOAL * 100) if ARR_GOAL else 0
 
@@ -423,6 +428,37 @@ def list_contacts() -> list[dict]:
         out = [dict(zip(cols, r)) for r in rows]
         cur.close()
         return out
+    finally:
+        conn.close()
+
+
+_CONTACT_COLS = ["id", "name", "title", "agency", "email", "stage",
+                 "pilot_value", "recurring_value", "date_emailed",
+                 "next_date", "subject", "notes",
+                 "industry", "email_thread", "role",
+                 "hosting_model", "engagement_notes", "pilot_agreement",
+                 "follow_up_date",
+                 "created_at", "updated_at"]
+
+
+def get_contact(contact_id: int) -> dict | None:
+    """Single contact by id, same dict shape as list_contacts(). Lets
+    modal/detail handlers fetch one row with an indexed primary-key
+    lookup instead of scanning the whole crm_contacts table."""
+    conn = _get_conn()
+    if not conn:
+        return None
+    try:
+        cur = conn.cursor()
+        cur.execute(f"""
+            SELECT {", ".join(_CONTACT_COLS)}
+            FROM crm_contacts
+            WHERE id = %s
+            LIMIT 1
+        """, (contact_id,))
+        row = cur.fetchone()
+        cur.close()
+        return dict(zip(_CONTACT_COLS, row)) if row else None
     finally:
         conn.close()
 
@@ -3046,7 +3082,7 @@ def process_working_session_auto(contact_id: int, transcript: str,
     # contact's email_thread so async context lands in the brief too.
     email_thread = ""
     try:
-        contact = next((c for c in list_contacts() if c["id"] == contact_id), None)
+        contact = get_contact(contact_id)
         if contact:
             email_thread = contact.get("email_thread") or ""
     except Exception:

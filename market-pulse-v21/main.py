@@ -1,5 +1,5 @@
 """Market Pulse — Real Estate & Finance Dashboard."""
-import json, os, logging, sqlite3
+import asyncio, hmac, json, os, logging, sqlite3
 from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
@@ -27,7 +27,10 @@ def _fmt_obs_date(iso: str) -> str:
     rate chip + affordability tooltip. Falls back to the raw string on
     parse failure so a malformed value never breaks the page."""
     try:
-        return date.fromisoformat(iso).strftime("%b %-d, %Y")
+        d = date.fromisoformat(iso)
+        # Build "May 1, 2026" without the Linux-only %-d flag so this
+        # also works on Windows dev machines.
+        return f"{d.strftime('%b')} {d.day}, {d.year}"
     except (ValueError, TypeError):
         return iso
 
@@ -392,7 +395,7 @@ async def pipeline(request: Request, funnel_start: str = "", funnel_end: str = "
         "funnel_end": f_end,
         "trailing": trailing_weekly_kpis(weeks=8),
         "completion": goals_completion_stats(),
-        "path": arr_path_to_goal(),
+        "path": arr_path_to_goal(contacts),
         "industries": INDUSTRIES,
         "email_triggers": EMAIL_TRIGGERS,
         "roles": ROLES,
@@ -598,8 +601,8 @@ async def api_pipeline_email(request: Request, contact_id: int):
     JSON the modal can drop into its textareas."""
     if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
-    from crm import list_contacts, suggest_email_for_contact
-    contact = next((c for c in list_contacts() if c["id"] == contact_id), None)
+    from crm import get_contact, suggest_email_for_contact
+    contact = get_contact(contact_id)
     if not contact:
         return JSONResponse({"error": "not found"}, status_code=404)
     payload = suggest_email_for_contact(contact)
@@ -641,9 +644,9 @@ async def api_get_agreement(request: Request, contact_id: int):
     state so the modal can render."""
     if not _check_pipeline_access(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
-    from crm import (list_contacts, PILOT_AGREEMENT_SECTIONS,
+    from crm import (get_contact, PILOT_AGREEMENT_SECTIONS,
                      agreement_progress)
-    contact = next((c for c in list_contacts() if c["id"] == contact_id), None)
+    contact = get_contact(contact_id)
     if not contact:
         return JSONResponse({"error": "not found"}, status_code=404)
     saved = contact.get("pilot_agreement") or ""
@@ -706,7 +709,7 @@ async def api_vercel_create(request: Request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     from vercel import create_project, configured as _vc
     from github_api import (create_repo, configured as _gc)
-    from crm import list_contacts, add_prototype
+    from crm import get_contact, add_prototype
     if not _vc():
         return JSONResponse({
             "error": ("Vercel sign-in not configured. Create a token at "
@@ -724,7 +727,7 @@ async def api_vercel_create(request: Request):
     proto_label   = (body.get("prototype_label") or "").strip()
     create_github = bool(body.get("create_github"))
 
-    contact = next((c for c in list_contacts() if c["id"] == contact_id), None)
+    contact = get_contact(contact_id)
     if not contact:
         return JSONResponse({"error": "contact not found"}, status_code=404)
     if not project_name:
@@ -1137,9 +1140,9 @@ async def api_pipeline_call_get(request: Request, contact_id: int):
     from crm import (DISCOVERY_AGENDA, DISCOVERY_PROMPT_EXTRACT,
                      DISCOVERY_PROMPT_EXEC_SUMMARY,
                      DISCOVERY_PROMPT_PAIN, DISCOVERY_PROMPT_MVP,
-                     SCORECARD_DIMENSIONS, list_contacts,
+                     SCORECARD_DIMENSIONS, get_contact,
                      get_call_for_contact, render_prompt)
-    contact = next((c for c in list_contacts() if c["id"] == contact_id), None)
+    contact = get_contact(contact_id)
     if not contact:
         return JSONResponse({"error": "not found"}, status_code=404)
     call = get_call_for_contact(contact_id) or {}
@@ -1243,8 +1246,8 @@ async def api_pipeline_session_get(request: Request, contact_id: int):
                      WORKING_PROMPT_LOCKED_SCOPE, WORKING_PROMPT_CRITERIA,
                      WORKING_PROMPT_PROPOSAL, WORKING_PROMPT_PROTOTYPE,
                      WORKING_SCORECARD_DIMENSIONS,
-                     list_contacts, get_session_for_contact, render_prompt)
-    contact = next((c for c in list_contacts() if c["id"] == contact_id), None)
+                     get_contact, get_session_for_contact, render_prompt)
+    contact = get_contact(contact_id)
     if not contact:
         return JSONResponse({"error": "not found"}, status_code=404)
     session = get_session_for_contact(contact_id) or {}
@@ -1394,13 +1397,13 @@ async def api_pipeline_send_email(request: Request):
         return JSONResponse({"error": "missing contact_id / subject / body"},
                             status_code=400)
 
-    from crm import (list_contacts, send_via_resend, update_contact,
+    from crm import (get_contact, send_via_resend, update_contact,
                      change_stage, resend_configured, SENDER_NAME,
                      record_email_send)
     if not resend_configured():
         return JSONResponse({"error": "RESEND_API_KEY not set"}, status_code=400)
 
-    contact = next((c for c in list_contacts() if c["id"] == contact_id), None)
+    contact = get_contact(contact_id)
     if not contact:
         return JSONResponse({"error": "contact not found"}, status_code=404)
     to_email = (contact.get("email") or "").strip()
@@ -1622,7 +1625,7 @@ async def api_pipeline_session_auto(request: Request, contact_id: int):
                          WORKING_PROMPT_EXTRACT, WORKING_PROMPT_LOCKED_SCOPE,
                          WORKING_PROMPT_CRITERIA, WORKING_PROMPT_PROPOSAL,
                          WORKING_PROMPT_PROTOTYPE,
-                         list_contacts, upsert_session)
+                         get_contact, upsert_session)
 
         def emit(obj):
             return (_json.dumps(obj) + "\n").encode("utf-8")
@@ -1658,9 +1661,7 @@ async def api_pipeline_session_auto(request: Request, contact_id: int):
             # brief has the full async context.
             email_thread = ""
             try:
-                contact = await _asyncio.to_thread(
-                    lambda: next((c for c in list_contacts() if c["id"] == contact_id), None)
-                )
+                contact = await _asyncio.to_thread(get_contact, contact_id)
                 if contact:
                     email_thread = contact.get("email_thread") or ""
             except Exception:
@@ -1790,13 +1791,15 @@ async def stocks_page(request: Request):
 @app.get("/api/stock/{ticker}/quote")
 async def api_stock_quote(ticker: str):
     from stock_lookup import get_quote
-    return JSONResponse(get_quote(ticker))
+    # get_quote() makes a blocking Yahoo request — run it off the event
+    # loop so one slow fetch doesn't stall every concurrent request.
+    return JSONResponse(await asyncio.to_thread(get_quote, ticker))
 
 
 @app.get("/api/stock/{ticker}/fundamentals")
 async def api_stock_fundamentals(ticker: str):
     from stock_lookup import get_fundamentals
-    return JSONResponse(get_fundamentals(ticker))
+    return JSONResponse(await asyncio.to_thread(get_fundamentals, ticker))
 
 
 # ─── Real Mortgage Payment Price Index (public) ─────────────────────
@@ -2198,7 +2201,8 @@ async def conditions_page(request: Request):
 @app.get("/api/real-mortgage-index")
 async def api_real_mortgage_index(metro: str = "US", down_pct: float = 10.0):
     from real_mortgage_index import compute_index
-    return JSONResponse(compute_index(metro, down_pct))
+    # compute_index() does three blocking FRED calls on a cache miss.
+    return JSONResponse(await asyncio.to_thread(compute_index, metro, down_pct))
 
 
 # ─── Sign-up (Phase 1 of paywall — email capture only) ──────────────
@@ -2277,7 +2281,29 @@ def _check_admin_token(request: Request) -> bool:
         request.headers.get("x-admin-token", "") or
         request.cookies.get(ADMIN_COOKIE, "")
     ).strip()
-    return provided != "" and provided == expected
+    # Constant-time compare so a network-adjacent attacker can't recover
+    # the token byte-by-byte via response timing.
+    return provided != "" and hmac.compare_digest(provided, expected)
+
+
+def _admin_gate(request: Request):
+    """Return a 401 JSONResponse when the caller isn't an admin, else
+    None. Used to protect state-mutating / cache-clearing API endpoints
+    that were previously open to anonymous requests."""
+    if not _check_admin_token(request):
+        return JSONResponse({"error": "Unauthorized — admin only."},
+                            status_code=401)
+    return None
+
+
+def _coerce_float(value):
+    """Parse a float from a JSON body value. Returns None when the value
+    is missing or non-numeric so callers can reply 400 instead of
+    raising a 500."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 @app.get("/admin/login")
@@ -2287,7 +2313,7 @@ async def admin_login(request: Request, token: str = "", redirect: str = "/"):
     once and the admin nav links + pages unlock for 30 days.
     Bad/missing token → 401."""
     expected = os.environ.get("ADMIN_TOKEN", "").strip()
-    if not expected or token != expected:
+    if not expected or not hmac.compare_digest(token, expected):
         return JSONResponse({"error": "Invalid token."}, status_code=401)
     resp = RedirectResponse(url=redirect, status_code=302)
     resp.set_cookie(
@@ -2410,7 +2436,9 @@ async def auth_logout(request: Request):
     """Sign the user out of both the Google session AND the legacy
     admin cookie."""
     from auth import SESSION_COOKIE
-    resp = RedirectResponse("/admin/login", status_code=303)
+    # /admin/login 401s without a token, so logging out there showed a
+    # raw JSON error. Bounce to the friendly sign-in landing instead.
+    resp = RedirectResponse("/sign-in", status_code=303)
     resp.delete_cookie(SESSION_COOKIE)
     resp.delete_cookie(ADMIN_COOKIE)
     return resp
@@ -2821,7 +2849,7 @@ async def zip_detail(request: Request, zip: str):
         for h, v in [
             (3,  row["forecast_3mo_value"] if "forecast_3mo_value" in existing else None),
             (6,  row["forecast_6mo_value"] if "forecast_6mo_value" in existing else None),
-            (12, row["forecast_home_value_12mo"]),
+            (12, row["forecast_home_value_12mo"] if "forecast_home_value_12mo" in existing else None),
             (60, row["forecast_60mo_value"] if "forecast_60mo_value" in existing else None),
         ]:
             if v is not None:
@@ -2847,7 +2875,9 @@ async def zip_detail(request: Request, zip: str):
 @app.get("/api/finance/screener")
 async def api_screener():
     """Net-net / deep value screener powered by SEC EDGAR."""
-    data = build_net_net_screener()
+    # build_net_net_screener() fans out to SEC EDGAR on a cache miss —
+    # keep it off the event loop.
+    data = await asyncio.to_thread(build_net_net_screener)
     return JSONResponse(data)
 
 @app.get("/api/finance/rules")
@@ -2858,13 +2888,19 @@ async def api_rules():
 
 
 @app.get("/api/finance/refresh")
-async def api_refresh():
+async def api_refresh(request: Request):
+    # Admin-only: this clears the cache and triggers a live SEC EDGAR
+    # rebuild, which is exactly what we don't want anonymous callers
+    # hammering.
+    gate = _admin_gate(request)
+    if gate:
+        return gate
     from pathlib import Path
     for f in ["net_net_screener.json", "sec_financials.json"]:
         p = Path(f"/tmp/market_pulse_cache/{f}")
         if p.exists():
             p.unlink()
-    data = build_net_net_screener()
+    data = await asyncio.to_thread(build_net_net_screener)
     count = len(data) if isinstance(data, list) else 0
     net_nets = sum(1 for d in data if isinstance(d, dict) and d.get("is_net_net")) if isinstance(data, list) else 0
     return JSONResponse({"count": count, "net_nets": net_nets, "status": "refreshed"})
@@ -2959,28 +2995,45 @@ async def api_get_prices():
 @app.post("/api/prices")
 async def api_save_price(request: Request):
     """Save a single price. Body: {ticker, price, notes?}"""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
     body = await request.json()
     ticker = body.get("ticker", "").upper()
-    price = body.get("price")
+    price = _coerce_float(body.get("price"))
     notes = body.get("notes", "")
-    if not ticker or not price:
-        return JSONResponse({"error": "ticker and price required"}, status_code=400)
-    ok = save_price(ticker, float(price), notes)
+    if not ticker or price is None:
+        return JSONResponse({"error": "ticker and numeric price required"}, status_code=400)
+    ok = save_price(ticker, price, notes)
     return JSONResponse({"ok": ok, "ticker": ticker, "price": price})
 
 
 @app.post("/api/prices/bulk")
 async def api_save_bulk(request: Request):
     """Save multiple prices. Body: {prices: {TICKER: price, ...}}"""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
     body = await request.json()
-    prices = body.get("prices", {})
+    raw = body.get("prices", {})
+    # Keep only entries that parse to a real number so one bad value
+    # can't 500 the whole bulk save.
+    prices = {}
+    if isinstance(raw, dict):
+        for tkr, val in raw.items():
+            fv = _coerce_float(val)
+            if fv is not None:
+                prices[str(tkr).upper()] = fv
     ok = save_prices_bulk(prices)
     return JSONResponse({"ok": ok, "count": len(prices)})
 
 
 @app.delete("/api/prices/{ticker}")
-async def api_delete_price(ticker: str):
+async def api_delete_price(ticker: str, request: Request):
     """Delete a saved price."""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
     ok = delete_price(ticker.upper())
     return JSONResponse({"ok": ok})
 
@@ -3006,49 +3059,75 @@ async def api_get_portfolios():
 @app.post("/api/portfolios/lock")
 async def api_lock_portfolio(request: Request):
     """Lock in a new quarterly portfolio. Body: {name, holdings: [{ticker, entry_price, ...}], iwm_price}"""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
     body = await request.json()
     name = body.get("name", "")
     holdings = body.get("holdings", [])
-    iwm = body.get("iwm_price", 0)
+    iwm = _coerce_float(body.get("iwm_price", 0))
     if not name or not holdings:
         return JSONResponse({"error": "name and holdings required"}, status_code=400)
-    result = lock_portfolio(name, holdings, float(iwm))
+    if iwm is None:
+        return JSONResponse({"error": "iwm_price must be numeric"}, status_code=400)
+    result = lock_portfolio(name, holdings, iwm)
     return JSONResponse(result)
 
 
 @app.post("/api/portfolios/update")
 async def api_update_portfolio(request: Request):
     """Monthly price update. Body: {name, prices: {ticker: price}, iwm_price}"""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
     body = await request.json()
     name = body.get("name", "")
     prices = body.get("prices", {})
-    iwm = body.get("iwm_price", 0)
+    iwm = _coerce_float(body.get("iwm_price", 0))
     if not name or not prices:
         return JSONResponse({"error": "name and prices required"}, status_code=400)
-    result = update_portfolio_prices(name, prices, float(iwm))
+    if iwm is None:
+        return JSONResponse({"error": "iwm_price must be numeric"}, status_code=400)
+    result = update_portfolio_prices(name, prices, iwm)
     return JSONResponse(result)
 
 
 @app.post("/api/portfolios/exit")
 async def api_exit_holding(request: Request):
     """Exit a single holding. Body: {portfolio_name, ticker, exit_price, reason}"""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
     body = await request.json()
+    exit_price = _coerce_float(body.get("exit_price", 0))
+    if exit_price is None:
+        return JSONResponse({"error": "exit_price must be numeric"}, status_code=400)
     ok = exit_holding(body.get("portfolio_name"), body.get("ticker"),
-                      float(body.get("exit_price", 0)), body.get("reason", "held to maturity"))
+                      exit_price, body.get("reason", "held to maturity"))
     return JSONResponse({"ok": ok})
 
 
 @app.post("/api/portfolios/close")
 async def api_close_portfolio(request: Request):
     """Close a portfolio after 12 months. Body: {name, iwm_exit_price}"""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
     body = await request.json()
-    result = close_portfolio(body.get("name"), float(body.get("iwm_exit_price", 0)))
+    iwm_exit = _coerce_float(body.get("iwm_exit_price", 0))
+    if iwm_exit is None:
+        return JSONResponse({"error": "iwm_exit_price must be numeric"}, status_code=400)
+    result = close_portfolio(body.get("name"), iwm_exit)
     return JSONResponse(result)
 
 
 @app.get("/api/refresh-all")
-async def api_refresh_all():
-    """Clear all SEC EDGAR caches and force re-fetch."""
+async def api_refresh_all(request: Request):
+    """Clear all SEC EDGAR caches and force re-fetch. Admin-only — a
+    live re-fetch hammers SEC EDGAR, so this must not be anonymous."""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
     from pathlib import Path
     cache_dir = Path("/tmp/market_pulse_cache")
     cleared = 0
@@ -3056,6 +3135,6 @@ async def api_refresh_all():
         try:
             f.unlink()
             cleared += 1
-        except:
+        except OSError:
             pass
     return JSONResponse({"cleared": cleared, "status": "All caches cleared. Reload the page to fetch fresh data."})

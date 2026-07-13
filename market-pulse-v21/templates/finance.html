@@ -98,8 +98,8 @@
 
     <div class="card" style="margin-bottom:1rem;">
         <div class="toolbar">
-            <input type="text" class="search-bar" id="searchInput" placeholder="Search ticker or name...">
-            <select id="statusFilter">
+            <input type="search" class="search-bar" id="searchInput" placeholder="Search ticker or name..." aria-label="Search by ticker or company name">
+            <select id="statusFilter" aria-label="Filter by candidate type">
                 <option value="all">All Candidates</option>
                 <option value="confirmed">Net-Nets Only</option>
                 <option value="graham">Graham Bargains</option>
@@ -107,14 +107,16 @@
                 <option value="dividend">Dividend Payers</option>
                 <option value="no-china">Exclude China/Foreign</option>
             </select>
-            <select id="burnFilter">
+            <select id="burnFilter" aria-label="Filter by cash burn severity">
                 <option value="no-critical">Exclude Critical Burners</option>
                 <option value="">All Burn Rates</option>
                 <option value="ok">OK / Building Only</option>
             </select>
             <button onclick="exportNetNets()" class="btn-primary">Export CSV</button>
+            {% if is_admin(request) %}
             <button onclick="syncPricesToServer()" class="btn-secondary">Save to DB</button>
             <button onclick="refreshData()" class="btn-secondary">Refresh SEC Data</button>
+            {% endif %}
             <span style="color:var(--text-dim); font-size:0.75rem;" id="filterCount"></span>
         </div>
     </div>
@@ -165,11 +167,31 @@ let sortDir = 'desc';
 
 function savePrices() { try { localStorage.setItem('mp_prices', JSON.stringify(userPrices)); } catch(e) {} }
 
+// Non-blocking toast — replaces alert() so a failed save/refresh doesn't
+// freeze the tab (alert() is especially painful inside mobile Chrome).
+function mpToast(msg, isError) {
+    let el = document.getElementById('mpToast');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'mpToast';
+        el.setAttribute('role', 'status');
+        el.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:3000;max-width:90vw;padding:0.7rem 1.1rem;border-radius:10px;font-size:0.85rem;font-weight:600;box-shadow:0 6px 24px rgba(0,0,0,0.25);opacity:0;transition:opacity 0.2s;pointer-events:none;';
+        document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.background = isError ? '#fef2f2' : '#ecfdf5';
+    el.style.color = isError ? '#991b1b' : '#065f46';
+    el.style.border = '1px solid ' + (isError ? '#fecaca' : '#a7f3d0');
+    el.style.opacity = '1';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.opacity = '0'; }, 3200);
+}
+
 function syncPricesToServer() {
     const vp = {}; Object.entries(userPrices).forEach(([t,p]) => { if (p > 0) vp[t] = p; });
     fetch('/api/prices/bulk', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prices:vp})})
-        .then(r => r.json()).then(d => alert('Saved ' + (d.count||0) + ' prices to database.'))
-        .catch(e => alert('Save failed: ' + e.message));
+        .then(r => r.json()).then(d => mpToast('Saved ' + (d.count||0) + ' prices to database.'))
+        .catch(e => mpToast('Save failed: ' + e.message, true));
 }
 function loadPricesFromServer() {
     fetch('/api/prices').then(r => r.json()).then(sp => {
@@ -180,7 +202,7 @@ function loadPricesFromServer() {
 }
 function refreshData() {
     if (!confirm('Clear all SEC EDGAR cache and re-fetch? Takes ~30s.')) return;
-    fetch('/api/refresh-all').then(r => r.json()).then(d => { alert(d.status); location.reload(); }).catch(e => alert('Failed: ' + e.message));
+    fetch('/api/refresh-all').then(r => r.json()).then(d => { mpToast(d.status); setTimeout(() => location.reload(), 900); }).catch(e => mpToast('Failed: ' + e.message, true));
 }
 
 function updateCounts() {
