@@ -32,9 +32,14 @@ def _load_cli_overlay() -> dict:
     try:
         with open(_OVERLAY_PATH, encoding="utf-8") as fh:
             data = json.load(fh)
-        if isinstance(data, dict) and "series" in data:
+        # 'series' must be a code-keyed object. A syntactically-valid file
+        # whose series is a list/scalar is treated as malformed so the page
+        # falls back to the snapshot instead of 500-ing downstream.
+        if isinstance(data, dict) and isinstance(data.get("series"), dict):
             return data
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
+    except (OSError, ValueError):
+        # OSError → missing/unreadable file. ValueError covers both
+        # json.JSONDecodeError and UnicodeDecodeError (non-UTF-8 bytes).
         pass
     return {}
 
@@ -289,8 +294,12 @@ def _apply_cli_overlay(countries: list[dict]) -> list[dict]:
     out = []
     for c in countries:
         entry = overlay.get(c["code"])
-        if entry and entry.get("value") is not None:
-            c = {**c, "cli": entry["value"], "cli_trend": entry.get("trend") or c["cli_trend"]}
+        # Each entry must be a dict with a numeric value; anything else
+        # (a scalar from a partly-corrupt overlay) is ignored so it can't
+        # crash the page — that country just keeps its snapshot value.
+        if isinstance(entry, dict) and entry.get("value") is not None:
+            c = {**c, "cli": entry["value"],
+                 "cli_trend": entry.get("trend") or c["cli_trend"]}
         out.append(c)
     return out
 
@@ -328,7 +337,11 @@ def composite_scores(countries: list[dict] | None = None) -> list[dict]:
         if c["cli_trend"] == "rising":
             base = 50 + (100 - cli) * 12   # 98→74, 100→50, 102→26
         elif c["cli_trend"] == "falling":
-            base = 30 - (100 - cli) * 12   # 98→54 no wait, 102→54 → cap
+            # Still contracting → a 20-pt penalty vs the rising center, but
+            # same direction as 'rising': a low CLI that's falling is nearer
+            # a bottom (better) than a high CLI just rolling over off a peak
+            # (the classic AVOID phase).
+            base = 30 + (100 - cli) * 12   # 98→54, 100→30, 102→6
         else:  # flat
             base = 50 - abs(100 - cli) * 8
         cycle_score = round(max(0, min(100, base)), 1)

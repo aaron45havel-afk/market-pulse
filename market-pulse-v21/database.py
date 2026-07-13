@@ -763,7 +763,14 @@ def add_user(email, name=None, source=None, user_agent=None):
         logger.error(f"add_user failed: {e}")
         return (False, None)
     finally:
-        conn.commit(); cur.close(); conn.close()
+        # The success path already committed above; don't commit here —
+        # committing an errored transaction is misleading, and `cur` may be
+        # unbound if conn.cursor() itself raised.
+        try:
+            cur.close()
+        except Exception:
+            pass
+        conn.close()
 
 
 def get_user_count():

@@ -111,7 +111,11 @@ def _extract_series(payload: dict) -> tuple[str, dict[str, dict[str, float]]]:
             f"{[d.get('id') for d in dims_obs]})"
         )
 
-    obs_dict = data.get("dataSets", [{}])[0].get("observations", {})
+    # A present-but-empty "dataSets": [] (a plausible "no data for this
+    # query" response) would make [0] raise IndexError; guard it so main()
+    # reaches its graceful "zero series" path instead of a red traceback.
+    datasets = data.get("dataSets") or []
+    obs_dict = datasets[0].get("observations", {}) if datasets else {}
     series: dict[str, dict[str, float]] = {}
     for key, values in obs_dict.items():
         parts = key.split(":")

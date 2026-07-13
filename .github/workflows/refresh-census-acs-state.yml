@@ -21,7 +21,7 @@ on:
       vintage:
         description: 'ACS 5-year vintage year'
         required: false
-        default: '2022'
+        default: '2024'
 
 permissions:
   contents: write

@@ -111,7 +111,12 @@ def _cp(k): return CACHE / f"{k}.json"
 def _rc(k, hrs=24):
     p = _cp(k)
     if p.exists() and time.time() - p.stat().st_mtime < hrs * 3600:
-        return json.loads(p.read_text())
+        try:
+            return json.loads(p.read_text())
+        except (ValueError, OSError):
+            # Corrupt/truncated cache (process killed mid-write, full disk).
+            # Treat as a miss and refetch instead of crashing the screener.
+            return None
     return None
 
 def _wc(k, d):
