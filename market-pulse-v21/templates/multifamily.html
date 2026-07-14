@@ -74,6 +74,27 @@
     .fha-pill.ok { background: rgba(34,197,94,0.15); color: #16a34a; }
     .fha-pill.bad { background: rgba(239,68,68,0.15); color: #dc2626; }
 
+    /* Structural lens: stressed-cell spans reuse the cash colors. */
+    .mf-table span.cash-positive { color: var(--accent); font-weight: 700; }
+    .mf-table span.cash-warn { color: #d97706; }
+    .mf-table span.cash-bad { color: #ef4444; }
+    /* Trajectory badges — shape + color so they survive colorblindness. */
+    .traj-up   { color: #16a34a; font-weight: 600; }
+    .traj-flat { color: var(--text-dim, #6b7280); font-weight: 600; }
+    .traj-warn { color: #d97706; font-weight: 600; }
+    .traj-down { color: #dc2626; font-weight: 600; }
+    .veto-pill { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 0.62rem;
+                 font-weight: 700; margin-left: 0.3rem; background: rgba(220,38,38,0.12);
+                 color: #dc2626; border: 1px solid rgba(220,38,38,0.35); cursor: help; }
+    .struct-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem;
+                    margin: 0.8rem 0; padding: 0.65rem 0.9rem; border: 1px solid rgba(217,119,6,0.35);
+                    background: rgba(217,119,6,0.07); border-radius: 10px; font-size: 0.8rem; }
+    .struct-chips-label { font-weight: 700; }
+    .struct-chip { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.72rem;
+                   font-weight: 600; background: rgba(217,119,6,0.14); color: #b45309;
+                   border: 1px solid rgba(217,119,6,0.4); cursor: help; white-space: nowrap; }
+    .struct-chips-note { flex-basis: 100%; font-size: 0.7rem; color: var(--text-dim, #6b7280); }
+
     @media (max-width: 600px) {
         .mf-page { padding: 0 0.5rem; }
         .mf-table { font-size: 0.74rem; }
@@ -136,6 +157,16 @@
     </div>
     {% endif %}
 
+    {% if state_struct is defined and state_struct and state_struct.chips %}
+    <div class="struct-chips" role="note">
+        <span class="struct-chips-label">Structural flags for {{ state }}:</span>
+        {% for chip in state_struct.chips %}
+        <span class="struct-chip" title="{{ chip.title }}">{{ chip.label }}</span>
+        {% endfor %}
+        <span class="struct-chips-note">State-level regime signals — these lower the bar for the trajectory veto below.</span>
+    </div>
+    {% endif %}
+
     {% if data_pending %}
     <div class="mf-banner">
         <strong>Multifamily-specific signals (renter density, multi-unit stock, rent burden) populate on the next refresh-national-zips workflow run.</strong>
@@ -170,6 +201,14 @@
             <strong>Net monthly cost = PITI − expected rent.</strong> Negative = you live free + cash flow.</p>
             <p style="margin-top:0.4rem;"><strong>FHA self-sufficiency</strong> (3- and 4-unit only): FHA requires 75% × total rents ≥ PITI for the loan to fund.
             Two-unit purchases are exempt from this rule. We mark <span class="fha-pill ok">FHA</span> on rows that pass, <span class="fha-pill bad">FHA ✗</span> on rows that fail at your input price.</p>
+            <p style="margin-top:0.6rem;"><strong>Structural lens (new):</strong></p>
+            <ul>
+                <li><strong>3-yr trend</strong> — annualized home-value change from the ZIP's own 60-month history, with a second-derivative read:
+                    <span class="traj-up">▲ accelerating</span> · <span class="traj-flat">→ steady</span> · <span class="traj-warn">⚠ decelerating</span> · <span class="traj-down">▼ declining</span>.</li>
+                <li><strong>Trajectory veto</strong> — a declining ZIP's score is capped (at 79/69/59 depending on how many state-level structural flags are active); a decelerating ZIP loses 5 points. Vetoed rows show <span class="veto-pill" title="example">capped</span> so a cheap-but-shrinking market can't top the table on level alone.</li>
+                <li><strong>Durable cap</strong> — gross yield × 92% (vacancy) − state property tax − state insurance ÷ home value − 1.5% maintenance reserve. A fixed insurance premium is a big % drag on a $60k duplex and a rounding error on a $500k one — this column is where that honesty lives.</li>
+                <li><strong>Stressed</strong> — house-hack net if rents come in 10% light, insurance reprices +30%, and you eat one vacant month a year. If this still cash-flows, the deal survives a structural shift.</li>
+            </ul>
             <p style="margin-top:0.5rem; font-size:0.78rem;">ZIPs with population &lt;1,500 or median home value &gt;1.2× your cap are excluded. Capped at top 100 results.</p>
         </div>
     </details>
@@ -187,7 +226,10 @@
                         <th data-col="name">Area<span class="arrow"></span></th>
                         <th data-col="score" data-numeric="1">Score<span class="arrow"></span></th>
                         <th data-col="hh" data-numeric="1">House-hack<span class="arrow"></span></th>
+                        <th data-col="stress" data-numeric="1" title="House-hack net at rents −10%, insurance +30%, 1 vacant month/yr">Stressed<span class="arrow"></span></th>
                         <th data-col="cap" data-numeric="1">Cap rate<span class="arrow"></span></th>
+                        <th data-col="durable" data-numeric="1" title="Gross yield − vacancy − property tax − insurance − maintenance reserve">Durable<span class="arrow"></span></th>
+                        <th data-col="traj" data-numeric="1" title="Annualized change over the ZIP's last 36 months of home values, with acceleration/deceleration">3-yr trend<span class="arrow"></span></th>
                         <th data-col="rent" data-numeric="1">Rent/mo<span class="arrow"></span></th>
                         <th data-col="hv" data-numeric="1">Home value<span class="arrow"></span></th>
                         {% if has_mf_data %}
@@ -226,9 +268,12 @@
                         <td class="rank" data-sort="{{ loop.index }}">{{ loop.index }}</td>
                         <td class="zip-cell" data-sort="{{ r.zip }}"><a href="/zip/{{ r.zip }}">{{ r.zip }}</a></td>
                         <td data-sort="{{ r.name }}">{% if r.neighborhood %}{{ r.neighborhood }} · {% endif %}{{ r.name }}</td>
-                        <td class="score-cell" data-sort="{{ r.mf_score }}">{{ '%.0f'|format(r.mf_score) }}</td>
+                        <td class="score-cell" data-sort="{{ r.mf_score }}">{{ '%.0f'|format(r.mf_score) }}{% if r.vetoed %}<span class="veto-pill" title="Trajectory veto: this ZIP's own home-value history is {{ r.traj.label if r.traj else 'weak' }}{% if state_struct and state_struct.flags %}, and {{ state }} has {{ state_struct.flags|length }} state-level structural flag(s){% endif %} — the level score can't ride to the top of the table.">capped</span>{% endif %}</td>
                         <td class="{{ hh_class }}" data-sort="{{ r.house_hack_net if r.house_hack_net is not none else 99999 }}">{{ hh_text }}{% if r.fha_self_suff is not none %}{% if r.fha_self_suff %}<span class="fha-pill ok" title="FHA self-sufficiency test passes at {{ units }} units">FHA</span>{% else %}<span class="fha-pill bad" title="FHA self-sufficiency requires 75% × {{ units }} units × rent ≥ PITI">FHA ✗</span>{% endif %}{% endif %}</td>
+                        <td data-sort="{{ r.house_hack_stressed if r.house_hack_stressed is not none else 99999 }}">{% if r.house_hack_stressed is none %}—{% elif r.house_hack_stressed <= 0 %}<span class="cash-positive">+${{ '%.0f'|format(-r.house_hack_stressed|float) }}</span>{% else %}<span class="{% if r.house_hack_stressed >= 1500 %}cash-bad{% elif r.house_hack_stressed >= 500 %}cash-warn{% endif %}">-${{ '%.0f'|format(r.house_hack_stressed|float) }}</span>{% endif %}</td>
                         <td data-sort="{{ r.cap_rate_pct }}">{{ '%.2f'|format(r.cap_rate_pct) }}%</td>
+                        <td data-sort="{{ r.durable_cap_pct if r.durable_cap_pct is not none else -99 }}">{% if r.durable_cap_pct is not none %}<span title="gross {{ r.durable_detail.gross_cap_pct }}% − vacancy {{ r.durable_detail.vacancy_drag }} − tax {{ r.durable_detail.tax_pct }} − insurance {{ r.durable_detail.insurance_pct }} − maintenance {{ r.durable_detail.maintenance_pct }}">{{ '%.1f'|format(r.durable_cap_pct) }}%</span>{% else %}—{% endif %}</td>
+                        <td data-sort="{{ r.traj.cagr_3yr_pct if r.traj else -99 }}">{% if r.traj %}<span class="{{ r.traj_badge.cls }}" title="{{ r.traj_badge.label }} — 1yr {{ r.traj.chg_1yr_pct }}% vs prior-2yr {{ r.traj.prior_2yr_pct }}%/yr ({{ '%+.1f'|format(r.traj.decel_pct) }} pts)">{{ r.traj_badge.glyph }} {{ '%+.1f'|format(r.traj.cagr_3yr_pct) }}%</span>{% else %}—{% endif %}</td>
                         <td data-sort="{{ r.median_rent_monthly }}">${{ '{:,}'.format(r.median_rent_monthly) }}</td>
                         <td data-sort="{{ r.median_home_value }}">${{ '{:,}'.format(r.median_home_value) }}</td>
                         {% if has_mf_data %}

@@ -245,6 +245,14 @@
 
     .lb-list { flex: 1; overflow-y: auto; padding: 0.5rem 0.85rem 1rem; }
     .lb-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.5rem; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; }
+    /* Structural flag chips under the metro meta line. */
+    .lb-flags { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.2rem; }
+    .lb-flag { font-size: 0.56rem; font-weight: 600; padding: 0 6px; border-radius: 999px;
+               background: rgba(217,119,6,0.12); color: #b45309;
+               border: 1px solid rgba(217,119,6,0.35); cursor: help; white-space: nowrap; }
+    .lb-capped { font-size: 0.56rem; font-weight: 700; padding: 0 6px; border-radius: 999px;
+                 background: rgba(220,38,38,0.10); color: #dc2626;
+                 border: 1px solid rgba(220,38,38,0.35); cursor: help; }
     .lb-row:hover { background: var(--surface2); }
     .lb-row.active { background: rgba(59,130,246,0.10); border-left: 3px solid var(--accent2); padding-left: calc(0.5rem - 3px); }
     .lb-row .rank { font-size: 0.78rem; color: var(--text-dim); font-weight: 700; min-width: 1.4rem; text-align: right; }
@@ -1700,12 +1708,25 @@ function renderLeaderboard() {
         // number — without it, e.g. NYC at #45 looks worse than it
         // really is on a like-for-like basis.
         const tag = m.is_stub ? '<span class="stub-tag" title="State-level estimate (no per-ZIP dataset yet)">est</span>' : '';
+        // Structural badges: state regime flags (insurance shock, supply
+        // glut, …) + a "capped" tag when the statewide value trajectory
+        // vetoed this metro's persona composites. Shape+color, not
+        // color alone, so the signal survives colorblindness.
+        const st = m.structural || {};
+        const flagChips = (st.chips || []).map(c =>
+            `<span class="lb-flag" title="${c.title}">${c.label}</span>`).join('');
+        const capTag = st.capped
+            ? `<span class="lb-capped" title="Score capped: statewide home-value trajectory is ${st.traj ? st.traj.label : 'weak'} (1yr ${st.traj ? st.traj.chg_1yr_pct : '?'}% vs 3yr ${st.traj ? st.traj.cagr_3yr_pct : '?'}%/yr)${(st.chips && st.chips.length) ? ' with ' + st.chips.length + ' structural flag(s)' : ''}.">capped</span>`
+            : '';
+        const structRow = (flagChips || capTag)
+            ? `<div class="lb-flags">${flagChips}${capTag}</div>` : '';
         return `
             <div class="lb-row" data-slug="${m.slug}">
                 <span class="rank">${i + 1}</span>
                 <div class="name">
                     <div class="label">${m.metro_label}${tag}</div>
                     <div class="meta">${fmtMoney(m.avg_home_value)} &middot; ${m.avg_cap_rate_pct.toFixed(1)}% yield</div>
+                    ${structRow}
                 </div>
                 <span class="score" style="color:${color};">${score.toFixed(0)}</span>
             </div>`;

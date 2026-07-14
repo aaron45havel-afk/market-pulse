@@ -174,6 +174,13 @@ def init_db():
             CREATE INDEX IF NOT EXISTS crm_stage_events_occurred_idx
             ON crm_stage_events(occurred_at)
         """)
+        # Funnel aggregates filter/group by to_stage on every /pipeline
+        # render (WHERE to_stage = ANY(...) GROUP BY to_stage); index it
+        # so those don't seq-scan the whole event log.
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS crm_stage_events_to_stage_idx
+            ON crm_stage_events(to_stage)
+        """)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS crm_weekly_goals (
                 id         SERIAL PRIMARY KEY,
@@ -756,7 +763,14 @@ def add_user(email, name=None, source=None, user_agent=None):
         logger.error(f"add_user failed: {e}")
         return (False, None)
     finally:
-        conn.commit(); cur.close(); conn.close()
+        # The success path already committed above; don't commit here —
+        # committing an errored transaction is misleading, and `cur` may be
+        # unbound if conn.cursor() itself raised.
+        try:
+            cur.close()
+        except Exception:
+            pass
+        conn.close()
 
 
 def get_user_count():

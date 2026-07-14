@@ -88,15 +88,23 @@ def fetch_state_acs(vintage: int) -> dict[str, dict]:
     except urllib.error.URLError as e:
         raise SystemExit(f"Network error: {e.reason}")
 
+    if not isinstance(rows, list) or not rows:
+        raise SystemExit(
+            f"Census ACS returned no rows for vintage {vintage} — it may not be released yet")
     headers = rows[0]
-    inc_idx       = headers.index("B19013_001E")
-    edu_total_idx = headers.index("B15003_001E")
-    ba_idx        = headers.index("B15003_022E")
-    ma_idx        = headers.index("B15003_023E")
-    prof_idx      = headers.index("B15003_024E")
-    doc_idx       = headers.index("B15003_025E")
-    age_idx       = headers.index("B01002_001E")
-    state_idx     = headers.index("state")
+    try:
+        inc_idx       = headers.index("B19013_001E")
+        edu_total_idx = headers.index("B15003_001E")
+        ba_idx        = headers.index("B15003_022E")
+        ma_idx        = headers.index("B15003_023E")
+        prof_idx      = headers.index("B15003_024E")
+        doc_idx       = headers.index("B15003_025E")
+        age_idx       = headers.index("B01002_001E")
+        state_idx     = headers.index("state")
+    except ValueError as e:
+        raise SystemExit(
+            f"Census ACS response missing an expected column ({e}) — "
+            f"vintage {vintage} schema may have changed")
 
     def _int(v):
         try:
@@ -136,8 +144,9 @@ def fetch_state_acs(vintage: int) -> dict[str, dict]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     parser.add_argument(
-        "--vintage", type=int, default=2022,
-        help="ACS 5-year vintage year (default: 2022). Update annually after Dec release.",
+        "--vintage", type=int, default=2024,
+        help="ACS 5-year vintage year (default: 2024, released Dec 2025). "
+             "Update annually after each December release.",
     )
     parser.add_argument("--dry-run", action="store_true",
                         help="Fetch + parse but don't write the JSON file.")
