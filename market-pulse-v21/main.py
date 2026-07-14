@@ -346,6 +346,32 @@ async def lynch(request: Request):
     return templates.TemplateResponse("lynch.html", {"request": request})
 
 
+@app.get("/aristocrats")
+async def aristocrats_page(request: Request):
+    """Dividend-aristocrat value screen: 25+ year raisers (US champions
+    + Schwab-buyable international) flagged cheap when their yield sits
+    ≥20% above their own 5-yr median (Geraldine Weiss), gated by the
+    Chowder rule (yield + div growth ≥ 12; ≥ 8 utilities/REITs) and
+    payout/leverage safety checks. Universe in aristocrats.py; live
+    metrics via the monthly refresh-aristocrats workflow."""
+    from aristocrats import (score, buy_list, data_source_label,
+                             UNIVERSE, VALUE_PREMIUM_MIN,
+                             CHOWDER_HURDLE, CHOWDER_HURDLE_LOW)
+    rows = score()
+    n_awaiting = sum(1 for r in rows if r["status"] == "AWAITING")
+    return templates.TemplateResponse("aristocrats.html", {
+        "request":       request,
+        "rows":          rows,
+        "buys":          buy_list(rows),
+        "data_source":   data_source_label(),
+        "total":         len(UNIVERSE),
+        "n_awaiting":    n_awaiting,
+        "premium_min":   VALUE_PREMIUM_MIN,
+        "hurdle":        CHOWDER_HURDLE,
+        "hurdle_low":    CHOWDER_HURDLE_LOW,
+    })
+
+
 @app.get("/global-values")
 async def global_values(request: Request):
     """Country-level valuation vs OECD business cycle. Renders a

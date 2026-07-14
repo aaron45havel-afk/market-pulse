@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}Dividend Aristocrats — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+  main .container { max-width: 1400px; }
+
+  .ar-hero { display:flex; justify-content:space-between; align-items:baseline; gap:1rem; flex-wrap:wrap; margin-bottom:0.3rem; }
+  .ar-hero h1 { margin:0; font-size:1.35rem; letter-spacing:-0.01em; }
+  .ar-sub { color:var(--ink-3); font-size:0.9rem; margin:0 0 0.55rem; line-height:1.55; max-width:860px; }
+  .ar-refresh {
+    font-size:0.72rem; color:var(--ink-3);
+    background:var(--surface-2); border:1px solid var(--line);
+    padding:0.25rem 0.55rem; border-radius:99px; white-space:nowrap;
+  }
+
+  .ar-banner {
+    background:rgba(217,119,6,0.07); border:1px solid rgba(217,119,6,0.35);
+    border-radius:10px; padding:0.65rem 0.9rem; margin:0.8rem 0; font-size:0.8rem; line-height:1.5;
+  }
+
+  .ar-buy {
+    background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding:0.85rem 1rem; margin:1rem 0;
+  }
+  .ar-buy h2 { margin:0 0 0.25rem; font-size:1rem; }
+  .ar-buy .desc { font-size:0.78rem; color:var(--ink-3); margin:0 0 0.65rem; }
+  .ar-buy-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:0.55rem; }
+  .ar-buy-card {
+    background:var(--surface-2); border:1px solid var(--line); border-radius:8px;
+    padding:0.6rem 0.75rem; display:flex; flex-direction:column; gap:0.2rem;
+  }
+  .ar-buy-card .top { display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem; }
+  .ar-buy-card .ticker { font-family:'Menlo','Monaco',monospace; font-size:0.95rem; font-weight:700; color:var(--accent2, #2563eb); }
+  .ar-buy-card .streak { font-size:0.7rem; color:var(--ink-3); white-space:nowrap; }
+  .ar-buy-card .nm { font-weight:700; font-size:0.88rem; }
+  .ar-buy-card .stats { font-size:0.74rem; color:var(--ink-2); line-height:1.5; }
+  .ar-buy-empty { color:var(--ink-3); font-size:0.85rem; font-style:italic; padding:0.4rem 0; line-height:1.55; }
+
+  .ar-table-card {
+    background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding:0.85rem 1rem; margin:1rem 0;
+  }
+  .ar-table-card h2 { margin:0 0 0.25rem; font-size:1rem; }
+  .ar-table-card .desc { font-size:0.78rem; color:var(--ink-3); margin:0 0 0.6rem; }
+  .ar-scroll { overflow-x:auto; }
+  table.ar-table { width:100%; border-collapse:collapse; font-size:0.78rem; white-space:nowrap; }
+  .ar-table th {
+    text-align:right; padding:0.45rem 0.5rem; border-bottom:2px solid var(--line);
+    font-size:0.66rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-3);
+    cursor:pointer; user-select:none; position:sticky; top:0; background:var(--surface);
+  }
+  .ar-table th:nth-child(-n+4) { text-align:left; }
+  .ar-table td { padding:0.4rem 0.5rem; border-bottom:1px solid var(--line); text-align:right; font-variant-numeric:tabular-nums; }
+  .ar-table td:nth-child(-n+4) { text-align:left; }
+  .ar-table tr:hover td { background:var(--surface-2); }
+  .ar-table .tick { font-family:'Menlo','Monaco',monospace; font-weight:700; }
+  .ar-table .arrow { font-size:0.6rem; margin-left:2px; }
+
+  .st-pill { display:inline-block; padding:1px 8px; border-radius:999px; font-size:0.64rem; font-weight:700; }
+  .st-BUY      { background:rgba(34,197,94,0.15);  color:#15803d; }
+  .st-VALUE    { background:rgba(37,99,235,0.12);  color:#1d4ed8; }
+  .st-WATCH    { background:var(--surface-2);      color:var(--ink-3); border:1px solid var(--line); }
+  .st-GATED    { background:rgba(239,68,68,0.12);  color:#dc2626; }
+  .st-AWAITING { background:var(--surface-2);      color:var(--ink-3); font-style:italic; }
+
+  .ar-badge { display:inline-block; padding:0 6px; border-radius:999px; font-size:0.58rem; font-weight:600;
+              background:rgba(217,119,6,0.13); color:#b45309; border:1px solid rgba(217,119,6,0.35);
+              margin-left:0.3rem; cursor:help; }
+  .prem-hot { color:#15803d; font-weight:700; }
+  .chow-pass { color:#15803d; font-weight:700; }
+  .chow-fail { color:var(--ink-3); }
+
+  details.ar-explain {
+    background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding:0.6rem 1rem; margin:0.8rem 0; font-size:0.82rem; line-height:1.6;
+  }
+  details.ar-explain summary { cursor:pointer; font-weight:700; font-size:0.85rem; }
+  details.ar-explain ul { margin:0.4rem 0 0.4rem 1.1rem; padding:0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ar-hero">
+  <h1>💰 Dividend Aristocrats — value screen</h1>
+  <span class="ar-refresh">Data: {{ data_source }} · {{ total }} names</span>
+</div>
+<p class="ar-sub">
+  25+ year dividend raisers (US champions + Schwab-buyable international) flagged
+  <strong>cheap when their yield sits ≥{{ premium_min|int }}% above their own 5-yr median</strong> —
+  the Geraldine Weiss signal — and required to clear the
+  <strong>Chowder rule</strong> (yield + 5-yr dividend growth ≥ {{ hurdle|int }};
+  ≥ {{ hurdle_low|int }} for utilities/REITs/midstream) so the expected long-run
+  return matches your +12% target. Payout ≥80% or net debt/EBITDA ≥3.5× hides a
+  name entirely (that's the filter that would have caught Leggett &amp; Platt before
+  its cut). The buy list is <em>meant</em> to be short — an empty list is a signal, not a bug.
+</p>
+
+{% if n_awaiting > 0 %}
+<div class="ar-banner">
+  <strong>{{ n_awaiting }} of {{ total }} names are awaiting live data.</strong>
+  Yield history populates from Yahoo Finance on the monthly refresh (10th of each month).
+  <a href="https://github.com/aaron45havel-afk/market-pulse/actions/workflows/refresh-aristocrats.yml"
+     target="_blank" rel="noopener">Run the workflow manually</a> to populate everything now (~2 min),
+  then reload this page after Railway redeploys.
+</div>
+{% endif %}
+
+<div class="ar-buy">
+  <h2>🎯 Buy zone — passes all three filters</h2>
+  <p class="desc">Historically cheap vs its own yield history + clears the Chowder hurdle + payout/leverage safe.</p>
+  {% if buys %}
+  <div class="ar-buy-grid">
+    {% for b in buys %}
+    <div class="ar-buy-card">
+      <div class="top">
+        <span class="ticker">{{ b.t }}</span>
+        <span class="streak">{{ b.yrs }} yrs of raises</span>
+      </div>
+      <div class="nm">{{ b.n }}{% if b.c != 'US' %} · {{ b.c }}{% endif %}</div>
+      <div class="stats">
+        Yield {{ '%.2f'|format(b.y) }}% vs {{ '%.2f'|format(b.median_y5) }}% median
+        (<span class="prem-hot">+{{ b.yield_premium_pct }}%</span>)<br>
+        Chowder {{ b.chowder }} vs {{ b.hurdle|int }} hurdle
+        {% if b.pct_off_52wk_high is defined and b.pct_off_52wk_high is not none %} · {{ b.pct_off_52wk_high }}% off 52-wk high{% endif %}
+        {% if b.note %}<br><em>{{ b.note }}</em>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="ar-buy-empty">
+    Nothing passes all three filters right now{% if n_awaiting > 0 %} (most names are still awaiting their first data refresh){% endif %}.
+    That's the screen working: aristocrats are rarely cheap, and the right move is usually to wait.
+    Names that are cheap but miss the return hurdle show as <span class="st-pill st-VALUE">VALUE</span> in the table below.
+  </div>
+  {% endif %}
+</div>
+
+<details class="ar-explain">
+  <summary>Why yield-vs-history instead of 52-week lows? And how the filters work</summary>
+  <ul>
+    <li><strong>Value:</strong> an aristocrat's dividend is reliable and growing, so its <em>yield</em> mean-reverts.
+        Current yield ≥{{ premium_min|int }}% above the stock's own 5-yr median = historically cheap, no matter what
+        the price chart did. A 52-week low is momentum, not valuation — the list goes empty in rallies, floods in
+        crashes, and catches falling knives (Leggett &amp; Platt sat at 52-week lows for years before cutting after
+        52 straight raises). We show % off the 52-week high as context, never as the trigger.</li>
+    <li><strong>Return (+12%):</strong> the Chowder number — current yield + 5-yr dividend CAGR — approximates
+        long-run total return if the valuation holds. Hurdle {{ hurdle|int }} for most names,
+        {{ hurdle_low|int }} for utilities/REITs/midstream per the standard rule.</li>
+    <li><strong>Safety:</strong> payout ≥80% or net debt/EBITDA ≥3.5× hides the name (<span class="st-pill st-GATED">GATED</span>).
+        Elevated-but-passing names keep a warning badge — Altria stays visible, you decide.</li>
+    <li><strong>International:</strong> streaks are in local currency. The raise streak can be intact while your USD
+        payment wobbles with FX — that's the <span class="ar-badge" title="example">FX</span> badge. OTC tickers are
+        thin; use limit orders on Schwab.</li>
+  </ul>
+</details>
+
+<div class="ar-table-card">
+  <h2>Full universe</h2>
+  <p class="desc">Click headers to sort. Statuses: BUY = all filters pass · VALUE = cheap, misses return hurdle · WATCH = not cheap · GATED = payout/debt too risky · AWAITING = populates on next refresh.</p>
+  <div class="ar-scroll">
+  <table class="ar-table" id="arTable">
+    <thead>
+      <tr>
+        <th data-col="t">Ticker<span class="arrow"></span></th>
+        <th data-col="n">Name<span class="arrow"></span></th>
+        <th data-col="c">Ctry<span class="arrow"></span></th>
+        <th data-col="sec">Sector<span class="arrow"></span></th>
+        <th data-col="yrs" data-numeric="1">Streak<span class="arrow"></span></th>
+        <th data-col="y" data-numeric="1">Yield<span class="arrow"></span></th>
+        <th data-col="med" data-numeric="1" title="The stock's own 5-yr median trailing yield">5-yr med<span class="arrow"></span></th>
+        <th data-col="prem" data-numeric="1" title="Current yield vs own 5-yr median — the value trigger at +{{ premium_min|int }}%">Premium<span class="arrow"></span></th>
+        <th data-col="dg" data-numeric="1">Div CAGR<span class="arrow"></span></th>
+        <th data-col="chow" data-numeric="1" title="Yield + div growth vs the 12/8 hurdle">Chowder<span class="arrow"></span></th>
+        <th data-col="po" data-numeric="1">Payout<span class="arrow"></span></th>
+        <th data-col="nd" data-numeric="1">Debt<span class="arrow"></span></th>
+        <th data-col="off" data-numeric="1" title="Context only — not the trigger">% off 52wk hi<span class="arrow"></span></th>
+        <th data-col="st">Status<span class="arrow"></span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td class="tick" data-sort="{{ r.t }}">{{ r.t }}</td>
+        <td data-sort="{{ r.n }}">{{ r.n }}{% for b in r.badges %}<span class="ar-badge" title="{{ b.title }}">{{ b.label }}</span>{% endfor %}</td>
+        <td data-sort="{{ r.c }}">{{ r.c }}</td>
+        <td data-sort="{{ r.sec }}">{{ r.sec }}</td>
+        <td data-sort="{{ r.yrs }}">{{ r.yrs }}</td>
+        <td data-sort="{{ r.y if r.y is not none else -1 }}">{% if r.y is not none %}{{ '%.2f'|format(r.y) }}%{% else %}—{% endif %}</td>
+        <td data-sort="{{ r.median_y5 if r.median_y5 is defined and r.median_y5 is not none else -1 }}">{% if r.median_y5 is defined and r.median_y5 is not none %}{{ '%.2f'|format(r.median_y5) }}%{% else %}—{% endif %}</td>
+        <td data-sort="{{ r.yield_premium_pct if r.yield_premium_pct is not none else -999 }}">{% if r.yield_premium_pct is not none %}<span class="{% if r.value_flag %}prem-hot{% endif %}">{{ '%+.0f'|format(r.yield_premium_pct) }}%</span>{% else %}—{% endif %}</td>
+        <td data-sort="{{ r.dg5 if r.dg5 is not none else -999 }}">{% if r.dg5 is not none %}{{ '%.1f'|format(r.dg5) }}%{% else %}—{% endif %}</td>
+        <td data-sort="{{ r.chowder if r.chowder is not none else -999 }}">{% if r.chowder is not none %}<span class="{{ 'chow-pass' if r.chowder_pass else 'chow-fail' }}">{{ r.chowder }}</span> <span style="color:var(--ink-3); font-size:0.66rem;">/{{ r.hurdle|int }}</span>{% else %}—{% endif %}</td>
+        <td data-sort="{{ r.po if r.po is not none else -1 }}">{% if r.po is not none %}{{ '%.0f'|format(r.po) }}%{% else %}—{% endif %}</td>
+        <td data-sort="{{ r.nd if r.nd is not none else -1 }}">{% if r.nd is not none %}{{ '%.1f'|format(r.nd) }}×{% else %}—{% endif %}</td>
+        <td data-sort="{{ r.pct_off_52wk_high if r.pct_off_52wk_high is defined and r.pct_off_52wk_high is not none else -999 }}">{% if r.pct_off_52wk_high is defined and r.pct_off_52wk_high is not none %}{{ r.pct_off_52wk_high }}%{% else %}—{% endif %}</td>
+        <td data-sort="{{ r.status }}"><span class="st-pill st-{{ r.status }}">{{ r.status }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div style="font-size:0.7rem; color:var(--ink-3); margin:0.8rem 0 1.2rem;">
+  Streaks = consecutive years of dividend increases (approximate; hand-refreshed annually).
+  Yield / median / CAGR / 52-wk from Yahoo Finance via the monthly refresh; payout &amp; net debt/EBITDA
+  hand-seeded from dividend.com ({{ '2026-07-13' }}) and updated with the annual pass. Not financial advice.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Click-to-sort — same pattern as /multifamily.
+(function () {
+  const table = document.getElementById('arTable');
+  if (!table) return;
+  const headers = table.querySelectorAll('th');
+  let cur = null, dir = -1;
+  headers.forEach((th, idx) => {
+    th.addEventListener('click', () => {
+      const numeric = th.dataset.numeric === '1';
+      dir = (cur === idx) ? -dir : (numeric ? -1 : 1);
+      cur = idx;
+      headers.forEach(h => h.querySelector('.arrow').textContent = '');
+      th.querySelector('.arrow').textContent = dir === 1 ? '▲' : '▼';
+      const rows = Array.from(table.tBodies[0].rows);
+      rows.sort((a, b) => {
+        const av = a.cells[idx].dataset.sort, bv = b.cells[idx].dataset.sort;
+        if (numeric) return (parseFloat(av) - parseFloat(bv)) * dir;
+        return av.localeCompare(bv) * dir;
+      });
+      rows.forEach(r => table.tBodies[0].appendChild(r));
+    });
+  });
+})();
+</script>
+{% endblock %}
