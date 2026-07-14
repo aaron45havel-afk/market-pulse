@@ -104,6 +104,11 @@ async def national_map(request: Request):
         MORTGAGE_30Y_RATE, MORTGAGE_30Y_OBS_DATE,
         qualifying_income,
     )
+    from structural import (state_structural, state_trajectories,
+                            apply_trajectory_veto, TRAJECTORY_BADGES)
+    # Statewide value trajectories (median of each state's ZIP-level
+    # 60-month ZHVI series; lru-cached after the first render).
+    state_trajs = state_trajectories()
     metros = []
     for slug, cfg in STATE_METROS.items():
         # Stubs go through the same get_state_neighborhoods path as
@@ -138,6 +143,27 @@ async def national_map(request: Request):
             vals = [z.get('composite_by_persona', {}).get(pkey) for z in zips]
             vals = [v for v in vals if v is not None]
             composite_by_persona[pkey] = round(sum(vals) / len(vals), 1) if vals else round(avg_score, 1)
+        # Structural lens: state regime flags + statewide value
+        # trajectory. A declining/decelerating trajectory caps the
+        # persona composites (visibly — the sidebar shows why) so
+        # momentum can't carry a structurally-shifting market to the
+        # top of the leaderboard.
+        sst = state_structural(cfg["state"])
+        straj = state_trajs.get(cfg["state"])
+        struct_capped = False
+        for pkey in persona_keys:
+            adj, vetoed = apply_trajectory_veto(
+                composite_by_persona[pkey],
+                straj["label"] if straj else None,
+                len(sst["flags"]))
+            composite_by_persona[pkey] = adj
+            struct_capped = struct_capped or vetoed
+        structural_info = {
+            "chips": sst["chips"],
+            "traj": straj,
+            "traj_badge": TRAJECTORY_BADGES.get(straj["label"]) if straj else None,
+            "capped": struct_capped,
+        }
         # State-level lookups for tax-haven + growth-momentum signals.
         sunshine = STATE_SUNSHINE_DAYS.get(cfg["state"], 200)
         state_income_tax = STATE_INCOME_TAX_EFFECTIVE.get(cfg["state"], 0.045)
@@ -167,6 +193,7 @@ async def national_map(request: Request):
             "zip_count": n,
             "avg_composite": round(avg_score, 1),
             "composite_by_persona": composite_by_persona,
+            "structural": structural_info,
             "avg_cap_rate_pct": round(avg_cap, 2),
             "avg_home_value": round(avg_home),
             "avg_rent": round(avg_rent),
@@ -186,6 +213,15 @@ async def national_map(request: Request):
     # CHOROPLETH_METRICS is the source of truth. has_metros lets the
     # client highlight states we cover with metros.
     states_with_metros = {cfg["state"] for cfg in STATE_METROS.values()}
+    # Derived structural metrics for the two new choropleth layers.
+    # Computed here (not in data_providers) because insurance_burden
+    # must use the OVERRIDDEN home_value and value_momentum needs
+    # zips.db — both are only settled at request time. Idempotent.
+    for code, sd in CHOROPLETH_STATES.items():
+        hv, ins = sd.get("home_value"), sd.get("insurance")
+        sd["insurance_burden"] = round(ins / hv * 100, 2) if ins and hv else None
+        t = state_trajs.get(code)
+        sd["value_momentum"] = t["decel_pct"] if t else None
     metric_keys = [m["key"] for m in CHOROPLETH_METRICS]
     choropleth_by_fips = {}
     for code, sd in CHOROPLETH_STATES.items():
@@ -1928,16 +1964,18 @@ async def multifamily_page(
     # shows places the user could plausibly shop in.
     hv_ceiling = int(max_price * 1.2)
 
+    has_history = "history_zhvi" in cols
+    hist_col = "history_zhvi" if has_history else "NULL"
     if has_mf_data:
-        select_cols = """zip, name, neighborhood, lat, lng, population, population_density,
+        select_cols = f"""zip, name, neighborhood, lat, lng, population, population_density,
                    median_home_value, median_rent_monthly, cap_rate_pct,
                    pct_renter_occupied, pct_multi_unit, pct_rent_burdened,
-                   walk_score"""
+                   walk_score, {hist_col}"""
     else:
-        select_cols = """zip, name, neighborhood, lat, lng, population, population_density,
+        select_cols = f"""zip, name, neighborhood, lat, lng, population, population_density,
                    median_home_value, median_rent_monthly, cap_rate_pct,
                    NULL, NULL, NULL,
-                   walk_score"""
+                   walk_score, {hist_col}"""
     rows_raw = cur.execute(f"""
         select {select_cols}
         from zips
@@ -1960,19 +1998,48 @@ async def multifamily_page(
     # in our data, so this is a reasonable approximation).
     # Net cost = PITI - expected rent. Negative means the renters
     # pay more than your full housing cost — you live free + cash flow.
+    from structural import (trajectory_from_history, durable_cap_rate,
+                            state_structural, apply_trajectory_veto,
+                            TRAJECTORY_BADGES)
+    state_struct = state_structural(state)
+    n_state_flags = len(state_struct["flags"])
+
     house_hack_costs = []
+    stressed_costs = []   # rents −10%, insurance +30%, 1 month vacancy/yr
     fha_passes = []  # only meaningful for units>=3 per FHA rules
+    trajectories = []
+    durable_caps = []
     for r in rows_raw:
         hv, rent = r[7], r[8]
+        # Value trajectory from the ZIP's 60-month ZHVI history — the
+        # structural lens: a great level score with a declining series
+        # gets vetoed below, not averaged away.
+        traj = None
+        if r[14]:
+            try:
+                traj = trajectory_from_history(json.loads(r[14]))
+            except (ValueError, TypeError):
+                traj = None
+        trajectories.append(traj)
+        durable = durable_cap_rate(r[9], hv, state)
+        durable_caps.append(durable)
+
         purchase = min(hv, max_price)
         piti = _fha_piti(purchase, state, MORTGAGE_30Y_RATE, down_pct=down_pct)
         if not piti:
             house_hack_costs.append(None)
+            stressed_costs.append(None)
             fha_passes.append(None)
             continue
         expected_rent = (units - 1) * rent
         net = piti["piti"] - expected_rent
         house_hack_costs.append(round(net))
+        # Stress test: same deal if rents come in 10% light, insurance
+        # reprices +30%, and you eat one vacant month per year. If THIS
+        # number still cash-flows, the deal survives a structural shift.
+        stressed_piti = piti["piti"] + 0.30 * piti["monthly_ins"]
+        stressed_rent = expected_rent * 0.90 * (11 / 12)
+        stressed_costs.append(round(stressed_piti - stressed_rent))
         # FHA self-sufficiency test (3-4 unit only): 75% of *total*
         # rents (all units, including owner-occupied) must cover PITI.
         if units >= 3:
@@ -2037,7 +2104,7 @@ async def multifamily_page(
     rows = []
     for i, r in enumerate(rows_raw):
         (zip_code, name, neigh, lat, lng, pop, dens, hv, rent, cap,
-         pct_rent, pct_mu, pct_rb, walk) = r
+         pct_rent, pct_mu, pct_rb, walk, _hist) = r
         if hh_pcts[i] is None or cap_pcts[i] is None:
             continue
         if has_mf_data:
@@ -2058,6 +2125,13 @@ async def multifamily_page(
         if any(inputs[k] is None for k, _ in weights):
             continue
         score = round(sum(inputs[k] * w for k, w in weights), 1)
+        # Trajectory veto: a declining/decelerating ZIP can't ride a
+        # cheap-level score to the top of the table. Vetoed rows are
+        # marked so the UI shows *why* the score is capped.
+        traj = trajectories[i]
+        score, vetoed = apply_trajectory_veto(
+            score, traj["label"] if traj else None, n_state_flags)
+        durable = durable_caps[i]
         rows.append({
             "zip": zip_code, "name": name, "neighborhood": neigh or "",
             "lat": lat, "lng": lng, "population": pop,
@@ -2067,8 +2141,14 @@ async def multifamily_page(
             "pct_multi_unit": pct_mu,
             "pct_rent_burdened": pct_rb,
             "house_hack_net": house_hack_costs[i],
+            "house_hack_stressed": stressed_costs[i],
             "fha_self_suff": fha_passes[i],
             "mf_score": score,
+            "vetoed": vetoed,
+            "traj": traj,
+            "traj_badge": TRAJECTORY_BADGES.get(traj["label"]) if traj else None,
+            "durable_cap_pct": durable["durable_cap_pct"] if durable else None,
+            "durable_detail": durable,
         })
     rows.sort(key=lambda r: r["mf_score"], reverse=True)
 
@@ -2085,6 +2165,8 @@ async def multifamily_page(
         "mortgage_rate": MORTGAGE_30Y_RATE,
         "has_mf_data": has_mf_data,
         "data_pending": not has_mf_data,
+        "state_struct": state_struct,
+        "has_history": has_history,
     })
 
 

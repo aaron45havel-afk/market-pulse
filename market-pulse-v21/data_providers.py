@@ -837,6 +837,16 @@ CHOROPLETH_METRICS = [
     {"key": "taxpayer_balance",  "label": "Taxpayer surplus / burden", "format": "money", "good_when": "high", "decimals": 0, "category": "Fiscal Health"},
     {"key": "pension_funding",   "label": "Pension funded ratio",      "unit": "%",  "good_when": "high", "decimals": 0, "category": "Fiscal Health"},
     {"key": "insurance",     "label": "Home insurance/yr",     "format": "money", "good_when": "low",  "decimals": 0, "category": "Tax & Cost"},
+    # Structural-shift metrics (computed in the /map route):
+    # insurance_burden = insurance ÷ median home value. The level $
+    # hides the structural story — $5,500 on a $400k Florida house is
+    # a 1.4% annual drag; the same dollars on a $700k house are noise.
+    {"key": "insurance_burden", "label": "Insurance burden (% of home value)", "unit": "%", "good_when": "low", "decimals": 2, "category": "Tax & Cost", "popular": True},
+    # value_momentum = median ZIP-level 1-yr home-value change minus the
+    # prior-2-yr annualized trend (from each ZIP's 60-month history).
+    # Negative = the state is decelerating even if trailing YoY still
+    # looks fine — the second derivative that momentum rankings miss.
+    {"key": "value_momentum", "label": "Value momentum (1yr vs prior trend)", "unit": " pts", "good_when": "high", "decimals": 1, "category": "Market", "popular": True, "zero_anchored": True},
     {"key": "median_rent",   "label": "Median monthly rent",   "format": "money", "good_when": "low",  "decimals": 0, "category": "Tax & Cost"},
     {"key": "median_income",        "label": "Median household income","format": "money","good_when": "high", "decimals": 0, "category": "Demographic"},
     {"key": "wage_growth",          "label": "Wage growth/yr",         "unit": "%",  "good_when": "high", "decimals": 1, "category": "Demographic"},
