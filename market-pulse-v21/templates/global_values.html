@@ -144,6 +144,12 @@
   .gv-cli-rising  { color:#166534; }
   .gv-cli-falling { color:#991b1b; }
   .gv-cli-flat    { color:var(--ink-3); }
+  .gv-src-badge {
+    display:inline-block; margin-left:0.3rem; padding:0 6px; border-radius:999px;
+    font-size:0.58rem; font-weight:700; cursor:help; vertical-align:1px;
+    background:rgba(217,119,6,0.14); color:#b45309; border:1px solid rgba(217,119,6,0.4);
+  }
+  .gv-src-badge.snap { background:var(--surface-2); color:var(--ink-3); border-color:var(--line); }
   :root[data-theme="dark"] .gv-cli-rising  { color:#4ade80; }
   :root[data-theme="dark"] .gv-cli-falling { color:#f87171; }
 
@@ -204,7 +210,7 @@
           {{ c.etf_name }}
         </div>
         <div class="subline" style="margin-top:0.15rem;">
-          Val <strong>{{ c.valuation_score }}</strong> · Cycle <strong>{{ c.cycle_score }}</strong>
+          Val <strong>{{ c.valuation_score }}</strong> · Cycle <strong>{{ c.cycle_score }}</strong>{% if c.cli_source == 'market' %}<span class="gv-src-badge" title="Cycle score from an equity-market proxy, not OECD CLI ({{ c.cli_source_label or 'market index' }}).">proxy</span>{% endif %}
           · CAPE {{ c.cape }} <span style="color:var(--ink-3);">({{ c.cape_pct }}th %)</span>
         </div>
         <div class="gv-picks">
@@ -351,6 +357,7 @@
             <span class="gv-cli-trend gv-cli-{{ c.cli_trend }}">
               {% if c.cli_trend == 'rising' %}↑{% elif c.cli_trend == 'falling' %}↓{% else %}→{% endif %}
             </span>
+            {% if c.cli_source == 'market' %}<span class="gv-src-badge" title="Not OECD CLI — equity-market cycle proxy{% if c.cli_source_label %} ({{ c.cli_source_label }}){% endif %}. OECD stopped publishing CLI for this country; normalized to the same ~100 scale, so the rank is indicative.">proxy</span>{% elif c.cli_source == 'snapshot' %}<span class="gv-src-badge snap" title="No live cycle data — using the hard-coded {{ last_updated }} snapshot.">snapshot</span>{% endif %}
           </td>
           <td><span class="gv-quad-pill {{ c.quadrant }}">{{ c.quadrant }}</span></td>
         </tr>

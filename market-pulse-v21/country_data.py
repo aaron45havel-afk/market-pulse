@@ -23,32 +23,50 @@ LAST_UPDATED = "2026-Q1"
 # Optional monthly overlay written by scripts/refresh_oecd_cli.py.
 # When present, its CLI values override the hard-coded ones in COUNTRIES.
 _OVERLAY_PATH = Path(__file__).resolve().parent / "data" / "oecd_cli.json"
+# OECD dropped 11 of our countries from CLI. The monthly
+# refresh_market_cycle.py builds an equity-market cycle proxy for those
+# and writes it here — same ~100 anchor, tagged as a proxy so the UI can
+# badge it honestly. Kept in a SEPARATE file so the two refresh workflows
+# never race on one JSON.
+_MARKET_OVERLAY_PATH = Path(__file__).resolve().parent / "data" / "market_cycle.json"
 
 
-def _load_cli_overlay() -> dict:
-    """Read the OECD CLI overlay JSON if present. Returns
-    {'as_of': str, 'series': {code: {'value', 'prev', 'trend'}}} or {}
-    when the file is missing or malformed (fall back to hard-coded)."""
+def _load_overlay_file(path: Path) -> dict:
+    """Read one overlay JSON if present and well-formed, else {}. 'series'
+    must be a code-keyed object — a syntactically-valid file with the wrong
+    shape is treated as malformed so the page falls back to the snapshot
+    instead of 500-ing downstream. ValueError covers both JSONDecodeError
+    and UnicodeDecodeError (non-UTF-8 bytes)."""
     try:
-        with open(_OVERLAY_PATH, encoding="utf-8") as fh:
+        with open(path, encoding="utf-8") as fh:
             data = json.load(fh)
-        # 'series' must be a code-keyed object. A syntactically-valid file
-        # whose series is a list/scalar is treated as malformed so the page
-        # falls back to the snapshot instead of 500-ing downstream.
         if isinstance(data, dict) and isinstance(data.get("series"), dict):
             return data
     except (OSError, ValueError):
-        # OSError → missing/unreadable file. ValueError covers both
-        # json.JSONDecodeError and UnicodeDecodeError (non-UTF-8 bytes).
         pass
     return {}
 
 
+def _load_cli_overlay() -> dict:
+    """OECD CLI overlay (the 17 countries OECD still publishes)."""
+    return _load_overlay_file(_OVERLAY_PATH)
+
+
+def _load_market_overlay() -> dict:
+    """Equity-market cycle-proxy overlay (the 11 OECD dropped)."""
+    return _load_overlay_file(_MARKET_OVERLAY_PATH)
+
+
 def _cli_source_label() -> str:
     """Where the current CLI numbers came from, for display in the UI."""
-    overlay = _load_cli_overlay()
-    if overlay:
-        return f"OECD API — {overlay.get('as_of') or 'latest'}"
+    cli, market = _load_cli_overlay(), _load_market_overlay()
+    if cli and market:
+        return (f"OECD CLI {cli.get('as_of') or 'latest'} "
+                f"+ market proxy {market.get('as_of') or 'latest'}")
+    if cli:
+        return f"OECD API — {cli.get('as_of') or 'latest'}"
+    if market:
+        return f"market proxy — {market.get('as_of') or 'latest'}"
     return f"snapshot ({LAST_UPDATED})"
 
 
@@ -286,20 +304,35 @@ def picks_for(code: str) -> list[dict]:
 
 
 def _apply_cli_overlay(countries: list[dict]) -> list[dict]:
-    """Return a new list with cli / cli_trend replaced from the overlay
-    JSON where available. Non-destructive to the module constant."""
-    overlay = _load_cli_overlay().get("series") or {}
-    if not overlay:
-        return countries
+    """Return a new list with cli / cli_trend replaced from the overlays
+    where available, plus a cli_source tag per country so the UI can show
+    what's driving each cycle score:
+      • 'cli'    — live OECD CLI (the 17 OECD still publishes)
+      • 'market' — equity-market cycle proxy (the 11 OECD dropped)
+      • 'snapshot' — neither overlay had it; hard-coded fallback value
+    OECD CLI wins if a country somehow appears in both. Non-destructive to
+    the module constant. Both overlay entries land on the SAME ~100 anchor,
+    so composite_scores() never needs to know the difference."""
+    cli_series = _load_cli_overlay().get("series") or {}
+    market_series = _load_market_overlay().get("series") or {}
     out = []
     for c in countries:
-        entry = overlay.get(c["code"])
-        # Each entry must be a dict with a numeric value; anything else
-        # (a scalar from a partly-corrupt overlay) is ignored so it can't
-        # crash the page — that country just keeps its snapshot value.
+        code = c["code"]
+        # OECD CLI first, then the market proxy — only a dict with a
+        # numeric value is trusted (a scalar from a partly-corrupt overlay
+        # is ignored so it can't crash the page).
+        entry = cli_series.get(code)
+        source = "cli"
+        if not (isinstance(entry, dict) and entry.get("value") is not None):
+            entry = market_series.get(code)
+            source = "market"
         if isinstance(entry, dict) and entry.get("value") is not None:
             c = {**c, "cli": entry["value"],
-                 "cli_trend": entry.get("trend") or c["cli_trend"]}
+                 "cli_trend": entry.get("trend") or c["cli_trend"],
+                 "cli_source": source,
+                 "cli_source_label": entry.get("source_label")}
+        else:
+            c = {**c, "cli_source": "snapshot", "cli_source_label": None}
         out.append(c)
     return out
 
