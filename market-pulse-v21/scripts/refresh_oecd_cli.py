@@ -25,10 +25,13 @@ Output shape:
 Cadence: 15th of each month (OECD publishes CLI ~10th; we buffer 5 days).
 
 Notes for future maintenance:
-- OECD's API URL structure has changed multiple times. If the fetch fails
-  with a 404 or format error, check
-  https://data-explorer.oecd.org/ → CLI dataset → "Developer API"
-  for the current URL pattern.
+- OECD's API URL structure has changed multiple times (a hardcoded
+  dataflow version 404'd once they bumped it). The fetcher now tries a
+  ranked list of flowRefs (_FLOWREFS) — versionless "latest" first, then
+  specific versions — and logs which one won. If ALL fail, the run logs
+  every attempt and its HTTP status; read that, then check
+  https://data-explorer.oecd.org/ → CLI dataset → "Developer API" for the
+  current flowRef and add it to the top of _FLOWREFS.
 - ISO2 → OECD 3-letter code map is inline below.
 """
 from __future__ import annotations
@@ -57,19 +60,37 @@ CODE_MAP: dict[str, str] = {
 OECD_TO_OUR = {v: k for k, v in CODE_MAP.items()}
 
 
-def _oecd_sdmx_url() -> str:
-    """SDMX-JSON URL for the amplitude-adjusted CLI (LOLITOAA), monthly
-    frequency, all countries in our set. Format subject to change — see
-    module docstring."""
+# OECD periodically bumps the CLI dataflow version, and a hardcoded
+# version starts returning 404 the moment they do (this is exactly what
+# broke the feed — ",4.0" 404'd once they moved on). Rather than pin one
+# version, we try a ranked list of flowRefs and use the first that
+# returns real data:
+#   • a versionless flowRef, which SDMX resolves to the LATEST version
+#     (future-proof — survives the next bump with no code change),
+#   • then specific versions as fallbacks in case versionless is rejected.
+# main() logs which candidate won, so a future break is a one-line fix
+# (read the log, add the new flowRef to the top of this list).
+_FLOWREFS = (
+    "OECD.SDD.STES,DSD_STES@DF_CLI",        # versionless → latest
+    "OECD.SDD.STES,DSD_STES@DF_CLI,4.1",
+    "OECD.SDD.STES,DSD_STES@DF_CLI,4.0",
+    "OECD.SDD.STES,DSD_STES@DF_CLI,5.0",
+    "OECD.SDD.STES,DSD_STES@DF_CLI,1.0",
+)
+
+
+def _candidate_urls() -> list[str]:
+    """Ranked SDMX-JSON URLs for the amplitude-adjusted CLI (LOLITOAA),
+    monthly, for all countries in our set. See _FLOWREFS above."""
     countries = "+".join(CODE_MAP.values())
-    return (
-        "https://sdmx.oecd.org/public/rest/data/"
-        "OECD.SDD.STES,DSD_STES@DF_CLI,4.0"
+    tail = (
         f"/{countries}.M.LOLITOAA......"
         "?startPeriod=2024-01"
         "&dimensionAtObservation=AllDimensions"
         "&format=jsondata"
     )
+    return [f"https://sdmx.oecd.org/public/rest/data/{fr}{tail}"
+            for fr in _FLOWREFS]
 
 
 def _fetch(url: str, *, timeout: int = 40) -> dict:
@@ -145,32 +166,50 @@ def _trend(current: float, prev: float | None) -> str:
 
 
 def main() -> int:
-    url = _oecd_sdmx_url()
-    print(f"[oecd] Fetching CLI from OECD SDMX API…")
-    print(f"[oecd] URL: {url}")
+    candidates = _candidate_urls()
+    print(f"[oecd] Fetching CLI from OECD SDMX API "
+          f"(trying {len(candidates)} candidate flowRefs)…")
 
-    try:
-        payload = _fetch(url)
-    except urllib.error.HTTPError as e:
-        print(f"[oecd] HTTP error {e.code}: {e.reason}")
-        print("[oecd] The OECD API URL structure has likely changed. See module docstring.")
-        return 2
-    except (urllib.error.URLError, TimeoutError, OSError) as e:
-        print(f"[oecd] Network error: {e}")
-        return 3
-    except json.JSONDecodeError as e:
-        print(f"[oecd] Response wasn't JSON: {e}")
-        return 4
-
-    try:
-        as_of, series = _extract_series(payload)
-    except RuntimeError as e:
-        print(f"[oecd] Parse error: {e}")
-        return 5
+    as_of = None
+    series: dict[str, dict[str, float]] = {}
+    last_diag = "no attempts made"
+    for i, url in enumerate(candidates, 1):
+        print(f"[oecd] Attempt {i}/{len(candidates)}: {url}")
+        try:
+            payload = _fetch(url)
+        except urllib.error.HTTPError as e:
+            last_diag = f"HTTP {e.code} {e.reason}"
+            print(f"[oecd]   → {last_diag}")
+            continue
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            last_diag = f"network error: {e}"
+            print(f"[oecd]   → {last_diag}")
+            continue
+        except json.JSONDecodeError as e:
+            last_diag = f"response wasn't JSON: {e}"
+            print(f"[oecd]   → {last_diag}")
+            continue
+        try:
+            as_of, series = _extract_series(payload)
+        except RuntimeError as e:
+            last_diag = f"parse error: {e}"
+            print(f"[oecd]   → {last_diag}")
+            continue
+        if not series:
+            last_diag = "200 OK but zero series (key/structure mismatch)"
+            print(f"[oecd]   → {last_diag}")
+            continue
+        print(f"[oecd]   → OK: {len(series)} series, latest period {as_of}")
+        break
 
     if not series:
-        print("[oecd] Parse returned zero series — nothing to write.")
-        return 6
+        print(f"[oecd] All {len(candidates)} candidates failed "
+              f"(last: {last_diag}).")
+        print("[oecd] OECD changed the CLI API beyond the versions tried. "
+              "Open https://data-explorer.oecd.org/ → Composite Leading "
+              "Indicators → 'Developer API' for the current flowRef, and add "
+              "it to the top of _FLOWREFS in this script.")
+        return 2
 
     out: dict[str, dict[str, float | str]] = {}
     for oecd_code, ts in series.items():
