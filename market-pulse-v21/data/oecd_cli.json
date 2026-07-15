@@ -1,0 +1,91 @@
+{
+  "as_of": "2026-06",
+  "fetched_at": "2026-07-15T22:54Z",
+  "series": {
+    "AU": {
+      "prev": 100.33,
+      "trend": "flat",
+      "value": 100.24
+    },
+    "BR": {
+      "prev": 103.66,
+      "trend": "falling",
+      "value": 103.52
+    },
+    "CA": {
+      "prev": 101.65,
+      "trend": "rising",
+      "value": 101.8
+    },
+    "CN": {
+      "prev": 98.6,
+      "trend": "flat",
+      "value": 98.57
+    },
+    "DE": {
+      "prev": 100.76,
+      "trend": "flat",
+      "value": 100.72
+    },
+    "ES": {
+      "prev": 100.61,
+      "trend": "falling",
+      "value": 100.43
+    },
+    "FR": {
+      "prev": 100.58,
+      "trend": "flat",
+      "value": 100.56
+    },
+    "ID": {
+      "prev": 99.99,
+      "trend": "falling",
+      "value": 99.67
+    },
+    "IN": {
+      "prev": 101.2,
+      "trend": "flat",
+      "value": 101.25
+    },
+    "IT": {
+      "prev": 100.17,
+      "trend": "falling",
+      "value": 99.99
+    },
+    "JP": {
+      "prev": 100.24,
+      "trend": "flat",
+      "value": 100.3
+    },
+    "KR": {
+      "prev": 102.66,
+      "trend": "rising",
+      "value": 102.87
+    },
+    "MX": {
+      "prev": 102.96,
+      "trend": "flat",
+      "value": 103.02
+    },
+    "TR": {
+      "prev": 100.09,
+      "trend": "flat",
+      "value": 100.05
+    },
+    "UK": {
+      "prev": 100.48,
+      "trend": "falling",
+      "value": 100.29
+    },
+    "US": {
+      "prev": 100.76,
+      "trend": "flat",
+      "value": 100.8
+    },
+    "ZA": {
+      "prev": 100.48,
+      "trend": "falling",
+      "value": 100.36
+    }
+  }
+}
