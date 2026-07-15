@@ -1,0 +1,49 @@
+{
+ "as_of": "2026-07",
+ "fetched_at": "2026-07-15T23:24Z",
+ "method": "equity index: log-price deviation from 36-mo trend, z-scored, mapped to 100 +/- 1.5*z",
+ "series": {
+  "CH": {
+   "prev": 103.51,
+   "source_label": "Swiss Market Index cycle proxy",
+   "trend": "rising",
+   "value": 103.47
+  },
+  "HK": {
+   "prev": 101.07,
+   "source_label": "Hang Seng cycle proxy",
+   "trend": "falling",
+   "value": 101.14
+  },
+  "MY": {
+   "prev": 102.25,
+   "source_label": "FTSE Bursa Malaysia KLCI cycle proxy",
+   "trend": "flat",
+   "value": 102.03
+  },
+  "NL": {
+   "prev": 104.43,
+   "source_label": "AEX (Amsterdam) cycle proxy",
+   "trend": "rising",
+   "value": 104.4
+  },
+  "SE": {
+   "prev": 103.87,
+   "source_label": "OMX Stockholm 30 cycle proxy",
+   "trend": "falling",
+   "value": 103.62
+  },
+  "SG": {
+   "prev": 104.5,
+   "source_label": "Straits Times cycle proxy",
+   "trend": "flat",
+   "value": 104.5
+  },
+  "TW": {
+   "prev": 104.5,
+   "source_label": "TAIEX (Taiwan) cycle proxy",
+   "trend": "flat",
+   "value": 104.5
+  }
+ }
+}
