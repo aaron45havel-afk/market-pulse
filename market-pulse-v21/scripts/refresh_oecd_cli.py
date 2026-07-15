@@ -105,7 +105,10 @@ def _fetch(url: str, *, timeout: int = 40) -> dict:
     req = urllib.request.Request(
         url,
         headers={
-            "Accept":      "application/vnd.sdmx.data+json;version=1.0.0",
+            # Don't pin an old SDMX-JSON version — OECD's Data Explorer
+            # now serves SDMX-JSON 2.0; let format=jsondata in the URL
+            # drive it and accept whatever it returns.
+            "Accept":      "application/vnd.sdmx.data+json, application/json",
             "User-Agent":  "market-pulse-refresh/1.0",
         },
     )
@@ -115,13 +118,23 @@ def _fetch(url: str, *, timeout: int = 40) -> dict:
 
 def _extract_series(payload: dict) -> tuple[str, dict[str, dict[str, float]]]:
     """Return (as_of, {'USA': {'2026-05': 100.4, '2026-04': 100.2}, ...})
-    from an SDMX-JSON payload. Layout follows OECD Data Explorer's newer
-    schema (dimensionAtObservation=AllDimensions)."""
+    from an SDMX-JSON payload. Handles both the old SDMX-JSON 1.0 layout
+    (data.structure, singular) and the SDMX-JSON 2.0 layout the OECD Data
+    Explorer now serves (data.structures, a list)."""
     if "data" not in payload:
         raise RuntimeError("OECD response missing 'data' key — API format changed")
     data = payload["data"]
-    struct = data.get("structure") or payload.get("structure") or {}
-    dims_obs = struct.get("dimensions", {}).get("observation", [])
+    struct = data.get("structure")
+    if not struct:
+        structures = data.get("structures")
+        if isinstance(structures, list) and structures:
+            struct = structures[0]          # SDMX-JSON 2.0
+    struct = struct or payload.get("structure") or {}
+    dims = struct.get("dimensions", {}) or {}
+    # With dimensionAtObservation=AllDimensions every dimension is attached
+    # at the observation level; fall back to series/dataSet defensively.
+    dims_obs = (dims.get("observation") or dims.get("series")
+                or dims.get("dataSet") or [])
     # Find the REF_AREA dimension index (usually 0) and TIME_PERIOD (usually last).
     ref_area_idx = None
     time_idx = None
