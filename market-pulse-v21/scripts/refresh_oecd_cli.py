@@ -1,7 +1,8 @@
 """Monthly refresh of OECD Composite Leading Indicators for /global-values.
 
-Pulls the amplitude-adjusted CLI series (code: LOLITOAA) for the countries
-in country_data.COUNTRIES and writes them to data/oecd_cli.json. The
+Pulls the amplitude-adjusted CLI (MEASURE=LI, ADJUSTMENT=AA, monthly) for
+the countries in country_data.COUNTRIES and writes them to
+data/oecd_cli.json. The
 web page reads that overlay at request time — if it exists, the overlay
 values win; if it doesn't (fresh clone, network error, etc.), the
 hard-coded snapshot in country_data.COUNTRIES is used.
@@ -60,37 +61,44 @@ CODE_MAP: dict[str, str] = {
 OECD_TO_OUR = {v: k for k, v in CODE_MAP.items()}
 
 
-# OECD periodically bumps the CLI dataflow version, and a hardcoded
-# version starts returning 404 the moment they do (this is exactly what
-# broke the feed — ",4.0" 404'd once they moved on). Rather than pin one
-# version, we try a ranked list of flowRefs and use the first that
-# returns real data:
-#   • a versionless flowRef, which SDMX resolves to the LATEST version
-#     (future-proof — survives the next bump with no code change),
-#   • then specific versions as fallbacks in case versionless is rejected.
-# main() logs which candidate won, so a future break is a one-line fix
-# (read the log, add the new flowRef to the top of this list).
+# What actually broke the feed was NOT the version — it was the KEY.
+# OECD restructured the CLI data structure: the old single measure code
+# "LOLITOAA" was split into separate dimensions — MEASURE=LI (leading
+# indicator) + ADJUSTMENT=AA (amplitude-adjusted) + a trailing transform
+# dimension H. The old key ".M.LOLITOAA......" 404'd on every version.
+# Confirmed current query (OECD Data Explorer → CLI → "Developer API"):
+#   .../OECD.SDD.STES,DSD_STES@DF_CLI/.M.LI...AA...H?...&format=jsondata
+# REF_AREA is key position 1, so our country list goes there.
+#
+# We try (version × key) combinations and use the first that returns real
+# data; main() logs which one won, so a future break is a one-line fix.
 _FLOWREFS = (
-    "OECD.SDD.STES,DSD_STES@DF_CLI",        # versionless → latest
-    "OECD.SDD.STES,DSD_STES@DF_CLI,4.1",
-    "OECD.SDD.STES,DSD_STES@DF_CLI,4.0",
-    "OECD.SDD.STES,DSD_STES@DF_CLI,5.0",
-    "OECD.SDD.STES,DSD_STES@DF_CLI,1.0",
+    "OECD.SDD.STES,DSD_STES@DF_CLI,4.1",   # current version
+    "OECD.SDD.STES,DSD_STES@DF_CLI",       # versionless → latest (future-proof)
+)
+# Amplitude-adjusted CLI, monthly. The documented exact key plus one
+# variant tolerant of OECD dropping the trailing transform dimension.
+_KEY_TEMPLATES = (
+    "{c}.M.LI...AA...H",
+    "{c}.M.LI...AA...",
 )
 
 
 def _candidate_urls() -> list[str]:
-    """Ranked SDMX-JSON URLs for the amplitude-adjusted CLI (LOLITOAA),
-    monthly, for all countries in our set. See _FLOWREFS above."""
+    """Ranked SDMX-JSON URLs for the amplitude-adjusted CLI, monthly, for
+    all countries in our set. Tries (key × version) combos, most-likely
+    first, and main() uses the first that returns real data."""
     countries = "+".join(CODE_MAP.values())
-    tail = (
-        f"/{countries}.M.LOLITOAA......"
-        "?startPeriod=2024-01"
-        "&dimensionAtObservation=AllDimensions"
-        "&format=jsondata"
-    )
-    return [f"https://sdmx.oecd.org/public/rest/data/{fr}{tail}"
-            for fr in _FLOWREFS]
+    params = ("?startPeriod=2024-01"
+              "&dimensionAtObservation=AllDimensions"
+              "&format=jsondata")
+    urls = []
+    for key_tmpl in _KEY_TEMPLATES:
+        key = key_tmpl.format(c=countries)
+        for fr in _FLOWREFS:
+            urls.append(
+                f"https://sdmx.oecd.org/public/rest/data/{fr}/{key}{params}")
+    return urls
 
 
 def _fetch(url: str, *, timeout: int = 40) -> dict:
