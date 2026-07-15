@@ -370,21 +370,22 @@ def init_db():
             ON crm_prototypes(feedback_token)
             WHERE feedback_token IS NOT NULL
         """)
+        # A/B testing needs UNIQUE(industry, role, trigger, variant_label)
+        # — that's crm_email_templates_irtv_key, created above, and what
+        # upsert_template's ON CONFLICT targets. Two older constraints
+        # CONTRADICT it and must be dropped: the 2-column
+        # (industry, trigger) and the 3-column (industry, role, trigger).
+        # The 3-column one caps each (industry, role, trigger) at a single
+        # variant (breaking the bandit) AND makes every re-seed of an
+        # existing template raise a duplicate-key warning at startup.
+        # Idempotent — DROP IF EXISTS is a no-op once they're gone.
         cur.execute("""
             ALTER TABLE crm_email_templates
             DROP CONSTRAINT IF EXISTS crm_email_templates_industry_trigger_key
         """)
         cur.execute("""
-            DO $$ BEGIN
-                IF NOT EXISTS (
-                    SELECT 1 FROM pg_constraint
-                    WHERE conname = 'crm_email_templates_industry_role_trigger_key'
-                ) THEN
-                    ALTER TABLE crm_email_templates
-                    ADD CONSTRAINT crm_email_templates_industry_role_trigger_key
-                    UNIQUE (industry, role, trigger);
-                END IF;
-            END $$;
+            ALTER TABLE crm_email_templates
+            DROP CONSTRAINT IF EXISTS crm_email_templates_industry_role_trigger_key
         """)
         # Discovery-call artifacts — one row per contact (UNIQUE on
         # contact_id, upserted). Stores raw transcript + the AI chain
