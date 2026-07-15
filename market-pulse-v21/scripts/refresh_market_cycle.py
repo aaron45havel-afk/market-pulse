@@ -8,13 +8,15 @@ of them — the "proper" answer is ~8 different national statistics APIs,
 several needing keys and returning Excel. That's a maintenance trap.
 
 Instead we build ONE uniform proxy from a single already-proven source
-(Yahoo Finance index data — the same fetch refresh_aristocrats.py uses):
-each country's main equity index, turned into a business-cycle reading.
-Share prices are themselves a core component of the OECD CLI, and since
-/global-values exists to time country *equity* entries, the market's own
-cycle is a defensible — and directly relevant — signal. It is written to
-data/market_cycle.json, tagged so the page badges it "market proxy",
-never mistaken for true OECD CLI.
+(Yahoo Finance — the same fetch refresh_aristocrats.py uses): the US-listed
+iShares MSCI country ETF for each — the exact instrument /global-values
+tells you to buy — turned into a business-cycle reading. Share prices are
+a core component of the OECD CLI, and since the page exists to time
+country *equity* entries, the market's own cycle is a defensible and
+directly relevant signal. Using the USD ETF (vs the raw local index) also
+folds in the currency move, so the reading matches the dollar experience
+of actually owning it. Written to data/market_cycle.json, badged "market
+proxy", never mistaken for true OECD CLI.
 
 Method (amplitude-adjusted, mirrors how CLI is built):
   • ~7 years of monthly index closes.
@@ -56,20 +58,26 @@ CLI_SCALE = 1.5                   # z→cli_equiv gain (±3σ → ~95.5–104.5)
 TREND_DEADBAND = 0.15
 
 # Each country → ordered candidate Yahoo symbols (first that returns
-# enough history wins). '^' is URL-encoded at fetch time.
+# enough history wins). We lead with the US-listed iShares MSCI country
+# ETF: it's the exact instrument /global-values tells you to buy, it's
+# always liquid on Yahoo (raw local-index symbols like ^IPSA / ^SET.BK
+# fail intermittently), and it's USD-denominated — so the cycle reflects
+# the actual dollar experience of owning it, which also folds in the FX
+# move a local-index proxy would miss. The local index is kept as a
+# fallback. '^' is URL-encoded at fetch time.
 COUNTRY_INDEX: dict[str, list[tuple[str, str]]] = {
-    # code:      [(symbol, human label), ...]
-    "CH": [("^SSMI", "Swiss Market Index")],
-    "NL": [("^AEX", "AEX (Amsterdam)")],
-    "SE": [("^OMX", "OMX Stockholm 30"), ("^OMXSPI", "OMX Stockholm PI"), ("^OMXS30", "OMXS30")],
-    "PL": [("WIG20.WA", "WIG20 (Warsaw)"), ("^WIG20", "WIG20"), ("WIG.WA", "WIG")],
-    "CL": [("^IPSA", "IPSA (Santiago)")],
-    "HK": [("^HSI", "Hang Seng")],
-    "SG": [("^STI", "Straits Times")],
-    "TW": [("^TWII", "TAIEX (Taiwan)")],
-    "TH": [("^SET.BK", "SET (Thailand)"), ("^SETI", "SET Index")],
-    "MY": [("^KLSE", "FTSE Bursa Malaysia KLCI")],
-    "PH": [("PSEI.PS", "PSEi (Philippines)"), ("^PSI", "PSEi"), ("PSEI.PH", "PSEi")],
+    # code:      [(symbol, human label), ...]  ETF (USD) first, index fallback
+    "CH": [("EWL", "iShares MSCI Switzerland ETF"), ("^SSMI", "Swiss Market Index")],
+    "NL": [("EWN", "iShares MSCI Netherlands ETF"), ("^AEX", "AEX")],
+    "SE": [("EWD", "iShares MSCI Sweden ETF"), ("^OMX", "OMX Stockholm 30")],
+    "PL": [("EPOL", "iShares MSCI Poland ETF"), ("WIG20.WA", "WIG20")],
+    "CL": [("ECH", "iShares MSCI Chile ETF"), ("^IPSA", "IPSA")],
+    "HK": [("EWH", "iShares MSCI Hong Kong ETF"), ("^HSI", "Hang Seng")],
+    "SG": [("EWS", "iShares MSCI Singapore ETF"), ("^STI", "Straits Times")],
+    "TW": [("EWT", "iShares MSCI Taiwan ETF"), ("^TWII", "TAIEX")],
+    "TH": [("THD", "iShares MSCI Thailand ETF"), ("^SET.BK", "SET")],
+    "MY": [("EWM", "iShares MSCI Malaysia ETF"), ("^KLSE", "FBM KLCI")],
+    "PH": [("EPHE", "iShares MSCI Philippines ETF"), ("^PSI", "PSEi")],
 }
 
 
