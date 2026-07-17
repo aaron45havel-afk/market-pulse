@@ -346,6 +346,28 @@ async def lynch(request: Request):
     return templates.TemplateResponse("lynch.html", {"request": request})
 
 
+@app.get("/norcal")
+async def norcal_page(request: Request, assets: float = 200_000,
+                      reserves: float = 40_000, down_pct: float = 20.0,
+                      zip: str = "", price: float = 0, sqft: float = 0,
+                      income: float = 0):
+    """NorCal Real Estate — Bay Area strict screen (5 quality gates +
+    budget gate) and per-listing deal checker. See norcal.py."""
+    from norcal import screen, deal_check
+    assets = max(0.0, min(50_000_000, assets))
+    reserves = max(0.0, min(assets, reserves))
+    down_pct = max(3.0, min(100.0, down_pct))
+    res = await asyncio.to_thread(screen, assets, reserves, down_pct)
+    check = None
+    if zip and price > 0:
+        check = await asyncio.to_thread(
+            deal_check, zip.strip(), price, sqft or None, income or None,
+            assets, reserves, down_pct)
+    return templates.TemplateResponse("norcal.html", {
+        "request": request, "res": res, "power": res["power"], "check": check,
+    })
+
+
 # Browsers and iOS probe these absolute paths regardless of <link> tags —
 # serve them so the access log stops filling with 404s.
 _STATIC_DIR = Path(__file__).resolve().parent / "static"
