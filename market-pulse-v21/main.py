@@ -346,6 +346,24 @@ async def lynch(request: Request):
     return templates.TemplateResponse("lynch.html", {"request": request})
 
 
+# Browsers and iOS probe these absolute paths regardless of <link> tags —
+# serve them so the access log stops filling with 404s.
+_STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    from fastapi.responses import FileResponse
+    return FileResponse(_STATIC_DIR / "favicon.svg", media_type="image/svg+xml")
+
+
+@app.get("/apple-touch-icon.png", include_in_schema=False)
+@app.get("/apple-touch-icon-precomposed.png", include_in_schema=False)
+async def apple_touch_icon():
+    from fastapi.responses import FileResponse
+    return FileResponse(_STATIC_DIR / "apple-touch-icon.png", media_type="image/png")
+
+
 @app.get("/compounders")
 async def compounders_page(request: Request):
     """The 14%/yr long-term screen: quality gates (ROIC, consistency,

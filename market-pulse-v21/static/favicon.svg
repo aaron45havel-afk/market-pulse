@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Market Pulse favicon: brand indigo tile + white pulse line -->
+  <rect width="64" height="64" rx="14" fill="#5b4de0"/>
+  <polyline points="10,40 22,40 27,24 34,50 39,34 44,34 54,20"
+            fill="none" stroke="#ffffff" stroke-width="5"
+            stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
