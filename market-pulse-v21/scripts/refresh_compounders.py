@@ -147,7 +147,21 @@ def _get(url: str, timeout: int = 60, headers: dict | None = None) -> dict:
 FRAME_TAGS = [
     ("us-gaap", "Revenues"),
     ("us-gaap", "RevenueFromContractWithCustomerExcludingAssessedTax"),
-    ("ifrs-full", "Revenue"),
+    # NOTE: EDGAR's frames API 404s for ifrs-full concepts (confirmed in
+    # run logs) — IFRS-only 20-F ADRs can't self-discover through frames.
+    # ADR_SEEDS below patches the gap for the majors.
+]
+
+# Large ADRs whose fundamentals live under IFRS tags only. They're in
+# company_tickers_exchange.json (SEC registrants), so we resolve their
+# CIKs from the ticker map and force-add them to the universe; their
+# actual revenue check happens naturally in compute_metrics. Financials
+# and China names still get filtered/badged downstream as usual.
+ADR_SEEDS = [
+    "TSM", "ASML", "NVO", "SAP", "AZN", "NVS", "SNY", "GSK", "UL", "DEO",
+    "BUD", "SHEL", "TTE", "BP", "RIO", "BHP", "TM", "HMC", "SONY", "MUFG",
+    "BABA", "PDD", "JD", "NTES", "BIDU", "TCOM", "YUMC", "INFY", "WIT",
+    "SE", "MELI", "ARM", "STLA", "RACE", "SPOT", "TEAM", "ABBV",
 ]
 
 
@@ -205,13 +219,10 @@ def fetch_profile(cik: int) -> dict:
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, ValueError):
         return {}
     addr = (s.get("addresses") or {}).get("business") or {}
+    # US filers report a state name here; foreign filers a country name.
+    # A US state description still means "United States" for our tiers,
+    # and _country_assess treats anything unrecognized as US-tier anyway.
     country = (addr.get("stateOrCountryDescription") or "").strip()
-    # US states come through as the state name; normalize to United States.
-    if addr.get("stateOrCountry", "").isupper() and len(addr.get("stateOrCountry", "")) == 2 \
-            and not country.lower().startswith(("canada",)):
-        # two-letter codes that are US states → US; foreign codes come as
-        # longer descriptions in stateOrCountryDescription anyway.
-        pass
     try:
         sic = int(s.get("sic") or 0) or None
     except (TypeError, ValueError):
@@ -463,36 +474,55 @@ def main() -> int:
     universe = [(cik, rev) for cik, rev in revenue_by_cik.items() if cik in tickers]
     universe.sort(key=lambda x: -x[1])
     universe = universe[:MAX_UNIVERSE]
+    # Force-add the IFRS-only ADR seeds (frames can't discover them).
+    have = {cik for cik, _ in universe}
+    by_ticker = {info["ticker"]: cik for cik, info in tickers.items()}
+    seeded = 0
+    for t in ADR_SEEDS:
+        cik = by_ticker.get(t)
+        if cik and cik not in have:
+            universe.append((cik, MIN_REVENUE))   # revenue verified from facts later
+            have.add(cik)
+            seeded += 1
     if args.limit:
         universe = universe[:args.limit]
-    print(f"[compounders] {len(universe)} exchange-listed after ticker join")
+    print(f"[compounders] {len(universe)} exchange-listed after ticker join "
+          f"(+{seeded} ADR seeds)")
 
     out: dict[str, dict] = {}
     skipped = {"financial": 0, "no_facts": 0, "thin": 0, "market": 0}
     t0 = time.time()
+    skipped["error"] = 0
     for i, (cik, rev) in enumerate(universe, 1):
         info = tickers[cik]
-        profile = fetch_profile(cik)
-        time.sleep(SEC_SLEEP)
-        if _is_financial_sic(profile.get("sic")):
-            skipped["financial"] += 1
-            continue
-        metrics = fetch_fundamentals(cik)
-        time.sleep(SEC_SLEEP)
-        if metrics is None:
-            skipped["no_facts"] += 1
-            continue
-        market = fetch_market(info["ticker"], metrics.get("fcf_ps") or {})
-        time.sleep(YAHOO_SLEEP)
-        if market is None:
-            skipped["market"] += 1
-            market = {}
-        row = {**metrics, **market,
-               "name": info["name"], "cik": cik, "exchange": info["exchange"],
-               "sic": profile.get("sic"), "industry": profile.get("sic_desc"),
-               "country": profile.get("country_desc") or "United States"}
-        row.pop("fcf_ps", None)   # working data — not needed in output
-        out[info["ticker"]] = row
+        # One malformed company must never kill a 70-minute run — catch
+        # everything per-company, log it, move on.
+        try:
+            profile = fetch_profile(cik)
+            time.sleep(SEC_SLEEP)
+            if _is_financial_sic(profile.get("sic")):
+                skipped["financial"] += 1
+                continue
+            metrics = fetch_fundamentals(cik)
+            time.sleep(SEC_SLEEP)
+            if metrics is None:
+                skipped["no_facts"] += 1
+                continue
+            market = fetch_market(info["ticker"], metrics.get("fcf_ps") or {})
+            time.sleep(YAHOO_SLEEP)
+            if market is None:
+                skipped["market"] += 1
+                market = {}
+            row = {**metrics, **market,
+                   "name": info["name"], "cik": cik, "exchange": info["exchange"],
+                   "sic": profile.get("sic"), "industry": profile.get("sic_desc"),
+                   "country": profile.get("country_desc") or "United States"}
+            row.pop("fcf_ps", None)   # working data — not needed in output
+            out[info["ticker"]] = row
+        except Exception as e:
+            skipped["error"] += 1
+            print(f"[compounders] {info['ticker']} (CIK {cik}): "
+                  f"{type(e).__name__}: {e} — skipped")
         if i % 50 == 0:
             rate = i / (time.time() - t0)
             eta = (len(universe) - i) / rate / 60
