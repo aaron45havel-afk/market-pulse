@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}NorCal Real Estate — Market Pulse{% endblock %}
+{% block title %}California Real Estate — Market Pulse{% endblock %}
 {% block extra_css %}
 <style>
   main .container { max-width: 1400px; }
@@ -41,22 +41,33 @@
   .nc-table tr:hover td { background:var(--surface-2); }
   .nc-scroll { overflow-x:auto; }
   .nc-note { font-size:0.7rem; color:var(--ink-3); }
+  .nc-pills { display:flex; gap:0.4rem; margin:0.6rem 0 0.2rem; flex-wrap:wrap; }
+  .nc-pill { padding:0.3rem 0.9rem; border-radius:999px; font-size:0.78rem; font-weight:700;
+             border:1px solid var(--line); background:var(--surface); color:var(--ink-2); text-decoration:none; }
+  .nc-pill:hover { border-color:var(--accent2, #2563eb); text-decoration:none; }
+  .nc-pill.active { background:var(--accent2, #2563eb); color:#fff; border-color:var(--accent2, #2563eb); }
   .food-star { color:#b45309; cursor:help; font-weight:700; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="nc-hero">
-  <h1>🌉 NorCal Real Estate — Bay strict screen</h1>
+  <h1>🌉 California Real Estate — strict screen</h1>
   <span class="nc-power">${{ '{:,.0f}'.format(power.assets) }} assets − ${{ '{:,.0f}'.format(power.reserves) }} reserves = ${{ '{:,.0f}'.format(power.deployable) }} down → max ${{ '{:,.0f}'.format(power.max_purchase) }} at {{ power.down_pct|int }}% down</span>
 </div>
 <p class="nc-sub">
-  Every Bay ZIP graded on five strict gates — <strong>≤ ~20-30 min off-peak</strong> to SF/SJ/Oakland (bridge-penalty aware),
+  Every California ZIP graded on five strict gates — <strong>≤ ~20-30 min off-peak</strong> to any CA city ≥300k (14 anchors, bridge-penalty aware in the Bay),
   <strong>top-tier dining</strong> (Bay-calibrated, with documented overrides where the density metric is blind),
   <strong>excellent safety</strong> (top quintile), <strong>temperate microclimate</strong> (fog belt / wind corridors / inland heat excluded — hand-encoded, labeled),
   and <strong>steady appreciation</strong> (positive trend, low volatility, shallow drawdowns) — plus the sixth gate:
   <strong>can we actually buy it.</strong> Tune via URL: <code>?assets=…&amp;reserves=…&amp;down_pct=…</code>
 </p>
+
+<div class="nc-pills">
+  {% for reg in regions %}
+  <a class="nc-pill {{ 'active' if reg == res.region }}" href="/norcal?region={{ reg | urlencode }}{% if power.assets != 200000 %}&assets={{ power.assets|int }}{% endif %}">{{ reg }}</a>
+  {% endfor %}
+</div>
 
 <div class="nc-card">
   <h2>🔍 Deal checker</h2>
@@ -97,9 +108,10 @@
   <h2>✅ Buyable now — all five gates + budget ({{ res.buyable|length }})</h2>
   {% if res.buyable %}
   <div class="nc-scroll"><table class="nc-table">
-    <thead><tr><th>ZIP</th><th>Town</th><th>Entry</th><th>Segment</th><th>Min</th><th>Food</th><th>Crime</th><th>CAGR</th><th>Worst DD</th></tr></thead>
+    <thead><tr><th>ZIP</th><th>Town</th><th>Region</th><th>Entry</th><th>Segment</th><th>Min</th><th>Food</th><th>Crime</th><th>CAGR</th><th>Worst DD</th></tr></thead>
     <tbody>{% for s in res.buyable %}
       <tr><td><a href="/zip/{{ s.zip }}">{{ s.zip }}</a></td><td>{{ s.name }}</td>
+      <td>{{ s.region }}</td>
       <td>${{ '{:,.0f}'.format(s.entry_price) }}</td><td>{{ s.entry_kind }}</td>
       <td>{{ s.minutes }} {{ s.anchor }}</td><td>{{ s.food }}{% if s.food_override %}<span class="food-star" title="{{ s.food_override }}">*</span>{% endif %}</td>
       <td>{{ s.crime }}</td><td>{{ s.steady.cagr if s.steady else '—' }}%</td><td>{{ s.steady.max_dd if s.steady else '—' }}%</td></tr>
@@ -115,9 +127,10 @@
   <h2>🎯 Aspirational — passes all five quality gates, above budget ({{ res.aspirational|length }})</h2>
   <p class="desc">Your ladder. The gap column shows what asset base makes each reachable at {{ power.down_pct|int }}% down.</p>
   <div class="nc-scroll"><table class="nc-table">
-    <thead><tr><th>ZIP</th><th>Town</th><th>Entry</th><th>Segment</th><th>Assets needed</th><th>Min</th><th>Food</th><th>Crime</th><th>Climate</th><th>CAGR</th><th>Worst DD</th></tr></thead>
+    <thead><tr><th>ZIP</th><th>Town</th><th>Region</th><th>Entry</th><th>Segment</th><th>Assets needed</th><th>Min</th><th>Food</th><th>Crime</th><th>Climate</th><th>CAGR</th><th>Worst DD</th></tr></thead>
     <tbody>{% for s in res.aspirational %}
       <tr><td><a href="/zip/{{ s.zip }}">{{ s.zip }}</a></td><td>{{ s.name }}</td>
+      <td>{{ s.region }}</td>
       <td>${{ '{:,.0f}'.format(s.entry_price) }}</td><td>{{ s.entry_kind }}</td>
       <td>${{ '{:,.0f}'.format(s.entry_price * power.down_pct / 100 + power.reserves) }}</td>
       <td>{{ s.minutes }} {{ s.anchor }}</td>
@@ -129,11 +142,11 @@
 </div>
 
 <div class="nc-card">
-  <h2>〰 Near misses — four of five gates ({{ res.near|length }})</h2>
+  <h2>〰 Near misses — four of five gates ({{ res.near|length }}{% if res.near|length > 80 %}, showing nearest 80{% endif %})</h2>
   <p class="desc">Failed exactly one quality gate — shown because at this strictness, the "why" is the information.</p>
   <div class="nc-scroll"><table class="nc-table">
     <thead><tr><th>ZIP</th><th>Town</th><th>Failed gate</th><th>Detail</th><th>Entry</th><th>Min</th></tr></thead>
-    <tbody>{% for s in res.near %}
+    <tbody>{% for s in res.near[:80] %}
       <tr><td><a href="/zip/{{ s.zip }}">{{ s.zip }}</a></td><td>{{ s.name }}</td>
       {% set failed = [] %}{% for k, ok in s.gates.items() %}{% if not ok and k != 'budget' %}{% set _ = failed.append(k) %}{% endif %}{% endfor %}
       <td>{{ failed|join(', ') }}</td>
@@ -145,7 +158,7 @@
 </div>
 
 <div class="nc-note" style="margin:0.8rem 0 1.2rem;">
-  Universe: {{ res.universe_n }} Bay ZIPs (≤40 mi of an anchor, pop ≥3k). Thresholds: crime ≤ {{ res.thresholds.crime_max|int }} (top quintile),
+  Universe: {{ res.universe_n }} CA ZIPs ({{ res.region }}) (≤40 mi of an anchor, pop ≥3k). Thresholds: crime ≤ {{ res.thresholds.crime_max|int }} (top quintile),
   food ≥ {{ res.thresholds.food_min|int }} (density-biased metric — * marks documented downtown overrides), access ≤ {{ res.thresholds.access_max|int }} min est. off-peak.
   Climate is hand-encoded judgment from documented Bay microclimates. Steadiness currently uses a
   {{ 'condo-segment 15-yr window' if res.condo_as_of else '60-month all-homes window — the condo refresh extends this to 15+ yrs' }}.

@@ -349,15 +349,19 @@ async def lynch(request: Request):
 @app.get("/norcal")
 async def norcal_page(request: Request, assets: float = 200_000,
                       reserves: float = 40_000, down_pct: float = 20.0,
+                      region: str = "All CA",
                       zip: str = "", price: float = 0, sqft: float = 0,
                       income: float = 0):
-    """NorCal Real Estate — Bay Area strict screen (5 quality gates +
-    budget gate) and per-listing deal checker. See norcal.py."""
-    from norcal import screen, deal_check
+    """California Real Estate — statewide strict screen (5 quality gates
+    + budget gate) with region pills and a per-listing deal checker."""
+    from norcal import screen, deal_check, REGIONS
     assets = max(0.0, min(50_000_000, assets))
     reserves = max(0.0, min(assets, reserves))
     down_pct = max(3.0, min(100.0, down_pct))
-    res = await asyncio.to_thread(screen, assets, reserves, down_pct)
+    if region not in REGIONS:
+        region = "All CA"
+    res = await asyncio.to_thread(screen, assets, reserves, down_pct,
+                                  33.0, 45.0, 30.0, region)
     check = None
     if zip and price > 0:
         check = await asyncio.to_thread(
@@ -365,6 +369,7 @@ async def norcal_page(request: Request, assets: float = 200_000,
             assets, reserves, down_pct)
     return templates.TemplateResponse("norcal.html", {
         "request": request, "res": res, "power": res["power"], "check": check,
+        "regions": REGIONS,
     })
 
 

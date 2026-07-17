@@ -59,13 +59,45 @@ STEADY_SHORT = {"cagr_min": 1.0, "dd_max": -22.0, "vol_max": 9.0}
 STEADY_LONG = {"cagr_min": 2.0, "dd_max": -25.0, "vol_max": 12.5}
 LONG_WINDOW_MONTHS = 120
 
+# "Major city" = every CA city ≥ ~300k (user decision) — 14 anchors.
+# The heat/crime gates neutralize the Central Valley ones, so including
+# Fresno/Bakersfield/Stockton is principled and harmless.
 ANCHORS = {
-    "SF":  (37.7793, -122.4193),
-    "SJ":  (37.3382, -121.8863),
-    "OAK": (37.8044, -122.2712),
+    "SF":   (37.7793, -122.4193),
+    "SJ":   (37.3382, -121.8863),
+    "OAK":  (37.8044, -122.2712),
+    "SAC":  (38.5816, -121.4944),
+    "FRES": (36.7378, -119.7871),
+    "STK":  (37.9577, -121.2908),
+    "BAK":  (35.3733, -119.0187),
+    "LA":   (34.0522, -118.2437),
+    "LB":   (33.7701, -118.1937),
+    "ANA":  (33.8366, -117.9143),
+    "SNA":  (33.7455, -117.8677),
+    "IRV":  (33.6846, -117.8265),
+    "RIV":  (33.9806, -117.3755),
+    "SD":   (32.7157, -117.1611),
 }
-# Universe: CA ZIPs within this haversine radius of any anchor.
+# Universe: CA ZIPs within this haversine radius of any anchor. ZIPs
+# farther than this can never pass the access gate anyway.
 UNIVERSE_RADIUS_MI = 40.0
+
+# Region tags for the filter pills. San Diego gets its own pill; the
+# SoCal county set is explicit; everything else in CA is NorCal.
+_SOCAL_COUNTIES = {
+    "Los Angeles County", "Orange County", "Ventura County",
+    "San Bernardino County", "Riverside County", "Santa Barbara County",
+    "San Luis Obispo County", "Kern County", "Imperial County",
+}
+
+
+def _region(county: str | None) -> str:
+    c = county or ""
+    if c == "San Diego County":
+        return "San Diego"
+    if c in _SOCAL_COUNTIES:
+        return "SoCal"
+    return "NorCal"
 CORRIDOR_FACTOR = 1.25    # haversine → road miles
 AVG_MPH = 60.0            # off-peak freeway average
 SURFACE_BUFFER_MIN = 4.0  # getting on/off the freeway
@@ -122,9 +154,104 @@ CLIMATE_CITY = {
     "Hercules": "wind", "Rodeo": "wind", "Richmond": "wind",
     "San Leandro": "temperate", "Hayward": "temperate",
     "Castro Valley": "temperate",
+
+    # ── SoCal — marine layer ruled TEMPERATE (user decision), labeled ──
+    # Coastal LA / South Bay beach cities
+    "Santa Monica": "temperate (marine layer)", "Venice": "temperate (marine layer)",
+    "Marina Del Rey": "temperate (marine layer)", "Pacific Palisades": "temperate (marine layer)",
+    "Playa Del Rey": "temperate (marine layer)", "El Segundo": "temperate (marine layer)",
+    "Manhattan Beach": "temperate (marine layer)", "Hermosa Beach": "temperate (marine layer)",
+    "Redondo Beach": "temperate (marine layer)", "Torrance": "temperate (marine layer)",
+    "Palos Verdes": "temperate (marine layer)", "Rancho Palos Verdes": "temperate (marine layer)",
+    "Rolling Hills": "temperate (marine layer)", "San Pedro": "temperate (marine layer)",
+    "Long Beach": "temperate (marine layer)", "Seal Beach": "temperate (marine layer)",
+    "Culver City": "temperate (marine layer)", "Lakewood": "temperate",
+    "Cerritos": "temperate", "Cypress": "temperate",
+    # LA basin / valleys — heat or borderline (strict = fail)
+    "Los Angeles": "warm basin (borderline heat)", "Beverly Hills": "warm basin (borderline heat)",
+    "West Hollywood": "warm basin (borderline heat)", "Hollywood": "warm basin (borderline heat)",
+    "Burbank": "valley heat", "Glendale": "valley heat", "Pasadena": "SG Valley heat (borderline)",
+    "South Pasadena": "SG Valley heat (borderline)", "San Marino": "SG Valley heat (borderline)",
+    "Arcadia": "SG Valley heat", "Alhambra": "SG Valley heat", "Monrovia": "SG Valley heat",
+    "Van Nuys": "SF Valley heat", "Sherman Oaks": "SF Valley heat", "Studio City": "SF Valley heat",
+    "Encino": "SF Valley heat", "Woodland Hills": "SF Valley heat", "Northridge": "SF Valley heat",
+    "Chatsworth": "SF Valley heat", "Reseda": "SF Valley heat", "Canoga Park": "SF Valley heat",
+    "North Hollywood": "SF Valley heat", "Tarzana": "SF Valley heat", "Granada Hills": "SF Valley heat",
+    "Sylmar": "SF Valley heat", "Sun Valley": "SF Valley heat", "Whittier": "warm basin (borderline heat)",
+    "Downey": "warm basin (borderline heat)", "Norwalk": "warm basin (borderline heat)",
+    "Fullerton": "warm basin (borderline heat)", "Brea": "inland heat", "Yorba Linda": "inland heat",
+    "Palmdale": "high desert heat + wind", "Lancaster": "high desert heat + wind",
+    "Santa Clarita": "valley heat", "Simi Valley": "valley heat",
+    # Orange County coast + plain
+    "Irvine": "temperate (marine layer)", "Costa Mesa": "temperate (marine layer)",
+    "Newport Beach": "temperate (marine layer)", "Huntington Beach": "temperate (marine layer)",
+    "Fountain Valley": "temperate", "Laguna Beach": "temperate (marine layer)",
+    "Laguna Niguel": "temperate", "Laguna Hills": "temperate", "Aliso Viejo": "temperate",
+    "Mission Viejo": "temperate", "Lake Forest": "temperate", "Tustin": "temperate",
+    "Santa Ana": "temperate", "Anaheim": "warm basin (borderline heat)",
+    "Orange": "warm basin (borderline heat)", "Garden Grove": "temperate",
+    "Westminster": "temperate", "San Clemente": "temperate (marine layer)",
+    "Dana Point": "temperate (marine layer)", "San Juan Capistrano": "temperate",
+    "Rancho Santa Margarita": "warm foothill (borderline)",
+    # San Diego County
+    "San Diego": "temperate (marine layer)", "La Jolla": "temperate (marine layer)",
+    "Coronado": "temperate (marine layer)", "Del Mar": "temperate (marine layer)",
+    "Solana Beach": "temperate (marine layer)", "Encinitas": "temperate (marine layer)",
+    "Carlsbad": "temperate (marine layer)", "Oceanside": "temperate (marine layer)",
+    "Imperial Beach": "temperate (marine layer)", "Chula Vista": "temperate",
+    "National City": "temperate", "La Mesa": "temperate", "Lemon Grove": "temperate",
+    "Vista": "warm inland (borderline)", "San Marcos": "warm inland (borderline)",
+    "Escondido": "inland heat", "Poway": "warm inland (borderline)",
+    "El Cajon": "inland heat", "Santee": "inland heat", "Spring Valley": "warm inland (borderline)",
+    # Ventura / Central Coast (mostly access-limited anyway)
+    "Ventura": "temperate (marine layer)", "Oxnard": "temperate (marine layer)",
+    "Camarillo": "temperate", "Thousand Oaks": "temperate",
+    "Santa Barbara": "temperate (marine layer)", "Goleta": "temperate (marine layer)",
+    "Carpinteria": "temperate (marine layer)", "San Luis Obispo": "temperate",
+    "Pismo Beach": "temperate (marine layer)", "Santa Cruz": "temperate (marine layer)",
+    "Capitola": "temperate (marine layer)", "Aptos": "temperate (marine layer)",
+    "Monterey": "temperate (marine layer)", "Pacific Grove": "temperate (marine layer)",
+    "Carmel": "temperate (marine layer)", "Salinas": "temperate",
+    # Sacramento metro + valley (all fail the heat rule)
+    "Sacramento": "inland heat", "West Sacramento": "inland heat", "Elk Grove": "inland heat",
+    "Roseville": "inland heat", "Rocklin": "inland heat", "Folsom": "inland heat",
+    "Davis": "inland heat", "Woodland": "inland heat", "Citrus Heights": "inland heat",
+    "Rancho Cordova": "inland heat", "Carmichael": "inland heat", "Fair Oaks": "inland heat",
+    "El Dorado Hills": "inland heat", "Stockton": "inland heat", "Modesto": "inland heat",
+    "Fresno": "inland heat", "Clovis": "inland heat", "Bakersfield": "inland heat",
+    "Visalia": "inland heat", "Merced": "inland heat", "Tracy": "inland heat",
+    "Manteca": "inland heat", "Lodi": "inland heat", "Turlock": "inland heat",
+    # Inland Empire
+    "Riverside": "inland heat", "San Bernardino": "inland heat", "Fontana": "inland heat + wind",
+    "Ontario": "inland heat", "Rancho Cucamonga": "inland heat", "Corona": "inland heat",
+    "Moreno Valley": "inland heat", "Temecula": "inland heat", "Murrieta": "inland heat",
+    "Redlands": "inland heat", "Chino": "inland heat", "Chino Hills": "inland heat",
+    "Pomona": "inland heat", "Upland": "inland heat", "Claremont": "inland heat",
+    "Victorville": "high desert heat", "Palm Springs": "extreme heat", "Palm Desert": "extreme heat",
+    "Indio": "extreme heat", "Coachella": "extreme heat",
+    # Wine country / far NorCal
+    "Petaluma": "temperate", "Sonoma": "warm inland (borderline)", "Napa": "warm inland (borderline)",
+    "Santa Rosa": "warm inland (borderline)", "Healdsburg": "inland heat",
+    "Fairfield": "wind (gap winds)", "Vacaville": "inland heat",
 }
 CLIMATE_ZIP_OVERRIDES: dict[str, str] = {
     # e.g. "94131": "fog belt",   # add specific corrections here
+}
+# County-level defaults for cities not individually mapped — keeps the
+# near-miss table from flooding with "unclassified" rows for towns whose
+# county-wide climate is unambiguous. Coastal/mixed counties get no
+# default (unclassified = strict fail until hand-reviewed).
+CLIMATE_COUNTY_DEFAULT = {
+    "Sacramento County": "inland heat", "San Joaquin County": "inland heat",
+    "Stanislaus County": "inland heat", "Fresno County": "inland heat",
+    "Kern County": "inland heat", "Merced County": "inland heat",
+    "Tulare County": "inland heat", "Kings County": "inland heat",
+    "Madera County": "inland heat", "Yolo County": "inland heat",
+    "Placer County": "inland heat", "El Dorado County": "sierra foothill heat",
+    "Sutter County": "inland heat", "Yuba County": "inland heat",
+    "Butte County": "inland heat", "Shasta County": "inland heat",
+    "San Bernardino County": "inland heat", "Riverside County": "inland heat",
+    "Imperial County": "extreme heat",
 }
 
 
@@ -140,35 +267,47 @@ def _haversine_mi(lat1, lng1, lat2, lng2) -> float:
 # miles but crosses open water. Sides: SF/Peninsula/Marin = west, East
 # Bay = east, San Jose = south (reachable from both without a bridge).
 _EAST_COUNTIES = {"Alameda County", "Contra Costa County"}
-_ANCHOR_SIDE = {"SF": "west", "OAK": "east", "SJ": "south"}
+_BAY_WEST_COUNTIES = {"San Francisco County", "San Mateo County",
+                      "Santa Clara County", "Marin County",
+                      "Sonoma County", "Napa County", "Solano County"}
+# Bridge penalty is Bay-only geography: SF is a west-side anchor, OAK
+# east-side, SJ reachable from both without a bridge. Statewide anchors
+# have no water crossing — no side, no penalty.
+_ANCHOR_SIDE = {"SF": "west", "OAK": "east"}
 _BRIDGE_PENALTY_MIN = 25.0
 
 
 def _access(lat, lng, county: str | None) -> tuple[str, float]:
     """(nearest anchor, est. off-peak minutes) with a bridge penalty
     when ZIP and anchor sit on opposite sides of the Bay."""
-    zip_side = "east" if (county or "") in _EAST_COUNTIES else "west"
+    c = county or ""
+    zip_side = "east" if c in _EAST_COUNTIES else \
+               "west" if c in _BAY_WEST_COUNTIES else None
     best, minutes = "", 9e9
     for name, (alat, alng) in ANCHORS.items():
         road = _haversine_mi(lat, lng, alat, alng) * CORRIDOR_FACTOR
         mins = road / AVG_MPH * 60 + SURFACE_BUFFER_MIN
-        aside = _ANCHOR_SIDE[name]
-        if aside != "south" and aside != zip_side:
+        aside = _ANCHOR_SIDE.get(name)
+        if aside and zip_side and aside != zip_side:
             mins += _BRIDGE_PENALTY_MIN
         if mins < minutes:
             best, minutes = name, mins
     return best, round(minutes, 1)
 
 
-def _climate(zip_code: str, city_name: str) -> tuple[bool, str]:
-    """(passes, tier/reason)."""
+def _climate(zip_code: str, city_name: str, county: str | None = None) -> tuple[bool, str]:
+    """(passes, tier/reason). 'temperate' (with or without a marine-layer
+    label) passes; everything else fails with its reason."""
     if zip_code in CLIMATE_ZIP_OVERRIDES:
         tier = CLIMATE_ZIP_OVERRIDES[zip_code]
-        return tier == "temperate", tier
+        return tier.startswith("temperate"), tier
     city = (city_name or "").replace(", CA", "")
     for key, tier in CLIMATE_CITY.items():
         if key in city:
-            return tier == "temperate", tier
+            return tier.startswith("temperate"), tier
+    if county in CLIMATE_COUNTY_DEFAULT:
+        tier = CLIMATE_COUNTY_DEFAULT[county]
+        return False, tier
     return False, "unclassified — needs review"
 
 
@@ -223,7 +362,6 @@ def _universe(conn) -> list[sqlite3.Row]:
                history_zhvi
         FROM zips
         WHERE state = 'CA' AND lat IS NOT NULL AND population > 3000
-          AND lat BETWEEN 36.9 AND 38.4 AND lng BETWEEN -123.1 AND -121.3
     """).fetchall()
     out = []
     for r in rows:
@@ -233,15 +371,22 @@ def _universe(conn) -> list[sqlite3.Row]:
     return out
 
 
+REGIONS = ("All CA", "NorCal", "SoCal", "San Diego")
+
+
 def screen(assets: float = ASSETS_DEFAULT, reserves: float = RESERVES_DEFAULT,
            down_pct: float = DOWN_PCT_DEFAULT,
            crime_max: float = CRIME_MAX, food_min: float = FOOD_MIN,
-           access_max: float = ACCESS_MIN_MAX) -> dict:
-    """Run the six gates over the Bay universe. Returns tiers + stats."""
+           access_max: float = ACCESS_MIN_MAX,
+           region: str = "All CA") -> dict:
+    """Run the six gates over the CA universe. Returns tiers + stats,
+    filtered to `region` (All CA / NorCal / SoCal / San Diego)."""
     if not _ZIPS_DB.exists():
         return {"buyable": [], "aspirational": [], "near": [], "rest": [],
                 "power": buying_power(assets, reserves, down_pct),
-                "universe_n": 0, "condo_as_of": None}
+                "universe_n": 0, "condo_as_of": None, "region": region,
+                "thresholds": {"crime_max": crime_max, "food_min": food_min,
+                               "access_max": access_max}}
     conn = sqlite3.connect(str(_ZIPS_DB))
     try:
         universe = _universe(conn)
@@ -254,8 +399,11 @@ def screen(assets: float = ASSETS_DEFAULT, reserves: float = RESERVES_DEFAULT,
     scored = []
     for r in universe:
         z = r["zip"]
+        reg = _region(r["county"])
+        if region != "All CA" and reg != region:
+            continue
         anchor, minutes = _access(r["lat"], r["lng"], r["county"])
-        clim_ok, clim_tier = _climate(z, r["name"])
+        clim_ok, clim_tier = _climate(z, r["name"], r["county"])
         food = r["restaurant_score"]
         food_ok = (food is not None and food >= food_min) or z in FOOD_OVERRIDES
         crime = r["crime_index"]
@@ -291,7 +439,8 @@ def screen(assets: float = ASSETS_DEFAULT, reserves: float = RESERVES_DEFAULT,
         gates["budget"] = buyable_ok
 
         scored.append({
-            "zip": z, "name": (r["name"] or "").replace(", CA", ""),
+            "zip": z, "region": reg,
+            "name": (r["name"] or "").replace(", CA", ""),
             "county": r["county"], "population": r["population"],
             "anchor": anchor, "minutes": minutes,
             "food": food, "food_override": FOOD_OVERRIDES.get(z),
@@ -313,7 +462,7 @@ def screen(assets: float = ASSETS_DEFAULT, reserves: float = RESERVES_DEFAULT,
     return {
         "buyable": buyable, "aspirational": aspirational, "near": near,
         "universe_n": len(scored), "power": power,
-        "condo_as_of": condo.get("as_of"),
+        "condo_as_of": condo.get("as_of"), "region": region,
         "thresholds": {"crime_max": crime_max, "food_min": food_min,
                        "access_max": access_max},
     }
@@ -340,7 +489,7 @@ def deal_check(zip_code: str, price: float, sqft: float | None = None,
         if raw is None:
             return None
         anchor, minutes = _access(raw["lat"], raw["lng"], raw["county"])
-        clim_ok, tier = _climate(zip_code, raw["name"])
+        clim_ok, tier = _climate(zip_code, raw["name"], raw["county"])
         steady = _steadiness(raw["history_zhvi"])
         row = {"zip": zip_code, "name": (raw["name"] or "").replace(", CA", ""),
                "anchor": anchor, "minutes": minutes, "food": raw["restaurant_score"],
