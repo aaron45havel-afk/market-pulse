@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Value-Add Multifamily — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+  main .container { max-width: 1400px; }
+  .va-hero { display:flex; justify-content:space-between; align-items:baseline; gap:1rem; flex-wrap:wrap; margin-bottom:0.3rem; }
+  .va-hero h1 { margin:0; font-size:1.35rem; letter-spacing:-0.01em; }
+  .va-sub { color:var(--ink-3); font-size:0.9rem; margin:0 0 0.55rem; line-height:1.55; max-width:920px; }
+  .va-note { font-size:0.7rem; color:var(--ink-3); }
+  .va-pills { display:flex; gap:0.4rem; margin:0.6rem 0 0.2rem; flex-wrap:wrap; }
+  .va-pill { padding:0.3rem 0.9rem; border-radius:999px; font-size:0.78rem; font-weight:700;
+             border:1px solid var(--line); background:var(--surface); color:var(--ink-2); text-decoration:none; }
+  .va-pill.active { background:var(--accent2, #2563eb); color:#fff; border-color:var(--accent2, #2563eb); }
+
+  .va-card { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:0.85rem 1rem; margin:1rem 0; }
+  .va-card h2 { margin:0 0 0.25rem; font-size:1rem; }
+  .va-card .desc { font-size:0.78rem; color:var(--ink-3); margin:0 0 0.65rem; line-height:1.5; }
+
+  .va-form { display:flex; gap:0.5rem; flex-wrap:wrap; align-items:flex-end; }
+  .va-form .f { display:flex; flex-direction:column; gap:2px; }
+  .va-form label { font-size:0.62rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-3); font-weight:700; }
+  .va-form input, .va-form select { background:var(--surface-2); border:1px solid var(--line); border-radius:6px;
+    padding:0.4rem 0.55rem; color:var(--ink); width:105px; }
+  .va-form button { background:var(--accent2, #2563eb); color:#fff; border:none; border-radius:6px;
+    padding:0.5rem 1rem; font-weight:700; cursor:pointer; }
+
+  .va-verdict { border:2px solid var(--line); border-radius:10px; padding:0.8rem 1rem; margin-top:0.8rem; }
+  .va-verdict .headline { font-size:1.05rem; font-weight:800; }
+  .v-DISCOUNT { color:#15803d; } .v-FAIR { color:#1d4ed8; } .v-THIN { color:#dc2626; } .v-NO { color:var(--ink-3); }
+  .va-verdict .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:0.5rem 1rem; margin-top:0.6rem; font-size:0.78rem; }
+  .va-verdict .grid .k { color:var(--ink-3); font-size:0.63rem; text-transform:uppercase; letter-spacing:0.04em; }
+  .va-verdict .grid .v { font-weight:700; font-variant-numeric:tabular-nums; }
+  .va-sect { font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-3); margin-top:0.7rem; border-top:1px dashed var(--line); padding-top:0.5rem; }
+
+  table.va-table { width:100%; border-collapse:collapse; font-size:0.78rem; white-space:nowrap; }
+  .va-table th { text-align:right; padding:0.45rem 0.5rem; border-bottom:2px solid var(--line);
+    font-size:0.64rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-3); }
+  .va-table th:nth-child(-n+3) { text-align:left; }
+  .va-table td { padding:0.4rem 0.5rem; border-bottom:1px solid var(--line); text-align:right; font-variant-numeric:tabular-nums; }
+  .va-table td:nth-child(-n+3) { text-align:left; }
+  .va-table tr:hover td { background:var(--surface-2); }
+  .va-scroll { overflow-x:auto; }
+  .va-flag { display:inline-block; padding:0 6px; border-radius:999px; font-size:0.56rem; font-weight:600;
+    margin-left:0.25rem; cursor:help; background:rgba(217,119,6,0.13); color:#b45309; border:1px solid rgba(217,119,6,0.35); }
+  .score-hot { font-weight:800; color:#15803d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="va-hero">
+  <h1>🔨 Value-Add Multifamily — CA needs-work finder</h1>
+  <span class="va-note">Sourcing is manual by design: keyword-search listings in the hunt ZIPs.</span>
+</div>
+<p class="va-sub">
+  The forced-equity game: find tired 2–4 unit buildings, renovate, house-hack. <strong>Layer 1</strong> ranks every CA ZIP
+  as a hunting ground (2–4 unit economics + discount vs county + urban stock) — deliberately <em>not</em> the strict screen;
+  this game lives where that one refuses to. <strong>Layer 2</strong> underwrites any listing you find,
+  <strong>FHA 203(k) house-hack first</strong>: 3.5% down on purchase <em>plus</em> rehab — the structure where $200k goes furthest.
+  Copy-paste search: <strong>{{ res.keywords }}</strong>
+</p>
+
+<div class="va-pills">
+  {% for reg in regions %}
+  <a class="va-pill {{ 'active' if reg == res.region }}" href="/value-add?region={{ reg | urlencode }}">{{ reg }}</a>
+  {% endfor %}
+</div>
+
+<div class="va-card">
+  <h2>🧮 Rehab deal checker — 203(k) house-hack first</h2>
+  <p class="desc">Paste a needs-work listing: as-is price, units, your rehab estimate, expected post-reno rent per unit (defaults to ZIP market rent). ARV is the <em>lower</em> of comp-multiple and income approaches — first-pass underwriting, not an appraisal.</p>
+  <form class="va-form" method="get" action="/value-add">
+    <input type="hidden" name="region" value="{{ res.region }}">
+    <div class="f"><label>ZIP</label><input name="zip" value="{{ check.zip if check else '' }}" placeholder="94601" required pattern="[0-9]{5}"></div>
+    <div class="f"><label>As-is price $</label><input name="price" type="number" value="{{ check.price|int if check else '' }}" placeholder="550000" required min="50000"></div>
+    <div class="f"><label>Units</label><select name="units">{% for u in (2,3,4) %}<option value="{{ u }}" {% if check and check.units == u %}selected{% endif %}>{{ u }}</option>{% endfor %}</select></div>
+    <div class="f"><label>Rehab $</label><input name="rehab" type="number" value="{{ check.rehab|int if check else '' }}" placeholder="130000" required min="0"></div>
+    <div class="f"><label>Rent/unit (opt)</label><input name="rent" type="number" value="{{ check.market_rent|int if check else '' }}" placeholder="ZIP median"></div>
+    <div class="f"><label>Income (opt)</label><input name="income" type="number" value="{{ check.income|int if check and check.income else '' }}" placeholder="200000"></div>
+    <button type="submit">Underwrite</button>
+  </form>
+
+  {% if check %}
+  <div class="va-verdict">
+    <div class="headline">
+      {{ check.name }} ({{ check.zip }}) · {{ check.units }} units —
+      <span class="v-{{ check.verdict.split(' ')[0] }}">{{ check.verdict }}</span>
+      {% if check.margin is not none %}<span class="va-note">{{ check.margin }}% equity margin vs ARV</span>{% endif %}
+      {% for f in check.flags %}<span class="va-flag" title="{{ f.title }}">{{ f.label }}</span>{% endfor %}
+    </div>
+    <div class="grid">
+      <div><div class="k">ARV (lower of two)</div><div class="v">${{ '{:,.0f}'.format(check.arv) if check.arv else '—' }} <span class="va-note">comp ${{ '{:,.0f}'.format(check.arv_comp) if check.arv_comp else '—' }} · income ${{ '{:,.0f}'.format(check.arv_income) if check.arv_income else '—' }}</span></div></div>
+      <div><div class="k">All-in</div><div class="v">${{ '{:,.0f}'.format(check.all_in) }} <span class="va-note">incl ${{ '{:,.0f}'.format(check.carry) }} carry</span></div></div>
+      <div><div class="k">Equity created</div><div class="v" style="color:{{ '#15803d' if check.equity and check.equity > 0 else '#dc2626' }};">${{ '{:,.0f}'.format(check.equity) if check.equity is not none else '—' }}</div></div>
+      <div><div class="k">Yield basis</div><div class="v">{{ check.county_yield }}% <span class="va-note">rent ${{ '{:,.0f}'.format(check.market_rent) }}/unit</span></div></div>
+    </div>
+
+    <div class="va-sect">FHA 203(k) house-hack — live in one unit</div>
+    <div class="grid">
+      <div><div class="k">Loan vs county limit</div><div class="v">{{ '✓ fits' if check.fha.ok else '✗ over' }} <span class="va-note">limit ${{ '{:,.0f}'.format(check.fha.limit) }}</span></div></div>
+      <div><div class="k">Cash to close (3.5% + costs)</div><div class="v" style="color:{{ '#15803d' if check.fha.cash_ok else '#dc2626' }};">${{ '{:,.0f}'.format(check.fha.cash_close) }} {{ '✓' if check.fha.cash_ok else '— exceeds deployable' }}</div></div>
+      <div><div class="k">PITI+MIP post-reno</div><div class="v">${{ '{:,.0f}'.format(check.fha.piti) }}/mo</div></div>
+      <div><div class="k">House-hack net</div><div class="v">{{ '-' if check.fha.hh_net > 0 else '+' }}${{ '{:,.0f}'.format(check.fha.hh_net|abs) }}/mo <span class="va-note">vs ${{ '{:,.0f}'.format(check.fha.hh_rent) }} rent from {{ check.units - 1 }} unit(s)</span></div></div>
+      <div><div class="k">Income to qualify</div><div class="v">${{ '{:,.0f}'.format(check.fha.income_needed) }}{% if check.fha.qualifies is not none %} — {{ 'you qualify ✓' if check.fha.qualifies else 'short ✗' }}{% endif %}</div></div>
+      {% if check.fha.self_suff is not none %}<div><div class="k">Self-sufficiency (3-4u)</div><div class="v">{{ 'passes ✓' if check.fha.self_suff else 'fails ✗ — FHA won\'t fund' }}</div></div>{% endif %}
+    </div>
+
+    <div class="va-sect">Investor / BRRRR exit</div>
+    <div class="grid">
+      <div><div class="k">Refi at 75% ARV</div><div class="v">${{ '{:,.0f}'.format(check.brrrr.refi) if check.brrrr.refi else '—' }}</div></div>
+      <div><div class="k">Investor cash in (25% + rehab)</div><div class="v">${{ '{:,.0f}'.format(check.brrrr.inv_cash) }}</div></div>
+      <div><div class="k">Cash left in deal</div><div class="v">{% if check.brrrr.left_in is not none %}${{ '{:,.0f}'.format(check.brrrr.left_in) }} <span class="va-note">{{ 'full return + cash out' if check.brrrr.left_in <= 0 else 'stays invested' }}</span>{% else %}—{% endif %}</div></div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="va-card">
+  <h2>🗺 Hunting grounds — top {{ res.rows|length }} of {{ res.universe_n }} CA ZIPs ({{ res.region }})</h2>
+  <p class="desc">Where needs-work 2–4 unit deals concentrate. Score blends gross yield, discount vs county median, and urban stock density{% if res.has_age %}, plus pre-1960 stock share{% else %} (pre-1960 stock share joins after the next monthly data rebuild){% endif %}.
+  Flags are information, not exclusions — rent control and soft-story are cost lines in the checker, not reasons to skip a ZIP.</p>
+  <div class="va-scroll">
+  <table class="va-table">
+    <thead><tr><th>#</th><th>ZIP</th><th>Town</th><th>Score</th><th>Median value</th><th>Rent/mo</th><th>Yield</th><th>Disc vs county</th>{% if res.has_age %}<th>Pre-1960</th>{% endif %}<th>Crime</th><th>Region</th></tr></thead>
+    <tbody>
+      {% for s in res.rows %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td><a href="/zip/{{ s.zip }}">{{ s.zip }}</a></td>
+        <td>{{ s.name }}{% for f in s.flags %}<span class="va-flag" title="{{ f.title }}">{{ f.label }}</span>{% endfor %}</td>
+        <td class="{{ 'score-hot' if s.score >= 85 }}">{{ s.score }}</td>
+        <td>${{ '{:,.0f}'.format(s.median_home_value) }}</td>
+        <td>${{ '{:,.0f}'.format(s.median_rent) }}</td>
+        <td>{{ s.cap_rate_pct }}%</td>
+        <td>{{ s.discount_pct }}%</td>
+        {% if res.has_age %}<td>{{ s.pct_pre_1960 if s.pct_pre_1960 is not none else '—' }}%</td>{% endif %}
+        <td>{{ s.crime if s.crime is not none else '—' }}</td>
+        <td>{{ s.region }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="va-note" style="margin:0.8rem 0 1.2rem;">
+  Playbook: pick a hunt ZIP → search Zillow/Redfin there with <em>{{ res.keywords }}</em> → paste the candidate into the checker.
+  ARV = lower of (ZIP single-family median × 1.4/1.7/2.0 unit multiple) and (post-reno gross rent ÷ ZIP yield, floored 4.5%) —
+  a first-pass underwrite, not an appraisal; verify with an agent's comps before offering. FHA limits approximate — update annually.
+  AB 1482 applies statewide; flagged cities are stricter. Not financial advice.
+</div>
+{% endblock %}
