@@ -346,6 +346,26 @@ async def lynch(request: Request):
     return templates.TemplateResponse("lynch.html", {"request": request})
 
 
+@app.get("/compounders")
+async def compounders_page(request: Request):
+    """The 14%/yr long-term screen: quality gates (ROIC, consistency,
+    cash conversion, debt, capex) + a transparent expected-return
+    decomposition (growth + buybacks + dividends ± valuation drift).
+    Universe self-discovers from SEC EDGAR (≥ $1B revenue, incl. ADRs);
+    data built monthly by refresh_compounders.yml."""
+    from compounders import score, summary, data_source_label, ROIC_MIN, TARGET
+    rows = score()
+    return templates.TemplateResponse("compounders.html", {
+        "request":          request,
+        "rows":             rows,
+        "compounder_cards": [r for r in rows if r["status"] == "COMPOUNDER"][:12],
+        "summary":          summary(rows),
+        "data_source":      data_source_label(),
+        "roic_min":         ROIC_MIN,
+        "target":           TARGET,
+    })
+
+
 @app.get("/aristocrats")
 async def aristocrats_page(request: Request):
     """Dividend-aristocrat value screen: 25+ year raisers (US champions
