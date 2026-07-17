@@ -99,7 +99,13 @@ ACS_VARS = (
     "B25070_008E,"   # Rent burden 35-39.9%
     "B25070_009E,"   # Rent burden 40-49.9%
     "B25070_010E,"   # Rent burden 50%+
-    "B25070_011E"    # Rent burden — not computed (subtract from total before computing %)
+    "B25070_011E,"   # Rent burden — not computed (subtract from total before computing %)
+    # ── Value-add signals (age of housing stock) ─────────────────
+    "B25034_001E,"   # Year built — total structures (denominator)
+    "B25034_009E,"   # Year built 1950-1959
+    "B25034_010E,"   # Year built 1940-1949
+    "B25034_011E,"   # Year built 1939 or earlier
+    "B25035_001E"    # Median year structure built
 )
 
 # State FIPS → 2-letter code. Covers 50 + DC + the 5 territories that
@@ -356,6 +362,8 @@ def _load_acs_from_prior_db() -> dict[str, dict]:
         "pct_renter_occupied",
         "pct_multi_unit",
         "pct_rent_burdened",
+        "pct_pre_1960",
+        "median_year_built",
     ]
     out: dict[str, dict] = {}
     try:
@@ -457,6 +465,11 @@ def fetch_acs_zcta() -> dict[str, dict]:
     rb_40_idx      = headers.index("B25070_009E")
     rb_50_idx      = headers.index("B25070_010E")
     rb_notcomp_idx = headers.index("B25070_011E")
+    yb_tot_idx   = headers.index("B25034_001E")
+    yb_50s_idx   = headers.index("B25034_009E")
+    yb_40s_idx   = headers.index("B25034_010E")
+    yb_pre40_idx = headers.index("B25034_011E")
+    yb_med_idx   = headers.index("B25035_001E")
 
     def _int(v):
         try:
@@ -494,6 +507,14 @@ def fetch_acs_zcta() -> dict[str, dict]:
                         (rb_30_idx, rb_35_idx, rb_40_idx, rb_50_idx))
         pct_rent_burdened = (rb_30plus / rb_denom * 100) if rb_denom > 0 else None
 
+        # Age of stock — value-add / deferred-maintenance signal.
+        yb_tot = _int(row[yb_tot_idx])
+        pre60 = sum((_int(row[i]) or 0) for i in (yb_50s_idx, yb_40s_idx, yb_pre40_idx))
+        pct_pre_1960 = (pre60 / yb_tot * 100) if (yb_tot and yb_tot > 0) else None
+        yb_med = _int(row[yb_med_idx])
+        # Census uses 0/18xx sentinels for suppressed medians.
+        median_year_built = yb_med if yb_med and yb_med >= 1900 else None
+
         out[zcode] = {
             "median_household_income": income,
             "pct_bachelors": round(pct_bach, 1) if pct_bach is not None else None,
@@ -501,6 +522,8 @@ def fetch_acs_zcta() -> dict[str, dict]:
             "pct_renter_occupied": round(pct_renter, 1) if pct_renter is not None else None,
             "pct_multi_unit": round(pct_multi, 1) if pct_multi is not None else None,
             "pct_rent_burdened": round(pct_rent_burdened, 1) if pct_rent_burdened is not None else None,
+            "pct_pre_1960": round(pct_pre_1960, 1) if pct_pre_1960 is not None else None,
+            "median_year_built": median_year_built,
         }
     log.info("  → %d ZCTAs with ACS data", len(out))
     return out
@@ -607,6 +630,8 @@ CREATE TABLE zips (
     pct_renter_occupied      REAL,
     pct_multi_unit           REAL,
     pct_rent_burdened        REAL,
+    pct_pre_1960             REAL,
+    median_year_built        INTEGER,
     walk_score               REAL,
     crime_index              REAL,
     restaurant_score         REAL,
@@ -790,6 +815,8 @@ def main(argv: list[str] | None = None) -> int:
             "pct_renter_occupied": a.get("pct_renter_occupied"),
             "pct_multi_unit": a.get("pct_multi_unit"),
             "pct_rent_burdened": a.get("pct_rent_burdened"),
+            "pct_pre_1960": a.get("pct_pre_1960"),
+            "median_year_built": a.get("median_year_built"),
             "walk_score": round(walk, 1),
             "crime_index": crime,
             "restaurant_score": round(rest, 1),

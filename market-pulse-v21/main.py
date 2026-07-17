@@ -373,6 +373,27 @@ async def norcal_page(request: Request, assets: float = 200_000,
     })
 
 
+@app.get("/value-add")
+async def value_add_page(request: Request, region: str = "All CA",
+                         zip: str = "", price: float = 0, units: int = 2,
+                         rehab: float = 0, rent: float = 0, income: float = 0):
+    """CA needs-work multifamily finder: hunting-ground ZIP ranking +
+    203(k)-first rehab underwriting. See value_add.py."""
+    from value_add import hunting_grounds, rehab_check
+    from norcal import REGIONS
+    if region not in REGIONS:
+        region = "All CA"
+    res = await asyncio.to_thread(hunting_grounds, region)
+    check = None
+    if zip and price > 0:
+        check = await asyncio.to_thread(
+            rehab_check, zip.strip(), price, int(units), max(0.0, rehab),
+            rent or None, income or None)
+    return templates.TemplateResponse("value_add.html", {
+        "request": request, "res": res, "check": check, "regions": REGIONS,
+    })
+
+
 # Browsers and iOS probe these absolute paths regardless of <link> tags —
 # serve them so the access log stops filling with 404s.
 _STATIC_DIR = Path(__file__).resolve().parent / "static"
