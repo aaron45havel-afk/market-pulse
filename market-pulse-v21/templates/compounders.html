@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Compounders — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+  main .container { max-width: 1500px; }
+
+  .cp-hero { display:flex; justify-content:space-between; align-items:baseline; gap:1rem; flex-wrap:wrap; margin-bottom:0.3rem; }
+  .cp-hero h1 { margin:0; font-size:1.35rem; letter-spacing:-0.01em; }
+  .cp-sub { color:var(--ink-3); font-size:0.9rem; margin:0 0 0.55rem; line-height:1.55; max-width:900px; }
+  .cp-refresh { font-size:0.72rem; color:var(--ink-3); background:var(--surface-2);
+    border:1px solid var(--line); padding:0.25rem 0.55rem; border-radius:99px; white-space:nowrap; }
+
+  .cp-banner { background:rgba(217,119,6,0.07); border:1px solid rgba(217,119,6,0.35);
+    border-radius:10px; padding:0.65rem 0.9rem; margin:0.8rem 0; font-size:0.8rem; line-height:1.5; }
+
+  .cp-cards { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:0.85rem 1rem; margin:1rem 0; }
+  .cp-cards h2 { margin:0 0 0.25rem; font-size:1rem; }
+  .cp-cards .desc { font-size:0.78rem; color:var(--ink-3); margin:0 0 0.65rem; }
+  .cp-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:0.55rem; }
+  .cp-card { background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:0.6rem 0.75rem; }
+  .cp-card .top { display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem; }
+  .cp-card .ticker { font-family:'Menlo','Monaco',monospace; font-size:0.95rem; font-weight:700; color:var(--accent2, #2563eb); }
+  .cp-card .er { font-weight:800; color:#15803d; }
+  .cp-card .nm { font-weight:700; font-size:0.86rem; margin:0.1rem 0; }
+  .cp-card .stats { font-size:0.73rem; color:var(--ink-2); line-height:1.55; }
+  .cp-empty { color:var(--ink-3); font-size:0.85rem; font-style:italic; padding:0.4rem 0; line-height:1.55; }
+
+  .cp-table-card { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:0.85rem 1rem; margin:1rem 0; }
+  .cp-table-card h2 { margin:0 0 0.25rem; font-size:1rem; }
+  .cp-table-card .desc { font-size:0.78rem; color:var(--ink-3); margin:0 0 0.6rem; }
+  .cp-scroll { overflow-x:auto; }
+  table.cp-table { width:100%; border-collapse:collapse; font-size:0.76rem; white-space:nowrap; }
+  .cp-table th { text-align:right; padding:0.45rem 0.45rem; border-bottom:2px solid var(--line);
+    font-size:0.64rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-3);
+    cursor:pointer; user-select:none; position:sticky; top:0; background:var(--surface); }
+  .cp-table th:nth-child(-n+4) { text-align:left; }
+  .cp-table td { padding:0.38rem 0.45rem; border-bottom:1px solid var(--line); text-align:right; font-variant-numeric:tabular-nums; }
+  .cp-table td:nth-child(-n+4) { text-align:left; }
+  .cp-table tr:hover td { background:var(--surface-2); }
+  .cp-table .tick { font-family:'Menlo','Monaco',monospace; font-weight:700; }
+  .cp-table .arrow { font-size:0.6rem; margin-left:2px; }
+  .cp-er { font-weight:800; }
+  .cp-er.hot { color:#15803d; }
+  .cp-dim { color:var(--ink-3); font-size:0.68rem; }
+
+  .st-pill { display:inline-block; padding:1px 8px; border-radius:999px; font-size:0.62rem; font-weight:700; cursor:help; }
+  .st-COMPOUNDER { background:rgba(34,197,94,0.16); color:#15803d; }
+  .st-QUALITY    { background:rgba(37,99,235,0.12); color:#1d4ed8; }
+  .st-CYCLE-WAIT { background:rgba(217,119,6,0.14); color:#b45309; }
+  .st-WATCH      { background:var(--surface-2); color:var(--ink-3); border:1px solid var(--line); }
+  .st-GATED      { background:rgba(239,68,68,0.10); color:#dc2626; }
+
+  .cp-badge { display:inline-block; padding:0 6px; border-radius:999px; font-size:0.56rem; font-weight:600;
+    margin-left:0.28rem; cursor:help; background:rgba(217,119,6,0.13); color:#b45309;
+    border:1px solid rgba(217,119,6,0.35); }
+  .cp-badge.cyclow { background:rgba(34,197,94,0.12); color:#15803d; border-color:rgba(34,197,94,0.4); }
+  .cp-badge.excluded, .cp-badge.rich { background:rgba(239,68,68,0.10); color:#dc2626; border-color:rgba(239,68,68,0.35); }
+
+  details.cp-explain { background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding:0.6rem 1rem; margin:0.8rem 0; font-size:0.82rem; line-height:1.6; }
+  details.cp-explain summary { cursor:pointer; font-weight:700; font-size:0.85rem; }
+  details.cp-explain ul { margin:0.4rem 0 0.4rem 1.1rem; padding:0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cp-hero">
+  <h1>📈 Compounders — the 14% test</h1>
+  <span class="cp-refresh">Data: {{ data_source }}</span>
+</div>
+<p class="cp-sub">
+  Long-run return = <strong>growth + buybacks + dividends ± valuation drift</strong> — shown per stock, no black box.
+  Hard quality gates first (ROIC ≥ {{ roic_min|int }}% for a decade, revenue consistency, profits that convert to
+  actual cash, low debt, low capex); then every survivor's expected 10-yr CAGR is built from those four terms with
+  trailing growth <em>haircut</em>, because past growth fades while high return-on-capital persists.
+  <strong>COMPOUNDER</strong> = gates + expected ≥ {{ target|int }}%. Cyclicals are valued mid-cycle: at peak margins
+  they can only be CYCLE-WAIT, at trough margins with the engine intact they're flagged as buy-the-low setups.
+</p>
+
+{% if not rows %}
+<div class="cp-banner">
+  <strong>No data yet.</strong> The universe self-discovers from SEC EDGAR (every filer ≥ $1B revenue — roughly the
+  top 2,000 companies incl. US-listed ADRs) on the monthly workflow.
+  <a href="https://github.com/aaron45havel-afk/market-pulse/actions/workflows/refresh-compounders.yml"
+     target="_blank" rel="noopener">Run it manually</a> to populate (~45-70 min for the full universe), then reload
+  after Railway redeploys.
+</div>
+{% else %}
+
+<div class="cp-cards">
+  <h2>🏆 Compounders — clears every gate and the {{ target|int }}% bar</h2>
+  <p class="desc">Expect this list to be short — historically only ~10-15% of large caps deliver 14%/yr over a decade, and price is usually what kills it. An empty list in an expensive market is the screen telling the truth.</p>
+  {% if compounder_cards %}
+  <div class="cp-grid">
+    {% for c in compounder_cards %}
+    <div class="cp-card">
+      <div class="top"><span class="ticker">{{ c.ticker }}</span><span class="er">{{ c.expected }}%/yr</span></div>
+      <div class="nm">{{ c.name }}{% for b in c.badges %}<span class="cp-badge {{ b.key }}" title="{{ b.title }}">{{ b.label }}</span>{% endfor %}</div>
+      <div class="stats">
+        {{ c.er_growth }} growth + {{ c.er_buyback }} buyback + {{ c.er_div }} div {{ '%+.1f'|format(c.er_mult) }} valuation<br>
+        ROIC {{ c.roic_med }}% · conv {{ c.fcf_conv }}% · P/FCF {{ c.pfcf_now or '—' }} vs {{ c.pfcf_med or '—' }} median
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="cp-empty">Nothing clears all gates AND the {{ target|int }}% bar at today's prices. The
+    <span class="st-pill st-QUALITY">QUALITY</span> tier below is the shopping list — great engines whose price
+    currently buys you 10–14%; a drawdown puts them over the bar.</div>
+  {% endif %}
+</div>
+
+<details class="cp-explain">
+  <summary>How the math works — and what it can't see</summary>
+  <ul>
+    <li><strong>Expected CAGR</strong> = 0.7 × blended revenue CAGR (haircut — growth fades) + margin-trend effect
+        + net buyback yield + dividend yield + valuation drift (P/FCF reverting to its own 10-yr median over 10 yrs, capped ±3%/yr).</li>
+    <li><strong>Gates:</strong> 10-yr median ROIC ≥ {{ roic_min|int }}% · revenue up ≥ 60% of years and CAGR ≥ 4% ·
+        profits positive ≥ 8/10 yrs · ΣFCF/Σnet-income ≥ 70% (cash-is-real fraud guard) · net debt/EBIT ≤ 3× ·
+        capex/OCF ≤ 40% · investable jurisdiction. Financials excluded (different math). Moat isn't a column —
+        a decade of high ROIC + stable margins <em>is</em> the measurable fingerprint of one.</li>
+    <li><strong>Cyclicals</strong> are marked by margin volatility; status uses their own margin percentile — peak = wait, trough + gates = opportunity.</li>
+    <li><strong>What it can't see:</strong> management quality, insider ownership (no clean free feed), disruption risk,
+        and anything not in filings. China names carry a standing warning (audit verifiability). This surfaces candidates
+        for homework — it is not a buy list. Not financial advice.</li>
+  </ul>
+</details>
+
+<div class="cp-table-card">
+  <h2>Full screen</h2>
+  <p class="desc">{{ summary.total }} companies · {{ summary.compounder or 0 }} compounder · {{ summary.quality or 0 }} quality ·
+    {{ summary.cycle_wait or 0 }} cycle-wait · {{ summary.watch or 0 }} watch · {{ summary.gated or 0 }} gated.
+    Click headers to sort. E[r] columns: G growth · B buyback · D dividend · M valuation drift.</p>
+  <div class="cp-scroll">
+  <table class="cp-table" id="cpTable">
+    <thead><tr>
+      <th data-col="t">Ticker<span class="arrow"></span></th>
+      <th data-col="n">Name<span class="arrow"></span></th>
+      <th data-col="c">Country<span class="arrow"></span></th>
+      <th data-col="i">Industry<span class="arrow"></span></th>
+      <th data-col="er" data-numeric="1" title="Expected 10-yr CAGR = G + B + D + M">E[r]<span class="arrow"></span></th>
+      <th data-col="g" data-numeric="1" title="Growth term (haircut trailing revenue CAGR + margin trend)">G<span class="arrow"></span></th>
+      <th data-col="b" data-numeric="1" title="Net buyback yield (negative share-count CAGR)">B<span class="arrow"></span></th>
+      <th data-col="d" data-numeric="1" title="Dividend yield">D<span class="arrow"></span></th>
+      <th data-col="m" data-numeric="1" title="Valuation drift to own 10-yr median P/FCF">M<span class="arrow"></span></th>
+      <th data-col="roic" data-numeric="1" title="10-yr median return on invested capital">ROIC<span class="arrow"></span></th>
+      <th data-col="rev" data-numeric="1">Rev 10y<span class="arrow"></span></th>
+      <th data-col="conv" data-numeric="1" title="ΣFCF ÷ Σnet income, 10 yrs — cash-is-real check">Conv<span class="arrow"></span></th>
+      <th data-col="nd" data-numeric="1">ND/EBIT<span class="arrow"></span></th>
+      <th data-col="cap" data-numeric="1">Capex<span class="arrow"></span></th>
+      <th data-col="pf" data-numeric="1" title="P/FCF now vs own 10-yr median">P/FCF<span class="arrow"></span></th>
+      <th data-col="st">Status<span class="arrow"></span></th>
+    </tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td class="tick" data-sort="{{ r.ticker }}">{{ r.ticker }}</td>
+        <td data-sort="{{ r.name }}">{{ r.name }}{% for b in r.badges %}<span class="cp-badge {{ b.key }}" title="{{ b.title }}">{{ b.label }}</span>{% endfor %}</td>
+        <td data-sort="{{ r.country }}">{{ r.country }}</td>
+        <td data-sort="{{ r.industry or '' }}" title="{{ r.industry or '' }}">{{ (r.industry or '—')[:26] }}</td>
+        <td data-sort="{{ r.expected if r.expected is not none else -99 }}"><span class="cp-er {% if r.expected is not none and r.expected >= target %}hot{% endif %}">{{ r.expected if r.expected is not none else '—' }}</span></td>
+        <td data-sort="{{ r.er_growth if r.er_growth is not none else -99 }}">{{ r.er_growth if r.er_growth is not none else '—' }}</td>
+        <td data-sort="{{ r.er_buyback }}">{{ r.er_buyback }}</td>
+        <td data-sort="{{ r.er_div }}">{{ r.er_div }}</td>
+        <td data-sort="{{ r.er_mult }}">{{ '%+.1f'|format(r.er_mult) }}</td>
+        <td data-sort="{{ r.roic_med if r.roic_med is not none else -99 }}">{% if r.roic_med is not none %}{{ r.roic_med }}%{% else %}—{% endif %}</td>
+        <td data-sort="{{ r.rev_cagr10 if r.rev_cagr10 is not none else -99 }}">{% if r.rev_cagr10 is not none %}{{ r.rev_cagr10 }}%{% else %}—{% endif %}</td>
+        <td data-sort="{{ r.fcf_conv if r.fcf_conv is not none else -99 }}">{% if r.fcf_conv is not none %}{{ r.fcf_conv|int }}%{% else %}—{% endif %}</td>
+        <td data-sort="{{ r.nd_ebit if r.nd_ebit is not none else 99 }}">{% if r.nd_ebit is not none %}{{ r.nd_ebit }}×{% else %}—{% endif %}</td>
+        <td data-sort="{{ r.capex_ocf if r.capex_ocf is not none else 99 }}">{% if r.capex_ocf is not none %}{{ r.capex_ocf|int }}%{% else %}—{% endif %}</td>
+        <td data-sort="{{ r.pfcf_now if r.pfcf_now else 999 }}">{% if r.pfcf_now %}{{ r.pfcf_now }}<span class="cp-dim">/{{ r.pfcf_med or '—' }}</span>{% else %}—{% endif %}</td>
+        <td data-sort="{{ r.status }}"><span class="st-pill st-{{ r.status }}" title="{% if not r.gates_pass %}Failed gates: {% for k, ok in r.gates.items() %}{% if not ok %}{{ k }} {% endif %}{% endfor %}{% else %}All quality gates pass.{% endif %}">{{ r.status }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+
+<div style="font-size:0.7rem; color:var(--ink-3); margin:0.8rem 0 1.2rem;">
+  Universe: every SEC filer ≥ $1B revenue (self-discovering, incl. US-listed ADRs via 20-F; financials excluded).
+  Fundamentals: SEC EDGAR XBRL, 10 fiscal years. Prices/dividends: Yahoo Finance. Refreshed monthly.
+  Screens surface candidates — they can't read management or the future. Not financial advice.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const table = document.getElementById('cpTable');
+  if (!table) return;
+  const headers = table.querySelectorAll('th');
+  let cur = null, dir = -1;
+  headers.forEach((th, idx) => {
+    th.addEventListener('click', () => {
+      const numeric = th.dataset.numeric === '1';
+      dir = (cur === idx) ? -dir : (numeric ? -1 : 1);
+      cur = idx;
+      headers.forEach(h => h.querySelector('.arrow').textContent = '');
+      th.querySelector('.arrow').textContent = dir === 1 ? '▲' : '▼';
+      const rows = Array.from(table.tBodies[0].rows);
+      rows.sort((a, b) => {
+        const av = a.cells[idx].dataset.sort, bv = b.cells[idx].dataset.sort;
+        if (numeric) return (parseFloat(av) - parseFloat(bv)) * dir;
+        return av.localeCompare(bv) * dir;
+      });
+      rows.forEach(r => table.tBodies[0].appendChild(r));
+    });
+  });
+})();
+</script>
+{% endblock %}
