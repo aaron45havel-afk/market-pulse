@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}NorCal Real Estate — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+  main .container { max-width: 1400px; }
+  .nc-hero { display:flex; justify-content:space-between; align-items:baseline; gap:1rem; flex-wrap:wrap; margin-bottom:0.3rem; }
+  .nc-hero h1 { margin:0; font-size:1.35rem; letter-spacing:-0.01em; }
+  .nc-sub { color:var(--ink-3); font-size:0.9rem; margin:0 0 0.55rem; line-height:1.55; max-width:900px; }
+  .nc-power { font-size:0.72rem; color:var(--ink-3); background:var(--surface-2); border:1px solid var(--line);
+    padding:0.25rem 0.55rem; border-radius:99px; white-space:nowrap; }
+
+  .nc-card { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:0.85rem 1rem; margin:1rem 0; }
+  .nc-card h2 { margin:0 0 0.25rem; font-size:1rem; }
+  .nc-card .desc { font-size:0.78rem; color:var(--ink-3); margin:0 0 0.65rem; line-height:1.5; }
+
+  .nc-check-form { display:flex; gap:0.5rem; flex-wrap:wrap; align-items:flex-end; }
+  .nc-check-form .f { display:flex; flex-direction:column; gap:2px; }
+  .nc-check-form label { font-size:0.62rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-3); font-weight:700; }
+  .nc-check-form input { background:var(--surface-2); border:1px solid var(--line); border-radius:6px;
+    padding:0.4rem 0.55rem; color:var(--ink); width:110px; }
+  .nc-check-form button { background:var(--accent2, #2563eb); color:#fff; border:none; border-radius:6px;
+    padding:0.5rem 1rem; font-weight:700; cursor:pointer; }
+
+  .nc-verdict { border:2px solid var(--line); border-radius:10px; padding:0.8rem 1rem; margin-top:0.8rem; }
+  .nc-verdict .headline { font-size:1.05rem; font-weight:800; }
+  .nc-verdict .v-DISCOUNT { color:#15803d; } .nc-verdict .v-FAIR { color:#1d4ed8; } .nc-verdict .v-PAYING { color:#dc2626; }
+  .nc-verdict .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:0.5rem 1rem; margin-top:0.6rem; font-size:0.78rem; }
+  .nc-verdict .grid .k { color:var(--ink-3); font-size:0.64rem; text-transform:uppercase; letter-spacing:0.04em; }
+  .nc-verdict .grid .v { font-weight:700; font-variant-numeric:tabular-nums; }
+
+  .gate { display:inline-block; padding:1px 8px; border-radius:999px; font-size:0.62rem; font-weight:700; margin:0 0.2rem 0.2rem 0; cursor:help; }
+  .gate.ok { background:rgba(34,197,94,0.14); color:#15803d; }
+  .gate.no { background:rgba(239,68,68,0.10); color:#dc2626; }
+
+  table.nc-table { width:100%; border-collapse:collapse; font-size:0.78rem; white-space:nowrap; }
+  .nc-table th { text-align:right; padding:0.45rem 0.5rem; border-bottom:2px solid var(--line);
+    font-size:0.64rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-3); }
+  .nc-table th:nth-child(-n+2) { text-align:left; }
+  .nc-table td { padding:0.4rem 0.5rem; border-bottom:1px solid var(--line); text-align:right; font-variant-numeric:tabular-nums; }
+  .nc-table td:nth-child(-n+2) { text-align:left; }
+  .nc-table tr:hover td { background:var(--surface-2); }
+  .nc-scroll { overflow-x:auto; }
+  .nc-note { font-size:0.7rem; color:var(--ink-3); }
+  .food-star { color:#b45309; cursor:help; font-weight:700; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="nc-hero">
+  <h1>🌉 NorCal Real Estate — Bay strict screen</h1>
+  <span class="nc-power">${{ '{:,.0f}'.format(power.assets) }} assets − ${{ '{:,.0f}'.format(power.reserves) }} reserves = ${{ '{:,.0f}'.format(power.deployable) }} down → max ${{ '{:,.0f}'.format(power.max_purchase) }} at {{ power.down_pct|int }}% down</span>
+</div>
+<p class="nc-sub">
+  Every Bay ZIP graded on five strict gates — <strong>≤ ~20-30 min off-peak</strong> to SF/SJ/Oakland (bridge-penalty aware),
+  <strong>top-tier dining</strong> (Bay-calibrated, with documented overrides where the density metric is blind),
+  <strong>excellent safety</strong> (top quintile), <strong>temperate microclimate</strong> (fog belt / wind corridors / inland heat excluded — hand-encoded, labeled),
+  and <strong>steady appreciation</strong> (positive trend, low volatility, shallow drawdowns) — plus the sixth gate:
+  <strong>can we actually buy it.</strong> Tune via URL: <code>?assets=…&amp;reserves=…&amp;down_pct=…</code>
+</p>
+
+<div class="nc-card">
+  <h2>🔍 Deal checker</h2>
+  <p class="desc">Paste any listing. Verdict = the ZIP's gate report + this price vs the local benchmark + the financing math at today's rate.</p>
+  <form class="nc-check-form" method="get" action="/norcal">
+    <div class="f"><label>ZIP</label><input name="zip" value="{{ check.row.zip if check else '' }}" placeholder="94070" required pattern="[0-9]{5}"></div>
+    <div class="f"><label>Price $</label><input name="price" type="number" value="{{ check.price|int if check else '' }}" placeholder="850000" required min="100000"></div>
+    <div class="f"><label>Sqft (opt)</label><input name="sqft" type="number" value="{{ check.sqft|int if check and check.sqft else '' }}" placeholder="1150"></div>
+    <div class="f"><label>Income (opt)</label><input name="income" type="number" value="{{ check.income|int if check and check.income else '' }}" placeholder="220000"></div>
+    <button type="submit">Check deal</button>
+  </form>
+
+  {% if check %}
+  <div class="nc-verdict">
+    <div class="headline">
+      {{ check.row.name }} ({{ check.row.zip }}) —
+      <span class="v-{{ check.price_verdict.split(' ')[0] }}">{{ check.price_verdict }}</span>
+      {% if check.vs_bench is not none %}<span class="nc-note">({{ '%+.1f'|format(check.vs_bench) }}% vs {{ check.row.entry_kind }} benchmark ${{ '{:,.0f}'.format(check.row.entry_price) }})</span>{% endif %}
+    </div>
+    <div style="margin-top:0.45rem;">
+      {% for k, ok in check.row.gates.items() %}{% if k != 'budget' %}<span class="gate {{ 'ok' if ok else 'no' }}" title="{% if k=='climate' %}{{ check.row.climate_tier }}{% elif k=='access' %}{{ check.row.minutes }} min to {{ check.row.anchor }}{% elif k=='food' %}score {{ check.row.food }}{{ ' + override: ' ~ check.row.food_override if check.row.food_override }}{% elif k=='safety' %}crime index {{ check.row.crime }}{% elif k=='steady' %}{{ check.row.steady or 'no history' }}{% endif %}">{{ k }} {{ '✓' if ok else '✗' }}</span>{% endif %}{% endfor %}
+      <span class="gate {{ 'ok' if check.fits_budget else 'no' }}" title="max purchase ${{ '{:,.0f}'.format(check.power.max_purchase) }}">budget {{ '✓' if check.fits_budget else '✗' }}</span>
+    </div>
+    <div class="grid">
+      {% if check.ppsf %}<div><div class="k">$/sqft</div><div class="v">${{ check.ppsf }}</div></div>{% endif %}
+      <div><div class="k">Down ({{ check.power.down_pct|int }}%)</div><div class="v">${{ '{:,.0f}'.format(check.down) }}</div></div>
+      <div><div class="k">PITI @ {{ check.rate_pct }}%</div><div class="v">${{ '{:,.0f}'.format(check.piti) }}/mo</div></div>
+      <div><div class="k">Income to qualify</div><div class="v">${{ '{:,.0f}'.format(check.income_needed) }}{% if check.qualifies is not none %} — {{ 'you qualify ✓' if check.qualifies else 'short ✗' }}{% endif %}</div></div>
+      <div><div class="k">Cash after close</div><div class="v" style="color:{{ '#15803d' if check.reserve_ok else '#dc2626' }};">${{ '{:,.0f}'.format(check.cash_after) }} {{ '(reserves intact)' if check.reserve_ok else '(below reserve floor!)' }}</div></div>
+      {% if check.row.steady %}<div><div class="k">ZIP steadiness</div><div class="v">{{ check.row.steady.cagr }}%/yr · worst {{ check.row.steady.max_dd }}%</div></div>{% endif %}
+      {% if check.row.median_rent %}<div><div class="k">Carry note</div><div class="v nc-note">rent ≈ ${{ '{:,.0f}'.format(check.row.median_rent) }}/mo — appreciation is the thesis, not income</div></div>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="nc-card">
+  <h2>✅ Buyable now — all five gates + budget ({{ res.buyable|length }})</h2>
+  {% if res.buyable %}
+  <div class="nc-scroll"><table class="nc-table">
+    <thead><tr><th>ZIP</th><th>Town</th><th>Entry</th><th>Segment</th><th>Min</th><th>Food</th><th>Crime</th><th>CAGR</th><th>Worst DD</th></tr></thead>
+    <tbody>{% for s in res.buyable %}
+      <tr><td><a href="/zip/{{ s.zip }}">{{ s.zip }}</a></td><td>{{ s.name }}</td>
+      <td>${{ '{:,.0f}'.format(s.entry_price) }}</td><td>{{ s.entry_kind }}</td>
+      <td>{{ s.minutes }} {{ s.anchor }}</td><td>{{ s.food }}{% if s.food_override %}<span class="food-star" title="{{ s.food_override }}">*</span>{% endif %}</td>
+      <td>{{ s.crime }}</td><td>{{ s.steady.cagr if s.steady else '—' }}%</td><td>{{ s.steady.max_dd if s.steady else '—' }}%</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}
+  <p class="desc">Nothing passes all six gates at {{ 'all-homes pricing — the buyable segment in these towns is condos/townhomes. ' if not res.condo_as_of else '' }}
+  {% if not res.condo_as_of %}<a href="https://github.com/aaron45havel-afk/market-pulse/actions/workflows/refresh-norcal.yml" target="_blank" rel="noopener">Run the condo refresh</a> to price that segment (~2 min), then reload.{% else %}Condo data as of {{ res.condo_as_of }} — today's prices are simply above your max. The Aspirational list below is the ladder.{% endif %}</p>
+  {% endif %}
+</div>
+
+<div class="nc-card">
+  <h2>🎯 Aspirational — passes all five quality gates, above budget ({{ res.aspirational|length }})</h2>
+  <p class="desc">Your ladder. The gap column shows what asset base makes each reachable at {{ power.down_pct|int }}% down.</p>
+  <div class="nc-scroll"><table class="nc-table">
+    <thead><tr><th>ZIP</th><th>Town</th><th>Entry</th><th>Segment</th><th>Assets needed</th><th>Min</th><th>Food</th><th>Crime</th><th>Climate</th><th>CAGR</th><th>Worst DD</th></tr></thead>
+    <tbody>{% for s in res.aspirational %}
+      <tr><td><a href="/zip/{{ s.zip }}">{{ s.zip }}</a></td><td>{{ s.name }}</td>
+      <td>${{ '{:,.0f}'.format(s.entry_price) }}</td><td>{{ s.entry_kind }}</td>
+      <td>${{ '{:,.0f}'.format(s.entry_price * power.down_pct / 100 + power.reserves) }}</td>
+      <td>{{ s.minutes }} {{ s.anchor }}</td>
+      <td>{{ s.food }}{% if s.food_override %}<span class="food-star" title="{{ s.food_override }}">*</span>{% endif %}</td>
+      <td>{{ s.crime }}</td><td>{{ s.climate_tier }}</td>
+      <td>{{ s.steady.cagr if s.steady else '—' }}%</td><td>{{ s.steady.max_dd if s.steady else '—' }}%</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</div>
+
+<div class="nc-card">
+  <h2>〰 Near misses — four of five gates ({{ res.near|length }})</h2>
+  <p class="desc">Failed exactly one quality gate — shown because at this strictness, the "why" is the information.</p>
+  <div class="nc-scroll"><table class="nc-table">
+    <thead><tr><th>ZIP</th><th>Town</th><th>Failed gate</th><th>Detail</th><th>Entry</th><th>Min</th></tr></thead>
+    <tbody>{% for s in res.near %}
+      <tr><td><a href="/zip/{{ s.zip }}">{{ s.zip }}</a></td><td>{{ s.name }}</td>
+      {% set failed = [] %}{% for k, ok in s.gates.items() %}{% if not ok and k != 'budget' %}{% set _ = failed.append(k) %}{% endif %}{% endfor %}
+      <td>{{ failed|join(', ') }}</td>
+      <td class="nc-note">{% if 'climate' in failed %}{{ s.climate_tier }}{% elif 'safety' in failed %}crime {{ s.crime }}{% elif 'food' in failed %}food {{ s.food }}{% elif 'access' in failed %}{{ s.minutes }} min{% elif 'steady' in failed %}{{ s.steady or 'no history' }}{% endif %}</td>
+      <td>${{ '{:,.0f}'.format(s.entry_price) if s.entry_price else '—' }}</td>
+      <td>{{ s.minutes }} {{ s.anchor }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</div>
+
+<div class="nc-note" style="margin:0.8rem 0 1.2rem;">
+  Universe: {{ res.universe_n }} Bay ZIPs (≤40 mi of an anchor, pop ≥3k). Thresholds: crime ≤ {{ res.thresholds.crime_max|int }} (top quintile),
+  food ≥ {{ res.thresholds.food_min|int }} (density-biased metric — * marks documented downtown overrides), access ≤ {{ res.thresholds.access_max|int }} min est. off-peak.
+  Climate is hand-encoded judgment from documented Bay microclimates. Steadiness currently uses a
+  {{ 'condo-segment 15-yr window' if res.condo_as_of else '60-month all-homes window — the condo refresh extends this to 15+ yrs' }}.
+  Drive times are estimates, not isochrones. Not financial advice.
+</div>
+{% endblock %}
