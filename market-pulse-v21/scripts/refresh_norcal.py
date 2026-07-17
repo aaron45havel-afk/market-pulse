@@ -80,7 +80,7 @@ def main() -> int:
     targets = bay_zips()
     if not targets:
         return 2
-    print(f"[norcal] Bay universe: {len(targets)} ZIPs. Downloading Zillow condo ZHVI…")
+    print(f"[norcal] CA universe: {len(targets)} ZIPs. Downloading Zillow condo ZHVI…")
     try:
         with urllib.request.urlopen(
                 urllib.request.Request(CSV_URL, headers=HEADERS), timeout=300) as r:
@@ -120,7 +120,7 @@ def main() -> int:
         print(f"[norcal] Download failed: {e}")
         return 3
 
-    print(f"[norcal] Scanned {scanned} rows → {len(out)} Bay ZIPs with usable condo series")
+    print(f"[norcal] Scanned {scanned} rows → {len(out)} CA ZIPs with usable condo series")
     if len(out) < 20:
         print("[norcal] Too few — refusing to overwrite with a bad run.")
         return 4
