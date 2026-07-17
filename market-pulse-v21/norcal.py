@@ -47,9 +47,17 @@ DOWN_PCT_DEFAULT = 20.0
 CRIME_MAX = 33.0          # ≈ top quintile of Bay ZIPs (lower = safer)
 FOOD_MIN = 45.0           # ≈ top quartile of non-SF towns on our scale
 ACCESS_MIN_MAX = 30.0     # est. off-peak minutes to nearest anchor
-STEADY_CAGR_MIN = 1.0     # %/yr over the window
-STEADY_DD_MAX = -22.0     # max drawdown floor (60-mo window)
-STEADY_VOL_MAX = 9.0      # stdev of YoY changes
+# Steadiness thresholds are WINDOW-AWARE. The 60-month all-homes
+# fallback covers calm years, so its limits are tight. The 15-year
+# condo window includes 2008-2012, where even textbook-steady markets
+# (Palo Alto: 5.3%/yr, worst -16.6%) run YoY volatility of 10-12 —
+# judging that by the short-window limits fails nearly everything for
+# the wrong reason (measured against the real overlay, it cut the
+# aspirational list from 10 to 3). Long-window limits ask the right
+# question instead: did it compound through 2008 without a true bust?
+STEADY_SHORT = {"cagr_min": 1.0, "dd_max": -22.0, "vol_max": 9.0}
+STEADY_LONG = {"cagr_min": 2.0, "dd_max": -25.0, "vol_max": 12.5}
+LONG_WINDOW_MONTHS = 120
 
 ANCHORS = {
     "SF":  (37.7793, -122.4193),
@@ -264,10 +272,12 @@ def screen(assets: float = ASSETS_DEFAULT, reserves: float = RESERVES_DEFAULT,
             entry_kind = "all-homes"
             steady = _steadiness(r["history_zhvi"])
 
+        lim = (STEADY_LONG if steady and (steady.get("months") or 0) >= LONG_WINDOW_MONTHS
+               else STEADY_SHORT)
         steady_ok = bool(steady and steady.get("cagr") is not None
-                         and steady["cagr"] >= STEADY_CAGR_MIN
-                         and (steady.get("max_dd") is None or steady["max_dd"] >= STEADY_DD_MAX)
-                         and (steady.get("vol") is None or steady["vol"] <= STEADY_VOL_MAX))
+                         and steady["cagr"] >= lim["cagr_min"]
+                         and (steady.get("max_dd") is None or steady["max_dd"] >= lim["dd_max"])
+                         and (steady.get("vol") is None or steady["vol"] <= lim["vol_max"]))
 
         gates = {
             "access": minutes <= access_max,
@@ -344,7 +354,7 @@ def deal_check(zip_code: str, price: float, sqft: float | None = None,
                                  or zip_code in FOOD_OVERRIDES,
                          "safety": (raw["crime_index"] or 99) <= CRIME_MAX,
                          "climate": clim_ok,
-                         "steady": bool(steady and steady.get("cagr", -9) >= STEADY_CAGR_MIN)},
+                         "steady": bool(steady and steady.get("cagr", -9) >= STEADY_SHORT["cagr_min"])},
                "quality_n": 0}
         row["quality_n"] = sum(row["gates"].values())
 

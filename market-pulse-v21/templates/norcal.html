@@ -137,7 +137,7 @@
       <tr><td><a href="/zip/{{ s.zip }}">{{ s.zip }}</a></td><td>{{ s.name }}</td>
       {% set failed = [] %}{% for k, ok in s.gates.items() %}{% if not ok and k != 'budget' %}{% set _ = failed.append(k) %}{% endif %}{% endfor %}
       <td>{{ failed|join(', ') }}</td>
-      <td class="nc-note">{% if 'climate' in failed %}{{ s.climate_tier }}{% elif 'safety' in failed %}crime {{ s.crime }}{% elif 'food' in failed %}food {{ s.food }}{% elif 'access' in failed %}{{ s.minutes }} min{% elif 'steady' in failed %}{{ s.steady or 'no history' }}{% endif %}</td>
+      <td class="nc-note">{% if 'climate' in failed %}{{ s.climate_tier }}{% elif 'safety' in failed %}crime {{ s.crime }}{% elif 'food' in failed %}food {{ s.food }}{% elif 'access' in failed %}{{ s.minutes }} min{% elif 'steady' in failed %}{% if s.steady %}{{ s.steady.cagr }}%/yr · worst {{ s.steady.max_dd }}% · vol {{ s.steady.vol }}{% else %}no price history{% endif %}{% endif %}</td>
       <td>${{ '{:,.0f}'.format(s.entry_price) if s.entry_price else '—' }}</td>
       <td>{{ s.minutes }} {{ s.anchor }}</td></tr>
     {% endfor %}</tbody>
