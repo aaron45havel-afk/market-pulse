@@ -49,7 +49,61 @@ def _get_conn():
     return None
 
 
+def _ensure_landscaper_tables():
+    """Create the landscaper shared-book tables in their OWN connection
+    and transaction.
+
+    Deliberately separate from init_db()'s big single-transaction block:
+    that block accretes post-launch ALTERs whose ordering only holds on
+    an already-migrated DB, so on a fresh DB one bad statement aborts the
+    whole transaction and rolls back everything after it. Keeping these
+    tables self-contained means the landscaper book always initializes,
+    regardless of the CRM migrations' state. All statements are
+    IF NOT EXISTS, so this is idempotent.
+
+    The unguessable book code IS the auth (same pattern as prototype
+    feedback tokens): creation is admin-gated, all reads/writes require
+    the code.
+    """
+    conn = _get_conn()
+    if not conn: return
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS landscaper_books (
+                id         SERIAL PRIMARY KEY,
+                code       VARCHAR(24) NOT NULL UNIQUE,
+                name       VARCHAR(80),
+                costs      TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS landscaper_clients (
+                id         SERIAL PRIMARY KEY,
+                book_code  VARCHAR(24) NOT NULL,
+                name       VARCHAR(80) NOT NULL,
+                zip        VARCHAR(5) NOT NULL,
+                price      REAL NOT NULL,
+                freq       VARCHAR(2) NOT NULL DEFAULT 'w',
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS landscaper_clients_book_idx
+            ON landscaper_clients(book_code)
+        """)
+        conn.commit(); cur.close()
+    except Exception as e:
+        logger.error(f"landscaper table init error: {e}")
+    finally:
+        conn.close()
+
+
 def init_db():
+    # Self-contained migration first, in its own transaction, so it can't
+    # be rolled back by an unrelated failure in the block below.
+    _ensure_landscaper_tables()
     conn = _get_conn()
     if not conn: return
     try:
@@ -811,3 +865,127 @@ def list_users(limit=500):
         logger.error(f"list_users: {e}")
         if conn: conn.close()
         return []
+
+
+# ─── Landscaper shared book ─────────────────────────────────────────
+def landscaper_create_book(name: str) -> str | None:
+    """Create a book with an unguessable code. Returns the code."""
+    import secrets
+    code = secrets.token_urlsafe(9)[:12]
+    conn = _get_conn()
+    if not conn: return None
+    try:
+        cur = conn.cursor()
+        cur.execute("INSERT INTO landscaper_books (code, name) VALUES (%s, %s)",
+                    (code, name[:80]))
+        conn.commit(); cur.close()
+        return code
+    except Exception as e:
+        logger.error(f"landscaper_create_book failed: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+def landscaper_book_exists(code: str) -> bool:
+    conn = _get_conn()
+    if not conn: return False
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM landscaper_books WHERE code = %s", (code,))
+        ok = cur.fetchone() is not None
+        cur.close()
+        return ok
+    finally:
+        conn.close()
+
+
+def landscaper_list_books() -> list[dict]:
+    conn = _get_conn()
+    if not conn: return []
+    try:
+        cur = conn.cursor()
+        cur.execute("""SELECT b.code, b.name, b.created_at,
+                              (SELECT COUNT(*) FROM landscaper_clients c
+                               WHERE c.book_code = b.code)
+                       FROM landscaper_books b ORDER BY b.created_at DESC""")
+        rows = cur.fetchall(); cur.close()
+        return [{"code": r[0], "name": r[1],
+                 "created_at": r[2].isoformat() if r[2] else None,
+                 "clients": r[3]} for r in rows]
+    finally:
+        conn.close()
+
+
+def landscaper_get_book(code: str) -> dict | None:
+    """{clients: [...], costs: {...}} or None if the code is unknown."""
+    import json as _json
+    conn = _get_conn()
+    if not conn: return None
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT costs FROM landscaper_books WHERE code = %s", (code,))
+        row = cur.fetchone()
+        if row is None:
+            cur.close()
+            return None
+        costs = {}
+        if row[0]:
+            try: costs = _json.loads(row[0])
+            except ValueError: costs = {}
+        cur.execute("""SELECT id, name, zip, price, freq FROM landscaper_clients
+                       WHERE book_code = %s ORDER BY id""", (code,))
+        clients = [{"id": r[0], "name": r[1], "zip": r[2],
+                    "price": r[3], "freq": r[4]} for r in cur.fetchall()]
+        cur.close()
+        return {"clients": clients, "costs": costs}
+    finally:
+        conn.close()
+
+
+def landscaper_add_client(code: str, name: str, zip_code: str,
+                          price: float, freq: str) -> int | None:
+    conn = _get_conn()
+    if not conn: return None
+    try:
+        cur = conn.cursor()
+        cur.execute("""INSERT INTO landscaper_clients (book_code, name, zip, price, freq)
+                       VALUES (%s, %s, %s, %s, %s) RETURNING id""",
+                    (code, name[:80], zip_code[:5], price, freq[:2]))
+        cid = cur.fetchone()[0]
+        conn.commit(); cur.close()
+        return cid
+    except Exception as e:
+        logger.error(f"landscaper_add_client failed: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+def landscaper_delete_client(code: str, client_id: int) -> bool:
+    conn = _get_conn()
+    if not conn: return False
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM landscaper_clients WHERE book_code = %s AND id = %s",
+                    (code, client_id))
+        n = cur.rowcount
+        conn.commit(); cur.close()
+        return n > 0
+    finally:
+        conn.close()
+
+
+def landscaper_save_costs(code: str, costs: dict) -> bool:
+    import json as _json
+    conn = _get_conn()
+    if not conn: return False
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE landscaper_books SET costs = %s WHERE code = %s",
+                    (_json.dumps(costs), code))
+        n = cur.rowcount
+        conn.commit(); cur.close()
+        return n > 0
+    finally:
+        conn.close()

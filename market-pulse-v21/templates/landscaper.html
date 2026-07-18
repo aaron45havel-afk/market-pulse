@@ -69,6 +69,20 @@
 </div>
 <p class="lp-sub" data-i="sub">Cobra según el código postal, no un precio único. El mismo trabajo vale $50 en Hayward y $110 en Atherton — y el cliente rico no parpadea. Tus datos se guardan solo en tu teléfono.</p>
 
+<div id="syncBanner"></div>
+
+{% if is_admin(request) %}
+<div class="lp-card" style="border-color:var(--accent2,#2563eb);">
+  <h2>🔗 Admin — shared books</h2>
+  <p class="hint">Create a book, then text him the link. His clients/prices sync to the database so you can both see and manage them. He never logs in — the link is the key.</p>
+  <div class="lp-row">
+    <div class="lp-f"><label>Book name</label><input id="bkName" placeholder="Jose's crew"></div>
+    <button class="lp-btn" onclick="createBook()" style="align-self:flex-end;">Create book + link</button>
+  </div>
+  <div id="bkOut" style="margin-top:0.5rem;"></div>
+</div>
+{% endif %}
+
 <!-- ═══ 1. ZIP price lookup ═══ -->
 <div class="lp-card">
   <h2>📍 <span data-i="lookup_h">¿Cuánto cobrar en este ZIP?</span></h2>
@@ -242,6 +256,9 @@ const I18N = {
   reviewed:["Tarifas y reglas revisadas: julio 2026","Rates & rules reviewed: July 2026"],
   mo:["/mes","/mo"],
   pick_zip:["Esa ciudad tiene varios ZIPs — elige el correcto:","That city has several ZIPs — pick the right one:"],
+  synced:["☁️ Guardado en línea — tus clientes y precios se sincronizan en este libro compartido.","☁️ Saved online — your clients and prices sync to this shared book."],
+  sub_book:["Cobra según el código postal, no un precio único. El mismo trabajo vale $50 en Hayward y $110 en Atherton — y el cliente rico no parpadea.","Price by ZIP code, not one flat rate. The same job is worth $50 in Hayward and $110 in Atherton — and the wealthy client doesn't blink."],
+  foot_book:["Precios sugeridos = mercado Bay Area 2026, por nivel de riqueza del ZIP (valor mediano de casa, datos Zillow). Son puntos de partida — ajusta por lote grande, pendiente, portón, perros. Esta página no es consejo legal ni financiero.","Suggested prices = 2026 Bay Area market, by ZIP wealth tier (median home value, Zillow data). Starting points — adjust for big lots, slopes, gates, dogs. Not legal or financial advice."],
 };
 let LANG = localStorage.getItem('lp_lang') || 'es';
 function applyLang() {
@@ -250,12 +267,58 @@ function applyLang() {
   $('langBtn').textContent = LANG === 'es' ? 'EN' : 'ES';
 }
 function T(k) { return I18N[k] ? I18N[k][LANG === 'es' ? 0 : 1] : k; }
-function toggleLang() { LANG = LANG === 'es' ? 'en' : 'es'; localStorage.setItem('lp_lang', LANG); applyLang(); refreshClients(); }
+function toggleLang() { LANG = LANG === 'es' ? 'en' : 'es'; localStorage.setItem('lp_lang', LANG); applyLang(); refreshClients(); syncBannerUpdate(); }
 
 // ── storage ───────────────────────────────────────────────────────
+// BOOK = shared server-side book code (from ?book=CODE). When set, the
+// client list + costs live in the database; localStorage is an offline
+// mirror. When empty, on-device only (original behavior).
+const BOOK = "{{ book }}";
 let CLIENTS = JSON.parse(localStorage.getItem('lp_clients') || '[]');
 let COSTS = JSON.parse(localStorage.getItem('lp_costs') || '{}');
 const save = () => { localStorage.setItem('lp_clients', JSON.stringify(CLIENTS)); localStorage.setItem('lp_costs', JSON.stringify(COSTS)); };
+const api = (path, opts) => fetch('/api/landscaper/books' + path, opts).then(r => r.ok ? r.json() : Promise.reject(r));
+
+// Admin: create a book and show the shareable link.
+function createBook() {
+  const name = (document.getElementById('bkName')||{}).value || 'Book';
+  fetch('/api/landscaper/books', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name})})
+    .then(r => r.json()).then(d => {
+      if (!d.code) { document.getElementById('bkOut').textContent = 'Error'; return; }
+      const link = location.origin + '/jardin?book=' + d.code;
+      document.getElementById('bkOut').innerHTML =
+        `<div class="lp-price"><div class="k">Text him this link</div>
+         <div style="word-break:break-all;font-weight:700;margin:0.3rem 0;">${link}</div>
+         <button class="lp-btn sec" onclick="navigator.clipboard&&navigator.clipboard.writeText('${link}');this.textContent='Copied ✓'">Copy link</button>
+         <a class="lp-btn" style="margin-left:0.4rem;text-decoration:none;" href="/landscaper?book=${d.code}">Open it</a></div>`;
+    }).catch(() => document.getElementById('bkOut').textContent = 'Error (are you signed in as admin?)');
+}
+
+// Load a shared book: server wins; if the server book is empty but this
+// phone has local clients, migrate them up once (so switching to a book
+// keeps whatever he already entered).
+async function loadBook() {
+  if (!BOOK) return;
+  try {
+    const data = await api('/' + BOOK);
+    if ((!data.clients || !data.clients.length) && CLIENTS.length) {
+      for (const c of CLIENTS) {
+        try { await api('/' + BOOK + '/clients', {method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify(c)}); } catch(e){}
+      }
+      if (COSTS && Object.keys(COSTS).length) {
+        try { await api('/' + BOOK + '/costs', {method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({costs:COSTS})}); } catch(e){}
+      }
+      const fresh = await api('/' + BOOK);
+      CLIENTS = fresh.clients || []; COSTS = fresh.costs || COSTS;
+    } else {
+      CLIENTS = data.clients || [];
+      if (data.costs && Object.keys(data.costs).length) COSTS = data.costs;
+    }
+    save();
+  } catch(e) { /* offline → keep local mirror */ }
+}
 
 // ── city search ───────────────────────────────────────────────────
 const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
@@ -356,6 +419,8 @@ function calcCosts() {
   COSTS = { gas:+($('cGas').value||0), truck:+($('cTruck').value||0), dump:+($('cDump').value||0),
             equip:+($('cEquip').value||0), days:+($('cDays').value||5), stops:+($('cStops').value||8) };
   save();
+  if (BOOK) api('/' + BOOK + '/costs', {method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({costs:COSTS})}).catch(()=>{});
   const monthly = COSTS.gas*4.3 + COSTS.truck + COSTS.dump*4.3 + COSTS.equip/12;
   const stopsMo = COSTS.days * COSTS.stops * 4.3;
   const perStop = stopsMo ? monthly / stopsMo : 0;
@@ -370,16 +435,24 @@ function calcCosts() {
 }
 
 // ── 4. clients ────────────────────────────────────────────────────
-function addClient() {
+async function addClient() {
   const zipsN = resolveZips($('nZip').value);
   if (zipsN.length > 1) { $('clientList').insertAdjacentHTML('afterbegin', zipChips(zipsN, 'nZip', 'addClient()')); return; }
   const c = { name: $('nName').value.trim() || 'Cliente', zip: zipsN[0] || '',
               price: +($('nPrice').value||0), freq: $('nFreq').value };
   if (!ZIPS[c.zip] || c.price <= 0) { alert(T('no_zip')); return; }
+  if (BOOK) {
+    try { const r = await api('/' + BOOK + '/clients', {method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(c)}); c.id = r.id; } catch(e) { /* offline → local-only, re-syncs next load */ }
+  }
   CLIENTS.push(c); save(); $('nName').value = $('nZip').value = $('nPrice').value = '';
   refreshClients();
 }
-function delClient(i) { CLIENTS.splice(i,1); save(); refreshClients(); }
+async function delClient(i) {
+  const c = CLIENTS[i]; if (!c) return;
+  if (BOOK && c.id != null) { try { await api('/' + BOOK + '/clients/' + c.id, {method:'DELETE'}); } catch(e) {} }
+  CLIENTS.splice(i,1); save(); refreshClients();
+}
 function refreshClients() {
   $('clientList').innerHTML = CLIENTS.map((c,i) => {
     const z = ZIPS[c.zip] || {};
@@ -481,13 +554,30 @@ $('banCities').textContent = DATA.ban_cities.join(', ') + '.';
       : '📈 Automatic inflation adjustment active (CPI) — prices in July 2026 dollars for now.';
   }
 })();
-['cGas','cTruck','cDump','cEquip','cDays','cStops'].forEach(id => {
-  const k = id.slice(1).toLowerCase(); if (COSTS[k]) $(id).value = COSTS[k];
-});
+function fillCostInputs() {
+  ['cGas','cTruck','cDump','cEquip','cDays','cStops'].forEach(id => {
+    const k = id.slice(1).toLowerCase(); if (COSTS[k]) $(id).value = COSTS[k];
+  });
+}
+function syncBannerUpdate() {
+  const el = $('syncBanner'); if (!el) return;
+  if (BOOK) {
+    el.innerHTML = `<div class="lp-warn" style="background:rgba(37,99,235,0.08);border-color:rgba(37,99,235,0.35);">${T('synced')}</div>`;
+    // Data now lives on the server — drop the "phone only" copy.
+    const sub = document.querySelector('.lp-sub'); if (sub) sub.textContent = T('sub_book');
+    const foot = document.querySelector('[data-i="foot"]'); if (foot) foot.textContent = T('foot_book');
+  } else {
+    el.innerHTML = '';
+  }
+}
+fillCostInputs();
 const savedHome = localStorage.getItem('lp_home'); if (savedHome) $('rHome').value = savedHome;
 wireSuggest('lkZip', lookupZip);
 wireSuggest('qZip', quoteSqft);
 wireSuggest('nZip', () => {});
-applyLang(); refreshClients();
+applyLang(); refreshClients(); syncBannerUpdate();
+// Shared book: pull server data (and migrate any on-device clients up
+// once), then re-render. Offline keeps the local mirror.
+(async () => { if (BOOK) { await loadBook(); fillCostInputs(); refreshClients(); } })();
 </script>
 {% endblock %}
