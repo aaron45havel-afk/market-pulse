@@ -103,7 +103,7 @@
     });
     var card = el('div', {
       style: {
-        background: '#fff', color: 'var(--ink, #1a1917)',
+        background: 'var(--surface, #fff)', color: 'var(--ink, #1a1917)',
         width: 'min(440px, 100%)', maxHeight: '80vh',
         borderRadius: '14px 14px 0 0',
         padding: '1.1rem 1.2rem 1.2rem',

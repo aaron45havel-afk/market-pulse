@@ -336,7 +336,6 @@
             transition: transform 0.1s ease, box-shadow 0.15s ease;
             display: inline-flex; align-items: center; gap: 0.5rem;
         }
-        .btn-primary:active { transform: translateY(0); }
 
         /* ── Secondary + danger buttons — so pages stop hand-rolling them.
            Same footprint as .btn-primary; all three share the hover lift. ── */
@@ -360,8 +359,11 @@
             display: inline-flex; align-items: center; gap: 0.5rem;
         }
         .btn-danger:hover { background: var(--coral-soft); }
-        /* Shared micro-lift across all three button variants. */
+        /* Shared micro-lift on hover; press sinks back. The :active rule
+           must come after :hover — equal specificity, so the later one
+           wins while the button is held down. */
         .btn-primary:hover, .btn-secondary:hover, .btn-danger:hover { transform: translateY(-1px); }
+        .btn-primary:active, .btn-secondary:active, .btn-danger:active { transform: translateY(0); }
 
         /* ── .card — the core building block.
            White surface, warm border, generous radius, subtle elevation.
