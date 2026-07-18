@@ -4,28 +4,28 @@
 <style>
     .price-input { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.35rem 0.5rem; color:var(--text); font-size:0.9rem; width:85px; text-align:right; outline:none; transition:border-color 0.2s, background 0.2s; }
     .price-input:focus { border-color:var(--accent2); }
-    .price-input.net-net { border-color:var(--accent); background:rgba(34,197,94,0.12); }
-    .price-input.graham { border-color:var(--yellow); background:rgba(234,179,8,0.12); }
+    .price-input.net-net { border-color:var(--mint); background:var(--mint-soft); }
+    .price-input.graham { border-color:var(--gold); background:var(--gold-soft); }
     .verdict { font-size:0.65rem; font-weight:700; margin-top:3px; letter-spacing:0.03em; }
-    .verdict.buy { color:var(--accent); }
-    .verdict.graham { color:var(--yellow); }
+    .verdict.buy { color:var(--mint-ink); }
+    .verdict.graham { color:var(--gold-ink); }
     .verdict.expensive { color:var(--text-dim); font-weight:400; }
-    .action-zone { background:rgba(59,130,246,0.04); }
+    .action-zone { background:var(--primary-soft); }
     .row-dimmed td { opacity:0.5; }
     .row-dimmed:hover td { opacity:1; }
-    .row-netnet { background:rgba(34,197,94,0.06); }
-    .row-graham { background:rgba(234,179,8,0.06); }
+    .row-netnet { background:var(--mint-soft); }
+    .row-graham { background:var(--gold-soft); }
     #stockTable tbody tr { transition:opacity 0.2s; }
     #stockTable tbody td { padding:0.65rem 0.6rem; }
     #stockTable thead th { padding:0.6rem; font-size:0.7rem; }
     .div-badge { display:inline-block; padding:1px 5px; border-radius:3px; font-size:0.65rem; font-weight:600; }
-    .div-yes { background:rgba(34,197,94,0.15); color:var(--accent); }
+    .div-yes { background:var(--mint-soft); color:var(--mint-ink); }
     .div-no { color:var(--text-dim); font-size:0.6rem; }
     .mktcap-est { font-size:0.75rem; color:var(--text-dim); }
     .toolbar { display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; }
-    .toolbar button { padding:0.4rem 0.8rem; border-radius:6px; cursor:pointer; font-size:0.8rem; border:1px solid var(--border); transition:background 0.2s; }
-    .toolbar .btn-primary { background:var(--accent2); color:white; border-color:var(--accent2); }
-    .toolbar .btn-secondary { background:var(--surface2); color:var(--text); }
+    /* Compact toolbar sizing only — fill/glow now come from base
+       .btn-primary / .btn-secondary (no per-page fork). */
+    .toolbar button { padding:0.4rem 0.9rem; border-radius:var(--r-sm); cursor:pointer; font-size:0.82rem; }
 </style>
 {% endblock %}
 {% block content %}
@@ -54,13 +54,13 @@
     <div class="grid-4" style="margin-bottom:1rem;">
         <div class="card metric-card" style="border-color:var(--accent);">
             <div class="label">Net-Nets Confirmed</div>
-            <div class="value" style="color:var(--accent);" id="netNetCount">0</div>
-            <div class="change" style="color:var(--accent);">Price &lt; NCAV</div>
+            <div class="value" style="color:var(--mint-ink);" id="netNetCount">0</div>
+            <div class="change" style="color:var(--mint-ink);">Price &lt; NCAV</div>
         </div>
         <div class="card metric-card" style="border-color:var(--yellow);">
             <div class="label">Graham Bargains</div>
-            <div class="value" style="color:var(--yellow);" id="grahamCount">0</div>
-            <div class="change" style="color:var(--yellow);">P/NCAV ≤ 0.67</div>
+            <div class="value" style="color:var(--gold-ink);" id="grahamCount">0</div>
+            <div class="change" style="color:var(--gold-ink);">P/NCAV ≤ 0.67</div>
         </div>
         <div class="card metric-card">
             <div class="label">Prices Entered</div>
@@ -179,9 +179,10 @@ function mpToast(msg, isError) {
         document.body.appendChild(el);
     }
     el.textContent = msg;
-    el.style.background = isError ? '#fef2f2' : '#ecfdf5';
-    el.style.color = isError ? '#991b1b' : '#065f46';
-    el.style.border = '1px solid ' + (isError ? '#fecaca' : '#a7f3d0');
+    const t = isError
+        ? { bg:'var(--coral-soft)', fg:'var(--coral-ink)', bd:'var(--coral)' }
+        : { bg:'var(--mint-soft)',  fg:'var(--mint-ink)',  bd:'var(--mint)' };
+    el.style.background = t.bg; el.style.color = t.fg; el.style.border = '1px solid ' + t.bd;
     el.style.opacity = '1';
     clearTimeout(el._t);
     el._t = setTimeout(() => { el.style.opacity = '0'; }, 3200);
@@ -304,7 +305,7 @@ function renderTable(data) {
                     oninput="onPrice('${s.ticker}',${s.ncav_per_share},this)">
                 <div class="${vClass}"${vTitle ? ` title="${vTitle.replace(/"/g,'&quot;')}"` : ''}>${vText}</div>
             </td>
-            <td class="action-zone" style="text-align:right;"><strong style="color:var(--accent);">$${s.ncav_per_share.toFixed(2)}</strong></td>
+            <td class="action-zone" style="text-align:right;"><strong style="color:var(--mint-ink);">$${s.ncav_per_share.toFixed(2)}</strong></td>
             <td class="action-zone" style="text-align:center;"><span class="pncav-val">${pncavHtml}</span></td>
             <td style="text-align:right;" class="${ncc}">${nc}</td>
             <td style="text-align:right;">${cr}</td>

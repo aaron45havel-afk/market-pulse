@@ -10,7 +10,7 @@
   .va-pills { display:flex; gap:0.4rem; margin:0.6rem 0 0.2rem; flex-wrap:wrap; }
   .va-pill { padding:0.3rem 0.9rem; border-radius:999px; font-size:0.78rem; font-weight:700;
              border:1px solid var(--line); background:var(--surface); color:var(--ink-2); text-decoration:none; }
-  .va-pill.active { background:var(--accent2, #2563eb); color:#fff; border-color:var(--accent2, #2563eb); }
+  .va-pill.active { background:var(--primary); color:#fff; border-color:var(--primary); }
 
   .va-card { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:0.85rem 1rem; margin:1rem 0; }
   .va-card h2 { margin:0 0 0.25rem; font-size:1rem; }
@@ -21,12 +21,12 @@
   .va-form label { font-size:0.62rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-3); font-weight:700; }
   .va-form input, .va-form select { background:var(--surface-2); border:1px solid var(--line); border-radius:6px;
     padding:0.4rem 0.55rem; color:var(--ink); width:105px; }
-  .va-form button { background:var(--accent2, #2563eb); color:#fff; border:none; border-radius:6px;
+  .va-form button { background:var(--primary); color:#fff; border:none; border-radius:6px;
     padding:0.5rem 1rem; font-weight:700; cursor:pointer; }
 
   .va-verdict { border:2px solid var(--line); border-radius:10px; padding:0.8rem 1rem; margin-top:0.8rem; }
   .va-verdict .headline { font-size:1.05rem; font-weight:800; }
-  .v-DISCOUNT { color:#15803d; } .v-FAIR { color:#1d4ed8; } .v-THIN { color:#dc2626; } .v-NO { color:var(--ink-3); }
+  .v-DISCOUNT { color:var(--mint-ink); } .v-FAIR { color:var(--primary-ink); } .v-THIN { color:var(--coral-ink); } .v-NO { color:var(--ink-3); }
   .va-verdict .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:0.5rem 1rem; margin-top:0.6rem; font-size:0.78rem; }
   .va-verdict .grid .k { color:var(--ink-3); font-size:0.63rem; text-transform:uppercase; letter-spacing:0.04em; }
   .va-verdict .grid .v { font-weight:700; font-variant-numeric:tabular-nums; }
@@ -42,7 +42,7 @@
   .va-scroll { overflow-x:auto; }
   .va-flag { display:inline-block; padding:0 6px; border-radius:999px; font-size:0.56rem; font-weight:600;
     margin-left:0.25rem; cursor:help; background:rgba(217,119,6,0.13); color:#b45309; border:1px solid rgba(217,119,6,0.35); }
-  .score-hot { font-weight:800; color:#15803d; }
+  .score-hot { font-weight:800; color:var(--mint-ink); }
 </style>
 {% endblock %}
 
@@ -90,14 +90,14 @@
     <div class="grid">
       <div><div class="k">ARV (lower of two)</div><div class="v">${{ '{:,.0f}'.format(check.arv) if check.arv else '—' }} <span class="va-note">comp ${{ '{:,.0f}'.format(check.arv_comp) if check.arv_comp else '—' }} · income ${{ '{:,.0f}'.format(check.arv_income) if check.arv_income else '—' }}</span></div></div>
       <div><div class="k">All-in</div><div class="v">${{ '{:,.0f}'.format(check.all_in) }} <span class="va-note">incl ${{ '{:,.0f}'.format(check.carry) }} carry</span></div></div>
-      <div><div class="k">Equity created</div><div class="v" style="color:{{ '#15803d' if check.equity and check.equity > 0 else '#dc2626' }};">${{ '{:,.0f}'.format(check.equity) if check.equity is not none else '—' }}</div></div>
+      <div><div class="k">Equity created</div><div class="v" style="color:{{ 'var(--mint-ink)' if check.equity and check.equity > 0 else 'var(--coral-ink)' }};">${{ '{:,.0f}'.format(check.equity) if check.equity is not none else '—' }}</div></div>
       <div><div class="k">Yield basis</div><div class="v">{{ check.county_yield }}% <span class="va-note">rent ${{ '{:,.0f}'.format(check.market_rent) }}/unit</span></div></div>
     </div>
 
     <div class="va-sect">FHA 203(k) house-hack — live in one unit</div>
     <div class="grid">
       <div><div class="k">Loan vs county limit</div><div class="v">{{ '✓ fits' if check.fha.ok else '✗ over' }} <span class="va-note">limit ${{ '{:,.0f}'.format(check.fha.limit) }}</span></div></div>
-      <div><div class="k">Cash to close (3.5% + costs)</div><div class="v" style="color:{{ '#15803d' if check.fha.cash_ok else '#dc2626' }};">${{ '{:,.0f}'.format(check.fha.cash_close) }} {{ '✓' if check.fha.cash_ok else '— exceeds deployable' }}</div></div>
+      <div><div class="k">Cash to close (3.5% + costs)</div><div class="v" style="color:{{ 'var(--mint-ink)' if check.fha.cash_ok else 'var(--coral-ink)' }};">${{ '{:,.0f}'.format(check.fha.cash_close) }} {{ '✓' if check.fha.cash_ok else '— exceeds deployable' }}</div></div>
       <div><div class="k">PITI+MIP post-reno</div><div class="v">${{ '{:,.0f}'.format(check.fha.piti) }}/mo</div></div>
       <div><div class="k">House-hack net</div><div class="v">{{ '-' if check.fha.hh_net > 0 else '+' }}${{ '{:,.0f}'.format(check.fha.hh_net|abs) }}/mo <span class="va-note">vs ${{ '{:,.0f}'.format(check.fha.hh_rent) }} rent from {{ check.units - 1 }} unit(s)</span></div></div>
       <div><div class="k">Income to qualify</div><div class="v">${{ '{:,.0f}'.format(check.fha.income_needed) }}{% if check.fha.qualifies is not none %} — {{ 'you qualify ✓' if check.fha.qualifies else 'short ✗' }}{% endif %}</div></div>

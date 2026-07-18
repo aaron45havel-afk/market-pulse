@@ -22,7 +22,11 @@
   }
   if (!script) return;
   var TOKEN  = script.getAttribute('data-token');
-  var COLOR  = script.getAttribute('data-color')  || '#4F46E5';
+  // Match the host page's brand when it exposes --primary (Market Pulse
+  // does); fall back to the brand indigo on external embeds.
+  var COLOR  = script.getAttribute('data-color') ||
+      (getComputedStyle(document.documentElement).getPropertyValue('--primary') || '').trim() ||
+      '#5b4de0';
   var LABEL  = script.getAttribute('data-label')  || '💬 Feedback';
   if (!TOKEN) {
     console.warn('[focusedops-feedback] no data-token attribute set');
@@ -67,7 +71,7 @@
       border: 'none', borderRadius: '999px',
       padding: '12px 18px',
       fontSize: '14px', fontWeight: '600',
-      fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',
+      fontFamily: 'var(--sans, -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif)',
       cursor: 'pointer', zIndex: '2147483646',
       boxShadow: '0 6px 22px rgba(0,0,0,0.18)',
       transition: 'transform 0.12s, box-shadow 0.12s',
@@ -99,12 +103,12 @@
     });
     var card = el('div', {
       style: {
-        background: '#fff', color: '#0F1A2C',
+        background: '#fff', color: 'var(--ink, #1a1917)',
         width: 'min(440px, 100%)', maxHeight: '80vh',
         borderRadius: '14px 14px 0 0',
         padding: '1.1rem 1.2rem 1.2rem',
         boxShadow: '0 -12px 40px rgba(0,0,0,0.18)',
-        fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',
+        fontFamily: 'var(--sans, -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif)',
         fontSize: '14px', lineHeight: '1.5',
         overflowY: 'auto',
       },
@@ -152,7 +156,7 @@
     var send = el('button', {
       type: 'button',
       style: {
-        background: '#0F1A2C', color: '#fff',
+        background: COLOR, color: '#fff',
         border: 'none', borderRadius: '8px',
         padding: '0.6rem 1.2rem',
         fontSize: '14px', fontWeight: '600',

@@ -8,7 +8,7 @@
     .port-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; }
     .port-title { font-size:1.1rem; font-weight:700; }
     .port-status { font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:4px; }
-    .port-status.active { background:rgba(34,197,94,0.15); color:var(--accent); }
+    .port-status.active { background:var(--mint-soft); color:var(--mint-ink); }
     .port-status.closed { background:rgba(156,163,175,0.15); color:var(--text-dim); }
     .return-big { font-size:1.5rem; font-weight:700; }
     .update-input { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.3rem 0.5rem; color:var(--text); font-size:0.85rem; width:85px; text-align:right; outline:none; }
@@ -33,7 +33,7 @@
     <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
         <input type="text" id="portfolioName" placeholder="e.g. Q2-2026" aria-label="New portfolio name" style="background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.6rem; color:var(--text); width:120px; outline:none;">
         <input type="number" step="0.01" id="iwmEntry" placeholder="IWM price" aria-label="IWM entry price" class="update-input">
-        <button onclick="lockPortfolio()" style="background:var(--accent); color:white; border:none; padding:0.4rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem;">Lock Portfolio</button>
+        <button onclick="lockPortfolio()" class="btn-primary">Lock Portfolio</button>
         <span id="lockStatus" style="font-size:0.8rem; color:var(--text-dim);"></span>
     </div>
 </div>
@@ -231,8 +231,8 @@ function renderPortfolios(portfolios) {
         if (isActive) {
             html += `<div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-top:0.5rem;">
                 <input type="number" step="0.01" class="update-input iwm-update" data-portfolio="${p.name}" placeholder="IWM price" aria-label="IWM price for ${p.name}">
-                <button onclick="submitUpdate('${p.name}')" style="background:var(--accent2); color:white; border:none; padding:0.35rem 0.75rem; border-radius:6px; cursor:pointer; font-size:0.8rem;">Save Monthly Update</button>
-                <button onclick="closePortfolio('${p.name}')" style="background:var(--surface2); color:var(--red); border:1px solid var(--red); padding:0.35rem 0.75rem; border-radius:6px; cursor:pointer; font-size:0.8rem;">Close Portfolio (12mo)</button>
+                <button onclick="submitUpdate('${p.name}')" class="btn-primary">Save Monthly Update</button>
+                <button onclick="closePortfolio('${p.name}')" class="btn-danger">Close Portfolio (12mo)</button>
             </div>`;
         }
 
