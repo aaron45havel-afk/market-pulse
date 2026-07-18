@@ -394,6 +394,24 @@ async def value_add_page(request: Request, region: str = "All CA",
     })
 
 
+@app.get("/landscaper")
+async def landscaper_page(request: Request):
+    """Bilingual (ES-first) Bay Area landscaping pricing tool: ZIP wealth
+    tiers → suggested prices, sqft quotes, cost calculator, on-device
+    client book, day-route clustering, before/after. See landscaper.py."""
+    from landscaper import bay_pricing
+    pricing = await asyncio.to_thread(bay_pricing)
+    return templates.TemplateResponse("landscaper.html", {
+        "request": request, "pricing": pricing,
+    })
+
+
+@app.get("/jardin", include_in_schema=False)
+async def jardin_alias():
+    """Short, textable Spanish alias for the landscaper tool."""
+    return RedirectResponse("/landscaper", status_code=302)
+
+
 # Browsers and iOS probe these absolute paths regardless of <link> tags —
 # serve them so the access log stops filling with 404s.
 _STATIC_DIR = Path(__file__).resolve().parent / "static"
