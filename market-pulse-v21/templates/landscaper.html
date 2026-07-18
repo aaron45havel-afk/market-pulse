@@ -172,6 +172,8 @@
   </div>
 </div>
 
+<div class="lp-note" id="cpiNote"></div>
+<div class="lp-note"><span data-i="reviewed">Tarifas y reglas revisadas: julio 2026</span></div>
 <div class="lp-note" data-i="foot">Precios sugeridos = mercado Bay Area 2026, por nivel de riqueza del ZIP (valor mediano de casa, datos Zillow). Son puntos de partida — ajusta por lote grande, pendiente, portón, perros. Tus datos de clientes nunca salen de tu teléfono. Esta página no es consejo legal ni financiero.</div>
 
 <datalist id="cityList"></datalist>
@@ -237,6 +239,7 @@ const I18N = {
   need_clients:["Primero agrega clientes arriba.","Add clients above first."],
   saved:["Guardado ✓","Saved ✓"],
   median_home:["Casa mediana","Median home value"],
+  reviewed:["Tarifas y reglas revisadas: julio 2026","Rates & rules reviewed: July 2026"],
   mo:["/mes","/mo"],
   pick_zip:["Esa ciudad tiene varios ZIPs — elige el correcto:","That city has several ZIPs — pick the right one:"],
 };
@@ -441,6 +444,20 @@ function beforeAfter() {
 
 // ── init ──────────────────────────────────────────────────────────
 $('banCities').textContent = DATA.ban_cities.join(', ') + '.';
+(function cpiNote(){
+  const c = DATA.cpi || {mult:1};
+  const pct = Math.round((c.mult-1)*1000)/10;
+  const el = $('cpiNote');
+  if (c.mult > 1.001 && c.as_of) {
+    el.textContent = LANG==='es'
+      ? `📈 Precios ajustados por inflación automáticamente: +${pct}% desde jul 2026 (CPI hasta ${c.as_of}).`
+      : `📈 Prices auto-adjusted for inflation: +${pct}% since Jul 2026 (CPI through ${c.as_of}).`;
+  } else {
+    el.textContent = LANG==='es'
+      ? '📈 Ajuste automático por inflación activo (CPI) — precios en dólares de julio 2026 por ahora.'
+      : '📈 Automatic inflation adjustment active (CPI) — prices in July 2026 dollars for now.';
+  }
+})();
 ['cGas','cTruck','cDump','cEquip','cDays','cStops'].forEach(id => {
   const k = id.slice(1).toLowerCase(); if (COSTS[k]) $(id).value = COSTS[k];
 });
