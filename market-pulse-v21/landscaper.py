@@ -25,6 +25,27 @@ import statistics
 from pathlib import Path
 
 _ZIPS_DB = Path(__file__).resolve().parent / "data" / "zips.db"
+_RATES_JSON = Path(__file__).resolve().parent / "data" / "rates.json"
+
+
+def _cpi_adjust() -> dict:
+    """Inflation multiplier for the rate cards: CPIAUCSL(latest) ÷
+    CPIAUCSL(base month of the July-2026 calibration), written weekly by
+    refresh_rates.py. Clamped [1.0, 1.5] — rates never deflate below the
+    calibration and a data glitch can't run away. Missing/malformed →
+    1.0 (calibration dollars)."""
+    import json
+    try:
+        with open(_RATES_JSON, encoding="utf-8") as fh:
+            cpi = (json.load(fh) or {}).get("cpi") or {}
+        base, latest = cpi.get("base"), cpi.get("latest")
+        if isinstance(base, (int, float)) and isinstance(latest, (int, float)) and base > 0:
+            return {"mult": max(1.0, min(1.5, latest / base)),
+                    "as_of": cpi.get("latest_month"),
+                    "base_month": cpi.get("base_month")}
+    except (OSError, ValueError):
+        pass
+    return {"mult": 1.0, "as_of": None, "base_month": "2026-06"}
 
 BAY_COUNTIES = {
     "San Francisco County", "San Mateo County", "Santa Clara County",
@@ -93,13 +114,16 @@ def bay_pricing() -> dict:
                 return i + 1
         return 5
 
+    cpi = _cpi_adjust()
+    m = cpi["mult"]
     out = []
     for r in rows:
         t = tier_of(r["median_home_value"])
         rates = TIER_RATES[t]
         mult = rates["mult"]
         income = r["median_household_income"]
-        monthly = round(rates["visit"] * 4.3)
+        visit = round(rates["visit"] * m)
+        monthly = round(visit * 4.3)
         out.append({
             "zip": r["zip"],
             "city": (r["name"] or "").replace(", CA", ""),
@@ -108,15 +132,16 @@ def bay_pricing() -> dict:
             "tier": t,
             "hv": r["median_home_value"],
             "income": income,
-            "visit": rates["visit"],
+            "visit": visit,
             "monthly": monthly,
-            "ksqft": rates["ksqft"],
-            "min": rates["min"],
+            "ksqft": round(rates["ksqft"] * m, 1),
+            "min": round(rates["min"] * m),
             "pct_income": round(monthly * 12 / income * 100, 2) if income else None,
             "gas_ban": any(c in (r["name"] or "") for c in GAS_BLOWER_BAN_CITIES),
-            "upsells": {k: round(v * mult) for k, v in UPSELL_BASE.items()},
+            "upsells": {k: round(v * mult * m) for k, v in UPSELL_BASE.items()},
         })
     out.sort(key=lambda z: z["zip"])
     return {"zips": out, "tiers": TIER_RATES,
             "biweekly_factor": BIWEEKLY_FACTOR,
-            "ban_cities": GAS_BLOWER_BAN_CITIES}
+            "ban_cities": GAS_BLOWER_BAN_CITIES,
+            "cpi": cpi}
