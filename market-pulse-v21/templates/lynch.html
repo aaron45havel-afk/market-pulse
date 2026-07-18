@@ -6,11 +6,11 @@
   .lynch-search { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.6rem; color:var(--text); font-size:0.85rem; flex:1; min-width:180px; max-width:280px; outline:none; }
   .lynch-search:focus { border-color:var(--accent2); }
   .pe-badge { display:inline-block; padding:1px 7px; border-radius:4px; font-size:0.7rem; font-weight:700; }
-  .pe-deep { background:rgba(34,197,94,0.18); color:var(--accent); }
-  .pe-mid  { background:rgba(234,179,8,0.18); color:var(--yellow); }
+  .pe-deep { background:var(--mint-soft); color:var(--mint-ink); }
+  .pe-mid  { background:var(--gold-soft); color:var(--gold-ink); }
   .peg-cell { font-weight:700; }
-  .peg-best { color:var(--accent); }
-  .peg-good { color:var(--yellow); }
+  .peg-best { color:var(--mint-ink); }
+  .peg-good { color:var(--gold-ink); }
   .lynchTable thead th { padding:0.55rem 0.55rem; font-size:0.7rem; cursor:pointer; user-select:none; white-space:nowrap; }
   .lynchTable thead th:hover { background:var(--surface2); }
   .lynchTable thead th .sort-arrow { color:var(--text-dim); font-size:0.65rem; margin-left:3px; }
@@ -21,8 +21,8 @@
   .num { text-align:right; font-variant-numeric:tabular-nums; }
   .empty-state { padding:2rem 1rem; text-align:center; color:var(--text-dim); font-size:0.9rem; }
   .verdict-pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:0.65rem; font-weight:700; letter-spacing:0.04em; }
-  .verdict-pill.strong { background:rgba(34,197,94,0.18); color:var(--accent); }
-  .verdict-pill.solid  { background:rgba(234,179,8,0.18); color:var(--yellow); }
+  .verdict-pill.strong { background:var(--mint-soft); color:var(--mint-ink); }
+  .verdict-pill.solid  { background:var(--gold-soft); color:var(--gold-ink); }
 </style>
 {% endblock %}
 {% block content %}
@@ -42,8 +42,8 @@
 <div class="grid-4" style="margin-bottom:1rem;">
   <div class="card metric-card" style="border-color:var(--accent);">
     <div class="label">Companies passing</div>
-    <div class="value" style="color:var(--accent);" id="passCount">—</div>
-    <div class="change" style="color:var(--accent);">All Lynch filters</div>
+    <div class="value" style="color:var(--mint-ink);" id="passCount">—</div>
+    <div class="change" style="color:var(--mint-ink);">All Lynch filters</div>
   </div>
   <div class="card metric-card">
     <div class="label">Median P/E</div>
@@ -191,8 +191,8 @@ function renderTable(rows, tbodyId, emptyLabel) {
   tbody.innerHTML = rows.map(r => {
     const secType = r.is_international ? '20-F' : '10-K';
     const secUrl = `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${encodeURIComponent(r.ticker)}&type=${secType}&dateb=&owner=include&count=40`;
-    const moatBadge = r.has_moat ? '<span class="verdict-pill strong" style="background:rgba(99,102,241,0.18); color:var(--accent2);" title="3-yr avg ROE ≥ 15% AND 5+ years of positive EPS">MOAT</span>' : '';
-    const roeColor = r.avg_roe_3yr_pct != null && r.avg_roe_3yr_pct >= 15 ? 'var(--accent)' : 'var(--text)';
+    const moatBadge = r.has_moat ? '<span class="verdict-pill strong" style="background:var(--primary-soft); color:var(--primary-ink);" title="3-yr avg ROE ≥ 15% AND 5+ years of positive EPS">MOAT</span>' : '';
+    const roeColor = r.avg_roe_3yr_pct != null && r.avg_roe_3yr_pct >= 15 ? 'var(--mint-ink)' : 'var(--text)';
     return `<tr>
       <td><a class="ticker-link" href="${secUrl}" target="_blank" rel="noopener">${r.ticker}</a> ${verdictPill(r)} ${moatBadge}</td>
       <td>${r.name || ''}</td>
@@ -200,7 +200,7 @@ function renderTable(rows, tbodyId, emptyLabel) {
       <td class="num">${fmtMillions(r.market_cap)}</td>
       <td class="num">${fmtPrice(r.price)}</td>
       <td class="num"><span class="pe-badge ${r.pe_ratio < 7 ? 'pe-deep' : 'pe-mid'}">${fmtNum(r.pe_ratio)}</span></td>
-      <td class="num" style="color:var(--accent); font-weight:600;">${fmtPct(r.eps_3yr_cagr_pct)}</td>
+      <td class="num" style="color:var(--mint-ink); font-weight:600;">${fmtPct(r.eps_3yr_cagr_pct)}</td>
       <td class="num peg-cell ${pegClass(r.peg)}">${fmtNum(r.peg)}</td>
       <td class="num" style="color:${roeColor}; font-weight:600;">${fmtPct(r.avg_roe_3yr_pct)}</td>
       <td class="num">${fmtNum(r.debt_to_equity)}</td>

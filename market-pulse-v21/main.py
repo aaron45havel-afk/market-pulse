@@ -395,21 +395,117 @@ async def value_add_page(request: Request, region: str = "All CA",
 
 
 @app.get("/landscaper")
-async def landscaper_page(request: Request):
+async def landscaper_page(request: Request, book: str = ""):
     """Bilingual (ES-first) Bay Area landscaping pricing tool: ZIP wealth
-    tiers → suggested prices, sqft quotes, cost calculator, on-device
-    client book, day-route clustering, before/after. See landscaper.py."""
+    tiers → suggested prices, sqft quotes, cost calculator, client book,
+    day-route clustering, before/after. See landscaper.py.
+
+    ?book=<code> connects a shared server-side book: the unguessable
+    code IS the auth (same pattern as prototype feedback tokens). No
+    code → on-device (localStorage) only, as before."""
     from landscaper import bay_pricing
+    from database import landscaper_book_exists
     pricing = await asyncio.to_thread(bay_pricing)
+    book = (book or "").strip()
+    book_valid = bool(book) and await asyncio.to_thread(landscaper_book_exists, book)
     return templates.TemplateResponse("landscaper.html", {
         "request": request, "pricing": pricing,
+        "book": book if book_valid else "",
     })
 
 
 @app.get("/jardin", include_in_schema=False)
-async def jardin_alias():
+async def jardin_alias(request: Request, book: str = ""):
     """Short, textable Spanish alias for the landscaper tool."""
-    return RedirectResponse("/landscaper", status_code=302)
+    dest = "/landscaper" + (f"?book={book.strip()}" if book.strip() else "")
+    return RedirectResponse(dest, status_code=302)
+
+
+# ── Shared landscaper book API ──────────────────────────────────────
+# Book creation is admin-only (you make a book, text him the ?book=CODE
+# link). Every read/write requires a valid code — the code is the auth.
+
+@app.post("/api/landscaper/books")
+async def api_landscaper_create_book(request: Request):
+    """Admin: create a shared book. Body: {name}. Returns {code}."""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    body = await request.json()
+    from database import landscaper_create_book
+    code = await asyncio.to_thread(landscaper_create_book,
+                                   (body.get("name") or "Book").strip())
+    if not code:
+        return JSONResponse({"error": "could not create book"}, status_code=500)
+    return JSONResponse({"code": code})
+
+
+@app.get("/api/landscaper/books")
+async def api_landscaper_list_books(request: Request):
+    """Admin: list all books for the management view."""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    from database import landscaper_list_books
+    return JSONResponse({"books": await asyncio.to_thread(landscaper_list_books)})
+
+
+async def _require_book(code: str):
+    from database import landscaper_book_exists
+    ok = await asyncio.to_thread(landscaper_book_exists, code)
+    return None if ok else JSONResponse({"error": "unknown book"}, status_code=404)
+
+
+@app.get("/api/landscaper/books/{code}")
+async def api_landscaper_get_book(code: str):
+    from database import landscaper_get_book
+    data = await asyncio.to_thread(landscaper_get_book, code)
+    if data is None:
+        return JSONResponse({"error": "unknown book"}, status_code=404)
+    return JSONResponse(data)
+
+
+@app.post("/api/landscaper/books/{code}/clients")
+async def api_landscaper_add_client(code: str, request: Request):
+    bad = await _require_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    price = _coerce_float(body.get("price"))
+    name = (body.get("name") or "").strip()
+    zip_code = (body.get("zip") or "").strip()
+    freq = (body.get("freq") or "w").strip()
+    if not name or not zip_code or price is None:
+        return JSONResponse({"error": "name, zip, numeric price required"},
+                            status_code=400)
+    from database import landscaper_add_client
+    cid = await asyncio.to_thread(landscaper_add_client, code, name,
+                                  zip_code, price, freq)
+    return JSONResponse({"id": cid})
+
+
+@app.delete("/api/landscaper/books/{code}/clients/{client_id}")
+async def api_landscaper_delete_client(code: str, client_id: int):
+    bad = await _require_book(code)
+    if bad:
+        return bad
+    from database import landscaper_delete_client
+    ok = await asyncio.to_thread(landscaper_delete_client, code, client_id)
+    return JSONResponse({"ok": ok})
+
+
+@app.post("/api/landscaper/books/{code}/costs")
+async def api_landscaper_save_costs(code: str, request: Request):
+    bad = await _require_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    costs = body.get("costs") if isinstance(body.get("costs"), dict) else {}
+    # Coerce to plain numbers so a junk payload can't poison the store.
+    clean = {k: v for k, v in costs.items() if isinstance(v, (int, float))}
+    from database import landscaper_save_costs
+    ok = await asyncio.to_thread(landscaper_save_costs, code, clean)
+    return JSONResponse({"ok": ok})
 
 
 # Browsers and iOS probe these absolute paths regardless of <link> tags —
