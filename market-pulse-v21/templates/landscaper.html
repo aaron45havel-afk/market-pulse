@@ -236,6 +236,8 @@ const I18N = {
   l_upsell:["Trabajos extra (1/cliente/año)","Extra jobs (1/client/yr)"],
   need_clients:["Primero agrega clientes arriba.","Add clients above first."],
   saved:["Guardado ✓","Saved ✓"],
+  median_home:["Casa mediana","Median home value"],
+  mo:["/mes","/mo"],
   pick_zip:["Esa ciudad tiene varios ZIPs — elige el correcto:","That city has several ZIPs — pick the right one:"],
 };
 let LANG = localStorage.getItem('lp_lang') || 'es';
@@ -285,14 +287,14 @@ function priceCard(z) {
   return `<div class="lp-price">
     <div><span class="big">${fmt(z.visit)}</span> <span>${T('per_visit')}</span><span class="tier">${T('tier')} ${z.tier}/5 · ${z.city}</span></div>
     <div class="lp-grid">
-      <div><div class="k">${T('monthly')}</div><div class="v">${fmt(z.monthly)}/mes</div></div>
+      <div><div class="k">${T('monthly')}</div><div class="v">${fmt(z.monthly)}${T('mo')}</div></div>
       <div><div class="k">${T('min_stop')}</div><div class="v">${fmt(z.min)}</div></div>
       <div><div class="k">${T('cleanup')}</div><div class="v">${fmt(z.upsells.cleanup)}</div></div>
       <div><div class="k">${T('mulch')}</div><div class="v">${fmt(z.upsells.mulch_yd)}</div></div>
       <div><div class="k">${T('hedge')}</div><div class="v">${fmt(z.upsells.hedge_hr)}</div></div>
       <div><div class="k">${T('irrigation')}</div><div class="v">${fmt(z.upsells.irrigation)}</div></div>
       <div><div class="k">${T('gutter')}</div><div class="v">${fmt(z.upsells.gutter)}</div></div>
-      <div><div class="k">Casa mediana</div><div class="v">${fmt(z.hv)}</div></div>
+      <div><div class="k">${T('median_home')}</div><div class="v">${fmt(z.hv)}</div></div>
     </div>
     ${z.gas_ban ? `<div class="lp-warn">${T('ban_here')}</div>` : ''}
   </div>`;
@@ -318,7 +320,7 @@ function quoteSqft() {
   $('qOut').innerHTML = `<div class="lp-price">
     <div><span class="big">${fmt(per)}</span> ${T('per_visit')} <span class="tier">${T('tier')} ${z.tier}/5</span></div>
     <div class="lp-grid">
-      <div><div class="k">${T('monthly')}</div><div class="v">${fmt(perMonth)}/mes</div></div>
+      <div><div class="k">${T('monthly')}</div><div class="v">${fmt(perMonth)}${T('mo')}</div></div>
       <div><div class="k">${T('min_stop')}</div><div class="v">${fmt(z.min)}</div></div>
     </div></div>`;
 }
