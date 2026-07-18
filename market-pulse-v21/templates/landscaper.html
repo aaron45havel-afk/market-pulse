@@ -261,12 +261,35 @@ const save = () => { localStorage.setItem('lp_clients', JSON.stringify(CLIENTS))
 const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
 const CITY_IDX = {};
 DATA.zips.forEach(z => { const k = norm(z.city); (CITY_IDX[k] = CITY_IDX[k] || []).push(z.zip); });
+const CITY_NAMES = [...new Set(DATA.zips.map(z => z.city))].sort();
 (function fillDatalist(){
   const dl = document.getElementById('cityList');
-  [...new Set(DATA.zips.map(z => z.city))].sort().forEach(c => {
-    const o = document.createElement('option'); o.value = c; dl.appendChild(o);
-  });
+  CITY_NAMES.forEach(c => { const o = document.createElement('option'); o.value = c; dl.appendChild(o); });
 })();
+// iOS Safari hides datalist suggestions in the QuickType bar where
+// nobody sees them — render our own tappable city chips under the
+// field as the user types.
+function citySuggest(q) {
+  const n = norm(q);
+  if (n.length < 2 || /^\d+$/.test(n)) return [];
+  const pre = CITY_NAMES.filter(c => norm(c).startsWith(n));
+  const inc = CITY_NAMES.filter(c => !norm(c).startsWith(n) && norm(c).includes(n));
+  return [...pre, ...inc].slice(0, 6);
+}
+function wireSuggest(inputId, actionFn) {
+  const input = document.getElementById(inputId);
+  const box = document.createElement('div');
+  box.style.cssText = 'display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.35rem;';
+  input.closest('.lp-row').insertAdjacentElement('afterend', box);
+  input.addEventListener('input', () => {
+    const hits = citySuggest(input.value);
+    box.innerHTML = hits.map(c =>
+      `<button type="button" class="lp-btn sec" style="min-height:40px;padding:0.4rem 0.8rem;font-size:0.85rem;">${c}</button>`).join('');
+    [...box.children].forEach((b, i) => b.onclick = () => {
+      input.value = hits[i]; box.innerHTML = ''; actionFn();
+    });
+  });
+}
 function resolveZips(val) {
   const v = (val || '').trim();
   if (/^\d{5}$/.test(v)) return ZIPS[v] ? [v] : [];
@@ -462,6 +485,9 @@ $('banCities').textContent = DATA.ban_cities.join(', ') + '.';
   const k = id.slice(1).toLowerCase(); if (COSTS[k]) $(id).value = COSTS[k];
 });
 const savedHome = localStorage.getItem('lp_home'); if (savedHome) $('rHome').value = savedHome;
+wireSuggest('lkZip', lookupZip);
+wireSuggest('qZip', quoteSqft);
+wireSuggest('nZip', () => {});
 applyLang(); refreshClients();
 </script>
 {% endblock %}
