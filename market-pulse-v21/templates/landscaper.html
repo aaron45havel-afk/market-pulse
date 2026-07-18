@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+{% block title %}Jardinería Bay Area — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+  /* Mobile-first: single column, big touch targets, thumb-friendly. */
+  main .container { max-width: 560px; padding: 0.6rem; }
+  .lp-top { display:flex; justify-content:space-between; align-items:center; gap:0.5rem; margin-bottom:0.4rem; }
+  .lp-top h1 { margin:0; font-size:1.25rem; }
+  .lp-lang { background:var(--accent2,#2563eb); color:#fff; border:none; border-radius:999px;
+             padding:0.5rem 1rem; font-weight:800; font-size:0.9rem; cursor:pointer; min-height:44px; }
+  .lp-sub { color:var(--ink-3); font-size:0.85rem; margin:0 0 0.7rem; line-height:1.5; }
+
+  .lp-card { background:var(--surface); border:1px solid var(--line); border-radius:12px;
+             padding:0.9rem 1rem; margin:0.7rem 0; }
+  .lp-card h2 { margin:0 0 0.4rem; font-size:1.02rem; }
+  .lp-card .hint { font-size:0.76rem; color:var(--ink-3); margin:0 0 0.6rem; line-height:1.45; }
+
+  .lp-row { display:flex; gap:0.5rem; flex-wrap:wrap; }
+  .lp-f { display:flex; flex-direction:column; gap:2px; flex:1; min-width:110px; }
+  .lp-f label { font-size:0.62rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-3); font-weight:700; }
+  .lp-f input, .lp-f select { background:var(--surface-2); border:1px solid var(--line); border-radius:8px;
+     padding:0.65rem; color:var(--ink); font-size:16px; width:100%; min-height:44px; }
+  .lp-btn { background:var(--accent2,#2563eb); color:#fff; border:none; border-radius:8px;
+            padding:0.7rem 1rem; font-weight:800; font-size:0.95rem; cursor:pointer; min-height:44px; }
+  .lp-btn.sec { background:var(--surface-2); color:var(--ink-2); border:1px solid var(--line); }
+  .lp-btn.danger { background:rgba(220,38,38,0.1); color:#dc2626; border:1px solid rgba(220,38,38,0.4); }
+
+  .lp-price { border:2px solid var(--accent2,#2563eb); border-radius:12px; padding:0.8rem; margin-top:0.7rem; }
+  .lp-price .big { font-size:1.7rem; font-weight:900; color:var(--accent2,#2563eb); }
+  .lp-price .tier { display:inline-block; padding:2px 10px; border-radius:999px; font-weight:800; font-size:0.72rem;
+     background:rgba(34,197,94,0.14); color:#15803d; margin-left:0.4rem; }
+  .lp-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem 0.8rem; margin-top:0.55rem; font-size:0.85rem; }
+  .lp-grid .k { color:var(--ink-3); font-size:0.62rem; text-transform:uppercase; letter-spacing:0.04em; }
+  .lp-grid .v { font-weight:800; font-variant-numeric:tabular-nums; }
+  .lp-warn { background:rgba(217,119,6,0.08); border:1px solid rgba(217,119,6,0.35); border-radius:8px;
+             padding:0.5rem 0.7rem; font-size:0.78rem; margin-top:0.55rem; line-height:1.45; }
+
+  .lp-client { display:flex; justify-content:space-between; align-items:center; gap:0.5rem;
+               padding:0.6rem 0.2rem; border-bottom:1px solid var(--line); font-size:0.9rem; }
+  .lp-client .nm { font-weight:700; }
+  .lp-client .meta { font-size:0.72rem; color:var(--ink-3); }
+  .lp-badge-up { background:rgba(220,38,38,0.1); color:#dc2626; border:1px solid rgba(220,38,38,0.35);
+                 border-radius:999px; padding:1px 8px; font-size:0.68rem; font-weight:800; white-space:nowrap; }
+  .lp-badge-ok { background:rgba(34,197,94,0.12); color:#15803d; border-radius:999px; padding:1px 8px;
+                 font-size:0.68rem; font-weight:800; }
+  .lp-x { background:none; border:none; color:var(--ink-4); font-size:1.1rem; cursor:pointer; padding:0.3rem; }
+
+  .lp-day { background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:0.6rem 0.8rem; margin:0.5rem 0; }
+  .lp-day .d { font-weight:800; font-size:0.85rem; }
+  .lp-day ol { margin:0.3rem 0 0.2rem 1.2rem; padding:0; font-size:0.85rem; }
+  .lp-day .mi { font-size:0.72rem; color:var(--ink-3); }
+
+  .lp-hero { text-align:center; padding:0.9rem; border:2px solid #15803d; border-radius:12px; margin-top:0.6rem; }
+  .lp-hero .now { font-size:0.8rem; color:var(--ink-3); }
+  .lp-hero .after { font-size:2rem; font-weight:900; color:#15803d; }
+  .lp-hero .delta { font-weight:800; color:#15803d; }
+  .lp-lines { font-size:0.85rem; margin-top:0.5rem; text-align:left; }
+  .lp-lines div { display:flex; justify-content:space-between; padding:2px 0; }
+
+  .lp-note { font-size:0.7rem; color:var(--ink-3); margin:0.8rem 0 1.2rem; line-height:1.5; }
+  @media (max-width: 480px) { .lp-grid { grid-template-columns:1fr 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="lp-top">
+  <h1>🌱 <span data-i="title">Precios de Jardinería — Bay Area</span></h1>
+  <button class="lp-lang" id="langBtn" onclick="toggleLang()">EN</button>
+</div>
+<p class="lp-sub" data-i="sub">Cobra según el código postal, no un precio único. El mismo trabajo vale $50 en Hayward y $110 en Atherton — y el cliente rico no parpadea. Tus datos se guardan solo en tu teléfono.</p>
+
+<!-- ═══ 1. ZIP price lookup ═══ -->
+<div class="lp-card">
+  <h2>📍 <span data-i="lookup_h">¿Cuánto cobrar en este ZIP?</span></h2>
+  <p class="hint" data-i="lookup_hint">Escribe el código postal de la casa. Te decimos el precio sugerido para corte semanal, el mínimo por visita, y precios de trabajos extra.</p>
+  <div class="lp-row">
+    <div class="lp-f"><label data-i="zip_l">Código postal</label><input id="lkZip" inputmode="numeric" pattern="[0-9]*" maxlength="5" placeholder="94027"></div>
+    <button class="lp-btn" onclick="lookupZip()" data-i="lookup_btn" style="align-self:flex-end;">Ver precio</button>
+  </div>
+  <div id="lkOut"></div>
+</div>
+
+<!-- ═══ 2. Sqft quote ═══ -->
+<div class="lp-card">
+  <h2>📐 <span data-i="quote_h">Cotizar una casa por tamaño</span></h2>
+  <p class="hint" data-i="quote_hint">ZIP + pies cuadrados de pasto (mide con Google Maps si quieres). Nunca cobres menos del mínimo — cada parada te cuesta ~25 min de manejo y carga aunque el pasto sea chico.</p>
+  <div class="lp-row">
+    <div class="lp-f"><label>ZIP</label><input id="qZip" inputmode="numeric" maxlength="5" placeholder="94010"></div>
+    <div class="lp-f"><label data-i="sqft_l">Pasto (sqft)</label><input id="qSqft" inputmode="numeric" placeholder="3000"></div>
+    <div class="lp-f"><label data-i="freq_l">Frecuencia</label>
+      <select id="qFreq"><option value="w" data-i="weekly">Cada semana</option><option value="b" data-i="biweekly">Cada 2 semanas</option></select></div>
+  </div>
+  <button class="lp-btn" style="margin-top:0.5rem;" onclick="quoteSqft()" data-i="quote_btn">Cotizar</button>
+  <div id="qOut"></div>
+</div>
+
+<!-- ═══ 3. My costs ═══ -->
+<div class="lp-card">
+  <h2>🚚 <span data-i="costs_h">Mis costos reales</span></h2>
+  <p class="hint" data-i="costs_hint">Lo que gastas cada semana/mes. Con esto sabemos cuánto te cuesta CADA parada — el número que decide tu precio mínimo.</p>
+  <div class="lp-row">
+    <div class="lp-f"><label data-i="gas_l">Gasolina $/sem</label><input id="cGas" inputmode="numeric" placeholder="120"></div>
+    <div class="lp-f"><label data-i="truck_l">Troca+seguro $/mes</label><input id="cTruck" inputmode="numeric" placeholder="650"></div>
+    <div class="lp-f"><label data-i="dump_l">Basura verde $/sem</label><input id="cDump" inputmode="numeric" placeholder="60"></div>
+  </div>
+  <div class="lp-row" style="margin-top:0.4rem;">
+    <div class="lp-f"><label data-i="equip_l">Equipo $/año</label><input id="cEquip" inputmode="numeric" placeholder="2500"></div>
+    <div class="lp-f"><label data-i="days_l">Días/semana</label><input id="cDays" inputmode="numeric" placeholder="5"></div>
+    <div class="lp-f"><label data-i="stops_l">Paradas/día</label><input id="cStops" inputmode="numeric" placeholder="8"></div>
+  </div>
+  <button class="lp-btn" style="margin-top:0.5rem;" onclick="calcCosts()" data-i="costs_btn">Calcular mi costo</button>
+  <div id="cOut"></div>
+</div>
+
+<!-- ═══ 4. Client book ═══ -->
+<div class="lp-card">
+  <h2>📒 <span data-i="clients_h">Mis clientes</span></h2>
+  <p class="hint" data-i="clients_hint">Agrega tus clientes con lo que cobras hoy. Te marcamos en rojo los que pagan menos de lo que deberían — y cuánto subirles. Se guarda solo en este teléfono; usa Exportar para respaldar.</p>
+  <div class="lp-row">
+    <div class="lp-f"><label data-i="name_l">Nombre</label><input id="nName" placeholder="Sra. García"></div>
+    <div class="lp-f"><label>ZIP</label><input id="nZip" inputmode="numeric" maxlength="5" placeholder="94301"></div>
+  </div>
+  <div class="lp-row" style="margin-top:0.4rem;">
+    <div class="lp-f"><label data-i="price_l">Cobro $/visita</label><input id="nPrice" inputmode="numeric" placeholder="60"></div>
+    <div class="lp-f"><label data-i="freq_l">Frecuencia</label>
+      <select id="nFreq"><option value="w" data-i="weekly">Cada semana</option><option value="b" data-i="biweekly">Cada 2 semanas</option></select></div>
+    <button class="lp-btn" onclick="addClient()" style="align-self:flex-end;" data-i="add_btn">Agregar</button>
+  </div>
+  <div id="clientList" style="margin-top:0.6rem;"></div>
+  <div class="lp-row" style="margin-top:0.6rem;">
+    <button class="lp-btn sec" onclick="exportBook()" data-i="export_btn">⬇ Exportar respaldo</button>
+    <button class="lp-btn sec" onclick="document.getElementById('importFile').click()" data-i="import_btn">⬆ Importar</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importBook(event)">
+  </div>
+</div>
+
+<!-- ═══ 5. Routes ═══ -->
+<div class="lp-card">
+  <h2>🗺 <span data-i="routes_h">Mis rutas por día</span></h2>
+  <p class="hint" data-i="routes_hint">Agrupamos tus clientes por zona para que manejes menos. Regla de oro: un cliente nuevo en la misma calle es casi pura ganancia; uno a 25 minutos se come su propio pago en manejo.</p>
+  <div class="lp-row">
+    <div class="lp-f"><label data-i="home_l">Tu ZIP (casa)</label><input id="rHome" inputmode="numeric" maxlength="5" placeholder="94544"></div>
+    <div class="lp-f"><label data-i="rdays_l">Días de trabajo</label><input id="rDays" inputmode="numeric" placeholder="5"></div>
+    <button class="lp-btn" onclick="buildRoutes()" style="align-self:flex-end;" data-i="routes_btn">Armar rutas</button>
+  </div>
+  <div id="rOut"></div>
+</div>
+
+<!-- ═══ 6. Before / After ═══ -->
+<div class="lp-card">
+  <h2>💰 <span data-i="ba_h">Hoy vs. Con el plan</span></h2>
+  <p class="hint" data-i="ba_hint">Con tus clientes y costos de arriba: cuánto ganas hoy y cuánto puedes ganar subiendo precios al nivel del ZIP, manejando menos, y ofreciendo trabajos extra.</p>
+  <button class="lp-btn" onclick="beforeAfter()" data-i="ba_btn">Calcular</button>
+  <div id="baOut"></div>
+</div>
+
+<!-- ═══ 7. Equipment / legality ═══ -->
+<div class="lp-card">
+  <h2>⚡ <span data-i="eq_h">Equipo y reglas de California</span></h2>
+  <div class="lp-warn">
+    <strong data-i="eq_ban_h">Sopladoras de gasolina prohibidas</strong> —
+    <span data-i="eq_ban_t">estas ciudades ya multan por usar sopladora de gas, y son las ciudades RICAS donde más pagan: </span>
+    <span id="banCities"></span>
+  </div>
+  <div class="lp-warn">
+    <strong data-i="eq_core_h">Dinero gratis del estado</strong> —
+    <span data-i="eq_core_t">el programa CORE de California da vales (vouchers) para comprar equipo profesional de batería con descuento. Busca "CORE CARB voucher equipo jardinería" o pide ayuda en tu tienda de equipo comercial. Batería = sin gasolina (~$100/mes menos), menos reparaciones, y entrada a las ciudades con prohibición.</span>
+  </div>
+  <div class="lp-warn">
+    <strong data-i="eq_ins_h">El seguro te abre las puertas ricas</strong> —
+    <span data-i="eq_ins_t">seguro de responsabilidad (~$70-90/mes) es lo que piden las HOAs, los property managers, y los clientes de Atherton/Palo Alto — donde la misma hora paga el doble. También: trabajos de más de $1,000 requieren licencia de contratista C-27 en California. El seguro se paga solo con 1-2 clientes nuevos de zona rica.</span>
+  </div>
+</div>
+
+<div class="lp-note" data-i="foot">Precios sugeridos = mercado Bay Area 2026, por nivel de riqueza del ZIP (valor mediano de casa, datos Zillow). Son puntos de partida — ajusta por lote grande, pendiente, portón, perros. Tus datos de clientes nunca salen de tu teléfono. Esta página no es consejo legal ni financiero.</div>
+
+<script id="zipData" type="application/json">{{ pricing | tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const DATA = JSON.parse(document.getElementById('zipData').textContent);
+const ZIPS = {}; DATA.zips.forEach(z => ZIPS[z.zip] = z);
+const $ = id => document.getElementById(id);
+const fmt = n => '$' + Math.round(n).toLocaleString();
+
+// ── i18n ──────────────────────────────────────────────────────────
+const I18N = {
+  title:["Precios de Jardinería — Bay Area","Landscaping Prices — Bay Area"],
+  sub:["Cobra según el código postal, no un precio único. El mismo trabajo vale $50 en Hayward y $110 en Atherton — y el cliente rico no parpadea. Tus datos se guardan solo en tu teléfono.","Price by ZIP code, not one flat rate. The same job is worth $50 in Hayward and $110 in Atherton — and the wealthy client doesn't blink. Your data stays on your phone only."],
+  lookup_h:["¿Cuánto cobrar en este ZIP?","What to charge in this ZIP?"],
+  lookup_hint:["Escribe el código postal de la casa. Te decimos el precio sugerido para corte semanal, el mínimo por visita, y precios de trabajos extra.","Enter the house's ZIP code. We show the suggested weekly mow price, the minimum per stop, and prices for extra jobs."],
+  zip_l:["Código postal","ZIP code"], lookup_btn:["Ver precio","See price"],
+  quote_h:["Cotizar una casa por tamaño","Quote a house by size"],
+  quote_hint:["ZIP + pies cuadrados de pasto (mide con Google Maps si quieres). Nunca cobres menos del mínimo — cada parada te cuesta ~25 min de manejo y carga aunque el pasto sea chico.","ZIP + lawn square feet (measure on Google Maps if you like). Never charge below the minimum — every stop costs ~25 min of driving and loading even if the lawn is tiny."],
+  sqft_l:["Pasto (sqft)","Lawn (sqft)"], freq_l:["Frecuencia","Frequency"],
+  weekly:["Cada semana","Weekly"], biweekly:["Cada 2 semanas","Every 2 weeks"], quote_btn:["Cotizar","Quote"],
+  costs_h:["Mis costos reales","My real costs"],
+  costs_hint:["Lo que gastas cada semana/mes. Con esto sabemos cuánto te cuesta CADA parada — el número que decide tu precio mínimo.","What you spend weekly/monthly. This tells us what EACH stop costs you — the number that sets your minimum price."],
+  gas_l:["Gasolina $/sem","Gas $/wk"], truck_l:["Troca+seguro $/mes","Truck+insurance $/mo"],
+  dump_l:["Basura verde $/sem","Green waste $/wk"], equip_l:["Equipo $/año","Equipment $/yr"],
+  days_l:["Días/semana","Days/week"], stops_l:["Paradas/día","Stops/day"], costs_btn:["Calcular mi costo","Calculate my cost"],
+  clients_h:["Mis clientes","My clients"],
+  clients_hint:["Agrega tus clientes con lo que cobras hoy. Te marcamos en rojo los que pagan menos de lo que deberían — y cuánto subirles. Se guarda solo en este teléfono; usa Exportar para respaldar.","Add your clients with today's price. We flag in red the ones paying less than they should — and how much to raise. Saved on this phone only; use Export to back up."],
+  name_l:["Nombre","Name"], price_l:["Cobro $/visita","Charge $/visit"], add_btn:["Agregar","Add"],
+  export_btn:["⬇ Exportar respaldo","⬇ Export backup"], import_btn:["⬆ Importar","⬆ Import"],
+  routes_h:["Mis rutas por día","My routes by day"],
+  routes_hint:["Agrupamos tus clientes por zona para que manejes menos. Regla de oro: un cliente nuevo en la misma calle es casi pura ganancia; uno a 25 minutos se come su propio pago en manejo.","We group your clients by area so you drive less. Golden rule: a new client on the same street is almost pure profit; one 25 minutes away eats its own pay in driving."],
+  home_l:["Tu ZIP (casa)","Your ZIP (home)"], rdays_l:["Días de trabajo","Work days"], routes_btn:["Armar rutas","Build routes"],
+  ba_h:["Hoy vs. Con el plan","Today vs. With the plan"],
+  ba_hint:["Con tus clientes y costos de arriba: cuánto ganas hoy y cuánto puedes ganar subiendo precios al nivel del ZIP, manejando menos, y ofreciendo trabajos extra.","Using your clients and costs above: what you make today and what you could make by raising prices to ZIP level, driving less, and offering extra jobs."],
+  ba_btn:["Calcular","Calculate"],
+  eq_h:["Equipo y reglas de California","Equipment & California rules"],
+  eq_ban_h:["Sopladoras de gasolina prohibidas","Gas leaf blowers banned"],
+  eq_ban_t:["estas ciudades ya multan por usar sopladora de gas, y son las ciudades RICAS donde más pagan: ","these cities already fine gas blower use — and they're the RICH cities that pay the most: "],
+  eq_core_h:["Dinero gratis del estado","Free money from the state"],
+  eq_core_t:["el programa CORE de California da vales (vouchers) para comprar equipo profesional de batería con descuento. Busca \"CORE CARB voucher equipo jardinería\" o pide ayuda en tu tienda de equipo comercial. Batería = sin gasolina (~$100/mes menos), menos reparaciones, y entrada a las ciudades con prohibición.","California's CORE program gives vouchers toward professional battery equipment. Search \"CORE CARB voucher landscaping equipment\" or ask at your commercial dealer. Battery = no gas (~$100/mo saved), fewer repairs, and access to the ban cities."],
+  eq_ins_h:["El seguro te abre las puertas ricas","Insurance opens the wealthy doors"],
+  eq_ins_t:["seguro de responsabilidad (~$70-90/mes) es lo que piden las HOAs, los property managers, y los clientes de Atherton/Palo Alto — donde la misma hora paga el doble. También: trabajos de más de $1,000 requieren licencia de contratista C-27 en California. El seguro se paga solo con 1-2 clientes nuevos de zona rica.","liability insurance (~$70-90/mo) is what HOAs, property managers, and Atherton/Palo Alto clients require — where the same hour pays double. Also: jobs over $1,000 require a C-27 contractor license in California. Insurance pays for itself with 1-2 new wealthy-ZIP clients."],
+  foot:["Precios sugeridos = mercado Bay Area 2026, por nivel de riqueza del ZIP (valor mediano de casa, datos Zillow). Son puntos de partida — ajusta por lote grande, pendiente, portón, perros. Tus datos de clientes nunca salen de tu teléfono. Esta página no es consejo legal ni financiero.","Suggested prices = 2026 Bay Area market, by ZIP wealth tier (median home value, Zillow data). Starting points — adjust for big lots, slopes, gates, dogs. Your client data never leaves your phone. Not legal or financial advice."],
+  // dynamic strings
+  tier:["Nivel","Tier"], visit:["Corte semanal","Weekly mow"], monthly:["Por mes","Per month"],
+  min_stop:["MÍNIMO por visita","MINIMUM per stop"], cleanup:["Limpieza grande","Big cleanup"],
+  mulch:["Mulch (por yarda)","Mulch (per yard)"], hedge:["Arbustos (por hora)","Hedges (per hour)"],
+  irrigation:["Riego (llamada)","Irrigation (call)"], gutter:["Canaletas","Gutters"],
+  ban_here:["⚠ Aquí la sopladora de gas está PROHIBIDA — usa batería.","⚠ Gas blowers are BANNED here — use battery."],
+  no_zip:["No encontré ese ZIP en el Bay Area.","ZIP not found in the Bay Area."],
+  per_visit:["por visita","per visit"], per_stop_cost:["Costo por parada","Cost per stop"],
+  per_month_cost:["Costos por mes","Costs per month"], raise_to:["SUBIR a","RAISE to"], ok_price:["bien ✓","good ✓"],
+  day:["Día","Day"], miles:["millas aprox","approx miles"],
+  now_l:["Hoy ganas (bruto/mes)","Today you gross (per month)"],
+  after_l:["Con el plan","With the plan"],
+  l_reprice:["Subir precios al nivel del ZIP","Raise prices to ZIP level"],
+  l_route:["Ahorro de ruta (gas+tiempo)","Route savings (gas+time)"],
+  l_upsell:["Trabajos extra (1/cliente/año)","Extra jobs (1/client/yr)"],
+  need_clients:["Primero agrega clientes arriba.","Add clients above first."],
+  saved:["Guardado ✓","Saved ✓"],
+};
+let LANG = localStorage.getItem('lp_lang') || 'es';
+function applyLang() {
+  const i = LANG === 'es' ? 0 : 1;
+  document.querySelectorAll('[data-i]').forEach(el => { const k = el.dataset.i; if (I18N[k]) el.textContent = I18N[k][i]; });
+  $('langBtn').textContent = LANG === 'es' ? 'EN' : 'ES';
+}
+function T(k) { return I18N[k] ? I18N[k][LANG === 'es' ? 0 : 1] : k; }
+function toggleLang() { LANG = LANG === 'es' ? 'en' : 'es'; localStorage.setItem('lp_lang', LANG); applyLang(); refreshClients(); }
+
+// ── storage ───────────────────────────────────────────────────────
+let CLIENTS = JSON.parse(localStorage.getItem('lp_clients') || '[]');
+let COSTS = JSON.parse(localStorage.getItem('lp_costs') || '{}');
+const save = () => { localStorage.setItem('lp_clients', JSON.stringify(CLIENTS)); localStorage.setItem('lp_costs', JSON.stringify(COSTS)); };
+
+// ── 1. lookup ─────────────────────────────────────────────────────
+function priceCard(z) {
+  return `<div class="lp-price">
+    <div><span class="big">${fmt(z.visit)}</span> <span>${T('per_visit')}</span><span class="tier">${T('tier')} ${z.tier}/5 · ${z.city}</span></div>
+    <div class="lp-grid">
+      <div><div class="k">${T('monthly')}</div><div class="v">${fmt(z.monthly)}/mes</div></div>
+      <div><div class="k">${T('min_stop')}</div><div class="v">${fmt(z.min)}</div></div>
+      <div><div class="k">${T('cleanup')}</div><div class="v">${fmt(z.upsells.cleanup)}</div></div>
+      <div><div class="k">${T('mulch')}</div><div class="v">${fmt(z.upsells.mulch_yd)}</div></div>
+      <div><div class="k">${T('hedge')}</div><div class="v">${fmt(z.upsells.hedge_hr)}</div></div>
+      <div><div class="k">${T('irrigation')}</div><div class="v">${fmt(z.upsells.irrigation)}</div></div>
+      <div><div class="k">${T('gutter')}</div><div class="v">${fmt(z.upsells.gutter)}</div></div>
+      <div><div class="k">Casa mediana</div><div class="v">${fmt(z.hv)}</div></div>
+    </div>
+    ${z.gas_ban ? `<div class="lp-warn">${T('ban_here')}</div>` : ''}
+  </div>`;
+}
+function lookupZip() {
+  const z = ZIPS[$('lkZip').value.trim()];
+  $('lkOut').innerHTML = z ? priceCard(z) : `<div class="lp-warn">${T('no_zip')}</div>`;
+}
+
+// ── 2. sqft quote ─────────────────────────────────────────────────
+function quoteSqft() {
+  const z = ZIPS[$('qZip').value.trim()];
+  const sqft = parseFloat($('qSqft').value) || 0;
+  if (!z || sqft <= 0) { $('qOut').innerHTML = `<div class="lp-warn">${T('no_zip')}</div>`; return; }
+  let per = Math.max(z.min, sqft / 1000 * z.ksqft);
+  const biweekly = $('qFreq').value === 'b';
+  if (biweekly) per *= DATA.biweekly_factor;
+  const perMonth = per * (biweekly ? 2.15 : 4.3);
+  $('qOut').innerHTML = `<div class="lp-price">
+    <div><span class="big">${fmt(per)}</span> ${T('per_visit')} <span class="tier">${T('tier')} ${z.tier}/5</span></div>
+    <div class="lp-grid">
+      <div><div class="k">${T('monthly')}</div><div class="v">${fmt(perMonth)}/mes</div></div>
+      <div><div class="k">${T('min_stop')}</div><div class="v">${fmt(z.min)}</div></div>
+    </div></div>`;
+}
+
+// ── 3. costs ──────────────────────────────────────────────────────
+function calcCosts() {
+  COSTS = { gas:+($('cGas').value||0), truck:+($('cTruck').value||0), dump:+($('cDump').value||0),
+            equip:+($('cEquip').value||0), days:+($('cDays').value||5), stops:+($('cStops').value||8) };
+  save();
+  const monthly = COSTS.gas*4.3 + COSTS.truck + COSTS.dump*4.3 + COSTS.equip/12;
+  const stopsMo = COSTS.days * COSTS.stops * 4.3;
+  const perStop = stopsMo ? monthly / stopsMo : 0;
+  $('cOut').innerHTML = `<div class="lp-price">
+    <div class="lp-grid">
+      <div><div class="k">${T('per_month_cost')}</div><div class="v">${fmt(monthly)}</div></div>
+      <div><div class="k">${T('per_stop_cost')}</div><div class="v">${fmt(perStop)}</div></div>
+    </div>
+    <div class="lp-warn">${LANG==='es'
+      ? `Cada visita te cuesta ${fmt(perStop)} antes de cortar nada. Por eso NUNCA cobres menos del mínimo del ZIP.`
+      : `Every visit costs you ${fmt(perStop)} before you cut anything. That's why you NEVER charge below the ZIP minimum.`}</div></div>`;
+}
+
+// ── 4. clients ────────────────────────────────────────────────────
+function addClient() {
+  const c = { name: $('nName').value.trim() || 'Cliente', zip: $('nZip').value.trim(),
+              price: +($('nPrice').value||0), freq: $('nFreq').value };
+  if (!ZIPS[c.zip] || c.price <= 0) { alert(T('no_zip')); return; }
+  CLIENTS.push(c); save(); $('nName').value = $('nZip').value = $('nPrice').value = '';
+  refreshClients();
+}
+function delClient(i) { CLIENTS.splice(i,1); save(); refreshClients(); }
+function refreshClients() {
+  $('clientList').innerHTML = CLIENTS.map((c,i) => {
+    const z = ZIPS[c.zip] || {};
+    const sug = z.visit || 0;
+    const under = sug - c.price >= 5;
+    return `<div class="lp-client">
+      <div><div class="nm">${c.name}</div><div class="meta">${c.zip} ${z.city||''} · ${fmt(c.price)}/${c.freq==='w'?'sem':'2sem'} · T${z.tier||'?'}</div></div>
+      <div>${under ? `<span class="lp-badge-up">${T('raise_to')} ${fmt(sug)}</span>` : `<span class="lp-badge-ok">${T('ok_price')}</span>`}
+      <button class="lp-x" onclick="delClient(${i})">✕</button></div></div>`;
+  }).join('') || `<div class="hint">${T('need_clients')}</div>`;
+}
+function exportBook() {
+  const blob = new Blob([JSON.stringify({clients:CLIENTS, costs:COSTS}, null, 1)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'mis-clientes-respaldo.json'; a.click();
+}
+function importBook(ev) {
+  const f = ev.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { try { const d = JSON.parse(r.result);
+      if (Array.isArray(d.clients)) { CLIENTS = d.clients; COSTS = d.costs || COSTS; save(); refreshClients(); alert(T('saved')); }
+    } catch(e) { alert('!'); } };
+  r.readAsText(f);
+}
+
+// ── 5. routes ─────────────────────────────────────────────────────
+const dist = (a,b) => { const dx=(a.lat-b.lat)*69, dy=(a.lng-b.lng)*54.6; return Math.sqrt(dx*dx+dy*dy)*1.3; };
+function buildRoutes() {
+  if (!CLIENTS.length) { $('rOut').innerHTML = `<div class="lp-warn">${T('need_clients')}</div>`; return; }
+  const home = ZIPS[$('rHome').value.trim()] || ZIPS[CLIENTS[0].zip];
+  const days = Math.max(1, Math.min(6, +($('rDays').value||5)));
+  localStorage.setItem('lp_home', $('rHome').value.trim());
+  const pts = CLIENTS.map(c => ({...c, ...ZIPS[c.zip]}));
+  // farthest-point seeding, then nearest-seed assignment
+  const seeds = [pts[0]];
+  while (seeds.length < Math.min(days, pts.length)) {
+    let best=null, bd=-1;
+    pts.forEach(p => { const d = Math.min(...seeds.map(s=>dist(p,s))); if (d>bd){bd=d;best=p;} });
+    seeds.push(best);
+  }
+  const groups = seeds.map(()=>[]);
+  pts.forEach(p => { let bi=0, bd=1e9; seeds.forEach((s,i)=>{const d=dist(p,s); if(d<bd){bd=d;bi=i;}}); groups[bi].push(p); });
+  // nearest-neighbor order per group from home
+  const tour = g => { const rest=[...g]; const ordered=[]; let cur=home;
+    while(rest.length){ let bi=0,bd=1e9; rest.forEach((p,i)=>{const d=dist(cur,p); if(d<bd){bd=d;bi=i;}});
+      ordered.push(rest[bi]); cur=rest[bi]; rest.splice(bi,1);} return ordered; };
+  const tourMiles = g => { let m=0, cur=home; g.forEach(p=>{m+=dist(cur,p);cur=p;}); return m + dist(cur,home); };
+  const opt = groups.filter(g=>g.length).map(tour);
+  const optMiles = opt.reduce((s,g)=>s+tourMiles(g),0);
+  // baseline: insertion order chunked evenly
+  const chunk = Math.ceil(pts.length/days); let baseMiles=0;
+  for (let i=0;i<pts.length;i+=chunk) baseMiles += tourMiles(pts.slice(i,i+chunk));
+  const savedMi = Math.max(0, baseMiles-optMiles);
+  const savedMo = savedMi*4.3*0.65 + (savedMi/22)*4.3*30;   // $0.65/mi + time at $30/hr
+  window._routeSavings = savedMo;
+  $('rOut').innerHTML = opt.map((g,i)=>`<div class="lp-day"><div class="d">${T('day')} ${i+1} — ${g.length} clientes · ${tourMiles(g).toFixed(0)} ${T('miles')}</div>
+    <ol>${g.map(p=>`<li>${p.name} — ${p.zip} ${p.city||''}</li>`).join('')}</ol></div>`).join('')
+    + `<div class="lp-warn">${LANG==='es'
+      ? `Ruta agrupada: ${optMiles.toFixed(0)} mi/sem vs ~${baseMiles.toFixed(0)} sin agrupar → ahorras ~${fmt(savedMo)}/mes en gas y tiempo.`
+      : `Clustered route: ${optMiles.toFixed(0)} mi/wk vs ~${baseMiles.toFixed(0)} unclustered → you save ~${fmt(savedMo)}/mo in gas and time.`}</div>`;
+}
+
+// ── 6. before / after ─────────────────────────────────────────────
+function beforeAfter() {
+  if (!CLIENTS.length) { $('baOut').innerHTML = `<div class="lp-warn">${T('need_clients')}</div>`; return; }
+  const mult = c => c.freq==='w' ? 4.3 : 2.15;
+  const now = CLIENTS.reduce((s,c)=>s+c.price*mult(c),0);
+  const repriced = CLIENTS.reduce((s,c)=>{const z=ZIPS[c.zip]||{}; return s+Math.max(c.price, z.visit||c.price)*mult(c);},0);
+  const uplift = repriced-now;
+  const route = window._routeSavings || 0;
+  const upsell = CLIENTS.reduce((s,c)=>{const z=ZIPS[c.zip]||{}; return s+(z.upsells?z.upsells.cleanup:0);},0)/12;
+  const after = repriced + route + upsell;
+  $('baOut').innerHTML = `<div class="lp-hero">
+      <div class="now">${T('now_l')}: <strong>${fmt(now)}</strong></div>
+      <div class="after">${fmt(after)}/mes</div>
+      <div class="delta">+${fmt(after-now)}/mes (+${Math.round((after-now)/Math.max(now,1)*100)}%)</div>
+      <div class="lp-lines">
+        <div><span>↑ ${T('l_reprice')}</span><strong>+${fmt(uplift)}</strong></div>
+        <div><span>🚚 ${T('l_route')}</span><strong>+${fmt(route)}</strong></div>
+        <div><span>🧰 ${T('l_upsell')}</span><strong>+${fmt(upsell)}</strong></div>
+      </div>
+      ${route===0?`<div class="hint" style="margin-top:0.4rem;">${LANG==='es'?'(Arma tus rutas arriba para incluir el ahorro de manejo)':'(Build your routes above to include drive savings)'}</div>`:''}
+    </div>`;
+}
+
+// ── init ──────────────────────────────────────────────────────────
+$('banCities').textContent = DATA.ban_cities.join(', ') + '.';
+['cGas','cTruck','cDump','cEquip','cDays','cStops'].forEach(id => {
+  const k = id.slice(1).toLowerCase(); if (COSTS[k]) $(id).value = COSTS[k];
+});
+const savedHome = localStorage.getItem('lp_home'); if (savedHome) $('rHome').value = savedHome;
+applyLang(); refreshClients();
+</script>
+{% endblock %}
