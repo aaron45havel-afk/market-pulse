@@ -74,7 +74,7 @@
   <h2>📍 <span data-i="lookup_h">¿Cuánto cobrar en este ZIP?</span></h2>
   <p class="hint" data-i="lookup_hint">Escribe el código postal de la casa. Te decimos el precio sugerido para corte semanal, el mínimo por visita, y precios de trabajos extra.</p>
   <div class="lp-row">
-    <div class="lp-f"><label data-i="zip_l">Código postal</label><input id="lkZip" inputmode="numeric" pattern="[0-9]*" maxlength="5" placeholder="94027"></div>
+    <div class="lp-f"><label data-i="zip_l">Código postal</label><input id="lkZip" list="cityList" placeholder="94027 / Atherton" autocomplete="off"></div>
     <button class="lp-btn" onclick="lookupZip()" data-i="lookup_btn" style="align-self:flex-end;">Ver precio</button>
   </div>
   <div id="lkOut"></div>
@@ -85,7 +85,7 @@
   <h2>📐 <span data-i="quote_h">Cotizar una casa por tamaño</span></h2>
   <p class="hint" data-i="quote_hint">ZIP + pies cuadrados de pasto (mide con Google Maps si quieres). Nunca cobres menos del mínimo — cada parada te cuesta ~25 min de manejo y carga aunque el pasto sea chico.</p>
   <div class="lp-row">
-    <div class="lp-f"><label>ZIP</label><input id="qZip" inputmode="numeric" maxlength="5" placeholder="94010"></div>
+    <div class="lp-f"><label>ZIP</label><input id="qZip" list="cityList" placeholder="94010 / Burlingame" autocomplete="off"></div>
     <div class="lp-f"><label data-i="sqft_l">Pasto (sqft)</label><input id="qSqft" inputmode="numeric" placeholder="3000"></div>
     <div class="lp-f"><label data-i="freq_l">Frecuencia</label>
       <select id="qFreq"><option value="w" data-i="weekly">Cada semana</option><option value="b" data-i="biweekly">Cada 2 semanas</option></select></div>
@@ -118,7 +118,7 @@
   <p class="hint" data-i="clients_hint">Agrega tus clientes con lo que cobras hoy. Te marcamos en rojo los que pagan menos de lo que deberían — y cuánto subirles. Se guarda solo en este teléfono; usa Exportar para respaldar.</p>
   <div class="lp-row">
     <div class="lp-f"><label data-i="name_l">Nombre</label><input id="nName" placeholder="Sra. García"></div>
-    <div class="lp-f"><label>ZIP</label><input id="nZip" inputmode="numeric" maxlength="5" placeholder="94301"></div>
+    <div class="lp-f"><label>ZIP</label><input id="nZip" list="cityList" placeholder="94301 / Palo Alto" autocomplete="off"></div>
   </div>
   <div class="lp-row" style="margin-top:0.4rem;">
     <div class="lp-f"><label data-i="price_l">Cobro $/visita</label><input id="nPrice" inputmode="numeric" placeholder="60"></div>
@@ -174,6 +174,7 @@
 
 <div class="lp-note" data-i="foot">Precios sugeridos = mercado Bay Area 2026, por nivel de riqueza del ZIP (valor mediano de casa, datos Zillow). Son puntos de partida — ajusta por lote grande, pendiente, portón, perros. Tus datos de clientes nunca salen de tu teléfono. Esta página no es consejo legal ni financiero.</div>
 
+<datalist id="cityList"></datalist>
 <script id="zipData" type="application/json">{{ pricing | tojson }}</script>
 {% endblock %}
 
@@ -235,6 +236,7 @@ const I18N = {
   l_upsell:["Trabajos extra (1/cliente/año)","Extra jobs (1/client/yr)"],
   need_clients:["Primero agrega clientes arriba.","Add clients above first."],
   saved:["Guardado ✓","Saved ✓"],
+  pick_zip:["Esa ciudad tiene varios ZIPs — elige el correcto:","That city has several ZIPs — pick the right one:"],
 };
 let LANG = localStorage.getItem('lp_lang') || 'es';
 function applyLang() {
@@ -249,6 +251,34 @@ function toggleLang() { LANG = LANG === 'es' ? 'en' : 'es'; localStorage.setItem
 let CLIENTS = JSON.parse(localStorage.getItem('lp_clients') || '[]');
 let COSTS = JSON.parse(localStorage.getItem('lp_costs') || '{}');
 const save = () => { localStorage.setItem('lp_clients', JSON.stringify(CLIENTS)); localStorage.setItem('lp_costs', JSON.stringify(COSTS)); };
+
+// ── city search ───────────────────────────────────────────────────
+const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+const CITY_IDX = {};
+DATA.zips.forEach(z => { const k = norm(z.city); (CITY_IDX[k] = CITY_IDX[k] || []).push(z.zip); });
+(function fillDatalist(){
+  const dl = document.getElementById('cityList');
+  [...new Set(DATA.zips.map(z => z.city))].sort().forEach(c => {
+    const o = document.createElement('option'); o.value = c; dl.appendChild(o);
+  });
+})();
+function resolveZips(val) {
+  const v = (val || '').trim();
+  if (/^\d{5}$/.test(v)) return ZIPS[v] ? [v] : [];
+  const q = norm(v);
+  if (!q) return [];
+  let hits = Object.keys(CITY_IDX).filter(k => k === q);
+  if (!hits.length) hits = Object.keys(CITY_IDX).filter(k => k.startsWith(q));
+  if (!hits.length) hits = Object.keys(CITY_IDX).filter(k => k.includes(q));
+  return hits.flatMap(k => CITY_IDX[k]);
+}
+function zipChips(zips, inputId, cb) {
+  return `<div class="lp-warn">${T('pick_zip')}<div style="margin-top:0.4rem; display:flex; flex-wrap:wrap; gap:0.35rem;">`
+    + zips.map(z => { const d = ZIPS[z];
+        return `<button class="lp-btn sec" style="min-height:38px; padding:0.35rem 0.7rem; font-size:0.8rem;"
+          onclick="document.getElementById('${inputId}').value='${z}';${cb}">${z} · ${fmt(d.visit)} · T${d.tier}</button>`; }).join('')
+    + `</div></div>`;
+}
 
 // ── 1. lookup ─────────────────────────────────────────────────────
 function priceCard(z) {
@@ -268,13 +298,17 @@ function priceCard(z) {
   </div>`;
 }
 function lookupZip() {
-  const z = ZIPS[$('lkZip').value.trim()];
-  $('lkOut').innerHTML = z ? priceCard(z) : `<div class="lp-warn">${T('no_zip')}</div>`;
+  const zips = resolveZips($('lkZip').value);
+  if (zips.length === 1) { $('lkOut').innerHTML = priceCard(ZIPS[zips[0]]); return; }
+  if (zips.length > 1) { $('lkOut').innerHTML = zipChips(zips, 'lkZip', 'lookupZip()'); return; }
+  $('lkOut').innerHTML = `<div class="lp-warn">${T('no_zip')}</div>`;
 }
 
 // ── 2. sqft quote ─────────────────────────────────────────────────
 function quoteSqft() {
-  const z = ZIPS[$('qZip').value.trim()];
+  const zipsQ = resolveZips($('qZip').value);
+  if (zipsQ.length > 1) { $('qOut').innerHTML = zipChips(zipsQ, 'qZip', 'quoteSqft()'); return; }
+  const z = ZIPS[zipsQ[0]];
   const sqft = parseFloat($('qSqft').value) || 0;
   if (!z || sqft <= 0) { $('qOut').innerHTML = `<div class="lp-warn">${T('no_zip')}</div>`; return; }
   let per = Math.max(z.min, sqft / 1000 * z.ksqft);
@@ -309,7 +343,9 @@ function calcCosts() {
 
 // ── 4. clients ────────────────────────────────────────────────────
 function addClient() {
-  const c = { name: $('nName').value.trim() || 'Cliente', zip: $('nZip').value.trim(),
+  const zipsN = resolveZips($('nZip').value);
+  if (zipsN.length > 1) { $('clientList').insertAdjacentHTML('afterbegin', zipChips(zipsN, 'nZip', 'addClient()')); return; }
+  const c = { name: $('nName').value.trim() || 'Cliente', zip: zipsN[0] || '',
               price: +($('nPrice').value||0), freq: $('nFreq').value };
   if (!ZIPS[c.zip] || c.price <= 0) { alert(T('no_zip')); return; }
   CLIENTS.push(c); save(); $('nName').value = $('nZip').value = $('nPrice').value = '';
