@@ -634,21 +634,49 @@ def _median(xs):
     return xs[n // 2] if n % 2 else (xs[n // 2 - 1] + xs[n // 2]) / 2
 
 
+# The bills she'd still owe if the paycheck stopped — what a real emergency
+# fund has to cover. Deliberately excludes discretionary (dining, shopping,
+# travel…) AND the one-time renovation buckets, so a lumpy reno month can't
+# inflate the safety-net target.
+ESSENTIAL_BUCKETS = {
+    "Mortgage", "Rent", "HELOC", "Utilities", "Phone & Internet",
+    "Insurance", "Groceries", "Health & Pharmacy", "Auto & Transport",
+    "Gas & Fuel",
+}
+
+
+def _is_reno(t):
+    """A one-time renovation outflow: tagged to a project or booked as a
+    home-improvement purchase — kept out of the recurring-spend figures."""
+    return bool(t.get("project_id")) or t.get("bucket") == "Home Improvement"
+
+
 def monthly_figures(txns):
     """Median monthly income / spend / fixed / variable across the months
-    present — robust to a partial first or last month."""
+    present — robust to a partial first or last month. Also two normalized
+    figures that ignore one-time renovation spending: `essential` (the bills
+    an emergency fund must cover) and `spend_recurring` (everyday spend
+    without the lumpy reno)."""
     months = sorted({t["date"][:7] for t in txns if t.get("date")})
-    inc, spd, fix, var = [], [], [], []
+    inc, spd, fix, var, ess, rec = [], [], [], [], [], []
     for mo in months:
         mt = [t for t in txns if t["date"][:7] == mo]
         inc.append(sum(t["amount"] for t in mt if t["cls"] == "income"))
-        out = lambda cls=None: -sum(
-            t["amount"] for t in mt if t["amount"] < 0
-            and t["cls"] not in ("transfer", "income")
-            and (cls is None or t["cls"] == cls))
+
+        def out(cls=None, essential=False, no_reno=False):
+            return -sum(
+                t["amount"] for t in mt if t["amount"] < 0
+                and t["cls"] not in ("transfer", "income")
+                and (cls is None or t["cls"] == cls)
+                and (not essential or t.get("bucket") in ESSENTIAL_BUCKETS)
+                and (not no_reno or not _is_reno(t)))
         spd.append(out()); fix.append(out("fixed")); var.append(out("variable"))
+        ess.append(out(essential=True, no_reno=True))
+        rec.append(out(no_reno=True))
     return {"income": _median(inc), "spend": _median(spd),
-            "fixed": _median(fix), "variable": _median(var), "n_months": len(months)}
+            "fixed": _median(fix), "variable": _median(var),
+            "essential": _median(ess), "spend_recurring": _median(rec),
+            "n_months": len(months)}
 
 
 def payoff_months(balance, apr, payment):
@@ -703,6 +731,12 @@ def vital_signs(txns, settings, accounts=None):
     m = monthly_figures(txns)
     income = float(s.get("income") or 0) or m["income"]
     spend, fixed, variable = m["spend"], m["fixed"], m["variable"]
+    # normalized figures that ignore lumpy one-time renovation spending
+    essential = m["essential"]
+    spend_recurring = m["spend_recurring"]
+    # what the cushion is measured against: the bills a lost paycheck must
+    # still cover. Fall back to recurring, then total, if we can't tell yet.
+    cushion_base = essential or spend_recurring or spend
     from_accounts, liquid_breakdown = liquid_savings(accounts)
     savings_extra = float(s.get("savings_extra") or 0)
     if liquid_breakdown:
@@ -724,14 +758,17 @@ def vital_signs(txns, settings, accounts=None):
     for mo in months:
         mt = [t for t in txns if t["date"][:7] == mo]
         mi = sum(t["amount"] for t in mt if t["cls"] == "income")
-        mo_out = -sum(t["amount"] for t in mt if t["amount"] < 0 and t["cls"] not in ("transfer", "income"))
+        # exclude one-time reno so a HELOC-funded remodel doesn't read as
+        # "living beyond your means" — the renovation is tracked on its own tab
+        mo_out = -sum(t["amount"] for t in mt if t["amount"] < 0
+                      and t["cls"] not in ("transfer", "income") and not _is_reno(t))
         net3.append(mi - mo_out)
     avg_net = round(_median(net3), 2) if net3 else 0.0
 
     means_light = ("green" if avg_net >= 0
                    else "yellow" if income and avg_net > -0.10 * income else "red")
     ratio = (fixed / income * 100) if income else None
-    months_saved = (savings / spend) if (spend and savings) else (0.0 if spend else None)
+    months_saved = (savings / cushion_base) if (cushion_base and savings) else (0.0 if cushion_base else None)
     interest = hb * hapr / 100 / 12 if hb and hapr else 0.0
     pct_interest = round(interest / hpay * 100) if hpay else None
     heloc_light = ("gray" if not (hb and hpay)
@@ -747,7 +784,7 @@ def vital_signs(txns, settings, accounts=None):
                   "note": (f"{round(ratio)}% of income is locked-in bills" if ratio is not None else "add your income")},
         "cushion": {"light": _light(months_saved if savings else None, 3, 1),
                     "value": round(months_saved, 1) if months_saved is not None else None, "label": "Cushion", "unit": "mo",
-                    "note": (f"{_money(savings)} on hand — {round(months_saved,1)} of {round(goal)} months" if (savings and months_saved is not None)
+                    "note": (f"{_money(savings)} on hand — {round(months_saved,1)} of {round(goal)} months of bills" if (savings and months_saved is not None)
                              else f"{_money(savings)} on hand" if savings
                              else ("import an account to read savings" if savings_source == "accounts" else "set your savings balance"))},
         "heloc": {"light": heloc_light, "value": pct_interest, "label": "HELOC direction", "unit": "%",
@@ -763,6 +800,8 @@ def vital_signs(txns, settings, accounts=None):
     return {
         "lights": lights, "income": round(income, 2), "spend": round(spend, 2),
         "fixed": round(fixed, 2), "variable": round(variable, 2), "avg_net": avg_net,
+        "essential": round(essential, 2), "spend_recurring": round(spend_recurring, 2),
+        "cushion_base": round(cushion_base, 2),
         "savings": savings, "cushion_goal": goal,
         "savings_source": savings_source, "savings_from_accounts": from_accounts,
         "savings_extra": savings_extra, "liquid_accounts": liquid_breakdown,
@@ -1270,6 +1309,11 @@ def money_roadmap(vitals, reno=None, retire=None):
     retire = retire or {}
 
     spend = float(v.get("spend") or 0)
+    # the safety net is sized to essential bills (mortgage, utilities,
+    # insurance, groceries…), NOT total spend — so a one-time renovation
+    # month doesn't balloon the target. Falls back to spend if we can't
+    # separate essentials yet.
+    essential = float(v.get("essential") or 0) or float(v.get("spend_recurring") or 0) or spend
     savings = float(v.get("savings") or 0)
     avg_net = float(v.get("avg_net") or 0)
     card = float(v.get("card_balance") or 0)
@@ -1278,7 +1322,7 @@ def money_roadmap(vitals, reno=None, retire=None):
     heloc_apr = float(v.get("heloc_apr") or 0)
 
     starter_target = 2000.0
-    safety_target = round(3 * spend, 2) if spend else 0.0
+    safety_target = round(3 * essential, 2) if essential else 0.0
 
     steps = []
 
@@ -1314,10 +1358,10 @@ def money_roadmap(vitals, reno=None, retire=None):
         metric=(_money(card) + " left" if card > 0 else "paid off — nice"),
         action="Attack the card", tab="thismonth", mode="kill_debt")
 
-    # 4 — a real safety net (three months of costs)
+    # 4 — a real safety net (three months of ESSENTIAL bills, not one-time reno)
     add("safety", "Build a 3-month safety net",
-        "Three months of costs" + (" (~" + _money(safety_target) + ")" if safety_target else "") +
-        " keeps a big surprise from undoing the progress above.",
+        "Three months of essential bills" + (" (~" + _money(safety_target) + ")" if safety_target else "") +
+        " — mortgage, utilities, insurance, groceries — keeps a lost paycheck from undoing the progress above. One-time renovation costs are left out so the target doesn't jump around.",
         done=(safety_target > 0 and savings >= safety_target),
         metric=(_money(savings) + " of " + _money(safety_target) + " saved"
                 if safety_target else "add a month of spending first"),
