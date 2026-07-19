@@ -371,7 +371,7 @@ function targetsCard(v) {
     <div class="hh-form" style="margin-top:0.9rem;">
       <div class="hh-f"><label>Cushion goal (months)</label><input class="hh-in" id="tGoal" type="number" step="1" value="${val('cushion_goal', 4)}"></div>
       ${savingsField(v)}
-      <div class="hh-f"><label>Monthly income (optional)</label><input class="hh-in" id="tInc" type="number" step="100" value="${val('income', '')}" placeholder="auto from deposits"></div>
+      <div class="hh-f"><label>Monthly income</label><input class="hh-in" id="tInc" type="number" step="100" value="${val('income', v.income_auto ? Math.round(v.income_auto) : '')}" placeholder="auto from deposits">${v.income_source === 'deposits' ? '<span class="hh-prefill">read from deposits</span>' : v.income_source === 'none' ? '<span class="hh-prefill" style="color:var(--gold-ink)">no paycheck spotted — set it or tag a deposit "Income"</span>' : ''}</div>
       <div class="hh-f"><label>HELOC balance</label><input class="hh-in" id="tHb" type="number" step="100" value="${val('heloc_balance', helocAuto)}">${helocAuto != null ? '<span class="hh-prefill">read from statement</span>' : ''}</div>
       <div class="hh-f"><label>HELOC rate (APR %)</label><input class="hh-in" id="tHapr" type="number" step="0.01" value="${val('heloc_apr', '')}" placeholder="e.g. 7.12"></div>
       <div class="hh-f"><label>HELOC payment / mo</label><input class="hh-in" id="tHpay" type="number" step="10" value="${val('heloc_payment', '')}"></div>
