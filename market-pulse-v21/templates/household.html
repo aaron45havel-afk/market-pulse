@@ -92,6 +92,13 @@
   .hh-renobtn { font-size: 0.68rem; font-weight: 700; color: var(--ink-3); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; cursor: pointer; white-space: nowrap; }
   .hh-renobtn:hover { border-color: var(--gold); color: var(--gold-ink); }
   .hh-renobtn.on { background: var(--gold-soft); color: var(--gold-ink); border-color: var(--gold); }
+  .hh-budget td { padding: 0.3rem 0.35rem; }
+  .hh-bi { border: 1px solid transparent; border-radius: 6px; padding: 0.25rem 0.35rem; font-size: 0.82rem; background: transparent; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .hh-bi:hover { border-color: var(--line); } .hh-bi:focus { outline: none; border-color: var(--primary); background: var(--surface-2); }
+  .hh-bi.n { width: 62px; text-align: right; } .hh-bi.u { width: 54px; }
+  .hh-secrow td { background: var(--surface-2); border-bottom: 1px solid var(--line); }
+  .hh-x { background: none; border: none; color: var(--ink-4); font-size: 0.9rem; cursor: pointer; padding: 0.2rem 0.35rem; }
+  .hh-x:hover { color: var(--coral-ink); }
   .hh-recur { display: flex; justify-content: space-between; align-items: center; padding: 0.45rem 0; border-bottom: 1px solid var(--line); font-size: 0.85rem; }
   .hh-recur .m { font-size: 0.7rem; color: var(--ink-3); }
 
@@ -440,9 +447,139 @@ function renderProject() {
       <div class="hh-card"><h2>What it costs to carry</h2>${payoffPanel(s)}</div>
     </div>
     ${d.suggestions.length ? suggestCard(d.suggestions) : ''}
-    <div class="hh-card"><h2>Tagged to this renovation <span class="hh-pill">${d.tagged.length}</span></h2>${d.tagged.length ? tagTable(d.tagged, true) : '<div class="hh-empty">Nothing tagged yet.</div>'}</div>`;
+    <div class="hh-card"><h2>Tagged to this renovation <span class="hh-pill">${d.tagged.length}</span></h2>${d.tagged.length ? tagTable(d.tagged, true) : '<div class="hh-empty">Nothing tagged yet.</div>'}</div>
+    <div id="budget"><div class="hh-empty">Loading budget…</div></div>`;
   if (s.vendors.length) renderRenoVendors(s.vendors);
   wirePayoff(s);
+  loadBudget();
+}
+
+// ── Kitchen budget builder ─────────────────────────────────────────
+const SECTION_ORDER = ["Cabinets","Countertops","Appliances","Flooring","Backsplash","Fixtures & Lighting","Plumbing","Electrical","Demo & Prep","Paint & Walls","Permits & Fees","Labor & Install","Other"];
+async function loadBudget() {
+  STATE.budget = await api('/' + BOOK + '/projects/' + STATE.curProject + '/budget');
+  renderBudget();
+}
+function itemTotal(it) { return it.qty * it.unit_cost + it.labor; }
+function renderBudget() {
+  const b = STATE.budget, s = b.summary, m = b.meta, f = s.financing;
+  if (!b.items.length) {
+    $('budget').innerHTML = `<div class="hh-card"><h2>Kitchen budget</h2>
+      <p class="hint">Start from a realistic San Leandro "nice full kitchen" budget (2026 Bay Area prices) and edit from there — swap materials, add items you find online, and watch it against the HELOC.</p>
+      <button class="btn-primary" onclick="seedBudget()">Build a starter kitchen budget</button></div>`;
+    return;
+  }
+  // group items by section
+  const bySec = {};
+  b.items.forEach(it => (bySec[it.section] = bySec[it.section] || []).push(it));
+  const secHtml = SECTION_ORDER.filter(sec => bySec[sec]).map(sec => {
+    const rows = bySec[sec].map(it => `<tr>
+      <td><input class="hh-bi" style="width:100%" value="${(it.name||'').replace(/"/g,'&quot;')}" onchange="editItem(${it.id},'name',this.value)"></td>
+      <td><input class="hh-bi n" value="${it.qty}" onchange="editItem(${it.id},'qty',this.value)"></td>
+      <td><input class="hh-bi u" value="${it.unit||''}" onchange="editItem(${it.id},'unit',this.value)"></td>
+      <td>$<input class="hh-bi n" value="${it.unit_cost}" onchange="editItem(${it.id},'unit_cost',this.value)"></td>
+      <td>$<input class="hh-bi n" value="${it.labor}" onchange="editItem(${it.id},'labor',this.value)"></td>
+      <td class="amt">${fmt(itemTotal(it))}</td>
+      <td>${it.url ? `<a href="${it.url}" target="_blank" class="hh-note" style="margin:0">link</a> ` : ''}<button class="hh-x" onclick="delItem(${it.id})" title="remove">✕</button></td></tr>`).join('');
+    const secTotal = bySec[sec].reduce((a, it) => a + itemTotal(it), 0);
+    return `<tr class="hh-secrow"><td colspan="5"><strong>${sec}</strong></td><td class="amt"><strong>${fmt(secTotal)}</strong></td><td></td></tr>${rows}`;
+  }).join('');
+  const overUnder = s.target ? (s.over_under > 0 ? `<span style="color:var(--coral-ink)">${fmt(s.over_under)} over your ${fmt(s.target)} target</span>` : `<span style="color:var(--mint-ink)">${fmt(-s.over_under)} under your ${fmt(s.target)} target</span>`) : 'set a target below';
+  $('budget').innerHTML = `
+    <div class="hh-card"><h2>Kitchen budget</h2>
+      <div class="hh-reno-head" style="margin-bottom:0.8rem;">
+        <div class="hh-tile"><div class="k">Materials + labor</div><div class="v">${fmt(s.subtotal)}</div><div class="sub">${b.items.length} line items</div></div>
+        <div class="hh-tile"><div class="k">+ Contingency ${s.contingency_pct}%</div><div class="v">${fmt(s.contingency)}</div><div class="sub">buffer for surprises</div></div>
+        <div class="hh-tile"><div class="k">Projected total</div><div class="v" style="color:var(--primary)">${fmt(s.total)}</div><div class="sub">${overUnder}</div></div>
+        <div class="hh-tile"><div class="k">HELOC can cover</div><div class="v" style="color:${f.can_fund>=s.total?'var(--mint-ink)':'var(--gold-ink)'}">${fmt(f.can_fund)}</div><div class="sub">${f.can_fund>=s.total?'covers the whole budget':'of the '+fmt(s.total)}</div></div>
+      </div>
+      ${financingPanel(f, m, s)}
+      <details class="hh-card" style="background:var(--surface-2);"><summary style="cursor:pointer;font-weight:600;">Kitchen measurements <span class="hh-note" style="margin:0">— enter once; quantities update</span></summary>${measureForm(m)}</details>
+      <table class="hh-tx hh-budget"><thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Unit $</th><th>Labor $</th><th style="text-align:right">Total</th><th></th></tr></thead><tbody>${secHtml}</tbody></table>
+      ${addItemRow(b.sections)}
+    </div>`;
+}
+function financingPanel(f, m, s) {
+  return `<div class="hh-card" style="background:var(--primary-soft);border-color:var(--primary);">
+    <div style="font-weight:700;margin-bottom:0.3rem;">Can the HELOC cover it?</div>
+    <div class="hh-note" style="margin:0 0 0.6rem;">House ${fmt(f.home_value)} · at ${f.target_cltv}% loan-to-value that's ${fmt(f.home_value*f.target_cltv/100)} of total borrowing. After the mortgage, a HELOC could go to about <strong>${fmt(f.potential_limit)}</strong> — roughly <strong>${fmt(f.potential_increase)}</strong> more than today's ${fmt(f.heloc_limit)} limit. Available right now: ${fmt(f.available_now)}.</div>
+    <div class="hh-form">
+      <div class="hh-f"><label>Home value</label><input class="hh-in" id="mHome" type="number" step="10000" value="${m.home_value||950000}"></div>
+      <div class="hh-f"><label>Mortgage balance</label><input class="hh-in" id="mMort" type="number" step="10000" value="${m.mortgage_balance||''}" placeholder="what's left owed"></div>
+      <div class="hh-f"><label>Target loan-to-value %</label><input class="hh-in" id="mCltv" type="number" step="1" value="${m.target_cltv||80}"></div>
+      <div class="hh-f"><label>Budget target</label><input class="hh-in" id="mTarget" type="number" step="1000" value="${m.budget_target||''}" placeholder="e.g. 90000"></div>
+      <div class="hh-f"><label>Contingency %</label><input class="hh-in" id="mCont" type="number" step="1" value="${s.contingency_pct}"></div>
+    </div>
+    <button class="btn-secondary" style="margin-top:0.6rem;" onclick="saveMeta({home_value:mv('mHome'),mortgage_balance:mv('mMort'),target_cltv:mv('mCltv'),budget_target:mv('mTarget'),contingency_pct:mv('mCont')})">Save</button>
+  </div>`;
+}
+function measureForm(m) {
+  return `<div class="hh-form" style="margin-top:0.8rem;">
+    <div class="hh-f"><label>Floor length (ft)</label><input class="hh-in" id="msFl" type="number" step="0.5" value="${m.floor_len_ft||''}"></div>
+    <div class="hh-f"><label>Floor width (ft)</label><input class="hh-in" id="msFw" type="number" step="0.5" value="${m.floor_wid_ft||''}"></div>
+    <div class="hh-f"><label>Counter run (ft)</label><input class="hh-in" id="msCr" type="number" step="0.5" value="${m.counter_run_ft||''}"></div>
+    <div class="hh-f"><label>Cabinets (linear ft)</label><input class="hh-in" id="msCab" type="number" step="0.5" value="${m.cabinet_lf||''}"></div>
+    <div class="hh-f"><label>Backsplash length (ft)</label><input class="hh-in" id="msBl" type="number" step="0.5" value="${m.backsplash_len_ft||''}"></div>
+    <div class="hh-f"><label>Backsplash height (in)</label><input class="hh-in" id="msBh" type="number" step="1" value="${m.backsplash_height_in||18}"></div>
+    </div>
+    <div class="hh-note">From this: floor ${m.floor_sqft||'—'} sqft, counter run drives countertop sqft, backsplash sqft. Saving updates the seeded quantities (your edits stay).</div>
+    <button class="btn-secondary" style="margin-top:0.5rem;" onclick="saveMeta({floor_len_ft:mv('msFl'),floor_wid_ft:mv('msFw'),counter_run_ft:mv('msCr'),cabinet_lf:mv('msCab'),backsplash_len_ft:mv('msBl'),backsplash_height_in:mv('msBh')})">Save measurements</button>`;
+}
+function addItemRow(sections) {
+  const opts = sections.map(s => `<option>${s}</option>`).join('');
+  return `<div class="hh-card" style="background:var(--surface-2);margin-top:0.8rem;">
+    <div style="font-weight:600;margin-bottom:0.4rem;">Add an item</div>
+    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:flex-end;">
+      <div class="hh-f" style="flex:2;min-width:150px;"><label>Name</label><input class="hh-in" id="aiName"></div>
+      <div class="hh-f"><label>Section</label><select class="hh-sel" id="aiSec">${opts}</select></div>
+      <div class="hh-f" style="max-width:70px;"><label>Qty</label><input class="hh-in" id="aiQty" type="number" value="1"></div>
+      <div class="hh-f" style="max-width:90px;"><label>Unit $</label><input class="hh-in" id="aiCost" type="number"></div>
+      <div class="hh-f" style="max-width:90px;"><label>Labor $</label><input class="hh-in" id="aiLabor" type="number"></div>
+      <button class="btn-primary" onclick="addItem()">Add</button>
+    </div>
+    <div style="margin-top:0.6rem;display:flex;gap:0.4rem;align-items:flex-end;flex-wrap:wrap;">
+      <div class="hh-f" style="flex:1;min-width:180px;"><label>…or paste a product link she found online</label><input class="hh-in" id="aiUrl" placeholder="https://homedepot.com/... "></div>
+      <button class="btn-secondary" onclick="fetchUrl()">Look up price</button>
+      <span id="aiMsg" class="hh-note" style="margin:0"></span>
+    </div>
+  </div>`;
+}
+function mv(id) { const el = $(id); return el && el.value !== '' ? parseFloat(el.value) : null; }
+async function editItem(id, field, value) {
+  const v = (field === 'name' || field === 'unit') ? value : parseFloat(value);
+  await api('/' + BOOK + '/projects/' + STATE.curProject + '/budget/items/' + id, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({[field]: v}) });
+  await loadBudget();
+}
+async function delItem(id) {
+  await api('/' + BOOK + '/projects/' + STATE.curProject + '/budget/items/' + id, { method: 'DELETE' });
+  await loadBudget();
+}
+async function addItem() {
+  const name = ($('aiName')||{}).value.trim(); if (!name) return;
+  await api('/' + BOOK + '/projects/' + STATE.curProject + '/budget/items', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, section: $('aiSec').value, qty: mv('aiQty')||1, unit_cost: mv('aiCost')||0, labor: mv('aiLabor')||0, url: ($('aiUrl')||{}).value||null}) });
+  await loadBudget();
+}
+async function seedBudget() {
+  await api('/' + BOOK + '/projects/' + STATE.curProject + '/budget/seed', { method: 'POST' });
+  await loadBudget();
+}
+async function saveMeta(meta) {
+  Object.keys(meta).forEach(k => meta[k] == null && delete meta[k]);
+  await api('/' + BOOK + '/projects/' + STATE.curProject + '/meta', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({meta}) });
+  await loadBudget();
+}
+async function fetchUrl() {
+  const url = ($('aiUrl')||{}).value.trim(); if (!url) return;
+  $('aiMsg').textContent = 'Reading…';
+  try {
+    const r = await api('/' + BOOK + '/projects/' + STATE.curProject + '/budget/fetch-url', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({url}) });
+    if ($('aiName')) $('aiName').value = r.name || '';
+    if (r.price != null && $('aiCost')) $('aiCost').value = r.price;
+    $('aiMsg').textContent = r.price != null ? `Found ${r.name ? '"' + r.name.slice(0,40) + '"' : ''} at $${r.price} — review and Add.` : 'Got the name; add the price yourself.';
+  } catch (e) {
+    let m = 'Could not read that link.'; try { const j = await e.json(); if (j.error) m = j.error; } catch(_){}
+    $('aiMsg').textContent = m;
+  }
 }
 function renderRenoVendors(vendors) {
   const max = vendors[0].amount;
