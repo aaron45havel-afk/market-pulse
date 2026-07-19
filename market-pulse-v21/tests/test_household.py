@@ -109,6 +109,35 @@ def test_suggest_reno_and_candidates():
 
 
 # ── monthly figures / normalization ────────────────────────────────
+def test_fixed_bills():
+    rows = [
+        # a recurring mortgage across 2 months (fixed)
+        txn("2026-05-02", -2664, "Mortgage", desc="LOANDEPOT"),
+        txn("2026-06-02", -2664, "Mortgage", desc="LOANDEPOT"),
+        # a recurring phone bill (fixed)
+        txn("2026-05-10", -193, "Phone & Internet", desc="ATT"),
+        txn("2026-06-10", -193, "Phone & Internet", desc="ATT"),
+        # a HELOC payment (debt)
+        txn("2026-06-15", -669, "HELOC", desc="G1 HELOC PMT"),
+        # groceries (variable) — should NOT appear as a fixed bill
+        txn("2026-06-05", -400, "Groceries", desc="SAFEWAY"),
+        # income — never a bill
+        txn("2026-06-01", 5000, "Income", desc="PAYROLL"),
+    ]
+    fb = H.fixed_bills(rows)
+    names = [b["merchant"] for b in fb["bills"]]
+    check("SAFEWAY" not in names, "groceries excluded from fixed bills")
+    check("PAYROLL" not in names, "income excluded from fixed bills")
+    check(any("LOANDEPOT" in n for n in names), "mortgage is a fixed bill")
+    check(any("HELOC" in n for n in names), "HELOC payment is a debt bill")
+    approx(fb["total"], 2664 + 193 + 669, "total = the committed nut")
+    mort = next(b for b in fb["bills"] if "LOANDEPOT" in b["merchant"])
+    check(mort["recurring"] and mort["months"] == 2, "mortgage flagged recurring across 2 months")
+    heloc = next(b for b in fb["bills"] if "HELOC" in b["merchant"])
+    check(not heloc["recurring"], "single-month HELOC not flagged recurring")
+    check(any(s["bucket"] == "Mortgage" for s in fb["sections"]), "sections roll up by bucket")
+
+
 def test_monthly_and_essential():
     rows = [
         txn("2026-06-01", 12000, "Income"),

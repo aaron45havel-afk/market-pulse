@@ -257,6 +257,7 @@ async function boot() {
       <button class="hh-tab" data-t="plan" onclick="go('plan')">Plan</button>
       <button class="hh-tab" data-t="thismonth" onclick="go('thismonth')">This Month</button>
       <button class="hh-tab" data-t="spending" onclick="go('spending')">Spending</button>
+      <button class="hh-tab" data-t="bills" onclick="go('bills')">Fixed Bills</button>
       <button class="hh-tab" data-t="reno" onclick="go('reno')">Renovation</button>
       <button class="hh-tab" data-t="retire" onclick="go('retire')">Retirement</button>
     </div>
@@ -269,6 +270,7 @@ function go(name) {
   if (name === 'plan') loadRoadmap();
   else if (name === 'thismonth') loadThisMonth();
   else if (name === 'spending') loadDashboard();
+  else if (name === 'bills') loadBills();
   else if (name === 'retire') loadRetirement();
   else loadReno();
 }
@@ -885,6 +887,39 @@ async function tagLabor(id) {
 async function removePayee(name) {
   await api('/' + BOOK + '/reno-payees', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({remove: name}) });
   await loadProject();
+}
+
+// ══ FIXED BILLS ═══════════════════════════════════════════════════
+async function loadBills() {
+  if (!STATE.hasData) { $('tab').innerHTML = emptyImportPrompt(); wireDrop(); renderAccounts(); return; }
+  const b = await api('/' + BOOK + '/bills');
+  STATE.bills = b;
+  renderBills(b);
+}
+function renderBills(b) {
+  if (!b.bills.length) {
+    $('tab').innerHTML = `<div class="hh-card"><h2>Her fixed bills</h2>
+      <p class="hint">The recurring costs that go out every month — mortgage, utilities, insurance, phone, subscriptions, loan payments — show up here once a statement or two is imported.</p></div>`;
+    return;
+  }
+  const secBars = b.sections.map(s => `<div class="hh-bar"><div class="row"><span class="nm">${s.bucket}</span><span class="amt">${fmt(s.amount)}<span class="m">/mo</span></span></div><div class="track"><div class="fill" style="width:${Math.max(3, s.amount / b.total * 100)}%;background:var(--primary)"></div></div></div>`).join('');
+  const rows = b.bills.map(x => `<tr>
+    <td><strong>${x.merchant}</strong><div class="hh-note" style="margin:0">${x.bucket}${x.recurring ? ' · every month' : ' · seen once so far'}</div></td>
+    <td class="amt">${fmt(x.typical)} <span class="hh-note" style="margin:0">/mo</span></td></tr>`).join('');
+  $('tab').innerHTML = `
+    <div class="hh-card">
+      <h2>Her fixed bills — the monthly nut</h2>
+      <p class="hint">The committed, recurring costs that go out every month no matter what. This number is the anchor for the whole plan — it's what her income has to cover before anything else.</p>
+      <div class="hh-reno-head" style="margin-bottom:0.8rem;">
+        <div class="hh-tile"><div class="k">Total fixed bills</div><div class="v" style="color:var(--primary)">${fmt(b.total)}</div><div class="sub">/mo committed</div></div>
+        <div class="hh-tile"><div class="k">Bills tracked</div><div class="v">${b.count}</div><div class="sub">recurring payees</div></div>
+      </div>
+      <div class="hh-nw-h">By category</div>
+      <div class="hh-bars" style="margin:0.4rem 0 1rem;">${secBars}</div>
+      <div class="hh-nw-h">Every fixed bill</div>
+      <table class="hh-tx"><tbody>${rows}</tbody></table>
+      <div class="hh-note">Something mis-filed? Re-bucket it on the Spending tab and it moves here. "Fixed" covers housing, utilities, insurance, phone and subscriptions; "debt" covers the loan, HELOC and card payments.</div>
+    </div>`;
 }
 
 // ══ IMPORT (shared) ═══════════════════════════════════════════════
