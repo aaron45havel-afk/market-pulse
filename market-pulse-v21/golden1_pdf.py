@@ -73,12 +73,23 @@ def parse(pdf_bytes: bytes) -> dict:
         raise RuntimeError(f"could not open PDF: {e}") from e
     full = "\n".join(p.get_text() for p in doc)
     if "HELOC" in full or "HOME EQUITY LINE OF CREDIT" in full:
-        return {"type": "heloc", "accounts": [_parse_heloc(full)]}
+        return {"type": "heloc",
+                "accounts": [_parse_card(full, "heloc", "Golden 1 HELOC")]}
+    if "Credit Card Statement" in full:
+        last4 = _card_last4(full)
+        name = "Golden 1 Credit Card" + (f" {last4}" if last4 else "")
+        return {"type": "credit_card",
+                "accounts": [_parse_card(full, "credit_card", name)]}
     return {"type": "deposit", "accounts": _parse_deposit(doc)}
 
 
-# ── HELOC (credit-card style) ──────────────────────────────────────
-def _parse_heloc(full: str) -> dict:
+def _card_last4(full: str):
+    m = re.search(r"\*{4,}(\d{4})", full)          # ******0741
+    return m.group(1) if m else None
+
+
+# ── Card statements — HELOC & credit card share this layout ────────
+def _parse_card(full: str, kind: str, name: str) -> dict:
     lines = [ln.strip() for ln in full.split("\n")]
 
     def after(label):
@@ -87,9 +98,15 @@ def _parse_heloc(full: str) -> dict:
                 return lines[i + 1]
         return None
 
+    apr = _pct(after("Annual Percentage Rate"))
+    if apr is None:                                # credit cards list the APR
+        for l in lines:                            # only in the calc table
+            m = re.match(r"^(\d{1,2}\.\d{2,4})%\s*\(v\)", l)
+            if m:
+                apr = float(m.group(1)); break
     summary = {
         "balance": _money(after("New Balance")),
-        "apr": _pct(after("Annual Percentage Rate")),
+        "apr": apr,
         "min_payment": _money(after("Minimum Payment Due:")),
         "interest": _money(after("Interest Charged")),
         "credit_limit": _money(after("Credit Limit")),
@@ -126,7 +143,7 @@ def _parse_heloc(full: str) -> dict:
             else:
                 i += 1
     txns = _dedupe(txns)
-    return {"name": "Golden 1 HELOC", "kind": "heloc",
+    return {"name": name, "kind": kind,
             "transactions": txns, "summary": summary}
 
 
