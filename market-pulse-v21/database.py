@@ -100,10 +100,78 @@ def _ensure_landscaper_tables():
         conn.close()
 
 
+def _ensure_household_tables():
+    """Household finance dashboard tables — own connection/transaction,
+    same rationale as _ensure_landscaper_tables (isolated from the big
+    init_db block so a fresh DB always gets these).
+
+    Privacy: hh_txns stores only redacted descriptions + signed amounts;
+    raw statement files are never persisted. The unguessable book code IS
+    the auth (admin creates the book, texts the /household?book=CODE link)."""
+    conn = _get_conn()
+    if not conn: return
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS hh_books (
+                id         SERIAL PRIMARY KEY,
+                code       VARCHAR(24) NOT NULL UNIQUE,
+                name       VARCHAR(80),
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS hh_accounts (
+                id         SERIAL PRIMARY KEY,
+                book_code  VARCHAR(24) NOT NULL,
+                name       VARCHAR(80) NOT NULL,
+                kind       VARCHAR(20) NOT NULL DEFAULT 'checking',
+                mapping    TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("""CREATE INDEX IF NOT EXISTS hh_accounts_book_idx
+                       ON hh_accounts(book_code)""")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS hh_txns (
+                id         SERIAL PRIMARY KEY,
+                book_code  VARCHAR(24) NOT NULL,
+                account_id INTEGER NOT NULL,
+                txn_date   DATE NOT NULL,
+                descr      VARCHAR(200) NOT NULL,
+                amount     REAL NOT NULL,
+                bucket     VARCHAR(40) NOT NULL,
+                hash       VARCHAR(24) NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("""CREATE INDEX IF NOT EXISTS hh_txns_book_idx
+                       ON hh_txns(book_code)""")
+        cur.execute("""CREATE UNIQUE INDEX IF NOT EXISTS hh_txns_dedupe_idx
+                       ON hh_txns(book_code, account_id, hash)""")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS hh_rules (
+                id         SERIAL PRIMARY KEY,
+                book_code  VARCHAR(24) NOT NULL,
+                keyword    VARCHAR(60) NOT NULL,
+                bucket     VARCHAR(40) NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("""CREATE INDEX IF NOT EXISTS hh_rules_book_idx
+                       ON hh_rules(book_code)""")
+        conn.commit(); cur.close()
+    except Exception as e:
+        logger.error(f"household table init error: {e}")
+    finally:
+        conn.close()
+
+
 def init_db():
-    # Self-contained migration first, in its own transaction, so it can't
-    # be rolled back by an unrelated failure in the block below.
+    # Self-contained migrations first, each in its own transaction, so
+    # they can't be rolled back by an unrelated failure in the block below.
     _ensure_landscaper_tables()
+    _ensure_household_tables()
     conn = _get_conn()
     if not conn: return
     try:
@@ -987,5 +1055,240 @@ def landscaper_save_costs(code: str, costs: dict) -> bool:
         n = cur.rowcount
         conn.commit(); cur.close()
         return n > 0
+    finally:
+        conn.close()
+
+
+# ─── Household finance dashboard ────────────────────────────────────
+def household_create_book(name: str) -> str | None:
+    """Create a household book with an unguessable code. Admin-only path
+    at the API layer; the code is the access key for reads/writes."""
+    import secrets
+    code = secrets.token_urlsafe(9)[:12]
+    conn = _get_conn()
+    if not conn: return None
+    try:
+        cur = conn.cursor()
+        cur.execute("INSERT INTO hh_books (code, name) VALUES (%s, %s)",
+                    (code, (name or "Household")[:80]))
+        conn.commit(); cur.close()
+        return code
+    except Exception as e:
+        logger.error(f"household_create_book failed: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+def household_book_exists(code: str) -> bool:
+    conn = _get_conn()
+    if not conn: return False
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM hh_books WHERE code = %s", (code,))
+        ok = cur.fetchone() is not None
+        cur.close()
+        return ok
+    finally:
+        conn.close()
+
+
+def household_list_books() -> list[dict]:
+    conn = _get_conn()
+    if not conn: return []
+    try:
+        cur = conn.cursor()
+        cur.execute("""SELECT b.code, b.name, b.created_at,
+                          (SELECT COUNT(*) FROM hh_txns t WHERE t.book_code = b.code),
+                          (SELECT COUNT(*) FROM hh_accounts a WHERE a.book_code = b.code)
+                       FROM hh_books b ORDER BY b.created_at DESC""")
+        rows = cur.fetchall(); cur.close()
+        return [{"code": r[0], "name": r[1],
+                 "created_at": r[2].isoformat() if r[2] else None,
+                 "txns": r[3], "accounts": r[4]} for r in rows]
+    finally:
+        conn.close()
+
+
+def household_add_account(code: str, name: str, kind: str,
+                          mapping: dict | None) -> int | None:
+    import json as _json
+    conn = _get_conn()
+    if not conn: return None
+    try:
+        cur = conn.cursor()
+        cur.execute("""INSERT INTO hh_accounts (book_code, name, kind, mapping)
+                       VALUES (%s, %s, %s, %s) RETURNING id""",
+                    (code, (name or "Account")[:80], (kind or "checking")[:20],
+                     _json.dumps(mapping) if mapping else None))
+        aid = cur.fetchone()[0]
+        conn.commit(); cur.close()
+        return aid
+    except Exception as e:
+        logger.error(f"household_add_account failed: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+def household_list_accounts(code: str) -> list[dict]:
+    import json as _json
+    conn = _get_conn()
+    if not conn: return []
+    try:
+        cur = conn.cursor()
+        cur.execute("""SELECT a.id, a.name, a.kind, a.mapping,
+                          (SELECT COUNT(*) FROM hh_txns t WHERE t.account_id = a.id)
+                       FROM hh_accounts a WHERE a.book_code = %s ORDER BY a.id""",
+                    (code,))
+        rows = cur.fetchall(); cur.close()
+        out = []
+        for r in rows:
+            mp = None
+            if r[3]:
+                try: mp = _json.loads(r[3])
+                except ValueError: mp = None
+            out.append({"id": r[0], "name": r[1], "kind": r[2],
+                        "mapping": mp, "txns": r[4]})
+        return out
+    finally:
+        conn.close()
+
+
+def household_delete_account(code: str, account_id: int) -> bool:
+    """Delete an account and all its transactions (a re-import fix path)."""
+    conn = _get_conn()
+    if not conn: return False
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM hh_txns WHERE book_code = %s AND account_id = %s",
+                    (code, account_id))
+        cur.execute("DELETE FROM hh_accounts WHERE book_code = %s AND id = %s",
+                    (code, account_id))
+        n = cur.rowcount
+        conn.commit(); cur.close()
+        return n > 0
+    finally:
+        conn.close()
+
+
+def household_insert_txns(code: str, account_id: int, txns: list[dict]) -> int:
+    """Bulk-insert normalized ledger rows, skipping duplicates (re-import
+    safe via the unique (book, account, hash) index). Returns # inserted."""
+    conn = _get_conn()
+    if not conn: return 0
+    try:
+        cur = conn.cursor()
+        inserted = 0
+        for t in txns:
+            cur.execute("""INSERT INTO hh_txns
+                           (book_code, account_id, txn_date, descr, amount, bucket, hash)
+                           VALUES (%s, %s, %s, %s, %s, %s, %s)
+                           ON CONFLICT (book_code, account_id, hash) DO NOTHING""",
+                        (code, account_id, t["date"], (t["desc"] or "")[:200],
+                         float(t["amount"]), (t["bucket"] or "Uncategorized")[:40],
+                         str(t["hash"])[:24]))
+            inserted += cur.rowcount
+        conn.commit(); cur.close()
+        return inserted
+    except Exception as e:
+        logger.error(f"household_insert_txns failed: {e}")
+        return 0
+    finally:
+        conn.close()
+
+
+def household_set_mapping(code: str, account_id: int, mapping: dict) -> bool:
+    """Remember the confirmed column mapping on an account so future
+    imports of the same institution's CSV don't re-ask."""
+    import json as _json
+    conn = _get_conn()
+    if not conn: return False
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE hh_accounts SET mapping = %s WHERE book_code = %s AND id = %s",
+                    (_json.dumps(mapping), code, account_id))
+        n = cur.rowcount
+        conn.commit(); cur.close()
+        return n > 0
+    finally:
+        conn.close()
+
+
+def household_all_txns(code: str) -> list[dict]:
+    """All ledger rows for a book, as {id, account_id, date, desc, amount,
+    bucket}. The engine re-derives class/merchant-key from these."""
+    conn = _get_conn()
+    if not conn: return []
+    try:
+        cur = conn.cursor()
+        cur.execute("""SELECT id, account_id, txn_date, descr, amount, bucket
+                       FROM hh_txns WHERE book_code = %s ORDER BY txn_date, id""",
+                    (code,))
+        rows = cur.fetchall(); cur.close()
+        return [{"id": r[0], "account_id": r[1],
+                 "date": r[2].isoformat() if r[2] else None,
+                 "desc": r[3], "amount": float(r[4]), "bucket": r[5]}
+                for r in rows]
+    finally:
+        conn.close()
+
+
+def household_get_rules(code: str) -> dict:
+    """Learned {keyword: bucket} rules the user has confirmed."""
+    conn = _get_conn()
+    if not conn: return {}
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT keyword, bucket FROM hh_rules WHERE book_code = %s",
+                    (code,))
+        rules = {r[0]: r[1] for r in cur.fetchall()}
+        cur.close()
+        return rules
+    finally:
+        conn.close()
+
+
+def household_add_rule(code: str, keyword: str, bucket: str) -> bool:
+    conn = _get_conn()
+    if not conn: return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""INSERT INTO hh_rules (book_code, keyword, bucket)
+                       VALUES (%s, %s, %s)""",
+                    (code, (keyword or "")[:60], (bucket or "")[:40]))
+        conn.commit(); cur.close()
+        return True
+    except Exception as e:
+        logger.error(f"household_add_rule failed: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def household_recategorize(code: str, txn_id: int, bucket: str,
+                           like: str | None = None) -> int:
+    """Move one txn to `bucket`. If `like` (a merchant keyword) is given,
+    also re-bucket every OTHER still-Uncategorized row in the book whose
+    description contains it — so categorizing once fixes all matches.
+    Returns the number of rows updated."""
+    conn = _get_conn()
+    if not conn: return 0
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE hh_txns SET bucket = %s WHERE book_code = %s AND id = %s",
+                    (bucket[:40], code, txn_id))
+        n = cur.rowcount
+        if like:
+            cur.execute("""UPDATE hh_txns SET bucket = %s
+                           WHERE book_code = %s AND bucket = 'Uncategorized'
+                             AND LOWER(descr) LIKE %s""",
+                        (bucket[:40], code, f"%{like.lower()}%"))
+            n += cur.rowcount
+        conn.commit(); cur.close()
+        return n
+    except Exception as e:
+        logger.error(f"household_recategorize failed: {e}")
+        return 0
     finally:
         conn.close()

@@ -1,0 +1,453 @@
+{% extends "base.html" %}
+{% block title %}Household Money — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+  main .container { max-width: 1080px; }
+  .hh-sub { color: var(--ink-3); font-size: 0.9rem; margin: 0 0 1.1rem; line-height: 1.5; }
+
+  /* ── headline tiles ── */
+  .hh-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; margin-bottom: 1rem; }
+  .hh-tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 1rem 1.1rem; }
+  .hh-tile .k { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); font-weight: 700; }
+  .hh-tile .v { font-size: 1.7rem; font-weight: 800; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; margin-top: 0.2rem; }
+  .hh-tile .sub { font-size: 0.72rem; color: var(--ink-3); margin-top: 0.15rem; }
+  .hh-tile.net .v.pos { color: var(--mint-ink); } .hh-tile.net .v.neg { color: var(--coral-ink); }
+  @media (max-width: 640px) { .hh-tiles { grid-template-columns: 1fr; } }
+
+  .hh-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .hh-card h2 { font-size: 1.02rem; margin: 0 0 0.2rem; }
+  .hh-card .hint { font-size: 0.76rem; color: var(--ink-3); margin: 0 0 0.9rem; line-height: 1.45; }
+  .hh-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
+  @media (max-width: 820px) { .hh-grid2 { grid-template-columns: 1fr; } }
+
+  /* ── month picker ── */
+  .hh-months { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .hh-mo { padding: 0.35rem 0.8rem; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--ink-3); font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+  .hh-mo.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  /* ── fixed/var/debt split ── */
+  .hh-split { display: flex; height: 34px; border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--line); }
+  .hh-split span { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.72rem; font-weight: 700; white-space: nowrap; border-right: 2px solid var(--surface); }
+  .hh-split span:last-child { border-right: none; }
+  .hh-legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.6rem; font-size: 0.76rem; color: var(--ink-2); }
+  .hh-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 0.35rem; vertical-align: -1px; }
+
+  /* ── sorted bucket bars ── */
+  .hh-bars { display: flex; flex-direction: column; gap: 0.5rem; }
+  .hh-bar { cursor: pointer; }
+  .hh-bar .row { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.2rem; }
+  .hh-bar .row .nm { font-weight: 600; }
+  .hh-bar .row .nm .dot { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 0.4rem; vertical-align: 0; }
+  .hh-bar .row .amt { font-variant-numeric: tabular-nums; color: var(--ink-2); }
+  .hh-bar .track { height: 12px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+  .hh-bar .fill { height: 100%; border-radius: 4px; }
+  .hh-bar:hover .track { outline: 2px solid var(--primary-soft); }
+  .hh-bar.sel .track { outline: 2px solid var(--primary); }
+
+  /* ── monthly cash-flow trend ── */
+  .hh-trend { display: flex; align-items: flex-end; gap: 0.6rem; height: 150px; padding-top: 0.5rem; overflow-x: auto; }
+  .hh-tcol { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 46px; flex: 1; }
+  .hh-tbars { display: flex; align-items: flex-end; gap: 3px; height: 118px; }
+  .hh-tbars i { width: 13px; border-radius: 3px 3px 0 0; display: block; }
+  .hh-tbars i.in { background: var(--mint); } .hh-tbars i.out { background: var(--coral); }
+  .hh-tcol .ml { font-size: 0.66rem; color: var(--ink-3); }
+
+  /* ── tables / lists ── */
+  .hh-tx { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .hh-tx th { text-align: left; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-3); padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--line); }
+  .hh-tx td { padding: 0.5rem 0.5rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .hh-tx td.amt { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .hh-tx td.amt.out { color: var(--coral-ink); } .hh-tx td.amt.in { color: var(--mint-ink); }
+  .hh-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
+  .hh-sel { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 0.3rem 0.4rem; color: var(--ink); font-size: 0.8rem; }
+  .hh-recur { display: flex; justify-content: space-between; align-items: center; padding: 0.45rem 0; border-bottom: 1px solid var(--line); font-size: 0.85rem; }
+  .hh-recur .m { font-size: 0.7rem; color: var(--ink-3); }
+
+  /* ── import ── */
+  .hh-drop { border: 2px dashed var(--line-strong); border-radius: var(--r); padding: 1.4rem; text-align: center; color: var(--ink-3); font-size: 0.9rem; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+  .hh-drop:hover, .hh-drop.over { border-color: var(--primary); background: var(--primary-soft); color: var(--ink-2); }
+  .hh-acct { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--line); font-size: 0.88rem; }
+  .hh-map { display: grid; grid-template-columns: 130px 1fr; gap: 0.5rem 0.8rem; align-items: center; margin: 0.7rem 0; font-size: 0.85rem; }
+  .hh-map label { color: var(--ink-3); font-weight: 600; font-size: 0.78rem; }
+  .hh-note { font-size: 0.7rem; color: var(--ink-3); margin-top: 0.8rem; line-height: 1.5; }
+  .hh-empty { text-align: center; color: var(--ink-3); padding: 2rem 1rem; font-size: 0.92rem; }
+  .hh-msg { font-size: 0.82rem; margin-top: 0.5rem; }
+  .hh-msg.ok { color: var(--mint-ink); } .hh-msg.err { color: var(--coral-ink); }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>💰 Household Money</h1>
+<p class="hh-sub">Drop in bank & card statements — everything gets sorted into buckets so you can see what got spent on what. Your account numbers are stripped before anything is saved.</p>
+
+{% if is_admin(request) and not book %}
+<div class="hh-card" style="border-color: var(--primary);">
+  <h2>🔗 Create a household book</h2>
+  <p class="hint">Make a book, then text the link to whoever's finances these are. Their data syncs privately; they never log in — the link is the key.</p>
+  <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+    <input id="bkName" class="hh-sel" placeholder="Mom's finances" style="flex:1; min-width:180px;">
+    <button class="btn-primary" onclick="createBook()">Create book + link</button>
+  </div>
+  <div id="bkOut" style="margin-top:0.7rem;"></div>
+</div>
+{% endif %}
+
+<div id="app"></div>
+
+{% if not book and not is_admin(request) %}
+<div class="hh-empty">This is a private page. Open it with the link you were given.</div>
+{% endif %}
+
+<script id="hh-boot" type="application/json">{{ {"book": book} | tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const BOOK = (JSON.parse(document.getElementById('hh-boot').textContent).book) || "";
+const $ = id => document.getElementById(id);
+const fmt = n => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString();
+const fmt2 = n => '$' + Math.abs(n).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const api = (path, opts) => fetch('/api/household/books' + path, opts).then(r => r.ok ? r.json() : Promise.reject(r));
+const CLS_COLOR = { fixed: 'var(--primary)', variable: 'var(--indy)', debt: 'var(--gold)', income: 'var(--mint)', transfer: 'var(--ink-4)', review: 'var(--ink-3)' };
+
+let STATE = { month: null, data: null, accounts: [], buckets: [], selBucket: null };
+
+// ── admin: create book ────────────────────────────────────────────
+function createBook() {
+  const name = ($('bkName') || {}).value || 'Household';
+  fetch('/api/household/books', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name}) })
+    .then(r => r.json()).then(d => {
+      if (!d.code) { $('bkOut').textContent = 'Error'; return; }
+      const link = location.origin + '/household?book=' + d.code;
+      $('bkOut').innerHTML = `<div class="hh-card" style="margin:0;"><div class="k" style="font-size:0.68rem;color:var(--ink-3);font-weight:700;">TEXT THIS LINK</div>
+        <div style="word-break:break-all;font-weight:700;margin:0.3rem 0;">${link}</div>
+        <button class="btn-secondary" onclick="navigator.clipboard&&navigator.clipboard.writeText('${link}');this.textContent='Copied ✓'">Copy link</button>
+        <a class="btn-primary" style="margin-left:0.4rem;text-decoration:none;" href="/household?book=${d.code}">Open it</a></div>`;
+    }).catch(() => $('bkOut').textContent = 'Error (are you signed in as admin?)');
+}
+
+// ── boot ──────────────────────────────────────────────────────────
+async function boot() {
+  if (!BOOK) return;
+  const st = await api('/' + BOOK);
+  STATE.accounts = st.accounts; STATE.buckets = st.buckets;
+  if (!st.months.length) { renderEmpty(); return; }
+  STATE.month = st.months[st.months.length - 1];
+  await loadDashboard();
+}
+
+async function loadDashboard() {
+  const d = await api('/' + BOOK + '/dashboard?month=' + (STATE.month || ''));
+  STATE.data = d; STATE.buckets = d.buckets;
+  render();
+}
+
+// ── render ────────────────────────────────────────────────────────
+function render() {
+  const d = STATE.data, s = d.summary;
+  const netCls = s.net >= 0 ? 'pos' : 'neg';
+  $('app').innerHTML = `
+    ${monthPicker(s.months)}
+    <div class="hh-tiles">
+      <div class="hh-tile"><div class="k">Money in</div><div class="v" style="color:var(--mint-ink)">${fmt(s.income)}</div><div class="sub">${monthLabel(STATE.month)}</div></div>
+      <div class="hh-tile"><div class="k">Money out</div><div class="v">${fmt(s.spend)}</div><div class="sub">spending, transfers excluded</div></div>
+      <div class="hh-tile net"><div class="k">${s.net >= 0 ? 'Saved' : 'Overspent'}</div><div class="v ${netCls}">${fmt(Math.abs(s.net))}</div><div class="sub">in minus out</div></div>
+    </div>
+
+    <div class="hh-grid2">
+      <div class="hh-card">
+        <h2>Where it went</h2>
+        <p class="hint">Biggest buckets first. Tap one to see just those transactions.</p>
+        <div class="hh-bars" id="buckets"></div>
+      </div>
+      <div>
+        <div class="hh-card">
+          <h2>Fixed vs. everyday</h2>
+          <p class="hint">How much is locked-in bills vs. discretionary. Debt = interest &amp; fees.</p>
+          <div id="split"></div>
+        </div>
+        <div class="hh-card">
+          <h2>Month by month</h2>
+          <p class="hint">Green = money in, red = money out. Is spending creeping up?</p>
+          <div class="hh-trend" id="trend"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hh-grid2">
+      <div class="hh-card"><h2>Recurring &amp; subscriptions</h2><p class="hint">Same payee, most months — the easy wins to review.</p><div id="recur"></div></div>
+      <div class="hh-card"><h2>Debt &amp; interest</h2><p class="hint">What carrying debt actually costs.</p><div id="debt"></div></div>
+    </div>
+
+    <div class="hh-card" id="reviewCard" style="display:none;">
+      <h2>⚠ Needs review <span class="hh-pill" id="reviewN"></span></h2>
+      <p class="hint">Pick a bucket. Check "all like this" and every matching charge sorts itself now and next time.</p>
+      <div id="review"></div>
+    </div>
+
+    <div class="hh-card">
+      <h2>Transactions <span id="txScope" class="hh-pill"></span></h2>
+      <div id="txns"></div>
+    </div>
+
+    ${importSection()}
+  `;
+  renderBuckets(); renderSplit(); renderTrend(); renderRecurring(); renderDebt(); renderReview(); renderTxns(); renderAccounts();
+}
+
+function monthPicker(months) {
+  return `<div class="hh-months">` + months.map(m =>
+    `<button class="hh-mo ${m === STATE.month ? 'active' : ''}" onclick="pickMonth('${m}')">${monthLabel(m)}</button>`).join('') + `</div>`;
+}
+function monthLabel(m) {
+  if (!m) return '';
+  const [y, mo] = m.split('-');
+  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo - 1] + " '" + y.slice(2);
+}
+async function pickMonth(m) { STATE.month = m; STATE.selBucket = null; await loadDashboard(); }
+
+function renderBuckets() {
+  const bs = STATE.data.summary.buckets;
+  const el = $('buckets');
+  if (!bs.length) { el.innerHTML = `<div class="hh-empty">No spending this month.</div>`; return; }
+  const max = bs[0].amount, total = bs.reduce((a, b) => a + b.amount, 0);
+  el.innerHTML = bs.map(b => {
+    const pct = Math.round(b.amount / total * 100);
+    const col = CLS_COLOR[b.cls] || 'var(--primary)';
+    return `<div class="hh-bar ${STATE.selBucket === b.bucket ? 'sel' : ''}" onclick="selBucket('${b.bucket.replace(/'/g,"\\'")}')">
+      <div class="row"><span class="nm"><span class="dot" style="background:${col}"></span>${b.bucket}</span><span class="amt">${fmt(b.amount)} · ${pct}%</span></div>
+      <div class="track"><div class="fill" style="width:${Math.max(3, b.amount / max * 100)}%;background:${col}"></div></div></div>`;
+  }).join('');
+}
+function selBucket(b) { STATE.selBucket = (STATE.selBucket === b ? null : b); renderBuckets(); renderTxns(); }
+
+function renderSplit() {
+  const s = STATE.data.summary;
+  const parts = [['fixed', s.fixed], ['variable', s.variable], ['debt', s.debt_cost]].filter(p => p[1] > 0);
+  const total = parts.reduce((a, p) => a + p[1], 0) || 1;
+  const label = { fixed: 'Fixed', variable: 'Everyday', debt: 'Debt cost' };
+  $('split').innerHTML = `<div class="hh-split">` + parts.map(p =>
+    `<span style="background:${CLS_COLOR[p[0]]};width:${p[1] / total * 100}%" title="${label[p[0]]} ${fmt(p[1])}">${p[1] / total > 0.12 ? fmt(p[1]) : ''}</span>`).join('') +
+    `</div><div class="hh-legend">` + parts.map(p =>
+    `<span><span class="dot" style="background:${CLS_COLOR[p[0]]}"></span>${label[p[0]]} — ${fmt(p[1])}</span>`).join('') + `</div>`;
+}
+
+function renderTrend() {
+  const tr = STATE.data.summary.trend;
+  const max = Math.max(1, ...tr.map(t => Math.max(t.in, t.out)));
+  $('trend').innerHTML = tr.map(t => `
+    <div class="hh-tcol" title="${monthLabel(t.month)} — in ${fmt(t.in)}, out ${fmt(t.out)}">
+      <div class="hh-tbars">
+        <i class="in" style="height:${Math.max(2, t.in / max * 118)}px"></i>
+        <i class="out" style="height:${Math.max(2, t.out / max * 118)}px"></i>
+      </div>
+      <div class="ml">${monthLabel(t.month)}</div>
+    </div>`).join('') +
+    `</div><div class="hh-legend" style="padding:0 0.2rem;"><span><span class="dot" style="background:var(--mint)"></span>In</span><span><span class="dot" style="background:var(--coral)"></span>Out</span>`;
+}
+
+function renderRecurring() {
+  const r = STATE.data.recurring;
+  $('recur').innerHTML = r.length ? r.map(x =>
+    `<div class="hh-recur"><div><div style="font-weight:600">${x.merchant}</div><div class="m">${x.bucket} · seen ${x.months} months</div></div>
+     <div style="font-weight:700;font-variant-numeric:tabular-nums">${fmt(x.typical)}<span class="m">/mo</span></div></div>`).join('')
+    : `<div class="hh-empty">Load a few months to spot recurring bills.</div>`;
+}
+
+function renderDebt() {
+  const s = STATE.data.summary;
+  const debtBuckets = s.buckets.filter(b => b.cls === 'debt');
+  $('debt').innerHTML = `
+    <div class="hh-tile" style="margin-bottom:0.6rem;border:none;padding:0;"><div class="k">Interest &amp; fees this month</div><div class="v" style="color:var(--coral-ink);font-size:1.4rem;">${fmt(s.debt_cost)}</div></div>
+    ${debtBuckets.length ? debtBuckets.map(b => `<div class="hh-recur"><span>${b.bucket}</span><span style="font-weight:700">${fmt(b.amount)}</span></div>`).join('')
+      : `<div class="hh-note">No interest or fees flagged this month. 👍 (Import your card statements to catch finance charges.)</div>`}`;
+}
+
+function renderReview() {
+  const rev = STATE.data.review;
+  if (!rev.length) { $('reviewCard').style.display = 'none'; return; }
+  $('reviewCard').style.display = '';
+  $('reviewN').textContent = rev.length;
+  const opts = STATE.buckets.filter(b => b !== 'Uncategorized').map(b => `<option>${b}</option>`).join('');
+  $('review').innerHTML = `<table class="hh-tx"><tbody>` + rev.map(t => `
+    <tr>
+      <td>${t.date.slice(5)}</td>
+      <td>${t.desc}</td>
+      <td class="amt out">${fmt(t.amount)}</td>
+      <td><select class="hh-sel" id="rv${t.id}"><option value="">Pick…</option>${opts}</select></td>
+      <td><label style="font-size:0.72rem;color:var(--ink-3)"><input type="checkbox" id="rc${t.id}" checked> all like this</label></td>
+      <td><button class="btn-secondary" style="padding:0.3rem 0.7rem;" onclick="saveCat(${t.id}, '${(t.desc||'').replace(/'/g,"\\'")}')">Save</button></td>
+    </tr>`).join('') + `</tbody></table>`;
+}
+async function saveCat(id, desc) {
+  const bucket = ($('rv' + id) || {}).value;
+  if (!bucket) return;
+  const apply_all = ($('rc' + id) || {}).checked;
+  await api('/' + BOOK + '/txns/' + id + '/bucket', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({bucket, apply_all, desc}) });
+  await loadDashboard();
+}
+
+function renderTxns() {
+  let tx = STATE.data.txns;
+  if (STATE.selBucket) tx = tx.filter(t => t.bucket === STATE.selBucket);
+  $('txScope').textContent = (STATE.selBucket ? STATE.selBucket + ' · ' : '') + tx.length + ' in ' + monthLabel(STATE.month);
+  if (!tx.length) { $('txns').innerHTML = `<div class="hh-empty">No transactions.</div>`; return; }
+  $('txns').innerHTML = `<table class="hh-tx"><thead><tr><th>Date</th><th>Description</th><th>Account</th><th>Bucket</th><th style="text-align:right">Amount</th></tr></thead><tbody>` +
+    tx.map(t => `<tr><td>${t.date.slice(5)}</td><td>${t.desc}</td><td style="color:var(--ink-3)">${t.account}</td>
+      <td><span class="hh-pill" style="border-color:${CLS_COLOR[t.cls]||'var(--line)'}">${t.bucket}</span></td>
+      <td class="amt ${t.amount < 0 ? 'out' : 'in'}">${fmt(t.amount)}</td></tr>`).join('') + `</tbody></table>`;
+}
+
+function renderEmpty() {
+  $('app').innerHTML = `<div class="hh-card"><h2>Let's get her money in here</h2>
+    <p class="hint">Add each account, then drop in its CSV export. Start with the checking account where the paycheck lands and bills pay.</p>
+    ${importSection()}</div>`;
+  renderAccounts();
+}
+
+// ── import ────────────────────────────────────────────────────────
+let PENDING = null;   // {csv, headers, sample, mapping, row_count}
+
+function importSection() {
+  return `<div class="hh-card"><h2>Accounts &amp; import</h2>
+    <p class="hint">Add an account, then drop its CSV. The first time, confirm which columns are which — after that it's remembered.</p>
+    <div id="accts"></div>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin:0.7rem 0;">
+      <input id="acName" class="hh-sel" placeholder="Golden 1 Checking" style="flex:1;min-width:150px;">
+      <select id="acKind" class="hh-sel">
+        <option value="checking">Checking</option><option value="savings">Savings</option>
+        <option value="credit_card">Credit card</option><option value="mortgage">Mortgage</option>
+        <option value="heloc">HELOC</option><option value="loan">Loan</option>
+      </select>
+      <button class="btn-secondary" onclick="addAccount()">+ Add account</button>
+    </div>
+    <div class="hh-drop" id="drop">📄 Drop a CSV here, or click to choose a file
+      <input type="file" id="file" accept=".csv,text/csv" style="display:none">
+    </div>
+    <div id="mapArea"></div>
+    <div id="impMsg" class="hh-msg"></div>
+    <div class="hh-note">Nothing is uploaded except the sorted rows — account numbers, card numbers and reference IDs are stripped first. Raw files are never saved.</div>
+  </div>`;
+}
+
+function renderAccounts() {
+  const el = $('accts'); if (!el) return;
+  el.innerHTML = STATE.accounts.length ? STATE.accounts.map(a =>
+    `<div class="hh-acct"><span><strong>${a.name}</strong> <span class="hh-pill">${a.kind.replace('_',' ')}</span></span>
+     <span style="color:var(--ink-3)">${a.txns} rows <button class="btn-secondary" style="padding:0.2rem 0.6rem;margin-left:0.4rem;" onclick="delAccount(${a.id},'${a.name.replace(/'/g,"\\'")}')">✕</button></span></div>`).join('')
+    : `<div class="hh-note">No accounts yet — add one above.</div>`;
+}
+async function addAccount() {
+  const name = ($('acName')||{}).value.trim(); const kind = ($('acKind')||{}).value;
+  if (!name) return;
+  await api('/' + BOOK + '/accounts', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, kind}) });
+  const st = await api('/' + BOOK); STATE.accounts = st.accounts; renderAccounts();
+}
+async function delAccount(id, name) {
+  if (!confirm('Delete "' + name + '" and all its transactions?')) return;
+  await api('/' + BOOK + '/accounts/' + id, { method: 'DELETE' });
+  STATE.selBucket = null; await boot();
+}
+
+(function wireDrop() {
+  document.addEventListener('click', e => { if (e.target && e.target.id === 'drop') $('file').click(); });
+  document.addEventListener('change', e => { if (e.target && e.target.id === 'file' && e.target.files[0]) readFile(e.target.files[0]); });
+  document.addEventListener('dragover', e => { if (e.target && e.target.id === 'drop') { e.preventDefault(); e.target.classList.add('over'); } });
+  document.addEventListener('dragleave', e => { if (e.target && e.target.id === 'drop') e.target.classList.remove('over'); });
+  document.addEventListener('drop', e => { if (e.target && e.target.id === 'drop') { e.preventDefault(); e.target.classList.remove('over'); if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); } });
+})();
+
+function readFile(f) {
+  const r = new FileReader();
+  r.onload = async () => {
+    const csv = r.result;
+    try {
+      const p = await api('/' + BOOK + '/preview', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({csv}) });
+      PENDING = { csv, ...p };
+      renderMapping();
+    } catch (e) { $('impMsg').className = 'hh-msg err'; $('impMsg').textContent = 'Could not read that CSV.'; }
+  };
+  r.readAsText(f);
+}
+
+function renderMapping() {
+  const p = PENDING, m = p.mapping;
+  const hdrOpts = (sel) => p.headers.map((h, i) => `<option value="${i}" ${i === sel ? 'selected' : ''}>${h || ('col ' + (i+1))}</option>`).join('');
+  const acctOpts = STATE.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+  $('mapArea').innerHTML = `
+    <div class="hh-card" style="background:var(--surface-2);margin-top:0.8rem;">
+      <h2 style="font-size:0.95rem;">Confirm the columns · ${p.row_count} rows</h2>
+      <div class="hh-map">
+        <label>Import into</label><select class="hh-sel" id="mAcct">${acctOpts || '<option value="">— add an account first —</option>'}</select>
+        <label>Date column</label><select class="hh-sel" id="mDate">${hdrOpts(m.date)}</select>
+        <label>Description</label><select class="hh-sel" id="mDesc">${hdrOpts(m.desc)}</select>
+        <label>Amount style</label>
+        <select class="hh-sel" id="mMode" onchange="renderMapping2()">
+          <option value="signed" ${m.mode==='signed'?'selected':''}>One amount column</option>
+          <option value="debit_credit" ${m.mode==='debit_credit'?'selected':''}>Separate money-out / money-in columns</option>
+        </select>
+      </div>
+      <div id="mMode2"></div>
+      <div id="mPrev" style="margin-top:0.6rem;"></div>
+      <button class="btn-primary" style="margin-top:0.7rem;" onclick="doImport()">Import ${p.row_count} rows</button>
+    </div>`;
+  renderMapping2();
+}
+function renderMapping2() {
+  const p = PENDING, m = p.mapping;
+  const mode = ($('mMode')||{}).value || m.mode;
+  const hdrOpts = (sel) => p.headers.map((h, i) => `<option value="${i}" ${i === sel ? 'selected' : ''}>${h || ('col ' + (i+1))}</option>`).join('');
+  $('mMode2').innerHTML = mode === 'debit_credit'
+    ? `<div class="hh-map"><label>Money out (debit)</label><select class="hh-sel" id="mDebit">${hdrOpts(m.debit)}</select>
+       <label>Money in (credit)</label><select class="hh-sel" id="mCredit">${hdrOpts(m.credit)}</select></div>`
+    : `<div class="hh-map"><label>Amount column</label><select class="hh-sel" id="mAmount">${hdrOpts(m.amount)}</select>
+       <label>Money out shows as</label><select class="hh-sel" id="mSign"><option value="-1" ${m.sign_out===-1?'selected':''}>negative (−)</option><option value="1" ${m.sign_out===1?'selected':''}>positive (+)</option></select></div>`;
+  renderPreview();
+}
+function currentMapping() {
+  const mode = $('mMode').value;
+  const g = id => $(id) ? parseInt($(id).value) : null;
+  const m = { date: g('mDate'), desc: g('mDesc'), mode };
+  if (mode === 'debit_credit') { m.debit = g('mDebit'); m.credit = g('mCredit'); }
+  else { m.amount = g('mAmount'); m.sign_out = parseInt($('mSign').value); }
+  return m;
+}
+function parseAmt(s) {
+  if (s == null) return null;
+  let t = String(s).trim(); if (!t) return null;
+  const neg = t.startsWith('(') && t.endsWith(')');
+  t = t.replace(/[^0-9.\-]/g, '');
+  if (!t || t === '-' || t === '.') return null;
+  let v = parseFloat(t); if (isNaN(v)) return null;
+  return neg ? -v : v;
+}
+function renderPreview() {
+  const p = PENDING, m = currentMapping();
+  const rows = p.sample.slice(0, 4).map(r => {
+    const date = r[m.date] || '', desc = r[m.desc] || '';
+    let amt;
+    if (m.mode === 'debit_credit') { amt = (parseAmt(r[m.credit]) || 0) - (parseAmt(r[m.debit]) || 0); }
+    else { const v = parseAmt(r[m.amount]); amt = v == null ? null : (m.sign_out === -1 ? v : -v); }
+    const cls = amt == null ? '' : (amt < 0 ? 'out' : 'in');
+    return `<tr><td>${date}</td><td>${desc}</td><td class="amt ${cls}">${amt == null ? '—' : fmt(amt)}</td></tr>`;
+  }).join('');
+  $('mPrev').innerHTML = `<div style="font-size:0.72rem;color:var(--ink-3);margin-bottom:0.2rem;">Preview — money out should look negative:</div>
+    <table class="hh-tx"><tbody>${rows}</tbody></table>`;
+}
+async function doImport() {
+  const account_id = ($('mAcct')||{}).value;
+  if (!account_id) { $('impMsg').className='hh-msg err'; $('impMsg').textContent='Add an account first.'; return; }
+  const mapping = currentMapping();
+  $('impMsg').className = 'hh-msg'; $('impMsg').textContent = 'Importing…';
+  try {
+    const res = await api('/' + BOOK + '/import', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({csv: PENDING.csv, mapping, account_id: parseInt(account_id)}) });
+    $('mapArea').innerHTML = ''; PENDING = null;
+    $('impMsg').className = 'hh-msg ok';
+    $('impMsg').textContent = `Imported ${res.inserted} new transaction${res.inserted===1?'':'s'}` + (res.skipped ? ` (${res.skipped} already there)` : '') + '.';
+    await boot();
+  } catch (e) { $('impMsg').className='hh-msg err'; $('impMsg').textContent='Import failed.'; }
+}
+
+boot();
+</script>
+{% endblock %}
