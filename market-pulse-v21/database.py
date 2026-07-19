@@ -210,6 +210,10 @@ def _ensure_household_tables():
         # (marble vs quartz…); only the `chosen` one counts toward the total.
         cur.execute("ALTER TABLE hh_budget_items ADD COLUMN IF NOT EXISTS opt_group VARCHAR(40)")
         cur.execute("ALTER TABLE hh_budget_items ADD COLUMN IF NOT EXISTS chosen BOOLEAN NOT NULL DEFAULT TRUE")
+        # Reallocation: `planned` is the budgeted allowance per line; the live
+        # estimate (qty*unit_cost+labor) is compared to it so money freed on
+        # one item can be moved to another. NULL = no baseline set yet.
+        cur.execute("ALTER TABLE hh_budget_items ADD COLUMN IF NOT EXISTS planned NUMERIC")
         conn.commit(); cur.close()
     except Exception as e:
         logger.error(f"household table init error: {e}")
@@ -1536,14 +1540,15 @@ def household_budget_items(code: str, pid: int) -> list[dict]:
     try:
         cur = conn.cursor()
         cur.execute("""SELECT id, section, name, qty, unit, unit_cost, labor, url, notes, sort,
-                              owned, opt_group, chosen
+                              owned, opt_group, chosen, planned
                        FROM hh_budget_items WHERE book_code = %s AND project_id = %s
                        ORDER BY sort, id""", (code, pid))
         rows = cur.fetchall(); cur.close()
         return [{"id": r[0], "section": r[1], "name": r[2], "qty": float(r[3]),
                  "unit": r[4], "unit_cost": float(r[5]), "labor": float(r[6]),
                  "url": r[7], "notes": r[8], "sort": r[9], "owned": bool(r[10]),
-                 "opt_group": r[11], "chosen": bool(r[12])}
+                 "opt_group": r[11], "chosen": bool(r[12]),
+                 "planned": float(r[13]) if r[13] is not None else None}
                 for r in rows]
     finally:
         conn.close()
@@ -1554,15 +1559,18 @@ def household_budget_add(code: str, pid: int, item: dict) -> int | None:
     if not conn: return None
     try:
         cur = conn.cursor()
+        qty = float(item.get("qty") or 1); uc = float(item.get("unit_cost") or 0)
+        lab = float(item.get("labor") or 0)
+        planned = item.get("planned")
+        planned = float(planned) if planned is not None else round(qty * uc + lab, 2)
         cur.execute("""INSERT INTO hh_budget_items
-                       (book_code, project_id, section, name, qty, unit, unit_cost, labor, url, notes, sort, opt_group, chosen)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+                       (book_code, project_id, section, name, qty, unit, unit_cost, labor, url, notes, sort, opt_group, chosen, planned)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
                     (code, pid, (item.get("section") or "Other")[:40],
-                     (item.get("name") or "Item")[:120], float(item.get("qty") or 1),
-                     (item.get("unit") or "ea")[:16], float(item.get("unit_cost") or 0),
-                     float(item.get("labor") or 0), (item.get("url") or None),
+                     (item.get("name") or "Item")[:120], qty,
+                     (item.get("unit") or "ea")[:16], uc, lab, (item.get("url") or None),
                      (item.get("notes") or None), int(item.get("sort") or 0),
-                     (item.get("opt_group") or None), bool(item.get("chosen", True))))
+                     (item.get("opt_group") or None), bool(item.get("chosen", True)), planned))
         iid = cur.fetchone()[0]
         conn.commit(); cur.close()
         return iid
@@ -1580,14 +1588,17 @@ def household_budget_bulk_add(code: str, pid: int, items: list[dict]) -> int:
         cur = conn.cursor()
         n = 0
         for i, item in enumerate(items):
+            qty = float(item.get("qty") or 1); uc = float(item.get("unit_cost") or 0)
+            lab = float(item.get("labor") or 0)
+            planned = item.get("planned")
+            planned = float(planned) if planned is not None else round(qty * uc + lab, 2)
             cur.execute("""INSERT INTO hh_budget_items
-                           (book_code, project_id, section, name, qty, unit, unit_cost, labor, sort, opt_group, chosen)
-                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                           (book_code, project_id, section, name, qty, unit, unit_cost, labor, sort, opt_group, chosen, planned)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                         (code, pid, (item.get("section") or "Other")[:40],
-                         (item.get("name") or "Item")[:120], float(item.get("qty") or 1),
-                         (item.get("unit") or "ea")[:16], float(item.get("unit_cost") or 0),
-                         float(item.get("labor") or 0), i,
-                         (item.get("opt_group") or None), bool(item.get("chosen", True))))
+                         (item.get("name") or "Item")[:120], qty,
+                         (item.get("unit") or "ea")[:16], uc, lab, i,
+                         (item.get("opt_group") or None), bool(item.get("chosen", True)), planned))
             n += 1
         conn.commit(); cur.close()
         return n
@@ -1601,7 +1612,7 @@ def household_budget_bulk_add(code: str, pid: int, items: list[dict]) -> int:
 def household_budget_update(code: str, item_id: int, fields: dict) -> bool:
     cols = {"section": str, "name": str, "qty": float, "unit": str,
             "unit_cost": float, "labor": float, "url": str, "notes": str,
-            "owned": bool, "opt_group": str, "chosen": bool}
+            "owned": bool, "opt_group": str, "chosen": bool, "planned": float}
     sets, vals = [], []
     for k, cast in cols.items():
         if k in fields:
@@ -1663,5 +1674,22 @@ def household_budget_choose(code: str, item_id: int) -> bool:
                     (code, item_id))
         conn.commit(); cur.close()
         return True
+    finally:
+        conn.close()
+
+
+def household_budget_lock_plan(code: str, pid: int) -> int:
+    """Snapshot every line's current estimate as its planned budget — the
+    baseline reallocation is measured against. Returns rows updated."""
+    conn = _get_conn()
+    if not conn: return 0
+    try:
+        cur = conn.cursor()
+        cur.execute("""UPDATE hh_budget_items
+                       SET planned = ROUND((qty * unit_cost + labor)::numeric, 2)
+                       WHERE book_code = %s AND project_id = %s""", (code, pid))
+        n = cur.rowcount
+        conn.commit(); cur.close()
+        return n
     finally:
         conn.close()

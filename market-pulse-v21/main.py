@@ -1404,6 +1404,18 @@ async def api_hh_budget_choose(code: str, pid: int, item_id: int):
     return JSONResponse({"ok": ok})
 
 
+@app.post("/api/household/books/{code}/projects/{pid}/budget/lock-plan")
+async def api_hh_budget_lock_plan(code: str, pid: int):
+    """Snapshot the current estimates as the budgeted plan — the baseline
+    reallocation (freed / over) is measured against."""
+    from database import household_budget_lock_plan
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    n = await asyncio.to_thread(household_budget_lock_plan, code, pid)
+    return JSONResponse({"locked": n})
+
+
 @app.delete("/api/household/books/{code}/projects/{pid}/budget/items/{item_id}")
 async def api_hh_budget_delete(code: str, pid: int, item_id: int):
     from database import household_budget_delete

@@ -1107,6 +1107,10 @@ def budget_summary(items, meta=None):
     cont_pct = float(m.get("contingency_pct") if m.get("contingency_pct") is not None else 15)
     by_section = {}
     owned_total = 0.0
+    total_planned = 0.0          # sum of budgeted allowances (counting items)
+    freed = 0.0                  # money saved on items now under their plan
+    over = 0.0                   # extra needed on items now over their plan
+    has_plan = False
     for it in items:
         by_section.setdefault(it["section"], 0.0)
         # An unchosen alternative in an option group doesn't count.
@@ -1116,7 +1120,20 @@ def budget_summary(items, meta=None):
         if it.get("owned"):
             owned_total += _item_total(it)
             continue
-        by_section[it["section"]] += _item_total(it)
+        cur = _item_total(it)
+        by_section[it["section"]] += cur
+        # Reallocation: compare the live estimate to the budgeted plan.
+        plan = it.get("planned")
+        if plan is not None:
+            has_plan = True
+            plan = float(plan)
+            total_planned += plan
+            if cur < plan:
+                freed += plan - cur
+            elif cur > plan:
+                over += cur - plan
+        else:
+            total_planned += cur     # no baseline yet → on plan by definition
     subtotal = round(sum(by_section.values()), 2)
     contingency = round(subtotal * cont_pct / 100, 2)
     total = round(subtotal + contingency, 2)
@@ -1142,6 +1159,14 @@ def budget_summary(items, meta=None):
         "owned_total": round(owned_total, 2),
         "target": round(target, 2),
         "over_under": round(total - target, 2) if target else None,
+        "reallocation": {
+            "has_plan": has_plan,
+            "planned": round(total_planned, 2),
+            "current": subtotal,
+            "freed": round(freed, 2),
+            "over": round(over, 2),
+            "net_vs_plan": round(subtotal - total_planned, 2),
+        },
         "financing": {
             "home_value": home, "mortgage_balance": mortgage, "target_cltv": cltv,
             "heloc_limit": hlimit, "heloc_balance": hbal,
