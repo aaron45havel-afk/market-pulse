@@ -160,6 +160,26 @@ def _ensure_household_tables():
         """)
         cur.execute("""CREATE INDEX IF NOT EXISTS hh_rules_book_idx
                        ON hh_rules(book_code)""")
+        # Phase 2: per-book settings (targets/mode), project tagging for the
+        # renovation view, and statement-read balances. ADD COLUMN guards
+        # keep this idempotent for books created before phase 2.
+        cur.execute("ALTER TABLE hh_books ADD COLUMN IF NOT EXISTS settings TEXT")
+        cur.execute("ALTER TABLE hh_txns ADD COLUMN IF NOT EXISTS project_id INTEGER")
+        cur.execute("ALTER TABLE hh_accounts ADD COLUMN IF NOT EXISTS balance REAL")
+        cur.execute("ALTER TABLE hh_accounts ADD COLUMN IF NOT EXISTS balance_date DATE")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS hh_projects (
+                id         SERIAL PRIMARY KEY,
+                book_code  VARCHAR(24) NOT NULL,
+                name       VARCHAR(80) NOT NULL,
+                start_date DATE,
+                end_date   DATE,
+                budget     REAL,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("""CREATE INDEX IF NOT EXISTS hh_projects_book_idx
+                       ON hh_projects(book_code)""")
         conn.commit(); cur.close()
     except Exception as e:
         logger.error(f"household table init error: {e}")
@@ -1138,7 +1158,8 @@ def household_list_accounts(code: str) -> list[dict]:
     try:
         cur = conn.cursor()
         cur.execute("""SELECT a.id, a.name, a.kind, a.mapping,
-                          (SELECT COUNT(*) FROM hh_txns t WHERE t.account_id = a.id)
+                          (SELECT COUNT(*) FROM hh_txns t WHERE t.account_id = a.id),
+                          a.balance, a.balance_date
                        FROM hh_accounts a WHERE a.book_code = %s ORDER BY a.id""",
                     (code,))
         rows = cur.fetchall(); cur.close()
@@ -1149,7 +1170,9 @@ def household_list_accounts(code: str) -> list[dict]:
                 try: mp = _json.loads(r[3])
                 except ValueError: mp = None
             out.append({"id": r[0], "name": r[1], "kind": r[2],
-                        "mapping": mp, "txns": r[4]})
+                        "mapping": mp, "txns": r[4],
+                        "balance": float(r[5]) if r[5] is not None else None,
+                        "balance_date": r[6].isoformat() if r[6] else None})
         return out
     finally:
         conn.close()
@@ -1222,14 +1245,151 @@ def household_all_txns(code: str) -> list[dict]:
     if not conn: return []
     try:
         cur = conn.cursor()
-        cur.execute("""SELECT id, account_id, txn_date, descr, amount, bucket
+        cur.execute("""SELECT id, account_id, txn_date, descr, amount, bucket, project_id
                        FROM hh_txns WHERE book_code = %s ORDER BY txn_date, id""",
                     (code,))
         rows = cur.fetchall(); cur.close()
         return [{"id": r[0], "account_id": r[1],
                  "date": r[2].isoformat() if r[2] else None,
-                 "desc": r[3], "amount": float(r[4]), "bucket": r[5]}
+                 "desc": r[3], "amount": float(r[4]), "bucket": r[5],
+                 "project_id": r[6]}
                 for r in rows]
+    finally:
+        conn.close()
+
+
+# ─── Household phase 2: settings, balances, projects, tags ──────────
+def household_get_settings(code: str) -> dict:
+    import json as _json
+    conn = _get_conn()
+    if not conn: return {}
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT settings FROM hh_books WHERE code = %s", (code,))
+        row = cur.fetchone(); cur.close()
+        if row and row[0]:
+            try: return _json.loads(row[0])
+            except ValueError: return {}
+        return {}
+    finally:
+        conn.close()
+
+
+def household_set_settings(code: str, settings: dict) -> bool:
+    import json as _json
+    conn = _get_conn()
+    if not conn: return False
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE hh_books SET settings = %s WHERE code = %s",
+                    (_json.dumps(settings), code))
+        n = cur.rowcount
+        conn.commit(); cur.close()
+        return n > 0
+    finally:
+        conn.close()
+
+
+def household_set_account_balance(code: str, account_id: int,
+                                  balance, balance_date) -> bool:
+    conn = _get_conn()
+    if not conn or balance is None: return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""UPDATE hh_accounts SET balance = %s, balance_date = %s
+                       WHERE book_code = %s AND id = %s""",
+                    (float(balance), balance_date, code, account_id))
+        n = cur.rowcount
+        conn.commit(); cur.close()
+        return n > 0
+    finally:
+        conn.close()
+
+
+def household_interest_paid(code: str) -> float:
+    """Total interest/finance charges booked in the ledger — the backward-
+    looking cost of carrying debt, used in the renovation true-cost."""
+    conn = _get_conn()
+    if not conn: return 0.0
+    try:
+        cur = conn.cursor()
+        cur.execute("""SELECT COALESCE(SUM(-amount), 0) FROM hh_txns
+                       WHERE book_code = %s AND bucket = 'Fees & Interest'
+                         AND amount < 0""", (code,))
+        v = cur.fetchone()[0]; cur.close()
+        return round(float(v or 0), 2)
+    finally:
+        conn.close()
+
+
+def household_create_project(code: str, name: str, start, end, budget) -> int | None:
+    conn = _get_conn()
+    if not conn: return None
+    try:
+        cur = conn.cursor()
+        cur.execute("""INSERT INTO hh_projects (book_code, name, start_date, end_date, budget)
+                       VALUES (%s, %s, %s, %s, %s) RETURNING id""",
+                    (code, (name or "Project")[:80], start or None, end or None,
+                     float(budget) if budget else None))
+        pid = cur.fetchone()[0]
+        conn.commit(); cur.close()
+        return pid
+    except Exception as e:
+        logger.error(f"household_create_project failed: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+def household_list_projects(code: str) -> list[dict]:
+    conn = _get_conn()
+    if not conn: return []
+    try:
+        cur = conn.cursor()
+        cur.execute("""SELECT p.id, p.name, p.start_date, p.end_date, p.budget,
+                          (SELECT COUNT(*) FROM hh_txns t WHERE t.project_id = p.id)
+                       FROM hh_projects p WHERE p.book_code = %s ORDER BY p.id""",
+                    (code,))
+        rows = cur.fetchall(); cur.close()
+        return [{"id": r[0], "name": r[1],
+                 "start": r[2].isoformat() if r[2] else None,
+                 "end": r[3].isoformat() if r[3] else None,
+                 "budget": float(r[4]) if r[4] is not None else None,
+                 "tagged": r[5]} for r in rows]
+    finally:
+        conn.close()
+
+
+def household_delete_project(code: str, project_id: int) -> bool:
+    conn = _get_conn()
+    if not conn: return False
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE hh_txns SET project_id = NULL WHERE book_code = %s AND project_id = %s",
+                    (code, project_id))
+        cur.execute("DELETE FROM hh_projects WHERE book_code = %s AND id = %s",
+                    (code, project_id))
+        n = cur.rowcount
+        conn.commit(); cur.close()
+        return n > 0
+    finally:
+        conn.close()
+
+
+def household_tag_txns(code: str, txn_ids: list[int], project_id) -> int:
+    """Tag (or untag, when project_id is None) a set of transactions to a
+    project. Returns the number of rows changed."""
+    conn = _get_conn()
+    if not conn or not txn_ids: return 0
+    try:
+        cur = conn.cursor()
+        ids = tuple(int(i) for i in txn_ids)
+        cur.execute("""UPDATE hh_txns SET project_id = %s
+                       WHERE book_code = %s AND id = ANY(%s)""",
+                    (int(project_id) if project_id else None, code, list(ids)))
+        n = cur.rowcount
+        conn.commit(); cur.close()
+        return n
     finally:
         conn.close()
 
