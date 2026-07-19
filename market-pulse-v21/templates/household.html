@@ -124,6 +124,14 @@
   .hh-nw-row .v { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .hh-nw-row .act { white-space: nowrap; min-width: 44px; text-align: right; }
   .hh-nw-add { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; margin-top: 0.6rem; }
+  .hh-chk { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.55rem 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .hh-chk:last-child { border-bottom: none; }
+  .hh-chk input { margin-top: 0.15rem; width: 18px; height: 18px; accent-color: var(--primary); flex: 0 0 auto; cursor: pointer; }
+  .hh-chk .body { flex: 1; min-width: 0; }
+  .hh-chk .t { font-weight: 600; font-size: 0.9rem; display: block; }
+  .hh-chk .d { font-size: 0.75rem; color: var(--ink-3); }
+  .hh-chk.done .t { text-decoration: line-through; color: var(--ink-4); }
+  .hh-chk.done .d { color: var(--ink-4); }
   .hh-rm { display: flex; flex-direction: column; gap: 0.5rem; }
   .hh-step { display: flex; gap: 0.8rem; align-items: flex-start; padding: 0.7rem; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); }
   .hh-step.now { border-color: var(--primary); background: var(--primary-soft); }
@@ -974,11 +982,40 @@ async function loadRoadmap() {
     wireDrop(); renderAccounts();
     return;
   }
-  const [r, nw] = await Promise.all([api('/' + BOOK + '/roadmap'), api('/' + BOOK + '/net-worth')]);
-  STATE.roadmap = r; STATE.netWorth = nw;
-  renderRoadmap(r, nw);
+  const [r, nw, cl] = await Promise.all([api('/' + BOOK + '/roadmap'), api('/' + BOOK + '/net-worth'), api('/' + BOOK + '/checklist')]);
+  STATE.roadmap = r; STATE.netWorth = nw; STATE.checklist = cl;
+  renderRoadmap(r, nw, cl);
 }
-function renderRoadmap(r, nw) {
+function monthLabel(m) {
+  if (!m) return '';
+  const names = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const [y, mo] = m.split('-');
+  return (names[+mo - 1] || '') + ' ' + y;
+}
+function checklistCard(cl) {
+  if (!cl || !cl.items || !cl.items.length) return '';
+  const pct = cl.total ? Math.round(cl.done_count / cl.total * 100) : 0;
+  const rows = cl.items.map(it => `<label class="hh-chk ${it.done ? 'done' : ''}">
+    <input type="checkbox" ${it.done ? 'checked' : ''} onchange="toggleCheck('${it.key}', this.checked)">
+    <span class="body"><span class="t">${it.text}</span><span class="d">${it.detail}</span></span>
+    ${it.tab ? `<button class="hh-renobtn" onclick="event.preventDefault();jumpTo('${it.tab}'${it.mode ? `,'${it.mode}'` : ''})">go</button>` : ''}
+  </label>`).join('');
+  return `<div class="hh-card">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:0.5rem;">
+      <h2 style="margin:0">This month's checklist</h2>
+      <span class="hh-note" style="margin:0">${monthLabel(cl.month)} · ${cl.done_count} of ${cl.total} done</span>
+    </div>
+    <div class="hh-rm-bar" style="margin:0.5rem 0 0.7rem;"><div class="fill" style="width:${pct}%"></div></div>
+    ${rows}
+  </div>`;
+}
+async function toggleCheck(key, done) {
+  await api('/' + BOOK + '/checklist', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({key, done}) });
+  const cl = await api('/' + BOOK + '/checklist');
+  STATE.checklist = cl;
+  renderRoadmap(STATE.roadmap, STATE.netWorth, cl);
+}
+function renderRoadmap(r, nw, cl) {
   const cur = r.steps.find(s => s.status === 'now');
   const pct = r.total ? Math.round(r.done_count / r.total * 100) : 0;
   const headCard = r.all_done
@@ -1003,6 +1040,7 @@ function renderRoadmap(r, nw) {
       <div class="hh-note" style="margin-top:0.35rem">${r.done_count} of ${r.total} milestones done</div>
     </div>
     <div class="hh-card" style="border-color:var(--primary);">${headCard}</div>
+    ${checklistCard(cl)}
     ${netWorthCard(nw)}
     <div class="hh-card"><div class="hh-rm">${rows}</div></div>`;
 }

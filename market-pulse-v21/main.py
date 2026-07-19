@@ -895,50 +895,119 @@ async def api_hh_set_settings(code: str, request: Request):
     return JSONResponse({"settings": saved})
 
 
-@app.get("/api/household/books/{code}/roadmap")
-async def api_hh_roadmap(code: str):
-    """The framework: one ordered path over cash flow, debts, the kitchen
-    goal and retirement — with the single next move she should focus on."""
+def _current_month():
+    import datetime
+    return datetime.date.today().strftime("%Y-%m")
+
+
+def _assemble_roadmap(code):
+    """Shared roadmap assembly — vitals + reno summary + retirement summary
+    into money_roadmap, plus the raw pieces the monthly checklist reuses."""
     import household
     from database import (household_all_txns, household_get_settings,
                           household_list_projects, household_budget_items,
                           household_list_accounts)
+    rows = household_all_txns(code)
+    for r in rows:
+        r["cls"] = household.bucket_class(r["bucket"])
+    settings = household_get_settings(code)
+    accounts = household_list_accounts(code)
+    vitals = household.vital_signs(rows, settings, accounts)
+
+    reno = {"active": False, "budget_total": 0.0, "can_fund": 0.0}
+    projects = household_list_projects(code)
+    for p in projects:
+        items = household_budget_items(code, p["id"])
+        if not items:
+            continue
+        meta = _budget_meta_with_financing(code, p["id"])
+        summ = household.budget_summary(items, meta)
+        reno["active"] = True
+        reno["budget_total"] += summ["total"]
+        reno["can_fund"] += summ["financing"]["can_fund"]
+    reno["budget_total"] = round(reno["budget_total"], 2)
+    reno["can_fund"] = round(reno["can_fund"], 2)
+
+    plan = household.retirement_plan(settings)
+    retire = {"configured": False}
+    if plan.get("configured") and plan.get("chosen"):
+        ch = plan["chosen"]
+        retire = {"configured": True, "year": ch["year"],
+                  "covered": ch["covered"], "surplus": ch["surplus_with_ss"]}
+
+    roadmap = household.money_roadmap(vitals, reno=reno, retire=retire)
+    return {"roadmap": roadmap, "vitals": vitals, "reno": reno,
+            "rows": rows, "settings": settings, "projects": projects}
+
+
+@app.get("/api/household/books/{code}/roadmap")
+async def api_hh_roadmap(code: str):
+    """The framework: one ordered path over cash flow, debts, the kitchen
+    goal and retirement — with the single next move she should focus on."""
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    ctx = await asyncio.to_thread(_assemble_roadmap, code)
+    return JSONResponse(ctx["roadmap"])
+
+
+@app.get("/api/household/books/{code}/checklist")
+async def api_hh_checklist(code: str):
+    """This month's concrete, checkable routine, derived from her state."""
+    import household
     bad = await _require_hh_book(code)
     if bad:
         return bad
 
     def _do():
-        rows = household_all_txns(code)
-        for r in rows:
-            r["cls"] = household.bucket_class(r["bucket"])
+        ctx = _assemble_roadmap(code)
+        rows, settings, projects = ctx["rows"], ctx["settings"], ctx["projects"]
+        vitals, roadmap = ctx["vitals"], ctx["roadmap"]
+        uncategorized = sum(1 for r in rows if r.get("bucket") == "Uncategorized")
+        payees = settings.get("reno_payees") or []
+        labor_pending = sum(len(household.labor_candidates(rows, p.get("start"), p.get("end"), payees))
+                            for p in projects)
+        current = next((s for s in roadmap["steps"] if s.get("status") == "now"), None)
+        items = household.monthly_checklist({
+            "current_step": current, "surplus": vitals.get("avg_net"),
+            "uncategorized": uncategorized, "reno_active": ctx["reno"]["active"],
+            "labor_pending": labor_pending,
+            "card_balance": vitals.get("card_balance"),
+            "heloc_balance": vitals.get("heloc_balance"),
+        })
+        month = _current_month()
+        done = set((settings.get("checklist") or {}).get(month, []))
+        for it in items:
+            it["done"] = it["key"] in done
+        return {"month": month, "items": items,
+                "done_count": sum(1 for it in items if it["done"]), "total": len(items)}
+
+    return JSONResponse(await asyncio.to_thread(_do))
+
+
+@app.post("/api/household/books/{code}/checklist")
+async def api_hh_checklist_toggle(code: str, request: Request):
+    """Tick (or untick) a checklist item for the current month."""
+    from database import household_get_settings, household_set_settings
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    key = str(body.get("key") or "").strip()
+    if not key:
+        return JSONResponse({"error": "key required"}, status_code=400)
+    done = bool(body.get("done"))
+
+    def _do():
         settings = household_get_settings(code)
-        accounts = household_list_accounts(code)
-        vitals = household.vital_signs(rows, settings, accounts)
-
-        # Reno summary: total planned across projects with a budget, and how
-        # much of it the HELOC could cover (same headroom math as the budget).
-        reno = {"active": False, "budget_total": 0.0, "can_fund": 0.0}
-        for p in household_list_projects(code):
-            items = household_budget_items(code, p["id"])
-            if not items:
-                continue
-            meta = _budget_meta_with_financing(code, p["id"])
-            summ = household.budget_summary(items, meta)
-            reno["active"] = True
-            reno["budget_total"] += summ["total"]
-            reno["can_fund"] += summ["financing"]["can_fund"]
-        reno["budget_total"] = round(reno["budget_total"], 2)
-        reno["can_fund"] = round(reno["can_fund"], 2)
-
-        # Retirement summary from the same plan the Retirement tab shows.
-        plan = household.retirement_plan(settings)
-        retire = {"configured": False}
-        if plan.get("configured") and plan.get("chosen"):
-            ch = plan["chosen"]
-            retire = {"configured": True, "year": ch["year"],
-                      "covered": ch["covered"], "surplus": ch["surplus_with_ss"]}
-
-        return household.money_roadmap(vitals, reno=reno, retire=retire)
+        chk = settings.get("checklist") or {}
+        month = _current_month()
+        cur = set(chk.get(month, []))
+        cur.add(key) if done else cur.discard(key)
+        chk[month] = sorted(cur)
+        settings["checklist"] = chk
+        household_set_settings(code, settings)
+        return {"month": month, "done": sorted(cur)}
 
     return JSONResponse(await asyncio.to_thread(_do))
 

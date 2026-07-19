@@ -342,6 +342,30 @@ def test_rental_scenario():
     approx(r["gross_yield_pct"], 5000 * 12 / 950000 * 100, "gross yield")
 
 
+def test_monthly_checklist():
+    # on the "card" step with surplus -> a concrete "pay $X on the card" item
+    items = H.monthly_checklist({
+        "current_step": {"key": "card"}, "surplus": 1500, "card_balance": 7454,
+        "uncategorized": 3, "reno_active": True, "labor_pending": 2,
+    })
+    keys = [i["key"] for i in items]
+    check(keys[0] == "import", "import is always first")
+    check("review" in keys, "uncategorized -> review item")
+    check("move_card" in keys, "card step -> pay-the-card item")
+    check(any("$1,500" in i["text"] for i in items), "surplus amount in the card action")
+    check("labor" in keys, "pending labor -> tag item")
+    check("quotes" in keys, "reno active -> quotes item")
+    check("balances" in keys, "balances sanity always present")
+    # every item has text + detail
+    check(all(i.get("text") and i.get("detail") for i in items), "items are fully described")
+    # clean state: no review / labor / quotes
+    items2 = H.monthly_checklist({"current_step": {"key": "safety"}, "surplus": 800})
+    k2 = [i["key"] for i in items2]
+    check("review" not in k2 and "labor" not in k2 and "quotes" not in k2, "clean state trims conditionals")
+    check("move_savings" in k2, "safety step -> move-to-savings")
+    check(any("$800" in i["text"] for i in items2), "surplus in savings action")
+
+
 def main():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:
