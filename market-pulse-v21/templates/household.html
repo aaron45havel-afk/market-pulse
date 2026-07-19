@@ -284,11 +284,15 @@ function jumpTo(tab, mode) {
 // ══ THIS MONTH ════════════════════════════════════════════════════
 async function loadThisMonth() {
   if (!STATE.hasData) { $('tab').innerHTML = emptyImportPrompt(); wireDrop(); renderAccounts(); return; }
-  const [tm, s] = await Promise.all([ api('/' + BOOK + '/this-month?mode=' + STATE.mode), api('/' + BOOK + '/settings') ]);
+  const [tm, s, retire] = await Promise.all([
+    api('/' + BOOK + '/this-month?mode=' + STATE.mode),
+    api('/' + BOOK + '/settings'),
+    api('/' + BOOK + '/retirement').catch(() => null),
+  ]);
   STATE.settings = s.settings || {}; STATE.accounts = s.accounts || STATE.accounts;
-  renderThisMonth(tm);
+  renderThisMonth(tm, retire);
 }
-function renderThisMonth(tm) {
+function renderThisMonth(tm, retire) {
   const rec = tm.rec, v = tm.vitals;
   const hd = rec.headline || {};
   const headVal = hd.v_txt != null ? hd.v_txt : (hd.v != null ? fmt(hd.v) : '');
@@ -305,6 +309,7 @@ function renderThisMonth(tm) {
       <p class="hint">These stay the same whatever focus you pick — they're the health check.</p>
       <div class="hh-vitals">${['means','fixed','cushion','heloc'].map(k => vitalCard(v.lights[k])).join('')}</div>
     </div>
+    ${incomeStreamsCard(tm.income_streams, retire)}
     ${debtPlanCard(tm.debt_plan)}
     ${targetsCard(v)}`;
 }
@@ -345,6 +350,37 @@ function debtPlanCard(dp) {
 function vitalCard(l) {
   const val = l.value == null ? '—' : (l.unit === '$' ? fmt(l.value) : l.unit === '%' ? l.value + '%' : l.value + (l.unit ? ' ' + l.unit : ''));
   return `<div class="hh-vital ${l.light}"><div class="lbl">${l.label}</div><div class="val">${val}</div><div class="nt">${l.note}</div></div>`;
+}
+function incomeStreamsCard(is, retire) {
+  const current = (is && is.streams) || [];
+  const rows = current.length ? current.map(s => `<div class="hh-nw-row">
+    <span class="nm"><strong>${s.name}</strong> <span class="hh-note" style="margin:0">${s.months > 1 ? 'every month' : 'seen once so far'}</span></span>
+    <span class="v">${fmt(s.monthly)} <span class="hh-note" style="margin:0">/mo</span></span>
+    <span class="act"><button class="hh-x" title="give it a friendly name" onclick="renameStream('${s.key}','${(s.name||'').replace(/'/g,"\\'")}')">rename</button></span>
+  </div>`).join('')
+    : `<div class="hh-note">No income deposits recognized yet. If a paycheck landed but isn't here, open the Spending tab, set that deposit's bucket to "Income", and check "all like this".</div>`;
+  let future = '';
+  if (retire && retire.configured) {
+    const ch = retire.chosen || {};
+    future = `<div class="hh-nw-h" style="margin-top:0.9rem">Begins at retirement</div>
+      <div class="hh-nw-row"><span class="nm"><strong>CalPERS pension</strong> <span class="hh-note" style="margin:0">from ${ch.year || 'retirement'}</span></span><span class="v">${fmt(ch.pension || 0)} <span class="hh-note" style="margin:0">/mo</span></span><span class="act"></span></div>
+      <div class="hh-nw-row"><span class="nm"><strong>Social Security</strong> <span class="hh-note" style="margin:0">at age ${retire.claim_age || 67}</span></span><span class="v">${fmt(retire.ss_monthly || 0)} <span class="hh-note" style="margin:0">/mo</span></span><span class="act"></span></div>
+      <div class="hh-note">These two start later — pick when on the Retirement tab.</div>`;
+  }
+  return `<div class="hh-card">
+    <h2>Her income streams</h2>
+    <p class="hint">Every source of money coming in, pulled from her deposits. Rename any cryptic one so it reads plainly.</p>
+    <div class="hh-nw-h">Coming in now</div>
+    ${rows}
+    <div class="hh-nw-row" style="border-top:2px solid var(--line);border-bottom:none;"><span class="nm"><strong>Total coming in now</strong></span><span class="v"><strong>${fmt(is ? is.total : 0)}</strong> <span class="hh-note" style="margin:0">/mo</span></span><span class="act"></span></div>
+    ${future}
+  </div>`;
+}
+async function renameStream(key, current) {
+  const name = prompt('Name this income stream (e.g. "Nursing pension", "State salary")', current);
+  if (name === null) return;
+  await api('/' + BOOK + '/income-label', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({key, name}) });
+  loadThisMonth();
 }
 async function setMode(m) {
   STATE.mode = m;

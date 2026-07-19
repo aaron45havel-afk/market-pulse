@@ -178,6 +178,33 @@ def test_vital_signs_savings():
     approx(vs["cushion_base"], vs["essential"], "cushion base is essential")
 
 
+def test_income_streams():
+    rows = [
+        txn("2026-05-01", 6000, "Income", desc="PAYROLL ST OF CA CA PAYROLL"),
+        txn("2026-06-01", 6000, "Income", desc="PAYROLL ST OF CA CA PAYROLL"),
+        txn("2026-06-03", 2200, "Income", desc="PENSION BENEFITS PENBEJUL26"),
+        txn("2026-06-04", 159, "Income", desc="CALTRANS"),
+        txn("2026-06-05", -400, "Groceries", desc="SAFEWAY"),  # not income
+    ]
+    s = H.income_streams(rows)
+    names = [x["raw"] for x in s["streams"]]
+    check(any("PAYROLL" in n for n in names), "salary is a stream")
+    check(any("PENSION" in n for n in names), "nursing pension is a stream")
+    check(any("CALTRANS" in n for n in names), "caltrans COLA is a stream")
+    check(all("SAFEWAY" not in n for n in names), "spending is not an income stream")
+    approx(s["total"], 6000 + 2200 + 159, "total income across streams")
+    # streams sorted biggest first
+    eq(s["streams"][0]["monthly"], 6000, "biggest stream first")
+    # a friendly label overrides the cryptic descriptor
+    payroll_key = next(x["key"] for x in s["streams"] if "PAYROLL" in x["raw"])
+    s2 = H.income_streams(rows, {payroll_key: "State salary"})
+    check(any(x["name"] == "State salary" for x in s2["streams"]), "label renames the stream")
+
+
+def test_caltrans_is_income():
+    eq(H.categorize("CALTRANS COLA ADJ"), "Income", "caltrans -> income")
+
+
 def test_income_surfacing():
     # a recognized paycheck deposit -> income derived + source "deposits"
     rows = [txn("2026-06-01", 5000, "Income", desc="PAYROLL ST OF CA"),
