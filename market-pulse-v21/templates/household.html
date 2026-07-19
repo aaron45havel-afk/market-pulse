@@ -911,6 +911,13 @@ async function doImport() {
 
 // ══ PLAN (the roadmap) ════════════════════════════════════════════
 async function loadRoadmap() {
+  if (!STATE.hasData) {
+    $('tab').innerHTML = `<div class="hh-card"><h2>Mom's money roadmap</h2>
+      <p class="hint">Drop in a Golden 1 statement and the plan builds itself — the tool reads her balances, bills and debts and shows the one next move. Nothing to fill in.</p></div>`
+      + emptyImportPrompt();
+    wireDrop(); renderAccounts();
+    return;
+  }
   const r = await api('/' + BOOK + '/roadmap');
   STATE.roadmap = r;
   renderRoadmap(r);

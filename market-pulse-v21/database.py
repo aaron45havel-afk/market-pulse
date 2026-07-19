@@ -1322,10 +1322,24 @@ def household_set_settings(code: str, settings: dict) -> bool:
 
 def household_set_account_balance(code: str, account_id: int,
                                   balance, balance_date) -> bool:
+    """Store an account's balance. If a `balance_date` is given and we
+    already hold a NEWER one, keep the newer figure — so importing an older
+    statement after a newer one doesn't overwrite cash-on-hand with stale
+    data. A null date always writes (backwards compatible)."""
     conn = _get_conn()
     if not conn or balance is None: return False
     try:
         cur = conn.cursor()
+        if balance_date is not None:
+            cur.execute("SELECT balance_date FROM hh_accounts WHERE book_code = %s AND id = %s",
+                        (code, account_id))
+            row = cur.fetchone()
+            existing = row[0] if row else None
+            if existing is not None:
+                existing_iso = existing.isoformat() if hasattr(existing, "isoformat") else str(existing)
+                if str(balance_date) < existing_iso:
+                    cur.close()
+                    return False                          # stale, keep newer
         cur.execute("""UPDATE hh_accounts SET balance = %s, balance_date = %s
                        WHERE book_code = %s AND id = %s""",
                     (float(balance), balance_date, code, account_id))
