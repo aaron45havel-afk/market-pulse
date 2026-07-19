@@ -303,7 +303,42 @@ function renderThisMonth(tm) {
       <p class="hint">These stay the same whatever focus you pick — they're the health check.</p>
       <div class="hh-vitals">${['means','fixed','cushion','heloc'].map(k => vitalCard(v.lights[k])).join('')}</div>
     </div>
+    ${debtPlanCard(tm.debt_plan)}
     ${targetsCard(v)}`;
+}
+function debtMonths(m) {
+  if (m == null) return 'never at this rate';
+  if (m < 12) return m + ' month' + (m === 1 ? '' : 's');
+  const y = Math.floor(m / 12), mo = m % 12;
+  return y + ' yr' + (mo ? ' ' + mo + ' mo' : '');
+}
+function debtFreeDate(m) {
+  if (m == null) return '—';
+  const d = new Date(); d.setMonth(d.getMonth() + m);
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
+function debtPlanCard(dp) {
+  if (!dp) return '';
+  const ws = dp.with_surplus, mn = dp.minimums;
+  if (!ws || !ws.debts.length) return '';
+  const order = ws.debts.map((d, i) => `<div class="hh-nw-row">
+    <span class="nm"><strong>${i + 1}. ${d.name}</strong> <span class="hh-note" style="margin:0">${d.apr}% · ${fmt(d.interest)} interest</span></span>
+    <span class="v">${d.cleared_month != null ? 'clear by ' + debtFreeDate(d.cleared_month) : '—'}</span></div>`).join('');
+  const savedMonths = (mn.months != null && ws.months != null) ? mn.months - ws.months : null;
+  const savedInt = Math.max(0, Math.round((mn.total_interest || 0) - (ws.total_interest || 0)));
+  return `<div class="hh-card">
+    <h2>Your path to debt-free</h2>
+    <p class="hint">Attack the highest-rate debt first, then roll its payment onto the next. ${dp.surplus > 0 ? `Using your ${fmt(dp.surplus)}/mo surplus on top of the minimums:` : 'At the minimum payments:'}</p>
+    <div class="hh-reno-head" style="margin-bottom:0.6rem;">
+      <div class="hh-tile"><div class="k">Debt-free</div><div class="v" style="color:${ws.months != null ? 'var(--mint-ink)' : 'var(--coral-ink)'}">${ws.months != null ? debtFreeDate(ws.months) : '—'}</div><div class="sub">${ws.months != null ? 'in ' + debtMonths(ws.months) : 'payments too low'}</div></div>
+      <div class="hh-tile"><div class="k">Paying</div><div class="v">${fmt(ws.monthly_payment)}</div><div class="sub">/mo total</div></div>
+      <div class="hh-tile"><div class="k">Interest cost</div><div class="v" style="color:var(--coral-ink)">${fmt(ws.total_interest)}</div><div class="sub">over the whole payoff</div></div>
+      ${dp.surplus > 0 && savedMonths ? `<div class="hh-tile"><div class="k">Your surplus saves</div><div class="v" style="color:var(--mint-ink)">${fmt(savedInt)}</div><div class="sub">${savedMonths} mo sooner vs minimums</div></div>` : ''}
+    </div>
+    <div class="hh-nw-h">Order to attack</div>
+    ${order}
+    ${dp.surplus <= 0 ? `<div class="hh-note">No monthly surplus yet — even $50 extra on the ${ws.debts[0].name} starts shrinking it faster. Try the "Stop overspending" focus above to free some up.</div>` : ''}
+  </div>`;
 }
 function vitalCard(l) {
   const val = l.value == null ? '—' : (l.unit === '$' ? fmt(l.value) : l.unit === '%' ? l.value + '%' : l.value + (l.unit ? ' ' + l.unit : ''));

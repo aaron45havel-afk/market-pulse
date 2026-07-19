@@ -342,6 +342,30 @@ def test_rental_scenario():
     approx(r["gross_yield_pct"], 5000 * 12 / 950000 * 100, "gross yield")
 
 
+def test_debt_free_plan():
+    debts = [
+        {"name": "credit card", "balance": 7454, "apr": 18.24, "payment": 250},
+        {"name": "HELOC", "balance": 117648, "apr": 7.12, "payment": 669},
+    ]
+    # with a healthy surplus she clears both; card (higher APR) clears first
+    p = H.debt_free_plan(debts, extra=1500)
+    check(p["payoff"], "debts pay off with surplus")
+    byn = {d["name"]: d for d in p["debts"]}
+    check(byn["credit card"]["cleared_month"] <= byn["HELOC"]["cleared_month"],
+          "card (18%) clears before HELOC (7%)")
+    check(p["months"] == byn["HELOC"]["cleared_month"], "debt-free month = last debt cleared")
+    approx(p["monthly_payment"], 250 + 669 + 1500, "monthly payment = minimums + extra")
+    # more extra -> fewer months and less interest
+    p2 = H.debt_free_plan(debts, extra=3000)
+    check(p2["months"] < p["months"], "more extra clears sooner")
+    check(p2["total_interest"] < p["total_interest"], "more extra costs less interest")
+    # minimums that can't cover interest -> never pays off
+    stuck = H.debt_free_plan([{"name": "card", "balance": 10000, "apr": 24, "payment": 50}], extra=0)
+    check(not stuck["payoff"] and stuck["months"] is None, "underwater debt doesn't pay off")
+    # no debts -> trivially done
+    eq(H.debt_free_plan([])["payoff"], True, "no debts -> paid off")
+
+
 def test_monthly_checklist():
     # on the "card" step with surplus -> a concrete "pay $X on the card" item
     items = H.monthly_checklist({
