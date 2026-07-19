@@ -117,6 +117,12 @@
   /* ── roadmap ── */
   .hh-rm-bar { height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
   .hh-rm-bar .fill { height: 100%; background: var(--mint); border-radius: 999px; transition: width 0.3s; }
+  .hh-nw-h { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-3); margin-bottom: 0.4rem; }
+  .hh-nw-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0; border-bottom: 1px solid var(--line); font-size: 0.86rem; }
+  .hh-nw-row .nm { flex: 1; min-width: 0; }
+  .hh-nw-row .v { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .hh-nw-row .act { white-space: nowrap; min-width: 44px; text-align: right; }
+  .hh-nw-add { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; margin-top: 0.6rem; }
   .hh-rm { display: flex; flex-direction: column; gap: 0.5rem; }
   .hh-step { display: flex; gap: 0.8rem; align-items: flex-start; padding: 0.7rem; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); }
   .hh-step.now { border-color: var(--primary); background: var(--primary-soft); }
@@ -918,11 +924,11 @@ async function loadRoadmap() {
     wireDrop(); renderAccounts();
     return;
   }
-  const r = await api('/' + BOOK + '/roadmap');
-  STATE.roadmap = r;
-  renderRoadmap(r);
+  const [r, nw] = await Promise.all([api('/' + BOOK + '/roadmap'), api('/' + BOOK + '/net-worth')]);
+  STATE.roadmap = r; STATE.netWorth = nw;
+  renderRoadmap(r, nw);
 }
-function renderRoadmap(r) {
+function renderRoadmap(r, nw) {
   const cur = r.steps.find(s => s.status === 'now');
   const pct = r.total ? Math.round(r.done_count / r.total * 100) : 0;
   const headCard = r.all_done
@@ -947,7 +953,59 @@ function renderRoadmap(r) {
       <div class="hh-note" style="margin-top:0.35rem">${r.done_count} of ${r.total} milestones done</div>
     </div>
     <div class="hh-card" style="border-color:var(--primary);">${headCard}</div>
+    ${netWorthCard(nw)}
     <div class="hh-card"><div class="hh-rm">${rows}</div></div>`;
+}
+function netWorthCard(nw) {
+  if (!nw) return '';
+  const assetRows = nw.assets.map(a => `<div class="hh-nw-row">
+    <span class="nm">${a.name}${a.detail ? `<span class="hh-note" style="margin:0"> · ${a.detail}</span>` : ''}</span>
+    <span class="v">${fmt(a.value)}</span>
+    <span class="act">${a.auto ? '' : `<button class="hh-x" title="edit value" onclick="editAsset(${a.id},'${(a.name||'').replace(/'/g,"\\'")}',${a.value},'${a.kind}')">edit</button><button class="hh-x" title="remove" onclick="delAsset(${a.id})">✕</button>`}</span>
+  </div>`).join('');
+  const liabRows = nw.liabilities.length
+    ? nw.liabilities.map(l => `<div class="hh-nw-row"><span class="nm">${l.name}</span><span class="v">${fmt(l.value)}</span><span class="act"></span></div>`).join('')
+    : '<div class="hh-note" style="margin:0.3rem 0">none tracked yet</div>';
+  return `<div class="hh-card">
+    <h2 style="margin-bottom:0.6rem;">Where she stands</h2>
+    <div class="hh-reno-head" style="margin-bottom:0.9rem;">
+      <div class="hh-tile"><div class="k">Net worth</div><div class="v" style="color:var(--primary)">${fmt(nw.net_worth)}</div><div class="sub">what she owns minus what she owes</div></div>
+      <div class="hh-tile"><div class="k">Owns</div><div class="v">${fmt(nw.total_assets)}</div><div class="sub">home + cash + investments</div></div>
+      <div class="hh-tile"><div class="k">Owes</div><div class="v">${fmt(nw.total_liabilities)}</div><div class="sub">mortgage + HELOC + card</div></div>
+      <div class="hh-tile"><div class="k">Home equity</div><div class="v" style="color:var(--mint-ink)">${fmt(nw.home_equity)}</div><div class="sub">house value minus liens</div></div>
+    </div>
+    <div class="hh-grid2">
+      <div><div class="hh-nw-h">What she owns</div>${assetRows}${addAssetForm()}</div>
+      <div><div class="hh-nw-h">What she owes</div>${liabRows}<div class="hh-note">Read from her statements — update these in "Set my targets" on This Month.</div></div>
+    </div>
+  </div>`;
+}
+function addAssetForm() {
+  return `<div class="hh-nw-add">
+    <input class="hh-in" id="asName" placeholder="Fidelity, 401k, other property…" style="flex:2;min-width:120px;">
+    <input class="hh-in" id="asVal" type="number" step="1000" placeholder="value" style="max-width:110px;">
+    <select class="hh-sel" id="asKind" style="width:auto;"><option value="investment">Investment</option><option value="property">Property</option><option value="cash">Cash</option><option value="other">Other</option></select>
+    <button class="btn-secondary" onclick="addAsset()">Add</button>
+  </div>`;
+}
+async function addAsset() {
+  const name = ($('asName') || {}).value.trim();
+  const value = parseFloat(($('asVal') || {}).value);
+  if (!name || isNaN(value)) return;
+  await api('/' + BOOK + '/assets', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, value, kind: ($('asKind')||{}).value}) });
+  loadRoadmap();
+}
+async function editAsset(id, name, value, kind) {
+  const nv = prompt('New value for ' + name, value);
+  if (nv === null) return;
+  const v = parseFloat(nv);
+  if (isNaN(v)) return;
+  await api('/' + BOOK + '/assets', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id, name, value: v, kind}) });
+  loadRoadmap();
+}
+async function delAsset(id) {
+  await api('/' + BOOK + '/assets/' + id, { method: 'DELETE' });
+  loadRoadmap();
 }
 function rmStep(s, num) {
   const label = s.status === 'goal' ? 'goal'

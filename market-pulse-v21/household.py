@@ -1297,6 +1297,60 @@ def retirement_plan(settings):
     }
 
 
+# ── Net worth (the whole picture in one number) ────────────────────
+DEFAULT_HOME_VALUE = 950000.0     # she told us; editable
+
+
+def net_worth(settings, accounts=None):
+    """Assets minus liabilities. Assets = the home, cash on hand (her
+    imported checking + savings), and any investment / other assets she
+    enters by hand (Fidelity, 401k, a second property…). Liabilities = the
+    mortgage, HELOC and card the tool already tracks from her statements."""
+    s = settings or {}
+    ret = s.get("retirement") or {}
+
+    home = float(s.get("home_value") or ret.get("home_value") or DEFAULT_HOME_VALUE)
+    cash, cash_break = liquid_savings(accounts)
+    manual = []
+    for a in (s.get("assets") or []):
+        try:
+            manual.append({"id": a.get("id"), "name": str(a.get("name") or "Asset"),
+                           "value": round(float(a.get("value") or 0), 2),
+                           "kind": a.get("kind") or "investment"})
+        except (TypeError, ValueError):
+            continue
+
+    assets = [{"name": "Home", "value": round(home, 2), "kind": "property", "auto": True}]
+    if cash or cash_break:
+        assets.append({"name": "Cash on hand", "value": cash, "kind": "cash", "auto": True,
+                       "detail": " + ".join(f"{b['name']} {_money(b['balance'])}" for b in cash_break)})
+    assets += manual
+    total_assets = round(sum(a["value"] for a in assets), 2)
+
+    mortgage = float(ret.get("mortgage_balance") or 0)
+    heloc = float(s.get("heloc_balance") or 0)
+    card = float(s.get("card_balance") or 0)
+    liabilities = [
+        {"name": "Mortgage (LoanDepot)", "value": round(mortgage, 2)},
+        {"name": "HELOC (Golden 1)", "value": round(heloc, 2)},
+        {"name": "Credit card (Golden 1)", "value": round(card, 2)},
+    ]
+    liabilities = [l for l in liabilities if l["value"] > 0]
+    total_liab = round(mortgage + heloc + card, 2)
+
+    invest_total = round(sum(a["value"] for a in manual if a["kind"] == "investment"), 2)
+    home_equity = round(home - mortgage - heloc, 2)   # equity left in the house
+
+    return {
+        "assets": assets, "liabilities": liabilities,
+        "total_assets": total_assets, "total_liabilities": total_liab,
+        "net_worth": round(total_assets - total_liab, 2),
+        "home_value": round(home, 2), "home_equity": home_equity,
+        "cash": cash, "investments": invest_total,
+        "manual_assets": manual,
+    }
+
+
 # ── The Roadmap (order of operations she can follow) ────────────────
 # One ordered path over everything the tool tracks. Each milestone reads
 # her live numbers and reports done / now / later, so a non-technical

@@ -263,6 +263,28 @@ def test_payoff_months():
     eq(H.payoff_months(0, 5, 100), (0, 0.0), "no balance -> done")
 
 
+def test_net_worth():
+    accts = [{"kind": "checking", "balance": 3800, "name": "Checking"},
+             {"kind": "savings", "balance": 200, "name": "Savings"}]
+    settings = {
+        "home_value": 950000, "heloc_balance": 117648, "card_balance": 7454,
+        "retirement": {"mortgage_balance": 377000},
+        "assets": [{"id": 1, "name": "Fidelity", "value": 8000, "kind": "investment"},
+                   {"id": 2, "name": "401k", "value": 120000, "kind": "investment"}],
+    }
+    nw = H.net_worth(settings, accts)
+    approx(nw["total_assets"], 950000 + 4000 + 8000 + 120000, "assets = home+cash+investments")
+    approx(nw["total_liabilities"], 377000 + 117648 + 7454, "liabilities = mortgage+heloc+card")
+    approx(nw["net_worth"], nw["total_assets"] - nw["total_liabilities"], "net = assets - liab")
+    approx(nw["home_equity"], 950000 - 377000 - 117648, "home equity net of liens")
+    approx(nw["investments"], 128000, "investment total")
+    approx(nw["cash"], 4000, "cash from liquid balances")
+    # empty book still returns a sane shape (home default only)
+    nw0 = H.net_worth({})
+    approx(nw0["home_value"], H.DEFAULT_HOME_VALUE, "default home value")
+    eq(nw0["total_liabilities"], 0, "no liabilities on empty book")
+
+
 def main():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:
