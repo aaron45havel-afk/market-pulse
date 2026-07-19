@@ -885,6 +885,78 @@ async def api_hh_set_settings(code: str, request: Request):
     return JSONResponse({"settings": saved})
 
 
+@app.get("/api/household/books/{code}/retirement")
+async def api_hh_retirement(code: str):
+    """The retirement picture: pension + Social Security vs. living costs and
+    the debts the tool already tracks, across candidate retirement years."""
+    import household
+    from database import household_get_settings
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    settings = await asyncio.to_thread(household_get_settings, code)
+    return JSONResponse(household.retirement_plan(settings))
+
+
+@app.post("/api/household/books/{code}/retirement/seed")
+async def api_hh_retirement_seed(code: str):
+    """Populate the retirement plan with Frances's CalPERS/SS/mortgage
+    starting figures (from her spreadsheet). Editable afterward."""
+    import household
+    from database import household_get_settings, household_set_settings
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+
+    def _do():
+        cur = household_get_settings(code)
+        if not (cur.get("retirement") or {}).get("pension_by_year"):
+            cur["retirement"] = household.retirement_seed()
+            household_set_settings(code, cur)
+        return household.retirement_plan(cur)
+    return JSONResponse(await asyncio.to_thread(_do))
+
+
+@app.post("/api/household/books/{code}/retirement")
+async def api_hh_retirement_save(code: str, request: Request):
+    """Merge edits into settings['retirement'] — the picked retire year / SS
+    claim age, monthly expenses, mortgage, or a whole pension/SS schedule."""
+    import household
+    from database import household_get_settings, household_set_settings
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    incoming = body.get("retirement") if isinstance(body.get("retirement"), dict) else {}
+    num_fields = {"birth_year", "retire_expenses", "mortgage_balance",
+                  "mortgage_payment", "mortgage_rate", "retire_year", "ss_claim_age"}
+    clean = {}
+    for k, v in incoming.items():
+        if k in num_fields:
+            fv = _coerce_float(v)
+            if fv is not None:
+                clean[k] = int(fv) if k in ("birth_year", "retire_year", "ss_claim_age") else fv
+        elif k in ("pension_by_year", "ss_by_age") and isinstance(v, dict):
+            sched = {}
+            for yk, yv in v.items():
+                fv = _coerce_float(yv)
+                if fv is not None and str(yk).strip().isdigit():
+                    sched[str(int(yk))] = fv
+            if sched:
+                clean[k] = sched
+
+    def _do():
+        cur = household_get_settings(code)
+        ret = cur.get("retirement") or {}
+        if not ret.get("pension_by_year"):
+            ret = household.retirement_seed()
+        ret.update(clean)
+        cur["retirement"] = ret
+        household_set_settings(code, cur)
+        return household.retirement_plan(cur)
+    return JSONResponse(await asyncio.to_thread(_do))
+
+
 @app.get("/api/household/books/{code}/this-month")
 async def api_hh_this_month(code: str, mode: str = "kill_debt"):
     """The decision tab: four vital signs + the chosen mode's one move."""
