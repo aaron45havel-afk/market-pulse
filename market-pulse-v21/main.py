@@ -1076,7 +1076,12 @@ async def api_hh_retirement_save(code: str, request: Request):
         ret = cur.get("retirement") or {}
         if not ret.get("pension_by_year"):
             ret = household.retirement_seed()
-        ret.update(clean)
+        for k, v in clean.items():
+            # merge schedule dicts so a partial edit doesn't wipe other years
+            if k in ("pension_by_year", "ss_by_age") and isinstance(ret.get(k), dict):
+                merged = dict(ret[k]); merged.update(v); ret[k] = merged
+            else:
+                ret[k] = v
         cur["retirement"] = ret
         household_set_settings(code, cur)
         return household.retirement_plan(cur)
