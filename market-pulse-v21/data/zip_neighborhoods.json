@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "as_of": "2026-07-12",
-    "count": 6668,
+    "as_of": "2026-07-19",
+    "count": 6671,
     "source": "Photon (komoot.io OSM reverse-geocoder), neighbourhood/suburb/district tags"
   },
   "neighborhoods": {
@@ -686,6 +686,7 @@
     "07030": "Downtown",
     "07034": "Lake Hiawatha",
     "07040": "Newark Heights",
+    "07041": "Wyoming",
     "07043": "Upper Montclair",
     "07045": "Towaco",
     "07047": "New Durham",
@@ -6426,9 +6427,11 @@
     "92139": "Paradise Hills",
     "92154": "Otay Mesa",
     "92173": "San Ysidro",
+    "92203": "Sun City Shadow Hills",
     "92210": "Eldorado Country Club",
     "92242": "Earp",
     "92253": "PGA West",
+    "92270": "Morningside",
     "92282": "Bonnie Bell",
     "92321": "Cedar Glen",
     "92325": "Skyland",
