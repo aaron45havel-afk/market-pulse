@@ -1575,3 +1575,73 @@ def money_roadmap(vitals, reno=None, retire=None):
         "total": seq_total,
         "all_done": current is None,
     }
+
+
+# ── Monthly checklist (a concrete routine she can tick off) ────────
+def monthly_checklist(ctx):
+    """The handful of concrete things to do THIS month, derived from her
+    live state — a checkable routine that turns the roadmap's guidance into
+    actions. `ctx` carries: current_step (the roadmap's now-step dict or
+    None), surplus (monthly money to spare), uncategorized (count),
+    reno_active (bool), labor_pending (count), card_balance, heloc_balance.
+    Each item: {key, text, detail, tab?, mode?}."""
+    ctx = ctx or {}
+    items = [{
+        "key": "import",
+        "text": "Drop in this month's Golden 1 statement",
+        "detail": "it reads the balances, bills and debts so every number is current.",
+        "tab": "spending",
+    }]
+
+    u = int(ctx.get("uncategorized") or 0)
+    if u:
+        items.append({
+            "key": "review",
+            "text": f"Sort {u} uncategorized transaction{'s' if u != 1 else ''} into buckets",
+            "detail": "a quick tap each on the Spending tab keeps the picture accurate.",
+            "tab": "spending",
+        })
+
+    step = ctx.get("current_step") or {}
+    key = step.get("key")
+    surplus = float(ctx.get("surplus") or 0)
+    amt = _money(surplus) if surplus > 0 else None
+    if key == "card" and ctx.get("card_balance"):
+        items.append({"key": "move_card",
+                      "text": (f"Pay {amt} on the credit card" if amt else "Put every spare dollar on the credit card"),
+                      "detail": "it's the most expensive debt — clear it first.",
+                      "tab": "thismonth", "mode": "kill_debt"})
+    elif key in ("starter", "safety"):
+        items.append({"key": "move_savings",
+                      "text": (f"Move {amt} to savings" if amt else "Move whatever you can to savings"),
+                      "detail": "building the cushion is this month's focus.",
+                      "tab": "thismonth", "mode": "cushion"})
+    elif key == "heloc" and ctx.get("heloc_balance"):
+        items.append({"key": "move_heloc",
+                      "text": (f"Send {amt} extra to the HELOC" if amt else "Send anything extra to the HELOC"),
+                      "detail": "clears the renovation debt sooner and frees cash for retirement.",
+                      "tab": "reno"})
+    elif key == "cover":
+        items.append({"key": "trim",
+                      "text": "Trim your biggest everyday bucket a little",
+                      "detail": "spending is running ahead of income — ease off the top category.",
+                      "tab": "thismonth", "mode": "stop_overspend"})
+
+    lp = int(ctx.get("labor_pending") or 0)
+    if lp:
+        items.append({"key": "labor",
+                      "text": f"Tag {lp} contractor payment{'s' if lp != 1 else ''} to the kitchen",
+                      "detail": "so the renovation's true cost stays complete.",
+                      "tab": "reno"})
+
+    if ctx.get("reno_active"):
+        items.append({"key": "quotes",
+                      "text": "Log any new kitchen quotes",
+                      "detail": "update the line costs and re-lock the plan if you're happy with them.",
+                      "tab": "reno"})
+
+    items.append({"key": "balances",
+                  "text": "Glance that your balances look right",
+                  "detail": "savings and card balances read from the statement — a quick sanity check.",
+                  "tab": "plan"})
+    return items
