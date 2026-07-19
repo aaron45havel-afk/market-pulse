@@ -867,7 +867,7 @@ async def api_hh_set_settings(code: str, request: Request):
         return bad
     body = await request.json()
     incoming = body.get("settings") if isinstance(body.get("settings"), dict) else {}
-    allowed = {"mode", "income", "savings", "cushion_goal",
+    allowed = {"mode", "income", "savings", "savings_extra", "cushion_goal",
                "heloc_balance", "heloc_apr", "heloc_payment", "heloc_limit",
                "card_balance", "card_apr", "card_payment", "reno_budget"}
     clean = {}
@@ -897,7 +897,8 @@ async def api_hh_roadmap(code: str):
     goal and retirement — with the single next move she should focus on."""
     import household
     from database import (household_all_txns, household_get_settings,
-                          household_list_projects, household_budget_items)
+                          household_list_projects, household_budget_items,
+                          household_list_accounts)
     bad = await _require_hh_book(code)
     if bad:
         return bad
@@ -907,7 +908,8 @@ async def api_hh_roadmap(code: str):
         for r in rows:
             r["cls"] = household.bucket_class(r["bucket"])
         settings = household_get_settings(code)
-        vitals = household.vital_signs(rows, settings)
+        accounts = household_list_accounts(code)
+        vitals = household.vital_signs(rows, settings, accounts)
 
         # Reno summary: total planned across projects with a budget, and how
         # much of it the HELOC could cover (same headroom math as the budget).
@@ -1013,15 +1015,17 @@ async def api_hh_retirement_save(code: str, request: Request):
 async def api_hh_this_month(code: str, mode: str = "kill_debt"):
     """The decision tab: four vital signs + the chosen mode's one move."""
     import household
-    from database import household_all_txns, household_get_settings
+    from database import (household_all_txns, household_get_settings,
+                          household_list_accounts)
     bad = await _require_hh_book(code)
     if bad:
         return bad
     rows = await asyncio.to_thread(household_all_txns, code)
     settings = await asyncio.to_thread(household_get_settings, code)
+    accounts = await asyncio.to_thread(household_list_accounts, code)
     for r in rows:
         r["cls"] = household.bucket_class(r["bucket"])
-    return JSONResponse(household.this_month(rows, settings, mode))
+    return JSONResponse(household.this_month(rows, settings, mode, accounts))
 
 
 @app.post("/api/household/books/{code}/projects")

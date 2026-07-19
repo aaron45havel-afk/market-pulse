@@ -678,15 +678,39 @@ def _light(value, green, yellow, higher_is_better=True):
     return "green" if value <= green else "yellow" if value <= yellow else "red"
 
 
-def vital_signs(txns, settings):
+LIQUID_KINDS = {"checking", "savings"}
+
+
+def liquid_savings(accounts):
+    """Cash on hand: the balances of her checking + savings accounts, read
+    from the statements she imports. Returns (total, [(name, balance)…])."""
+    liquid = [a for a in (accounts or [])
+              if a.get("kind") in LIQUID_KINDS and a.get("balance") is not None]
+    breakdown = [{"name": a.get("name"), "balance": round(float(a["balance"]), 2)}
+                 for a in liquid]
+    total = round(sum(b["balance"] for b in breakdown), 2)
+    return total, breakdown
+
+
+def vital_signs(txns, settings, accounts=None):
     """The four always-on diagnostics + the money figures behind them.
-    settings carries what we can't derive: cushion_goal (months), savings,
-    heloc_balance, heloc_apr, heloc_payment, and an optional income override."""
+    settings carries what we can't derive: cushion_goal (months),
+    heloc_balance, heloc_apr, heloc_payment, and an optional income override.
+    Savings is read straight from her imported checking + savings balances
+    (plus any 'savings_extra' held elsewhere); the manual `savings` setting
+    is only a fallback for a book with no account balances yet."""
     s = settings or {}
     m = monthly_figures(txns)
     income = float(s.get("income") or 0) or m["income"]
     spend, fixed, variable = m["spend"], m["fixed"], m["variable"]
-    savings = float(s.get("savings") or 0)
+    from_accounts, liquid_breakdown = liquid_savings(accounts)
+    savings_extra = float(s.get("savings_extra") or 0)
+    if liquid_breakdown:
+        savings = round(from_accounts + savings_extra, 2)
+        savings_source = "accounts"
+    else:
+        savings = float(s.get("savings") or 0)
+        savings_source = "manual"
     hb = float(s.get("heloc_balance") or 0)
     hapr = float(s.get("heloc_apr") or 0)
     hpay = float(s.get("heloc_payment") or 0)
@@ -723,8 +747,9 @@ def vital_signs(txns, settings):
                   "note": (f"{round(ratio)}% of income is locked-in bills" if ratio is not None else "add your income")},
         "cushion": {"light": _light(months_saved if savings else None, 3, 1),
                     "value": round(months_saved, 1) if months_saved is not None else None, "label": "Cushion", "unit": "mo",
-                    "note": (f"{round(months_saved,1)} of {round(goal)} months saved" if (savings and months_saved is not None)
-                             else f"{_money(savings)} saved" if savings else "set your savings balance")},
+                    "note": (f"{_money(savings)} on hand — {round(months_saved,1)} of {round(goal)} months" if (savings and months_saved is not None)
+                             else f"{_money(savings)} on hand" if savings
+                             else ("import an account to read savings" if savings_source == "accounts" else "set your savings balance"))},
         "heloc": {"light": heloc_light, "value": pct_interest, "label": "HELOC direction", "unit": "%",
                   "note": (f"{pct_interest}% of the payment is just interest" if pct_interest is not None else "set your HELOC balance")},
     }
@@ -739,6 +764,8 @@ def vital_signs(txns, settings):
         "lights": lights, "income": round(income, 2), "spend": round(spend, 2),
         "fixed": round(fixed, 2), "variable": round(variable, 2), "avg_net": avg_net,
         "savings": savings, "cushion_goal": goal,
+        "savings_source": savings_source, "savings_from_accounts": from_accounts,
+        "savings_extra": savings_extra, "liquid_accounts": liquid_breakdown,
         "heloc_balance": hb, "heloc_apr": hapr, "heloc_payment": hpay,
         "card_balance": cb, "card_apr": capr, "card_payment": cpay,
         "debts": debts, "after_bills": round(income - fixed, 2),
@@ -818,9 +845,9 @@ def recommendation(vs, mode):
     return {"headline": head, "move": move, "projection": proj}
 
 
-def this_month(txns, settings, mode="kill_debt"):
+def this_month(txns, settings, mode="kill_debt", accounts=None):
     """Bundle the vital signs + the mode's recommendation for the tab."""
-    vs = vital_signs(txns, settings)
+    vs = vital_signs(txns, settings, accounts)
     return {
         "vitals": vs,
         "mode": mode if mode in MODES else "kill_debt",
