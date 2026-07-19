@@ -1066,6 +1066,17 @@ async def api_hh_budget_update(code: str, pid: int, item_id: int, request: Reque
     return JSONResponse({"ok": ok})
 
 
+@app.post("/api/household/books/{code}/projects/{pid}/budget/items/{item_id}/choose")
+async def api_hh_budget_choose(code: str, pid: int, item_id: int):
+    """Pick this alternative in its option group (unpicks the siblings)."""
+    from database import household_budget_choose
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    ok = await asyncio.to_thread(household_budget_choose, code, item_id)
+    return JSONResponse({"ok": ok})
+
+
 @app.delete("/api/household/books/{code}/projects/{pid}/budget/items/{item_id}")
 async def api_hh_budget_delete(code: str, pid: int, item_id: int):
     from database import household_budget_delete
