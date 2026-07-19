@@ -1088,6 +1088,44 @@ async def api_hh_retirement_save(code: str, request: Request):
     return JSONResponse(await asyncio.to_thread(_do))
 
 
+@app.get("/api/household/books/{code}/rental")
+async def api_hh_rental(code: str):
+    """'What if she rented the house?' cash-flow model."""
+    import household
+    from database import household_get_settings
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    settings = await asyncio.to_thread(household_get_settings, code)
+    return JSONResponse(household.rental_scenario(settings))
+
+
+@app.post("/api/household/books/{code}/rental")
+async def api_hh_rental_save(code: str, request: Request):
+    """Save rental assumptions (rent, management/vacancy/maintenance %)."""
+    import household
+    from database import household_get_settings, household_set_settings
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    incoming = body if isinstance(body, dict) else {}
+    allowed = {"rental_rent", "rental_mgmt_pct", "rental_vacancy_pct", "rental_maint_pct"}
+    clean = {}
+    for k in allowed:
+        if k in incoming:
+            fv = _coerce_float(incoming[k])
+            if fv is not None:
+                clean[k] = fv
+
+    def _do():
+        cur = household_get_settings(code)
+        cur.update(clean)
+        household_set_settings(code, cur)
+        return household.rental_scenario(cur)
+    return JSONResponse(await asyncio.to_thread(_do))
+
+
 @app.get("/api/household/books/{code}/this-month")
 async def api_hh_this_month(code: str, mode: str = "kill_debt"):
     """The decision tab: four vital signs + the chosen mode's one move."""

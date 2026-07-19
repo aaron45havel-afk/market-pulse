@@ -285,6 +285,27 @@ def test_net_worth():
     eq(nw0["total_liabilities"], 0, "no liabilities on empty book")
 
 
+def test_rental_scenario():
+    settings = {"home_value": 950000, "heloc_payment": 669,
+                "retirement": {"mortgage_payment": 2664}}
+    r = H.rental_scenario(settings)
+    eq(r["rent"], 5000, "default rent")
+    # operating = mgmt 8% + vacancy 5% of rent + maintenance 1%/yr of value
+    approx(r["mgmt"], 400, "management 8% of rent")
+    approx(r["vacancy"], 250, "vacancy 5% of rent")
+    approx(r["maintenance"], 950000 * 0.01 / 12, "maintenance 1%/yr of value")
+    approx(r["debt_service"], 2664 + 669, "debt service = mortgage + heloc")
+    approx(r["net_monthly"], 5000 - (2664 + 669) - r["operating"], "net = rent - costs")
+    approx(r["net_annual"], r["net_monthly"] * 12, "annual = 12x monthly")
+    # override the rent and management
+    r2 = H.rental_scenario(settings, {"rental_rent": 6000, "rental_mgmt_pct": 0})
+    eq(r2["rent"], 6000, "rent override")
+    eq(r2["mgmt"], 0, "self-manage -> no management fee")
+    check(r2["net_monthly"] > r["net_monthly"], "higher rent + self-manage nets more")
+    # gross yield
+    approx(r["gross_yield_pct"], 5000 * 12 / 950000 * 100, "gross yield")
+
+
 def main():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:
