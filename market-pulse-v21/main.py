@@ -1213,6 +1213,33 @@ async def api_hh_rental_save(code: str, request: Request):
     return JSONResponse(await asyncio.to_thread(_do))
 
 
+@app.post("/api/household/books/{code}/income-label")
+async def api_hh_income_label(code: str, request: Request):
+    """Give a cryptic income deposit a friendly name (e.g. rename
+    'PENSION BENEFITS PENBEJUL26' to 'Nursing pension')."""
+    from database import household_get_settings, household_set_settings
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    key = str(body.get("key") or "").strip()
+    name = str(body.get("name") or "").strip()
+    if not key:
+        return JSONResponse({"error": "key required"}, status_code=400)
+
+    def _do():
+        settings = household_get_settings(code)
+        labels = settings.get("income_labels") or {}
+        if name:
+            labels[key] = name[:60]
+        else:
+            labels.pop(key, None)
+        settings["income_labels"] = labels
+        household_set_settings(code, settings)
+        return {"income_labels": labels}
+    return JSONResponse(await asyncio.to_thread(_do))
+
+
 @app.get("/api/household/books/{code}/this-month")
 async def api_hh_this_month(code: str, mode: str = "kill_debt"):
     """The decision tab: four vital signs + the chosen mode's one move."""

@@ -106,6 +106,7 @@ DEFAULT_RULES: list[tuple[str, list[str]]] = [
         "irs treas", "tax ref", "state tax", "franchise tax bd",
         "gusto", "adp", "paychex", "workday", "salary", "wages",
         "deposit dividend", "interest paid",
+        "caltrans", "sco ", "state controller", "calstrs", "calpers",  # CA state pay/COLA
     ]),
     # ── Housing (fixed) ──
     ("Mortgage", [
@@ -578,6 +579,36 @@ def fixed_bills(txns):
     }
 
 
+def income_streams(txns, labels=None):
+    """Her income broken into streams — payroll, a nursing pension, a state
+    COLA, etc. — grouped by payee, each with its typical monthly amount and
+    the months it's appeared. `labels` is a {merchant_key: friendly name} map
+    so cryptic descriptors can read plainly. Returns {streams, total}."""
+    labels = labels or {}
+    groups: dict[str, list[dict]] = defaultdict(list)
+    for t in txns:
+        if t["cls"] == "income" and t["amount"] > 0:
+            key = t.get("mkey") or merchant_key(t.get("desc", ""))
+            if key:
+                groups[key].append(t)
+    streams = []
+    for mkey, ts in groups.items():
+        months = sorted({t["date"][:7] for t in ts if t.get("date")})
+        amts = sorted(t["amount"] for t in ts)
+        typical = amts[len(amts) // 2] if amts else 0.0
+        if typical <= 0:
+            continue
+        streams.append({
+            "key": mkey,
+            "name": labels.get(mkey) or ts[-1]["desc"],
+            "raw": ts[-1]["desc"],
+            "monthly": round(typical, 2),
+            "months": len(months),
+        })
+    streams.sort(key=lambda s: s["monthly"], reverse=True)
+    return {"streams": streams, "total": round(sum(s["monthly"] for s in streams), 2)}
+
+
 # ── Aggregation for the dashboard ──────────────────────────────────
 def summarize(txns: list[dict], month: str | None = None) -> dict:
     """Compute the dashboard numbers. If `month` (YYYY-MM) is given,
@@ -1016,6 +1047,7 @@ def this_month(txns, settings, mode="kill_debt", accounts=None):
         "modes": [{"key": k, "label": MODE_LABEL[k]} for k in MODES],
         "rec": recommendation(vs, mode),
         "debt_plan": debt_plan,
+        "income_streams": income_streams(txns, (settings or {}).get("income_labels")),
     }
 
 
