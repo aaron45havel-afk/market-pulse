@@ -169,6 +169,20 @@
   .hh-empty { text-align: center; color: var(--ink-3); padding: 2rem 1rem; font-size: 0.92rem; }
   .hh-msg { font-size: 0.82rem; margin-top: 0.5rem; }
   .hh-msg.ok { color: var(--mint-ink); } .hh-msg.err { color: var(--coral-ink); }
+
+  /* ── phone: keep the page from scrolling sideways ── */
+  @media (max-width: 600px) {
+    /* wide tables scroll inside their own card, never the whole page */
+    .hh-tx { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .hh-reno-head { grid-template-columns: 1fr 1fr; }
+    .hh-picker { flex-direction: column; }
+    .hh-picker .hh-f { min-width: 0; }
+    .hh-tile .v { font-size: 1.45rem; }
+    h2 { font-size: 1.15rem; }
+  }
+  @media (max-width: 380px) {
+    .hh-reno-head { grid-template-columns: 1fr; }
+  }
 </style>
 {% endblock %}
 

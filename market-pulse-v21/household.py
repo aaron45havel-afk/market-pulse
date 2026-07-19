@@ -142,6 +142,9 @@ DEFAULT_RULES: list[tuple[str, list[str]]] = [
         "raley", "lucky super", "foodmaxx", "food maxx", "grocery outlet",
         "aldi", "kroger", "smart & final", "smart final", "nob hill",
         "grocery", "supermarket", "cardenas", "mi pueblo", "food 4 less",
+        # warehouse stores are mostly food/household staples → essential.
+        # (specific "whse/wholesale" so it never catches "COSTCO GAS")
+        "costco whse", "costco wholesale", "sam's club", "sams club", "bj's whs",
     ]),
     ("Dining", [
         "restaurant", " cafe", "coffee", "starbucks", "peet", "mcdonald",
@@ -203,7 +206,7 @@ DEFAULT_RULES: list[tuple[str, list[str]]] = [
     ]),
     ("Shopping", [
         "amazon", "amzn", "best buy", "home depot", "lowe's", "lowes",
-        "etsy", "ebay", "costco whse", "costco wholesale", "target.com",
+        "etsy", "ebay", "target.com",
     ]),
     ("Subscriptions", [
         "netflix", "spotify", "hulu", "disney plus", "disney+", "apple.com",
