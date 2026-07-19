@@ -99,6 +99,10 @@
   .hh-secrow td { background: var(--surface-2); border-bottom: 1px solid var(--line); }
   .hh-x { background: none; border: none; color: var(--ink-4); font-size: 0.9rem; cursor: pointer; padding: 0.2rem 0.35rem; }
   .hh-x:hover { color: var(--coral-ink); }
+  .hh-owned .hh-bi { color: var(--ink-4); text-decoration: line-through; }
+  .hh-owned .hh-bi.u, .hh-owned .hh-bi.n { text-decoration: none; }
+  .hh-have { font-size: 0.68rem; color: var(--ink-3); font-weight: 600; margin-right: 0.4rem; cursor: pointer; }
+  .hh-owned .hh-have { color: var(--mint-ink); }
   .hh-recur { display: flex; justify-content: space-between; align-items: center; padding: 0.45rem 0; border-bottom: 1px solid var(--line); font-size: 0.85rem; }
   .hh-recur .m { font-size: 0.7rem; color: var(--ink-3); }
 
@@ -473,22 +477,23 @@ function renderBudget() {
   const bySec = {};
   b.items.forEach(it => (bySec[it.section] = bySec[it.section] || []).push(it));
   const secHtml = SECTION_ORDER.filter(sec => bySec[sec]).map(sec => {
-    const rows = bySec[sec].map(it => `<tr>
+    const rows = bySec[sec].map(it => `<tr class="${it.owned ? 'hh-owned' : ''}">
       <td><input class="hh-bi" style="width:100%" value="${(it.name||'').replace(/"/g,'&quot;')}" onchange="editItem(${it.id},'name',this.value)"></td>
       <td><input class="hh-bi n" value="${it.qty}" onchange="editItem(${it.id},'qty',this.value)"></td>
       <td><input class="hh-bi u" value="${it.unit||''}" onchange="editItem(${it.id},'unit',this.value)"></td>
       <td>$<input class="hh-bi n" value="${it.unit_cost}" onchange="editItem(${it.id},'unit_cost',this.value)"></td>
       <td>$<input class="hh-bi n" value="${it.labor}" onchange="editItem(${it.id},'labor',this.value)"></td>
-      <td class="amt">${fmt(itemTotal(it))}</td>
-      <td>${it.url ? `<a href="${it.url}" target="_blank" class="hh-note" style="margin:0">link</a> ` : ''}<button class="hh-x" onclick="delItem(${it.id})" title="remove">✕</button></td></tr>`).join('');
-    const secTotal = bySec[sec].reduce((a, it) => a + itemTotal(it), 0);
+      <td class="amt">${it.owned ? `<s style="color:var(--ink-4)">${fmt(itemTotal(it))}</s> $0` : fmt(itemTotal(it))}</td>
+      <td style="white-space:nowrap"><label class="hh-have" title="Already have it — keep in the plan but don't fund"><input type="checkbox" ${it.owned ? 'checked' : ''} onchange="editItem(${it.id},'owned',this.checked)"> have it</label>
+      ${it.url ? `<a href="${it.url}" target="_blank" class="hh-note" style="margin:0">link</a> ` : ''}<button class="hh-x" onclick="delItem(${it.id})" title="remove">✕</button></td></tr>`).join('');
+    const secTotal = bySec[sec].reduce((a, it) => a + (it.owned ? 0 : itemTotal(it)), 0);
     return `<tr class="hh-secrow"><td colspan="5"><strong>${sec}</strong></td><td class="amt"><strong>${fmt(secTotal)}</strong></td><td></td></tr>${rows}`;
   }).join('');
   const overUnder = s.target ? (s.over_under > 0 ? `<span style="color:var(--coral-ink)">${fmt(s.over_under)} over your ${fmt(s.target)} target</span>` : `<span style="color:var(--mint-ink)">${fmt(-s.over_under)} under your ${fmt(s.target)} target</span>`) : 'set a target below';
   $('budget').innerHTML = `
     <div class="hh-card"><h2>Kitchen budget</h2>
       <div class="hh-reno-head" style="margin-bottom:0.8rem;">
-        <div class="hh-tile"><div class="k">Materials + labor</div><div class="v">${fmt(s.subtotal)}</div><div class="sub">${b.items.length} line items</div></div>
+        <div class="hh-tile"><div class="k">Materials + labor</div><div class="v">${fmt(s.subtotal)}</div><div class="sub">${b.items.length} line items${s.owned_total ? ' · ' + fmt(s.owned_total) + ' already owned' : ''}</div></div>
         <div class="hh-tile"><div class="k">+ Contingency ${s.contingency_pct}%</div><div class="v">${fmt(s.contingency)}</div><div class="sub">buffer for surprises</div></div>
         <div class="hh-tile"><div class="k">Projected total</div><div class="v" style="color:var(--primary)">${fmt(s.total)}</div><div class="sub">${overUnder}</div></div>
         <div class="hh-tile"><div class="k">HELOC can cover</div><div class="v" style="color:${f.can_fund>=s.total?'var(--mint-ink)':'var(--gold-ink)'}">${fmt(f.can_fund)}</div><div class="sub">${f.can_fund>=s.total?'covers the whole budget':'of the '+fmt(s.total)}</div></div>
@@ -546,7 +551,8 @@ function addItemRow(sections) {
 }
 function mv(id) { const el = $(id); return el && el.value !== '' ? parseFloat(el.value) : null; }
 async function editItem(id, field, value) {
-  const v = (field === 'name' || field === 'unit') ? value : parseFloat(value);
+  const v = field === 'owned' ? !!value
+          : (field === 'name' || field === 'unit') ? value : parseFloat(value);
   await api('/' + BOOK + '/projects/' + STATE.curProject + '/budget/items/' + id, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({[field]: v}) });
   await loadBudget();
 }

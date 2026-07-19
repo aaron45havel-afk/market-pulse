@@ -196,12 +196,16 @@ def _ensure_household_tables():
                 labor      REAL NOT NULL DEFAULT 0,
                 url        TEXT,
                 notes      VARCHAR(200),
+                owned      BOOLEAN NOT NULL DEFAULT FALSE,
                 sort       INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """)
         cur.execute("""CREATE INDEX IF NOT EXISTS hh_budget_items_proj_idx
                        ON hh_budget_items(project_id)""")
+        # "Already have it" flag — keeps the line in the plan but drops its
+        # cost from the total (she already owns the fridge, etc.).
+        cur.execute("ALTER TABLE hh_budget_items ADD COLUMN IF NOT EXISTS owned BOOLEAN NOT NULL DEFAULT FALSE")
         conn.commit(); cur.close()
     except Exception as e:
         logger.error(f"household table init error: {e}")
@@ -1524,13 +1528,14 @@ def household_budget_items(code: str, pid: int) -> list[dict]:
     if not conn: return []
     try:
         cur = conn.cursor()
-        cur.execute("""SELECT id, section, name, qty, unit, unit_cost, labor, url, notes, sort
+        cur.execute("""SELECT id, section, name, qty, unit, unit_cost, labor, url, notes, sort, owned
                        FROM hh_budget_items WHERE book_code = %s AND project_id = %s
                        ORDER BY sort, id""", (code, pid))
         rows = cur.fetchall(); cur.close()
         return [{"id": r[0], "section": r[1], "name": r[2], "qty": float(r[3]),
                  "unit": r[4], "unit_cost": float(r[5]), "labor": float(r[6]),
-                 "url": r[7], "notes": r[8], "sort": r[9]} for r in rows]
+                 "url": r[7], "notes": r[8], "sort": r[9], "owned": bool(r[10])}
+                for r in rows]
     finally:
         conn.close()
 
@@ -1584,7 +1589,8 @@ def household_budget_bulk_add(code: str, pid: int, items: list[dict]) -> int:
 
 def household_budget_update(code: str, item_id: int, fields: dict) -> bool:
     cols = {"section": str, "name": str, "qty": float, "unit": str,
-            "unit_cost": float, "labor": float, "url": str, "notes": str}
+            "unit_cost": float, "labor": float, "url": str, "notes": str,
+            "owned": bool}
     sets, vals = [], []
     for k, cast in cols.items():
         if k in fields:

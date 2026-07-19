@@ -949,7 +949,13 @@ def budget_summary(items, meta=None):
     m = meta or {}
     cont_pct = float(m.get("contingency_pct") if m.get("contingency_pct") is not None else 15)
     by_section = {}
+    owned_total = 0.0
     for it in items:
+        # "Already have it" items stay in the plan but cost $0 toward it.
+        if it.get("owned"):
+            owned_total += _item_total(it)
+            by_section.setdefault(it["section"], 0.0)
+            continue
         by_section[it["section"]] = by_section.get(it["section"], 0) + _item_total(it)
     subtotal = round(sum(by_section.values()), 2)
     contingency = round(subtotal * cont_pct / 100, 2)
@@ -973,6 +979,7 @@ def budget_summary(items, meta=None):
     return {
         "sections": sections, "subtotal": subtotal,
         "contingency_pct": cont_pct, "contingency": contingency, "total": total,
+        "owned_total": round(owned_total, 2),
         "target": round(target, 2),
         "over_under": round(total - target, 2) if target else None,
         "financing": {
