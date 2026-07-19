@@ -701,6 +701,75 @@ def payoff_months(balance, apr, payment):
     return (n, round(max(0.0, payment * n - balance), 2))
 
 
+def debt_free_plan(debts, extra=0.0, cap_months=1200):
+    """Simulate the debt AVALANCHE across all her debts: pay every minimum,
+    throw any spare dollar at the highest-APR balance, and roll each cleared
+    debt's payment onto the next. Returns the order she clears them, when,
+    the interest each costs, and the debt-free month/total interest. Returns
+    payoff=False if the payments can't outrun the interest."""
+    ds = []
+    for d in (debts or []):
+        bal = float(d.get("balance") or 0)
+        if bal <= 0:
+            continue
+        ds.append({"name": d.get("name") or "debt", "balance": bal,
+                   "apr": float(d.get("apr") or 0),
+                   "min": float(d.get("payment") or 0),
+                   "interest": 0.0, "cleared_month": None})
+    if not ds:
+        return {"payoff": True, "months": 0, "total_interest": 0.0,
+                "debts": [], "monthly_payment": 0.0, "extra": round(float(extra or 0), 2)}
+    # highest APR first — the avalanche order
+    ds.sort(key=lambda d: d["apr"], reverse=True)
+    budget = round(sum(d["min"] for d in ds) + max(0.0, float(extra or 0)), 2)
+    total_interest = 0.0
+    month = 0
+    while any(d["balance"] > 0.005 for d in ds) and month < cap_months:
+        month += 1
+        # accrue this month's interest
+        for d in ds:
+            if d["balance"] > 0:
+                i = d["balance"] * d["apr"] / 1200.0
+                d["balance"] += i
+                d["interest"] += i
+                total_interest += i
+        # what she can pay this month, never more than what's owed
+        remaining = min(budget, sum(d["balance"] for d in ds if d["balance"] > 0))
+        if remaining <= 0.005:
+            break
+        # cover each minimum first (capped at the balance)…
+        for d in ds:
+            if d["balance"] > 0 and remaining > 0:
+                pay = min(d["min"], d["balance"], remaining)
+                d["balance"] -= pay
+                remaining -= pay
+        # …then avalanche the rest onto the highest-APR remaining balance
+        for d in ds:                       # already APR-sorted
+            if remaining <= 0.005:
+                break
+            if d["balance"] > 0:
+                pay = min(d["balance"], remaining)
+                d["balance"] -= pay
+                remaining -= pay
+        for d in ds:
+            if d["balance"] <= 0.005 and d["cleared_month"] is None:
+                d["balance"] = 0.0
+                d["cleared_month"] = month
+    payoff = all(d["balance"] <= 0.005 for d in ds)
+    out_debts = [{"name": d["name"], "apr": round(d["apr"], 2),
+                  "interest": round(d["interest"], 2),
+                  "cleared_month": d["cleared_month"]}
+                 for d in ds]
+    return {
+        "payoff": payoff,
+        "months": month if payoff else None,
+        "total_interest": round(total_interest, 2),
+        "monthly_payment": budget,
+        "extra": round(max(0.0, float(extra or 0)), 2),
+        "debts": out_debts,
+    }
+
+
 def _light(value, green, yellow, higher_is_better=True):
     if value is None:
         return "gray"
@@ -890,11 +959,21 @@ def recommendation(vs, mode):
 def this_month(txns, settings, mode="kill_debt", accounts=None):
     """Bundle the vital signs + the mode's recommendation for the tab."""
     vs = vital_signs(txns, settings, accounts)
+    debts = vs.get("debts") or []
+    surplus = max(0.0, vs.get("avg_net") or 0)
+    debt_plan = None
+    if debts:
+        debt_plan = {
+            "surplus": round(surplus, 2),
+            "minimums": debt_free_plan(debts, extra=0),
+            "with_surplus": debt_free_plan(debts, extra=surplus),
+        }
     return {
         "vitals": vs,
         "mode": mode if mode in MODES else "kill_debt",
         "modes": [{"key": k, "label": MODE_LABEL[k]} for k in MODES],
         "rec": recommendation(vs, mode),
+        "debt_plan": debt_plan,
     }
 
 
