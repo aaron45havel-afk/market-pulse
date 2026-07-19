@@ -838,6 +838,23 @@ async def api_hh_bills(code: str):
     return JSONResponse(await asyncio.to_thread(_do))
 
 
+@app.get("/api/household/books/{code}/coverage")
+async def api_hh_coverage(code: str):
+    """Which months are imported per account — and which are missing — so a
+    skipped statement (a forgotten HELOC month) is easy to spot."""
+    import household
+    from database import household_all_txns, household_list_accounts
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+
+    def _do():
+        rows = household_all_txns(code)
+        accounts = household_list_accounts(code)
+        return {"accounts": household.statement_coverage(rows, accounts)}
+    return JSONResponse(await asyncio.to_thread(_do))
+
+
 @app.post("/api/household/books/{code}/txns/{txn_id}/bucket")
 async def api_hh_recategorize(code: str, txn_id: int, request: Request):
     """Assign a bucket to a transaction. With apply_all, learns a rule
