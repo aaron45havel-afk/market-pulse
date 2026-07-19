@@ -388,31 +388,9 @@ def init_db():
             ALTER TABLE crm_contacts
             ADD COLUMN IF NOT EXISTS email_thread TEXT
         """)
-        # Prototype brief artifact — Step 5 of the working-session chain.
-        cur.execute("""
-            ALTER TABLE crm_working_sessions
-            ADD COLUMN IF NOT EXISTS prototype_brief TEXT
-        """)
-        # Step 6 — post-review iteration planning. Free-form feedback
-        # the user pastes from a client review call, plus the AI's two
-        # output prompts (Claude Code + claude.ai design).
-        cur.execute("""
-            ALTER TABLE crm_working_sessions
-            ADD COLUMN IF NOT EXISTS iteration_feedback TEXT
-        """)
-        cur.execute("""
-            ALTER TABLE crm_working_sessions
-            ADD COLUMN IF NOT EXISTS iteration_code_prompt TEXT
-        """)
-        cur.execute("""
-            ALTER TABLE crm_working_sessions
-            ADD COLUMN IF NOT EXISTS iteration_design_prompt TEXT
-        """)
-        # Gap-analysis artifact — Step 2 of the discovery-call chain.
-        cur.execute("""
-            ALTER TABLE crm_discovery_calls
-            ADD COLUMN IF NOT EXISTS gap_analysis_md TEXT
-        """)
+        # NOTE: ALTERs for crm_working_sessions / crm_discovery_calls were
+        # moved to just before commit — those tables are CREATEd later in
+        # this block, so altering them here failed on a fresh database.
         # NURTURE play — after a prospect replies but says they've signed
         # with a competitor. We stash a follow_up_date (default +4 mo)
         # so we can reach back out with a "gaps in their new tool" pitch.
@@ -445,6 +423,13 @@ def init_db():
         cur.execute("""
             ALTER TABLE crm_email_templates
             ADD COLUMN IF NOT EXISTS replies_count INTEGER NOT NULL DEFAULT 0
+        """)
+        # The `role` column must exist before the UNIQUE(industry, role,
+        # trigger, variant_label) constraint below references it — on a
+        # fresh database the table is created without it.
+        cur.execute("""
+            ALTER TABLE crm_email_templates
+            ADD COLUMN IF NOT EXISTS role VARCHAR(40) NOT NULL DEFAULT ''
         """)
         cur.execute("""
             ALTER TABLE crm_email_templates
@@ -503,10 +488,6 @@ def init_db():
         cur.execute("""
             ALTER TABLE crm_contacts
             ADD COLUMN IF NOT EXISTS pilot_agreement TEXT
-        """)
-        cur.execute("""
-            ALTER TABLE crm_email_templates
-            ADD COLUMN IF NOT EXISTS role VARCHAR(40) NOT NULL DEFAULT ''
         """)
         # Prototype tracking — one row per testable build per contact.
         # Captures the deployed URL the client can hit, the current
@@ -601,6 +582,14 @@ def init_db():
                 updated_at        TIMESTAMP DEFAULT NOW()
             )
         """)
+
+        # Idempotent column migrations for tables created above. These run
+        # AFTER their CREATE TABLE so a fresh database doesn't error.
+        cur.execute("ALTER TABLE crm_working_sessions ADD COLUMN IF NOT EXISTS prototype_brief TEXT")
+        cur.execute("ALTER TABLE crm_working_sessions ADD COLUMN IF NOT EXISTS iteration_feedback TEXT")
+        cur.execute("ALTER TABLE crm_working_sessions ADD COLUMN IF NOT EXISTS iteration_code_prompt TEXT")
+        cur.execute("ALTER TABLE crm_working_sessions ADD COLUMN IF NOT EXISTS iteration_design_prompt TEXT")
+        cur.execute("ALTER TABLE crm_discovery_calls ADD COLUMN IF NOT EXISTS gap_analysis_md TEXT")
 
         conn.commit()
         cur.close()

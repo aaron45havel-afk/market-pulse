@@ -56,6 +56,8 @@ def test_categorize():
         "AMAZON MKTPL*OF8": "Shopping",
         "TARGET T-1234": "Household Goods",
         "SAFEWAY #123": "Groceries",
+        "COSTCO WHSE #0441": "Groceries",       # warehouse -> essential groceries
+        "COSTCO GAS #0441 SAN LEANDRO": "Gas & Fuel",  # but the gas station is fuel
         "CHEVRON 12345": "Gas & Fuel",
         "GEICO ONLINE PMT": "Insurance",
         "PAYROLL ST OF CA": "Income",
