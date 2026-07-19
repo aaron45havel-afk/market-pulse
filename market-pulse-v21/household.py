@@ -53,6 +53,7 @@ BUCKET_CLASS = {
     "Health & Pharmacy": "variable",
     "Shopping": "variable",
     "Household Goods": "variable",
+    "Home Improvement": "variable",
     "Furniture": "variable",
     "Clothes": "variable",
     "Beauty": "variable",
@@ -76,6 +77,12 @@ DEFAULT_RULES: list[tuple[str, list[str]]] = [
     # ── Interest first — "Interest Charge on Cash Advances" must land in
     # Fees & Interest, not get grabbed by the "cash advance" transfer kw. ──
     ("Fees & Interest", ["finance charge", "interest charge", "interest chg"]),
+    # ── Person-to-person apps are real payments to people (here, mostly
+    # renovation labor — "ZELLE ... TO ROSALES"), NOT internal transfers.
+    # They must NOT be excluded like a transfer, so catch them before the
+    # Transfer rule grabs the word "transfer" and leave them for review /
+    # reno-tagging. (Internal Zelle to your own accounts is rare.) ──
+    ("Uncategorized", ["zelle", "venmo", "cash app", "cashapp"]),
     # ── Internal transfers (Golden 1 self-labels these) ──
     ("Transfer", [
         "transfer", "to loan", "from loan", "to share", "from share",
@@ -106,6 +113,7 @@ DEFAULT_RULES: list[tuple[str, list[str]]] = [
         "rocket mortgage", "loancare", "pennymac", "penny mac",
         "freedom mortgage", "caliber home", "wells fargo home",
         "chase mortgage", "flagstar", "newrez", "shellpoint", "carrington",
+        "loandepot", "loan depot",
     ]),
     ("HELOC", [
         "heloc", "home equity", "equity line", "line of credit", "eq line",
@@ -157,6 +165,17 @@ DEFAULT_RULES: list[tuple[str, list[str]]] = [
         "dental", "dentist", "medical", "clinic", "hospital", "optometr",
         "vision care", "urgent care", "labcorp", "quest diag", "rx ",
         "blue shield", "anthem", "health net", "goodrx",
+    ]),
+    # ── Home Improvement — she's mid-reno; keep hardware/paint/flooring
+    # out of generic Shopping so the renovation picture is clean. Comes
+    # before Shopping so "home depot" lands here, and these also auto-tag
+    # to the reno on import (see RENO_VENDORS). ──
+    ("Home Improvement", [
+        "home depot", "homedepot", "lowe's", "lowes", "ace hardware",
+        "orchard supply", "harbor freight", "floor & decor", "floor and decor",
+        "ferguson", "sherwin", "benjamin moore", "creative paint", "the tile",
+        "tile shop", "hardware store", "lumber", "build.com", "menards",
+        "paint #", "paint co", "glass & mirror", "kitchen & bath",
     ]),
     ("Furniture", [
         "furniture", "ashley homestore", "ashley furniture", "wayfair",
