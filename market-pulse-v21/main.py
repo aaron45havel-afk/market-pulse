@@ -855,6 +855,25 @@ async def api_hh_coverage(code: str):
     return JSONResponse(await asyncio.to_thread(_do))
 
 
+@app.get("/api/household/books/{code}/merchants")
+async def api_hh_merchants(code: str, q: str = ""):
+    """Where the money goes by store — top merchants, plus a total for a
+    search term (a store like 'costco' or a category like 'gas')."""
+    import household
+    from database import household_all_txns
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+
+    def _do():
+        rows = household_all_txns(code)
+        for r in rows:
+            r["cls"] = household.bucket_class(r["bucket"])
+        return {"top": household.top_merchants(rows),
+                "lookup": household.spend_lookup(rows, q) if q.strip() else None}
+    return JSONResponse(await asyncio.to_thread(_do))
+
+
 @app.post("/api/household/books/{code}/txns/{txn_id}/bucket")
 async def api_hh_recategorize(code: str, txn_id: int, request: Request):
     """Assign a bucket to a transaction. With apply_all, learns a rule

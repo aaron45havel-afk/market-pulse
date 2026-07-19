@@ -178,6 +178,42 @@ def test_vital_signs_savings():
     approx(vs["cushion_base"], vs["essential"], "cushion base is essential")
 
 
+def test_merchant_spending():
+    rows = [
+        txn("2026-05-04", -180, "Groceries", desc="COSTCO WHSE #0441"),
+        txn("2026-06-04", -220, "Groceries", desc="COSTCO WHSE #0441"),
+        txn("2026-05-08", -60, "Gas & Fuel", desc="CHEVRON 12345"),
+        txn("2026-06-08", -55, "Gas & Fuel", desc="SHELL OIL 99"),
+        txn("2026-06-10", -400, "Groceries", desc="SAFEWAY"),
+        txn("2026-06-01", 5000, "Income", desc="PAYROLL"),        # excluded
+        txn("2026-06-02", -700, "Transfer", desc="G1 TRANSFER"),  # excluded
+    ]
+    top = H.top_merchants(rows)
+    names = [m["merchant"] for m in top]
+    check("PAYROLL" not in " ".join(names), "income excluded from merchants")
+    check(all("TRANSFER" not in n for n in names), "transfers excluded")
+    costco = next(m for m in top if "COSTCO" in m["merchant"])
+    approx(costco["total"], 400, "Costco total across 2 months")
+    approx(costco["monthly"], 200, "Costco ~$200/mo")
+    # lookup by store name
+    lk = H.spend_lookup(rows, "costco")
+    approx(lk["total"], 400, "costco lookup total")
+    eq(lk["count"], 2, "two costco charges")
+    check(len(lk["matches"]) == 2, "sample charges returned")
+    # lookup by CATEGORY (matches the bucket) — all gas stations
+    gas = H.spend_lookup(rows, "gas")
+    approx(gas["total"], 115, "gas lookup sums Chevron + Shell via the bucket")
+    eq(gas["count"], 2, "two gas charges")
+    # a fuzzy word that spans buckets is broken out honestly
+    fuzzy_rows = rows + [txn("2026-06-11", -850, "Utilities", desc="PACIFIC GAS & EL")]
+    fz = H.spend_lookup(fuzzy_rows, "gas")
+    buckets = {b["bucket"]: b["amount"] for b in fz["by_bucket"]}
+    approx(buckets.get("Utilities", 0), 850, "PG&E shows under Utilities, not fuel")
+    approx(buckets.get("Gas & Fuel", 0), 115, "actual fuel shown separately")
+    # empty query -> empty
+    eq(H.spend_lookup(rows, "")["total"], 0, "empty query")
+
+
 def test_statement_coverage():
     accts = [{"id": 1, "name": "Golden 1 HELOC", "kind": "heloc"},
              {"id": 2, "name": "Checking", "kind": "checking"}]
