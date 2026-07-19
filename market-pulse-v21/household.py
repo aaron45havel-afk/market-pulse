@@ -1351,6 +1351,55 @@ def net_worth(settings, accounts=None):
     }
 
 
+# ── Rental scenario ("what if she rented the house out?") ──────────
+def rental_scenario(settings, params=None):
+    """A plain-language cash-flow model for renting the house: rent minus
+    the mortgage (PITI), the HELOC, and operating costs (management,
+    vacancy, maintenance). Sensible Bay-Area defaults; every input editable
+    via settings['rental_*'] or the params override."""
+    s = settings or {}
+    p = params or {}
+    ret = s.get("retirement") or {}
+
+    def num(key, default):
+        for src in (p, s):
+            v = src.get(key)
+            if v is not None:
+                try:
+                    return float(v)
+                except (TypeError, ValueError):
+                    pass
+        return float(default)
+
+    home = float(s.get("home_value") or ret.get("home_value") or DEFAULT_HOME_VALUE)
+    rent = num("rental_rent", 5000)
+    mortgage = float(ret.get("mortgage_payment") or 0)
+    heloc = float(s.get("heloc_payment") or 0)
+    mgmt_pct = num("rental_mgmt_pct", 8)          # property manager
+    vacancy_pct = num("rental_vacancy_pct", 5)    # empty-months allowance
+    maint_pct = num("rental_maint_pct", 1)        # annual % of home value
+
+    mgmt = round(rent * mgmt_pct / 100, 2)
+    vacancy = round(rent * vacancy_pct / 100, 2)
+    maintenance = round(home * maint_pct / 100 / 12, 2)
+    operating = round(mgmt + vacancy + maintenance, 2)
+    debt_service = round(mortgage + heloc, 2)
+    total_costs = round(debt_service + operating, 2)
+    net = round(rent - total_costs, 2)
+
+    return {
+        "home_value": round(home, 2), "rent": round(rent, 2),
+        "mortgage": round(mortgage, 2), "heloc": round(heloc, 2),
+        "mgmt": mgmt, "vacancy": vacancy, "maintenance": maintenance,
+        "operating": operating, "debt_service": debt_service,
+        "total_costs": total_costs, "net_monthly": net,
+        "net_annual": round(net * 12, 2),
+        "gross_yield_pct": round(rent * 12 / home * 100, 2) if home else None,
+        "mgmt_pct": mgmt_pct, "vacancy_pct": vacancy_pct, "maint_pct": maint_pct,
+        "covers_costs": net >= 0,
+    }
+
+
 # ── The Roadmap (order of operations she can follow) ────────────────
 # One ordered path over everything the tool tracks. Each milestone reads
 # her live numbers and reports done / now / later, so a non-technical
