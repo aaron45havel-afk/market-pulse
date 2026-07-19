@@ -2993,28 +2993,93 @@ def _coerce_float(value):
         return None
 
 
-@app.get("/admin/login")
-async def admin_login(request: Request, token: str = "", redirect: str = "/"):
-    """Set the mp_admin cookie if ?token=<ADMIN_TOKEN> matches, then
-    redirect (default: home). Visit /admin/login?token=<your-token>
-    once and the admin nav links + pages unlock for 30 days.
-    Bad/missing token → 401."""
-    expected = os.environ.get("ADMIN_TOKEN", "").strip()
-    if not expected or not hmac.compare_digest(token, expected):
-        return JSONResponse({"error": "Invalid token."}, status_code=401)
-    resp = RedirectResponse(url=redirect, status_code=302)
+def _safe_redirect(r: str) -> str:
+    """Only allow same-site relative paths — never an off-site open redirect."""
+    r = (r or "/").strip()
+    return r if (r.startswith("/") and not r.startswith("//")) else "/"
+
+
+def _admin_login_success(request: Request, redirect: str):
+    """Set the 30-day admin cookie and bounce to the target page."""
+    resp = RedirectResponse(url=_safe_redirect(redirect), status_code=302)
     resp.set_cookie(
         key=ADMIN_COOKIE,
-        value=token,
+        value=os.environ.get("ADMIN_TOKEN", "").strip(),
         max_age=60 * 60 * 24 * 30,   # 30 days
         httponly=True,
-        # secure=True only over HTTPS so dev/test on http://localhost
-        # still round-trips the cookie. Production on Railway is HTTPS
-        # so this lights up automatically.
+        # secure=True only over HTTPS so dev/test on http://localhost still
+        # round-trips the cookie. Production (Railway) is HTTPS → on.
         secure=(request.url.scheme == "https"),
         samesite="lax",
     )
     return resp
+
+
+def _admin_login_html(error: bool = False, redirect: str = "/") -> str:
+    import html as _html
+    red = _html.escape(_safe_redirect(redirect), quote=True)
+    err = ('<p class="err">That token didn\'t match — try again.</p>'
+           if error else "")
+    page = """<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin sign in - Market Pulse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#f5f4f1;--surface:#fff;--line:#e5e3df;--ink:#1a1917;--ink3:#6b6864;--primary:#5b4de0;--coral-ink:#a02e22;--coral-soft:#fce8e5;}
+  *{box-sizing:border-box;margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.2rem;}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:2rem 1.8rem;max-width:380px;width:100%;box-shadow:0 12px 32px rgb(26 25 23 / .10);}
+  .brand{font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:1.7rem;color:var(--primary);}
+  h1{font-size:1.05rem;margin:.1rem 0 1.1rem;font-weight:700;}
+  label{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3);font-weight:700;margin-bottom:.35rem;}
+  input{width:100%;padding:.7rem .8rem;border:1px solid var(--line);border-radius:10px;font-size:1rem;background:#f5f4f1;color:var(--ink);}
+  input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px #f0effe;}
+  button{width:100%;margin-top:1rem;padding:.75rem;border:none;border-radius:10px;background:linear-gradient(135deg,#5b4de0,#8962e5);color:#fff;font-weight:700;font-size:.95rem;cursor:pointer;}
+  .err{background:var(--coral-soft);color:var(--coral-ink);font-size:.82rem;padding:.5rem .7rem;border-radius:8px;margin-bottom:.9rem;}
+  .note{font-size:.72rem;color:var(--ink3);margin-top:.9rem;line-height:1.5;}
+</style></head><body>
+<form class="card" method="post" action="/admin/login">
+  <div class="brand">Market Pulse</div>
+  <h1>Admin sign in</h1>
+  __ERR__
+  <input type="hidden" name="redirect" value="__REDIRECT__">
+  <label for="t">Admin token</label>
+  <input id="t" name="token" type="password" autocomplete="current-password" autofocus placeholder="your admin token">
+  <button type="submit">Sign in</button>
+  <p class="note">Stays signed in on this device for 30 days. This is the ADMIN_TOKEN you set in Railway.</p>
+</form></body></html>"""
+    return page.replace("__ERR__", err).replace("__REDIRECT__", red)
+
+
+@app.get("/admin/login")
+async def admin_login(request: Request, token: str = "", redirect: str = "/"):
+    """Admin sign-in. With a valid ?token=<ADMIN_TOKEN> it sets the 30-day
+    mp_admin cookie and redirects (keeps old bookmarks working). With no /
+    wrong token it now renders a simple sign-in form instead of raw JSON."""
+    from fastapi.responses import HTMLResponse
+    expected = os.environ.get("ADMIN_TOKEN", "").strip()
+    if token and expected and hmac.compare_digest(token, expected):
+        return _admin_login_success(request, redirect)
+    return HTMLResponse(_admin_login_html(error=bool(token), redirect=redirect),
+                        status_code=(401 if token else 200))
+
+
+@app.post("/admin/login")
+async def admin_login_post(request: Request):
+    """Form submit from the sign-in page. Token comes in the POST body (not
+    the URL), so it never lands in history or logs. Parses urlencoded body
+    directly to avoid a multipart dependency."""
+    from fastapi.responses import HTMLResponse
+    from urllib.parse import parse_qs
+    raw = (await request.body()).decode("utf-8", "ignore")
+    data = parse_qs(raw, keep_blank_values=True)
+    token = (data.get("token", [""])[0]).strip()
+    redirect = data.get("redirect", ["/"])[0]
+    expected = os.environ.get("ADMIN_TOKEN", "").strip()
+    if expected and hmac.compare_digest(token, expected):
+        return _admin_login_success(request, redirect)
+    return HTMLResponse(_admin_login_html(error=True, redirect=redirect), status_code=401)
 
 
 def _check_pipeline_access(request: Request) -> bool:
