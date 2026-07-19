@@ -842,21 +842,72 @@ RENO_VENDORS = [
 ]
 
 
-def suggest_reno(txns, start=None, end=None):
-    """Untagged outflows whose merchant looks like a renovation vendor
-    within the project window — candidates for one-tap tagging."""
+# Person-to-person payment apps — a "ZELLE ... TO ROSALES" is money to a
+# person (here, renovation labor), never an internal account move.
+_P2P_RE = re.compile(r"\b(zelle|venmo|cash\s*app|cashapp)\b", re.I)
+_PAYEE_STOP = {"the", "llc", "inc", "payment", "transfer", "money", "online",
+               "web", "mobile", "and", "for"}
+
+
+def is_p2p(desc: str) -> bool:
+    return bool(_P2P_RE.search(desc or ""))
+
+
+def payee_fragment(desc: str) -> str:
+    """A stable, lowercase key for the person/vendor paid, good for matching
+    the same payee on future statements. For a person-to-person app it's the
+    name after the last 'to ' ("...TO ROSALES,FE" -> "rosales"); otherwise
+    the merchant key."""
+    low = (desc or "").lower()
+    if is_p2p(low):
+        idx = low.rfind(" to ")
+        tail = low[idx + 4:] if idx >= 0 else low
+        toks = [t for t in re.findall(r"[a-z]{3,}", tail) if t not in _PAYEE_STOP]
+        if toks:
+            return max(toks, key=len)          # surname is the longest, stable bit
+    return merchant_key(desc)
+
+
+def _in_window(t, start, end):
+    if t.get("project_id") or t["amount"] >= 0:
+        return False
+    d = t.get("date", "") or ""
+    return not ((start and d < start) or (end and d > end))
+
+
+def suggest_reno(txns, start=None, end=None, payees=None):
+    """Untagged outflows within the project window that look like renovation
+    spend — a known vendor (Home Depot, contractor, glass) OR a learned
+    labor payee (a person she's marked as renovation labor). Candidates for
+    one-tap or automatic tagging."""
+    pay = [p.lower() for p in (payees or []) if p]
     out = []
     for t in txns:
-        if t.get("project_id"):
-            continue
-        if t["amount"] >= 0:
-            continue
-        d = t.get("date", "") or ""
-        if (start and d < start) or (end and d > end):
+        if not _in_window(t, start, end):
             continue
         low = t["desc"].lower()
-        if any(k in low for k in RENO_VENDORS):
+        if any(k in low for k in RENO_VENDORS) or any(p in low for p in pay):
             out.append(t)
+    return out
+
+
+def labor_candidates(txns, start=None, end=None, payees=None):
+    """Untagged person-to-person payments (Zelle/Venmo) within the window
+    that AREN'T yet a known vendor or learned payee — likely renovation
+    labor worth one-tap confirming ('tag + remember this payee')."""
+    pay = [p.lower() for p in (payees or []) if p]
+    out = []
+    for t in txns:
+        if not _in_window(t, start, end):
+            continue
+        low = t["desc"].lower()
+        if not is_p2p(low):
+            continue
+        if any(p in low for p in pay) or any(k in low for k in RENO_VENDORS):
+            continue
+        row = dict(t)
+        row["payee"] = payee_fragment(t["desc"])
+        out.append(row)
     return out
 
 
@@ -1035,9 +1086,11 @@ RETIRE_SEED = {
     # realistic monthly living cost in retirement (her "basis for the cal")
     "retire_expenses": 7000,
     # LoanDepot first mortgage — 2.99%, cheap, so the payoff engine leaves
-    # it alone; it's simply a bill until it clears.
+    # it alone; it's simply a bill until it clears. Payment is the FULL
+    # monthly ACH from her statement ($2,664 PITI = ~$1,836 P&I + escrow
+    # for property tax & insurance), which is her real cash outflow.
     "mortgage_balance": 377000,
-    "mortgage_payment": 1836,
+    "mortgage_payment": 2664,
     "mortgage_rate": 2.99,
     # CalPERS monthly pension by the year she stops working (col J of her
     # "retire" tab). Each extra year is worth ~$550–670/mo, for life.
