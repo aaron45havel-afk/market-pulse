@@ -1001,3 +1001,148 @@ def budget_summary(items, meta=None):
             "can_fund": round(can_fund, 2),
         },
     }
+
+
+# ── Retirement ("when can she retire?") ─────────────────────────────
+# Frances's starting figures, lifted from her long-running retirement
+# spreadsheet (CalPERS "2% @ 55" service pension near the 2.5% cap, plus
+# Social Security by claim age, plus her low-rate LoanDepot mortgage).
+# These SEED her book; everything is editable in the UI afterward. The
+# HELOC and credit-card payments come from the same statements the rest
+# of the tool already tracks — retirement just reuses them as fixed bills.
+RETIRE_SEED = {
+    "birth_year": 1960,
+    # realistic monthly living cost in retirement (her "basis for the cal")
+    "retire_expenses": 7000,
+    # LoanDepot first mortgage — 2.99%, cheap, so the payoff engine leaves
+    # it alone; it's simply a bill until it clears.
+    "mortgage_balance": 377000,
+    "mortgage_payment": 1836,
+    "mortgage_rate": 2.99,
+    # CalPERS monthly pension by the year she stops working (col J of her
+    # "retire" tab). Each extra year is worth ~$550–670/mo, for life.
+    "pension_by_year": {
+        "2026": 8017, "2027": 8685, "2028": 9216, "2029": 9769, "2030": 10344,
+    },
+    # Social Security monthly benefit by the age she first claims.
+    "ss_by_age": {
+        "62": 1890, "63": 2248, "64": 2502, "65": 2808, "66": 3057,
+        "67": 3405, "68": 3505, "69": 3815, "70": 4338,
+    },
+    # her current picks (full-retirement-age SS is 67 for a 1960 birth year)
+    "retire_year": 2027,
+    "ss_claim_age": 67,
+}
+
+
+def retirement_seed():
+    import copy
+    return copy.deepcopy(RETIRE_SEED)
+
+
+def _int_keyed(d):
+    out = {}
+    for k, v in (d or {}).items():
+        try:
+            out[int(k)] = float(v)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def retirement_plan(settings):
+    """Weave her CalPERS pension + Social Security + the debts the tool
+    already tracks into one 'when can she retire, and is she covered?'
+    picture. Reads settings['retirement']; heloc_/card_ come from the top
+    level of settings (same place This Month reads them)."""
+    s = settings or {}
+    ret = s.get("retirement") or {}
+    if not ret.get("pension_by_year"):
+        return {"configured": False}
+
+    birth = int(ret.get("birth_year") or 0)
+    expenses = float(ret.get("retire_expenses") or 0)
+    pension_by_year = _int_keyed(ret.get("pension_by_year"))
+    ss_by_age = _int_keyed(ret.get("ss_by_age"))
+    mort_bal = float(ret.get("mortgage_balance") or 0)
+    mort_pay = float(ret.get("mortgage_payment") or 0)
+    mort_rate = float(ret.get("mortgage_rate") or 0)
+
+    # Debt service she'd still carry into retirement, from her statements.
+    heloc_pay = float(s.get("heloc_payment") or 0)
+    card_pay = float(s.get("card_payment") or 0)
+    debt_bills = [
+        {"name": "Mortgage (LoanDepot)", "payment": round(mort_pay, 2), "rate": mort_rate,
+         "note": "2.99% — cheap, kept as a bill until it clears"},
+        {"name": "HELOC (Golden 1)", "payment": round(heloc_pay, 2),
+         "rate": float(s.get("heloc_apr") or 0), "note": "renovation debt"},
+        {"name": "Credit card (Golden 1)", "payment": round(card_pay, 2),
+         "rate": float(s.get("card_apr") or 0), "note": "highest rate — clear first"},
+    ]
+    debt_bills = [d for d in debt_bills if d["payment"] > 0]
+    debt_total = round(sum(d["payment"] for d in debt_bills), 2)
+    need = round(expenses + debt_total, 2)
+
+    claim_age = int(ret.get("ss_claim_age") or 67)
+    ss_monthly = ss_by_age.get(claim_age, 0.0)
+
+    def age_in(year):
+        return (year - birth) if birth else None
+
+    def scenario(year):
+        pension = pension_by_year.get(year, 0.0)
+        claim_year = (birth + claim_age) if birth else year
+        # Before SS starts she lives on pension alone (the "bridge" years).
+        bridge = max(0, claim_year - year)
+        pension_only = round(pension - need, 2)
+        with_ss = round(pension + ss_monthly - need, 2)
+        return {
+            "year": year, "age": age_in(year),
+            "pension": round(pension, 2),
+            "ss_monthly": round(ss_monthly, 2),
+            "ss_starts_year": claim_year,
+            "bridge_years": bridge,
+            "income_before_ss": round(pension, 2),
+            "income_with_ss": round(pension + ss_monthly, 2),
+            "surplus_before_ss": pension_only,
+            "surplus_with_ss": with_ss,
+            "covered": with_ss >= 0,
+            "covered_before_ss": pension_only >= 0,
+        }
+
+    years = sorted(pension_by_year)
+    scenarios = [scenario(y) for y in years]
+    chosen_year = int(ret.get("retire_year") or (years[0] if years else 0))
+    chosen = next((sc for sc in scenarios if sc["year"] == chosen_year),
+                  scenarios[0] if scenarios else None)
+
+    # Earliest year she's fully covered once SS is on — the "green light".
+    earliest_ok = next((sc["year"] for sc in scenarios if sc["covered"]), None)
+
+    # Cost of retiring one year earlier than chosen / gain of waiting one.
+    def delta(from_y, to_y):
+        a = pension_by_year.get(from_y)
+        b = pension_by_year.get(to_y)
+        return round(b - a, 2) if (a is not None and b is not None) else None
+
+    wait_gain = delta(chosen_year, chosen_year + 1) if chosen else None
+    early_cost = delta(chosen_year - 1, chosen_year) if chosen else None
+
+    return {
+        "configured": True,
+        "birth_year": birth,
+        "expenses": round(expenses, 2),
+        "debt_bills": debt_bills,
+        "debt_total": debt_total,
+        "need": need,
+        "claim_age": claim_age,
+        "ss_monthly": round(ss_monthly, 2),
+        "ss_by_age": {str(k): round(v, 2) for k, v in sorted(ss_by_age.items())},
+        "claim_ages": sorted(ss_by_age),
+        "mortgage_balance": round(mort_bal, 2),
+        "chosen": chosen,
+        "scenarios": scenarios,
+        "earliest_covered_year": earliest_ok,
+        "wait_one_year_gain": wait_gain,
+        "retire_early_cost": early_cost,
+    }

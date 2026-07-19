@@ -113,6 +113,11 @@
   .hh-opt { display: flex; align-items: center; gap: 0.4rem; }
   .hh-opt input[type=radio] { accent-color: var(--gold); flex: 0 0 auto; }
   .hh-opttoolbar { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; flex-wrap: wrap; margin: 0.6rem 0 0.2rem; }
+  .hh-picker { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 0.6rem; }
+  .hh-picker .hh-f { flex: 1; min-width: 180px; }
+  .hh-retire tr, .hh-retire td { }
+  .hh-retire tbody tr.chosen { background: var(--primary-soft); }
+  .hh-retire tbody tr.chosen td { border-color: var(--primary); }
   .hh-recur { display: flex; justify-content: space-between; align-items: center; padding: 0.45rem 0; border-bottom: 1px solid var(--line); font-size: 0.85rem; }
   .hh-recur .m { font-size: 0.7rem; color: var(--ink-3); }
 
@@ -198,6 +203,7 @@ async function boot() {
       <button class="hh-tab" data-t="thismonth" onclick="go('thismonth')">This Month</button>
       <button class="hh-tab" data-t="spending" onclick="go('spending')">Spending</button>
       <button class="hh-tab" data-t="reno" onclick="go('reno')">Renovation</button>
+      <button class="hh-tab" data-t="retire" onclick="go('retire')">Retirement</button>
     </div>
     <div id="tab"></div>`;
   go(STATE.tab);
@@ -207,6 +213,7 @@ function go(name) {
   document.querySelectorAll('.hh-tab').forEach(b => b.classList.toggle('active', b.dataset.t === name));
   if (name === 'thismonth') loadThisMonth();
   else if (name === 'spending') loadDashboard();
+  else if (name === 'retire') loadRetirement();
   else loadReno();
 }
 
@@ -831,6 +838,96 @@ async function doImport() {
     $('impMsg').textContent = `Imported ${res.inserted} new transaction${res.inserted===1?'':'s'}` + (res.skipped ? ` (${res.skipped} already there)` : '') + '.';
     await boot();
   } catch (e) { $('impMsg').className='hh-msg err'; $('impMsg').textContent='Import failed.'; }
+}
+
+// ══ RETIREMENT ════════════════════════════════════════════════════
+async function loadRetirement() {
+  const p = await api('/' + BOOK + '/retirement');
+  STATE.retire = p;
+  renderRetirement(p);
+}
+function renderRetirement(p) {
+  if (!p.configured) {
+    $('tab').innerHTML = `<div class="hh-card"><h2>When can Mom retire?</h2>
+      <p class="hint">Weave her CalPERS pension and Social Security together with the mortgage, HELOC and card the tool already tracks, and see — year by year — whether her income covers her costs. Start from the figures in her retirement spreadsheet, then edit anything.</p>
+      <button class="btn-primary" onclick="seedRetire()">Build her retirement picture</button></div>`;
+    return;
+  }
+  const ch = p.chosen || {};
+  const covered = ch.covered;
+  const gap = ch.bridge_years > 0;
+  const verdictColor = covered ? 'var(--mint-ink)' : 'var(--coral-ink)';
+  const surplus = ch.surplus_with_ss;
+  const headline = covered
+    ? `${fmt(Math.abs(surplus))}/mo to spare`
+    : `${fmt(Math.abs(surplus))}/mo short`;
+  $('tab').innerHTML = `
+    <div class="hh-card">
+      <h2>When can Mom retire?</h2>
+      <p class="hint">Retire in <strong>${ch.year}</strong> (age ${ch.age}), claim Social Security at <strong>${p.claim_age}</strong>. Change either below.</p>
+      <div class="hh-reno-head" style="margin-bottom:0.4rem;">
+        <div class="hh-tile"><div class="k">Monthly income</div><div class="v" style="color:var(--primary)">${fmt(ch.income_with_ss)}</div><div class="sub">pension ${fmt(ch.pension)} + SS ${fmt(ch.ss_monthly)}</div></div>
+        <div class="hh-tile"><div class="k">Monthly costs</div><div class="v">${fmt(p.need)}</div><div class="sub">living ${fmt(p.expenses)} + debts ${fmt(p.debt_total)}</div></div>
+        <div class="hh-tile"><div class="k">${covered ? 'Covered' : 'Shortfall'}</div><div class="v" style="color:${verdictColor}">${headline}</div><div class="sub">${covered ? 'income beats costs once SS is on' : 'income falls short once SS is on'}</div></div>
+        <div class="hh-tile"><div class="k">Waiting one more year</div><div class="v" style="color:var(--gold-ink)">+${fmt(p.wait_one_year_gain||0)}</div><div class="sub">extra pension/mo, for life</div></div>
+      </div>
+      ${gap ? `<div class="hh-note" style="color:var(--coral-ink);margin-top:0.2rem"><strong>Bridge gap:</strong> she'd retire in ${ch.year} but Social Security doesn't start until ${ch.ss_starts_year}. For those ${ch.bridge_years} year${ch.bridge_years>1?'s':''} she's on pension alone: ${ch.surplus_before_ss>=0?fmt(ch.surplus_before_ss)+'/mo to spare':fmt(Math.abs(ch.surplus_before_ss))+'/mo short (needs savings to bridge)'}.</div>` : ''}
+      <div class="hh-picker">
+        <div class="hh-f"><label>Retire in year</label><select class="hh-sel" id="rYear" onchange="saveRetire({retire_year:+this.value})">${p.scenarios.map(sc=>`<option value="${sc.year}" ${sc.year===ch.year?'selected':''}>${sc.year} — age ${sc.age}</option>`).join('')}</select></div>
+        <div class="hh-f"><label>Claim Social Security at</label><select class="hh-sel" id="rAge" onchange="saveRetire({ss_claim_age:+this.value})">${retireAgeOptions(p)}</select></div>
+      </div>
+    </div>
+
+    <div class="hh-card">
+      <h3 style="margin:0 0 0.5rem">The trade-off, year by year</h3>
+      <p class="hint" style="margin-top:0">Every year she keeps working raises her pension permanently. "Once SS is on" folds in Social Security at age ${p.claim_age}.</p>
+      <table class="hh-tx hh-retire"><thead><tr><th>Retire</th><th>Age</th><th style="text-align:right">Pension/mo</th><th style="text-align:right">+ SS income/mo</th><th style="text-align:right">Costs/mo</th><th style="text-align:right">Surplus (once SS on)</th><th></th></tr></thead><tbody>
+        ${p.scenarios.map(sc=>`<tr class="${sc.year===ch.year?'chosen':''}">
+          <td><strong>${sc.year}</strong></td><td>${sc.age}</td>
+          <td class="amt">${fmt(sc.pension)}</td>
+          <td class="amt">${fmt(sc.income_with_ss)}</td>
+          <td class="amt">${fmt(p.need)}</td>
+          <td class="amt" style="color:${sc.surplus_with_ss>=0?'var(--mint-ink)':'var(--coral-ink)'}">${sc.surplus_with_ss>=0?'+':''}${fmt(sc.surplus_with_ss)}</td>
+          <td>${sc.year===ch.year?'<span class="hh-pill">chosen</span>':`<button class="hh-renobtn" onclick="saveRetire({retire_year:${sc.year}})">pick</button>`}</td></tr>`).join('')}
+      </tbody></table>
+      ${p.earliest_covered_year ? `<div class="hh-note">Earliest year she's fully covered once Social Security is on: <strong>${p.earliest_covered_year}</strong>.</div>` : ''}
+    </div>
+
+    <div class="hh-card">
+      <h3 style="margin:0 0 0.5rem">Debts she'd carry into retirement</h3>
+      <p class="hint" style="margin-top:0">These come straight from her statements. Clearing the HELOC and card (see the "Pay off debt" move on This Month) drops her monthly costs by ${fmt(p.debt_total - (p.debt_bills.find(d=>d.name.indexOf('Mortgage')>=0)||{}).payment||0)}.</p>
+      <table class="hh-tx"><tbody>
+        ${p.debt_bills.map(d=>`<tr><td><strong>${d.name}</strong><div class="hh-note" style="margin:0">${d.note}${d.rate?` · ${d.rate}%`:''}</div></td><td class="amt">${fmt(d.payment)}/mo</td></tr>`).join('')}
+        <tr class="hh-secrow"><td><strong>Total debt service</strong></td><td class="amt"><strong>${fmt(p.debt_total)}/mo</strong></td></tr>
+      </tbody></table>
+    </div>
+
+    <details class="hh-card" style="background:var(--surface-2);"><summary style="cursor:pointer;font-weight:600;">Adjust the numbers <span class="hh-note" style="margin:0">— pension, Social Security, living costs, mortgage</span></summary>
+      ${retireEditForm(p)}
+    </details>`;
+}
+function retireAgeOptions(p) {
+  const ages = p.claim_ages || [62,63,64,65,66,67,68,69,70];
+  return ages.map(a=>`<option value="${a}" ${a===p.claim_age?'selected':''}>age ${a} — ${fmt((p.ss_by_age&&p.ss_by_age[a])||0)}/mo</option>`).join('');
+}
+function retireEditForm(p) {
+  return `<div class="hh-form" style="margin-top:0.8rem;">
+    <div class="hh-f"><label>Monthly living costs</label><input class="hh-in" id="reExp" type="number" step="100" value="${p.expenses}"></div>
+    <div class="hh-f"><label>Mortgage payment (P&I)</label><input class="hh-in" id="reMortPay" type="number" step="50" value="${(p.debt_bills.find(d=>d.name.indexOf('Mortgage')>=0)||{}).payment||''}"></div>
+    <div class="hh-f"><label>Mortgage balance</label><input class="hh-in" id="reMortBal" type="number" step="1000" value="${p.mortgage_balance||''}"></div>
+    <div class="hh-f"><label>Birth year</label><input class="hh-in" id="reBirth" type="number" step="1" value="${p.birth_year||''}"></div>
+    </div>
+    <button class="btn-secondary" style="margin-top:0.5rem;" onclick="saveRetire({retire_expenses:mv('reExp'),mortgage_payment:mv('reMortPay'),mortgage_balance:mv('reMortBal'),birth_year:mv('reBirth')})">Save</button>
+    <div class="hh-note">Pension by year and Social Security by age are seeded from her spreadsheet. Ask to edit those and I'll wire in a grid.</div>`;
+}
+async function seedRetire() {
+  await api('/' + BOOK + '/retirement/seed', { method: 'POST' });
+  await loadRetirement();
+}
+async function saveRetire(fields) {
+  Object.keys(fields).forEach(k => fields[k] == null && delete fields[k]);
+  await api('/' + BOOK + '/retirement', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({retirement: fields}) });
+  await loadRetirement();
 }
 
 boot();
