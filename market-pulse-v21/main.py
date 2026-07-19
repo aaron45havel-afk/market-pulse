@@ -508,6 +508,228 @@ async def api_landscaper_save_costs(code: str, request: Request):
     return JSONResponse({"ok": ok})
 
 
+# ── Household finance dashboard ─────────────────────────────────────
+# Admin creates a book and texts the /household?book=CODE link; the code
+# is the auth (same pattern as the landscaper book + prototype tokens).
+# Descriptions are redacted BEFORE storage; raw CSVs are never persisted.
+
+@app.get("/household")
+async def household_page(request: Request, book: str = ""):
+    """Bank-statement bucketing dashboard. ?book=<code> connects a shared
+    server-side book; no code → the admin 'create a book' landing."""
+    from database import household_book_exists
+    book = (book or "").strip()
+    valid = bool(book) and await asyncio.to_thread(household_book_exists, book)
+    return templates.TemplateResponse("household.html", {
+        "request": request, "book": book if valid else "",
+    })
+
+
+@app.get("/casa", include_in_schema=False)
+async def casa_alias(request: Request, book: str = ""):
+    """Short textable alias for the household dashboard."""
+    dest = "/household" + (f"?book={book.strip()}" if book.strip() else "")
+    return RedirectResponse(dest, status_code=302)
+
+
+@app.post("/api/household/books")
+async def api_hh_create_book(request: Request):
+    """Admin: create a household book. Body: {name}. Returns {code}."""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    body = await request.json()
+    from database import household_create_book
+    code = await asyncio.to_thread(household_create_book,
+                                   (body.get("name") or "Household").strip())
+    if not code:
+        return JSONResponse({"error": "could not create book"}, status_code=500)
+    return JSONResponse({"code": code})
+
+
+@app.get("/api/household/books")
+async def api_hh_list_books(request: Request):
+    """Admin: list all household books."""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    from database import household_list_books
+    return JSONResponse({"books": await asyncio.to_thread(household_list_books)})
+
+
+async def _require_hh_book(code: str):
+    from database import household_book_exists
+    ok = await asyncio.to_thread(household_book_exists, code)
+    return None if ok else JSONResponse({"error": "unknown book"}, status_code=404)
+
+
+@app.get("/api/household/books/{code}")
+async def api_hh_get_book(code: str):
+    """State the page needs: accounts, month list, the bucket catalog."""
+    import household
+    from database import household_list_accounts, household_all_txns
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    accounts = await asyncio.to_thread(household_list_accounts, code)
+    txns = await asyncio.to_thread(household_all_txns, code)
+    months = sorted({t["date"][:7] for t in txns if t["date"]})
+    return JSONResponse({
+        "accounts": accounts,
+        "months": months,
+        "txn_count": len(txns),
+        "buckets": list(household.BUCKET_CLASS.keys()),
+    })
+
+
+@app.post("/api/household/books/{code}/accounts")
+async def api_hh_add_account(code: str, request: Request):
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    name = (body.get("name") or "").strip()
+    kind = (body.get("kind") or "checking").strip()
+    if not name:
+        return JSONResponse({"error": "name required"}, status_code=400)
+    from database import household_add_account
+    aid = await asyncio.to_thread(household_add_account, code, name, kind,
+                                  body.get("mapping") if isinstance(body.get("mapping"), dict) else None)
+    return JSONResponse({"id": aid})
+
+
+@app.delete("/api/household/books/{code}/accounts/{account_id}")
+async def api_hh_delete_account(code: str, account_id: int):
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    from database import household_delete_account
+    ok = await asyncio.to_thread(household_delete_account, code, account_id)
+    return JSONResponse({"ok": ok})
+
+
+@app.post("/api/household/books/{code}/preview")
+async def api_hh_preview(code: str, request: Request):
+    """Parse an uploaded CSV's headers + first rows and guess the column
+    mapping, for the confirm-before-import step. Nothing is stored."""
+    import household
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    text = body.get("csv") or ""
+    if not isinstance(text, str) or not text.strip():
+        return JSONResponse({"error": "empty csv"}, status_code=400)
+    headers, rows = household.parse_csv(text)
+    if not headers:
+        return JSONResponse({"error": "could not parse csv"}, status_code=400)
+    mapping = household.auto_detect_mapping(headers, rows)
+    return JSONResponse({
+        "headers": headers,
+        "sample": rows[:5],
+        "row_count": len(rows),
+        "mapping": mapping,
+    })
+
+
+@app.post("/api/household/books/{code}/import")
+async def api_hh_import(code: str, request: Request):
+    """Normalize + categorize + store a CSV into an account. Applies the
+    book's learned rules; remembers the mapping for next time."""
+    import household
+    from database import (household_get_rules, household_insert_txns,
+                          household_set_mapping)
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    text = body.get("csv") or ""
+    mapping = body.get("mapping")
+    account_id = body.get("account_id")
+    if not isinstance(text, str) or not text.strip() or not isinstance(mapping, dict):
+        return JSONResponse({"error": "csv and mapping required"}, status_code=400)
+    try:
+        account_id = int(account_id)
+    except (TypeError, ValueError):
+        return JSONResponse({"error": "valid account_id required"}, status_code=400)
+
+    def _do():
+        headers, rows = household.parse_csv(text)
+        learned = household_get_rules(code)
+        txns = household.normalize_rows(headers, rows, mapping, learned)
+        inserted = household_insert_txns(code, account_id, txns)
+        household_set_mapping(code, account_id, mapping)
+        return len(txns), inserted
+
+    parsed, inserted = await asyncio.to_thread(_do)
+    return JSONResponse({"parsed": parsed, "inserted": inserted,
+                         "skipped": parsed - inserted})
+
+
+@app.get("/api/household/books/{code}/dashboard")
+async def api_hh_dashboard(code: str, month: str = ""):
+    """The whole dashboard payload: headline figures, spend-by-bucket,
+    monthly trend, recurring bills, and the scoped transactions + review
+    tray. Aggregates computed server-side over the redacted ledger."""
+    import household
+    from database import household_all_txns, household_list_accounts
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    rows = await asyncio.to_thread(household_all_txns, code)
+    accounts = await asyncio.to_thread(household_list_accounts, code)
+    acct_name = {a["id"]: a["name"] for a in accounts}
+    # Enrich stored rows into engine txns (class + merchant key).
+    for r in rows:
+        r["cls"] = household.bucket_class(r["bucket"])
+        r["mkey"] = household.merchant_key(r["desc"])
+    month = (month or "").strip() or None
+    if month is None and rows:
+        month = sorted({r["date"][:7] for r in rows if r["date"]})[-1]
+    summary = household.summarize(rows, month)
+    recurring = household.find_recurring(rows)
+    scoped = [r for r in rows if (month is None or (r["date"] or "")[:7] == month)]
+    scoped.sort(key=lambda r: (r["date"] or "", r["id"]), reverse=True)
+    txns = [{"id": r["id"], "date": r["date"], "desc": r["desc"],
+             "amount": round(r["amount"], 2), "bucket": r["bucket"],
+             "cls": r["cls"], "account": acct_name.get(r["account_id"], "")}
+            for r in scoped]
+    review = [t for t in txns if t["cls"] == "review"]
+    return JSONResponse({
+        "summary": summary, "recurring": recurring[:20],
+        "txns": txns, "review": review,
+        "buckets": list(household.BUCKET_CLASS.keys()),
+    })
+
+
+@app.post("/api/household/books/{code}/txns/{txn_id}/bucket")
+async def api_hh_recategorize(code: str, txn_id: int, request: Request):
+    """Assign a bucket to a transaction. With apply_all, learns a rule
+    from the merchant and re-buckets every other Uncategorized match."""
+    import household
+    from database import household_recategorize, household_add_rule
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    bucket = (body.get("bucket") or "").strip()
+    if bucket not in household.BUCKET_CLASS:
+        return JSONResponse({"error": "unknown bucket"}, status_code=400)
+    like = None
+    if body.get("apply_all"):
+        like = household.merchant_key(body.get("desc") or "")
+        like = like if len(like) >= 3 else None
+
+    def _do():
+        n = household_recategorize(code, txn_id, bucket, like)
+        if like:
+            household_add_rule(code, like, bucket)
+        return n
+
+    updated = await asyncio.to_thread(_do)
+    return JSONResponse({"updated": updated})
+
+
 # Browsers and iOS probe these absolute paths regardless of <link> tags —
 # serve them so the access log stops filling with 404s.
 _STATIC_DIR = Path(__file__).resolve().parent / "static"
