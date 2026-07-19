@@ -885,6 +885,52 @@ async def api_hh_set_settings(code: str, request: Request):
     return JSONResponse({"settings": saved})
 
 
+@app.get("/api/household/books/{code}/roadmap")
+async def api_hh_roadmap(code: str):
+    """The framework: one ordered path over cash flow, debts, the kitchen
+    goal and retirement — with the single next move she should focus on."""
+    import household
+    from database import (household_all_txns, household_get_settings,
+                          household_list_projects, household_budget_items)
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+
+    def _do():
+        rows = household_all_txns(code)
+        for r in rows:
+            r["cls"] = household.bucket_class(r["bucket"])
+        settings = household_get_settings(code)
+        vitals = household.vital_signs(rows, settings)
+
+        # Reno summary: total planned across projects with a budget, and how
+        # much of it the HELOC could cover (same headroom math as the budget).
+        reno = {"active": False, "budget_total": 0.0, "can_fund": 0.0}
+        for p in household_list_projects(code):
+            items = household_budget_items(code, p["id"])
+            if not items:
+                continue
+            meta = _budget_meta_with_financing(code, p["id"])
+            summ = household.budget_summary(items, meta)
+            reno["active"] = True
+            reno["budget_total"] += summ["total"]
+            reno["can_fund"] += summ["financing"]["can_fund"]
+        reno["budget_total"] = round(reno["budget_total"], 2)
+        reno["can_fund"] = round(reno["can_fund"], 2)
+
+        # Retirement summary from the same plan the Retirement tab shows.
+        plan = household.retirement_plan(settings)
+        retire = {"configured": False}
+        if plan.get("configured") and plan.get("chosen"):
+            ch = plan["chosen"]
+            retire = {"configured": True, "year": ch["year"],
+                      "covered": ch["covered"], "surplus": ch["surplus_with_ss"]}
+
+        return household.money_roadmap(vitals, reno=reno, retire=retire)
+
+    return JSONResponse(await asyncio.to_thread(_do))
+
+
 @app.get("/api/household/books/{code}/retirement")
 async def api_hh_retirement(code: str):
     """The retirement picture: pension + Social Security vs. living costs and

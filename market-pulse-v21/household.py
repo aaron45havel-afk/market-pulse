@@ -704,7 +704,8 @@ def vital_signs(txns, settings):
                   "note": (f"{round(ratio)}% of income is locked-in bills" if ratio is not None else "add your income")},
         "cushion": {"light": _light(months_saved if savings else None, 3, 1),
                     "value": round(months_saved, 1) if months_saved is not None else None, "label": "Cushion", "unit": "mo",
-                    "note": (f"{round(months_saved,1)} of {round(goal)} months saved" if savings else "set your savings balance")},
+                    "note": (f"{round(months_saved,1)} of {round(goal)} months saved" if (savings and months_saved is not None)
+                             else f"{_money(savings)} saved" if savings else "set your savings balance")},
         "heloc": {"light": heloc_light, "value": pct_interest, "label": "HELOC direction", "unit": "%",
                   "note": (f"{pct_interest}% of the payment is just interest" if pct_interest is not None else "set your HELOC balance")},
     }
@@ -1145,4 +1146,148 @@ def retirement_plan(settings):
         "earliest_covered_year": earliest_ok,
         "wait_one_year_gain": wait_gain,
         "retire_early_cost": early_cost,
+    }
+
+
+# ── The Roadmap (order of operations she can follow) ────────────────
+# One ordered path over everything the tool tracks. Each milestone reads
+# her live numbers and reports done / now / later, so a non-technical
+# person always sees the single next move instead of four dashboards.
+def _progress_pct(have, target):
+    if not target or target <= 0:
+        return None
+    return max(0, min(100, round(have / target * 100)))
+
+
+def money_roadmap(vitals, reno=None, retire=None):
+    """Build the ordered milestone list and mark which one she's on. The
+    order is by what protects each dollar most: a covered month, a small
+    buffer, then the priciest debt, a real safety net, the kitchen goal,
+    the cheaper HELOC, and finally the retirement date. `reno` and `retire`
+    are small summary dicts the caller assembles from the budget and the
+    retirement plan; either may be None when there's nothing there yet."""
+    v = vitals or {}
+    reno = reno or {}
+    retire = retire or {}
+
+    spend = float(v.get("spend") or 0)
+    savings = float(v.get("savings") or 0)
+    avg_net = float(v.get("avg_net") or 0)
+    card = float(v.get("card_balance") or 0)
+    card_apr = float(v.get("card_apr") or 0)
+    heloc = float(v.get("heloc_balance") or 0)
+    heloc_apr = float(v.get("heloc_apr") or 0)
+
+    starter_target = 2000.0
+    safety_target = round(3 * spend, 2) if spend else 0.0
+
+    steps = []
+
+    def add(key, title, why, done, metric, action, tab, mode=None,
+            progress=None, parallel=False):
+        steps.append({
+            "key": key, "title": title, "why": why, "done": bool(done),
+            "metric": metric, "action": action, "tab": tab, "mode": mode,
+            "progress": progress, "parallel": parallel,
+        })
+
+    # 1 — a month that pays for itself
+    add("cover", "Cover the month",
+        "Money coming in has to beat money going out — nothing else holds until it does.",
+        done=(avg_net >= 0),
+        metric=("about " + _money(avg_net) + "/mo " + ("to spare" if avg_net >= 0 else "short")),
+        action="See where the money goes", tab="thismonth", mode="stop_overspend")
+
+    # 2 — a small buffer so a surprise doesn't hit the card
+    add("starter", "Set aside a starter cushion",
+        "A small buffer means the next surprise goes to savings, not onto an 18% card.",
+        done=(savings >= starter_target),
+        metric=(_money(savings) + " of " + _money(starter_target) + " saved"
+                if savings or spend else "set your savings balance"),
+        action="Build the cushion", tab="thismonth", mode="cushion",
+        progress=_progress_pct(savings, starter_target))
+
+    # 3 — the most expensive money she owes
+    apr_txt = (str(round(card_apr, 2)) + "%") if card_apr else "a high rate"
+    add("card", "Wipe out the credit card",
+        "At " + apr_txt + " it's the most expensive money you owe — clearing it beats almost any other use of a dollar.",
+        done=(card <= 0),
+        metric=(_money(card) + " left" if card > 0 else "paid off — nice"),
+        action="Attack the card", tab="thismonth", mode="kill_debt")
+
+    # 4 — a real safety net (three months of costs)
+    add("safety", "Build a 3-month safety net",
+        "Three months of costs" + (" (~" + _money(safety_target) + ")" if safety_target else "") +
+        " keeps a big surprise from undoing the progress above.",
+        done=(safety_target > 0 and savings >= safety_target),
+        metric=(_money(savings) + " of " + _money(safety_target) + " saved"
+                if safety_target else "add a month of spending first"),
+        action="Grow savings", tab="thismonth", mode="cushion",
+        progress=_progress_pct(savings, safety_target))
+
+    # 5 — the kitchen goal, funded without over-borrowing
+    if reno.get("active"):
+        total = float(reno.get("budget_total") or 0)
+        can_fund = float(reno.get("can_fund") or 0)
+        covered = can_fund >= total and total > 0
+        add("kitchen", "Finish the kitchen on budget",
+            "It's the big goal — keep it on a real number and let the HELOC cover it without over-borrowing. Runs alongside the debt steps.",
+            done=False,
+            metric=(_money(total) + " planned" +
+                    (" · HELOC can cover it" if covered else
+                     (" · HELOC covers " + _money(can_fund)) if can_fund else "")),
+            action="Open the kitchen budget", tab="reno",
+            progress=_progress_pct(can_fund, total), parallel=True)
+
+    # 6 — the HELOC, once the card is gone
+    if heloc > 0 or heloc_apr:
+        heloc_apr_txt = (str(round(heloc_apr, 2)) + "%") if heloc_apr else "its rate"
+        add("heloc", "Pay down the HELOC",
+            "Once the card's gone, the " + heloc_apr_txt + " HELOC is the next most expensive debt — and it frees cash for retirement.",
+            done=(heloc <= 0),
+            metric=(_money(heloc) + " left" if heloc > 0 else "paid off"),
+            action="Plan the payoff", tab="reno")
+
+    # 7 — the retirement date
+    if retire.get("configured"):
+        year = retire.get("year")
+        covered = retire.get("covered")
+        surplus = float(retire.get("surplus") or 0)
+        add("retire", "Lock in the retirement date",
+            "With the debts under control, pension + Social Security decide when she can stop working.",
+            done=bool(covered),
+            metric=("retire " + str(year) + ": " +
+                    (_money(surplus) + "/mo to spare" if surplus >= 0 else _money(-surplus) + "/mo short")),
+            action="Open the retirement plan", tab="retire")
+    else:
+        add("retire", "Lock in the retirement date",
+            "With the debts under control, pension + Social Security decide when she can stop working.",
+            done=False, metric="build her retirement picture",
+            action="Open the retirement plan", tab="retire")
+
+    # The current focus is the first sequential milestone that isn't done.
+    # Parallel goals (the kitchen) show progress but never hold the pointer.
+    current_idx = next((i for i, s in enumerate(steps)
+                        if not s["done"] and not s["parallel"]), None)
+    for i, s in enumerate(steps):
+        s["status"] = ("done" if s["done"]
+                       else "goal" if s["parallel"]
+                       else "now" if i == current_idx
+                       else "later")
+    done_ct = sum(1 for s in steps if s["done"] and not s["parallel"])
+    seq_total = sum(1 for s in steps if not s["parallel"])
+    current = steps[current_idx] if current_idx is not None else None
+
+    # Human step number counts sequential milestones only (skip the goal).
+    current_num = None
+    if current_idx is not None:
+        current_num = sum(1 for s in steps[:current_idx + 1] if not s["parallel"])
+
+    return {
+        "steps": steps,
+        "current_key": current["key"] if current else None,
+        "current_num": current_num,
+        "done_count": done_ct,
+        "total": seq_total,
+        "all_done": current is None,
     }

@@ -113,6 +113,27 @@
   .hh-opt { display: flex; align-items: center; gap: 0.4rem; }
   .hh-opt input[type=radio] { accent-color: var(--gold); flex: 0 0 auto; }
   .hh-opttoolbar { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; flex-wrap: wrap; margin: 0.6rem 0 0.2rem; }
+  /* ── roadmap ── */
+  .hh-rm-bar { height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+  .hh-rm-bar .fill { height: 100%; background: var(--mint); border-radius: 999px; transition: width 0.3s; }
+  .hh-rm { display: flex; flex-direction: column; gap: 0.5rem; }
+  .hh-step { display: flex; gap: 0.8rem; align-items: flex-start; padding: 0.7rem; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); }
+  .hh-step.now { border-color: var(--primary); background: var(--primary-soft); }
+  .hh-step.done { opacity: 0.72; }
+  .hh-step.goal { border-color: var(--gold); background: var(--gold-soft); }
+  .hh-badge { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800; background: var(--surface-2); color: var(--ink-3); border: 1px solid var(--line); text-transform: uppercase; }
+  .hh-badge.done { background: var(--mint); color: #fff; border-color: var(--mint); }
+  .hh-badge.now { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .hh-badge.goal { background: var(--gold); color: #fff; border-color: var(--gold); }
+  .hh-step-body { flex: 1; min-width: 0; }
+  .hh-step-top { display: flex; justify-content: space-between; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; }
+  .hh-step-top .t { font-weight: 700; font-size: 0.95rem; }
+  .hh-step-top .m { font-size: 0.82rem; color: var(--ink-2); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .hh-step-why { font-size: 0.78rem; color: var(--ink-3); margin-top: 0.15rem; line-height: 1.45; }
+  .hh-step-act { margin-top: 0.5rem; }
+  .hh-rm-mini { height: 5px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin-top: 0.45rem; }
+  .hh-rm-mini .fill { height: 100%; background: var(--primary); border-radius: 999px; }
+  .hh-step.goal .hh-rm-mini .fill { background: var(--gold); }
   .hh-picker { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 0.6rem; }
   .hh-picker .hh-f { flex: 1; min-width: 180px; }
   .hh-retire tr, .hh-retire td { }
@@ -175,7 +196,7 @@ const api = (path, opts) => fetch('/api/household/books' + path, opts).then(r =>
 const CLS_COLOR = { fixed: 'var(--primary)', variable: 'var(--indy)', debt: 'var(--gold)', income: 'var(--mint)', transfer: 'var(--ink-4)', review: 'var(--ink-3)' };
 const LIGHT = { green: 'var(--mint)', yellow: 'var(--gold)', red: 'var(--coral)', gray: 'var(--ink-4)' };
 
-let STATE = { tab: 'thismonth', month: null, data: null, accounts: [], buckets: [],
+let STATE = { tab: 'plan', month: null, data: null, accounts: [], buckets: [],
               selBucket: null, mode: 'kill_debt', settings: {}, projects: [],
               curProject: null, projData: null, hasData: false };
 
@@ -200,6 +221,7 @@ async function boot() {
   STATE.month = st.months.length ? st.months[st.months.length - 1] : null;
   $('app').innerHTML = `
     <div class="hh-tabs">
+      <button class="hh-tab" data-t="plan" onclick="go('plan')">Plan</button>
       <button class="hh-tab" data-t="thismonth" onclick="go('thismonth')">This Month</button>
       <button class="hh-tab" data-t="spending" onclick="go('spending')">Spending</button>
       <button class="hh-tab" data-t="reno" onclick="go('reno')">Renovation</button>
@@ -211,10 +233,17 @@ async function boot() {
 function go(name) {
   STATE.tab = name;
   document.querySelectorAll('.hh-tab').forEach(b => b.classList.toggle('active', b.dataset.t === name));
-  if (name === 'thismonth') loadThisMonth();
+  if (name === 'plan') loadRoadmap();
+  else if (name === 'thismonth') loadThisMonth();
   else if (name === 'spending') loadDashboard();
   else if (name === 'retire') loadRetirement();
   else loadReno();
+}
+// Jump from a roadmap step to the tab that does the work (optionally
+// pre-selecting a This Month focus mode).
+function jumpTo(tab, mode) {
+  if (mode) STATE.mode = mode;
+  go(tab);
 }
 
 // ══ THIS MONTH ════════════════════════════════════════════════════
@@ -838,6 +867,59 @@ async function doImport() {
     $('impMsg').textContent = `Imported ${res.inserted} new transaction${res.inserted===1?'':'s'}` + (res.skipped ? ` (${res.skipped} already there)` : '') + '.';
     await boot();
   } catch (e) { $('impMsg').className='hh-msg err'; $('impMsg').textContent='Import failed.'; }
+}
+
+// ══ PLAN (the roadmap) ════════════════════════════════════════════
+async function loadRoadmap() {
+  const r = await api('/' + BOOK + '/roadmap');
+  STATE.roadmap = r;
+  renderRoadmap(r);
+}
+function renderRoadmap(r) {
+  const cur = r.steps.find(s => s.status === 'now');
+  const pct = r.total ? Math.round(r.done_count / r.total * 100) : 0;
+  const headCard = r.all_done
+    ? `<div class="hh-move"><div class="hl">The whole path is green</div>
+        <div class="big" style="color:var(--mint-ink)">All ${r.total} steps done</div>
+        <div class="mv">Debts under control and retirement covered. Keep the kitchen on budget and the cushion topped up.</div></div>`
+    : `<div class="hh-move"><div class="hl">You are on step ${r.current_num} of ${r.total}</div>
+        <div class="big">${cur ? cur.title : ''}</div>
+        <div class="mv">${cur ? cur.why : ''}</div>
+        <div style="margin-top:0.5rem;font-weight:700;color:var(--ink-2)">Right now: ${cur ? cur.metric : ''}</div>
+        ${cur ? `<button class="btn-primary" style="margin-top:0.7rem" onclick="jumpTo('${cur.tab}'${cur.mode?`,'${cur.mode}'`:''})">${cur.action}</button>` : ''}</div>`;
+  let num = 0;
+  const rows = r.steps.map(s => {
+    if (s.status !== 'goal') num++;
+    return rmStep(s, num);
+  }).join('');
+  $('tab').innerHTML = `
+    <div class="hh-card">
+      <h2>Mom's money roadmap</h2>
+      <p class="hint">One path, in the order that protects each dollar most. The tool watches her numbers and always points to the single next move — no need to figure out what matters first.</p>
+      <div class="hh-rm-bar"><div class="fill" style="width:${pct}%"></div></div>
+      <div class="hh-note" style="margin-top:0.35rem">${r.done_count} of ${r.total} milestones done</div>
+    </div>
+    <div class="hh-card" style="border-color:var(--primary);">${headCard}</div>
+    <div class="hh-card"><div class="hh-rm">${rows}</div></div>`;
+}
+function rmStep(s, num) {
+  const label = s.status === 'goal' ? 'goal'
+              : s.status === 'done' ? 'done'
+              : s.status === 'now' ? 'now' : String(num);
+  const prog = (s.progress != null)
+    ? `<div class="hh-rm-mini"><div class="fill" style="width:${Math.max(2, s.progress)}%"></div></div>` : '';
+  const act = s.status === 'now'
+    ? `<button class="btn-primary" style="padding:0.3rem 0.9rem" onclick="jumpTo('${s.tab}'${s.mode?`,'${s.mode}'`:''})">${s.action}</button>`
+    : `<button class="hh-renobtn" onclick="jumpTo('${s.tab}'${s.mode?`,'${s.mode}'`:''})">${s.action}</button>`;
+  return `<div class="hh-step ${s.status}">
+    <div class="hh-badge ${s.status}">${label}</div>
+    <div class="hh-step-body">
+      <div class="hh-step-top"><span class="t">${s.title}</span><span class="m">${s.metric}</span></div>
+      <div class="hh-step-why">${s.why}</div>
+      ${prog}
+      <div class="hh-step-act">${act}</div>
+    </div>
+  </div>`;
 }
 
 // ══ RETIREMENT ════════════════════════════════════════════════════
