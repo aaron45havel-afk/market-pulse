@@ -1105,7 +1105,25 @@ function retireEditForm(p) {
     <div class="hh-f"><label>Birth year</label><input class="hh-in" id="reBirth" type="number" step="1" value="${p.birth_year||''}"></div>
     </div>
     <button class="btn-secondary" style="margin-top:0.5rem;" onclick="saveRetire({retire_expenses:mv('reExp'),mortgage_payment:mv('reMortPay'),mortgage_balance:mv('reMortBal'),birth_year:mv('reBirth')})">Save</button>
-    <div class="hh-note">Pension by year and Social Security by age are seeded from her spreadsheet. Ask to edit those and I'll wire in a grid.</div>`;
+    <div class="hh-grid2" style="margin-top:1rem;">
+      <div>
+        <div class="hh-nw-h">CalPERS pension by retirement year</div>
+        ${p.scenarios.map(sc => `<div class="hh-nw-row"><span class="nm">${sc.year} <span class="hh-note" style="margin:0">age ${sc.age}</span></span><span class="v">$<input class="hh-bi n" id="pen-${sc.year}" value="${sc.pension}" style="width:82px"></span></div>`).join('')}
+      </div>
+      <div>
+        <div class="hh-nw-h">Social Security by claim age</div>
+        ${(p.claim_ages||[]).map(a => `<div class="hh-nw-row"><span class="nm">age ${a}</span><span class="v">$<input class="hh-bi n" id="ss-${a}" value="${(p.ss_by_age&&p.ss_by_age[a])||0}" style="width:82px"></span></div>`).join('')}
+      </div>
+    </div>
+    <button class="btn-secondary" style="margin-top:0.6rem;" onclick="saveSchedules()">Save pension &amp; Social Security</button>
+    <div class="hh-note">Update these from her latest CalPERS estimate or SSA statement — the plan recalculates from them.</div>`;
+}
+async function saveSchedules() {
+  const pension = {}, ss = {};
+  (STATE.retire.scenarios || []).forEach(sc => { const el = $('pen-' + sc.year); if (el && el.value !== '') pension[sc.year] = parseFloat(el.value); });
+  (STATE.retire.claim_ages || []).forEach(a => { const el = $('ss-' + a); if (el && el.value !== '') ss[a] = parseFloat(el.value); });
+  await api('/' + BOOK + '/retirement', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({retirement: {pension_by_year: pension, ss_by_age: ss}}) });
+  await loadRetirement();
 }
 async function seedRetire() {
   await api('/' + BOOK + '/retirement/seed', { method: 'POST' });
