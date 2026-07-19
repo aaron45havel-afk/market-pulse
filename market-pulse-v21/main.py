@@ -720,7 +720,10 @@ async def api_hh_import_pdf(code: str, request: Request):
             ins = household_insert_txns(code, aid, txns) if txns else 0
             bal = acct["summary"].get("balance")
             if bal is not None:
-                household_set_account_balance(code, aid, bal, None)
+                # date the balance by the statement's latest activity, so an
+                # older statement can't clobber a newer cash-on-hand figure
+                bal_date = max((t["date"] for t in txns if t.get("date")), default=None)
+                household_set_account_balance(code, aid, bal, bal_date)
             if acct["kind"] == "heloc":
                 s = acct["summary"]
                 if s.get("balance") is not None:
@@ -1095,13 +1098,14 @@ async def api_hh_tag_labor(code: str, pid: int, request: Request):
     if bad:
         return bad
     body = await request.json()
-    txn_id = body.get("txn_id")
-    if txn_id is None:
-        return JSONResponse({"error": "txn_id required"}, status_code=400)
+    try:
+        txn_id = int(body.get("txn_id"))
+    except (TypeError, ValueError):
+        return JSONResponse({"error": "a numeric txn_id is required"}, status_code=400)
 
     def _do():
         rows = household_all_txns(code)
-        row = next((r for r in rows if r["id"] == int(txn_id)), None)
+        row = next((r for r in rows if r["id"] == txn_id), None)
         if not row:
             return {"error": "unknown transaction"}
         payee = household.payee_fragment(row["desc"])
@@ -1121,9 +1125,9 @@ async def api_hh_tag_labor(code: str, pid: int, request: Request):
             d = r.get("date", "") or ""
             return not ((start and d < start) or (end and d > end))
         # tag + re-bucket every matching payment in the window that isn't
-        # already tagged to a DIFFERENT project
+        # already tagged to a DIFFERENT project (whole-word payee match)
         matches = [r for r in rows
-                   if payee in (r["desc"] or "").lower() and r["amount"] < 0
+                   if household.payee_matches(r["desc"], payee) and r["amount"] < 0
                    and (not r.get("project_id") or r.get("project_id") == pid)
                    and in_window(r)]
         ids = [r["id"] for r in matches]
@@ -1146,7 +1150,9 @@ async def api_hh_reno_payees(code: str, request: Request):
     if bad:
         return bad
     body = await request.json()
-    remove = (body.get("remove") or "").strip().lower()
+    remove = str(body.get("remove") or "").strip().lower()
+    if not remove:
+        return JSONResponse({"error": "remove (a payee name) is required"}, status_code=400)
 
     def _do():
         settings = household_get_settings(code)

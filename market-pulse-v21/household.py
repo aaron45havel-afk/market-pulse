@@ -934,6 +934,16 @@ def payee_fragment(desc: str) -> str:
     return merchant_key(desc)
 
 
+def payee_matches(desc, payee):
+    """Whole-word, case-insensitive test for a learned payee inside a
+    description — so a short surname like "lee" matches "…TO LEE" but NOT
+    "SLEEP NUMBER". Payees under 3 chars are ignored as too broad."""
+    p = (payee or "").strip().lower()
+    if len(p) < 3:
+        return False
+    return re.search(r"\b" + re.escape(p) + r"\b", (desc or "").lower()) is not None
+
+
 def _in_window(t, start, end):
     if t.get("project_id") or t["amount"] >= 0:
         return False
@@ -952,7 +962,7 @@ def suggest_reno(txns, start=None, end=None, payees=None):
         if not _in_window(t, start, end):
             continue
         low = t["desc"].lower()
-        if any(k in low for k in RENO_VENDORS) or any(p in low for p in pay):
+        if any(k in low for k in RENO_VENDORS) or any(payee_matches(low, p) for p in pay):
             out.append(t)
     return out
 
@@ -969,7 +979,7 @@ def labor_candidates(txns, start=None, end=None, payees=None):
         low = t["desc"].lower()
         if not is_p2p(low):
             continue
-        if any(p in low for p in pay) or any(k in low for k in RENO_VENDORS):
+        if any(payee_matches(low, p) for p in pay) or any(k in low for k in RENO_VENDORS):
             continue
         row = dict(t)
         row["payee"] = payee_fragment(t["desc"])
