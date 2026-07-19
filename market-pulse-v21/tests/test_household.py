@@ -278,6 +278,34 @@ def test_budget_reallocation():
     approx(r3["planned"], 120, "planned excludes unchosen + owned")
 
 
+def test_optimize_budget():
+    # fixed $10k + two option groups; target should pick the priciest combo that fits
+    items = [
+        {"section": "F", "name": "fixed", "qty": 1, "unit": "ea", "unit_cost": 10000, "labor": 0},
+        {"id": 1, "section": "C", "name": "quartz", "qty": 1, "unit": "ea", "unit_cost": 5000, "labor": 0, "opt_group": "counter", "chosen": True},
+        {"id": 2, "section": "C", "name": "marble", "qty": 1, "unit": "ea", "unit_cost": 8000, "labor": 0, "opt_group": "counter", "chosen": False},
+        {"id": 3, "section": "C", "name": "soapstone", "qty": 1, "unit": "ea", "unit_cost": 12000, "labor": 0, "opt_group": "counter", "chosen": False},
+        {"id": 4, "section": "K", "name": "painted", "qty": 1, "unit": "ea", "unit_cost": 6000, "labor": 0, "opt_group": "cab", "chosen": True},
+        {"id": 5, "section": "K", "name": "walnut", "qty": 1, "unit": "ea", "unit_cost": 11000, "labor": 0, "opt_group": "cab", "chosen": False},
+    ]
+    # target 30k, contingency 0 -> budget_for_opts = 30k - 10k = 20k for the two groups.
+    # best combo <= 20k maximizing spend: marble 8k + walnut 11k = 19k (soapstone 12k+painted 6k=18k;
+    # soapstone+walnut=23k over). So marble + walnut.
+    r = H.optimize_budget(items, {"budget_target": 30000, "contingency_pct": 0})
+    check(r["feasible"], "fits under target")
+    eq(r["picks"]["counter"], 2, "counter -> marble (maximizes within budget)")
+    eq(r["picks"]["cab"], 5, "cab -> walnut")
+    approx(r["projected"], 10000 + 8000 + 11000, "projected = fixed + chosen options")
+    check(r["projected"] <= 30000, "projected under the target")
+    # tiny target -> can't fit even cheapest -> best effort cheapest, infeasible
+    r2 = H.optimize_budget(items, {"budget_target": 12000, "contingency_pct": 0})
+    check(not r2["feasible"], "too-tight target flagged infeasible")
+    eq(r2["picks"]["counter"], 1, "falls back to cheapest counter (quartz)")
+    eq(r2["picks"]["cab"], 4, "falls back to cheapest cab (painted)")
+    # no target -> nothing to optimize
+    check(not H.optimize_budget(items, {})["feasible"], "no target -> not feasible")
+
+
 def test_owned_zeroes_cost():
     items = [{"section": "Appliances", "name": "Fridge", "qty": 1, "unit": "ea",
               "unit_cost": 2800, "labor": 0, "owned": True},

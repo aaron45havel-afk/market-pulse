@@ -1473,6 +1473,26 @@ async def api_hh_budget_choose(code: str, pid: int, item_id: int):
     return JSONResponse({"ok": ok})
 
 
+@app.post("/api/household/books/{code}/projects/{pid}/budget/fit")
+async def api_hh_budget_fit(code: str, pid: int):
+    """Auto-pick the option combination that spends the most of her budget
+    target without going over, and apply it."""
+    import household
+    from database import (household_budget_items, household_budget_choose)
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+
+    def _do():
+        items = household_budget_items(code, pid)
+        meta = _budget_meta_with_financing(code, pid)
+        opt = household.optimize_budget(items, meta)
+        for iid in opt.get("picks", {}).values():
+            household_budget_choose(code, iid)
+        return opt
+    return JSONResponse(await asyncio.to_thread(_do))
+
+
 @app.post("/api/household/books/{code}/projects/{pid}/budget/lock-plan")
 async def api_hh_budget_lock_plan(code: str, pid: int):
     """Snapshot the current estimates as the budgeted plan — the baseline

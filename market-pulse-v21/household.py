@@ -1257,6 +1257,89 @@ def budget_summary(items, meta=None):
     }
 
 
+def optimize_budget(items, meta=None):
+    """Auto-pick the option in each compare-group that spends the MOST of her
+    budget target WITHOUT going over — the nicest kitchen that still fits.
+    Only option groups move; fixed lines and 'owned' items are left alone.
+    Returns {feasible, target, projected, picks: {opt_group: item_id}}."""
+    m = meta or {}
+    target = float(m.get("budget_target") or 0)
+    cont = float(m.get("contingency_pct") if m.get("contingency_pct") is not None else 15)
+    if target <= 0:
+        return {"feasible": False, "reason": "no_target", "picks": {}}
+
+    groups, fixed = {}, 0.0
+    for it in items:
+        if it.get("owned"):
+            continue
+        g = it.get("opt_group")
+        if g:
+            groups.setdefault(g, []).append(it)
+        else:
+            fixed += _item_total(it)
+
+    factor = 1 + cont / 100.0
+    budget_for_opts = target / factor - fixed        # what the option groups may sum to
+
+    if not groups:
+        projected = round(fixed * factor, 2)
+        return {"feasible": projected <= target, "target": round(target, 2),
+                "projected": projected, "picks": {}, "reason": "no_options"}
+
+    order = sorted(groups)
+    cheapest_sum = sum(min(_item_total(o) for o in groups[g]) for g in order)
+    picks = {}
+
+    if cheapest_sum > budget_for_opts:
+        # can't fit even the cheapest of each — pick cheapest everywhere (best effort)
+        for g in order:
+            picks[g] = min(groups[g], key=_item_total)["id"]
+        chosen_sum, feasible = cheapest_sum, False
+    else:
+        # brute force is fine for a handful of small groups; guard the blow-up
+        combos = 1
+        for g in order:
+            combos *= len(groups[g])
+        if combos <= 100000:
+            best, best_sum = None, -1.0
+            for combo in _itertools_product([groups[g] for g in order]):
+                s = sum(_item_total(o) for o in combo)
+                if s <= budget_for_opts + 0.01 and s > best_sum:
+                    best_sum, best = s, combo
+            for g, o in zip(order, best):
+                picks[g] = o["id"]
+            chosen_sum = best_sum
+        else:
+            # greedy fallback: start cheapest, upgrade the biggest affordable step
+            chosen = {g: min(groups[g], key=_item_total) for g in order}
+            chosen_sum = sum(_item_total(chosen[g]) for g in order)
+            improved = True
+            while improved:
+                improved = False
+                for g in order:
+                    room = budget_for_opts - chosen_sum
+                    cur = _item_total(chosen[g])
+                    ups = [o for o in groups[g] if 0 < _item_total(o) - cur <= room]
+                    if ups:
+                        nxt = max(ups, key=_item_total)
+                        chosen_sum += _item_total(nxt) - cur
+                        chosen[g] = nxt
+                        improved = True
+            for g in order:
+                picks[g] = chosen[g]["id"]
+        feasible = True
+
+    projected = round((fixed + chosen_sum) * factor, 2)
+    return {"feasible": feasible, "target": round(target, 2),
+            "projected": projected, "picks": picks,
+            "budget_for_options": round(budget_for_opts, 2)}
+
+
+def _itertools_product(pools):
+    import itertools
+    return itertools.product(*pools)
+
+
 # ── Retirement ("when can she retire?") ─────────────────────────────
 # Frances's starting figures, lifted from her long-running retirement
 # spreadsheet (CalPERS "2% @ 55" service pension near the 2.5% cap, plus
