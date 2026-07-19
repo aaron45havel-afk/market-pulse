@@ -180,6 +180,28 @@ def _ensure_household_tables():
         """)
         cur.execute("""CREATE INDEX IF NOT EXISTS hh_projects_book_idx
                        ON hh_projects(book_code)""")
+        # Phase 3: kitchen budget builder. meta holds measurements +
+        # contingency% + home/mortgage/CLTV for the HELOC-headroom calc.
+        cur.execute("ALTER TABLE hh_projects ADD COLUMN IF NOT EXISTS meta TEXT")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS hh_budget_items (
+                id         SERIAL PRIMARY KEY,
+                book_code  VARCHAR(24) NOT NULL,
+                project_id INTEGER NOT NULL,
+                section    VARCHAR(40) NOT NULL DEFAULT 'Other',
+                name       VARCHAR(120) NOT NULL,
+                qty        REAL NOT NULL DEFAULT 1,
+                unit       VARCHAR(16) DEFAULT 'ea',
+                unit_cost  REAL NOT NULL DEFAULT 0,
+                labor      REAL NOT NULL DEFAULT 0,
+                url        TEXT,
+                notes      VARCHAR(200),
+                sort       INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("""CREATE INDEX IF NOT EXISTS hh_budget_items_proj_idx
+                       ON hh_budget_items(project_id)""")
         conn.commit(); cur.close()
     except Exception as e:
         logger.error(f"household table init error: {e}")
@@ -1450,5 +1472,154 @@ def household_recategorize(code: str, txn_id: int, bucket: str,
     except Exception as e:
         logger.error(f"household_recategorize failed: {e}")
         return 0
+    finally:
+        conn.close()
+
+
+# ─── Household phase 3: kitchen budget builder ─────────────────────
+def household_project_meta(code: str, pid: int) -> dict:
+    import json as _json
+    conn = _get_conn()
+    if not conn: return {}
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT meta FROM hh_projects WHERE book_code = %s AND id = %s",
+                    (code, pid))
+        row = cur.fetchone(); cur.close()
+        if row and row[0]:
+            try: return _json.loads(row[0])
+            except ValueError: return {}
+        return {}
+    finally:
+        conn.close()
+
+
+def household_project_set_meta(code: str, pid: int, meta: dict) -> bool:
+    """Merge fields into the project's meta blob (measurements, budget
+    target, contingency%, home value / mortgage / CLTV for headroom)."""
+    import json as _json
+    conn = _get_conn()
+    if not conn: return False
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT meta FROM hh_projects WHERE book_code = %s AND id = %s",
+                    (code, pid))
+        row = cur.fetchone()
+        cur_meta = {}
+        if row and row[0]:
+            try: cur_meta = _json.loads(row[0])
+            except ValueError: cur_meta = {}
+        cur_meta.update(meta)
+        cur.execute("UPDATE hh_projects SET meta = %s WHERE book_code = %s AND id = %s",
+                    (_json.dumps(cur_meta), code, pid))
+        n = cur.rowcount
+        conn.commit(); cur.close()
+        return n > 0
+    finally:
+        conn.close()
+
+
+def household_budget_items(code: str, pid: int) -> list[dict]:
+    conn = _get_conn()
+    if not conn: return []
+    try:
+        cur = conn.cursor()
+        cur.execute("""SELECT id, section, name, qty, unit, unit_cost, labor, url, notes, sort
+                       FROM hh_budget_items WHERE book_code = %s AND project_id = %s
+                       ORDER BY sort, id""", (code, pid))
+        rows = cur.fetchall(); cur.close()
+        return [{"id": r[0], "section": r[1], "name": r[2], "qty": float(r[3]),
+                 "unit": r[4], "unit_cost": float(r[5]), "labor": float(r[6]),
+                 "url": r[7], "notes": r[8], "sort": r[9]} for r in rows]
+    finally:
+        conn.close()
+
+
+def household_budget_add(code: str, pid: int, item: dict) -> int | None:
+    conn = _get_conn()
+    if not conn: return None
+    try:
+        cur = conn.cursor()
+        cur.execute("""INSERT INTO hh_budget_items
+                       (book_code, project_id, section, name, qty, unit, unit_cost, labor, url, notes, sort)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+                    (code, pid, (item.get("section") or "Other")[:40],
+                     (item.get("name") or "Item")[:120], float(item.get("qty") or 1),
+                     (item.get("unit") or "ea")[:16], float(item.get("unit_cost") or 0),
+                     float(item.get("labor") or 0), (item.get("url") or None),
+                     (item.get("notes") or None), int(item.get("sort") or 0)))
+        iid = cur.fetchone()[0]
+        conn.commit(); cur.close()
+        return iid
+    except Exception as e:
+        logger.error(f"household_budget_add failed: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+def household_budget_bulk_add(code: str, pid: int, items: list[dict]) -> int:
+    conn = _get_conn()
+    if not conn: return 0
+    try:
+        cur = conn.cursor()
+        n = 0
+        for i, item in enumerate(items):
+            cur.execute("""INSERT INTO hh_budget_items
+                           (book_code, project_id, section, name, qty, unit, unit_cost, labor, sort)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                        (code, pid, (item.get("section") or "Other")[:40],
+                         (item.get("name") or "Item")[:120], float(item.get("qty") or 1),
+                         (item.get("unit") or "ea")[:16], float(item.get("unit_cost") or 0),
+                         float(item.get("labor") or 0), i))
+            n += 1
+        conn.commit(); cur.close()
+        return n
+    except Exception as e:
+        logger.error(f"household_budget_bulk_add failed: {e}")
+        return 0
+    finally:
+        conn.close()
+
+
+def household_budget_update(code: str, item_id: int, fields: dict) -> bool:
+    cols = {"section": str, "name": str, "qty": float, "unit": str,
+            "unit_cost": float, "labor": float, "url": str, "notes": str}
+    sets, vals = [], []
+    for k, cast in cols.items():
+        if k in fields:
+            v = fields[k]
+            try:
+                v = cast(v) if v is not None else None
+            except (TypeError, ValueError):
+                continue
+            if cast is str and v is not None:
+                v = v[:200]
+            sets.append(f"{k} = %s"); vals.append(v)
+    if not sets:
+        return False
+    conn = _get_conn()
+    if not conn: return False
+    try:
+        cur = conn.cursor()
+        cur.execute(f"UPDATE hh_budget_items SET {', '.join(sets)} WHERE book_code = %s AND id = %s",
+                    (*vals, code, item_id))
+        n = cur.rowcount
+        conn.commit(); cur.close()
+        return n > 0
+    finally:
+        conn.close()
+
+
+def household_budget_delete(code: str, item_id: int) -> bool:
+    conn = _get_conn()
+    if not conn: return False
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM hh_budget_items WHERE book_code = %s AND id = %s",
+                    (code, item_id))
+        n = cur.rowcount
+        conn.commit(); cur.close()
+        return n > 0
     finally:
         conn.close()

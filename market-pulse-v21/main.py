@@ -729,6 +729,8 @@ async def api_hh_import_pdf(code: str, request: Request):
                     settings_update["heloc_apr"] = s["apr"]
                 if s.get("min_payment") is not None:
                     settings_update["heloc_payment"] = s["min_payment"]
+                if s.get("credit_limit") is not None:
+                    settings_update["heloc_limit"] = s["credit_limit"]
             elif acct["kind"] == "credit_card":
                 s = acct["summary"]
                 if s.get("balance") is not None:
@@ -743,8 +745,25 @@ async def api_hh_import_pdf(code: str, request: Request):
             cur = household_get_settings(code)
             cur.update(settings_update)
             household_set_settings(code, cur)
+        # Auto-tag renovation vendors into any project (less manual work).
+        from database import (household_list_projects, household_all_txns,
+                              household_tag_txns)
+        projects = household_list_projects(code)
+        auto_tagged = 0
+        if projects:
+            all_tx = household_all_txns(code)
+            for r in all_tx:
+                r.setdefault("project_id", r.get("project_id"))
+            for p in projects:
+                sugg = household.suggest_reno(all_tx, p.get("start"), p.get("end"))
+                ids = [t["id"] for t in sugg]
+                if ids:
+                    auto_tagged += household_tag_txns(code, ids, p["id"])
+                    for t in sugg:
+                        t["project_id"] = p["id"]        # keep local view in sync
         return {"type": parsed["type"], "accounts": results,
-                "settings_updated": bool(settings_update)}
+                "settings_updated": bool(settings_update),
+                "auto_tagged": auto_tagged}
 
     out = await asyncio.to_thread(_do)
     if isinstance(out, dict) and out.get("error"):
@@ -843,7 +862,7 @@ async def api_hh_set_settings(code: str, request: Request):
     body = await request.json()
     incoming = body.get("settings") if isinstance(body.get("settings"), dict) else {}
     allowed = {"mode", "income", "savings", "cushion_goal",
-               "heloc_balance", "heloc_apr", "heloc_payment",
+               "heloc_balance", "heloc_apr", "heloc_payment", "heloc_limit",
                "card_balance", "card_apr", "card_payment", "reno_budget"}
     clean = {}
     for k, v in incoming.items():
@@ -971,6 +990,184 @@ async def api_hh_project(code: str, pid: int):
         "tagged": [fmt(r) for r in tagged],
         "suggestions": [fmt(r) for r in suggestions],
     })
+
+
+# ── Kitchen budget builder ─────────────────────────────────────────
+def _budget_meta_with_financing(code, pid):
+    """Project meta + live HELOC balance/limit pulled from settings, so the
+    headroom math has the real numbers without re-entering them."""
+    from database import household_project_meta, household_get_settings
+    meta = household_project_meta(code, pid)
+    s = household_get_settings(code)
+    if s.get("heloc_balance") is not None:
+        meta.setdefault("heloc_balance", s["heloc_balance"])
+    if s.get("heloc_limit") is not None:
+        meta.setdefault("heloc_limit", s["heloc_limit"])
+    meta.setdefault("home_value", 950000)   # she told us; editable
+    return meta
+
+
+@app.get("/api/household/books/{code}/projects/{pid}/budget")
+async def api_hh_budget(code: str, pid: int):
+    import household
+    from database import household_budget_items
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+
+    def _do():
+        items = household_budget_items(code, pid)
+        meta = _budget_meta_with_financing(code, pid)
+        return {"items": items, "meta": meta,
+                "summary": household.budget_summary(items, meta),
+                "sections": household.BUDGET_SECTIONS}
+    return JSONResponse(await asyncio.to_thread(_do))
+
+
+@app.post("/api/household/books/{code}/projects/{pid}/budget/seed")
+async def api_hh_budget_seed(code: str, pid: int):
+    """Fill an empty budget with the researched San Leandro kitchen template
+    (scaled to any measurements already saved)."""
+    import household
+    from database import (household_budget_items, household_budget_bulk_add,
+                          household_project_meta)
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+
+    def _do():
+        if household_budget_items(code, pid):
+            return {"seeded": 0, "note": "already has items"}
+        meta = household_project_meta(code, pid)
+        items = household.kitchen_seed_template(meta)
+        return {"seeded": household_budget_bulk_add(code, pid, items)}
+    return JSONResponse(await asyncio.to_thread(_do))
+
+
+@app.post("/api/household/books/{code}/projects/{pid}/budget/items")
+async def api_hh_budget_add(code: str, pid: int, request: Request):
+    from database import household_budget_add
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    item = await request.json()
+    iid = await asyncio.to_thread(household_budget_add, code, pid, item)
+    return JSONResponse({"id": iid})
+
+
+@app.post("/api/household/books/{code}/projects/{pid}/budget/items/{item_id}")
+async def api_hh_budget_update(code: str, pid: int, item_id: int, request: Request):
+    from database import household_budget_update
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    fields = await request.json()
+    ok = await asyncio.to_thread(household_budget_update, code, item_id, fields)
+    return JSONResponse({"ok": ok})
+
+
+@app.delete("/api/household/books/{code}/projects/{pid}/budget/items/{item_id}")
+async def api_hh_budget_delete(code: str, pid: int, item_id: int):
+    from database import household_budget_delete
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    ok = await asyncio.to_thread(household_budget_delete, code, item_id)
+    return JSONResponse({"ok": ok})
+
+
+@app.post("/api/household/books/{code}/projects/{pid}/meta")
+async def api_hh_project_meta(code: str, pid: int, request: Request):
+    """Save measurements / contingency% / home value / mortgage / target CLTV
+    / budget target onto the project."""
+    from database import household_project_set_meta
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    incoming = body.get("meta") if isinstance(body.get("meta"), dict) else {}
+    allowed = {"floor_len_ft", "floor_wid_ft", "counter_run_ft", "counter_depth_in",
+               "cabinet_lf", "backsplash_len_ft", "backsplash_height_in", "ceiling_ht_ft",
+               "floor_sqft", "counter_sqft", "backsplash_sqft",
+               "contingency_pct", "budget_target", "home_value",
+               "mortgage_balance", "target_cltv", "notes"}
+    clean = {}
+    for k, v in incoming.items():
+        if k not in allowed:
+            continue
+        if k == "notes":
+            clean[k] = str(v)[:400]
+        else:
+            fv = _coerce_float(v)
+            if fv is not None:
+                clean[k] = fv
+    ok = await asyncio.to_thread(household_project_set_meta, code, pid, clean)
+    return JSONResponse({"ok": ok})
+
+
+@app.post("/api/household/books/{code}/projects/{pid}/budget/fetch-url")
+async def api_hh_budget_fetch(code: str, pid: int, request: Request):
+    """Read a product page she pastes/drops and pull the item name + price
+    (Open Graph / JSON-LD / meta / a $-price fallback). Server-side fetch
+    with an SSRF guard — no private hosts."""
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    url = (body.get("url") or "").strip()
+    info = await asyncio.to_thread(_fetch_product, url)
+    if info.get("error"):
+        return JSONResponse(info, status_code=400)
+    return JSONResponse(info)
+
+
+def _fetch_product(url: str) -> dict:
+    import ipaddress
+    import re as _re
+    import socket
+    import urllib.request
+    from urllib.parse import urlparse
+    if not url.lower().startswith(("http://", "https://")):
+        return {"error": "paste a full http(s) link"}
+    host = urlparse(url).hostname or ""
+    try:                                        # SSRF guard: no private hosts
+        for fam, *_rest in socket.getaddrinfo(host, None):
+            ip = ipaddress.ip_address(_rest[-1][0])
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                return {"error": "that host isn't allowed"}
+    except Exception:
+        return {"error": "could not resolve that link"}
+    try:
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (compatible; MarketPulse/1.0)"})
+        with urllib.request.urlopen(req, timeout=12) as r:
+            html = r.read(600_000).decode("utf-8", "ignore")
+    except Exception:
+        return {"error": "could not open that link"}
+
+    def meta(prop):
+        m = _re.search(r'<meta[^>]+(?:property|name|itemprop)=["\']%s["\'][^>]+content=["\']([^"\']+)' % prop, html, _re.I) \
+            or _re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:property|name|itemprop)=["\']%s["\']' % prop, html, _re.I)
+        return m.group(1).strip() if m else None
+
+    name = meta("og:title") or meta("twitter:title")
+    if not name:
+        t = _re.search(r"<title[^>]*>([^<]+)</title>", html, _re.I)
+        name = t.group(1).strip() if t else None
+    price = meta("product:price:amount") or meta("og:price:amount") or meta("price")
+    if not price:                               # JSON-LD "price": "12.34"
+        m = _re.search(r'"price"\s*:\s*"?([0-9][0-9,]*\.?[0-9]*)"?', html)
+        price = m.group(1) if m else None
+    if not price:                               # last resort: first $ amount
+        m = _re.search(r'\$\s?([0-9][0-9,]{1,7}(?:\.[0-9]{2})?)', html)
+        price = m.group(1) if m else None
+    price_val = None
+    if price:
+        try:
+            price_val = float(str(price).replace(",", ""))
+        except ValueError:
+            price_val = None
+    return {"name": (name or "")[:120], "price": price_val, "url": url}
 
 
 # Browsers and iOS probe these absolute paths regardless of <link> tags —

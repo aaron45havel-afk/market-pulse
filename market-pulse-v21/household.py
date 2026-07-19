@@ -878,3 +878,109 @@ def project_summary(tagged, settings, interest_paid=0.0):
         "true_cost": true_cost,
         "payoff_months": n, "payoff_interest": total_int,
     }
+
+
+# ── Kitchen budget builder ─────────────────────────────────────────
+BUDGET_SECTIONS = [
+    "Cabinets", "Countertops", "Appliances", "Flooring", "Backsplash",
+    "Fixtures & Lighting", "Plumbing", "Electrical", "Demo & Prep",
+    "Paint & Walls", "Permits & Fees", "Labor & Install", "Other",
+]
+
+
+def kitchen_quantities(m):
+    """Derive material quantities from the kitchen measurements she enters
+    (falls back to a direct sqft/lin-ft field, then a typical value)."""
+    m = m or {}
+    fl, fw = float(m.get("floor_len_ft") or 0), float(m.get("floor_wid_ft") or 0)
+    counter_lf = float(m.get("counter_run_ft") or 0)
+    depth_in = float(m.get("counter_depth_in") or 25.5)
+    cab_lf = float(m.get("cabinet_lf") or 0) or counter_lf
+    bs_len = float(m.get("backsplash_len_ft") or 0) or counter_lf
+    bs_h_in = float(m.get("backsplash_height_in") or 18)
+    return {
+        "floor_sqft": round(fl * fw, 1) if (fl and fw) else float(m.get("floor_sqft") or 0),
+        "counter_sqft": round(counter_lf * (depth_in / 12), 1) if counter_lf else float(m.get("counter_sqft") or 0),
+        "cabinet_lf": cab_lf,
+        "backsplash_sqft": round(bs_len * (bs_h_in / 12), 1) if bs_len else float(m.get("backsplash_sqft") or 0),
+    }
+
+
+def kitchen_seed_template(meta=None):
+    """A realistic 'nice full kitchen reno' starting budget for San Leandro
+    / East Bay, priced off 2026 web research (semi-custom cabinets ~$525/lf,
+    quartz ~$95/sqft installed, LVP ~$8/sqft, backsplash ~$30/sqft, high
+    appliance package, Alameda permits, Bay-Area labor). Quantities scale
+    to her measurements when present. All fully editable afterward."""
+    q = kitchen_quantities(meta)
+    cab = q["cabinet_lf"] or 25
+    counter = q["counter_sqft"] or 55
+    floor = q["floor_sqft"] or 200
+    bs = q["backsplash_sqft"] or 35
+    return [
+        {"section": "Cabinets", "name": "Cabinets (semi-custom, installed)", "qty": cab, "unit": "lin ft", "unit_cost": 525, "labor": 0},
+        {"section": "Countertops", "name": "Quartz countertop (installed)", "qty": counter, "unit": "sq ft", "unit_cost": 95, "labor": 0},
+        {"section": "Appliances", "name": "Range (gas, 30 in)", "qty": 1, "unit": "ea", "unit_cost": 2800, "labor": 0},
+        {"section": "Appliances", "name": "Refrigerator (counter-depth)", "qty": 1, "unit": "ea", "unit_cost": 2800, "labor": 0},
+        {"section": "Appliances", "name": "Dishwasher", "qty": 1, "unit": "ea", "unit_cost": 1200, "labor": 0},
+        {"section": "Appliances", "name": "Range hood", "qty": 1, "unit": "ea", "unit_cost": 1000, "labor": 0},
+        {"section": "Appliances", "name": "Microwave (built-in)", "qty": 1, "unit": "ea", "unit_cost": 600, "labor": 0},
+        {"section": "Flooring", "name": "Luxury vinyl plank (installed)", "qty": floor, "unit": "sq ft", "unit_cost": 8, "labor": 0},
+        {"section": "Backsplash", "name": "Tile backsplash (installed)", "qty": bs, "unit": "sq ft", "unit_cost": 30, "labor": 0},
+        {"section": "Fixtures & Lighting", "name": "Sink (undermount)", "qty": 1, "unit": "ea", "unit_cost": 450, "labor": 0},
+        {"section": "Fixtures & Lighting", "name": "Faucet", "qty": 1, "unit": "ea", "unit_cost": 400, "labor": 0},
+        {"section": "Fixtures & Lighting", "name": "Lighting (recessed + pendants + under-cabinet)", "qty": 1, "unit": "set", "unit_cost": 1600, "labor": 0},
+        {"section": "Plumbing", "name": "Plumbing (rough-in + connect)", "qty": 1, "unit": "job", "unit_cost": 0, "labor": 2800},
+        {"section": "Electrical", "name": "Electrical (circuits + lighting)", "qty": 1, "unit": "job", "unit_cost": 0, "labor": 2800},
+        {"section": "Demo & Prep", "name": "Demolition & disposal", "qty": 1, "unit": "job", "unit_cost": 0, "labor": 2200},
+        {"section": "Paint & Walls", "name": "Drywall repair & paint", "qty": 1, "unit": "job", "unit_cost": 0, "labor": 2200},
+        {"section": "Permits & Fees", "name": "Permits (San Leandro / Alameda Co.)", "qty": 1, "unit": "ea", "unit_cost": 1400, "labor": 0},
+        {"section": "Labor & Install", "name": "General labor & project management", "qty": 1, "unit": "job", "unit_cost": 0, "labor": 22000},
+    ]
+
+
+def _item_total(it):
+    return round(float(it.get("qty", 1)) * float(it.get("unit_cost", 0)) + float(it.get("labor", 0)), 2)
+
+
+def budget_summary(items, meta=None):
+    """Roll the line items up by section, apply a contingency %, compare to
+    her target, and compute HELOC headroom against the home's equity."""
+    m = meta or {}
+    cont_pct = float(m.get("contingency_pct") if m.get("contingency_pct") is not None else 15)
+    by_section = {}
+    for it in items:
+        by_section[it["section"]] = by_section.get(it["section"], 0) + _item_total(it)
+    subtotal = round(sum(by_section.values()), 2)
+    contingency = round(subtotal * cont_pct / 100, 2)
+    total = round(subtotal + contingency, 2)
+    sections = [{"section": s, "amount": round(a, 2)}
+                for s, a in sorted(by_section.items(), key=lambda x: -x[1])]
+    target = float(m.get("budget_target") or 0)
+
+    home = float(m.get("home_value") or 0)
+    mortgage = float(m.get("mortgage_balance") or 0)
+    cltv = float(m.get("target_cltv") or 80)
+    hlimit = float(m.get("heloc_limit") or 0)
+    hbal = float(m.get("heloc_balance") or 0)
+    max_lien = home * cltv / 100 if home else 0
+    potential_limit = max(0.0, max_lien - mortgage) if home else 0.0
+    potential_increase = (max(0.0, potential_limit - hlimit) if hlimit else potential_limit)
+    available_now = max(0.0, hlimit - hbal) if hlimit else 0.0
+    # how much of THIS budget the HELOC could cover if raised
+    can_fund = min(total, available_now + potential_increase) if (available_now or potential_increase) else 0.0
+
+    return {
+        "sections": sections, "subtotal": subtotal,
+        "contingency_pct": cont_pct, "contingency": contingency, "total": total,
+        "target": round(target, 2),
+        "over_under": round(total - target, 2) if target else None,
+        "financing": {
+            "home_value": home, "mortgage_balance": mortgage, "target_cltv": cltv,
+            "heloc_limit": hlimit, "heloc_balance": hbal,
+            "available_now": round(available_now, 2),
+            "potential_limit": round(potential_limit, 2),
+            "potential_increase": round(potential_increase, 2),
+            "can_fund": round(can_fund, 2),
+        },
+    }
