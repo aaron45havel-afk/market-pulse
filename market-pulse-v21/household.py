@@ -52,6 +52,10 @@ BUCKET_CLASS = {
     "Auto & Transport": "variable",
     "Health & Pharmacy": "variable",
     "Shopping": "variable",
+    "Household Goods": "variable",
+    "Furniture": "variable",
+    "Clothes": "variable",
+    "Beauty": "variable",
     "Subscriptions": "variable",
     "Entertainment": "variable",
     "Travel": "variable",
@@ -154,11 +158,33 @@ DEFAULT_RULES: list[tuple[str, list[str]]] = [
         "vision care", "urgent care", "labcorp", "quest diag", "rx ",
         "blue shield", "anthem", "health net", "goodrx",
     ]),
+    ("Furniture", [
+        "furniture", "ashley homestore", "ashley furniture", "wayfair",
+        "west elm", "pottery barn", "crate & barrel", "crate and barrel",
+        "cb2", "living spaces", "la-z-boy", "lazboy", "room & board",
+        "mattress", "ikea", "ethan allen", "restoration hardware",
+        "arhaus", "bassett", "z gallerie", "interior define",
+    ]),
+    ("Clothes", [
+        "nordstrom", "macy", "old navy", "banana republic", "j.crew",
+        "j crew", "h&m", "h & m", "zara", "uniqlo", "nike", "adidas",
+        "lululemon", "ross store", "ross dress", "tj maxx", "tjmaxx",
+        "marshalls", "kohl", "the gap", "gap store", "dsw", "foot locker",
+        "shoe", "clothing", "apparel", "boutique", "athleta", "forever 21",
+    ]),
+    ("Beauty", [
+        "sephora", "ulta", "sally beauty", "bath & body", "bath and body",
+        "cosmetic", "salon", "day spa", "nail salon", "mac cosmetics",
+        "lush ", "sports clips", "supercuts", "barber", "hair studio",
+    ]),
+    ("Household Goods", [
+        "target", "walmart", "wal-mart", "bed bath", "container store",
+        "homegoods", "home goods", "at home", "dollar tree", "dollar general",
+        "big lots", "world market", "tuesday morning", "the container",
+    ]),
     ("Shopping", [
-        "amazon", "amzn", "walmart", "target", "best buy", "home depot",
-        "lowe's", "lowes", "ikea", "macy", "nordstrom", "ross store",
-        "tj maxx", "tjmaxx", "marshalls", "kohl", "old navy", "the gap",
-        "etsy", "ebay", "wayfair", "costco whse", "costco wholesale",
+        "amazon", "amzn", "best buy", "home depot", "lowe's", "lowes",
+        "etsy", "ebay", "costco whse", "costco wholesale", "target.com",
     ]),
     ("Subscriptions", [
         "netflix", "spotify", "hulu", "disney plus", "disney+", "apple.com",
@@ -645,6 +671,9 @@ def vital_signs(txns, settings):
     hb = float(s.get("heloc_balance") or 0)
     hapr = float(s.get("heloc_apr") or 0)
     hpay = float(s.get("heloc_payment") or 0)
+    cb = float(s.get("card_balance") or 0)
+    capr = float(s.get("card_apr") or 0)
+    cpay = float(s.get("card_payment") or 0)
     goal = float(s.get("cushion_goal") or 4)
 
     months = sorted({t["date"][:7] for t in txns if t.get("date")})[-3:]
@@ -679,12 +708,20 @@ def vital_signs(txns, settings):
         "heloc": {"light": heloc_light, "value": pct_interest, "label": "HELOC direction", "unit": "%",
                   "note": (f"{pct_interest}% of the payment is just interest" if pct_interest is not None else "set your HELOC balance")},
     }
+    # Debt list for the pay-off-debt mode — highest APR first (avalanche).
+    debts = []
+    if hb > 0:
+        debts.append({"name": "HELOC", "balance": hb, "apr": hapr, "payment": hpay})
+    if cb > 0:
+        debts.append({"name": "credit card", "balance": cb, "apr": capr, "payment": cpay})
+    debts.sort(key=lambda d: d["apr"], reverse=True)
     return {
         "lights": lights, "income": round(income, 2), "spend": round(spend, 2),
         "fixed": round(fixed, 2), "variable": round(variable, 2), "avg_net": avg_net,
         "savings": savings, "cushion_goal": goal,
         "heloc_balance": hb, "heloc_apr": hapr, "heloc_payment": hpay,
-        "after_bills": round(income - fixed, 2),
+        "card_balance": cb, "card_apr": capr, "card_payment": cpay,
+        "debts": debts, "after_bills": round(income - fixed, 2),
     }
 
 
@@ -731,22 +768,33 @@ def recommendation(vs, mode):
             proj = None
         return {"headline": head, "move": move, "projection": proj}
 
-    # kill_debt (default)
-    n, total_int = payoff_months(vs["heloc_balance"], vs["heloc_apr"], vs["heloc_payment"])
-    head = {"k": "HELOC balance", "v": vs["heloc_balance"]}
-    if not vs["heloc_balance"]:
-        return {"headline": head, "move": "Set your HELOC balance, rate and payment to see the payoff plan.", "projection": None}
+    # kill_debt (default) — avalanche: attack the HIGHEST-rate debt first.
+    debts = vs.get("debts") or []
+    total_debt = sum(d["balance"] for d in debts)
+    if not debts:
+        return {"headline": {"k": "Debt", "v": 0},
+                "move": "Set your HELOC and/or card balance, rate and payment to see the payoff plan.",
+                "projection": None}
+    target = debts[0]                                   # highest APR
+    head = {"k": f"{target['name'].title()} balance", "v": target["balance"]}
+    apr_txt = f"{round(target['apr'], 2)}%"
+    others = f" (you carry {_money(total_debt)} of debt across {len(debts)})" if len(debts) > 1 else ""
+    n, total_int = payoff_months(target["balance"], target["apr"], target["payment"])
+    lead = (f"Put every extra dollar on the {target['name']} first — it's your most expensive debt at {apr_txt}{others}. "
+            if len(debts) > 1 else "")
     if n is None:
-        move = "Your payment barely covers interest — even a small increase starts shrinking the balance."
+        move = lead + "That payment barely covers its interest, so even a small increase starts shrinking the balance."
         proj = None
     else:
         extra = max(0.0, surplus)
-        n2, int2 = payoff_months(vs["heloc_balance"], vs["heloc_apr"], vs["heloc_payment"] + extra)
+        n2, int2 = payoff_months(target["balance"], target["apr"], target["payment"] + extra)
         if extra > 0 and n2 and n2 < n:
-            move = f"Send your {_money(extra)} surplus to the HELOC — debt-free {n - n2} months sooner, saving {_money((total_int or 0) - (int2 or 0))} in interest."
+            move = (lead + f"Send your {_money(extra)} surplus to it — clear in {n2} months instead of {n}, "
+                    f"saving {_money((total_int or 0) - (int2 or 0))} in interest.")
         else:
-            move = f"Keep the HELOC payment steady — on track to clear it in about {n} months."
-        proj = f"At the current payment: clear in ~{n} months, ~{_money(total_int)} total interest."
+            move = lead + f"On track to clear it in about {n} months at the current payment."
+        nxt = (" Then roll that whole payment onto the next debt." if len(debts) > 1 else "")
+        proj = f"At the current payment: {target['name']} clears in ~{n} months, ~{_money(total_int)} interest.{nxt}"
     return {"headline": head, "move": move, "projection": proj}
 
 

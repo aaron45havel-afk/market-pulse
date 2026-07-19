@@ -87,6 +87,11 @@
   .hh-tx td.amt { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .hh-tx td.amt.out { color: var(--coral-ink); } .hh-tx td.amt.in { color: var(--mint-ink); }
   .hh-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
+  .hh-bsel { font-size: 0.72rem; font-weight: 700; color: var(--ink-2); background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 2px 6px; max-width: 150px; cursor: pointer; }
+  .hh-bsel:hover { border-color: var(--primary); }
+  .hh-renobtn { font-size: 0.68rem; font-weight: 700; color: var(--ink-3); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; cursor: pointer; white-space: nowrap; }
+  .hh-renobtn:hover { border-color: var(--gold); color: var(--gold-ink); }
+  .hh-renobtn.on { background: var(--gold-soft); color: var(--gold-ink); border-color: var(--gold); }
   .hh-recur { display: flex; justify-content: space-between; align-items: center; padding: 0.45rem 0; border-bottom: 1px solid var(--line); font-size: 0.85rem; }
   .hh-recur .m { font-size: 0.7rem; color: var(--ink-3); }
 
@@ -225,16 +230,19 @@ function acctBalance(kind) {
 }
 function targetsCard(v) {
   const s = STATE.settings;
-  const helocAuto = acctBalance('heloc'), savAuto = acctBalance('savings');
+  const helocAuto = acctBalance('heloc'), savAuto = acctBalance('savings'), cardAuto = acctBalance('credit_card');
   const val = (k, fallback) => (s[k] != null ? s[k] : (fallback != null ? fallback : ''));
-  return `<details class="hh-card"><summary style="cursor:pointer;font-weight:600;">Set my targets <span class="hh-note" style="margin:0">— cushion goal, savings, HELOC. Done once; balances read from your statements.</span></summary>
+  return `<details class="hh-card"><summary style="cursor:pointer;font-weight:600;">Set my targets <span class="hh-note" style="margin:0">— cushion goal, savings, and your debts. Done once; balances read from your statements.</span></summary>
     <div class="hh-form" style="margin-top:0.9rem;">
       <div class="hh-f"><label>Cushion goal (months)</label><input class="hh-in" id="tGoal" type="number" step="1" value="${val('cushion_goal', 4)}"></div>
       <div class="hh-f"><label>Savings balance</label><input class="hh-in" id="tSav" type="number" step="100" value="${val('savings', savAuto)}">${savAuto != null ? '<span class="hh-prefill">read from statement</span>' : ''}</div>
       <div class="hh-f"><label>Monthly income (optional)</label><input class="hh-in" id="tInc" type="number" step="100" value="${val('income', '')}" placeholder="auto from deposits"></div>
       <div class="hh-f"><label>HELOC balance</label><input class="hh-in" id="tHb" type="number" step="100" value="${val('heloc_balance', helocAuto)}">${helocAuto != null ? '<span class="hh-prefill">read from statement</span>' : ''}</div>
-      <div class="hh-f"><label>HELOC rate (APR %)</label><input class="hh-in" id="tHapr" type="number" step="0.01" value="${val('heloc_apr', '')}" placeholder="e.g. 9.5"></div>
+      <div class="hh-f"><label>HELOC rate (APR %)</label><input class="hh-in" id="tHapr" type="number" step="0.01" value="${val('heloc_apr', '')}" placeholder="e.g. 7.12"></div>
       <div class="hh-f"><label>HELOC payment / mo</label><input class="hh-in" id="tHpay" type="number" step="10" value="${val('heloc_payment', '')}"></div>
+      <div class="hh-f"><label>Credit card balance</label><input class="hh-in" id="tCb" type="number" step="100" value="${val('card_balance', cardAuto)}">${cardAuto != null ? '<span class="hh-prefill">read from statement</span>' : ''}</div>
+      <div class="hh-f"><label>Card rate (APR %)</label><input class="hh-in" id="tCapr" type="number" step="0.01" value="${val('card_apr', '')}" placeholder="e.g. 18.24"></div>
+      <div class="hh-f"><label>Card payment / mo</label><input class="hh-in" id="tCpay" type="number" step="10" value="${val('card_payment', '')}"></div>
     </div>
     <button class="btn-primary" style="margin-top:0.8rem;" onclick="saveTargets()">Save targets</button>
     <span id="tMsg" class="hh-msg"></span>
@@ -243,7 +251,8 @@ function targetsCard(v) {
 async function saveTargets() {
   const g = id => { const el = $(id); return el && el.value !== '' ? parseFloat(el.value) : null; };
   const settings = { cushion_goal: g('tGoal'), savings: g('tSav'), income: g('tInc'),
-                     heloc_balance: g('tHb'), heloc_apr: g('tHapr'), heloc_payment: g('tHpay') };
+                     heloc_balance: g('tHb'), heloc_apr: g('tHapr'), heloc_payment: g('tHpay'),
+                     card_balance: g('tCb'), card_apr: g('tCapr'), card_payment: g('tCpay') };
   Object.keys(settings).forEach(k => settings[k] == null && delete settings[k]);
   await api('/' + BOOK + '/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({settings}) });
   $('tMsg').className = 'hh-msg ok'; $('tMsg').textContent = 'Saved';
@@ -333,13 +342,38 @@ async function saveCat(id, desc) {
   await api('/' + BOOK + '/txns/' + id + '/bucket', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({bucket, apply_all, desc}) });
   await loadDashboard();
 }
+function bucketSelect(t) {
+  const opts = STATE.buckets.map(b => `<option ${b === t.bucket ? 'selected' : ''}>${b}</option>`).join('');
+  return `<select class="hh-bsel" onchange="reBucket(${t.id}, this.value)" style="border-color:${CLS_COLOR[t.cls] || 'var(--line)'}">${opts}</select>`;
+}
 function renderTxns() {
   let tx = STATE.data.txns;
   if (STATE.selBucket) tx = tx.filter(t => t.bucket === STATE.selBucket);
   $('txScope').textContent = (STATE.selBucket ? STATE.selBucket + ' · ' : '') + tx.length + ' in ' + monthLabel(STATE.month);
   if (!tx.length) { $('txns').innerHTML = `<div class="hh-empty">No transactions.</div>`; return; }
-  $('txns').innerHTML = `<table class="hh-tx"><thead><tr><th>Date</th><th>Description</th><th>Account</th><th>Bucket</th><th style="text-align:right">Amount</th></tr></thead><tbody>` +
-    tx.map(t => `<tr><td>${t.date.slice(5)}</td><td>${t.desc}</td><td style="color:var(--ink-3)">${t.account}</td><td><span class="hh-pill" style="border-color:${CLS_COLOR[t.cls]||'var(--line)'}">${t.bucket}</span></td><td class="amt ${t.amount < 0 ? 'out' : 'in'}">${fmt(t.amount)}</td></tr>`).join('') + `</tbody></table>`;
+  $('txns').innerHTML = `<table class="hh-tx"><thead><tr><th>Date</th><th>Description</th><th>Account</th><th>Bucket</th><th>Reno</th><th style="text-align:right">Amount</th></tr></thead><tbody>` +
+    tx.map(t => `<tr>
+      <td>${t.date.slice(5)}</td><td>${t.desc}</td><td style="color:var(--ink-3)">${t.account}</td>
+      <td>${bucketSelect(t)}</td>
+      <td><button class="hh-renobtn ${t.project_id ? 'on' : ''}" onclick="toggleReno(${t.id})" title="Tag to the renovation project">${t.project_id ? 'Reno' : '+ Reno'}</button></td>
+      <td class="amt ${t.amount < 0 ? 'out' : 'in'}">${fmt(t.amount)}</td></tr>`).join('') + `</tbody></table>`;
+}
+async function reBucket(id, bucket) {
+  await api('/' + BOOK + '/txns/' + id + '/bucket', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({bucket, apply_all: false}) });
+  await loadDashboard();
+}
+async function toggleReno(id) {
+  const t = (STATE.data.txns || []).find(x => x.id === id);
+  const tagged = !!(t && t.project_id);
+  let pid;
+  if (tagged) pid = t.project_id;
+  else {
+    const projs = STATE.data.projects || [];
+    pid = projs.length ? projs[0].id
+      : (await api('/' + BOOK + '/projects', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name: 'Renovation'}) })).id;
+  }
+  await api('/' + BOOK + '/projects/' + pid + '/tag', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({txn_ids: [id], tag: !tagged}) });
+  await loadDashboard();
 }
 
 // ══ RENOVATION ════════════════════════════════════════════════════

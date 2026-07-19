@@ -729,6 +729,14 @@ async def api_hh_import_pdf(code: str, request: Request):
                     settings_update["heloc_apr"] = s["apr"]
                 if s.get("min_payment") is not None:
                     settings_update["heloc_payment"] = s["min_payment"]
+            elif acct["kind"] == "credit_card":
+                s = acct["summary"]
+                if s.get("balance") is not None:
+                    settings_update["card_balance"] = s["balance"]
+                if s.get("apr") is not None:
+                    settings_update["card_apr"] = s["apr"]
+                if s.get("min_payment") is not None:
+                    settings_update["card_payment"] = s["min_payment"]
             results.append({"account": acct["name"], "kind": acct["kind"],
                             "parsed": len(txns), "inserted": ins, "balance": bal})
         if settings_update:
@@ -750,12 +758,14 @@ async def api_hh_dashboard(code: str, month: str = ""):
     monthly trend, recurring bills, and the scoped transactions + review
     tray. Aggregates computed server-side over the redacted ledger."""
     import household
-    from database import household_all_txns, household_list_accounts
+    from database import (household_all_txns, household_list_accounts,
+                          household_list_projects)
     bad = await _require_hh_book(code)
     if bad:
         return bad
     rows = await asyncio.to_thread(household_all_txns, code)
     accounts = await asyncio.to_thread(household_list_accounts, code)
+    projects = await asyncio.to_thread(household_list_projects, code)
     acct_name = {a["id"]: a["name"] for a in accounts}
     # Enrich stored rows into engine txns (class + merchant key).
     for r in rows:
@@ -770,12 +780,14 @@ async def api_hh_dashboard(code: str, month: str = ""):
     scoped.sort(key=lambda r: (r["date"] or "", r["id"]), reverse=True)
     txns = [{"id": r["id"], "date": r["date"], "desc": r["desc"],
              "amount": round(r["amount"], 2), "bucket": r["bucket"],
-             "cls": r["cls"], "account": acct_name.get(r["account_id"], "")}
+             "cls": r["cls"], "account": acct_name.get(r["account_id"], ""),
+             "project_id": r.get("project_id")}
             for r in scoped]
     review = [t for t in txns if t["cls"] == "review"]
     return JSONResponse({
         "summary": summary, "recurring": recurring[:20],
         "txns": txns, "review": review,
+        "projects": projects,
         "buckets": list(household.BUCKET_CLASS.keys()),
     })
 
@@ -831,7 +843,8 @@ async def api_hh_set_settings(code: str, request: Request):
     body = await request.json()
     incoming = body.get("settings") if isinstance(body.get("settings"), dict) else {}
     allowed = {"mode", "income", "savings", "cushion_goal",
-               "heloc_balance", "heloc_apr", "heloc_payment", "reno_budget"}
+               "heloc_balance", "heloc_apr", "heloc_payment",
+               "card_balance", "card_apr", "card_payment", "reno_budget"}
     clean = {}
     for k, v in incoming.items():
         if k not in allowed:
