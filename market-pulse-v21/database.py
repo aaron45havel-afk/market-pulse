@@ -206,6 +206,10 @@ def _ensure_household_tables():
         # "Already have it" flag — keeps the line in the plan but drops its
         # cost from the total (she already owns the fridge, etc.).
         cur.execute("ALTER TABLE hh_budget_items ADD COLUMN IF NOT EXISTS owned BOOLEAN NOT NULL DEFAULT FALSE")
+        # Compare-options: items sharing an opt_group are alternatives
+        # (marble vs quartz…); only the `chosen` one counts toward the total.
+        cur.execute("ALTER TABLE hh_budget_items ADD COLUMN IF NOT EXISTS opt_group VARCHAR(40)")
+        cur.execute("ALTER TABLE hh_budget_items ADD COLUMN IF NOT EXISTS chosen BOOLEAN NOT NULL DEFAULT TRUE")
         conn.commit(); cur.close()
     except Exception as e:
         logger.error(f"household table init error: {e}")
@@ -1528,13 +1532,15 @@ def household_budget_items(code: str, pid: int) -> list[dict]:
     if not conn: return []
     try:
         cur = conn.cursor()
-        cur.execute("""SELECT id, section, name, qty, unit, unit_cost, labor, url, notes, sort, owned
+        cur.execute("""SELECT id, section, name, qty, unit, unit_cost, labor, url, notes, sort,
+                              owned, opt_group, chosen
                        FROM hh_budget_items WHERE book_code = %s AND project_id = %s
                        ORDER BY sort, id""", (code, pid))
         rows = cur.fetchall(); cur.close()
         return [{"id": r[0], "section": r[1], "name": r[2], "qty": float(r[3]),
                  "unit": r[4], "unit_cost": float(r[5]), "labor": float(r[6]),
-                 "url": r[7], "notes": r[8], "sort": r[9], "owned": bool(r[10])}
+                 "url": r[7], "notes": r[8], "sort": r[9], "owned": bool(r[10]),
+                 "opt_group": r[11], "chosen": bool(r[12])}
                 for r in rows]
     finally:
         conn.close()
@@ -1546,13 +1552,14 @@ def household_budget_add(code: str, pid: int, item: dict) -> int | None:
     try:
         cur = conn.cursor()
         cur.execute("""INSERT INTO hh_budget_items
-                       (book_code, project_id, section, name, qty, unit, unit_cost, labor, url, notes, sort)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+                       (book_code, project_id, section, name, qty, unit, unit_cost, labor, url, notes, sort, opt_group, chosen)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
                     (code, pid, (item.get("section") or "Other")[:40],
                      (item.get("name") or "Item")[:120], float(item.get("qty") or 1),
                      (item.get("unit") or "ea")[:16], float(item.get("unit_cost") or 0),
                      float(item.get("labor") or 0), (item.get("url") or None),
-                     (item.get("notes") or None), int(item.get("sort") or 0)))
+                     (item.get("notes") or None), int(item.get("sort") or 0),
+                     (item.get("opt_group") or None), bool(item.get("chosen", True))))
         iid = cur.fetchone()[0]
         conn.commit(); cur.close()
         return iid
@@ -1571,12 +1578,13 @@ def household_budget_bulk_add(code: str, pid: int, items: list[dict]) -> int:
         n = 0
         for i, item in enumerate(items):
             cur.execute("""INSERT INTO hh_budget_items
-                           (book_code, project_id, section, name, qty, unit, unit_cost, labor, sort)
-                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                           (book_code, project_id, section, name, qty, unit, unit_cost, labor, sort, opt_group, chosen)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                         (code, pid, (item.get("section") or "Other")[:40],
                          (item.get("name") or "Item")[:120], float(item.get("qty") or 1),
                          (item.get("unit") or "ea")[:16], float(item.get("unit_cost") or 0),
-                         float(item.get("labor") or 0), i))
+                         float(item.get("labor") or 0), i,
+                         (item.get("opt_group") or None), bool(item.get("chosen", True))))
             n += 1
         conn.commit(); cur.close()
         return n
@@ -1590,7 +1598,7 @@ def household_budget_bulk_add(code: str, pid: int, items: list[dict]) -> int:
 def household_budget_update(code: str, item_id: int, fields: dict) -> bool:
     cols = {"section": str, "name": str, "qty": float, "unit": str,
             "unit_cost": float, "labor": float, "url": str, "notes": str,
-            "owned": bool}
+            "owned": bool, "opt_group": str, "chosen": bool}
     sets, vals = [], []
     for k, cast in cols.items():
         if k in fields:
@@ -1627,5 +1635,30 @@ def household_budget_delete(code: str, item_id: int) -> bool:
         n = cur.rowcount
         conn.commit(); cur.close()
         return n > 0
+    finally:
+        conn.close()
+
+
+def household_budget_choose(code: str, item_id: int) -> bool:
+    """Pick one alternative in an option group: mark it chosen and unmark
+    its siblings (same project + opt_group)."""
+    conn = _get_conn()
+    if not conn: return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""SELECT project_id, opt_group FROM hh_budget_items
+                       WHERE book_code = %s AND id = %s""", (code, item_id))
+        row = cur.fetchone()
+        if not row:
+            cur.close(); return False
+        pid, grp = row
+        if grp:
+            cur.execute("""UPDATE hh_budget_items SET chosen = FALSE
+                           WHERE book_code = %s AND project_id = %s AND opt_group = %s""",
+                        (code, pid, grp))
+        cur.execute("UPDATE hh_budget_items SET chosen = TRUE WHERE book_code = %s AND id = %s",
+                    (code, item_id))
+        conn.commit(); cur.close()
+        return True
     finally:
         conn.close()

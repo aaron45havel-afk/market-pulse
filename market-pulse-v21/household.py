@@ -918,8 +918,15 @@ def kitchen_seed_template(meta=None):
     floor = q["floor_sqft"] or 200
     bs = q["backsplash_sqft"] or 35
     return [
-        {"section": "Cabinets", "name": "Cabinets (semi-custom, installed)", "qty": cab, "unit": "lin ft", "unit_cost": 525, "labor": 0},
-        {"section": "Countertops", "name": "Quartz countertop (installed)", "qty": counter, "unit": "sq ft", "unit_cost": 95, "labor": 0},
+        # Cabinet finish — pick one (poplar/paint is cheapest, walnut priciest).
+        {"section": "Cabinets", "name": "Cabinets — semi-custom, painted", "qty": cab, "unit": "lin ft", "unit_cost": 525, "labor": 0, "opt_group": "Cabinet finish", "chosen": True},
+        {"section": "Cabinets", "name": "Cabinets — white oak (custom)", "qty": cab, "unit": "lin ft", "unit_cost": 850, "labor": 0, "opt_group": "Cabinet finish", "chosen": False},
+        {"section": "Cabinets", "name": "Cabinets — walnut (custom)", "qty": cab, "unit": "lin ft", "unit_cost": 1100, "labor": 0, "opt_group": "Cabinet finish", "chosen": False},
+        # Countertop material — pick one.
+        {"section": "Countertops", "name": "Quartz (engineered) — no maintenance", "qty": counter, "unit": "sq ft", "unit_cost": 95, "labor": 0, "opt_group": "Countertop material", "chosen": True},
+        {"section": "Countertops", "name": "Quartzite (natural) — seal occasionally", "qty": counter, "unit": "sq ft", "unit_cost": 120, "labor": 0, "opt_group": "Countertop material", "chosen": False},
+        {"section": "Countertops", "name": "Marble — soft, patinas/etches", "qty": counter, "unit": "sq ft", "unit_cost": 115, "labor": 0, "opt_group": "Countertop material", "chosen": False},
+        {"section": "Countertops", "name": "Soapstone — non-porous, patinas", "qty": counter, "unit": "sq ft", "unit_cost": 110, "labor": 0, "opt_group": "Countertop material", "chosen": False},
         {"section": "Appliances", "name": "Range (gas, 30 in)", "qty": 1, "unit": "ea", "unit_cost": 2800, "labor": 0},
         {"section": "Appliances", "name": "Refrigerator (counter-depth)", "qty": 1, "unit": "ea", "unit_cost": 2800, "labor": 0},
         {"section": "Appliances", "name": "Dishwasher", "qty": 1, "unit": "ea", "unit_cost": 1200, "labor": 0},
@@ -951,12 +958,15 @@ def budget_summary(items, meta=None):
     by_section = {}
     owned_total = 0.0
     for it in items:
+        by_section.setdefault(it["section"], 0.0)
+        # An unchosen alternative in an option group doesn't count.
+        if it.get("opt_group") and not it.get("chosen", True):
+            continue
         # "Already have it" items stay in the plan but cost $0 toward it.
         if it.get("owned"):
             owned_total += _item_total(it)
-            by_section.setdefault(it["section"], 0.0)
             continue
-        by_section[it["section"]] = by_section.get(it["section"], 0) + _item_total(it)
+        by_section[it["section"]] += _item_total(it)
     subtotal = round(sum(by_section.values()), 2)
     contingency = round(subtotal * cont_pct / 100, 2)
     total = round(subtotal + contingency, 2)

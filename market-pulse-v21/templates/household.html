@@ -103,6 +103,16 @@
   .hh-owned .hh-bi.u, .hh-owned .hh-bi.n { text-decoration: none; }
   .hh-have { font-size: 0.68rem; color: var(--ink-3); font-weight: 600; margin-right: 0.4rem; cursor: pointer; }
   .hh-owned .hh-have { color: var(--mint-ink); }
+  .hh-tlink { font-size: 0.72rem; color: var(--primary); text-decoration: none; margin-right: 0.3rem; }
+  .hh-tlink:hover { text-decoration: underline; }
+  .hh-optgroup td { background: var(--surface-2); border-top: 1px solid var(--line); padding-top: 0.4rem; }
+  .hh-optlabel { font-size: 0.72rem; font-weight: 700; color: var(--gold-ink); text-transform: uppercase; letter-spacing: 0.03em; }
+  .hh-optrow td { opacity: 0.6; }
+  .hh-optrow.chosen td { opacity: 1; }
+  .hh-optrow.chosen { background: var(--gold-soft); }
+  .hh-opt { display: flex; align-items: center; gap: 0.4rem; }
+  .hh-opt input[type=radio] { accent-color: var(--gold); flex: 0 0 auto; }
+  .hh-opttoolbar { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; flex-wrap: wrap; margin: 0.6rem 0 0.2rem; }
   .hh-recur { display: flex; justify-content: space-between; align-items: center; padding: 0.45rem 0; border-bottom: 1px solid var(--line); font-size: 0.85rem; }
   .hh-recur .m { font-size: 0.7rem; color: var(--ink-3); }
 
@@ -465,6 +475,48 @@ async function loadBudget() {
   renderBudget();
 }
 function itemTotal(it) { return it.qty * it.unit_cost + it.labor; }
+function esc(s) { return (s || '').replace(/"/g, '&quot;'); }
+function budgetRow(it) {
+  return `<tr class="${it.owned ? 'hh-owned' : ''}">
+    <td><input class="hh-bi" style="width:100%" value="${esc(it.name)}" onchange="editItem(${it.id},'name',this.value)"></td>
+    <td><input class="hh-bi n" value="${it.qty}" onchange="editItem(${it.id},'qty',this.value)"></td>
+    <td><input class="hh-bi u" value="${it.unit||''}" onchange="editItem(${it.id},'unit',this.value)"></td>
+    <td>$<input class="hh-bi n" value="${it.unit_cost}" onchange="editItem(${it.id},'unit_cost',this.value)"></td>
+    <td>$<input class="hh-bi n" value="${it.labor}" onchange="editItem(${it.id},'labor',this.value)"></td>
+    <td class="amt">${it.owned ? `<s style="color:var(--ink-4)">${fmt(itemTotal(it))}</s> $0` : fmt(itemTotal(it))}</td>
+    <td style="white-space:nowrap"><label class="hh-have" title="mark as already owned — zeroes the cost"><input type="checkbox" ${it.owned ? 'checked' : ''} onchange="editItem(${it.id},'owned',this.checked)"> have it</label>
+    ${it.url ? `<a href="${it.url}" target="_blank" class="hh-tlink">link</a> ` : ''}<button class="hh-x" onclick="delItem(${it.id})">✕</button></td></tr>`;
+}
+function optionGroup(label, opts) {
+  const nm = 'opt-' + label.replace(/[^a-z0-9]+/gi, '-');
+  const chosen = opts.find(o => o.chosen) || opts[0];
+  const head = `<tr class="hh-optgroup"><td colspan="7"><span class="hh-optlabel">Choose one — ${label}</span>
+    <span class="hh-note" style="margin:0"> · counting ${chosen ? fmt(itemTotal(chosen)) : '$0'}; pick a row to swap</span></td></tr>`;
+  const rows = opts.map(it => `<tr class="hh-optrow${it.chosen ? ' chosen' : ''}">
+    <td><label class="hh-opt"><input type="radio" name="${nm}" ${it.chosen ? 'checked' : ''} onchange="chooseItem(${it.id})">
+      <input class="hh-bi" style="width:100%" value="${esc(it.name)}" onchange="editItem(${it.id},'name',this.value)"></label></td>
+    <td><input class="hh-bi n" value="${it.qty}" onchange="editItem(${it.id},'qty',this.value)"></td>
+    <td><input class="hh-bi u" value="${it.unit||''}" onchange="editItem(${it.id},'unit',this.value)"></td>
+    <td>$<input class="hh-bi n" value="${it.unit_cost}" onchange="editItem(${it.id},'unit_cost',this.value)"></td>
+    <td>$<input class="hh-bi n" value="${it.labor}" onchange="editItem(${it.id},'labor',this.value)"></td>
+    <td class="amt">${it.chosen ? fmt(itemTotal(it)) : `<span style="color:var(--ink-4)">${fmt(itemTotal(it))}</span>`}</td>
+    <td style="white-space:nowrap">${it.url ? `<a href="${it.url}" target="_blank" class="hh-tlink">link</a> ` : ''}<button class="hh-x" onclick="delItem(${it.id})">✕</button></td></tr>`).join('');
+  return head + rows;
+}
+async function chooseItem(id) {
+  await api('/' + BOOK + '/projects/' + STATE.curProject + '/budget/items/' + id + '/choose', { method: 'POST' });
+  await loadBudget();
+}
+async function trimToCheapest() {
+  const groups = {};
+  STATE.budget.items.forEach(it => { if (it.opt_group) (groups[it.opt_group] = groups[it.opt_group] || []).push(it); });
+  for (const g of Object.keys(groups)) {
+    const cheapest = groups[g].reduce((a, b) => itemTotal(b) < itemTotal(a) ? b : a);
+    if (!cheapest.chosen)
+      await api('/' + BOOK + '/projects/' + STATE.curProject + '/budget/items/' + cheapest.id + '/choose', { method: 'POST' });
+  }
+  await loadBudget();
+}
 function renderBudget() {
   const b = STATE.budget, s = b.summary, m = b.meta, f = s.financing;
   if (!b.items.length) {
@@ -476,17 +528,19 @@ function renderBudget() {
   // group items by section
   const bySec = {};
   b.items.forEach(it => (bySec[it.section] = bySec[it.section] || []).push(it));
+  const hasOpts = b.items.some(it => it.opt_group);
   const secHtml = SECTION_ORDER.filter(sec => bySec[sec]).map(sec => {
-    const rows = bySec[sec].map(it => `<tr class="${it.owned ? 'hh-owned' : ''}">
-      <td><input class="hh-bi" style="width:100%" value="${(it.name||'').replace(/"/g,'&quot;')}" onchange="editItem(${it.id},'name',this.value)"></td>
-      <td><input class="hh-bi n" value="${it.qty}" onchange="editItem(${it.id},'qty',this.value)"></td>
-      <td><input class="hh-bi u" value="${it.unit||''}" onchange="editItem(${it.id},'unit',this.value)"></td>
-      <td>$<input class="hh-bi n" value="${it.unit_cost}" onchange="editItem(${it.id},'unit_cost',this.value)"></td>
-      <td>$<input class="hh-bi n" value="${it.labor}" onchange="editItem(${it.id},'labor',this.value)"></td>
-      <td class="amt">${it.owned ? `<s style="color:var(--ink-4)">${fmt(itemTotal(it))}</s> $0` : fmt(itemTotal(it))}</td>
-      <td style="white-space:nowrap"><label class="hh-have" title="Already have it — keep in the plan but don't fund"><input type="checkbox" ${it.owned ? 'checked' : ''} onchange="editItem(${it.id},'owned',this.checked)"> have it</label>
-      ${it.url ? `<a href="${it.url}" target="_blank" class="hh-note" style="margin:0">link</a> ` : ''}<button class="hh-x" onclick="delItem(${it.id})" title="remove">✕</button></td></tr>`).join('');
-    const secTotal = bySec[sec].reduce((a, it) => a + (it.owned ? 0 : itemTotal(it)), 0);
+    const done = new Set();
+    const rows = bySec[sec].map(it => {
+      if (it.opt_group) {
+        if (done.has(it.opt_group)) return '';
+        done.add(it.opt_group);
+        return optionGroup(it.opt_group, bySec[sec].filter(x => x.opt_group === it.opt_group));
+      }
+      return budgetRow(it);
+    }).join('');
+    const counts = it => (it.opt_group && !it.chosen) || it.owned ? 0 : itemTotal(it);
+    const secTotal = bySec[sec].reduce((a, it) => a + counts(it), 0);
     return `<tr class="hh-secrow"><td colspan="5"><strong>${sec}</strong></td><td class="amt"><strong>${fmt(secTotal)}</strong></td><td></td></tr>${rows}`;
   }).join('');
   const overUnder = s.target ? (s.over_under > 0 ? `<span style="color:var(--coral-ink)">${fmt(s.over_under)} over your ${fmt(s.target)} target</span>` : `<span style="color:var(--mint-ink)">${fmt(-s.over_under)} under your ${fmt(s.target)} target</span>`) : 'set a target below';
@@ -500,6 +554,7 @@ function renderBudget() {
       </div>
       ${financingPanel(f, m, s)}
       <details class="hh-card" style="background:var(--surface-2);"><summary style="cursor:pointer;font-weight:600;">Kitchen measurements <span class="hh-note" style="margin:0">— enter once; quantities update</span></summary>${measureForm(m)}</details>
+      ${hasOpts ? `<div class="hh-opttoolbar"><span class="hh-note" style="margin:0">Rows marked <strong>Choose one</strong> are options to compare — only the picked one counts toward the total.</span><button class="btn-secondary" onclick="trimToCheapest()">Use cheapest options</button></div>` : ''}
       <table class="hh-tx hh-budget"><thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Unit $</th><th>Labor $</th><th style="text-align:right">Total</th><th></th></tr></thead><tbody>${secHtml}</tbody></table>
       ${addItemRow(b.sections)}
     </div>`;
