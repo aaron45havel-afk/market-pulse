@@ -632,6 +632,17 @@ async function chooseItem(id) {
   await api('/' + BOOK + '/projects/' + STATE.curProject + '/budget/items/' + id + '/choose', { method: 'POST' });
   await loadBudget();
 }
+async function fitBudget() {
+  const r = await api('/' + BOOK + '/projects/' + STATE.curProject + '/budget/fit', { method: 'POST' });
+  await loadBudget();
+  const el = $('fitMsg');
+  if (el) {
+    el.textContent = r.feasible
+      ? `Picked the nicest options that fit — projected ${fmt(r.projected)} against your ${fmt(r.target)} target.`
+      : `Even the cheapest options come to ${fmt(r.projected)}, over your ${fmt(r.target)} target — raise the target, trim a line, or mark more items "have it".`;
+    el.style.color = r.feasible ? 'var(--mint-ink)' : 'var(--coral-ink)';
+  }
+}
 async function trimToCheapest() {
   const groups = {};
   STATE.budget.items.forEach(it => { if (it.opt_group) (groups[it.opt_group] = groups[it.opt_group] || []).push(it); });
@@ -680,7 +691,7 @@ function renderBudget() {
       ${financingPanel(f, m, s)}
       <details class="hh-card" style="background:var(--surface-2);"><summary style="cursor:pointer;font-weight:600;">Kitchen measurements <span class="hh-note" style="margin:0">— enter once; quantities update</span></summary>${measureForm(m)}</details>
       ${reallocCard(s.reallocation)}
-      ${hasOpts ? `<div class="hh-opttoolbar"><span class="hh-note" style="margin:0">Rows marked <strong>Choose one</strong> are options to compare — only the picked one counts toward the total.</span><button class="btn-secondary" onclick="trimToCheapest()">Use cheapest options</button></div>` : ''}
+      ${hasOpts ? `<div class="hh-opttoolbar"><span class="hh-note" style="margin:0">Rows marked <strong>Choose one</strong> are options to compare — only the picked one counts toward the total.</span><span style="display:flex;gap:0.4rem;flex-wrap:wrap;">${m.budget_target ? `<button class="btn-primary" onclick="fitBudget()" title="auto-pick the nicest options that still fit your target">Fit to my ${fmt(m.budget_target)} budget</button>` : ''}<button class="btn-secondary" onclick="trimToCheapest()">Use cheapest options</button></span></div><div id="fitMsg" class="hh-note" style="margin:0.2rem 0 0"></div>` : ''}
       <table class="hh-tx hh-budget"><thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Unit $</th><th>Labor $</th><th style="text-align:right">Total</th><th></th></tr></thead><tbody>${secHtml}</tbody></table>
       ${addItemRow(b.sections)}
     </div>`;
