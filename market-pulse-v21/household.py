@@ -579,6 +579,64 @@ def fixed_bills(txns):
     }
 
 
+def top_merchants(txns, limit=12):
+    """Where the money actually goes, by payee — biggest first. Every outflow
+    (transfers and income excluded) grouped by merchant with the total,
+    typical monthly and count, so Costco, the gas stations, etc. surface on
+    their own instead of hiding inside a bucket."""
+    groups: dict[str, list[dict]] = defaultdict(list)
+    for t in txns:
+        if t["amount"] < 0 and t["cls"] not in ("transfer", "income"):
+            key = t.get("mkey") or merchant_key(t.get("desc", ""))
+            if key:
+                groups[key].append(t)
+    out = []
+    for _, ts in groups.items():
+        total = round(sum(-t["amount"] for t in ts), 2)
+        months = len({t["date"][:7] for t in ts if t.get("date")}) or 1
+        out.append({
+            "merchant": ts[-1]["desc"], "bucket": ts[0]["bucket"],
+            "total": total, "monthly": round(total / months, 2),
+            "count": len(ts), "months": months,
+        })
+    out.sort(key=lambda r: r["total"], reverse=True)
+    return out[:limit]
+
+
+def spend_lookup(txns, query):
+    """Total spend at a store or category matching `query` — matches the
+    description OR the bucket, so 'costco', 'gas', 'geico' all work. Returns
+    the total, the typical month, and a sample of the actual charges so she
+    can see exactly what's counted."""
+    q = (query or "").strip().lower()
+    empty = {"query": query, "total": 0.0, "monthly": 0.0, "count": 0,
+             "months": 0, "matches": []}
+    if not q:
+        return empty
+    hits = [t for t in txns
+            if t["amount"] < 0 and t["cls"] not in ("transfer", "income")
+            and (q in (t.get("desc") or "").lower() or q in (t.get("bucket") or "").lower())]
+    if not hits:
+        return empty
+    total = round(sum(-t["amount"] for t in hits), 2)
+    months = len({t["date"][:7] for t in hits if t.get("date")}) or 1
+    sample = sorted(hits, key=lambda t: t.get("date") or "", reverse=True)[:8]
+    # split by bucket so a fuzzy word ('gas' also hits 'Pacific Gas & El')
+    # is shown honestly — utilities vs. actual fuel, not one lump.
+    by_bucket: dict[str, float] = defaultdict(float)
+    for t in hits:
+        by_bucket[t["bucket"]] += -t["amount"]
+    return {
+        "query": query, "total": total, "monthly": round(total / months, 2),
+        "count": len(hits), "months": months,
+        "by_bucket": [{"bucket": k, "amount": round(v, 2)}
+                      for k, v in sorted(by_bucket.items(), key=lambda x: -x[1])],
+        "matches": [{"date": t["date"], "desc": t["desc"],
+                     "amount": round(t["amount"], 2), "bucket": t["bucket"]}
+                    for t in sample],
+    }
+
+
 def _month_range(start, end):
     """All YYYY-MM strings from start to end inclusive."""
     out = []

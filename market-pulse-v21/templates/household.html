@@ -437,12 +437,48 @@ async function saveTargets() {
 // ══ SPENDING (dashboard) ══════════════════════════════════════════
 async function loadDashboard() {
   if (!STATE.hasData) { $('tab').innerHTML = emptyImportPrompt(); wireDrop(); renderAccounts(); return; }
-  const [d, cov] = await Promise.all([
+  const [d, cov, mer] = await Promise.all([
     api('/' + BOOK + '/dashboard?month=' + (STATE.month || '')),
     api('/' + BOOK + '/coverage').catch(() => null),
+    api('/' + BOOK + '/merchants').catch(() => null),
   ]);
-  STATE.data = d; STATE.buckets = d.buckets; STATE.coverage = cov;
+  STATE.data = d; STATE.buckets = d.buckets; STATE.coverage = cov; STATE.merchants = mer;
   renderSpending();
+}
+function merchantsCard(m) {
+  if (!m || !m.top || !m.top.length) return '';
+  const max = m.top[0].total || 1;
+  const rows = m.top.map(x => `<div class="hh-bar"><div class="row"><span class="nm">${x.merchant} <span class="m">· ${x.bucket}</span></span><span class="amt">${fmt(x.total)}${x.months > 1 ? `<span class="m"> · ${fmt(x.monthly)}/mo</span>` : ''}</span></div><div class="track"><div class="fill" style="width:${Math.max(3, x.total / max * 100)}%;background:var(--indy)"></div></div></div>`).join('');
+  return `<div class="hh-card">
+    <h2>Where the money goes, by store</h2>
+    <p class="hint">Her biggest payees across everything imported. Search a store or a category to total it up.</p>
+    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;margin-bottom:0.6rem;">
+      <input class="hh-in" id="mqIn" placeholder="Costco, gas, Geico…" style="flex:1;min-width:140px;" onkeydown="if(event.key==='Enter')spendLookup()">
+      <button class="btn-secondary" onclick="spendLookup()">Total it up</button>
+      ${['Costco','Gas & Fuel','Dining','Groceries'].map(c => `<button class="hh-renobtn" onclick="spendLookup('${c}')">${c}</button>`).join('')}
+    </div>
+    <div id="mqResult"></div>
+    <div class="hh-bars">${rows}</div>
+  </div>`;
+}
+async function spendLookup(preset) {
+  const q = preset || (($('mqIn') || {}).value || '').trim();
+  if (!q) return;
+  if ($('mqIn')) $('mqIn').value = q;
+  const m = await api('/' + BOOK + '/merchants?q=' + encodeURIComponent(q));
+  const lk = m.lookup, el = $('mqResult');
+  if (!el) return;
+  if (!lk || !lk.count) { el.innerHTML = `<div class="hh-note">Nothing matching "${q}" found.</div>`; return; }
+  const multi = (lk.by_bucket || []).length > 1;
+  const split = multi
+    ? `<div class="hh-note" style="margin:0.3rem 0 0.2rem;">Spans a few categories — ${lk.by_bucket.map(b => `<strong>${b.bucket}</strong> ${fmt(b.amount)}`).join(' · ')}. Search or tap a category chip to isolate one.</div>`
+    : '';
+  el.innerHTML = `<div class="hh-card" style="background:var(--surface-2);margin-bottom:0.6rem;">
+    <div style="font-weight:700;font-size:1.05rem;">${fmt(lk.total)} on "${q}"${lk.months > 1 ? ` · about ${fmt(lk.monthly)}/mo` : ''}</div>
+    <div class="hh-note" style="margin:0.1rem 0 0.4rem;">${lk.count} charge${lk.count === 1 ? '' : 's'} across ${lk.months} month${lk.months === 1 ? '' : 's'} — most recent:</div>
+    ${split}
+    <table class="hh-tx"><tbody>${lk.matches.map(t => `<tr><td>${(t.date||'').slice(5)}</td><td>${t.desc}</td><td style="color:var(--ink-3)">${t.bucket}</td><td class="amt out">${fmt(t.amount)}</td></tr>`).join('')}</tbody></table>
+  </div>`;
 }
 function coverageCard(cov) {
   if (!cov || !cov.accounts || !cov.accounts.length) return '';
@@ -483,6 +519,7 @@ function renderSpending() {
       <div class="hh-card"><h2>Recurring &amp; subscriptions</h2><p class="hint">Same payee, most months — the easy wins to review.</p><div id="recur"></div></div>
       <div class="hh-card"><h2>Debt &amp; interest</h2><p class="hint">What carrying debt actually costs.</p><div id="debt"></div></div>
     </div>
+    ${merchantsCard(STATE.merchants)}
     <div class="hh-card" id="reviewCard" style="display:none;"><h2>Needs review <span class="hh-pill" id="reviewN"></span></h2><p class="hint">Pick a bucket. Check "all like this" and every matching charge sorts itself now and next time.</p><div id="review"></div></div>
     <div class="hh-card"><h2>Transactions <span id="txScope" class="hh-pill"></span></h2><div id="txns"></div></div>
     ${coverageCard(STATE.coverage)}
