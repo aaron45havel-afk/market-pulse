@@ -872,7 +872,8 @@ async def api_hh_set_settings(code: str, request: Request):
     incoming = body.get("settings") if isinstance(body.get("settings"), dict) else {}
     allowed = {"mode", "income", "savings", "savings_extra", "cushion_goal",
                "heloc_balance", "heloc_apr", "heloc_payment", "heloc_limit",
-               "card_balance", "card_apr", "card_payment", "reno_budget"}
+               "card_balance", "card_apr", "card_payment", "reno_budget",
+               "home_value"}
     clean = {}
     for k, v in incoming.items():
         if k not in allowed:
@@ -939,6 +940,74 @@ async def api_hh_roadmap(code: str):
 
         return household.money_roadmap(vitals, reno=reno, retire=retire)
 
+    return JSONResponse(await asyncio.to_thread(_do))
+
+
+@app.get("/api/household/books/{code}/net-worth")
+async def api_hh_net_worth(code: str):
+    """Assets − liabilities: home + cash + investments vs. the mortgage,
+    HELOC and card the tool tracks."""
+    import household
+    from database import household_get_settings, household_list_accounts
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+
+    def _do():
+        settings = household_get_settings(code)
+        accounts = household_list_accounts(code)
+        return household.net_worth(settings, accounts)
+    return JSONResponse(await asyncio.to_thread(_do))
+
+
+@app.post("/api/household/books/{code}/assets")
+async def api_hh_asset_save(code: str, request: Request):
+    """Add or update a manual asset (Fidelity, 401k, a second property…).
+    Body: {id?, name, value, kind}. Returns the updated net-worth picture."""
+    import household
+    from database import household_get_settings, household_set_settings, household_list_accounts
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    name = str(body.get("name") or "").strip()
+    value = _coerce_float(body.get("value"))
+    if not name or value is None:
+        return JSONResponse({"error": "name and a numeric value are required"}, status_code=400)
+    kind = str(body.get("kind") or "investment")
+    if kind not in ("investment", "property", "cash", "other"):
+        kind = "investment"
+
+    def _do():
+        settings = household_get_settings(code)
+        assets = [a for a in (settings.get("assets") or []) if isinstance(a, dict)]
+        aid = body.get("id")
+        row = next((a for a in assets if a.get("id") == aid), None) if aid is not None else None
+        if row:
+            row.update(name=name[:60], value=value, kind=kind)
+        else:
+            new_id = (max([a.get("id", 0) for a in assets], default=0) or 0) + 1
+            assets.append({"id": new_id, "name": name[:60], "value": value, "kind": kind})
+        settings["assets"] = assets
+        household_set_settings(code, settings)
+        return household.net_worth(settings, household_list_accounts(code))
+    return JSONResponse(await asyncio.to_thread(_do))
+
+
+@app.delete("/api/household/books/{code}/assets/{asset_id}")
+async def api_hh_asset_delete(code: str, asset_id: int):
+    import household
+    from database import household_get_settings, household_set_settings, household_list_accounts
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+
+    def _do():
+        settings = household_get_settings(code)
+        settings["assets"] = [a for a in (settings.get("assets") or [])
+                              if isinstance(a, dict) and a.get("id") != asset_id]
+        household_set_settings(code, settings)
+        return household.net_worth(settings, household_list_accounts(code))
     return JSONResponse(await asyncio.to_thread(_do))
 
 
