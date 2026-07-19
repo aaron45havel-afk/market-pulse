@@ -671,6 +671,79 @@ async def api_hh_import(code: str, request: Request):
                          "skipped": parsed - inserted})
 
 
+@app.post("/api/household/books/{code}/import-pdf")
+async def api_hh_import_pdf(code: str, request: Request):
+    """Import a Golden 1 PDF statement (no CSV needed). Parses every
+    account in the statement, creates/matches each by name, stores the
+    transactions, reads balances, and — for a HELOC — auto-fills the
+    decision-system settings (balance / APR / payment) from the summary."""
+    import base64, household, golden1_pdf
+    from database import (household_list_accounts, household_add_account,
+                          household_insert_txns, household_set_account_balance,
+                          household_get_rules, household_get_settings,
+                          household_set_settings)
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    b64 = body.get("pdf") or ""
+    if "," in b64[:64]:                      # strip a data: URL prefix
+        b64 = b64.split(",", 1)[1]
+    try:
+        pdf = base64.b64decode(b64)
+    except Exception:
+        return JSONResponse({"error": "bad pdf data"}, status_code=400)
+    if not pdf:
+        return JSONResponse({"error": "empty pdf"}, status_code=400)
+
+    def _do():
+        try:
+            parsed = golden1_pdf.parse(pdf)
+        except RuntimeError as e:
+            return {"error": str(e)}
+        except Exception as e:
+            logger.error(f"golden1 pdf parse failed: {e}")
+            return {"error": "could not read that statement PDF"}
+        learned = household_get_rules(code)
+        existing = {a["name"]: a for a in household_list_accounts(code)}
+        results, settings_update = [], {}
+        for acct in parsed["accounts"]:
+            txns = acct["transactions"]
+            if learned:
+                for t in txns:
+                    if t["bucket"] == "Uncategorized":
+                        nb = household.categorize(t["desc"], learned)
+                        if nb != "Uncategorized":
+                            t["bucket"] = nb
+            aid = (existing[acct["name"]]["id"] if acct["name"] in existing
+                   else household_add_account(code, acct["name"], acct["kind"], None))
+            ins = household_insert_txns(code, aid, txns) if txns else 0
+            bal = acct["summary"].get("balance")
+            if bal is not None:
+                household_set_account_balance(code, aid, bal, None)
+            if acct["kind"] == "heloc":
+                s = acct["summary"]
+                if s.get("balance") is not None:
+                    settings_update["heloc_balance"] = s["balance"]
+                if s.get("apr") is not None:
+                    settings_update["heloc_apr"] = s["apr"]
+                if s.get("min_payment") is not None:
+                    settings_update["heloc_payment"] = s["min_payment"]
+            results.append({"account": acct["name"], "kind": acct["kind"],
+                            "parsed": len(txns), "inserted": ins, "balance": bal})
+        if settings_update:
+            cur = household_get_settings(code)
+            cur.update(settings_update)
+            household_set_settings(code, cur)
+        return {"type": parsed["type"], "accounts": results,
+                "settings_updated": bool(settings_update)}
+
+    out = await asyncio.to_thread(_do)
+    if isinstance(out, dict) and out.get("error"):
+        return JSONResponse(out, status_code=400)
+    return JSONResponse(out)
+
+
 @app.get("/api/household/books/{code}/dashboard")
 async def api_hh_dashboard(code: str, month: str = ""):
     """The whole dashboard payload: headline figures, spend-by-bucket,

@@ -69,16 +69,19 @@ BUCKET_CLASS = {
 # before the broad merchant buckets. Each entry: (bucket, [keywords]).
 # Keywords match case-insensitively as substrings of the cleaned desc.
 DEFAULT_RULES: list[tuple[str, list[str]]] = [
+    # ── Interest first — "Interest Charge on Cash Advances" must land in
+    # Fees & Interest, not get grabbed by the "cash advance" transfer kw. ──
+    ("Fees & Interest", ["finance charge", "interest charge", "interest chg"]),
     # ── Internal transfers (Golden 1 self-labels these) ──
     ("Transfer", [
         "transfer", "to loan", "from loan", "to share", "from share",
         "online transfer", "moneylink", "overdraft protection",
         "book transfer", "internal transfer", "to savings", "from savings",
-        "mobile deposit transfer",
+        "mobile deposit transfer", "cash advance", "schwab", "brokerage",
     ]),
     # ── Credit-card payments (counted on the card side, so exclude here) ──
     ("Credit Card Payment", [
-        "payment thank you", "autopay", "online payment", "epay",
+        "payment thank you", "thank you", "autopay", "online payment", "epay",
         "cardmember serv", "card payment", "credit card pmt", "cc pymt",
         "chase card", "amex epayment", "american express ach",
         "capital one crcardpmt", "discover e-pymt", "citi card",
@@ -766,7 +769,8 @@ RENO_VENDORS = [
     "cabinet", "countertop", "granite", "quartz", "appliance", "permit",
     "contractor", "construction", "roofing", "hvac", "plumbing supply",
     "electric supply", "lumber", "glass & mirror", "hardware store", "restoration",
-    "remodel", "kitchen & bath", "window", "paint ",
+    "remodel", "kitchen & bath", "window", "paint ", "glass", "andersen",
+    "pella", "milgard", "marvin", "door", "cabinetry", "granite", "masonry",
 ]
 
 

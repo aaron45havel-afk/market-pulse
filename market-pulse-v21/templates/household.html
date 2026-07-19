@@ -487,9 +487,9 @@ function importSection() {
       </select>
       <button class="btn-secondary" onclick="addAccount()">+ Add account</button>
     </div>
-    <div class="hh-drop" id="drop">Drop a CSV here, or click to choose a file<input type="file" id="file" accept=".csv,text/csv" style="display:none"></div>
+    <div class="hh-drop" id="drop">Drop a Golden 1 statement (PDF) or a CSV here, or click to choose<input type="file" id="file" accept=".pdf,.csv,application/pdf,text/csv" style="display:none"></div>
     <div id="mapArea"></div><div id="impMsg" class="hh-msg"></div>
-    <div class="hh-note">Nothing is uploaded except the sorted rows — account numbers, card numbers and reference IDs are stripped first. Raw files are never saved.</div>
+    <div class="hh-note">Drop the PDF Golden 1 gives you — it reads every account, buckets the charges, and pulls the HELOC balance/rate on its own. Account numbers, card numbers and reference IDs are stripped before anything is saved; the raw file is never kept.</div>
   </div>`;
 }
 function renderAccounts() {
@@ -513,13 +513,34 @@ document.addEventListener('dragleave', e => { if (e.target && e.target.id === 'd
 document.addEventListener('drop', e => { if (e.target && e.target.id === 'drop') { e.preventDefault(); e.target.classList.remove('over'); if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); } });
 function wireDrop() {}
 function readFile(f) {
+  const isPdf = /\.pdf$/i.test(f.name) || f.type === 'application/pdf';
   const r = new FileReader();
-  r.onload = async () => {
-    try { const p = await api('/' + BOOK + '/preview', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({csv: r.result}) });
-      PENDING = { csv: r.result, ...p }; renderMapping();
-    } catch (e) { $('impMsg').className = 'hh-msg err'; $('impMsg').textContent = 'Could not read that CSV.'; }
-  };
-  r.readAsText(f);
+  if (isPdf) {
+    if ($('impMsg')) { $('impMsg').className = 'hh-msg'; $('impMsg').textContent = 'Reading statement…'; }
+    r.onload = async () => {
+      try {
+        const res = await api('/' + BOOK + '/import-pdf', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({pdf: r.result}) });
+        const lines = res.accounts.filter(a => a.inserted || a.parsed || a.balance != null)
+          .map(a => `- ${a.account}: ${a.inserted} new${a.parsed - a.inserted ? ` (${a.parsed - a.inserted} already there)` : ''}${a.balance != null ? `, balance ${fmt(a.balance)}` : ''}`);
+        alert('Imported from your statement:\n\n' + (lines.join('\n') || 'no new transactions') +
+              (res.settings_updated ? '\n\nHELOC balance, rate and payment saved - see the This Month tab.' : ''));
+        STATE.tab = res.settings_updated ? 'thismonth' : 'spending';
+        await boot();
+      } catch (e) {
+        let m = 'Could not read that statement.';
+        try { const j = await e.json(); if (j && j.error) m = j.error; } catch (_) {}
+        if ($('impMsg')) { $('impMsg').className = 'hh-msg err'; $('impMsg').textContent = m; } else alert(m);
+      }
+    };
+    r.readAsDataURL(f);
+  } else {
+    r.onload = async () => {
+      try { const p = await api('/' + BOOK + '/preview', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({csv: r.result}) });
+        PENDING = { csv: r.result, ...p }; renderMapping();
+      } catch (e) { $('impMsg').className = 'hh-msg err'; $('impMsg').textContent = 'Could not read that CSV.'; }
+    };
+    r.readAsText(f);
+  }
 }
 function renderMapping() {
   const p = PENDING, m = p.mapping;
