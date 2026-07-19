@@ -98,6 +98,7 @@
   .hh-bi:hover { border-color: var(--line); } .hh-bi:focus { outline: none; border-color: var(--primary); background: var(--surface-2); }
   .hh-bi.n { width: 62px; text-align: right; } .hh-bi.u { width: 54px; }
   .hh-secrow td { background: var(--surface-2); border-bottom: 1px solid var(--line); }
+  .hh-var { font-size: 0.72rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .hh-x { background: none; border: none; color: var(--ink-4); font-size: 0.9rem; cursor: pointer; padding: 0.2rem 0.35rem; }
   .hh-x:hover { color: var(--coral-ink); }
   .hh-owned .hh-bi { color: var(--ink-4); text-decoration: line-through; }
@@ -549,6 +550,14 @@ async function loadBudget() {
 }
 function itemTotal(it) { return it.qty * it.unit_cost + it.labor; }
 function esc(s) { return (s || '').replace(/"/g, '&quot;'); }
+function varChip(it) {
+  // how the live estimate compares to this line's budgeted plan
+  if (it.planned == null || it.owned || (it.opt_group && !it.chosen)) return '';
+  const v = Math.round(itemTotal(it) - it.planned);
+  if (Math.abs(v) < 1) return '';
+  const c = v < 0 ? 'var(--mint-ink)' : 'var(--coral-ink)';
+  return ` <span class="hh-var" title="vs planned ${fmt(it.planned)}" style="color:${c}">${v < 0 ? '−' : '+'}$${Math.abs(v).toLocaleString()}</span>`;
+}
 function budgetRow(it) {
   return `<tr class="${it.owned ? 'hh-owned' : ''}">
     <td><input class="hh-bi" style="width:100%" value="${esc(it.name)}" onchange="editItem(${it.id},'name',this.value)"></td>
@@ -556,7 +565,7 @@ function budgetRow(it) {
     <td><input class="hh-bi u" value="${it.unit||''}" onchange="editItem(${it.id},'unit',this.value)"></td>
     <td>$<input class="hh-bi n" value="${it.unit_cost}" onchange="editItem(${it.id},'unit_cost',this.value)"></td>
     <td>$<input class="hh-bi n" value="${it.labor}" onchange="editItem(${it.id},'labor',this.value)"></td>
-    <td class="amt">${it.owned ? `<s style="color:var(--ink-4)">${fmt(itemTotal(it))}</s> $0` : fmt(itemTotal(it))}</td>
+    <td class="amt">${it.owned ? `<s style="color:var(--ink-4)">${fmt(itemTotal(it))}</s> $0` : fmt(itemTotal(it)) + varChip(it)}</td>
     <td style="white-space:nowrap"><label class="hh-have" title="mark as already owned — zeroes the cost"><input type="checkbox" ${it.owned ? 'checked' : ''} onchange="editItem(${it.id},'owned',this.checked)"> have it</label>
     ${it.url ? `<a href="${it.url}" target="_blank" class="hh-tlink">link</a> ` : ''}<button class="hh-x" onclick="delItem(${it.id})">✕</button></td></tr>`;
 }
@@ -572,7 +581,7 @@ function optionGroup(label, opts) {
     <td><input class="hh-bi u" value="${it.unit||''}" onchange="editItem(${it.id},'unit',this.value)"></td>
     <td>$<input class="hh-bi n" value="${it.unit_cost}" onchange="editItem(${it.id},'unit_cost',this.value)"></td>
     <td>$<input class="hh-bi n" value="${it.labor}" onchange="editItem(${it.id},'labor',this.value)"></td>
-    <td class="amt">${it.chosen ? fmt(itemTotal(it)) : `<span style="color:var(--ink-4)">${fmt(itemTotal(it))}</span>`}</td>
+    <td class="amt">${it.chosen ? fmt(itemTotal(it)) + varChip(it) : `<span style="color:var(--ink-4)">${fmt(itemTotal(it))}</span>`}</td>
     <td style="white-space:nowrap">${it.url ? `<a href="${it.url}" target="_blank" class="hh-tlink">link</a> ` : ''}<button class="hh-x" onclick="delItem(${it.id})">✕</button></td></tr>`).join('');
   return head + rows;
 }
@@ -627,10 +636,37 @@ function renderBudget() {
       </div>
       ${financingPanel(f, m, s)}
       <details class="hh-card" style="background:var(--surface-2);"><summary style="cursor:pointer;font-weight:600;">Kitchen measurements <span class="hh-note" style="margin:0">— enter once; quantities update</span></summary>${measureForm(m)}</details>
+      ${reallocCard(s.reallocation)}
       ${hasOpts ? `<div class="hh-opttoolbar"><span class="hh-note" style="margin:0">Rows marked <strong>Choose one</strong> are options to compare — only the picked one counts toward the total.</span><button class="btn-secondary" onclick="trimToCheapest()">Use cheapest options</button></div>` : ''}
       <table class="hh-tx hh-budget"><thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Unit $</th><th>Labor $</th><th style="text-align:right">Total</th><th></th></tr></thead><tbody>${secHtml}</tbody></table>
       ${addItemRow(b.sections)}
     </div>`;
+}
+function reallocCard(rl) {
+  if (!rl || !rl.has_plan) return '';
+  const netColor = rl.net_vs_plan <= 0 ? 'var(--mint-ink)' : 'var(--coral-ink)';
+  const moving = rl.freed > 0 || rl.over > 0;
+  const nudge = !moving ? 'Every line matches its plan. As real quotes come in, over/under shows here and freed money can move elsewhere.'
+    : rl.net_vs_plan > 0 ? `You're <strong style="color:var(--coral-ink)">${fmt(rl.net_vs_plan)}</strong> over your plan — trim a line or spend the freed money more carefully.`
+    : rl.net_vs_plan < 0 ? `You've freed <strong style="color:var(--mint-ink)">${fmt(-rl.net_vs_plan)}</strong> net — room to upgrade another line or bank it toward the target.`
+    : `It nets out — the money freed on some lines exactly covers the ones you went over. Reallocated perfectly.`;
+  return `<div class="hh-card" style="background:var(--surface-2);">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.6rem;">
+      <div><strong>Budget vs. the plan</strong> <span class="hh-note" style="margin:0">— move money freed on one line to another and stay on target</span></div>
+      <button class="btn-secondary" onclick="lockPlan()" title="snapshot the current numbers as your baseline">Lock current as the plan</button>
+    </div>
+    <div class="hh-reno-head" style="margin-top:0.7rem;">
+      <div class="hh-tile"><div class="k">Planned</div><div class="v">${fmt(rl.planned)}</div><div class="sub">your budgeted baseline</div></div>
+      <div class="hh-tile"><div class="k">Freed up</div><div class="v" style="color:var(--mint-ink)">${fmt(rl.freed)}</div><div class="sub">saved on under lines</div></div>
+      <div class="hh-tile"><div class="k">Over</div><div class="v" style="color:var(--coral-ink)">${fmt(rl.over)}</div><div class="sub">extra on over lines</div></div>
+      <div class="hh-tile"><div class="k">Net vs plan</div><div class="v" style="color:${netColor}">${rl.net_vs_plan < 0 ? '−' : rl.net_vs_plan > 0 ? '+' : ''}${fmt(Math.abs(rl.net_vs_plan))}</div><div class="sub">${rl.net_vs_plan <= 0 ? 'on or under plan' : 'over plan'}</div></div>
+    </div>
+    <div class="hh-note">${nudge}</div>
+  </div>`;
+}
+async function lockPlan() {
+  await api('/' + BOOK + '/projects/' + STATE.curProject + '/budget/lock-plan', { method: 'POST' });
+  await loadBudget();
 }
 function financingPanel(f, m, s) {
   return `<div class="hh-card" style="background:var(--primary-soft);border-color:var(--primary);">

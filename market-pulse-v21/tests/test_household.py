@@ -244,6 +244,40 @@ def test_budget_options_and_owned():
     approx(H.budget_summary(seed)["subtotal"], manual, "only chosen options count")
 
 
+def test_budget_reallocation():
+    # two items with planned baselines; one comes in under, one over
+    items = [
+        {"section": "Countertops", "name": "Quartz", "qty": 30, "unit": "sqft",
+         "unit_cost": 250, "labor": 0, "planned": 8000},   # current 7500 -> -500 freed
+        {"section": "Cabinets", "name": "Cabinets", "qty": 1, "unit": "job",
+         "unit_cost": 20800, "labor": 0, "planned": 20000},  # current 20800 -> +800 over
+    ]
+    r = H.budget_summary(items)["reallocation"]
+    check(r["has_plan"], "plan present")
+    approx(r["planned"], 28000, "total planned")
+    approx(r["current"], 7500 + 20800, "total current")
+    approx(r["freed"], 500, "freed from the under item")
+    approx(r["over"], 800, "over on the cabinets")
+    approx(r["net_vs_plan"], 300, "net = over - freed")
+    # no baseline -> everything on plan (net 0)
+    r2 = H.budget_summary([{"section": "X", "name": "y", "qty": 1, "unit": "ea",
+                            "unit_cost": 500, "labor": 0}])["reallocation"]
+    check(not r2["has_plan"], "no plan flagged")
+    approx(r2["net_vs_plan"], 0, "no baseline -> on plan")
+    # unchosen option + owned excluded from the pool
+    items2 = [
+        {"section": "C", "name": "A", "qty": 1, "unit": "ea", "unit_cost": 100, "labor": 0,
+         "opt_group": "g", "chosen": True, "planned": 120},
+        {"section": "C", "name": "B", "qty": 1, "unit": "ea", "unit_cost": 999, "labor": 0,
+         "opt_group": "g", "chosen": False, "planned": 999},   # unchosen -> ignored
+        {"section": "C", "name": "Fridge", "qty": 1, "unit": "ea", "unit_cost": 2000,
+         "labor": 0, "owned": True, "planned": 2000},          # owned -> ignored
+    ]
+    r3 = H.budget_summary(items2)["reallocation"]
+    approx(r3["freed"], 20, "only the chosen item's -20 counts")
+    approx(r3["planned"], 120, "planned excludes unchosen + owned")
+
+
 def test_owned_zeroes_cost():
     items = [{"section": "Appliances", "name": "Fridge", "qty": 1, "unit": "ea",
               "unit_cost": 2800, "labor": 0, "owned": True},
