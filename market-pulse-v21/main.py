@@ -751,16 +751,22 @@ async def api_hh_import_pdf(code: str, request: Request):
         projects = household_list_projects(code)
         auto_tagged = 0
         if projects:
+            from database import household_recategorize
+            payees = (household_get_settings(code).get("reno_payees") or [])
             all_tx = household_all_txns(code)
             for r in all_tx:
                 r.setdefault("project_id", r.get("project_id"))
             for p in projects:
-                sugg = household.suggest_reno(all_tx, p.get("start"), p.get("end"))
+                sugg = household.suggest_reno(all_tx, p.get("start"), p.get("end"), payees)
                 ids = [t["id"] for t in sugg]
                 if ids:
                     auto_tagged += household_tag_txns(code, ids, p["id"])
                     for t in sugg:
                         t["project_id"] = p["id"]        # keep local view in sync
+                        # A learned labor payee's payment shouldn't linger in
+                        # the review tray — book it as Home Improvement.
+                        if household.is_p2p(t["desc"]) and t.get("bucket") == "Uncategorized":
+                            household_recategorize(code, t["id"], "Home Improvement")
         return {"type": parsed["type"], "accounts": results,
                 "settings_updated": bool(settings_update),
                 "auto_tagged": auto_tagged}
@@ -1071,6 +1077,82 @@ async def api_hh_tag(code: str, pid: int, request: Request):
     return JSONResponse({"tagged": n})
 
 
+@app.post("/api/household/books/{code}/projects/{pid}/tag-labor")
+async def api_hh_tag_labor(code: str, pid: int, request: Request):
+    """Mark a person-to-person payment (a Zelle to a contractor) as
+    renovation labor and REMEMBER the payee: the payee is learned, every
+    matching payment in the project window is tagged to the project and
+    re-bucketed to Home Improvement, and future imports auto-tag it."""
+    import household
+    from database import (household_all_txns, household_get_settings,
+                          household_set_settings, household_tag_txns,
+                          household_recategorize, household_list_projects)
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    txn_id = body.get("txn_id")
+    if txn_id is None:
+        return JSONResponse({"error": "txn_id required"}, status_code=400)
+
+    def _do():
+        rows = household_all_txns(code)
+        row = next((r for r in rows if r["id"] == int(txn_id)), None)
+        if not row:
+            return {"error": "unknown transaction"}
+        payee = household.payee_fragment(row["desc"])
+        if not payee:
+            return {"error": "could not read a payee name"}
+        settings = household_get_settings(code)
+        payees = [p for p in (settings.get("reno_payees") or []) if p]
+        if payee not in payees:
+            payees.append(payee)
+            settings["reno_payees"] = payees
+            household_set_settings(code, settings)
+        proj = next((p for p in household_list_projects(code) if p["id"] == pid), None)
+        start = proj.get("start") if proj else None
+        end = proj.get("end") if proj else None
+
+        def in_window(r):
+            d = r.get("date", "") or ""
+            return not ((start and d < start) or (end and d > end))
+        # tag + re-bucket every matching payment in the window that isn't
+        # already tagged to a DIFFERENT project
+        matches = [r for r in rows
+                   if payee in (r["desc"] or "").lower() and r["amount"] < 0
+                   and (not r.get("project_id") or r.get("project_id") == pid)
+                   and in_window(r)]
+        ids = [r["id"] for r in matches]
+        tagged = household_tag_txns(code, ids, pid) if ids else 0
+        for r in matches:
+            household_recategorize(code, r["id"], "Home Improvement")
+        return {"payee": payee, "tagged": tagged, "learned": True}
+
+    out = await asyncio.to_thread(_do)
+    if out.get("error"):
+        return JSONResponse(out, status_code=400)
+    return JSONResponse(out)
+
+
+@app.post("/api/household/books/{code}/reno-payees")
+async def api_hh_reno_payees(code: str, request: Request):
+    """Remove a learned renovation-labor payee (add happens via tag-labor)."""
+    from database import household_get_settings, household_set_settings
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    remove = (body.get("remove") or "").strip().lower()
+
+    def _do():
+        settings = household_get_settings(code)
+        payees = [p for p in (settings.get("reno_payees") or []) if p and p != remove]
+        settings["reno_payees"] = payees
+        household_set_settings(code, settings)
+        return {"reno_payees": payees}
+    return JSONResponse(await asyncio.to_thread(_do))
+
+
 @app.get("/api/household/books/{code}/projects/{pid}")
 async def api_hh_project(code: str, pid: int):
     """The renovation ledger: reconciliation, vendor breakdown, true cost,
@@ -1093,20 +1175,25 @@ async def api_hh_project(code: str, pid: int):
     acct_name = {a["id"]: a["name"] for a in accounts}
     for r in rows:
         r["cls"] = household.bucket_class(r["bucket"])
+    payees = settings.get("reno_payees") or []
     tagged = [r for r in rows if r.get("project_id") == pid]
     summary = household.project_summary(
         tagged, {**settings, "reno_budget": proj.get("budget") or 0}, interest_paid)
-    suggestions = household.suggest_reno(rows, proj.get("start"), proj.get("end"))
+    suggestions = household.suggest_reno(rows, proj.get("start"), proj.get("end"), payees)
+    candidates = household.labor_candidates(rows, proj.get("start"), proj.get("end"), payees)
 
     def fmt(r):
         return {"id": r["id"], "date": r["date"], "desc": r["desc"],
                 "amount": round(r["amount"], 2), "bucket": r["bucket"],
-                "account": acct_name.get(r["account_id"], "")}
+                "account": acct_name.get(r["account_id"], ""),
+                "payee": r.get("payee")}
     tagged.sort(key=lambda r: (r["date"] or ""), reverse=True)
     return JSONResponse({
         "project": proj, "summary": summary,
         "tagged": [fmt(r) for r in tagged],
         "suggestions": [fmt(r) for r in suggestions],
+        "labor_candidates": [fmt(r) for r in candidates],
+        "reno_payees": payees,
     })
 
 

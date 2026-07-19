@@ -134,6 +134,9 @@
   .hh-rm-mini { height: 5px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin-top: 0.45rem; }
   .hh-rm-mini .fill { height: 100%; background: var(--primary); border-radius: 999px; }
   .hh-step.goal .hh-rm-mini .fill { background: var(--gold); }
+  .hh-chip { display: inline-flex; align-items: center; gap: 0.25rem; background: var(--gold-soft); color: var(--gold-ink); border: 1px solid var(--gold); border-radius: 999px; padding: 1px 4px 1px 9px; font-size: 0.72rem; font-weight: 700; margin: 0 0.15rem; }
+  .hh-chip button { background: none; border: none; color: var(--gold-ink); cursor: pointer; font-size: 0.8rem; line-height: 1; padding: 0 0.15rem; opacity: 0.7; }
+  .hh-chip button:hover { opacity: 1; }
   .hh-picker { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 0.6rem; }
   .hh-picker .hh-f { flex: 1; min-width: 180px; }
   .hh-retire tr, .hh-retire td { }
@@ -497,6 +500,7 @@ function renderProject() {
       <div class="hh-card"><h2>What it costs to carry</h2>${payoffPanel(s)}</div>
     </div>
     ${d.suggestions.length ? suggestCard(d.suggestions) : ''}
+    ${laborCard(d.labor_candidates, d.reno_payees)}
     <div class="hh-card"><h2>Tagged to this renovation <span class="hh-pill">${d.tagged.length}</span></h2>${d.tagged.length ? tagTable(d.tagged, true) : '<div class="hh-empty">Nothing tagged yet.</div>'}</div>
     <div id="budget"><div class="hh-empty">Loading budget…</div></div>`;
   if (s.vendors.length) renderRenoVendors(s.vendors);
@@ -734,6 +738,29 @@ async function tagAll(tag) {
   const ids = (STATE.projData.suggestions || []).map(t => t.id);
   if (!ids.length) return;
   await api('/' + BOOK + '/projects/' + STATE.curProject + '/tag', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({txn_ids: ids, tag}) });
+  await loadProject();
+}
+function laborCard(cands, payees) {
+  cands = cands || []; payees = payees || [];
+  if (!cands.length && !payees.length) return '';
+  const chips = payees.length
+    ? `<div class="hh-note" style="margin-top:0.5rem">Remembered labor payees: ${payees.map(p => `<span class="hh-chip">${p}<button title="forget this payee" onclick="removePayee('${p.replace(/'/g,"\\'")}')">✕</button></span>`).join(' ')}</div>`
+    : '';
+  const rows = cands.length ? `
+    <p class="hint">Payments to people (Zelle) in the project window that aren't recognized yet — often contractors and labor. Tag one and the tool remembers that payee, tags every payment to them, books it as Home Improvement, and auto-tags future ones on import.</p>
+    <table class="hh-tx"><tbody>${cands.map(t => `<tr>
+      <td>${(t.date||'').slice(5)}</td><td>${t.desc}</td>
+      <td class="amt out">${fmt(t.amount)}</td>
+      <td style="white-space:nowrap"><button class="btn-secondary" style="padding:0.25rem 0.7rem;" onclick="tagLabor(${t.id})">Tag as labor${t.payee ? ` — remember ${t.payee}` : ''}</button></td>
+    </tr>`).join('')}</tbody></table>` : '';
+  return `<div class="hh-card" style="border-color:var(--gold);"><h2>Possible renovation labor ${cands.length ? `<span class="hh-pill">${cands.length}</span>` : ''}</h2>${rows}${chips}</div>`;
+}
+async function tagLabor(id) {
+  await api('/' + BOOK + '/projects/' + STATE.curProject + '/tag-labor', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({txn_id: id}) });
+  await loadProject();
+}
+async function removePayee(name) {
+  await api('/' + BOOK + '/reno-payees', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({remove: name}) });
   await loadProject();
 }
 
