@@ -801,7 +801,10 @@ def vital_signs(txns, settings, accounts=None):
     is only a fallback for a book with no account balances yet."""
     s = settings or {}
     m = monthly_figures(txns)
-    income = float(s.get("income") or 0) or m["income"]
+    income_auto = m["income"]                       # median of recognized deposits
+    manual_income = float(s.get("income") or 0)
+    income = manual_income or income_auto
+    income_source = "manual" if manual_income else ("deposits" if income_auto else "none")
     spend, fixed, variable = m["spend"], m["fixed"], m["variable"]
     # normalized figures that ignore lumpy one-time renovation spending
     essential = m["essential"]
@@ -871,6 +874,7 @@ def vital_signs(txns, settings, accounts=None):
     debts.sort(key=lambda d: d["apr"], reverse=True)
     return {
         "lights": lights, "income": round(income, 2), "spend": round(spend, 2),
+        "income_auto": round(income_auto, 2), "income_source": income_source,
         "fixed": round(fixed, 2), "variable": round(variable, 2), "avg_net": avg_net,
         "essential": round(essential, 2), "spend_recurring": round(spend_recurring, 2),
         "cushion_base": round(cushion_base, 2),

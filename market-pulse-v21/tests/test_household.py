@@ -149,6 +149,23 @@ def test_vital_signs_savings():
     approx(vs["cushion_base"], vs["essential"], "cushion base is essential")
 
 
+def test_income_surfacing():
+    # a recognized paycheck deposit -> income derived + source "deposits"
+    rows = [txn("2026-06-01", 5000, "Income", desc="PAYROLL ST OF CA"),
+            txn("2026-06-05", -500, "Groceries")]
+    vs = H.vital_signs(rows, {})
+    approx(vs["income_auto"], 5000, "income derived from the paycheck deposit")
+    eq(vs["income_source"], "deposits", "source flagged as deposits")
+    eq(vs["income"], vs["income_auto"], "effective income = derived when no manual override")
+    # a manual override wins and is flagged
+    vs2 = H.vital_signs(rows, {"income": 8000})
+    eq(vs2["income"], 8000, "manual override wins")
+    eq(vs2["income_source"], "manual", "source flagged as manual")
+    # no recognized income deposits -> source "none" (paycheck not spotted)
+    vs3 = H.vital_signs([txn("2026-06-05", -500, "Groceries")], {})
+    eq(vs3["income_source"], "none", "no paycheck -> none")
+
+
 def test_vital_signs_reno_not_overspend():
     rows = [
         txn("2026-06-01", 8000, "Income"),
