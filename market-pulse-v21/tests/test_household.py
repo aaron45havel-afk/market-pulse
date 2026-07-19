@@ -178,6 +178,30 @@ def test_vital_signs_savings():
     approx(vs["cushion_base"], vs["essential"], "cushion base is essential")
 
 
+def test_statement_coverage():
+    accts = [{"id": 1, "name": "Golden 1 HELOC", "kind": "heloc"},
+             {"id": 2, "name": "Checking", "kind": "checking"}]
+    rows = [
+        # HELOC: May, then SKIPS June, then July -> June is a gap
+        {"account_id": 1, "date": "2026-05-10", "amount": -100, "bucket": "HELOC"},
+        {"account_id": 1, "date": "2026-07-10", "amount": -100, "bucket": "HELOC"},
+        # Checking: May, June, July -> no gaps
+        {"account_id": 2, "date": "2026-05-01", "amount": -50, "bucket": "Groceries"},
+        {"account_id": 2, "date": "2026-06-01", "amount": -50, "bucket": "Groceries"},
+        {"account_id": 2, "date": "2026-07-01", "amount": -50, "bucket": "Groceries"},
+    ]
+    cov = {c["id"]: c for c in H.statement_coverage(rows, accts)}
+    eq(cov[1]["months"], ["2026-05", "2026-07"], "heloc months present")
+    eq(cov[1]["gaps"], ["2026-06"], "june flagged as a missing HELOC statement")
+    eq(cov[2]["gaps"], [], "checking has no gaps")
+    eq(cov[1]["first"], "2026-05", "first month")
+    eq(cov[1]["last"], "2026-07", "last month")
+    # a single month -> no gaps possible
+    one = H.statement_coverage([{"account_id": 9, "date": "2026-06-01", "amount": -1, "bucket": "x"}],
+                               [{"id": 9, "name": "New", "kind": "savings"}])[0]
+    eq(one["gaps"], [], "single month -> no gap")
+
+
 def test_income_streams():
     rows = [
         txn("2026-05-01", 6000, "Income", desc="PAYROLL ST OF CA CA PAYROLL"),

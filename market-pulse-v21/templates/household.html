@@ -437,9 +437,30 @@ async function saveTargets() {
 // ══ SPENDING (dashboard) ══════════════════════════════════════════
 async function loadDashboard() {
   if (!STATE.hasData) { $('tab').innerHTML = emptyImportPrompt(); wireDrop(); renderAccounts(); return; }
-  const d = await api('/' + BOOK + '/dashboard?month=' + (STATE.month || ''));
-  STATE.data = d; STATE.buckets = d.buckets;
+  const [d, cov] = await Promise.all([
+    api('/' + BOOK + '/dashboard?month=' + (STATE.month || '')),
+    api('/' + BOOK + '/coverage').catch(() => null),
+  ]);
+  STATE.data = d; STATE.buckets = d.buckets; STATE.coverage = cov;
   renderSpending();
+}
+function coverageCard(cov) {
+  if (!cov || !cov.accounts || !cov.accounts.length) return '';
+  const withData = cov.accounts.filter(a => a.count > 0);
+  if (!withData.length) return '';
+  const anyGap = withData.some(a => a.gaps.length);
+  const rows = withData.map(a => {
+    const range = a.first === a.last ? monthLabel(a.first) : `${monthLabel(a.first)} – ${monthLabel(a.last)}`;
+    const gapTxt = a.gaps.length
+      ? `<span style="color:var(--coral-ink);font-weight:700;">missing ${a.gaps.map(monthLabel).join(', ')}</span>`
+      : `<span style="color:var(--mint-ink);">${a.count} month${a.count === 1 ? '' : 's'}, no gaps</span>`;
+    return `<div class="hh-nw-row"><span class="nm"><strong>${a.name}</strong> <span class="hh-note" style="margin:0">${range}</span></span><span class="v" style="font-size:0.78rem;">${gapTxt}</span><span class="act"></span></div>`;
+  }).join('');
+  return `<div class="hh-card" ${anyGap ? 'style="border-color:var(--coral);"' : ''}>
+    <h2>Statements imported${anyGap ? ' <span class="hh-pill" style="background:var(--coral-soft);color:var(--coral-ink);">gaps</span>' : ''}</h2>
+    <p class="hint">Which months are in, per account. A red "missing" month means a statement wasn't imported — drop it in to fill the gap.</p>
+    ${rows}
+  </div>`;
 }
 function renderSpending() {
   const d = STATE.data, s = d.summary;
@@ -464,6 +485,7 @@ function renderSpending() {
     </div>
     <div class="hh-card" id="reviewCard" style="display:none;"><h2>Needs review <span class="hh-pill" id="reviewN"></span></h2><p class="hint">Pick a bucket. Check "all like this" and every matching charge sorts itself now and next time.</p><div id="review"></div></div>
     <div class="hh-card"><h2>Transactions <span id="txScope" class="hh-pill"></span></h2><div id="txns"></div></div>
+    ${coverageCard(STATE.coverage)}
     ${importSection()}`;
   renderBuckets(); renderSplit(); renderTrend(); renderRecurring(); renderDebt(); renderReview(); renderTxns(); renderAccounts();
 }

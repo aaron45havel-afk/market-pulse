@@ -579,6 +579,46 @@ def fixed_bills(txns):
     }
 
 
+def _month_range(start, end):
+    """All YYYY-MM strings from start to end inclusive."""
+    out = []
+    y, m = (int(x) for x in start.split("-"))
+    ey, em = (int(x) for x in end.split("-"))
+    while (y, m) <= (ey, em):
+        out.append(f"{y:04d}-{m:02d}")
+        m += 1
+        if m > 12:
+            m = 1
+            y += 1
+    return out
+
+
+def statement_coverage(txns, accounts):
+    """Per account, which months have transactions and which months are
+    MISSING inside that range — so a skipped statement (a HELOC month you
+    forgot) stands out instead of hiding. Returns one row per account."""
+    by_acct: dict = defaultdict(set)
+    for t in txns:
+        aid = t.get("account_id")
+        if t.get("date") and aid is not None:
+            by_acct[aid].add(t["date"][:7])
+    out = []
+    for a in (accounts or []):
+        months = sorted(by_acct.get(a["id"], set()))
+        gaps = []
+        if len(months) >= 2:
+            present = set(months)
+            gaps = [mo for mo in _month_range(months[0], months[-1]) if mo not in present]
+        out.append({
+            "id": a["id"], "name": a["name"], "kind": a.get("kind"),
+            "months": months, "gaps": gaps,
+            "first": months[0] if months else None,
+            "last": months[-1] if months else None,
+            "count": len(months),
+        })
+    return out
+
+
 def income_streams(txns, labels=None):
     """Her income broken into streams — payroll, a nursing pension, a state
     COLA, etc. — grouped by payee, each with its typical monthly amount and
