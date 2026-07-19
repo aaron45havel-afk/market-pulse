@@ -52,6 +52,7 @@
   .hh-f label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-3); font-weight: 700; }
   .hh-in, .hh-sel { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.6rem; color: var(--ink); font-size: 0.95rem; width: 100%; }
   .hh-prefill { font-size: 0.66rem; color: var(--mint-ink); }
+  .hh-readout { font-size: 1rem; font-weight: 800; font-variant-numeric: tabular-nums; padding: 0.35rem 0; color: var(--ink); }
 
   /* ── sorted bucket bars ── */
   .hh-bars { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -288,14 +289,24 @@ function acctBalance(kind) {
   const a = STATE.accounts.find(x => x.kind === kind && x.balance != null);
   return a ? a.balance : null;
 }
+function savingsField(v) {
+  if (v.savings_source === 'accounts') {
+    const parts = (v.liquid_accounts || []).map(a => `${a.name} ${fmt(a.balance)}`).join(' + ');
+    return `<div class="hh-f"><label>Cash on hand</label>
+        <div class="hh-readout">${fmt(v.savings_from_accounts)}</div>
+        <span class="hh-prefill">${parts || 'from your checking + savings'}</span></div>
+      <div class="hh-f"><label>Other savings elsewhere</label><input class="hh-in" id="tSavX" type="number" step="100" value="${v.savings_extra || ''}" placeholder="cash not in these accounts"></div>`;
+  }
+  return `<div class="hh-f"><label>Savings balance</label><input class="hh-in" id="tSav" type="number" step="100" value="${v.savings || ''}"><span class="hh-prefill">import a statement to read this automatically</span></div>`;
+}
 function targetsCard(v) {
   const s = STATE.settings;
-  const helocAuto = acctBalance('heloc'), savAuto = acctBalance('savings'), cardAuto = acctBalance('credit_card');
+  const helocAuto = acctBalance('heloc'), cardAuto = acctBalance('credit_card');
   const val = (k, fallback) => (s[k] != null ? s[k] : (fallback != null ? fallback : ''));
   return `<details class="hh-card"><summary style="cursor:pointer;font-weight:600;">Set my targets <span class="hh-note" style="margin:0">— cushion goal, savings, and your debts. Done once; balances read from your statements.</span></summary>
     <div class="hh-form" style="margin-top:0.9rem;">
       <div class="hh-f"><label>Cushion goal (months)</label><input class="hh-in" id="tGoal" type="number" step="1" value="${val('cushion_goal', 4)}"></div>
-      <div class="hh-f"><label>Savings balance</label><input class="hh-in" id="tSav" type="number" step="100" value="${val('savings', savAuto)}">${savAuto != null ? '<span class="hh-prefill">read from statement</span>' : ''}</div>
+      ${savingsField(v)}
       <div class="hh-f"><label>Monthly income (optional)</label><input class="hh-in" id="tInc" type="number" step="100" value="${val('income', '')}" placeholder="auto from deposits"></div>
       <div class="hh-f"><label>HELOC balance</label><input class="hh-in" id="tHb" type="number" step="100" value="${val('heloc_balance', helocAuto)}">${helocAuto != null ? '<span class="hh-prefill">read from statement</span>' : ''}</div>
       <div class="hh-f"><label>HELOC rate (APR %)</label><input class="hh-in" id="tHapr" type="number" step="0.01" value="${val('heloc_apr', '')}" placeholder="e.g. 7.12"></div>
@@ -310,9 +321,11 @@ function targetsCard(v) {
 }
 async function saveTargets() {
   const g = id => { const el = $(id); return el && el.value !== '' ? parseFloat(el.value) : null; };
-  const settings = { cushion_goal: g('tGoal'), savings: g('tSav'), income: g('tInc'),
+  const settings = { cushion_goal: g('tGoal'), income: g('tInc'),
                      heloc_balance: g('tHb'), heloc_apr: g('tHapr'), heloc_payment: g('tHpay'),
                      card_balance: g('tCb'), card_apr: g('tCapr'), card_payment: g('tCpay') };
+  if ($('tSav')) settings.savings = g('tSav');            // manual (no accounts yet)
+  if ($('tSavX')) settings.savings_extra = g('tSavX') || 0;  // cash held elsewhere
   Object.keys(settings).forEach(k => settings[k] == null && delete settings[k]);
   await api('/' + BOOK + '/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({settings}) });
   $('tMsg').className = 'hh-msg ok'; $('tMsg').textContent = 'Saved';
