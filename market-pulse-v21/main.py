@@ -820,6 +820,24 @@ async def api_hh_dashboard(code: str, month: str = ""):
     })
 
 
+@app.get("/api/household/books/{code}/bills")
+async def api_hh_bills(code: str):
+    """Her committed monthly nut — recurring fixed + debt bills grouped by
+    payee, with a per-category rollup and the total."""
+    import household
+    from database import household_all_txns
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+
+    def _do():
+        rows = household_all_txns(code)
+        for r in rows:
+            r["cls"] = household.bucket_class(r["bucket"])
+        return household.fixed_bills(rows)
+    return JSONResponse(await asyncio.to_thread(_do))
+
+
 @app.post("/api/household/books/{code}/txns/{txn_id}/bucket")
 async def api_hh_recategorize(code: str, txn_id: int, request: Request):
     """Assign a bucket to a transaction. With apply_all, learns a rule

@@ -540,6 +540,44 @@ def find_recurring(txns: list[dict]) -> list[dict]:
     return out
 
 
+def fixed_bills(txns):
+    """Her committed monthly nut: the recurring FIXED and DEBT outflows —
+    mortgage, utilities, insurance, phone, subscriptions, loan/HELOC/card
+    payments — grouped by payee with the typical monthly amount. Uses every
+    month present (median), flags which are seen in ≥2 months, and rolls up
+    a per-category total."""
+    groups: dict[str, list[dict]] = defaultdict(list)
+    for t in txns:
+        if t["amount"] < 0 and bucket_class(t["bucket"]) in ("fixed", "debt"):
+            key = t.get("mkey") or merchant_key(t.get("desc", ""))
+            if key:
+                groups[key].append(t)
+    bills = []
+    for mkey, ts in groups.items():
+        months = sorted({t["date"][:7] for t in ts if t.get("date")})
+        amts = sorted(abs(t["amount"]) for t in ts)
+        typical = amts[len(amts) // 2] if amts else 0.0
+        if typical <= 0:
+            continue
+        bills.append({
+            "merchant": ts[-1]["desc"], "bucket": ts[0]["bucket"],
+            "typical": round(typical, 2), "months": len(months),
+            "recurring": len(months) >= 2,
+        })
+    # recurring first, then by size
+    bills.sort(key=lambda b: (b["recurring"], b["typical"]), reverse=True)
+    by_bucket: dict[str, float] = defaultdict(float)
+    for b in bills:
+        by_bucket[b["bucket"]] += b["typical"]
+    sections = [{"bucket": k, "amount": round(v, 2)}
+                for k, v in sorted(by_bucket.items(), key=lambda x: -x[1])]
+    return {
+        "bills": bills, "sections": sections,
+        "total": round(sum(b["typical"] for b in bills), 2),
+        "count": len(bills),
+    }
+
+
 # ── Aggregation for the dashboard ──────────────────────────────────
 def summarize(txns: list[dict], month: str | None = None) -> dict:
     """Compute the dashboard numbers. If `month` (YYYY-MM) is given,
