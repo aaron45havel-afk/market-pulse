@@ -638,7 +638,7 @@ async def api_hh_import(code: str, request: Request):
     book's learned rules; remembers the mapping for next time."""
     import household
     from database import (household_get_rules, household_insert_txns,
-                          household_set_mapping)
+                          household_set_mapping, household_set_account_balance)
     bad = await _require_hh_book(code)
     if bad:
         return bad
@@ -659,6 +659,11 @@ async def api_hh_import(code: str, request: Request):
         txns = household.normalize_rows(headers, rows, mapping, learned)
         inserted = household_insert_txns(code, account_id, txns)
         household_set_mapping(code, account_id, mapping)
+        # Read the closing balance straight off the statement (HELOC /
+        # savings balances feed the decision system with no manual entry).
+        bal, bal_date = household.extract_last_balance(headers, rows, mapping)
+        if bal is not None:
+            household_set_account_balance(code, account_id, bal, bal_date)
         return len(txns), inserted
 
     parsed, inserted = await asyncio.to_thread(_do)
@@ -728,6 +733,158 @@ async def api_hh_recategorize(code: str, txn_id: int, request: Request):
 
     updated = await asyncio.to_thread(_do)
     return JSONResponse({"updated": updated})
+
+
+# ── Household phase 2: decision system + renovation project ─────────
+@app.get("/api/household/books/{code}/settings")
+async def api_hh_get_settings(code: str):
+    from database import household_get_settings, household_list_accounts
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    settings = await asyncio.to_thread(household_get_settings, code)
+    accounts = await asyncio.to_thread(household_list_accounts, code)
+    return JSONResponse({"settings": settings, "accounts": accounts})
+
+
+@app.post("/api/household/books/{code}/settings")
+async def api_hh_set_settings(code: str, request: Request):
+    """Merge the provided target fields into the book's settings (so
+    saving the reno budget doesn't clear the cushion goal, etc.)."""
+    from database import household_get_settings, household_set_settings
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    incoming = body.get("settings") if isinstance(body.get("settings"), dict) else {}
+    allowed = {"mode", "income", "savings", "cushion_goal",
+               "heloc_balance", "heloc_apr", "heloc_payment", "reno_budget"}
+    clean = {}
+    for k, v in incoming.items():
+        if k not in allowed:
+            continue
+        if k == "mode":
+            clean[k] = str(v)[:20]
+        else:
+            fv = _coerce_float(v)
+            if fv is not None:
+                clean[k] = fv
+
+    def _do():
+        cur = household_get_settings(code)
+        cur.update(clean)
+        household_set_settings(code, cur)
+        return cur
+
+    saved = await asyncio.to_thread(_do)
+    return JSONResponse({"settings": saved})
+
+
+@app.get("/api/household/books/{code}/this-month")
+async def api_hh_this_month(code: str, mode: str = "kill_debt"):
+    """The decision tab: four vital signs + the chosen mode's one move."""
+    import household
+    from database import household_all_txns, household_get_settings
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    rows = await asyncio.to_thread(household_all_txns, code)
+    settings = await asyncio.to_thread(household_get_settings, code)
+    for r in rows:
+        r["cls"] = household.bucket_class(r["bucket"])
+    return JSONResponse(household.this_month(rows, settings, mode))
+
+
+@app.post("/api/household/books/{code}/projects")
+async def api_hh_create_project(code: str, request: Request):
+    from database import household_create_project
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    name = (body.get("name") or "").strip()
+    if not name:
+        return JSONResponse({"error": "name required"}, status_code=400)
+    pid = await asyncio.to_thread(
+        household_create_project, code, name,
+        (body.get("start") or "").strip() or None,
+        (body.get("end") or "").strip() or None,
+        _coerce_float(body.get("budget")))
+    return JSONResponse({"id": pid})
+
+
+@app.get("/api/household/books/{code}/projects")
+async def api_hh_list_projects(code: str):
+    from database import household_list_projects
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    return JSONResponse({"projects": await asyncio.to_thread(household_list_projects, code)})
+
+
+@app.delete("/api/household/books/{code}/projects/{pid}")
+async def api_hh_delete_project(code: str, pid: int):
+    from database import household_delete_project
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    ok = await asyncio.to_thread(household_delete_project, code, pid)
+    return JSONResponse({"ok": ok})
+
+
+@app.post("/api/household/books/{code}/projects/{pid}/tag")
+async def api_hh_tag(code: str, pid: int, request: Request):
+    """Tag (or untag, with tag=false) transactions to a renovation project."""
+    from database import household_tag_txns
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    ids = body.get("txn_ids") or []
+    if not isinstance(ids, list) or not ids:
+        return JSONResponse({"error": "txn_ids required"}, status_code=400)
+    target = pid if body.get("tag", True) else None
+    n = await asyncio.to_thread(household_tag_txns, code, ids, target)
+    return JSONResponse({"tagged": n})
+
+
+@app.get("/api/household/books/{code}/projects/{pid}")
+async def api_hh_project(code: str, pid: int):
+    """The renovation ledger: reconciliation, vendor breakdown, true cost,
+    payoff inputs, the tagged rows, and reno-vendor suggestions to tag."""
+    import household
+    from database import (household_all_txns, household_get_settings,
+                          household_list_projects, household_list_accounts,
+                          household_interest_paid)
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    projects = await asyncio.to_thread(household_list_projects, code)
+    proj = next((p for p in projects if p["id"] == pid), None)
+    if not proj:
+        return JSONResponse({"error": "unknown project"}, status_code=404)
+    rows = await asyncio.to_thread(household_all_txns, code)
+    settings = await asyncio.to_thread(household_get_settings, code)
+    accounts = await asyncio.to_thread(household_list_accounts, code)
+    interest_paid = await asyncio.to_thread(household_interest_paid, code)
+    acct_name = {a["id"]: a["name"] for a in accounts}
+    for r in rows:
+        r["cls"] = household.bucket_class(r["bucket"])
+    tagged = [r for r in rows if r.get("project_id") == pid]
+    summary = household.project_summary(
+        tagged, {**settings, "reno_budget": proj.get("budget") or 0}, interest_paid)
+    suggestions = household.suggest_reno(rows, proj.get("start"), proj.get("end"))
+
+    def fmt(r):
+        return {"id": r["id"], "date": r["date"], "desc": r["desc"],
+                "amount": round(r["amount"], 2), "bucket": r["bucket"],
+                "account": acct_name.get(r["account_id"], "")}
+    tagged.sort(key=lambda r: (r["date"] or ""), reverse=True)
+    return JSONResponse({
+        "project": proj, "summary": summary,
+        "tagged": [fmt(r) for r in tagged],
+        "suggestions": [fmt(r) for r in suggestions],
+    })
 
 
 # Browsers and iOS probe these absolute paths regardless of <link> tags —

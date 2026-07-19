@@ -3,9 +3,14 @@
 {% block extra_css %}
 <style>
   main .container { max-width: 1080px; }
-  .hh-sub { color: var(--ink-3); font-size: 0.9rem; margin: 0 0 1.1rem; line-height: 1.5; }
+  .hh-sub { color: var(--ink-3); font-size: 0.9rem; margin: 0 0 1rem; line-height: 1.5; }
 
-  /* ── headline tiles ── */
+  /* ── tabs ── */
+  .hh-tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1.1rem; border-bottom: 1px solid var(--line); padding-bottom: 0.6rem; }
+  .hh-tab { padding: 0.45rem 1rem; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--ink-3); font-size: 0.86rem; font-weight: 600; cursor: pointer; }
+  .hh-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  /* ── headline tiles / cards ── */
   .hh-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; margin-bottom: 1rem; }
   .hh-tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 1rem 1.1rem; }
   .hh-tile .k { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); font-weight: 700; }
@@ -20,37 +25,60 @@
   .hh-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
   @media (max-width: 820px) { .hh-grid2 { grid-template-columns: 1fr; } }
 
-  /* ── month picker ── */
-  .hh-months { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 1rem; }
-  .hh-mo { padding: 0.35rem 0.8rem; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--ink-3); font-size: 0.82rem; font-weight: 600; cursor: pointer; }
-  .hh-mo.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  /* ── This Month: mode toggle, one-move, vital signs ── */
+  .hh-modes { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .hh-mode { padding: 0.4rem 0.9rem; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+  .hh-mode.active { background: var(--primary-soft); color: var(--primary-ink); border-color: var(--primary); }
+  .hh-move { background: var(--primary-soft); border: 1px solid var(--primary); border-radius: var(--r-lg); padding: 1.1rem 1.25rem; margin-bottom: 1rem; }
+  .hh-move .hl { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--primary-ink); font-weight: 700; }
+  .hh-move .big { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em; margin: 0.1rem 0 0.5rem; }
+  .hh-move .mv { font-size: 1rem; color: var(--ink); line-height: 1.5; font-weight: 600; }
+  .hh-move .pj { font-size: 0.82rem; color: var(--ink-2); margin-top: 0.45rem; }
 
-  /* ── fixed/var/debt split ── */
-  .hh-split { display: flex; height: 34px; border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--line); }
-  .hh-split span { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.72rem; font-weight: 700; white-space: nowrap; border-right: 2px solid var(--surface); }
-  .hh-split span:last-child { border-right: none; }
-  .hh-legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.6rem; font-size: 0.76rem; color: var(--ink-2); }
-  .hh-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 0.35rem; vertical-align: -1px; }
+  .hh-vitals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.7rem; }
+  @media (max-width: 720px) { .hh-vitals { grid-template-columns: 1fr 1fr; } }
+  .hh-vital { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 0.85rem 0.9rem; border-left: 4px solid var(--ink-4); }
+  .hh-vital.green { border-left-color: var(--mint); } .hh-vital.yellow { border-left-color: var(--gold); }
+  .hh-vital.red { border-left-color: var(--coral); } .hh-vital.gray { border-left-color: var(--ink-4); }
+  .hh-vital .lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-3); font-weight: 700; }
+  .hh-vital .val { font-size: 1.35rem; font-weight: 800; font-variant-numeric: tabular-nums; margin: 0.15rem 0; }
+  .hh-vital.green .val { color: var(--mint-ink); } .hh-vital.yellow .val { color: var(--gold-ink); } .hh-vital.red .val { color: var(--coral-ink); }
+  .hh-vital .nt { font-size: 0.72rem; color: var(--ink-3); line-height: 1.35; }
+
+  /* ── set targets form ── */
+  .hh-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem 0.9rem; }
+  @media (max-width: 640px) { .hh-form { grid-template-columns: 1fr 1fr; } }
+  .hh-f { display: flex; flex-direction: column; gap: 3px; }
+  .hh-f label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-3); font-weight: 700; }
+  .hh-in, .hh-sel { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.6rem; color: var(--ink); font-size: 0.95rem; width: 100%; }
+  .hh-prefill { font-size: 0.66rem; color: var(--mint-ink); }
 
   /* ── sorted bucket bars ── */
   .hh-bars { display: flex; flex-direction: column; gap: 0.5rem; }
   .hh-bar { cursor: pointer; }
   .hh-bar .row { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.2rem; }
   .hh-bar .row .nm { font-weight: 600; }
-  .hh-bar .row .nm .dot { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 0.4rem; vertical-align: 0; }
+  .hh-bar .row .nm .dot, .hh-legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 0.4rem; vertical-align: 0; }
   .hh-bar .row .amt { font-variant-numeric: tabular-nums; color: var(--ink-2); }
   .hh-bar .track { height: 12px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
   .hh-bar .fill { height: 100%; border-radius: 4px; }
   .hh-bar:hover .track { outline: 2px solid var(--primary-soft); }
   .hh-bar.sel .track { outline: 2px solid var(--primary); }
+  .hh-legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.6rem; font-size: 0.76rem; color: var(--ink-2); }
 
-  /* ── monthly cash-flow trend ── */
+  /* ── split + trend ── */
+  .hh-split { display: flex; height: 34px; border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--line); }
+  .hh-split span { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.72rem; font-weight: 700; white-space: nowrap; border-right: 2px solid var(--surface); }
+  .hh-split span:last-child { border-right: none; }
   .hh-trend { display: flex; align-items: flex-end; gap: 0.6rem; height: 150px; padding-top: 0.5rem; overflow-x: auto; }
   .hh-tcol { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 46px; flex: 1; }
   .hh-tbars { display: flex; align-items: flex-end; gap: 3px; height: 118px; }
   .hh-tbars i { width: 13px; border-radius: 3px 3px 0 0; display: block; }
   .hh-tbars i.in { background: var(--mint); } .hh-tbars i.out { background: var(--coral); }
   .hh-tcol .ml { font-size: 0.66rem; color: var(--ink-3); }
+  .hh-months { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .hh-mo { padding: 0.35rem 0.8rem; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--ink-3); font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+  .hh-mo.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
   /* ── tables / lists ── */
   .hh-tx { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
@@ -59,9 +87,15 @@
   .hh-tx td.amt { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .hh-tx td.amt.out { color: var(--coral-ink); } .hh-tx td.amt.in { color: var(--mint-ink); }
   .hh-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
-  .hh-sel { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 0.3rem 0.4rem; color: var(--ink); font-size: 0.8rem; }
   .hh-recur { display: flex; justify-content: space-between; align-items: center; padding: 0.45rem 0; border-bottom: 1px solid var(--line); font-size: 0.85rem; }
   .hh-recur .m { font-size: 0.7rem; color: var(--ink-3); }
+
+  /* ── renovation ── */
+  .hh-reno-head { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8rem; }
+  @media (max-width: 720px) { .hh-reno-head { grid-template-columns: 1fr 1fr; } }
+  .hh-slider { width: 100%; margin: 0.6rem 0 0.2rem; }
+  .hh-payoff { background: var(--surface-2); border-radius: var(--r); padding: 0.9rem 1rem; margin-top: 0.6rem; }
+  .hh-payoff .res { font-size: 0.95rem; font-weight: 700; margin-top: 0.4rem; }
 
   /* ── import ── */
   .hh-drop { border: 2px dashed var(--line-strong); border-radius: var(--r); padding: 1.4rem; text-align: center; color: var(--ink-3); font-size: 0.9rem; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
@@ -77,15 +111,15 @@
 {% endblock %}
 
 {% block content %}
-<h1>💰 Household Money</h1>
-<p class="hh-sub">Drop in bank & card statements — everything gets sorted into buckets so you can see what got spent on what. Your account numbers are stripped before anything is saved.</p>
+<h1>Household Money</h1>
+<p class="hh-sub">Bank &amp; card statements sorted into buckets, with a monthly plan and a renovation tracker. Account numbers are stripped before anything is saved.</p>
 
 {% if is_admin(request) and not book %}
 <div class="hh-card" style="border-color: var(--primary);">
-  <h2>🔗 Create a household book</h2>
+  <h2>Create a household book</h2>
   <p class="hint">Make a book, then text the link to whoever's finances these are. Their data syncs privately; they never log in — the link is the key.</p>
   <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-    <input id="bkName" class="hh-sel" placeholder="Mom's finances" style="flex:1; min-width:180px;">
+    <input id="bkName" class="hh-in" placeholder="Mom's finances" style="flex:1; min-width:180px;">
     <button class="btn-primary" onclick="createBook()">Create book + link</button>
   </div>
   <div id="bkOut" style="margin-top:0.7rem;"></div>
@@ -106,13 +140,14 @@
 const BOOK = (JSON.parse(document.getElementById('hh-boot').textContent).book) || "";
 const $ = id => document.getElementById(id);
 const fmt = n => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString();
-const fmt2 = n => '$' + Math.abs(n).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const api = (path, opts) => fetch('/api/household/books' + path, opts).then(r => r.ok ? r.json() : Promise.reject(r));
 const CLS_COLOR = { fixed: 'var(--primary)', variable: 'var(--indy)', debt: 'var(--gold)', income: 'var(--mint)', transfer: 'var(--ink-4)', review: 'var(--ink-3)' };
+const LIGHT = { green: 'var(--mint)', yellow: 'var(--gold)', red: 'var(--coral)', gray: 'var(--ink-4)' };
 
-let STATE = { month: null, data: null, accounts: [], buckets: [], selBucket: null };
+let STATE = { tab: 'thismonth', month: null, data: null, accounts: [], buckets: [],
+              selBucket: null, mode: 'kill_debt', settings: {}, projects: [],
+              curProject: null, projData: null, hasData: false };
 
-// ── admin: create book ────────────────────────────────────────────
 function createBook() {
   const name = ($('bkName') || {}).value || 'Household';
   fetch('/api/household/books', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name}) })
@@ -121,225 +156,348 @@ function createBook() {
       const link = location.origin + '/household?book=' + d.code;
       $('bkOut').innerHTML = `<div class="hh-card" style="margin:0;"><div class="k" style="font-size:0.68rem;color:var(--ink-3);font-weight:700;">TEXT THIS LINK</div>
         <div style="word-break:break-all;font-weight:700;margin:0.3rem 0;">${link}</div>
-        <button class="btn-secondary" onclick="navigator.clipboard&&navigator.clipboard.writeText('${link}');this.textContent='Copied ✓'">Copy link</button>
+        <button class="btn-secondary" onclick="navigator.clipboard&&navigator.clipboard.writeText('${link}');this.textContent='Copied'">Copy link</button>
         <a class="btn-primary" style="margin-left:0.4rem;text-decoration:none;" href="/household?book=${d.code}">Open it</a></div>`;
     }).catch(() => $('bkOut').textContent = 'Error (are you signed in as admin?)');
 }
 
-// ── boot ──────────────────────────────────────────────────────────
+// ── boot + tab shell ──────────────────────────────────────────────
 async function boot() {
   if (!BOOK) return;
   const st = await api('/' + BOOK);
-  STATE.accounts = st.accounts; STATE.buckets = st.buckets;
-  if (!st.months.length) { renderEmpty(); return; }
-  STATE.month = st.months[st.months.length - 1];
-  await loadDashboard();
+  STATE.accounts = st.accounts; STATE.buckets = st.buckets; STATE.hasData = st.months.length > 0;
+  STATE.month = st.months.length ? st.months[st.months.length - 1] : null;
+  $('app').innerHTML = `
+    <div class="hh-tabs">
+      <button class="hh-tab" data-t="thismonth" onclick="go('thismonth')">This Month</button>
+      <button class="hh-tab" data-t="spending" onclick="go('spending')">Spending</button>
+      <button class="hh-tab" data-t="reno" onclick="go('reno')">Renovation</button>
+    </div>
+    <div id="tab"></div>`;
+  go(STATE.tab);
+}
+function go(name) {
+  STATE.tab = name;
+  document.querySelectorAll('.hh-tab').forEach(b => b.classList.toggle('active', b.dataset.t === name));
+  if (name === 'thismonth') loadThisMonth();
+  else if (name === 'spending') loadDashboard();
+  else loadReno();
 }
 
+// ══ THIS MONTH ════════════════════════════════════════════════════
+async function loadThisMonth() {
+  if (!STATE.hasData) { $('tab').innerHTML = emptyImportPrompt(); wireDrop(); renderAccounts(); return; }
+  const [tm, s] = await Promise.all([ api('/' + BOOK + '/this-month?mode=' + STATE.mode), api('/' + BOOK + '/settings') ]);
+  STATE.settings = s.settings || {}; STATE.accounts = s.accounts || STATE.accounts;
+  renderThisMonth(tm);
+}
+function renderThisMonth(tm) {
+  const rec = tm.rec, v = tm.vitals;
+  const hd = rec.headline || {};
+  const headVal = hd.v_txt != null ? hd.v_txt : (hd.v != null ? fmt(hd.v) : '');
+  $('tab').innerHTML = `
+    <div class="hh-modes">${tm.modes.map(m => `<button class="hh-mode ${m.key === STATE.mode ? 'active' : ''}" onclick="setMode('${m.key}')">${m.label}</button>`).join('')}</div>
+    <div class="hh-move">
+      <div class="hl">${hd.k || 'This month'}</div>
+      <div class="big">${headVal}</div>
+      <div class="mv">${rec.move}</div>
+      ${rec.projection ? `<div class="pj">${rec.projection}</div>` : ''}
+    </div>
+    <div class="hh-card">
+      <h2>Your four vital signs</h2>
+      <p class="hint">These stay the same whatever focus you pick — they're the health check.</p>
+      <div class="hh-vitals">${['means','fixed','cushion','heloc'].map(k => vitalCard(v.lights[k])).join('')}</div>
+    </div>
+    ${targetsCard(v)}`;
+}
+function vitalCard(l) {
+  const val = l.value == null ? '—' : (l.unit === '$' ? fmt(l.value) : l.unit === '%' ? l.value + '%' : l.value + (l.unit ? ' ' + l.unit : ''));
+  return `<div class="hh-vital ${l.light}"><div class="lbl">${l.label}</div><div class="val">${val}</div><div class="nt">${l.note}</div></div>`;
+}
+async function setMode(m) {
+  STATE.mode = m;
+  api('/' + BOOK + '/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({settings: {mode: m}}) });
+  loadThisMonth();
+}
+function acctBalance(kind) {
+  const a = STATE.accounts.find(x => x.kind === kind && x.balance != null);
+  return a ? a.balance : null;
+}
+function targetsCard(v) {
+  const s = STATE.settings;
+  const helocAuto = acctBalance('heloc'), savAuto = acctBalance('savings');
+  const val = (k, fallback) => (s[k] != null ? s[k] : (fallback != null ? fallback : ''));
+  return `<details class="hh-card"><summary style="cursor:pointer;font-weight:600;">Set my targets <span class="hh-note" style="margin:0">— cushion goal, savings, HELOC. Done once; balances read from your statements.</span></summary>
+    <div class="hh-form" style="margin-top:0.9rem;">
+      <div class="hh-f"><label>Cushion goal (months)</label><input class="hh-in" id="tGoal" type="number" step="1" value="${val('cushion_goal', 4)}"></div>
+      <div class="hh-f"><label>Savings balance</label><input class="hh-in" id="tSav" type="number" step="100" value="${val('savings', savAuto)}">${savAuto != null ? '<span class="hh-prefill">read from statement</span>' : ''}</div>
+      <div class="hh-f"><label>Monthly income (optional)</label><input class="hh-in" id="tInc" type="number" step="100" value="${val('income', '')}" placeholder="auto from deposits"></div>
+      <div class="hh-f"><label>HELOC balance</label><input class="hh-in" id="tHb" type="number" step="100" value="${val('heloc_balance', helocAuto)}">${helocAuto != null ? '<span class="hh-prefill">read from statement</span>' : ''}</div>
+      <div class="hh-f"><label>HELOC rate (APR %)</label><input class="hh-in" id="tHapr" type="number" step="0.01" value="${val('heloc_apr', '')}" placeholder="e.g. 9.5"></div>
+      <div class="hh-f"><label>HELOC payment / mo</label><input class="hh-in" id="tHpay" type="number" step="10" value="${val('heloc_payment', '')}"></div>
+    </div>
+    <button class="btn-primary" style="margin-top:0.8rem;" onclick="saveTargets()">Save targets</button>
+    <span id="tMsg" class="hh-msg"></span>
+  </details>`;
+}
+async function saveTargets() {
+  const g = id => { const el = $(id); return el && el.value !== '' ? parseFloat(el.value) : null; };
+  const settings = { cushion_goal: g('tGoal'), savings: g('tSav'), income: g('tInc'),
+                     heloc_balance: g('tHb'), heloc_apr: g('tHapr'), heloc_payment: g('tHpay') };
+  Object.keys(settings).forEach(k => settings[k] == null && delete settings[k]);
+  await api('/' + BOOK + '/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({settings}) });
+  $('tMsg').className = 'hh-msg ok'; $('tMsg').textContent = 'Saved';
+  loadThisMonth();
+}
+
+// ══ SPENDING (dashboard) ══════════════════════════════════════════
 async function loadDashboard() {
+  if (!STATE.hasData) { $('tab').innerHTML = emptyImportPrompt(); wireDrop(); renderAccounts(); return; }
   const d = await api('/' + BOOK + '/dashboard?month=' + (STATE.month || ''));
   STATE.data = d; STATE.buckets = d.buckets;
-  render();
+  renderSpending();
 }
-
-// ── render ────────────────────────────────────────────────────────
-function render() {
+function renderSpending() {
   const d = STATE.data, s = d.summary;
   const netCls = s.net >= 0 ? 'pos' : 'neg';
-  $('app').innerHTML = `
+  $('tab').innerHTML = `
     ${monthPicker(s.months)}
     <div class="hh-tiles">
       <div class="hh-tile"><div class="k">Money in</div><div class="v" style="color:var(--mint-ink)">${fmt(s.income)}</div><div class="sub">${monthLabel(STATE.month)}</div></div>
       <div class="hh-tile"><div class="k">Money out</div><div class="v">${fmt(s.spend)}</div><div class="sub">spending, transfers excluded</div></div>
       <div class="hh-tile net"><div class="k">${s.net >= 0 ? 'Saved' : 'Overspent'}</div><div class="v ${netCls}">${fmt(Math.abs(s.net))}</div><div class="sub">in minus out</div></div>
     </div>
-
     <div class="hh-grid2">
-      <div class="hh-card">
-        <h2>Where it went</h2>
-        <p class="hint">Biggest buckets first. Tap one to see just those transactions.</p>
-        <div class="hh-bars" id="buckets"></div>
-      </div>
+      <div class="hh-card"><h2>Where it went</h2><p class="hint">Biggest buckets first. Tap one to see just those transactions.</p><div class="hh-bars" id="buckets"></div></div>
       <div>
-        <div class="hh-card">
-          <h2>Fixed vs. everyday</h2>
-          <p class="hint">How much is locked-in bills vs. discretionary. Debt = interest &amp; fees.</p>
-          <div id="split"></div>
-        </div>
-        <div class="hh-card">
-          <h2>Month by month</h2>
-          <p class="hint">Green = money in, red = money out. Is spending creeping up?</p>
-          <div class="hh-trend" id="trend"></div>
-        </div>
+        <div class="hh-card"><h2>Fixed vs. everyday</h2><p class="hint">How much is locked-in bills vs. discretionary. Debt = interest &amp; fees.</p><div id="split"></div></div>
+        <div class="hh-card"><h2>Month by month</h2><p class="hint">Green = money in, red = money out. Is spending creeping up?</p><div class="hh-trend" id="trend"></div></div>
       </div>
     </div>
-
     <div class="hh-grid2">
       <div class="hh-card"><h2>Recurring &amp; subscriptions</h2><p class="hint">Same payee, most months — the easy wins to review.</p><div id="recur"></div></div>
       <div class="hh-card"><h2>Debt &amp; interest</h2><p class="hint">What carrying debt actually costs.</p><div id="debt"></div></div>
     </div>
-
-    <div class="hh-card" id="reviewCard" style="display:none;">
-      <h2>⚠ Needs review <span class="hh-pill" id="reviewN"></span></h2>
-      <p class="hint">Pick a bucket. Check "all like this" and every matching charge sorts itself now and next time.</p>
-      <div id="review"></div>
-    </div>
-
-    <div class="hh-card">
-      <h2>Transactions <span id="txScope" class="hh-pill"></span></h2>
-      <div id="txns"></div>
-    </div>
-
-    ${importSection()}
-  `;
+    <div class="hh-card" id="reviewCard" style="display:none;"><h2>Needs review <span class="hh-pill" id="reviewN"></span></h2><p class="hint">Pick a bucket. Check "all like this" and every matching charge sorts itself now and next time.</p><div id="review"></div></div>
+    <div class="hh-card"><h2>Transactions <span id="txScope" class="hh-pill"></span></h2><div id="txns"></div></div>
+    ${importSection()}`;
   renderBuckets(); renderSplit(); renderTrend(); renderRecurring(); renderDebt(); renderReview(); renderTxns(); renderAccounts();
 }
-
 function monthPicker(months) {
-  return `<div class="hh-months">` + months.map(m =>
-    `<button class="hh-mo ${m === STATE.month ? 'active' : ''}" onclick="pickMonth('${m}')">${monthLabel(m)}</button>`).join('') + `</div>`;
+  return `<div class="hh-months">` + months.map(m => `<button class="hh-mo ${m === STATE.month ? 'active' : ''}" onclick="pickMonth('${m}')">${monthLabel(m)}</button>`).join('') + `</div>`;
 }
-function monthLabel(m) {
-  if (!m) return '';
-  const [y, mo] = m.split('-');
-  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo - 1] + " '" + y.slice(2);
-}
+function monthLabel(m) { if (!m) return ''; const [y, mo] = m.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo - 1] + " '" + y.slice(2); }
 async function pickMonth(m) { STATE.month = m; STATE.selBucket = null; await loadDashboard(); }
-
 function renderBuckets() {
-  const bs = STATE.data.summary.buckets;
-  const el = $('buckets');
+  const bs = STATE.data.summary.buckets, el = $('buckets');
   if (!bs.length) { el.innerHTML = `<div class="hh-empty">No spending this month.</div>`; return; }
   const max = bs[0].amount, total = bs.reduce((a, b) => a + b.amount, 0);
   el.innerHTML = bs.map(b => {
-    const pct = Math.round(b.amount / total * 100);
-    const col = CLS_COLOR[b.cls] || 'var(--primary)';
+    const pct = Math.round(b.amount / total * 100), col = CLS_COLOR[b.cls] || 'var(--primary)';
     return `<div class="hh-bar ${STATE.selBucket === b.bucket ? 'sel' : ''}" onclick="selBucket('${b.bucket.replace(/'/g,"\\'")}')">
       <div class="row"><span class="nm"><span class="dot" style="background:${col}"></span>${b.bucket}</span><span class="amt">${fmt(b.amount)} · ${pct}%</span></div>
       <div class="track"><div class="fill" style="width:${Math.max(3, b.amount / max * 100)}%;background:${col}"></div></div></div>`;
   }).join('');
 }
 function selBucket(b) { STATE.selBucket = (STATE.selBucket === b ? null : b); renderBuckets(); renderTxns(); }
-
 function renderSplit() {
   const s = STATE.data.summary;
   const parts = [['fixed', s.fixed], ['variable', s.variable], ['debt', s.debt_cost]].filter(p => p[1] > 0);
-  const total = parts.reduce((a, p) => a + p[1], 0) || 1;
-  const label = { fixed: 'Fixed', variable: 'Everyday', debt: 'Debt cost' };
-  $('split').innerHTML = `<div class="hh-split">` + parts.map(p =>
-    `<span style="background:${CLS_COLOR[p[0]]};width:${p[1] / total * 100}%" title="${label[p[0]]} ${fmt(p[1])}">${p[1] / total > 0.12 ? fmt(p[1]) : ''}</span>`).join('') +
-    `</div><div class="hh-legend">` + parts.map(p =>
-    `<span><span class="dot" style="background:${CLS_COLOR[p[0]]}"></span>${label[p[0]]} — ${fmt(p[1])}</span>`).join('') + `</div>`;
+  const total = parts.reduce((a, p) => a + p[1], 0) || 1, label = { fixed: 'Fixed', variable: 'Everyday', debt: 'Debt cost' };
+  $('split').innerHTML = `<div class="hh-split">` + parts.map(p => `<span style="background:${CLS_COLOR[p[0]]};width:${p[1] / total * 100}%" title="${label[p[0]]} ${fmt(p[1])}">${p[1] / total > 0.12 ? fmt(p[1]) : ''}</span>`).join('') +
+    `</div><div class="hh-legend">` + parts.map(p => `<span><span class="dot" style="background:${CLS_COLOR[p[0]]}"></span>${label[p[0]]} — ${fmt(p[1])}</span>`).join('') + `</div>`;
 }
-
 function renderTrend() {
-  const tr = STATE.data.summary.trend;
-  const max = Math.max(1, ...tr.map(t => Math.max(t.in, t.out)));
-  $('trend').innerHTML = tr.map(t => `
-    <div class="hh-tcol" title="${monthLabel(t.month)} — in ${fmt(t.in)}, out ${fmt(t.out)}">
-      <div class="hh-tbars">
-        <i class="in" style="height:${Math.max(2, t.in / max * 118)}px"></i>
-        <i class="out" style="height:${Math.max(2, t.out / max * 118)}px"></i>
-      </div>
-      <div class="ml">${monthLabel(t.month)}</div>
-    </div>`).join('') +
+  const tr = STATE.data.summary.trend, max = Math.max(1, ...tr.map(t => Math.max(t.in, t.out)));
+  $('trend').innerHTML = tr.map(t => `<div class="hh-tcol" title="${monthLabel(t.month)} — in ${fmt(t.in)}, out ${fmt(t.out)}"><div class="hh-tbars"><i class="in" style="height:${Math.max(2, t.in / max * 118)}px"></i><i class="out" style="height:${Math.max(2, t.out / max * 118)}px"></i></div><div class="ml">${monthLabel(t.month)}</div></div>`).join('') +
     `</div><div class="hh-legend" style="padding:0 0.2rem;"><span><span class="dot" style="background:var(--mint)"></span>In</span><span><span class="dot" style="background:var(--coral)"></span>Out</span>`;
 }
-
 function renderRecurring() {
   const r = STATE.data.recurring;
-  $('recur').innerHTML = r.length ? r.map(x =>
-    `<div class="hh-recur"><div><div style="font-weight:600">${x.merchant}</div><div class="m">${x.bucket} · seen ${x.months} months</div></div>
-     <div style="font-weight:700;font-variant-numeric:tabular-nums">${fmt(x.typical)}<span class="m">/mo</span></div></div>`).join('')
-    : `<div class="hh-empty">Load a few months to spot recurring bills.</div>`;
+  $('recur').innerHTML = r.length ? r.map(x => `<div class="hh-recur"><div><div style="font-weight:600">${x.merchant}</div><div class="m">${x.bucket} · seen ${x.months} months</div></div><div style="font-weight:700;font-variant-numeric:tabular-nums">${fmt(x.typical)}<span class="m">/mo</span></div></div>`).join('') : `<div class="hh-empty">Load a few months to spot recurring bills.</div>`;
 }
-
 function renderDebt() {
-  const s = STATE.data.summary;
-  const debtBuckets = s.buckets.filter(b => b.cls === 'debt');
-  $('debt').innerHTML = `
-    <div class="hh-tile" style="margin-bottom:0.6rem;border:none;padding:0;"><div class="k">Interest &amp; fees this month</div><div class="v" style="color:var(--coral-ink);font-size:1.4rem;">${fmt(s.debt_cost)}</div></div>
-    ${debtBuckets.length ? debtBuckets.map(b => `<div class="hh-recur"><span>${b.bucket}</span><span style="font-weight:700">${fmt(b.amount)}</span></div>`).join('')
-      : `<div class="hh-note">No interest or fees flagged this month. 👍 (Import your card statements to catch finance charges.)</div>`}`;
+  const s = STATE.data.summary, db = s.buckets.filter(b => b.cls === 'debt');
+  $('debt').innerHTML = `<div class="hh-tile" style="margin-bottom:0.6rem;border:none;padding:0;"><div class="k">Interest &amp; fees this month</div><div class="v" style="color:var(--coral-ink);font-size:1.4rem;">${fmt(s.debt_cost)}</div></div>${db.length ? db.map(b => `<div class="hh-recur"><span>${b.bucket}</span><span style="font-weight:700">${fmt(b.amount)}</span></div>`).join('') : `<div class="hh-note">No interest or fees flagged this month. Import your card &amp; HELOC statements to catch finance charges.</div>`}`;
 }
-
 function renderReview() {
   const rev = STATE.data.review;
   if (!rev.length) { $('reviewCard').style.display = 'none'; return; }
-  $('reviewCard').style.display = '';
-  $('reviewN').textContent = rev.length;
+  $('reviewCard').style.display = ''; $('reviewN').textContent = rev.length;
   const opts = STATE.buckets.filter(b => b !== 'Uncategorized').map(b => `<option>${b}</option>`).join('');
-  $('review').innerHTML = `<table class="hh-tx"><tbody>` + rev.map(t => `
-    <tr>
-      <td>${t.date.slice(5)}</td>
-      <td>${t.desc}</td>
-      <td class="amt out">${fmt(t.amount)}</td>
-      <td><select class="hh-sel" id="rv${t.id}"><option value="">Pick…</option>${opts}</select></td>
-      <td><label style="font-size:0.72rem;color:var(--ink-3)"><input type="checkbox" id="rc${t.id}" checked> all like this</label></td>
-      <td><button class="btn-secondary" style="padding:0.3rem 0.7rem;" onclick="saveCat(${t.id}, '${(t.desc||'').replace(/'/g,"\\'")}')">Save</button></td>
-    </tr>`).join('') + `</tbody></table>`;
+  $('review').innerHTML = `<table class="hh-tx"><tbody>` + rev.map(t => `<tr><td>${t.date.slice(5)}</td><td>${t.desc}</td><td class="amt out">${fmt(t.amount)}</td><td><select class="hh-sel" id="rv${t.id}"><option value="">Pick…</option>${opts}</select></td><td><label style="font-size:0.72rem;color:var(--ink-3)"><input type="checkbox" id="rc${t.id}" checked> all like this</label></td><td><button class="btn-secondary" style="padding:0.3rem 0.7rem;" onclick="saveCat(${t.id}, '${(t.desc||'').replace(/'/g,"\\'")}')">Save</button></td></tr>`).join('') + `</tbody></table>`;
 }
 async function saveCat(id, desc) {
-  const bucket = ($('rv' + id) || {}).value;
-  if (!bucket) return;
+  const bucket = ($('rv' + id) || {}).value; if (!bucket) return;
   const apply_all = ($('rc' + id) || {}).checked;
   await api('/' + BOOK + '/txns/' + id + '/bucket', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({bucket, apply_all, desc}) });
   await loadDashboard();
 }
-
 function renderTxns() {
   let tx = STATE.data.txns;
   if (STATE.selBucket) tx = tx.filter(t => t.bucket === STATE.selBucket);
   $('txScope').textContent = (STATE.selBucket ? STATE.selBucket + ' · ' : '') + tx.length + ' in ' + monthLabel(STATE.month);
   if (!tx.length) { $('txns').innerHTML = `<div class="hh-empty">No transactions.</div>`; return; }
   $('txns').innerHTML = `<table class="hh-tx"><thead><tr><th>Date</th><th>Description</th><th>Account</th><th>Bucket</th><th style="text-align:right">Amount</th></tr></thead><tbody>` +
-    tx.map(t => `<tr><td>${t.date.slice(5)}</td><td>${t.desc}</td><td style="color:var(--ink-3)">${t.account}</td>
-      <td><span class="hh-pill" style="border-color:${CLS_COLOR[t.cls]||'var(--line)'}">${t.bucket}</span></td>
-      <td class="amt ${t.amount < 0 ? 'out' : 'in'}">${fmt(t.amount)}</td></tr>`).join('') + `</tbody></table>`;
+    tx.map(t => `<tr><td>${t.date.slice(5)}</td><td>${t.desc}</td><td style="color:var(--ink-3)">${t.account}</td><td><span class="hh-pill" style="border-color:${CLS_COLOR[t.cls]||'var(--line)'}">${t.bucket}</span></td><td class="amt ${t.amount < 0 ? 'out' : 'in'}">${fmt(t.amount)}</td></tr>`).join('') + `</tbody></table>`;
 }
 
-function renderEmpty() {
-  $('app').innerHTML = `<div class="hh-card"><h2>Let's get her money in here</h2>
-    <p class="hint">Add each account, then drop in its CSV export. Start with the checking account where the paycheck lands and bills pay.</p>
-    ${importSection()}</div>`;
-  renderAccounts();
+// ══ RENOVATION ════════════════════════════════════════════════════
+async function loadReno() {
+  const p = await api('/' + BOOK + '/projects');
+  STATE.projects = p.projects;
+  if (!STATE.curProject && STATE.projects.length) STATE.curProject = STATE.projects[0].id;
+  if (STATE.curProject) { await loadProject(); }
+  else renderRenoHome();
+}
+function renderRenoHome() {
+  $('tab').innerHTML = `<div class="hh-card"><h2>Track a renovation against the HELOC</h2>
+    <p class="hint">Create a project, then tag the Home Depot / contractor / supplier charges. If the HELOC is in her statements, we match the spend to what it's costing.</p>
+    ${projectForm()}
+    ${STATE.projects.length ? `<div style="margin-top:1rem;">${STATE.projects.map(renoRow).join('')}</div>` : '<div class="hh-note">No projects yet.</div>'}
+  </div>`;
+}
+function projectForm() {
+  return `<div class="hh-form" style="margin:0.6rem 0;">
+    <div class="hh-f"><label>Project name</label><input class="hh-in" id="pName" placeholder="Kitchen renovation"></div>
+    <div class="hh-f"><label>Started</label><input class="hh-in" id="pStart" type="date"></div>
+    <div class="hh-f"><label>Ended (optional)</label><input class="hh-in" id="pEnd" type="date"></div>
+    <div class="hh-f"><label>Budget (optional)</label><input class="hh-in" id="pBudget" type="number" step="500" placeholder="30000"></div>
+    </div><button class="btn-primary" onclick="createProject()">Create project</button>`;
+}
+function renoRow(p) {
+  return `<div class="hh-acct"><span><strong>${p.name}</strong> <span class="hh-pill">${p.tagged} tagged</span> ${p.budget ? `<span class="hh-note" style="margin:0">budget ${fmt(p.budget)}</span>` : ''}</span>
+    <span><button class="btn-secondary" style="padding:0.25rem 0.7rem;" onclick="selectProject(${p.id})">Open</button>
+    <button class="btn-secondary" style="padding:0.25rem 0.6rem;margin-left:0.3rem;" onclick="delProject(${p.id},'${p.name.replace(/'/g,"\\'")}')">✕</button></span></div>`;
+}
+async function createProject() {
+  const g = id => ($(id) || {}).value;
+  if (!g('pName').trim()) return;
+  const r = await api('/' + BOOK + '/projects', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name: g('pName'), start: g('pStart'), end: g('pEnd'), budget: g('pBudget')}) });
+  STATE.curProject = r.id; await loadReno();
+}
+async function delProject(id, name) {
+  if (!confirm('Delete project "' + name + '"? (Transactions stay, just untagged.)')) return;
+  await api('/' + BOOK + '/projects/' + id, { method: 'DELETE' });
+  STATE.curProject = null; await loadReno();
+}
+function selectProject(id) { STATE.curProject = id; loadProject(); }
+async function loadProject() {
+  STATE.projData = await api('/' + BOOK + '/projects/' + STATE.curProject);
+  renderProject();
+}
+function renderProject() {
+  const d = STATE.projData, p = d.project, s = d.summary;
+  const picker = STATE.projects.length > 1 ? `<div class="hh-months">${STATE.projects.map(x => `<button class="hh-mo ${x.id === STATE.curProject ? 'active' : ''}" onclick="selectProject(${x.id})">${x.name}</button>`).join('')}</div>` : '';
+  $('tab').innerHTML = `
+    ${picker}
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.6rem;">
+      <h2 style="margin:0;">${p.name}</h2>
+      <span class="hh-note" style="margin:0;">${p.start || '—'} to ${p.end || 'ongoing'} <button class="btn-secondary" style="padding:0.2rem 0.6rem;margin-left:0.5rem;" onclick="STATE.curProject=null;renderRenoHome()">All projects</button></span>
+    </div>
+    <div class="hh-reno-head">
+      <div class="hh-tile"><div class="k">Spent so far</div><div class="v">${fmt(s.spend)}</div><div class="sub">${s.count} charges tagged</div></div>
+      <div class="hh-tile"><div class="k">Budget</div><div class="v">${p.budget ? fmt(p.budget) : '—'}</div><div class="sub">${s.over_under != null ? (s.over_under > 0 ? fmt(s.over_under) + ' over' : fmt(-s.over_under) + ' under') : 'set a budget'}</div></div>
+      <div class="hh-tile"><div class="k">True cost so far</div><div class="v" style="color:var(--coral-ink)">${fmt(s.true_cost)}</div><div class="sub">purchases + ${fmt(s.interest_paid)} interest</div></div>
+      <div class="hh-tile"><div class="k">HELOC balance</div><div class="v">${s.heloc_balance ? fmt(s.heloc_balance) : '—'}</div><div class="sub">${s.monthly_carry ? fmt(s.monthly_carry) + '/mo to carry' : 'set HELOC in This Month'}</div></div>
+    </div>
+    <div class="hh-grid2" style="margin-top:1rem;">
+      <div class="hh-card"><h2>Where the renovation money went</h2>${s.vendors.length ? `<div class="hh-bars" id="renoVendors"></div>` : '<div class="hh-empty">Tag some charges below to see the breakdown.</div>'}</div>
+      <div class="hh-card"><h2>What it costs to carry</h2>${payoffPanel(s)}</div>
+    </div>
+    ${d.suggestions.length ? suggestCard(d.suggestions) : ''}
+    <div class="hh-card"><h2>Tagged to this renovation <span class="hh-pill">${d.tagged.length}</span></h2>${d.tagged.length ? tagTable(d.tagged, true) : '<div class="hh-empty">Nothing tagged yet.</div>'}</div>`;
+  if (s.vendors.length) renderRenoVendors(s.vendors);
+  wirePayoff(s);
+}
+function renderRenoVendors(vendors) {
+  const max = vendors[0].amount;
+  $('renoVendors').innerHTML = vendors.slice(0, 12).map(v => `<div class="hh-bar"><div class="row"><span class="nm">${v.name}</span><span class="amt">${fmt(v.amount)}</span></div><div class="track"><div class="fill" style="width:${Math.max(3, v.amount / max * 100)}%;background:var(--indy)"></div></div></div>`).join('');
+}
+function payoffPanel(s) {
+  if (!s.heloc_balance || !s.heloc_apr || !s.heloc_payment)
+    return '<div class="hh-note">Set the HELOC balance, rate and monthly payment on the This Month tab to see how fast this renovation debt clears and what extra payments would save.</div>';
+  return `<div class="hh-note" style="margin-top:0">At ${fmt(s.heloc_payment)}/mo it clears in about <strong>${s.payoff_months || '—'}</strong> months, costing <strong>${fmt(s.payoff_interest || 0)}</strong> in interest.</div>
+    <div style="margin-top:0.8rem;"><label class="hh-note" style="margin:0;font-weight:600;color:var(--ink-2)">Pay extra per month: <span id="poX">$0</span></label>
+    <input class="hh-slider" id="poSlider" type="range" min="0" max="1000" step="25" value="0"></div>
+    <div class="hh-payoff" id="poRes"></div>`;
+}
+function poCalc(balance, apr, payment) {
+  balance = +balance; apr = +apr; payment = +payment;
+  if (balance <= 0 || payment <= 0) return [null, null];
+  const i = apr / 100 / 12;
+  if (i <= 0) { const n = Math.ceil(balance / payment); return [n, 0]; }
+  if (payment <= balance * i) return [null, null];
+  const n = Math.ceil(-Math.log(1 - balance * i / payment) / Math.log(1 + i));
+  return [n, Math.max(0, payment * n - balance)];
+}
+function wirePayoff(s) {
+  const sl = $('poSlider'); if (!sl) return;
+  const [baseN, baseI] = poCalc(s.heloc_balance, s.heloc_apr, s.heloc_payment);
+  const upd = () => {
+    const x = +sl.value; $('poX').textContent = fmt(x);
+    const [n, intr] = poCalc(s.heloc_balance, s.heloc_apr, s.heloc_payment + x);
+    if (!n || !baseN) { $('poRes').innerHTML = '<div class="res">—</div>'; return; }
+    const sooner = baseN - n, saved = (baseI || 0) - (intr || 0);
+    $('poRes').innerHTML = x === 0
+      ? `<div class="res">Debt-free in about ${n} months.</div>`
+      : `<div class="res" style="color:var(--mint-ink)">Debt-free ${sooner} months sooner — saving ${fmt(saved)} in interest.</div><div class="hh-note" style="margin-top:0.2rem">(${n} months instead of ${baseN})</div>`;
+  };
+  sl.addEventListener('input', upd); upd();
+}
+function suggestCard(sug) {
+  return `<div class="hh-card" style="border-color:var(--gold);"><h2>Looks like renovation spending <span class="hh-pill">${sug.length}</span></h2>
+    <p class="hint">These vendors within the project dates aren't tagged yet. Tag the ones that belong to this renovation.</p>
+    <div style="margin-bottom:0.6rem;"><button class="btn-secondary" onclick="tagAll(true)">Tag all</button></div>
+    ${tagTable(sug, false)}</div>`;
+}
+function tagTable(rows, tagged) {
+  return `<table class="hh-tx"><tbody>` + rows.map(t => `<tr>
+    <td>${(t.date||'').slice(5)}</td><td>${t.desc}</td><td style="color:var(--ink-3)">${t.account}</td>
+    <td class="amt out">${fmt(t.amount)}</td>
+    <td><button class="btn-secondary" style="padding:0.25rem 0.7rem;" onclick="tagOne(${t.id}, ${tagged ? 'false' : 'true'})">${tagged ? 'Remove' : 'Tag'}</button></td>
+  </tr>`).join('') + `</tbody></table>`;
+}
+async function tagOne(id, tag) {
+  await api('/' + BOOK + '/projects/' + STATE.curProject + '/tag', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({txn_ids: [id], tag}) });
+  await loadProject();
+}
+async function tagAll(tag) {
+  const ids = (STATE.projData.suggestions || []).map(t => t.id);
+  if (!ids.length) return;
+  await api('/' + BOOK + '/projects/' + STATE.curProject + '/tag', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({txn_ids: ids, tag}) });
+  await loadProject();
 }
 
-// ── import ────────────────────────────────────────────────────────
-let PENDING = null;   // {csv, headers, sample, mapping, row_count}
-
+// ══ IMPORT (shared) ═══════════════════════════════════════════════
+let PENDING = null;
+function emptyImportPrompt() {
+  return `<div class="hh-card"><h2>Let's get her money in here</h2><p class="hint">Add each account, then drop its CSV export. Start with the checking account where the paycheck lands and bills pay.</p>${importSection()}</div>`;
+}
 function importSection() {
   return `<div class="hh-card"><h2>Accounts &amp; import</h2>
     <p class="hint">Add an account, then drop its CSV. The first time, confirm which columns are which — after that it's remembered.</p>
     <div id="accts"></div>
     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin:0.7rem 0;">
-      <input id="acName" class="hh-sel" placeholder="Golden 1 Checking" style="flex:1;min-width:150px;">
-      <select id="acKind" class="hh-sel">
+      <input id="acName" class="hh-in" placeholder="Golden 1 Checking" style="flex:1;min-width:150px;">
+      <select id="acKind" class="hh-sel" style="width:auto;">
         <option value="checking">Checking</option><option value="savings">Savings</option>
         <option value="credit_card">Credit card</option><option value="mortgage">Mortgage</option>
         <option value="heloc">HELOC</option><option value="loan">Loan</option>
       </select>
       <button class="btn-secondary" onclick="addAccount()">+ Add account</button>
     </div>
-    <div class="hh-drop" id="drop">📄 Drop a CSV here, or click to choose a file
-      <input type="file" id="file" accept=".csv,text/csv" style="display:none">
-    </div>
-    <div id="mapArea"></div>
-    <div id="impMsg" class="hh-msg"></div>
+    <div class="hh-drop" id="drop">Drop a CSV here, or click to choose a file<input type="file" id="file" accept=".csv,text/csv" style="display:none"></div>
+    <div id="mapArea"></div><div id="impMsg" class="hh-msg"></div>
     <div class="hh-note">Nothing is uploaded except the sorted rows — account numbers, card numbers and reference IDs are stripped first. Raw files are never saved.</div>
   </div>`;
 }
-
 function renderAccounts() {
   const el = $('accts'); if (!el) return;
-  el.innerHTML = STATE.accounts.length ? STATE.accounts.map(a =>
-    `<div class="hh-acct"><span><strong>${a.name}</strong> <span class="hh-pill">${a.kind.replace('_',' ')}</span></span>
-     <span style="color:var(--ink-3)">${a.txns} rows <button class="btn-secondary" style="padding:0.2rem 0.6rem;margin-left:0.4rem;" onclick="delAccount(${a.id},'${a.name.replace(/'/g,"\\'")}')">✕</button></span></div>`).join('')
-    : `<div class="hh-note">No accounts yet — add one above.</div>`;
+  el.innerHTML = STATE.accounts.length ? STATE.accounts.map(a => `<div class="hh-acct"><span><strong>${a.name}</strong> <span class="hh-pill">${a.kind.replace('_',' ')}</span>${a.balance != null ? ` <span class="hh-note" style="margin:0">bal ${fmt(a.balance)}</span>` : ''}</span><span style="color:var(--ink-3)">${a.txns} rows <button class="btn-secondary" style="padding:0.2rem 0.6rem;margin-left:0.4rem;" onclick="delAccount(${a.id},'${a.name.replace(/'/g,"\\'")}')">✕</button></span></div>`).join('') : `<div class="hh-note">No accounts yet — add one above.</div>`;
 }
 async function addAccount() {
-  const name = ($('acName')||{}).value.trim(); const kind = ($('acKind')||{}).value;
-  if (!name) return;
+  const name = ($('acName')||{}).value.trim(), kind = ($('acKind')||{}).value; if (!name) return;
   await api('/' + BOOK + '/accounts', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, kind}) });
   const st = await api('/' + BOOK); STATE.accounts = st.accounts; renderAccounts();
 }
@@ -348,99 +506,73 @@ async function delAccount(id, name) {
   await api('/' + BOOK + '/accounts/' + id, { method: 'DELETE' });
   STATE.selBucket = null; await boot();
 }
-
-(function wireDrop() {
-  document.addEventListener('click', e => { if (e.target && e.target.id === 'drop') $('file').click(); });
-  document.addEventListener('change', e => { if (e.target && e.target.id === 'file' && e.target.files[0]) readFile(e.target.files[0]); });
-  document.addEventListener('dragover', e => { if (e.target && e.target.id === 'drop') { e.preventDefault(); e.target.classList.add('over'); } });
-  document.addEventListener('dragleave', e => { if (e.target && e.target.id === 'drop') e.target.classList.remove('over'); });
-  document.addEventListener('drop', e => { if (e.target && e.target.id === 'drop') { e.preventDefault(); e.target.classList.remove('over'); if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); } });
-})();
-
+document.addEventListener('click', e => { if (e.target && e.target.id === 'drop') $('file').click(); });
+document.addEventListener('change', e => { if (e.target && e.target.id === 'file' && e.target.files[0]) readFile(e.target.files[0]); });
+document.addEventListener('dragover', e => { if (e.target && e.target.id === 'drop') { e.preventDefault(); e.target.classList.add('over'); } });
+document.addEventListener('dragleave', e => { if (e.target && e.target.id === 'drop') e.target.classList.remove('over'); });
+document.addEventListener('drop', e => { if (e.target && e.target.id === 'drop') { e.preventDefault(); e.target.classList.remove('over'); if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); } });
+function wireDrop() {}
 function readFile(f) {
   const r = new FileReader();
   r.onload = async () => {
-    const csv = r.result;
-    try {
-      const p = await api('/' + BOOK + '/preview', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({csv}) });
-      PENDING = { csv, ...p };
-      renderMapping();
+    try { const p = await api('/' + BOOK + '/preview', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({csv: r.result}) });
+      PENDING = { csv: r.result, ...p }; renderMapping();
     } catch (e) { $('impMsg').className = 'hh-msg err'; $('impMsg').textContent = 'Could not read that CSV.'; }
   };
   r.readAsText(f);
 }
-
 function renderMapping() {
   const p = PENDING, m = p.mapping;
-  const hdrOpts = (sel) => p.headers.map((h, i) => `<option value="${i}" ${i === sel ? 'selected' : ''}>${h || ('col ' + (i+1))}</option>`).join('');
+  const hdrOpts = sel => p.headers.map((h, i) => `<option value="${i}" ${i === sel ? 'selected' : ''}>${h || ('col ' + (i+1))}</option>`).join('');
   const acctOpts = STATE.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
-  $('mapArea').innerHTML = `
-    <div class="hh-card" style="background:var(--surface-2);margin-top:0.8rem;">
-      <h2 style="font-size:0.95rem;">Confirm the columns · ${p.row_count} rows</h2>
-      <div class="hh-map">
-        <label>Import into</label><select class="hh-sel" id="mAcct">${acctOpts || '<option value="">— add an account first —</option>'}</select>
-        <label>Date column</label><select class="hh-sel" id="mDate">${hdrOpts(m.date)}</select>
-        <label>Description</label><select class="hh-sel" id="mDesc">${hdrOpts(m.desc)}</select>
-        <label>Amount style</label>
-        <select class="hh-sel" id="mMode" onchange="renderMapping2()">
-          <option value="signed" ${m.mode==='signed'?'selected':''}>One amount column</option>
-          <option value="debit_credit" ${m.mode==='debit_credit'?'selected':''}>Separate money-out / money-in columns</option>
-        </select>
-      </div>
-      <div id="mMode2"></div>
-      <div id="mPrev" style="margin-top:0.6rem;"></div>
-      <button class="btn-primary" style="margin-top:0.7rem;" onclick="doImport()">Import ${p.row_count} rows</button>
-    </div>`;
+  $('mapArea').innerHTML = `<div class="hh-card" style="background:var(--surface-2);margin-top:0.8rem;">
+    <h2 style="font-size:0.95rem;">Confirm the columns · ${p.row_count} rows</h2>
+    <div class="hh-map">
+      <label>Import into</label><select class="hh-sel" id="mAcct">${acctOpts || '<option value="">— add an account first —</option>'}</select>
+      <label>Date column</label><select class="hh-sel" id="mDate">${hdrOpts(m.date)}</select>
+      <label>Description</label><select class="hh-sel" id="mDesc">${hdrOpts(m.desc)}</select>
+      <label>Amount style</label><select class="hh-sel" id="mMode" onchange="renderMapping2()"><option value="signed" ${m.mode==='signed'?'selected':''}>One amount column</option><option value="debit_credit" ${m.mode==='debit_credit'?'selected':''}>Separate out / in columns</option></select>
+    </div><div id="mMode2"></div><div id="mPrev" style="margin-top:0.6rem;"></div>
+    <button class="btn-primary" style="margin-top:0.7rem;" onclick="doImport()">Import ${p.row_count} rows</button></div>`;
   renderMapping2();
 }
 function renderMapping2() {
-  const p = PENDING, m = p.mapping;
-  const mode = ($('mMode')||{}).value || m.mode;
-  const hdrOpts = (sel) => p.headers.map((h, i) => `<option value="${i}" ${i === sel ? 'selected' : ''}>${h || ('col ' + (i+1))}</option>`).join('');
+  const p = PENDING, m = p.mapping, mode = ($('mMode')||{}).value || m.mode;
+  const hdrOpts = sel => p.headers.map((h, i) => `<option value="${i}" ${i === sel ? 'selected' : ''}>${h || ('col ' + (i+1))}</option>`).join('');
   $('mMode2').innerHTML = mode === 'debit_credit'
-    ? `<div class="hh-map"><label>Money out (debit)</label><select class="hh-sel" id="mDebit">${hdrOpts(m.debit)}</select>
-       <label>Money in (credit)</label><select class="hh-sel" id="mCredit">${hdrOpts(m.credit)}</select></div>`
-    : `<div class="hh-map"><label>Amount column</label><select class="hh-sel" id="mAmount">${hdrOpts(m.amount)}</select>
-       <label>Money out shows as</label><select class="hh-sel" id="mSign"><option value="-1" ${m.sign_out===-1?'selected':''}>negative (−)</option><option value="1" ${m.sign_out===1?'selected':''}>positive (+)</option></select></div>`;
+    ? `<div class="hh-map"><label>Money out (debit)</label><select class="hh-sel" id="mDebit">${hdrOpts(m.debit)}</select><label>Money in (credit)</label><select class="hh-sel" id="mCredit">${hdrOpts(m.credit)}</select></div>`
+    : `<div class="hh-map"><label>Amount column</label><select class="hh-sel" id="mAmount">${hdrOpts(m.amount)}</select><label>Money out shows as</label><select class="hh-sel" id="mSign"><option value="-1" ${m.sign_out===-1?'selected':''}>negative (−)</option><option value="1" ${m.sign_out===1?'selected':''}>positive (+)</option></select></div>`;
   renderPreview();
 }
 function currentMapping() {
-  const mode = $('mMode').value;
-  const g = id => $(id) ? parseInt($(id).value) : null;
-  const m = { date: g('mDate'), desc: g('mDesc'), mode };
+  const mode = $('mMode').value, g = id => $(id) ? parseInt($(id).value) : null;
+  const m = { date: g('mDate'), desc: g('mDesc'), mode, balance: PENDING.mapping.balance, fee: PENDING.mapping.fee };
   if (mode === 'debit_credit') { m.debit = g('mDebit'); m.credit = g('mCredit'); }
   else { m.amount = g('mAmount'); m.sign_out = parseInt($('mSign').value); }
   return m;
 }
 function parseAmt(s) {
-  if (s == null) return null;
-  let t = String(s).trim(); if (!t) return null;
-  const neg = t.startsWith('(') && t.endsWith(')');
-  t = t.replace(/[^0-9.\-]/g, '');
-  if (!t || t === '-' || t === '.') return null;
-  let v = parseFloat(t); if (isNaN(v)) return null;
-  return neg ? -v : v;
+  if (s == null) return null; let t = String(s).trim(); if (!t) return null;
+  const neg = t.startsWith('(') && t.endsWith(')'); t = t.replace(/[^0-9.\-]/g, '');
+  if (!t || t === '-' || t === '.') return null; let v = parseFloat(t); if (isNaN(v)) return null; return neg ? -v : v;
 }
 function renderPreview() {
   const p = PENDING, m = currentMapping();
   const rows = p.sample.slice(0, 4).map(r => {
-    const date = r[m.date] || '', desc = r[m.desc] || '';
-    let amt;
-    if (m.mode === 'debit_credit') { amt = (parseAmt(r[m.credit]) || 0) - (parseAmt(r[m.debit]) || 0); }
+    const date = r[m.date] || '', desc = r[m.desc] || ''; let amt;
+    if (m.mode === 'debit_credit') amt = (parseAmt(r[m.credit]) || 0) - (parseAmt(r[m.debit]) || 0);
     else { const v = parseAmt(r[m.amount]); amt = v == null ? null : (m.sign_out === -1 ? v : -v); }
     const cls = amt == null ? '' : (amt < 0 ? 'out' : 'in');
     return `<tr><td>${date}</td><td>${desc}</td><td class="amt ${cls}">${amt == null ? '—' : fmt(amt)}</td></tr>`;
   }).join('');
-  $('mPrev').innerHTML = `<div style="font-size:0.72rem;color:var(--ink-3);margin-bottom:0.2rem;">Preview — money out should look negative:</div>
-    <table class="hh-tx"><tbody>${rows}</tbody></table>`;
+  $('mPrev').innerHTML = `<div style="font-size:0.72rem;color:var(--ink-3);margin-bottom:0.2rem;">Preview — money out should look negative:</div><table class="hh-tx"><tbody>${rows}</tbody></table>`;
 }
 async function doImport() {
   const account_id = ($('mAcct')||{}).value;
   if (!account_id) { $('impMsg').className='hh-msg err'; $('impMsg').textContent='Add an account first.'; return; }
-  const mapping = currentMapping();
   $('impMsg').className = 'hh-msg'; $('impMsg').textContent = 'Importing…';
   try {
-    const res = await api('/' + BOOK + '/import', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({csv: PENDING.csv, mapping, account_id: parseInt(account_id)}) });
+    const res = await api('/' + BOOK + '/import', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({csv: PENDING.csv, mapping: currentMapping(), account_id: parseInt(account_id)}) });
     $('mapArea').innerHTML = ''; PENDING = null;
     $('impMsg').className = 'hh-msg ok';
     $('impMsg').textContent = `Imported ${res.inserted} new transaction${res.inserted===1?'':'s'}` + (res.skipped ? ` (${res.skipped} already there)` : '') + '.';
