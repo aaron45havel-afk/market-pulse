@@ -983,6 +983,7 @@ def debt_free_plan(debts, extra=0.0, cap_months=1200, boosts=None):
     payoff = all(d["balance"] <= 0.005 for d in ds)
     out_debts = [{"name": d["name"], "apr": round(d["apr"], 2),
                   "interest": round(d["interest"], 2),
+                  "payment": round(d["min"], 2),
                   "cleared_month": d["cleared_month"]}
                  for d in ds]
     return {
@@ -1382,6 +1383,17 @@ def this_month(txns, settings, mode="kill_debt", accounts=None,
         }
         if target_months:
             debt_plan["target"] = debt_free_target(debts, target_months, boosts=boosts)
+        # An installment loan she keeps paying (the car) frees its payment when
+        # it clears. Unlike an external boost this is ALREADY in the plan — the
+        # avalanche redirects it — so it's surfaced for visibility only, never
+        # added to the budget again (that would double-count it).
+        installment_names = {"car loan"}
+        debt_plan["auto_freed"] = [
+            {"name": d["name"], "payment": d.get("payment"),
+             "cleared_month": d["cleared_month"]}
+            for d in debt_plan["minimums"]["debts"]
+            if d["name"] in installment_names and d.get("cleared_month") and d.get("payment")
+        ]
     s = settings or {}
     return {
         "vitals": vs,

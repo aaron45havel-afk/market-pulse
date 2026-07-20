@@ -763,6 +763,25 @@ def test_debt_free_target():
     check(r_boost["extra"] < r["extra"], "a scheduled boost lowers the extra needed")
 
 
+def test_this_month_auto_freed_car():
+    # The car loan (an installment debt she keeps paying) surfaces as an
+    # auto-freed item when it clears — but is NOT added to the budget again.
+    rows = [txn("2026-06-01", 9000, "Income"), txn("2026-06-02", -3000, "Groceries")]
+    s = {"card_balance": 2000, "card_apr": 18.24, "card_payment": 60,
+         "auto_balance": 12000, "auto_apr": 6.94, "auto_payment": 669}
+    tm = H.this_month(rows, s)
+    freed = tm["debt_plan"]["auto_freed"]
+    car = next((f for f in freed if f["name"] == "car loan"), None)
+    check(car is not None, "car loan surfaces as an auto-freed payment")
+    approx(car["payment"], 669, "freed amount = the car payment")
+    check(car["cleared_month"] and car["cleared_month"] > 0, "freed when the loan clears")
+    # the payoff budget is minimums only — the freed car payment is NOT double-added
+    approx(tm["debt_plan"]["minimums"]["monthly_payment"], 60 + 669, "budget = minimums, car not double-counted")
+    # a book with no car loan has no auto-freed entry
+    tm2 = H.this_month(rows, {"card_balance": 2000, "card_apr": 18.24, "card_payment": 60})
+    eq(tm2["debt_plan"]["auto_freed"], [], "no car loan → nothing auto-freed")
+
+
 def test_monthly_checklist():
     # on the "card" step with surplus -> a concrete "pay $X on the card" item
     items = H.monthly_checklist({
