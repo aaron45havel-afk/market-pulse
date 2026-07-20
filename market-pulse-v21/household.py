@@ -66,6 +66,12 @@ BUCKET_CLASS = {
     "Fees & Interest": "debt",
     "Debt Payment": "debt",
     "Credit Card Payment": "transfer",
+    # A loan PRINCIPAL payment is deleveraging, not consumption — the money
+    # moves from checking to shrink a balance she already owes (and the
+    # matching interest is booked separately as Fees & Interest). Excluded
+    # from spend like any transfer so principal isn't double-counted against
+    # the checking-side "to loan" transfer.
+    "Loan Payment": "transfer",
     "Transfer": "transfer",
     "Uncategorized": "review",
 }
@@ -677,12 +683,30 @@ def statement_coverage(txns, accounts):
     return out
 
 
-def income_streams(txns, labels=None):
+def _cola_split(monthly, pct):
+    """Break a monthly amount into last-year's base + this year's COLA raise,
+    given the annual cost-of-living-adjustment percent. The current check is
+    base × (1 + pct/100), so base = monthly / (1 + pct/100) and the COLA
+    portion is the remainder. Returns (base_monthly, cola_monthly)."""
+    pct = float(pct or 0)
+    if pct <= 0 or monthly <= 0:
+        return round(monthly, 2), 0.0
+    base = monthly / (1.0 + pct / 100.0)
+    return round(base, 2), round(monthly - base, 2)
+
+
+def income_streams(txns, labels=None, cola=None):
     """Her income broken into streams — payroll, a nursing pension, a state
     COLA, etc. — grouped by payee, each with its typical monthly amount and
     the months it's appeared. `labels` is a {merchant_key: friendly name} map
-    so cryptic descriptors can read plainly. Returns {streams, total}."""
+    so cryptic descriptors can read plainly. `cola` is a {merchant_key: pct}
+    map of the annual cost-of-living adjustment on a stream (e.g. her CalHR
+    state raise), used to break a paycheck into base pay + this year's COLA.
+    Returns {streams, total}. Each stream also carries `deposits` — the
+    distinct amounts seen (so a lumped payroll can be broken out) — and,
+    when a COLA is set, a `cola` block splitting base pay from the raise."""
     labels = labels or {}
+    cola = cola or {}
     groups: dict[str, list[dict]] = defaultdict(list)
     for t in txns:
         if t["cls"] == "income" and t["amount"] > 0:
@@ -696,13 +720,32 @@ def income_streams(txns, labels=None):
         typical = amts[len(amts) // 2] if amts else 0.0
         if typical <= 0:
             continue
-        streams.append({
+        # Distinct deposit amounts (biggest first) so a stream that lumps a
+        # regular paycheck with a separate line — a COLA retro, a stipend —
+        # can be broken out instead of hidden behind the median.
+        by_amt: dict[float, int] = defaultdict(int)
+        for a in amts:
+            by_amt[round(a, 2)] += 1
+        deposits = [{"amount": a, "count": n}
+                    for a, n in sorted(by_amt.items(), key=lambda p: -p[0])]
+        stream = {
             "key": mkey,
             "name": labels.get(mkey) or ts[-1]["desc"],
             "raw": ts[-1]["desc"],
             "monthly": round(typical, 2),
             "months": len(months),
-        })
+            "deposits": deposits,
+        }
+        pct = cola.get(mkey)
+        if pct:
+            base_m, cola_m = _cola_split(typical, pct)
+            stream["cola"] = {
+                "pct": round(float(pct), 2),
+                "base_monthly": base_m,
+                "cola_monthly": cola_m,
+                "cola_annual": round(cola_m * 12, 2),
+            }
+        streams.append(stream)
     streams.sort(key=lambda s: s["monthly"], reverse=True)
     return {"streams": streams, "total": round(sum(s["monthly"] for s in streams), 2)}
 
@@ -781,6 +824,11 @@ def extract_last_balance(headers, rows, mapping):
 
 # ── Decision system: vital signs, modes, projections ───────────────
 import math as _math
+
+# The market hurdle every guaranteed debt paydown is measured against, and
+# the small buffer that comes before any paydown. Both editable per book.
+DEFAULT_INVEST_RETURN = 7.0
+STARTER_CUSHION = 2000.0
 
 MODES = ("kill_debt", "cushion", "stop_overspend", "grow")
 MODE_LABEL = {
@@ -993,6 +1041,15 @@ def vital_signs(txns, settings, accounts=None):
     cb = float(s.get("card_balance") or 0)
     capr = float(s.get("card_apr") or 0)
     cpay = float(s.get("card_payment") or 0)
+    # Golden 1 loans that pay by transfer: the Used Auto car loan and the
+    # Personal Line of credit. Same shape as HELOC/card so the avalanche and
+    # opportunity-cost engines treat every debt on equal footing.
+    ab = float(s.get("auto_balance") or 0)
+    aapr = float(s.get("auto_apr") or 0)
+    apay = float(s.get("auto_payment") or 0)
+    lb = float(s.get("loc_balance") or 0)
+    lapr = float(s.get("loc_apr") or 0)
+    lpay = float(s.get("loc_payment") or 0)
     goal = float(s.get("cushion_goal") or 4)
 
     months = sorted({t["date"][:7] for t in txns if t.get("date")})[-3:]
@@ -1034,10 +1091,14 @@ def vital_signs(txns, settings, accounts=None):
     }
     # Debt list for the pay-off-debt mode — highest APR first (avalanche).
     debts = []
-    if hb > 0:
-        debts.append({"name": "HELOC", "balance": hb, "apr": hapr, "payment": hpay})
     if cb > 0:
         debts.append({"name": "credit card", "balance": cb, "apr": capr, "payment": cpay})
+    if lb > 0:
+        debts.append({"name": "line of credit", "balance": lb, "apr": lapr, "payment": lpay})
+    if hb > 0:
+        debts.append({"name": "HELOC", "balance": hb, "apr": hapr, "payment": hpay})
+    if ab > 0:
+        debts.append({"name": "car loan", "balance": ab, "apr": aapr, "payment": apay})
     debts.sort(key=lambda d: d["apr"], reverse=True)
     return {
         "lights": lights, "income": round(income, 2), "spend": round(spend, 2),
@@ -1050,6 +1111,8 @@ def vital_signs(txns, settings, accounts=None):
         "savings_extra": savings_extra, "liquid_accounts": liquid_breakdown,
         "heloc_balance": hb, "heloc_apr": hapr, "heloc_payment": hpay,
         "card_balance": cb, "card_apr": capr, "card_payment": cpay,
+        "auto_balance": ab, "auto_apr": aapr, "auto_payment": apay,
+        "loc_balance": lb, "loc_apr": lapr, "loc_payment": lpay,
         "debts": debts, "after_bills": round(income - fixed, 2),
     }
 
@@ -1127,6 +1190,112 @@ def recommendation(vs, mode):
     return {"headline": head, "move": move, "projection": proj}
 
 
+def opportunity_cost(vs, settings=None):
+    """Rank every use of her next free dollar by the return it earns, so she
+    can see whether each dollar is going to its highest and best use.
+
+    The core idea: paying down a debt is a GUARANTEED, tax-free return equal
+    to its APR — a dollar off the 11.29% line of credit is a risk-free 11.29%.
+    Investing is an EXPECTED return (the market, ~7%) but not guaranteed. A
+    starter emergency fund comes first because the alternative to having it is
+    borrowing at her highest rate. So the ranking is: starter cushion (if
+    unfunded) → each debt above the market hurdle, priciest first → invest →
+    any debt cheaper than the market (a low-rate mortgage: keep it, invest
+    instead). Also reports the annual interest each debt bleeds (the size of
+    the prize) and what her monthly surplus is worth at the best use."""
+    s = settings or {}
+    surplus = max(0.0, float(vs.get("avg_net") or 0))
+    invest = float(s.get("invest_return") or DEFAULT_INVEST_RETURN)
+    savings = float(vs.get("savings") or 0)
+
+    # Every debt she carries, including the cheap mortgage (kept as a bill but
+    # shown so "don't prepay it — invest instead" is explicit).
+    debts = [dict(d) for d in (vs.get("debts") or [])]
+    ret = s.get("retirement") or {}
+    mort_bal = float(ret.get("mortgage_balance") or 0)
+    mort_rate = float(ret.get("mortgage_rate") or 0)
+    if mort_bal > 0:
+        debts.append({"name": "mortgage", "balance": mort_bal, "apr": mort_rate,
+                      "payment": float(ret.get("mortgage_payment") or 0)})
+    debts.sort(key=lambda d: float(d.get("apr") or 0), reverse=True)
+
+    # Carry cost: the interest each debt bleeds per year at today's balance —
+    # the opportunity cost of leaving it in place.
+    carry = []
+    for d in debts:
+        bal = float(d.get("balance") or 0)
+        apr = float(d.get("apr") or 0)
+        ann = round(bal * apr / 100.0, 2)
+        carry.append({"name": d["name"], "balance": round(bal, 2),
+                      "apr": round(apr, 2), "annual_interest": ann,
+                      "monthly_interest": round(ann / 12.0, 2),
+                      "above": apr > invest})   # worth attacking vs. keep-and-invest
+    total_annual_interest = round(sum(c["annual_interest"] for c in carry), 2)
+    # The prize a spare dollar can actually claim: interest on the debt priced
+    # ABOVE the market hurdle. The cheap mortgage's interest is excluded — it's
+    # kept on purpose, not waste.
+    attackable_annual_interest = round(
+        sum(c["annual_interest"] for c in carry if c["above"]), 2)
+    highest = carry[0]["apr"] if carry else 0.0
+
+    def benefit(rate):                       # first-year value of the surplus
+        return round(surplus * 12 * rate / 100.0, 2)
+
+    uses = []
+    if savings < STARTER_CUSHION:
+        r = round(highest or invest, 2)
+        uses.append({"name": "Starter emergency fund", "rate": r,
+                     "kind": "protective", "beats_market": r > invest,
+                     "annual_on_surplus": benefit(r),
+                     "note": (f"the first {_money(STARTER_CUSHION)} — a surprise goes here "
+                              f"instead of onto a {r}% borrow")})
+    for c in carry:
+        above = c["apr"] > invest
+        uses.append({"name": f"Pay down the {c['name']}", "rate": c["apr"],
+                     "kind": "guaranteed", "beats_market": above,
+                     "annual_on_surplus": benefit(c["apr"]), "balance": c["balance"],
+                     "note": (f"a risk-free {c['apr']}% — the rate you stop paying"
+                              if above else
+                              f"only {c['apr']}% — cheaper than the market, so keep it and invest instead")})
+    uses.append({"name": "Invest for the long term", "rate": round(invest, 2),
+                 "kind": "expected", "beats_market": False,
+                 "annual_on_surplus": benefit(invest),
+                 "note": f"about {round(invest, 2)}% a year on average — likely, but not guaranteed"})
+
+    # Rank by return; a protective/guaranteed use wins a tie with the market.
+    order = {"protective": 0, "guaranteed": 1, "expected": 2}
+    uses.sort(key=lambda u: (-u["rate"], order.get(u["kind"], 3)))
+    for i, u in enumerate(uses, 1):
+        u["rank"] = i
+    best = uses[0] if uses else None
+
+    # Verdict: the priciest debt above the hurdle is where an extra dollar
+    # should go — and the spread over the cheapest attackable debt is what she
+    # gives up by paying the wrong one first.
+    verdict = None
+    attackable = [c for c in carry if c["apr"] > invest and c["balance"] > 0
+                  and c["name"] != "mortgage"]
+    if attackable:
+        top = attackable[0]
+        verdict = {
+            "target": top["name"], "apr": top["apr"],
+            "monthly_interest": top["monthly_interest"],
+            "beats_invest_by": round(top["apr"] - invest, 2),
+            "spread": (round(top["apr"] - attackable[-1]["apr"], 2)
+                       if len(attackable) > 1 else None),
+        }
+    return {
+        "surplus": round(surplus, 2),
+        "invest_return": round(invest, 2),
+        "uses": uses,
+        "best": best,
+        "carry": carry,
+        "total_annual_interest": total_annual_interest,
+        "attackable_annual_interest": attackable_annual_interest,
+        "verdict": verdict,
+    }
+
+
 def this_month(txns, settings, mode="kill_debt", accounts=None):
     """Bundle the vital signs + the mode's recommendation for the tab."""
     vs = vital_signs(txns, settings, accounts)
@@ -1139,13 +1308,15 @@ def this_month(txns, settings, mode="kill_debt", accounts=None):
             "minimums": debt_free_plan(debts, extra=0),
             "with_surplus": debt_free_plan(debts, extra=surplus),
         }
+    s = settings or {}
     return {
         "vitals": vs,
         "mode": mode if mode in MODES else "kill_debt",
         "modes": [{"key": k, "label": MODE_LABEL[k]} for k in MODES],
         "rec": recommendation(vs, mode),
         "debt_plan": debt_plan,
-        "income_streams": income_streams(txns, (settings or {}).get("income_labels")),
+        "opportunity": opportunity_cost(vs, s),
+        "income_streams": income_streams(txns, s.get("income_labels"), s.get("income_cola")),
     }
 
 
@@ -1582,6 +1753,8 @@ def retirement_plan(settings):
     # Debt service she'd still carry into retirement, from her statements.
     heloc_pay = float(s.get("heloc_payment") or 0)
     card_pay = float(s.get("card_payment") or 0)
+    auto_pay = float(s.get("auto_payment") or 0)
+    loc_pay = float(s.get("loc_payment") or 0)
     debt_bills = [
         {"name": "Mortgage (LoanDepot)", "payment": round(mort_pay, 2), "rate": mort_rate,
          "note": "2.99% — cheap, kept as a bill until it clears"},
@@ -1589,6 +1762,10 @@ def retirement_plan(settings):
          "rate": float(s.get("heloc_apr") or 0), "note": "renovation debt"},
         {"name": "Credit card (Golden 1)", "payment": round(card_pay, 2),
          "rate": float(s.get("card_apr") or 0), "note": "highest rate — clear first"},
+        {"name": "Line of credit (Golden 1)", "payment": round(loc_pay, 2),
+         "rate": float(s.get("loc_apr") or 0), "note": "personal line — high rate"},
+        {"name": "Car loan (Golden 1)", "payment": round(auto_pay, 2),
+         "rate": float(s.get("auto_apr") or 0), "note": "used auto — clears on schedule"},
     ]
     debt_bills = [d for d in debt_bills if d["payment"] > 0]
     debt_total = round(sum(d["payment"] for d in debt_bills), 2)
@@ -1692,13 +1869,17 @@ def net_worth(settings, accounts=None):
     mortgage = float(ret.get("mortgage_balance") or 0)
     heloc = float(s.get("heloc_balance") or 0)
     card = float(s.get("card_balance") or 0)
+    auto = float(s.get("auto_balance") or 0)
+    loc = float(s.get("loc_balance") or 0)
     liabilities = [
         {"name": "Mortgage (LoanDepot)", "value": round(mortgage, 2)},
         {"name": "HELOC (Golden 1)", "value": round(heloc, 2)},
         {"name": "Credit card (Golden 1)", "value": round(card, 2)},
+        {"name": "Line of credit (Golden 1)", "value": round(loc, 2)},
+        {"name": "Car loan (Golden 1)", "value": round(auto, 2)},
     ]
     liabilities = [l for l in liabilities if l["value"] > 0]
-    total_liab = round(mortgage + heloc + card, 2)
+    total_liab = round(mortgage + heloc + card + auto + loc, 2)
 
     invest_total = round(sum(a["value"] for a in manual if a["kind"] == "investment"), 2)
     home_equity = round(home - mortgage - heloc, 2)   # equity left in the house
