@@ -336,8 +336,9 @@ def test_roadmap_current_advances():
 
 # ── retirement ─────────────────────────────────────────────────────
 def test_retirement_plan():
-    settings = {"retirement": H.retirement_seed(),
-                "heloc_payment": 669, "card_payment": 250}
+    ret = H.retirement_seed()
+    ret["ss_claim_age"] = 67           # exact-FRA claim for this case
+    settings = {"retirement": ret, "heloc_payment": 669, "card_payment": 250}
     p = H.retirement_plan(settings)
     check(p["configured"], "seeded plan is configured")
     # need = living + mortgage(2664 PITI) + heloc + card
@@ -348,6 +349,42 @@ def test_retirement_plan():
     eq(p["chosen"]["bridge_years"], 0, "no bridge gap at FRA")
     # unconfigured book
     eq(H.retirement_plan({}).get("configured"), False, "empty settings not configured")
+
+
+def test_retirement_fractional_claim_and_fra():
+    # She claims at 67 yrs 3 mo (67.25), born Oct 1960 → past FRA (67), so she
+    # can work full-time and collect with no earnings-test reduction.
+    p = H.retirement_plan({"retirement": H.retirement_seed()})
+    eq(p["fra"], 67, "FRA is 67 for a 1960 birth year")
+    eq(p["claim_age"], 67.25, "fractional claim age preserved")
+    eq(p["claim_age_label"], "67 yrs 3 mo", "human label for the fractional age")
+    approx(p["ss_monthly"], 3405 + 0.25 * (3505 - 3405), "SS benefit interpolated between 67 and 68")
+    check(p["ss_status"]["while_working_ok"], "claiming at/after FRA while working is allowed")
+    check(not p["ss_status"]["before_fra"], "67.25 is not before FRA")
+    # Oct 1960 + 67y3m lands in Jan 2028
+    eq(p["ss_status"]["claim_year"], 2028, "reaches 67y3m in 2028")
+    # claiming before FRA while working trips the earnings test
+    ret = H.retirement_seed(); ret["ss_claim_age"] = 64
+    p2 = H.retirement_plan({"retirement": ret})
+    check(p2["ss_status"]["before_fra"] and not p2["ss_status"]["while_working_ok"],
+          "claiming at 64 is before FRA — earnings test applies")
+
+
+def test_retirement_cola_projection():
+    p = H.retirement_plan({"retirement": H.retirement_seed()})
+    c = p["cola"]
+    eq(c["rate"], 2.5, "income COLA rate")
+    eq(c["cost_inflation"], 2.5, "cost inflation rate")
+    check(c["keeps_pace"], "income COLA at least matches cost inflation")
+    # pension grows by the COLA across a 5-year horizon
+    r0 = c["rows"][0]
+    r5 = next(r for r in c["rows"] if r["year"] == r0["year"] + 5)
+    approx(r5["pension"], r0["pension"] * (1.025 ** 5), "pension compounds at the COLA")
+    # the first (pre-SS) row is flagged a bridge year; later rows carry SS
+    check(c["rows"][0]["bridge"], "retirement year before SS is a bridge year")
+    check(any(not r["bridge"] and r["ss_monthly"] > 0 for r in c["rows"]), "SS flows in later rows")
+    # she stays covered once SS is on
+    check(c["covered_for_life"], "COLA keeps her covered for life once SS is on")
 
 
 def test_retirement_bridge_gap():
@@ -687,6 +724,43 @@ def test_net_worth_all_debts():
     names = [l["name"] for l in nw["liabilities"]]
     check(any("Car loan" in n for n in names), "car loan is a liability")
     check(any("Line of credit" in n for n in names), "line of credit is a liability")
+
+
+def test_debt_free_boosts():
+    # a scheduled step-up (a 401k loan finishing, freeing $732/mo from month 4)
+    # clears the debt sooner than the flat minimums
+    debts = [{"name": "heloc", "balance": 90000, "apr": 7.12, "payment": 560},
+             {"name": "card", "balance": 3000, "apr": 18.24, "payment": 75}]
+    base = H.debt_free_plan(debts, extra=0)
+    boosted = H.debt_free_plan(debts, extra=0, boosts=[{"from_month": 4, "amount": 732}])
+    check(boosted["months"] < base["months"], "the boost clears the debt sooner")
+    check(boosted["total_interest"] < base["total_interest"], "and costs less interest")
+    eq(boosted["boost_total"], 732, "boost total reported")
+    # a boost that starts far in the future helps less than one starting now
+    late = H.debt_free_plan(debts, extra=0, boosts=[{"from_month": 40, "amount": 732}])
+    check(late["months"] >= boosted["months"], "a later boost clears no sooner than an earlier one")
+
+
+def test_debt_free_target():
+    debts = [{"name": "card", "balance": 3000, "apr": 18.24, "payment": 75},
+             {"name": "heloc", "balance": 90000, "apr": 7.12, "payment": 560}]
+    base = H.debt_free_plan(debts, extra=0)
+    tgt = 60
+    r = H.debt_free_target(debts, tgt)
+    check(r["feasible"], "target reachable with extra")
+    check(not r["already"], "minimums alone don't hit the tight target")
+    check(r["months"] <= tgt, "clears on or before the target month")
+    check(r["extra"] > 0, "requires extra over the minimums")
+    approx(r["monthly_payment"], 75 + 560 + r["extra"], "monthly = minimums + extra")
+    # a loose target the minimums already beat needs no extra
+    r2 = H.debt_free_target(debts, base["months"] + 24)
+    check(r2["already"] and r2["extra"] == 0, "loose target needs no extra")
+    # a tighter target needs at least as much extra
+    r_tight = H.debt_free_target(debts, 40)
+    check(r_tight["extra"] >= r["extra"], "tighter target needs more extra")
+    # a boost reduces the extra she must add herself
+    r_boost = H.debt_free_target(debts, tgt, boosts=[{"from_month": 4, "amount": 500}])
+    check(r_boost["extra"] < r["extra"], "a scheduled boost lowers the extra needed")
 
 
 def test_monthly_checklist():

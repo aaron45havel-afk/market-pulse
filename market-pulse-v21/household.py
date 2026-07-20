@@ -916,12 +916,16 @@ def payoff_months(balance, apr, payment):
     return (n, round(max(0.0, payment * n - balance), 2))
 
 
-def debt_free_plan(debts, extra=0.0, cap_months=1200):
+def debt_free_plan(debts, extra=0.0, cap_months=1200, boosts=None):
     """Simulate the debt AVALANCHE across all her debts: pay every minimum,
     throw any spare dollar at the highest-APR balance, and roll each cleared
     debt's payment onto the next. Returns the order she clears them, when,
     the interest each costs, and the debt-free month/total interest. Returns
-    payoff=False if the payments can't outrun the interest."""
+    payoff=False if the payments can't outrun the interest.
+
+    `boosts` are scheduled step-ups in what she can pay — a list of
+    {from_month, amount} that ADD to the monthly budget starting at that
+    month (1-based). E.g. a 401k loan finishing frees $732/mo from month 4."""
     ds = []
     for d in (debts or []):
         bal = float(d.get("balance") or 0)
@@ -931,9 +935,13 @@ def debt_free_plan(debts, extra=0.0, cap_months=1200):
                    "apr": float(d.get("apr") or 0),
                    "min": float(d.get("payment") or 0),
                    "interest": 0.0, "cleared_month": None})
+    bl = [(int(b["from_month"]), float(b["amount"]))
+          for b in (boosts or []) if float(b.get("amount") or 0) > 0]
+    boost_total = round(sum(a for _, a in bl), 2)
     if not ds:
         return {"payoff": True, "months": 0, "total_interest": 0.0,
-                "debts": [], "monthly_payment": 0.0, "extra": round(float(extra or 0), 2)}
+                "debts": [], "monthly_payment": 0.0, "boost_total": boost_total,
+                "extra": round(float(extra or 0), 2)}
     # highest APR first — the avalanche order
     ds.sort(key=lambda d: d["apr"], reverse=True)
     budget = round(sum(d["min"] for d in ds) + max(0.0, float(extra or 0)), 2)
@@ -948,8 +956,10 @@ def debt_free_plan(debts, extra=0.0, cap_months=1200):
                 d["balance"] += i
                 d["interest"] += i
                 total_interest += i
-        # what she can pay this month, never more than what's owed
-        remaining = min(budget, sum(d["balance"] for d in ds if d["balance"] > 0))
+        # what she can pay this month — the base budget plus any boosts now
+        # active — never more than what's owed
+        month_budget = budget + sum(a for fm, a in bl if month >= fm)
+        remaining = min(month_budget, sum(d["balance"] for d in ds if d["balance"] > 0))
         if remaining <= 0.005:
             break
         # cover each minimum first (capped at the balance)…
@@ -980,8 +990,51 @@ def debt_free_plan(debts, extra=0.0, cap_months=1200):
         "months": month if payoff else None,
         "total_interest": round(total_interest, 2),
         "monthly_payment": budget,
+        "boost_total": boost_total,
         "extra": round(max(0.0, float(extra or 0)), 2),
         "debts": out_debts,
+    }
+
+
+def debt_free_target(debts, target_months, boosts=None, cap_months=1200):
+    """How much MORE per month (on top of the minimums, and any scheduled
+    boosts) clears every debt within `target_months`, via the avalanche.
+    Binary-searches the extra so the payoff lands on or before the target.
+    Returns the required extra, the total monthly payment, and the resulting
+    plan. `already` is True when the minimums (+boosts) alone beat the target;
+    `feasible` is False only for a target below the pay-it-all-now floor."""
+    target_months = max(1, int(target_months))
+    base = debt_free_plan(debts, extra=0.0, boosts=boosts, cap_months=cap_months)
+    if not base["debts"]:                       # nothing owed
+        return {"feasible": True, "already": True, "extra": 0.0,
+                "monthly_payment": base["monthly_payment"], "boost_total": base["boost_total"],
+                "months": 0, "total_interest": 0.0, "target_months": target_months, "plan": base}
+    if base["payoff"] and base["months"] is not None and base["months"] <= target_months:
+        return {"feasible": True, "already": True, "extra": 0.0,
+                "monthly_payment": base["monthly_payment"], "boost_total": base["boost_total"],
+                "months": base["months"], "total_interest": base["total_interest"],
+                "target_months": target_months, "plan": base}
+    total_bal = sum(float(d.get("balance") or 0) for d in debts if float(d.get("balance") or 0) > 0)
+    lo, hi, best = 0.0, max(total_bal, 1.0), None    # hi clears in ~1 month
+    for _ in range(48):
+        mid = (lo + hi) / 2.0
+        p = debt_free_plan(debts, extra=mid, boosts=boosts, cap_months=cap_months)
+        if p["payoff"] and p["months"] is not None and p["months"] <= target_months:
+            best = mid; hi = mid
+        else:
+            lo = mid
+    extra = _math.ceil(best if best is not None else hi)   # round up so it lands on/under
+    p = debt_free_plan(debts, extra=float(extra), boosts=boosts, cap_months=cap_months)
+    return {
+        "feasible": bool(p["payoff"] and p["months"] is not None and p["months"] <= target_months),
+        "already": False,
+        "extra": round(float(extra), 2),
+        "monthly_payment": p["monthly_payment"],
+        "boost_total": p["boost_total"],
+        "months": p["months"],
+        "total_interest": p["total_interest"],
+        "target_months": target_months,
+        "plan": p,
     }
 
 
@@ -1308,8 +1361,14 @@ def opportunity_cost(vs, settings=None):
     }
 
 
-def this_month(txns, settings, mode="kill_debt", accounts=None):
-    """Bundle the vital signs + the mode's recommendation for the tab."""
+def this_month(txns, settings, mode="kill_debt", accounts=None,
+               boosts=None, target_months=None):
+    """Bundle the vital signs + the mode's recommendation for the tab.
+
+    `boosts` are scheduled step-ups in her debt-paydown capacity (e.g. a 401k
+    loan finishing frees $732/mo) as {from_month, amount}; `target_months` is a
+    debt-free deadline (months from now) — when given, the plan reports the
+    extra/mo needed to hit it. Both are numeric (the caller resolves dates)."""
     vs = vital_signs(txns, settings, accounts)
     debts = vs.get("debts") or []
     surplus = max(0.0, vs.get("avg_net") or 0)
@@ -1317,9 +1376,12 @@ def this_month(txns, settings, mode="kill_debt", accounts=None):
     if debts:
         debt_plan = {
             "surplus": round(surplus, 2),
-            "minimums": debt_free_plan(debts, extra=0),
-            "with_surplus": debt_free_plan(debts, extra=surplus),
+            "minimums": debt_free_plan(debts, extra=0, boosts=boosts),
+            "with_surplus": debt_free_plan(debts, extra=surplus, boosts=boosts),
+            "boosts": boosts or [],
         }
+        if target_months:
+            debt_plan["target"] = debt_free_target(debts, target_months, boosts=boosts)
     s = settings or {}
     return {
         "vitals": vs,
@@ -1704,8 +1766,14 @@ def _itertools_product(pools):
 # of the tool already tracks — retirement just reuses them as fixed bills.
 RETIRE_SEED = {
     "birth_year": 1960,
+    "birth_month": 10,          # Oct 11, 1960 — sets when she reaches FRA / claim age
     # realistic monthly living cost in retirement (her "basis for the cal")
     "retire_expenses": 7000,
+    # Cost-of-living: her CalPERS pension + Social Security both carry a COLA,
+    # and living costs inflate too. One rate drives income growth, one drives
+    # costs — both editable.
+    "cola_rate": 2.5,
+    "cost_inflation": 2.5,
     # LoanDepot first mortgage — 2.99%, cheap, so the payoff engine leaves
     # it alone; it's simply a bill until it clears. Payment is the FULL
     # monthly ACH from her statement ($2,664 PITI = ~$1,836 P&I + escrow
@@ -1723,9 +1791,10 @@ RETIRE_SEED = {
         "62": 1890, "63": 2248, "64": 2502, "65": 2808, "66": 3057,
         "67": 3405, "68": 3505, "69": 3815, "70": 4338,
     },
-    # her current picks (full-retirement-age SS is 67 for a 1960 birth year)
+    # her current picks — she claims at 67 yrs 3 mo (past FRA, so she can keep
+    # working full-time and collect with no earnings-test reduction)
     "retire_year": 2027,
-    "ss_claim_age": 67,
+    "ss_claim_age": 67.25,
 }
 
 
@@ -1742,6 +1811,49 @@ def _int_keyed(d):
         except (TypeError, ValueError):
             continue
     return out
+
+
+def _fra_age(birth_year):
+    """Social Security Full Retirement Age. 67 for anyone born 1960 or later
+    (Frances, 1960), 66 for earlier — the age past which you can work
+    full-time and collect Social Security with no earnings-test reduction."""
+    return 67 if int(birth_year or 0) >= 1960 else 66
+
+
+def _ss_benefit(ss_by_age, age):
+    """Monthly Social Security benefit for a (possibly fractional) claim age,
+    linearly interpolated between the whole-age figures — so 67 yrs 3 mo
+    (67.25) reads between the 67 and 68 numbers."""
+    if not ss_by_age:
+        return 0.0
+    ages = sorted(ss_by_age)
+    if age <= ages[0]:
+        return ss_by_age[ages[0]]
+    if age >= ages[-1]:
+        return ss_by_age[ages[-1]]
+    lo = max(a for a in ages if a <= age)
+    hi = min(a for a in ages if a >= age)
+    if hi == lo:
+        return ss_by_age[lo]
+    frac = (age - lo) / (hi - lo)
+    return ss_by_age[lo] + frac * (ss_by_age[hi] - ss_by_age[lo])
+
+
+def _reaches_year(birth_year, birth_month, age):
+    """The calendar year she reaches a given age, using her birth month so a
+    fractional age lands right: 67.25 from Oct 1960 → Jan 2028 (2028)."""
+    months = int(round(float(age) * 12))
+    idx = int(birth_year or 0) * 12 + (int(birth_month or 1) - 1) + months
+    return idx // 12
+
+
+def _age_months_label(age):
+    """'67 yrs 3 mo' from 67.25 — a plain label for a fractional claim age."""
+    whole = int(age)
+    months = int(round((age - whole) * 12))
+    if months == 12:
+        whole, months = whole + 1, 0
+    return f"{whole} yrs" + (f" {months} mo" if months else "")
 
 
 def retirement_plan(settings):
@@ -1783,24 +1895,32 @@ def retirement_plan(settings):
     debt_total = round(sum(d["payment"] for d in debt_bills), 2)
     need = round(expenses + debt_total, 2)
 
-    claim_age = int(ret.get("ss_claim_age") or 67)
-    ss_monthly = ss_by_age.get(claim_age, 0.0)
+    fra = _fra_age(birth)
+    birth_month = int(ret.get("birth_month") or 1)
+    claim_age = float(ret.get("ss_claim_age") or fra)
+    ss_monthly = _ss_benefit(ss_by_age, claim_age)         # interpolated for 67.25
+    claim_year = _reaches_year(birth, birth_month, claim_age) if birth else 0
+
+    cola = ret.get("cola_rate")
+    cola = float(cola) if cola is not None else 2.5        # income COLA, %/yr
+    infl = ret.get("cost_inflation")
+    infl = float(infl) if infl is not None else cola       # cost inflation, %/yr
 
     def age_in(year):
         return (year - birth) if birth else None
 
     def scenario(year):
         pension = pension_by_year.get(year, 0.0)
-        claim_year = (birth + claim_age) if birth else year
+        cy = claim_year if birth else year
         # Before SS starts she lives on pension alone (the "bridge" years).
-        bridge = max(0, claim_year - year)
+        bridge = max(0, cy - year)
         pension_only = round(pension - need, 2)
         with_ss = round(pension + ss_monthly - need, 2)
         return {
             "year": year, "age": age_in(year),
             "pension": round(pension, 2),
             "ss_monthly": round(ss_monthly, 2),
-            "ss_starts_year": claim_year,
+            "ss_starts_year": cy,
             "bridge_years": bridge,
             "income_before_ss": round(pension, 2),
             "income_with_ss": round(pension + ss_monthly, 2),
@@ -1828,14 +1948,47 @@ def retirement_plan(settings):
     wait_gain = delta(chosen_year, chosen_year + 1) if chosen else None
     early_cost = delta(chosen_year - 1, chosen_year) if chosen else None
 
+    # Social Security + working full-time: allowed at/after FRA (no earnings
+    # test), restricted before it. She claims at 67 yrs 3 mo — past FRA (67) —
+    # so she keeps working full-time and collects with no reduction.
+    claim_before_fra = claim_age < fra
+    ss_status = {
+        "claim_age": claim_age,
+        "claim_age_label": _age_months_label(claim_age),
+        "claim_year": claim_year,
+        "fra": fra,
+        "before_fra": claim_before_fra,
+        "while_working_ok": not claim_before_fra,
+        "note": (f"Claiming at {_age_months_label(claim_age)} is past full retirement age "
+                 f"({fra}) — she can keep working full-time and collect Social Security "
+                 f"with no earnings-test reduction."
+                 if not claim_before_fra else
+                 f"Claiming at {_age_months_label(claim_age)} is before full retirement age "
+                 f"({fra}); while she works full-time the earnings test withholds benefits "
+                 f"above the annual limit. Waiting until {fra} removes it."),
+    }
+
+    # COLA projection: pension + Social Security grow each year, living costs
+    # inflate — does she keep pace across retirement?
+    cola_proj = (_retire_cola_projection(chosen, expenses, debt_total, claim_year,
+                                         ss_monthly, cola, infl, birth)
+                 if chosen else None)
+
     return {
         "configured": True,
         "birth_year": birth,
+        "birth_month": birth_month,
         "expenses": round(expenses, 2),
         "debt_bills": debt_bills,
         "debt_total": debt_total,
         "need": need,
         "claim_age": claim_age,
+        "claim_age_label": _age_months_label(claim_age),
+        "fra": fra,
+        "ss_status": ss_status,
+        "cola_rate": cola,
+        "cost_inflation": infl,
+        "cola": cola_proj,
         "ss_monthly": round(ss_monthly, 2),
         "ss_by_age": {str(k): round(v, 2) for k, v in sorted(ss_by_age.items())},
         "claim_ages": sorted(ss_by_age),
@@ -1845,6 +1998,45 @@ def retirement_plan(settings):
         "earliest_covered_year": earliest_ok,
         "wait_one_year_gain": wait_gain,
         "retire_early_cost": early_cost,
+    }
+
+
+def _retire_cola_projection(chosen, expenses, debt_total, claim_year, ss_at_claim,
+                            cola, infl, birth, to_age=90):
+    """Project the chosen retirement forward: pension + Social Security grow at
+    the income COLA, living costs at the inflation rate. Debts are held flat
+    (fixed payments) and drop off once paid, so real coverage improves faster
+    than shown. Returns horizon rows and whether she stays covered for life."""
+    retire_year = chosen["year"]
+    pension0 = chosen["pension"]
+    g = 1 + cola / 100.0
+    gi = 1 + infl / 100.0
+    rows = []
+    for h in (0, 5, 10, 15, 20, 25):
+        y = retire_year + h
+        age = (y - birth) if birth else None
+        if age is not None and age > to_age:
+            break
+        pension = pension0 * (g ** h)
+        ss_on = y >= claim_year
+        ss = ss_at_claim * (g ** max(0, y - claim_year)) if ss_on else 0.0
+        living = expenses * (gi ** h)
+        income = pension + ss
+        costs = living + debt_total
+        rows.append({
+            "year": y, "age": age, "bridge": not ss_on,
+            "pension": round(pension, 2), "ss_monthly": round(ss, 2),
+            "income": round(income, 2), "living": round(living, 2),
+            "debt": round(debt_total, 2), "costs": round(costs, 2),
+            "surplus": round(income - costs, 2), "covered": income - costs >= 0,
+        })
+    # "For life" is judged once Social Security is flowing — the bridge years
+    # before it (when she's typically still working) are handled separately.
+    steady = [r for r in rows if not r["bridge"]]
+    return {
+        "rate": cola, "cost_inflation": infl, "rows": rows,
+        "covered_for_life": all(r["covered"] for r in steady) if steady else False,
+        "keeps_pace": cola >= infl,
     }
 
 

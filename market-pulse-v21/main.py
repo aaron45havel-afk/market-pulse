@@ -963,7 +963,7 @@ async def api_hh_set_settings(code: str, request: Request):
                "card_balance", "card_apr", "card_payment", "reno_budget",
                "auto_balance", "auto_apr", "auto_payment",
                "loc_balance", "loc_apr", "loc_payment", "loc_limit",
-               "invest_return", "home_value"}
+               "invest_return", "debt_free_target_year", "home_value"}
     clean = {}
     for k, v in incoming.items():
         if k not in allowed:
@@ -1213,14 +1213,17 @@ async def api_hh_retirement_save(code: str, request: Request):
         return bad
     body = await request.json()
     incoming = body.get("retirement") if isinstance(body.get("retirement"), dict) else {}
-    num_fields = {"birth_year", "retire_expenses", "mortgage_balance",
-                  "mortgage_payment", "mortgage_rate", "retire_year", "ss_claim_age"}
+    num_fields = {"birth_year", "birth_month", "retire_expenses", "mortgage_balance",
+                  "mortgage_payment", "mortgage_rate", "retire_year", "ss_claim_age",
+                  "cola_rate", "cost_inflation"}
     clean = {}
     for k, v in incoming.items():
         if k in num_fields:
             fv = _coerce_float(v)
             if fv is not None:
-                clean[k] = int(fv) if k in ("birth_year", "retire_year", "ss_claim_age") else fv
+                # ss_claim_age is fractional (67.25 = 67 yrs 3 mo); the rest of
+                # the whole-number fields stay ints.
+                clean[k] = int(fv) if k in ("birth_year", "birth_month", "retire_year") else fv
         elif k in ("pension_by_year", "ss_by_age") and isinstance(v, dict):
             sched = {}
             for yk, yv in v.items():
@@ -1340,6 +1343,36 @@ async def api_hh_income_cola(code: str, request: Request):
     return JSONResponse(await asyncio.to_thread(_do))
 
 
+@app.post("/api/household/books/{code}/debt-boosts")
+async def api_hh_debt_boosts(code: str, request: Request):
+    """Set the scheduled step-ups in her debt-paydown capacity — e.g. a 401k
+    loan finishing that frees $732/mo from Nov. Body: {boosts: [{month, amount,
+    label}]}. Replaces the whole list (send [] to clear)."""
+    from database import household_get_settings, household_set_settings
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    incoming = body.get("boosts") if isinstance(body.get("boosts"), list) else []
+    clean = []
+    for b in incoming[:12]:
+        if not isinstance(b, dict):
+            continue
+        month = str(b.get("month") or "").strip()
+        amt = _coerce_float(b.get("amount"))
+        if not re.match(r"^\d{4}-\d{2}$", month) or amt is None or amt <= 0:
+            continue
+        clean.append({"month": month, "amount": round(amt, 2),
+                      "label": str(b.get("label") or "")[:60]})
+
+    def _do():
+        settings = household_get_settings(code)
+        settings["debt_boosts"] = clean
+        household_set_settings(code, settings)
+        return {"debt_boosts": clean}
+    return JSONResponse(await asyncio.to_thread(_do))
+
+
 @app.get("/api/household/books/{code}/this-month")
 async def api_hh_this_month(code: str, mode: str = "kill_debt"):
     """The decision tab: four vital signs + the chosen mode's one move."""
@@ -1354,7 +1387,53 @@ async def api_hh_this_month(code: str, mode: str = "kill_debt"):
     accounts = await asyncio.to_thread(household_list_accounts, code)
     for r in rows:
         r["cls"] = household.bucket_class(r["bucket"])
-    return JSONResponse(household.this_month(rows, settings, mode, accounts))
+    boosts = _resolve_debt_boosts(settings.get("debt_boosts"))
+    target_months = _debt_target_months(settings.get("debt_free_target_year"))
+    return JSONResponse(household.this_month(rows, settings, mode, accounts,
+                                             boosts=boosts, target_months=target_months))
+
+
+def _month_index(year, month):
+    return int(year) * 12 + int(month)
+
+
+def _resolve_debt_boosts(raw):
+    """Turn stored debt boosts ({month:'YYYY-MM', amount, label}) into the
+    engine's {from_month, amount, label} — from_month = months from now until
+    the boost is active (1-based, clamped so a past boost applies immediately)."""
+    import datetime
+    if not isinstance(raw, list):
+        return []
+    today = datetime.date.today()
+    now = _month_index(today.year, today.month)
+    out = []
+    for b in raw:
+        try:
+            y, m = str(b.get("month")).split("-")[:2]
+            amt = float(b.get("amount") or 0)
+            fm = max(1, _month_index(int(y), int(m)) - now)   # keep int() inside the guard
+        except (TypeError, ValueError, AttributeError):
+            continue
+        if amt <= 0:
+            continue
+        out.append({"from_month": fm, "amount": amt,
+                    "label": str(b.get("label") or "")[:60], "month": b.get("month")})
+    return out
+
+
+def _debt_target_months(year):
+    """Months from now until the END of the target year (the debt-free
+    deadline). None when unset or already past."""
+    import datetime
+    if not year:
+        return None
+    try:
+        year = int(year)
+    except (TypeError, ValueError):
+        return None
+    today = datetime.date.today()
+    months = _month_index(year, 12) - _month_index(today.year, today.month)
+    return months if months >= 1 else None
 
 
 @app.post("/api/household/books/{code}/projects")
