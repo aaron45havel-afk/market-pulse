@@ -295,6 +295,7 @@ async function loadThisMonth() {
     api('/' + BOOK + '/retirement').catch(() => null),
   ]);
   STATE.settings = s.settings || {}; STATE.accounts = s.accounts || STATE.accounts;
+  STATE.tm = tm;
   renderThisMonth(tm, retire);
 }
 function renderThisMonth(tm, retire) {
@@ -388,7 +389,75 @@ function debtPlanCard(dp) {
     <div class="hh-nw-h">Order to attack</div>
     ${order}
     ${dp.surplus <= 0 ? `<div class="hh-note">No monthly surplus yet — even $50 extra on the ${ws.debts[0].name} starts shrinking it faster. Try the "Stop overspending" focus above to free some up.</div>` : ''}
+    ${boostsBlock(dp.boosts)}
+    ${targetBlock(dp.target)}
   </div>`;
+}
+// Scheduled step-ups in what she can pay — a loan finishing frees cash (e.g.
+// the 401k loan freeing $732/mo from Nov). Already folded into the plan above.
+function boostsBlock(boosts) {
+  boosts = boosts || [];
+  const rows = boosts.map((b, i) => `<div class="hh-nw-row">
+    <span class="nm"><strong style="color:var(--mint-ink)">+${fmt(b.amount)}/mo</strong> <span class="hh-note" style="margin:0">from ${b.month ? monthLabel(b.month) : 'soon'}${b.label ? ' · ' + b.label : ''}</span></span>
+    <span class="v"></span>
+    <span class="act"><button class="hh-x" onclick="removeBoost(${i})">remove</button></span></div>`).join('');
+  return `<div class="hh-nw-h" style="margin-top:0.9rem">Money freeing up <span class="hh-note" style="margin:0;font-weight:400;">— added to the payoff automatically</span></div>
+    ${rows || '<div class="hh-note">Nothing scheduled. When a loan finishes and frees a payment, add it so the plan speeds up.</div>'}
+    <button class="hh-x" style="margin-top:0.3rem" onclick="addBoost()">+ add freed-up payment</button>`;
+}
+function targetBlock(t) {
+  const cur = (STATE.settings && STATE.settings.debt_free_target_year) || '';
+  const years = [2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035];
+  let result = '';
+  if (t) {
+    if (t.already) result = `<div class="hh-note" style="color:var(--mint-ink)">Already on track to beat that — the plan above clears it with no extra needed.</div>`;
+    else if (!t.feasible) result = `<div class="hh-note" style="color:var(--coral-ink)">That's sooner than paying everything off at once — pick a later year.</div>`;
+    else {
+      const total = t.monthly_payment + t.boost_total;
+      result = `<div class="hh-reno-head" style="margin-bottom:0.3rem;">
+        <div class="hh-tile"><div class="k">Pay each month</div><div class="v" style="color:var(--indy)">${fmt(total)}</div><div class="sub">debt-free by ${debtFreeDate(t.months)}</div></div>
+        <div class="hh-tile"><div class="k">Extra you add</div><div class="v">${fmt(t.extra)}</div><div class="sub">over minimums${t.boost_total ? ' + the ' + fmt(t.boost_total) + ' freed up' : ''}</div></div>
+        <div class="hh-tile"><div class="k">Interest cost</div><div class="v" style="color:var(--coral-ink)">${fmt(t.total_interest)}</div><div class="sub">over the payoff</div></div>
+      </div>`;
+    }
+  }
+  return `<div class="hh-nw-h" style="margin-top:0.9rem">Hit a target date</div>
+    <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin:0.3rem 0 0.5rem;">
+      <span class="hh-note" style="margin:0">Be debt-free by the end of</span>
+      <select class="hh-sel" style="width:auto" onchange="setDebtTargetYear(this.value)">
+        <option value="">— pick a year —</option>
+        ${years.map(y => `<option value="${y}" ${String(cur) === String(y) ? 'selected' : ''}>${y}</option>`).join('')}
+      </select>
+    </div>
+    ${result}`;
+}
+async function setDebtTargetYear(year) {
+  const settings = { debt_free_target_year: year ? parseInt(year) : 0 };
+  await api('/' + BOOK + '/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({settings}) });
+  loadThisMonth();
+}
+function currentBoosts() {
+  return ((STATE.tm && STATE.tm.debt_plan && STATE.tm.debt_plan.boosts) || [])
+    .map(b => ({ month: b.month, amount: b.amount, label: b.label }));
+}
+async function saveBoosts(list) {
+  await api('/' + BOOK + '/debt-boosts', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({boosts: list}) });
+  loadThisMonth();
+}
+async function addBoost() {
+  const amt = prompt('How much per month frees up? (e.g. 732 when the 401k loan finishes)');
+  if (amt === null || !(parseFloat(amt) > 0)) return;
+  const month = prompt('Starting which month? (YYYY-MM, e.g. 2026-11)');
+  if (month === null || !/^\d{4}-\d{2}$/.test(month.trim())) return;
+  const label = prompt('Label (optional, e.g. "401k loan paid off")') || '';
+  const list = currentBoosts();
+  list.push({ month: month.trim(), amount: parseFloat(amt), label });
+  saveBoosts(list);
+}
+function removeBoost(i) {
+  const list = currentBoosts();
+  list.splice(i, 1);
+  saveBoosts(list);
 }
 function vitalCard(l) {
   const val = l.value == null ? '—' : (l.unit === '$' ? fmt(l.value) : l.unit === '%' ? l.value + '%' : l.value + (l.unit ? ' ' + l.unit : ''));
@@ -1402,7 +1471,7 @@ function renderRetirement(p, rental) {
   $('tab').innerHTML = `
     <div class="hh-card">
       <h2>When can Mom retire?</h2>
-      <p class="hint">Retire in <strong>${ch.year}</strong> (age ${ch.age}), claim Social Security at <strong>${p.claim_age}</strong>. Change either below.</p>
+      <p class="hint">Retire in <strong>${ch.year}</strong> (age ${ch.age}), claim Social Security at <strong>${p.claim_age_label || p.claim_age}</strong>. Change either below.</p>
       <div class="hh-reno-head" style="margin-bottom:0.4rem;">
         <div class="hh-tile"><div class="k">Monthly income</div><div class="v" style="color:var(--primary)">${fmt(ch.income_with_ss)}</div><div class="sub">pension ${fmt(ch.pension)} + SS ${fmt(ch.ss_monthly)}</div></div>
         <div class="hh-tile"><div class="k">Monthly costs</div><div class="v">${fmt(p.need)}</div><div class="sub">living ${fmt(p.expenses)} + debts ${fmt(p.debt_total)}</div></div>
@@ -1410,6 +1479,7 @@ function renderRetirement(p, rental) {
         <div class="hh-tile"><div class="k">Waiting one more year</div><div class="v" style="color:var(--gold-ink)">+${fmt(p.wait_one_year_gain||0)}</div><div class="sub">extra pension/mo, for life</div></div>
       </div>
       ${gap ? `<div class="hh-note" style="color:var(--coral-ink);margin-top:0.2rem"><strong>Bridge gap:</strong> she'd retire in ${ch.year} but Social Security doesn't start until ${ch.ss_starts_year}. For those ${ch.bridge_years} year${ch.bridge_years>1?'s':''} she's on pension alone: ${ch.surplus_before_ss>=0?fmt(ch.surplus_before_ss)+'/mo to spare':fmt(Math.abs(ch.surplus_before_ss))+'/mo short (needs savings to bridge)'}.</div>` : ''}
+      ${p.ss_status ? `<div class="hh-note" style="margin-top:0.2rem;color:${p.ss_status.while_working_ok?'var(--mint-ink)':'var(--gold-ink)'}">${p.ss_status.while_working_ok?'✓ ':'⚠ '}${p.ss_status.note}</div>` : ''}
       <div class="hh-picker">
         <div class="hh-f"><label>Retire in year</label><select class="hh-sel" id="rYear" onchange="saveRetire({retire_year:+this.value})">${p.scenarios.map(sc=>`<option value="${sc.year}" ${sc.year===ch.year?'selected':''}>${sc.year} — age ${sc.age}</option>`).join('')}</select></div>
         <div class="hh-f"><label>Claim Social Security at</label><select class="hh-sel" id="rAge" onchange="saveRetire({ss_claim_age:+this.value})">${retireAgeOptions(p)}</select></div>
@@ -1430,6 +1500,8 @@ function renderRetirement(p, rental) {
       </tbody></table>
       ${p.earliest_covered_year ? `<div class="hh-note">Earliest year she's fully covered once Social Security is on: <strong>${p.earliest_covered_year}</strong>.</div>` : ''}
     </div>
+
+    ${colaCard(p)}
 
     <div class="hh-card">
       <h3 style="margin:0 0 0.5rem">Debts she'd carry into retirement</h3>
@@ -1487,7 +1559,35 @@ async function saveRental() {
 }
 function retireAgeOptions(p) {
   const ages = p.claim_ages || [62,63,64,65,66,67,68,69,70];
-  return ages.map(a=>`<option value="${a}" ${a===p.claim_age?'selected':''}>age ${a} — ${fmt((p.ss_by_age&&p.ss_by_age[a])||0)}/mo</option>`).join('');
+  const ssAt = a => (p.ss_by_age && p.ss_by_age[a]) || 0;
+  const opts = ages.map(a=>`<option value="${a}" ${a===p.claim_age?'selected':''}>age ${a}${a===(p.fra||67)?' (full)':''} — ${fmt(ssAt(a))}/mo</option>`);
+  // 67 yrs 3 mo — her pick; past full retirement age, so allowed while working.
+  const ss6725 = p.claim_age===67.25 ? p.ss_monthly : Math.round(ssAt(67) + 0.25*(ssAt(68)-ssAt(67)));
+  const opt = `<option value="67.25" ${p.claim_age===67.25?'selected':''}>67 yrs 3 mo — ${fmt(ss6725)}/mo</option>`;
+  const i = ages.indexOf(67);
+  if (i>=0) opts.splice(i+1, 0, opt); else opts.push(opt);
+  return opts.join('');
+}
+// Her COLA carried through retirement: pension + Social Security grow each
+// year, living costs inflate — does she keep pace for life?
+function colaCard(p) {
+  const c = p.cola;
+  if (!c || !c.rows || !c.rows.length) return '';
+  const rows = c.rows.map(r => `<tr class="${r.bridge?'':''}">
+    <td><strong>${r.year}</strong></td><td>${r.age}</td>
+    <td class="amt">${fmt(r.income)}${r.bridge?'<div class="hh-note" style="margin:0">pension only — SS not yet</div>':''}</td>
+    <td class="amt">${fmt(r.costs)}</td>
+    <td class="amt" style="color:${r.surplus>=0?'var(--mint-ink)':'var(--coral-ink)'}">${r.surplus>=0?'+':''}${fmt(r.surplus)}</td></tr>`).join('');
+  const verdict = c.covered_for_life
+    ? `<span style="color:var(--mint-ink)">Her ${c.rate}% COLA keeps her covered for life</span> once Social Security is on`
+    : `<span style="color:var(--coral-ink)">Even with the COLA, costs outpace her income over time</span>`;
+  return `<div class="hh-card">
+    <h3 style="margin:0 0 0.5rem">With her COLA, year by year</h3>
+    <p class="hint" style="margin-top:0">Her pension and Social Security grow <strong>${c.rate}%/yr</strong>; living costs rise <strong>${c.cost_inflation}%/yr</strong>. ${verdict}.</p>
+    <table class="hh-tx hh-retire"><thead><tr><th>Year</th><th>Age</th><th style="text-align:right">Income/mo</th><th style="text-align:right">Costs/mo</th><th style="text-align:right">Surplus</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    <div class="hh-note">Debts are held flat here; they actually clear in the 2030s (see "Your path to debt-free"), so her real surplus grows even faster than shown.</div>
+  </div>`;
 }
 function retireEditForm(p) {
   return `<div class="hh-form" style="margin-top:0.8rem;">
@@ -1495,8 +1595,11 @@ function retireEditForm(p) {
     <div class="hh-f"><label>Mortgage payment (P&I)</label><input class="hh-in" id="reMortPay" type="number" step="50" value="${(p.debt_bills.find(d=>d.name.indexOf('Mortgage')>=0)||{}).payment||''}"></div>
     <div class="hh-f"><label>Mortgage balance</label><input class="hh-in" id="reMortBal" type="number" step="1000" value="${p.mortgage_balance||''}"></div>
     <div class="hh-f"><label>Birth year</label><input class="hh-in" id="reBirth" type="number" step="1" value="${p.birth_year||''}"></div>
+    <div class="hh-f"><label>Birth month (1–12)</label><input class="hh-in" id="reBMon" type="number" step="1" min="1" max="12" value="${p.birth_month||''}"><span class="hh-prefill">sets when she reaches full retirement age</span></div>
+    <div class="hh-f"><label>Income COLA (%/yr)</label><input class="hh-in" id="reCola" type="number" step="0.1" value="${p.cola_rate!=null?p.cola_rate:''}" placeholder="2.5 — pension + SS raise"></div>
+    <div class="hh-f"><label>Cost inflation (%/yr)</label><input class="hh-in" id="reInfl" type="number" step="0.1" value="${p.cost_inflation!=null?p.cost_inflation:''}" placeholder="2.5 — living costs"></div>
     </div>
-    <button class="btn-secondary" style="margin-top:0.5rem;" onclick="saveRetire({retire_expenses:mv('reExp'),mortgage_payment:mv('reMortPay'),mortgage_balance:mv('reMortBal'),birth_year:mv('reBirth')})">Save</button>
+    <button class="btn-secondary" style="margin-top:0.5rem;" onclick="saveRetire({retire_expenses:mv('reExp'),mortgage_payment:mv('reMortPay'),mortgage_balance:mv('reMortBal'),birth_year:mv('reBirth'),birth_month:mv('reBMon'),cola_rate:mv('reCola'),cost_inflation:mv('reInfl')})">Save</button>
     <div class="hh-grid2" style="margin-top:1rem;">
       <div>
         <div class="hh-nw-h">CalPERS pension by retirement year</div>
