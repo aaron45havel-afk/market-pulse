@@ -82,6 +82,8 @@ def parse(pdf_bytes: bytes) -> dict:
                 "accounts": [_parse_card(full, "credit_card", name)]}
     accounts = _parse_deposit(doc)
     _enrich_loan_summaries(full, accounts)
+    for a in accounts:               # drop the internal suffix enrichment used
+        a.pop("_suffix", None)
     return {"type": "deposit", "accounts": accounts}
 
 
@@ -104,10 +106,12 @@ def _find_apr(section: str):
     Interest Rate Detail table. Try the inline label first, then fall back to
     the first plausible APR-looking percent (1–40%), which skips the tiny
     daily-periodic rate."""
-    m = re.search(r"Annual Percentage Rate[\s\n]+([\d.]+)\s*%", section)
-    if m and float(m.group(1)) >= 1:
-        return float(m.group(1))
-    for mm in re.finditer(r"([\d]{1,2}\.\d{2,4})\s*%", section):
+    m = re.search(r"Annual Percentage Rate[\s\n]+(\d{1,2}(?:\.\d{1,4})?)\s*%", section)
+    if m:
+        v = float(m.group(1))          # pattern guarantees a real number
+        if v >= 1:
+            return v
+    for mm in re.finditer(r"(\d{1,2}\.\d{2,4})\s*%", section):
         v = float(mm.group(1))
         if 1 <= v <= 40:
             return v
@@ -115,16 +119,21 @@ def _find_apr(section: str):
 
 
 def _enrich_loan_summaries(full: str, accounts: list[dict]) -> None:
-    # Header positions carve the text into per-account sections.
-    hdrs = [m.start() for m in _ACCT_HDR.finditer(full)]
+    # Locate each account's section using the SAME whitespace-tolerant header
+    # regex that created the accounts — matching by suffix so a wrapped/oddly
+    # spaced header ("Used Auto\n(01)") or a generic name ("Auto") still lands
+    # on the right section, instead of a rigid literal find() that could miss
+    # the header entirely or match an earlier occurrence.
+    matches = [(m.group(2), m.start()) for m in _ACCT_HDR.finditer(full)]
+    starts = sorted(pos for _, pos in matches)
     for acct in accounts:
         if acct.get("kind") != "loan":
             continue
-        short = acct["name"].replace("Golden 1 ", "", 1).strip()
-        start = full.find(short + " (")
-        if start < 0:
+        suf = acct.get("_suffix")
+        start = next((pos for sf, pos in matches if sf == suf), None)
+        if start is None:
             continue
-        end = next((pos for pos in hdrs if pos > start), len(full))
+        end = next((pos for pos in starts if pos > start), len(full))
         section = full[start:end]
         for field, pat in _LOAN_LABELS.items():
             m = re.search(pat, section)
@@ -340,8 +349,8 @@ def _parse_deposit(doc) -> list[dict]:
                                                 bucket="Fees & Interest"))
 
     for a in accounts:
-        a.pop("_suffix", None)
         a["transactions"] = _dedupe(a["transactions"])
+        # _suffix is kept for _enrich_loan_summaries (popped by parse()).
     # Drop empty accounts (near-zero savings with no activity) so the
     # import UI isn't cluttered with dormant suffixes. Loan accounts are
     # always kept — their rate/limit/balance seed the debt engine even when

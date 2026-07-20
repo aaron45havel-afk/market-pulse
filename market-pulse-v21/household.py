@@ -1205,7 +1205,10 @@ def opportunity_cost(vs, settings=None):
     the prize) and what her monthly surplus is worth at the best use."""
     s = settings or {}
     surplus = max(0.0, float(vs.get("avg_net") or 0))
-    invest = float(s.get("invest_return") or DEFAULT_INVEST_RETURN)
+    # A legitimate 0% market assumption must survive — only fall back to the
+    # default when the setting is genuinely absent.
+    iv = s.get("invest_return")
+    invest = float(iv) if iv is not None else DEFAULT_INVEST_RETURN
     savings = float(vs.get("savings") or 0)
 
     # Every debt she carries, including the cheap mortgage (kept as a bill but
@@ -1229,7 +1232,11 @@ def opportunity_cost(vs, settings=None):
         carry.append({"name": d["name"], "balance": round(bal, 2),
                       "apr": round(apr, 2), "annual_interest": ann,
                       "monthly_interest": round(ann / 12.0, 2),
-                      "above": apr > invest})   # worth attacking vs. keep-and-invest
+                      # A guaranteed rate that MEETS the market hurdle still wins
+                      # (same return, no risk), so use >= — and it keeps this flag
+                      # consistent with the ranking, which puts guaranteed paydown
+                      # above investing on an equal rate.
+                      "above": apr >= invest})   # worth attacking vs. keep-and-invest
     total_annual_interest = round(sum(c["annual_interest"] for c in carry), 2)
     # The prize a spare dollar can actually claim: interest on the debt priced
     # ABOVE the market hurdle. The cheap mortgage's interest is excluded — it's
@@ -1243,14 +1250,19 @@ def opportunity_cost(vs, settings=None):
 
     uses = []
     if savings < STARTER_CUSHION:
-        r = round(highest or invest, 2)
+        # The cushion is never worth less than the market alternative — so its
+        # rank rate is at least the hurdle. (A cheap-mortgage-only household
+        # would otherwise see its unfunded emergency fund demoted below
+        # investing.) It ties invest and wins the protective tiebreak → ranks
+        # first when unfunded.
+        r = round(max(highest, invest), 2)
         uses.append({"name": "Starter emergency fund", "rate": r,
                      "kind": "protective", "beats_market": r > invest,
                      "annual_on_surplus": benefit(r),
                      "note": (f"the first {_money(STARTER_CUSHION)} — a surprise goes here "
                               f"instead of onto a {r}% borrow")})
     for c in carry:
-        above = c["apr"] > invest
+        above = c["above"]
         uses.append({"name": f"Pay down the {c['name']}", "rate": c["apr"],
                      "kind": "guaranteed", "beats_market": above,
                      "annual_on_surplus": benefit(c["apr"]), "balance": c["balance"],
@@ -1273,7 +1285,7 @@ def opportunity_cost(vs, settings=None):
     # should go — and the spread over the cheapest attackable debt is what she
     # gives up by paying the wrong one first.
     verdict = None
-    attackable = [c for c in carry if c["apr"] > invest and c["balance"] > 0
+    attackable = [c for c in carry if c["above"] and c["balance"] > 0
                   and c["name"] != "mortgage"]
     if attackable:
         top = attackable[0]

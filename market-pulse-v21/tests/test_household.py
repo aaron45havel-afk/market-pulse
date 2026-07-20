@@ -12,6 +12,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import household as H  # noqa: E402
+import golden1_pdf as G  # noqa: E402  (pure helpers; PyMuPDF only loaded in parse())
 
 
 # ── tiny test harness (no pytest dependency) ───────────────────────
@@ -620,6 +621,60 @@ def test_opportunity_cost():
     eq(oc2["uses"][0]["name"], "Starter emergency fund", "unfunded cushion comes first")
     eq(oc2["uses"][0]["kind"], "protective", "cushion is a protective use")
     approx(oc2["uses"][0]["rate"], 18.24, "cushion valued at the top debt's rate")
+
+
+def test_opportunity_cost_cushion_and_edges():
+    # An unfunded starter cushion ranks first even when the only debt is a
+    # cheap mortgage — its rank rate is max(top APR, market), never below it.
+    vs = {"avg_net": 500, "savings": 300, "debts": []}
+    oc = H.opportunity_cost(vs, {"retirement": {"mortgage_balance": 300000, "mortgage_rate": 2.99}})
+    eq(oc["uses"][0]["name"], "Starter emergency fund", "cushion ranks first, not investing")
+    eq(oc["best"]["name"], "Starter emergency fund", "best use = the cushion")
+    # An explicit 0% market assumption is honored, not silently bumped to 7%.
+    oc0 = H.opportunity_cost({"avg_net": 0, "savings": 9999,
+                              "debts": [{"name": "x", "balance": 1000, "apr": 3, "payment": 10}]},
+                             {"invest_return": 0})
+    eq(oc0["invest_return"], 0.0, "explicit 0% invest return preserved")
+    inv = next(u for u in oc0["uses"] if u["name"] == "Invest for the long term")
+    eq(inv["rate"], 0.0, "invest use shows the real 0%")
+    # A debt whose APR exactly meets the hurdle is worth attacking (a guaranteed
+    # rate that ties the market still wins — no risk), consistent with ranking.
+    oc_eq = H.opportunity_cost({"avg_net": 100, "savings": 9999,
+                                "debts": [{"name": "loan", "balance": 5000, "apr": 7, "payment": 100}]},
+                               {"invest_return": 7})
+    loan = next(c for c in oc_eq["carry"] if c["name"] == "loan")
+    check(loan["above"], "APR == hurdle counts as above (worth attacking)")
+    lu = next(u for u in oc_eq["uses"] if "loan" in u["name"])
+    check(lu["beats_market"], "equal-rate debt flagged beats_market")
+    eq(oc_eq["verdict"]["target"], "loan", "equal-rate debt is the attack target")
+    eq(oc_eq["uses"][0]["name"], "Pay down the loan", "guaranteed paydown wins the tie with investing")
+
+
+def test_find_apr_robust():
+    # A malformed inline capture must NOT crash the whole PDF import.
+    eq(G._find_apr("Annual Percentage Rate .%"), None, "dot-only APR returns None, no ValueError")
+    approx(G._find_apr("Annual Percentage Rate  6.94%"), 6.94, "inline APR parsed")
+    # A revolving line lists its APR only in a rate-detail table → fallback.
+    approx(G._find_apr("Interest Rate Detail Annual\nPercentage Rate 11.29%"), 11.29, "table APR via fallback")
+    # The tiny daily-periodic rate is skipped (sub-1%).
+    eq(G._find_apr("Daily Periodic Rate .019014%"), None, "sub-1% periodic rate ignored")
+
+
+def test_enrich_loan_by_suffix():
+    # Header wrapped as 'Used Auto\n(01)' — a literal find(name + ' (') would
+    # miss it; suffix-based matching still enriches the right section.
+    full = ("Used Auto\n(01)\nAnnual Percentage Rate\n6.94%\nEnding Balance\n$20,055.06\n"
+            "Personal Line\n(33)\nMaximum Credit Line\n$10,000.00\nNew Balance\n$3,800.00\n11.29%")
+    accts = [{"name": "Golden 1 Used Auto", "kind": "loan", "summary": {}, "_suffix": "01"},
+             {"name": "Golden 1 Personal Line", "kind": "loan", "summary": {}, "_suffix": "33"}]
+    G._enrich_loan_summaries(full, accts)
+    auto, loc = accts[0]["summary"], accts[1]["summary"]
+    approx(auto["apr"], 6.94, "auto APR lifted despite wrapped header")
+    approx(auto["balance"], 20055.06, "auto balance stays in its own section")
+    check("credit_limit" not in auto, "auto section doesn't bleed the line's credit limit")
+    approx(loc["credit_limit"], 10000, "line credit limit")
+    approx(loc["balance"], 3800, "line balance")
+    approx(loc["apr"], 11.29, "line APR from the rate-detail fallback")
 
 
 def test_net_worth_all_debts():
