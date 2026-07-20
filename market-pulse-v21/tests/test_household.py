@@ -12,6 +12,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import household as H  # noqa: E402
+import golden1_pdf as G  # noqa: E402  (pure helpers; PyMuPDF only loaded in parse())
 
 
 # ── tiny test harness (no pytest dependency) ───────────────────────
@@ -525,6 +526,167 @@ def test_debt_free_plan():
     check(not stuck["payoff"] and stuck["months"] is None, "underwater debt doesn't pay off")
     # no debts -> trivially done
     eq(H.debt_free_plan([])["payoff"], True, "no debts -> paid off")
+
+
+def test_loan_payment_is_transfer():
+    # A loan PRINCIPAL payment is deleveraging, not spending — must be a
+    # transfer so it isn't double-counted against the checking-side "to loan".
+    eq(H.bucket_class("Loan Payment"), "transfer", "loan payment excluded from spend")
+    rows = [txn("2026-06-01", 6000, "Income"),
+            txn("2026-06-05", -669.45, "Loan Payment", desc="car loan payment"),
+            txn("2026-06-05", -121.44, "Fees & Interest", desc="Interest charge")]
+    m = H.monthly_figures(rows)
+    approx(m["spend"], 121.44, "only the interest counts as spend, not the principal")
+
+
+def test_income_streams_cola_breakout():
+    # her real payroll: a small line ($159) and the regular check ($6,908)
+    rows = [
+        txn("2026-06-02", 159.37, "Income", desc="PAYROLL ST OF CA CA PAYROLL"),
+        txn("2026-06-29", 6908.36, "Income", desc="PAYROLL ST OF CA CA PAYROLL"),
+        txn("2026-06-30", 235.0, "Income", desc="PENSION BENEFIT PENBEJUL26"),
+    ]
+    s = H.income_streams(rows)
+    pay = next(x for x in s["streams"] if "PAYROLL" in x["raw"])
+    # both distinct deposit amounts are broken out, biggest first
+    eq([d["amount"] for d in pay["deposits"]], [6908.36, 159.37], "payroll deposits broken out")
+    check("cola" not in pay, "no COLA block until a percent is set")
+    # with a COLA percent, the check splits into base pay + this year's raise
+    key = pay["key"]
+    s2 = H.income_streams(rows, cola={key: 3.0})
+    pay2 = next(x for x in s2["streams"] if x["key"] == key)
+    approx(pay2["cola"]["base_monthly"], 6908.36 / 1.03, "base = check / (1 + COLA)")
+    approx(pay2["cola"]["cola_monthly"], 6908.36 - 6908.36 / 1.03, "COLA portion of the check")
+    approx(pay2["cola"]["cola_annual"], (6908.36 - 6908.36 / 1.03) * 12, "annualized COLA")
+    eq(pay2["cola"]["pct"], 3.0, "COLA percent echoed back")
+
+
+def test_vital_signs_all_debts():
+    rows = [txn("2026-06-01", 9000, "Income"), txn("2026-06-02", -2664, "Mortgage")]
+    s = {"card_balance": 7454, "card_apr": 18.24, "card_payment": 250,
+         "loc_balance": 3800, "loc_apr": 11.29, "loc_payment": 40,
+         "heloc_balance": 117648, "heloc_apr": 7.12, "heloc_payment": 669,
+         "auto_balance": 19492, "auto_apr": 6.94, "auto_payment": 669}
+    vs = H.vital_signs(rows, s)
+    names = [d["name"] for d in vs["debts"]]
+    eq(names, ["credit card", "line of credit", "HELOC", "car loan"],
+       "all four debts present, highest APR first")
+    eq(vs["auto_balance"], 19492, "car loan balance surfaced")
+    eq(vs["loc_apr"], 11.29, "line-of-credit APR surfaced")
+
+
+def test_opportunity_cost():
+    vs = {
+        "avg_net": 1000, "savings": 5000,   # cushion already above the starter
+        "debts": [
+            {"name": "credit card", "balance": 7454, "apr": 18.24, "payment": 250},
+            {"name": "line of credit", "balance": 3800, "apr": 11.29, "payment": 40},
+            {"name": "car loan", "balance": 19492, "apr": 6.94, "payment": 669},
+        ],
+    }
+    settings = {"invest_return": 7.0,
+                "retirement": {"mortgage_balance": 377000, "mortgage_rate": 2.99,
+                               "mortgage_payment": 2664}}
+    oc = H.opportunity_cost(vs, settings)
+    # highest and best use of the next dollar = the priciest debt
+    eq(oc["best"]["name"], "Pay down the credit card", "best use = priciest debt")
+    # ranked strictly by return, with the market hurdle (7%) between the
+    # 11.29% line and the 6.94% car loan; the 2.99% mortgage sits dead last
+    names = [u["name"] for u in oc["uses"]]
+    eq(names, ["Pay down the credit card", "Pay down the line of credit",
+               "Invest for the long term", "Pay down the car loan",
+               "Pay down the mortgage"], "ranked by return; invest beats cheap debt")
+    # carry cost = interest each debt bleeds per year (the size of the prize)
+    cc = {c["name"]: c for c in oc["carry"]}
+    approx(cc["credit card"]["annual_interest"], 7454 * 18.24 / 100, "card annual interest")
+    approx(cc["line of credit"]["monthly_interest"], 3800 * 11.29 / 100 / 12, "loc monthly interest")
+    # a debt below the market hurdle is keep-and-invest, not beats_market
+    car = next(u for u in oc["uses"] if "car loan" in u["name"])
+    check(not car["beats_market"], "car loan (6.94%) is below the 7% hurdle")
+    card = next(u for u in oc["uses"] if u["name"] == "Pay down the credit card")
+    check(card["beats_market"], "card (18.24%) beats the market")
+    # the "worth attacking" prize excludes the cheap mortgage that's kept
+    approx(oc["attackable_annual_interest"],
+           7454 * 18.24 / 100 + 3800 * 11.29 / 100,
+           "attackable interest = card + line, not the mortgage")
+    mort = next(c for c in oc["carry"] if c["name"] == "mortgage")
+    check(not mort["above"], "mortgage is below the hurdle → keep, not attack")
+    # verdict points at the priciest attackable debt and its edge over investing
+    eq(oc["verdict"]["target"], "credit card", "verdict targets the priciest debt")
+    approx(oc["verdict"]["beats_invest_by"], 18.24 - 7.0, "edge over investing")
+    # the surplus, valued at the best use, is a concrete dollar figure
+    approx(oc["best"]["annual_on_surplus"], 1000 * 12 * 18.24 / 100, "surplus at best use")
+    # an unfunded cushion jumps to the front, at the top debt's rate
+    oc2 = H.opportunity_cost({**vs, "savings": 0}, settings)
+    eq(oc2["uses"][0]["name"], "Starter emergency fund", "unfunded cushion comes first")
+    eq(oc2["uses"][0]["kind"], "protective", "cushion is a protective use")
+    approx(oc2["uses"][0]["rate"], 18.24, "cushion valued at the top debt's rate")
+
+
+def test_opportunity_cost_cushion_and_edges():
+    # An unfunded starter cushion ranks first even when the only debt is a
+    # cheap mortgage — its rank rate is max(top APR, market), never below it.
+    vs = {"avg_net": 500, "savings": 300, "debts": []}
+    oc = H.opportunity_cost(vs, {"retirement": {"mortgage_balance": 300000, "mortgage_rate": 2.99}})
+    eq(oc["uses"][0]["name"], "Starter emergency fund", "cushion ranks first, not investing")
+    eq(oc["best"]["name"], "Starter emergency fund", "best use = the cushion")
+    # An explicit 0% market assumption is honored, not silently bumped to 7%.
+    oc0 = H.opportunity_cost({"avg_net": 0, "savings": 9999,
+                              "debts": [{"name": "x", "balance": 1000, "apr": 3, "payment": 10}]},
+                             {"invest_return": 0})
+    eq(oc0["invest_return"], 0.0, "explicit 0% invest return preserved")
+    inv = next(u for u in oc0["uses"] if u["name"] == "Invest for the long term")
+    eq(inv["rate"], 0.0, "invest use shows the real 0%")
+    # A debt whose APR exactly meets the hurdle is worth attacking (a guaranteed
+    # rate that ties the market still wins — no risk), consistent with ranking.
+    oc_eq = H.opportunity_cost({"avg_net": 100, "savings": 9999,
+                                "debts": [{"name": "loan", "balance": 5000, "apr": 7, "payment": 100}]},
+                               {"invest_return": 7})
+    loan = next(c for c in oc_eq["carry"] if c["name"] == "loan")
+    check(loan["above"], "APR == hurdle counts as above (worth attacking)")
+    lu = next(u for u in oc_eq["uses"] if "loan" in u["name"])
+    check(lu["beats_market"], "equal-rate debt flagged beats_market")
+    eq(oc_eq["verdict"]["target"], "loan", "equal-rate debt is the attack target")
+    eq(oc_eq["uses"][0]["name"], "Pay down the loan", "guaranteed paydown wins the tie with investing")
+
+
+def test_find_apr_robust():
+    # A malformed inline capture must NOT crash the whole PDF import.
+    eq(G._find_apr("Annual Percentage Rate .%"), None, "dot-only APR returns None, no ValueError")
+    approx(G._find_apr("Annual Percentage Rate  6.94%"), 6.94, "inline APR parsed")
+    # A revolving line lists its APR only in a rate-detail table → fallback.
+    approx(G._find_apr("Interest Rate Detail Annual\nPercentage Rate 11.29%"), 11.29, "table APR via fallback")
+    # The tiny daily-periodic rate is skipped (sub-1%).
+    eq(G._find_apr("Daily Periodic Rate .019014%"), None, "sub-1% periodic rate ignored")
+
+
+def test_enrich_loan_by_suffix():
+    # Header wrapped as 'Used Auto\n(01)' — a literal find(name + ' (') would
+    # miss it; suffix-based matching still enriches the right section.
+    full = ("Used Auto\n(01)\nAnnual Percentage Rate\n6.94%\nEnding Balance\n$20,055.06\n"
+            "Personal Line\n(33)\nMaximum Credit Line\n$10,000.00\nNew Balance\n$3,800.00\n11.29%")
+    accts = [{"name": "Golden 1 Used Auto", "kind": "loan", "summary": {}, "_suffix": "01"},
+             {"name": "Golden 1 Personal Line", "kind": "loan", "summary": {}, "_suffix": "33"}]
+    G._enrich_loan_summaries(full, accts)
+    auto, loc = accts[0]["summary"], accts[1]["summary"]
+    approx(auto["apr"], 6.94, "auto APR lifted despite wrapped header")
+    approx(auto["balance"], 20055.06, "auto balance stays in its own section")
+    check("credit_limit" not in auto, "auto section doesn't bleed the line's credit limit")
+    approx(loc["credit_limit"], 10000, "line credit limit")
+    approx(loc["balance"], 3800, "line balance")
+    approx(loc["apr"], 11.29, "line APR from the rate-detail fallback")
+
+
+def test_net_worth_all_debts():
+    settings = {"home_value": 950000, "heloc_balance": 117648, "card_balance": 7454,
+                "auto_balance": 19492, "loc_balance": 3800,
+                "retirement": {"mortgage_balance": 377000}}
+    nw = H.net_worth(settings)
+    approx(nw["total_liabilities"], 377000 + 117648 + 7454 + 19492 + 3800,
+           "liabilities include the car loan + line of credit")
+    names = [l["name"] for l in nw["liabilities"]]
+    check(any("Car loan" in n for n in names), "car loan is a liability")
+    check(any("Line of credit" in n for n in names), "line of credit is a liability")
 
 
 def test_monthly_checklist():

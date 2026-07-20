@@ -80,7 +80,69 @@ def parse(pdf_bytes: bytes) -> dict:
         name = "Golden 1 Credit Card" + (f" {last4}" if last4 else "")
         return {"type": "credit_card",
                 "accounts": [_parse_card(full, "credit_card", name)]}
-    return {"type": "deposit", "accounts": _parse_deposit(doc)}
+    accounts = _parse_deposit(doc)
+    _enrich_loan_summaries(full, accounts)
+    for a in accounts:               # drop the internal suffix enrichment used
+        a.pop("_suffix", None)
+    return {"type": "deposit", "accounts": accounts}
+
+
+# The multi-account deposit statement lists each loan's rate, credit limit and
+# minimum payment in a labeled summary box. Lift them (per loan account) so the
+# Used Auto car loan and the Personal Line of credit seed the decision system
+# with no manual entry — the same way the HELOC/card summary is lifted.
+_LOAN_LABELS = {
+    "credit_limit": r"(?:Maximum Credit Line|Credit Limit)[\s\n\$]+([\d,]+\.\d{2})",
+    "min_payment": r"(?:Minimum Payment Due|Total Payment Due)[\s\n\$]+([\d,]+\.\d{2})",
+    # A revolving line (Personal Line) has no running-balance column for the
+    # row parser to lift, so read its New/Ending Balance from the summary box.
+    "balance": r"(?:New Balance|Ending Balance)[\s\n\$]+([\d,]+\.\d{2})",
+}
+
+
+def _find_apr(section: str):
+    """The installment loan prints 'Annual Percentage Rate  6.94%' inline; the
+    revolving line splits the label across lines and lists the rate down in an
+    Interest Rate Detail table. Try the inline label first, then fall back to
+    the first plausible APR-looking percent (1–40%), which skips the tiny
+    daily-periodic rate."""
+    m = re.search(r"Annual Percentage Rate[\s\n]+(\d{1,2}(?:\.\d{1,4})?)\s*%", section)
+    if m:
+        v = float(m.group(1))          # pattern guarantees a real number
+        if v >= 1:
+            return v
+    for mm in re.finditer(r"(\d{1,2}\.\d{2,4})\s*%", section):
+        v = float(mm.group(1))
+        if 1 <= v <= 40:
+            return v
+    return None
+
+
+def _enrich_loan_summaries(full: str, accounts: list[dict]) -> None:
+    # Locate each account's section using the SAME whitespace-tolerant header
+    # regex that created the accounts — matching by suffix so a wrapped/oddly
+    # spaced header ("Used Auto\n(01)") or a generic name ("Auto") still lands
+    # on the right section, instead of a rigid literal find() that could miss
+    # the header entirely or match an earlier occurrence.
+    matches = [(m.group(2), m.start()) for m in _ACCT_HDR.finditer(full)]
+    starts = sorted(pos for _, pos in matches)
+    for acct in accounts:
+        if acct.get("kind") != "loan":
+            continue
+        suf = acct.get("_suffix")
+        start = next((pos for sf, pos in matches if sf == suf), None)
+        if start is None:
+            continue
+        end = next((pos for pos in starts if pos > start), len(full))
+        section = full[start:end]
+        for field, pat in _LOAN_LABELS.items():
+            m = re.search(pat, section)
+            if m and acct["summary"].get(field) is None:
+                acct["summary"][field] = _money(m.group(1))
+        if acct["summary"].get("apr") is None:
+            apr = _find_apr(section)
+            if apr is not None:
+                acct["summary"]["apr"] = apr
 
 
 def _card_last4(full: str):
@@ -165,7 +227,8 @@ def _rows(doc):
 
 _ACCT_HDR = re.compile(
     r"(Free Checking|Student Checking|Checking|Savings|Money Market|"
-    r"Certificate|Club|Signature Loan|Personal Loan|Auto Loan|Loan)\s*\((\d{2})\)")
+    r"Certificate|Club|Signature Loan|Personal Loan|Used Auto|New Auto|Auto Loan|"
+    r"Auto|Personal Line|Line of Credit|Loan)\s*\((\d{2})\)")
 
 
 def _kind_of(name: str) -> str:
@@ -174,7 +237,7 @@ def _kind_of(name: str) -> str:
         return "checking"
     if "savings" in n or "money market" in n or "club" in n or "certificate" in n:
         return "savings"
-    if "loan" in n:
+    if "loan" in n or "auto" in n or "line" in n:   # auto loan, personal line
         return "loan"
     return "checking"
 
@@ -250,9 +313,13 @@ def _parse_deposit(doc) -> list[dict]:
                 assigned[name] = bv; used_x.add(bx)
         # Description = everything from the description column onward that
         # ISN'T a claimed column value (keeps long descriptions + the
-        # "to loan 2" tail that drives transfer detection).
+        # "to loan 2" tail that drives transfer detection). The loan table's
+        # Description column sits further left (right after Post Date) than the
+        # deposit table's, so read from a lower x there or the payment row's
+        # text is lost and the interest never books.
+        desc_min = 95 if style == "loan" else 160
         desc = " ".join(t for x, t in cells
-                        if x >= 160 and not (_AMT.match(t) and x in used_x)).strip()
+                        if x >= desc_min and not (_AMT.match(t) and x in used_x)).strip()
         low_desc = desc.lower()
         is_summary_line = any(k in low_desc for k in _SKIP_DESC)
         if assigned.get("balance") is not None:
@@ -282,11 +349,14 @@ def _parse_deposit(doc) -> list[dict]:
                                                 bucket="Fees & Interest"))
 
     for a in accounts:
-        a.pop("_suffix", None)
         a["transactions"] = _dedupe(a["transactions"])
+        # _suffix is kept for _enrich_loan_summaries (popped by parse()).
     # Drop empty accounts (near-zero savings with no activity) so the
-    # import UI isn't cluttered with dormant suffixes.
-    return [a for a in accounts if a["transactions"] or a["summary"].get("balance")]
+    # import UI isn't cluttered with dormant suffixes. Loan accounts are
+    # always kept — their rate/limit/balance seed the debt engine even when
+    # the period had no activity (enrichment fills the summary afterward).
+    return [a for a in accounts
+            if a["transactions"] or a["summary"].get("balance") or a["kind"] == "loan"]
 
 
 # ── shared ─────────────────────────────────────────────────────────

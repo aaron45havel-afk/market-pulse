@@ -719,14 +719,19 @@ async def api_hh_import_pdf(code: str, request: Request):
                    else household_add_account(code, acct["name"], acct["kind"], None))
             ins = household_insert_txns(code, aid, txns) if txns else 0
             bal = acct["summary"].get("balance")
+            # `fresh` is False when this statement's balance is OLDER than one we
+            # already hold — in that case don't let its balance clobber the
+            # settings mirror the decision engine reads (the account layer
+            # already refuses the stale write).
+            fresh = True
             if bal is not None:
                 # date the balance by the statement's latest activity, so an
                 # older statement can't clobber a newer cash-on-hand figure
                 bal_date = max((t["date"] for t in txns if t.get("date")), default=None)
-                household_set_account_balance(code, aid, bal, bal_date)
+                fresh = household_set_account_balance(code, aid, bal, bal_date)
             if acct["kind"] == "heloc":
                 s = acct["summary"]
-                if s.get("balance") is not None:
+                if fresh and s.get("balance") is not None:
                     settings_update["heloc_balance"] = s["balance"]
                 if s.get("apr") is not None:
                     settings_update["heloc_apr"] = s["apr"]
@@ -736,12 +741,41 @@ async def api_hh_import_pdf(code: str, request: Request):
                     settings_update["heloc_limit"] = s["credit_limit"]
             elif acct["kind"] == "credit_card":
                 s = acct["summary"]
-                if s.get("balance") is not None:
+                if fresh and s.get("balance") is not None:
                     settings_update["card_balance"] = s["balance"]
                 if s.get("apr") is not None:
                     settings_update["card_apr"] = s["apr"]
                 if s.get("min_payment") is not None:
                     settings_update["card_payment"] = s["min_payment"]
+            elif acct["kind"] == "loan":
+                # Used Auto (car loan) → auto_*, Personal Line → loc_*, so the
+                # decision + opportunity-cost engines pick them up with no
+                # manual entry. NOTE: one slot per class, so a household with two
+                # cars (or two lines) would collapse onto one key — fine for the
+                # single-loan case this serves; multiple same-class loans would
+                # need a list here and in the engines.
+                s = acct["summary"]
+                nl = acct["name"].lower()
+                prefix = "auto" if "auto" in nl else ("loc" if "line" in nl else None)
+                if prefix:
+                    if fresh and s.get("balance") is not None:
+                        settings_update[f"{prefix}_balance"] = s["balance"]
+                    if s.get("apr") is not None:
+                        settings_update[f"{prefix}_apr"] = s["apr"]
+                    # Recurring monthly payment: the stated minimum (revolving
+                    # line) or the MEDIAN of the period's loan payments (an
+                    # installment loan lists no minimum). Median, not max, so a
+                    # one-off extra principal payment doesn't inflate the figure
+                    # the payoff projection relies on.
+                    pmts = sorted(abs(t["amount"]) for t in txns
+                                  if t.get("bucket") == "Loan Payment")
+                    pay = s.get("min_payment")
+                    if pay is None and pmts:
+                        pay = pmts[len(pmts) // 2]
+                    if pay is not None:
+                        settings_update[f"{prefix}_payment"] = pay
+                    if prefix == "loc" and s.get("credit_limit") is not None:
+                        settings_update["loc_limit"] = s["credit_limit"]
             results.append({"account": acct["name"], "kind": acct["kind"],
                             "parsed": len(txns), "inserted": ins, "balance": bal})
         if settings_update:
@@ -927,7 +961,9 @@ async def api_hh_set_settings(code: str, request: Request):
     allowed = {"mode", "income", "savings", "savings_extra", "cushion_goal",
                "heloc_balance", "heloc_apr", "heloc_payment", "heloc_limit",
                "card_balance", "card_apr", "card_payment", "reno_budget",
-               "home_value"}
+               "auto_balance", "auto_apr", "auto_payment",
+               "loc_balance", "loc_apr", "loc_payment", "loc_limit",
+               "invest_return", "home_value"}
     clean = {}
     for k, v in incoming.items():
         if k not in allowed:
@@ -1273,6 +1309,34 @@ async def api_hh_income_label(code: str, request: Request):
         settings["income_labels"] = labels
         household_set_settings(code, settings)
         return {"income_labels": labels}
+    return JSONResponse(await asyncio.to_thread(_do))
+
+
+@app.post("/api/household/books/{code}/income-cola")
+async def api_hh_income_cola(code: str, request: Request):
+    """Set (or clear) the annual cost-of-living-adjustment percent on an
+    income stream, so a paycheck can be broken into base pay + this year's
+    COLA raise (e.g. her CalHR state raise). Body: {key, pct}."""
+    from database import household_get_settings, household_set_settings
+    bad = await _require_hh_book(code)
+    if bad:
+        return bad
+    body = await request.json()
+    key = str(body.get("key") or "").strip()
+    if not key:
+        return JSONResponse({"error": "key required"}, status_code=400)
+    pct = _coerce_float(body.get("pct"))
+
+    def _do():
+        settings = household_get_settings(code)
+        cola = settings.get("income_cola") or {}
+        if pct and pct > 0:
+            cola[key] = round(pct, 3)
+        else:
+            cola.pop(key, None)
+        settings["income_cola"] = cola
+        household_set_settings(code, settings)
+        return {"income_cola": cola}
     return JSONResponse(await asyncio.to_thread(_do))
 
 

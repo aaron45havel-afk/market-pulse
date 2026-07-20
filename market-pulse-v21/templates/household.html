@@ -65,6 +65,11 @@
   .hh-bar .fill { height: 100%; border-radius: 4px; }
   .hh-bar:hover .track { outline: 2px solid var(--primary-soft); }
   .hh-bar.sel .track { outline: 2px solid var(--primary); }
+  .hh-secbar summary { list-style: none; display: block; }
+  .hh-secbar summary::-webkit-details-marker { display: none; }
+  .hh-secbar[open] .caret { transform: rotate(180deg); }
+  .hh-secbar .caret { display: inline-block; transition: transform 0.15s; color: var(--ink-3); }
+  .hh-secdetail { padding: 0.1rem 0 0.5rem 0.6rem; border-left: 2px solid var(--line); margin: 0.35rem 0 0.2rem 0.35rem; }
   .hh-legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.6rem; font-size: 0.76rem; color: var(--ink-2); }
 
   /* ── split + trend ── */
@@ -309,9 +314,47 @@ function renderThisMonth(tm, retire) {
       <p class="hint">These stay the same whatever focus you pick — they're the health check.</p>
       <div class="hh-vitals">${['means','fixed','cushion','heloc'].map(k => vitalCard(v.lights[k])).join('')}</div>
     </div>
+    ${opportunityCard(tm.opportunity)}
     ${incomeStreamsCard(tm.income_streams, retire)}
     ${debtPlanCard(tm.debt_plan)}
     ${targetsCard(v)}`;
+}
+// Rank every use of her next free dollar by the return it earns, so she can
+// see whether each dollar is going to its highest and best use.
+function opportunityCard(oc) {
+  if (!oc || !oc.uses || !oc.uses.length) return '';
+  const best = oc.best || {};
+  const maxRate = Math.max(oc.invest_return, ...oc.uses.map(u => u.rate)) || 1;
+  const tag = k => k === 'guaranteed' ? 'guaranteed' : k === 'protective' ? 'protects you' : 'not guaranteed';
+  const rows = oc.uses.map(u => `<div class="hh-bar">
+    <div class="row">
+      <span class="nm">${u.rank}. ${u.name} <span class="m">· ${tag(u.kind)}</span></span>
+      <span class="amt">${u.rate}%${u.annual_on_surplus ? `<span class="m"> · ${fmt(u.annual_on_surplus)}/yr on your surplus</span>` : ''}</span>
+    </div>
+    <div class="track"><div class="fill" style="width:${Math.max(3, u.rate / maxRate * 100)}%;background:${u.kind === 'expected' ? 'var(--gold)' : (u.beats_market ? 'var(--mint)' : 'var(--indy)')}"></div></div>
+    <div class="hh-note" style="margin:0.15rem 0 0.2rem;">${u.note}</div>
+  </div>`).join('');
+  const all = (oc.carry || []).filter(c => c.balance > 0);
+  const attack = all.filter(c => c.above), keep = all.filter(c => !c.above);
+  const carryRow = (c, red) => `<div class="hh-nw-row">
+    <span class="nm"><strong>${c.name}</strong> <span class="hh-note" style="margin:0">${c.apr}% on ${fmt(c.balance)}</span></span>
+    <span class="v" style="color:${red ? 'var(--coral-ink)' : 'var(--ink-3)'}">${fmt(c.annual_interest)} <span class="hh-note" style="margin:0">/yr</span></span>
+    <span class="act"></span></div>`;
+  const v = oc.verdict;
+  return `<div class="hh-card">
+    <h2>Every dollar to its highest &amp; best use</h2>
+    <p class="hint">Paying down a debt is a <strong>guaranteed</strong> return equal to its rate; investing is an <strong>expected</strong> ${oc.invest_return}% but never guaranteed. So rank every use of your next dollar by what it earns — anything above the ${oc.invest_return}% market line beats the market, risk-free.</p>
+    <div class="hh-move" style="margin:0 0 0.8rem;">
+      <div class="hl">Your next dollar's best home</div>
+      <div class="big">${best.name || '—'}</div>
+      <div class="mv">${best.note || ''}</div>
+    </div>
+    <div class="hh-bars">${rows}</div>
+    ${attack.length ? `<div class="hh-nw-h" style="margin-top:0.9rem">What your high-rate debt bleeds a year</div>${attack.map(c => carryRow(c, true)).join('')}
+      <div class="hh-nw-row" style="border-top:2px solid var(--line);border-bottom:none;"><span class="nm"><strong>Worth attacking / year</strong></span><span class="v"><strong style="color:var(--coral-ink)">${fmt(oc.attackable_annual_interest)}</strong></span><span class="act"></span></div>` : ''}
+    ${keep.length ? `<div class="hh-note" style="margin-top:0.6rem;">Kept on purpose: ${keep.map(c => `${c.name} at ${c.apr}% (${fmt(c.annual_interest)}/yr)`).join(', ')} — cheaper than the market, so don't rush ${keep.length > 1 ? 'them' : 'it'}; invest instead.</div>` : ''}
+    ${v ? `<div class="hh-note" style="margin-top:0.6rem;">Bottom line: put every spare dollar on the <strong>${v.target}</strong> first — a guaranteed ${v.apr}%, which beats investing by ${v.beats_invest_by} points${v.spread != null ? `, and ${v.spread} more than clearing the cheapest debt first` : ''}. It's costing ${fmt(v.monthly_interest)}/mo right now.</div>` : ''}
+  </div>`;
 }
 function debtMonths(m) {
   if (m == null) return 'never at this rate';
@@ -353,11 +396,21 @@ function vitalCard(l) {
 }
 function incomeStreamsCard(is, retire) {
   const current = (is && is.streams) || [];
-  const rows = current.length ? current.map(s => `<div class="hh-nw-row">
-    <span class="nm"><strong>${s.name}</strong> <span class="hh-note" style="margin:0">${s.months > 1 ? 'every month' : 'seen once so far'}</span></span>
-    <span class="v">${fmt(s.monthly)} <span class="hh-note" style="margin:0">/mo</span></span>
-    <span class="act"><button class="hh-x" title="give it a friendly name" onclick="renameStream('${s.key}','${(s.name||'').replace(/'/g,"\\'")}')">rename</button></span>
-  </div>`).join('')
+  const streamRow = s => {
+    const esc = (s.name || '').replace(/'/g, "\\'");
+    const main = `<div class="hh-nw-row">
+      <span class="nm"><strong>${s.name}</strong> <span class="hh-note" style="margin:0">${s.months > 1 ? 'every month' : 'seen once so far'}</span></span>
+      <span class="v">${fmt(s.monthly)} <span class="hh-note" style="margin:0">/mo</span></span>
+      <span class="act"><button class="hh-x" title="give it a friendly name" onclick="renameStream('${s.key}','${esc}')">rename</button><button class="hh-x" title="set the annual cost-of-living raise %" onclick="setCola('${s.key}',${s.cola ? s.cola.pct : 0})">COLA</button></span>
+    </div>`;
+    const extra = [];
+    if ((s.deposits || []).length > 1)
+      extra.push(`<div class="hh-note" style="margin:-0.15rem 0 0.35rem 0.2rem;">Made of ${s.deposits.map(d => `${fmt(d.amount)}${d.count > 1 ? ` ×${d.count}` : ''}`).join(' + ')}</div>`);
+    if (s.cola)
+      extra.push(`<div class="hh-note" style="margin:-0.15rem 0 0.35rem 0.2rem;">Base pay ${fmt(s.cola.base_monthly)}/mo + <strong style="color:var(--mint-ink)">${fmt(s.cola.cola_monthly)}/mo COLA</strong> — a ${s.cola.pct}% raise worth ${fmt(s.cola.cola_annual)}/yr</div>`);
+    return main + extra.join('');
+  };
+  const rows = current.length ? current.map(streamRow).join('')
     : `<div class="hh-note">No income deposits recognized yet. If a paycheck landed but isn't here, open the Spending tab, set that deposit's bucket to "Income", and check "all like this".</div>`;
   let future = '';
   if (retire && retire.configured) {
@@ -380,6 +433,13 @@ async function renameStream(key, current) {
   const name = prompt('Name this income stream (e.g. "Nursing pension", "State salary")', current);
   if (name === null) return;
   await api('/' + BOOK + '/income-label', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({key, name}) });
+  loadThisMonth();
+}
+async function setCola(key, current) {
+  const raw = prompt('Annual cost-of-living raise on this stream, in % (e.g. 3 for a 3% COLA). This breaks the paycheck into base pay + this year\'s raise. Leave blank to clear.', current || '');
+  if (raw === null) return;
+  const pct = raw.trim() === '' ? 0 : parseFloat(raw);
+  await api('/' + BOOK + '/income-cola', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({key, pct}) });
   loadThisMonth();
 }
 async function setMode(m) {
@@ -416,6 +476,13 @@ function targetsCard(v) {
       <div class="hh-f"><label>Credit card balance</label><input class="hh-in" id="tCb" type="number" step="100" value="${val('card_balance', cardAuto)}">${cardAuto != null ? '<span class="hh-prefill">read from statement</span>' : ''}</div>
       <div class="hh-f"><label>Card rate (APR %)</label><input class="hh-in" id="tCapr" type="number" step="0.01" value="${val('card_apr', '')}" placeholder="e.g. 18.24"></div>
       <div class="hh-f"><label>Card payment / mo</label><input class="hh-in" id="tCpay" type="number" step="10" value="${val('card_payment', '')}"></div>
+      <div class="hh-f"><label>Line of credit balance</label><input class="hh-in" id="tLb" type="number" step="100" value="${val('loc_balance', '')}"><span class="hh-prefill">Personal Line — read from statement</span></div>
+      <div class="hh-f"><label>Line of credit rate (APR %)</label><input class="hh-in" id="tLapr" type="number" step="0.01" value="${val('loc_apr', '')}" placeholder="e.g. 11.29"></div>
+      <div class="hh-f"><label>Line of credit payment / mo</label><input class="hh-in" id="tLpay" type="number" step="10" value="${val('loc_payment', '')}"></div>
+      <div class="hh-f"><label>Car loan balance</label><input class="hh-in" id="tAb" type="number" step="100" value="${val('auto_balance', '')}"><span class="hh-prefill">Used Auto — read from statement</span></div>
+      <div class="hh-f"><label>Car loan rate (APR %)</label><input class="hh-in" id="tAapr" type="number" step="0.01" value="${val('auto_apr', '')}" placeholder="e.g. 6.94"></div>
+      <div class="hh-f"><label>Car loan payment / mo</label><input class="hh-in" id="tApay" type="number" step="10" value="${val('auto_payment', '')}"></div>
+      <div class="hh-f"><label>Assumed market return (%)</label><input class="hh-in" id="tInv" type="number" step="0.5" value="${val('invest_return', '')}" placeholder="7 — the debt-vs-invest hurdle"></div>
     </div>
     <button class="btn-primary" style="margin-top:0.8rem;" onclick="saveTargets()">Save targets</button>
     <span id="tMsg" class="hh-msg"></span>
@@ -425,7 +492,10 @@ async function saveTargets() {
   const g = id => { const el = $(id); return el && el.value !== '' ? parseFloat(el.value) : null; };
   const settings = { cushion_goal: g('tGoal'), income: g('tInc'),
                      heloc_balance: g('tHb'), heloc_apr: g('tHapr'), heloc_payment: g('tHpay'),
-                     card_balance: g('tCb'), card_apr: g('tCapr'), card_payment: g('tCpay') };
+                     card_balance: g('tCb'), card_apr: g('tCapr'), card_payment: g('tCpay'),
+                     loc_balance: g('tLb'), loc_apr: g('tLapr'), loc_payment: g('tLpay'),
+                     auto_balance: g('tAb'), auto_apr: g('tAapr'), auto_payment: g('tApay'),
+                     invest_return: g('tInv') };
   if ($('tSav')) settings.savings = g('tSav');            // manual (no accounts yet)
   if ($('tSavX')) settings.savings_extra = g('tSavX') || 0;  // cash held elsewhere
   Object.keys(settings).forEach(k => settings[k] == null && delete settings[k]);
@@ -997,7 +1067,24 @@ function renderBills(b) {
       <p class="hint">The recurring costs that go out every month — mortgage, utilities, insurance, phone, subscriptions, loan payments — show up here once a statement or two is imported.</p></div>`;
     return;
   }
-  const secBars = b.sections.map(s => `<div class="hh-bar"><div class="row"><span class="nm">${s.bucket}</span><span class="amt">${fmt(s.amount)}<span class="m">/mo</span></span></div><div class="track"><div class="fill" style="width:${Math.max(3, s.amount / b.total * 100)}%;background:var(--primary)"></div></div></div>`).join('');
+  // Each category expands to the payees that make it up, so "Utilities
+  // $1,014" shows exactly which bills add up to it and how.
+  const secBars = b.sections.map(s => {
+    const items = b.bills.filter(x => x.bucket === s.bucket);
+    const sub = items.map(x => `<div class="hh-nw-row" style="padding:0.28rem 0;">
+      <span class="nm">${x.merchant} <span class="hh-note" style="margin:0">${x.recurring ? 'every month · median of ' + x.months + ' mo' : 'seen once so far'}</span></span>
+      <span class="v">${fmt(x.typical)} <span class="hh-note" style="margin:0">/mo</span></span>
+      <span class="act"></span></div>`).join('');
+    const calc = items.length > 1
+      ? `<div class="hh-note" style="margin:0.25rem 0 0;">${items.length} payees: ${items.map(x => fmt(x.typical)).join(' + ')} = <strong>${fmt(s.amount)}/mo</strong></div>`
+      : `<div class="hh-note" style="margin:0.25rem 0 0;">A single payee — the whole ${fmt(s.amount)}/mo.</div>`;
+    return `<details class="hh-secbar">
+      <summary>
+        <div class="hh-bar"><div class="row"><span class="nm">${s.bucket} <span class="m">· ${items.length} bill${items.length === 1 ? '' : 's'}</span> <span class="caret">▾</span></span><span class="amt">${fmt(s.amount)}<span class="m">/mo</span></span></div><div class="track"><div class="fill" style="width:${Math.max(3, s.amount / b.total * 100)}%;background:var(--primary)"></div></div></div>
+      </summary>
+      <div class="hh-secdetail">${sub}${calc}</div>
+    </details>`;
+  }).join('');
   const rows = b.bills.map(x => `<tr>
     <td><strong>${x.merchant}</strong><div class="hh-note" style="margin:0">${x.bucket}${x.recurring ? ' · every month' : ' · seen once so far'}</div></td>
     <td class="amt">${fmt(x.typical)} <span class="hh-note" style="margin:0">/mo</span></td></tr>`).join('');
@@ -1009,7 +1096,7 @@ function renderBills(b) {
         <div class="hh-tile"><div class="k">Total fixed bills</div><div class="v" style="color:var(--primary)">${fmt(b.total)}</div><div class="sub">/mo committed</div></div>
         <div class="hh-tile"><div class="k">Bills tracked</div><div class="v">${b.count}</div><div class="sub">recurring payees</div></div>
       </div>
-      <div class="hh-nw-h">By category</div>
+      <div class="hh-nw-h">By category <span class="hh-note" style="margin:0;font-weight:400;">— tap one to see the bills behind it</span></div>
       <div class="hh-bars" style="margin:0.4rem 0 1rem;">${secBars}</div>
       <div class="hh-nw-h">Every fixed bill</div>
       <table class="hh-tx"><tbody>${rows}</tbody></table>
