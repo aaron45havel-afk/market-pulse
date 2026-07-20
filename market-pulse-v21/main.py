@@ -1411,11 +1411,11 @@ def _resolve_debt_boosts(raw):
         try:
             y, m = str(b.get("month")).split("-")[:2]
             amt = float(b.get("amount") or 0)
+            fm = max(1, _month_index(int(y), int(m)) - now)   # keep int() inside the guard
         except (TypeError, ValueError, AttributeError):
             continue
         if amt <= 0:
             continue
-        fm = max(1, _month_index(int(y), int(m)) - now)
         out.append({"from_month": fm, "amount": amt,
                     "label": str(b.get("label") or "")[:60], "month": b.get("month")})
     return out
