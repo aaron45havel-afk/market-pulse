@@ -389,20 +389,28 @@ function debtPlanCard(dp) {
     <div class="hh-nw-h">Order to attack</div>
     ${order}
     ${dp.surplus <= 0 ? `<div class="hh-note">No monthly surplus yet — even $50 extra on the ${ws.debts[0].name} starts shrinking it faster. Try the "Stop overspending" focus above to free some up.</div>` : ''}
-    ${boostsBlock(dp.boosts)}
+    ${boostsBlock(dp.boosts, dp.auto_freed)}
     ${targetBlock(dp.target)}
   </div>`;
 }
-// Scheduled step-ups in what she can pay — a loan finishing frees cash (e.g.
-// the 401k loan freeing $732/mo from Nov). Already folded into the plan above.
-function boostsBlock(boosts) {
-  boosts = boosts || [];
+// Money freeing up. Two kinds: EXTERNAL boosts (new capacity — a 401k loan
+// finishing frees $732/mo she wasn't putting toward these debts) that add to
+// the budget; and AUTO-FREED installment payments (the car loan) that the
+// avalanche already redirects when the loan clears — shown for visibility,
+// not added again.
+function boostsBlock(boosts, autoFreed) {
+  boosts = boosts || []; autoFreed = autoFreed || [];
   const rows = boosts.map((b, i) => `<div class="hh-nw-row">
     <span class="nm"><strong style="color:var(--mint-ink)">+${fmt(b.amount)}/mo</strong> <span class="hh-note" style="margin:0">from ${b.month ? monthLabel(b.month) : 'soon'}${b.label ? ' · ' + b.label : ''}</span></span>
     <span class="v"></span>
     <span class="act"><button class="hh-x" onclick="removeBoost(${i})">remove</button></span></div>`).join('');
+  const freedRows = autoFreed.map(f => `<div class="hh-nw-row">
+    <span class="nm"><strong style="color:var(--mint-ink)">+${fmt(f.payment)}/mo</strong> <span class="hh-note" style="margin:0">when the ${f.name} clears${f.cleared_month != null ? ' · ~' + debtFreeDate(f.cleared_month) : ''}</span></span>
+    <span class="v"></span>
+    <span class="act"><span class="hh-note" style="margin:0">already in the plan</span></span></div>`).join('');
   return `<div class="hh-nw-h" style="margin-top:0.9rem">Money freeing up <span class="hh-note" style="margin:0;font-weight:400;">— added to the payoff automatically</span></div>
     ${rows || '<div class="hh-note">Nothing scheduled. When a loan finishes and frees a payment, add it so the plan speeds up.</div>'}
+    ${freedRows ? freedRows + `<div class="hh-note">The car payment isn't new money — when the loan clears, the plan above already rolls that ${fmt(autoFreed[0].payment)}/mo onto the next debt.</div>` : ''}
     <button class="hh-x" style="margin-top:0.3rem" onclick="addBoost()">+ add freed-up payment</button>`;
 }
 function targetBlock(t) {
