@@ -24,14 +24,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Hit the refresh endpoint
+        env:
+          # Must match the ADMIN_TOKEN env var on Railway. Add it under
+          # repo Settings → Secrets and variables → Actions.
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
         run: |
           set -euo pipefail
+          # /api/finance/refresh is admin-gated (it clears the cache and
+          # rebuilds), so the cron authenticates with the admin token via
+          # the X-Admin-Token header — same token the app checks server-side.
+          if [ -z "${ADMIN_TOKEN:-}" ]; then
+            echo "ADMIN_TOKEN secret is not set — add it in repo Settings → Secrets and variables → Actions (value must match Railway's ADMIN_TOKEN)." >&2
+            exit 1
+          fi
           # Production URL — update if Railway domain changes.
           URL="https://market-pulse-production-628a.up.railway.app/api/finance/refresh"
           # 90s timeout — building the screener fetches several SEC
           # ZIPs and joins quarterly facts, can take 30-60s on a cold
           # cache.
-          curl --fail --max-time 90 --retry 3 --retry-delay 10 "$URL" || {
+          curl --fail --max-time 90 --retry 3 --retry-delay 10 \
+            -H "X-Admin-Token: ${ADMIN_TOKEN}" "$URL" || {
             echo "Refresh request failed."
             exit 1
           }
