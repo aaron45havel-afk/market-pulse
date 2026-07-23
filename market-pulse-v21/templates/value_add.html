@@ -191,8 +191,10 @@
 
     {% if loc and bstate_raw|upper in ('AUTO', '') %}
     <div class="va-loc">📍 {{ loc.place }} ({{ loc.zip }}) → priced as <b>{{ loc.label }}</b>{% if loc.metro_matched %} · {{ loc.distance_mi }} mi from the metro anchor{% else %} · no metro within range, statewide costs{% endif %}</div>
+    {% elif not loc and bstate_raw|upper in ('AUTO', '') and bzip.strip() %}
+    <div class="va-budget-flag">Couldn't resolve a ZIP from "{{ bzip }}" — priced at the Bay-Area default. Make sure the address ends with its 5-digit ZIP, or pick a market manually.</div>
     {% elif not loc and bstate_raw|upper in ('AUTO', '') %}
-    <div class="va-budget-flag">Couldn't find a ZIP in the address — priced at the Bay-Area default. Paste an address that ends with the ZIP, or pick a market manually.</div>
+    <div class="va-loc">📍 No address given — priced at the Bay-Area default. Paste the property address (with ZIP) to auto-locate the market.</div>
     {% endif %}
 
     {% if verdict %}

@@ -373,51 +373,69 @@ async def norcal_page(request: Request, assets: float = 200_000,
     })
 
 
+def _qnum(v: str | None, default: float = 0.0) -> float:
+    """Tolerant query-param number: '' / junk → default (an empty optional
+    <input type=number> submits as an empty string, which must never 422)."""
+    try:
+        s = (v or "").strip()
+        return float(s) if s else default
+    except ValueError:
+        return default
+
+
 @app.get("/value-add")
 async def value_add_page(request: Request, region: str = "All CA",
-                         zip: str = "", price: float = 0, units: int = 2,
-                         rehab: float = 0, rent: float = 0, income: float = 0,
-                         bsqft: float = 0, bbeds: int = 3, bbaths: float = 1,
-                         byear: int = 0, bscope: str = "gut", blevel: str = "mid",
-                         bstate: str = "AUTO", bprice: float = 0, bzip: str = "", barv: float = 0,
-                         bgreen: float = 20, bred: float = 8,
-                         bconv: int = 0, bmasonry: int = 0, bfound: int = 0, bwin: int = 0):
+                         zip: str = "", price: str = "", units: str = "2",
+                         rehab: str = "", rent: str = "", income: str = "",
+                         bsqft: str = "", bbeds: str = "3", bbaths: str = "1",
+                         byear: str = "", bscope: str = "gut", blevel: str = "mid",
+                         bstate: str = "AUTO", bprice: str = "", bzip: str = "", barv: str = "",
+                         bgreen: str = "20", bred: str = "8",
+                         bconv: str = "0", bmasonry: str = "0", bfound: str = "0", bwin: str = ""):
     """CA needs-work multifamily finder: hunting-ground ZIP ranking +
     203(k)-first rehab underwriting + a metro-aware SFR full-remodel budget
     builder with a buy / no-buy verdict. Paste the property address and the
-    budgeter resolves the closest metro's costs itself. See value_add.py."""
+    budgeter resolves the closest metro's costs itself. All numeric query
+    params are parsed tolerantly — empty strings fall back to defaults
+    instead of failing validation. See value_add.py."""
     from value_add import (hunting_grounds, rehab_check, remodel_budget,
                            flip_verdict, locate_market,
                            REMODEL_SCOPES, REMODEL_LEVELS, STATE_NAMES)
     from norcal import REGIONS
     if region not in REGIONS:
         region = "All CA"
+    price_n, rehab_n = _qnum(price), _qnum(rehab)
+    rent_n, income_n = _qnum(rent), _qnum(income)
+    bsqft_n, bbeds_n, bbaths_n = _qnum(bsqft), int(_qnum(bbeds, 3)), _qnum(bbaths, 1)
+    byear_n, bwin_n = int(_qnum(byear)), int(_qnum(bwin))
+    bprice_n, barv_n = _qnum(bprice), _qnum(barv)
+    bgreen_n, bred_n = _qnum(bgreen, 20), _qnum(bred, 8)
     res = await asyncio.to_thread(hunting_grounds, region)
     check = None
-    if zip and price > 0:
+    if zip and price_n > 0:
         check = await asyncio.to_thread(
-            rehab_check, zip.strip(), price, int(units), max(0.0, rehab),
-            rent or None, income or None)
+            rehab_check, zip.strip(), price_n, int(_qnum(units, 2)), max(0.0, rehab_n),
+            rent_n or None, income_n or None)
     budget = verdict = bmarket = loc = None
-    if bsqft and bsqft > 0:
+    if bsqft_n > 0:
         if bzip.strip():
             loc = await asyncio.to_thread(locate_market, bzip)
             bmarket = loc["market"] if loc else None
         auto = bstate.strip().upper() in ("", "AUTO")
         effective_state = (loc["code"] if (auto and loc) else ("CA-BAY" if auto else bstate))
         budget = await asyncio.to_thread(
-            remodel_budget, bsqft, bbeds, bbaths, (byear or None), bscope, blevel,
-            state=effective_state, conversion=bool(bconv), masonry=bool(bmasonry),
-            foundation_replace=bool(bfound), windows=(bwin or None))
-        if bprice > 0:
-            arv = barv if barv > 0 else (bmarket or {}).get("median_home_value")
-            verdict = flip_verdict(bprice, budget["total"], arv, bgreen, bred)
+            remodel_budget, bsqft_n, bbeds_n, bbaths_n, (byear_n or None), bscope, blevel,
+            state=effective_state, conversion=bool(_qnum(bconv)), masonry=bool(_qnum(bmasonry)),
+            foundation_replace=bool(_qnum(bfound)), windows=(bwin_n or None))
+        if bprice_n > 0:
+            arv = barv_n if barv_n > 0 else (bmarket or {}).get("median_home_value")
+            verdict = flip_verdict(bprice_n, budget["total"], arv, bgreen_n, bred_n)
     return templates.TemplateResponse("value_add.html", {
         "request": request, "res": res, "check": check, "budget": budget,
         "verdict": verdict, "bmarket": bmarket, "loc": loc,
         "bstate_raw": bstate,
-        "bprice": bprice, "bzip": bzip, "barv": barv, "bgreen": bgreen, "bred": bred,
-        "regions": REGIONS, "rehab": rehab,
+        "bprice": bprice_n, "bzip": bzip, "barv": barv_n, "bgreen": bgreen_n, "bred": bred_n,
+        "regions": REGIONS, "rehab": rehab_n,
         "scopes": REMODEL_SCOPES, "levels": REMODEL_LEVELS, "state_names": STATE_NAMES,
     })
 
