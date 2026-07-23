@@ -1,5 +1,5 @@
 """Market Pulse — Real Estate & Finance Dashboard."""
-import asyncio, hmac, json, os, logging, sqlite3
+import asyncio, hmac, json, math, os, logging, sqlite3
 from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
@@ -375,12 +375,39 @@ async def norcal_page(request: Request, assets: float = 200_000,
 
 def _qnum(v: str | None, default: float = 0.0) -> float:
     """Tolerant query-param number: '' / junk → default (an empty optional
-    <input type=number> submits as an empty string, which must never 422)."""
+    <input type=number> submits as an empty string, which must never 422).
+    Non-finite values ('inf', '1e309', 'nan') also fall back — float()
+    accepts them but int()/round() downstream raise OverflowError."""
     try:
         s = (v or "").strip()
-        return float(s) if s else default
+        f = float(s) if s else default
+        return f if math.isfinite(f) else default
     except ValueError:
         return default
+
+
+async def _build_remodel_budget(bsqft: str, bbeds: str, bbaths: str, byear: str,
+                                bscope: str, blevel: str, bstate: str, bzip: str,
+                                bconv: str, bmasonry: str, bfound: str, bwin: str):
+    """Shared by /value-add and the contractor-plan PDF so both render the
+    exact same budget from the same query params. Returns (budget, bmarket,
+    loc) — all None when no sqft was given."""
+    from value_add import remodel_budget, locate_market
+    bsqft_n, bbeds_n, bbaths_n = _qnum(bsqft), int(_qnum(bbeds, 3)), _qnum(bbaths, 1)
+    byear_n, bwin_n = int(_qnum(byear)), int(_qnum(bwin))
+    if bsqft_n <= 0:
+        return None, None, None
+    loc = None
+    if bzip.strip():
+        loc = await asyncio.to_thread(locate_market, bzip)
+    bmarket = loc["market"] if loc else None
+    auto = bstate.strip().upper() in ("", "AUTO")
+    effective_state = (loc["code"] if (auto and loc) else ("CA-BAY" if auto else bstate))
+    budget = await asyncio.to_thread(
+        remodel_budget, bsqft_n, bbeds_n, bbaths_n, (byear_n or None), bscope, blevel,
+        state=effective_state, conversion=bool(_qnum(bconv)), masonry=bool(_qnum(bmasonry)),
+        foundation_replace=bool(_qnum(bfound)), windows=(bwin_n or None))
+    return budget, bmarket, loc
 
 
 @app.get("/value-add")
@@ -398,16 +425,13 @@ async def value_add_page(request: Request, region: str = "All CA",
     budgeter resolves the closest metro's costs itself. All numeric query
     params are parsed tolerantly — empty strings fall back to defaults
     instead of failing validation. See value_add.py."""
-    from value_add import (hunting_grounds, rehab_check, remodel_budget,
-                           flip_verdict, locate_market,
+    from value_add import (hunting_grounds, rehab_check, flip_verdict,
                            REMODEL_SCOPES, REMODEL_LEVELS, STATE_NAMES)
     from norcal import REGIONS
     if region not in REGIONS:
         region = "All CA"
     price_n, rehab_n = _qnum(price), _qnum(rehab)
     rent_n, income_n = _qnum(rent), _qnum(income)
-    bsqft_n, bbeds_n, bbaths_n = _qnum(bsqft), int(_qnum(bbeds, 3)), _qnum(bbaths, 1)
-    byear_n, bwin_n = int(_qnum(byear)), int(_qnum(bwin))
     bprice_n, barv_n = _qnum(bprice), _qnum(barv)
     bgreen_n, bred_n = _qnum(bgreen, 20), _qnum(bred, 8)
     res = await asyncio.to_thread(hunting_grounds, region)
@@ -416,20 +440,13 @@ async def value_add_page(request: Request, region: str = "All CA",
         check = await asyncio.to_thread(
             rehab_check, zip.strip(), price_n, int(_qnum(units, 2)), max(0.0, rehab_n),
             rent_n or None, income_n or None)
-    budget = verdict = bmarket = loc = None
-    if bsqft_n > 0:
-        if bzip.strip():
-            loc = await asyncio.to_thread(locate_market, bzip)
-            bmarket = loc["market"] if loc else None
-        auto = bstate.strip().upper() in ("", "AUTO")
-        effective_state = (loc["code"] if (auto and loc) else ("CA-BAY" if auto else bstate))
-        budget = await asyncio.to_thread(
-            remodel_budget, bsqft_n, bbeds_n, bbaths_n, (byear_n or None), bscope, blevel,
-            state=effective_state, conversion=bool(_qnum(bconv)), masonry=bool(_qnum(bmasonry)),
-            foundation_replace=bool(_qnum(bfound)), windows=(bwin_n or None))
-        if bprice_n > 0:
-            arv = barv_n if barv_n > 0 else (bmarket or {}).get("median_home_value")
-            verdict = flip_verdict(bprice_n, budget["total"], arv, bgreen_n, bred_n)
+    verdict = None
+    budget, bmarket, loc = await _build_remodel_budget(
+        bsqft, bbeds, bbaths, byear, bscope, blevel, bstate, bzip,
+        bconv, bmasonry, bfound, bwin)
+    if budget is not None and bprice_n > 0:
+        arv = barv_n if barv_n > 0 else (bmarket or {}).get("median_home_value")
+        verdict = flip_verdict(bprice_n, budget["total"], arv, bgreen_n, bred_n)
     return templates.TemplateResponse("value_add.html", {
         "request": request, "res": res, "check": check, "budget": budget,
         "verdict": verdict, "bmarket": bmarket, "loc": loc,
@@ -438,6 +455,31 @@ async def value_add_page(request: Request, region: str = "All CA",
         "regions": REGIONS, "rehab": rehab_n,
         "scopes": REMODEL_SCOPES, "levels": REMODEL_LEVELS, "state_names": STATE_NAMES,
     })
+
+
+@app.get("/value-add/contractor-plan.pdf")
+async def contractor_plan_pdf(bsqft: str = "", bbeds: str = "3", bbaths: str = "1",
+                              byear: str = "", bscope: str = "gut", blevel: str = "mid",
+                              bstate: str = "AUTO", bzip: str = "",
+                              bconv: str = "0", bmasonry: str = "0", bfound: str = "0",
+                              bwin: str = "", bdollars: str = "1"):
+    """Downloadable contractor scope-of-work: the current budget's line
+    items grouped into construction phases in build order (see
+    remodel_plan.py). Same query params as the budgeter so the page link
+    just carries the form state over. bdollars=0 strips the allowance
+    figures for clean competitive bids. Deal economics (asking price, ARV,
+    margins) are never included — this document goes to the contractor."""
+    budget, _bmarket, loc = await _build_remodel_budget(
+        bsqft, bbeds, bbaths, byear, bscope, blevel, bstate, bzip,
+        bconv, bmasonry, bfound, bwin)
+    if budget is None:
+        return RedirectResponse("/value-add#budgeter", status_code=302)
+    from remodel_plan import plan_pdf
+    pdf = await asyncio.to_thread(plan_pdf, budget, address=bzip.strip(),
+                                  dollars=_qnum(bdollars, 1) > 0)
+    fn = f"contractor-plan-{loc['zip'] if loc else budget['state'].lower()}.pdf"
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{fn}"'})
 
 
 @app.get("/landscaper")
