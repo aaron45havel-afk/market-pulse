@@ -222,6 +222,12 @@ check("change_of_use" in phase_of and "Pre-construction" in phase_of["change_of_
 check("Rough-in" in phase_of.get("fire_sprinklers", ""), "sprinklers land in rough-in")
 check("windows_egress" in phase_of and "windows" not in phase_of,
       "conversion swaps egress windows into the dry-in phase")
+# intra-phase trade order: underground first, ductwork before wire, electrical last
+rough_keys = [r["key"] for p in plan["phases"] if "Rough-in" in p["title"] for r in p["items"]]
+check(rough_keys[0] == "sewer_lateral", "underground utilities lead the rough-in")
+check(rough_keys.index("hvac") < rough_keys.index("plumbing_repipe")
+      < rough_keys.index("electrical_rewire"),
+      "rough-in runs ductwork before pipe before wire (electrical roughs last)")
 
 # cosmetic post-1978 job collapses to a short plan but still starts with permits
 cos = V.remodel_budget(1200, 3, 2, 1995, "cosmetic", "mid", state="TX")
@@ -253,6 +259,9 @@ nodollar = P.plan_pdf(big, address="516 Ward St, Martinez, CA 94553", dollars=Fa
 _text2 = "".join(pg.get_text() for pg in fitz.open(stream=nodollar, filetype="pdf"))
 check("Allowance" not in _text2 and f"${big['total']:,}" not in _text2,
       "no-$ variant strips allowances and totals")
+import re as _re
+check(not _re.search(r"\$\s*\d", _text2),
+      "no-$ variant contains no dollar figure anywhere (incl. $-rates inside labels)")
 check("Phase 1" in _text2 and "Rough-in" in _text2, "no-$ variant keeps scope + sequence")
 
 # ── report ──

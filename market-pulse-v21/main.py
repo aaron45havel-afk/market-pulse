@@ -1,5 +1,5 @@
 """Market Pulse — Real Estate & Finance Dashboard."""
-import asyncio, hmac, json, os, logging, sqlite3
+import asyncio, hmac, json, math, os, logging, sqlite3
 from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
@@ -375,10 +375,13 @@ async def norcal_page(request: Request, assets: float = 200_000,
 
 def _qnum(v: str | None, default: float = 0.0) -> float:
     """Tolerant query-param number: '' / junk → default (an empty optional
-    <input type=number> submits as an empty string, which must never 422)."""
+    <input type=number> submits as an empty string, which must never 422).
+    Non-finite values ('inf', '1e309', 'nan') also fall back — float()
+    accepts them but int()/round() downstream raise OverflowError."""
     try:
         s = (v or "").strip()
-        return float(s) if s else default
+        f = float(s) if s else default
+        return f if math.isfinite(f) else default
     except ValueError:
         return default
 

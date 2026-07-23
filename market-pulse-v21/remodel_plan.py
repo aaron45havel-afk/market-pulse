@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import html
 import io
+import re
 from datetime import date
 
 # Canonical build order. Every REMODEL_ITEMS key and every soft/addon line
@@ -43,16 +44,21 @@ PLAN_PHASES = [
     {"key": "shell", "title": "Roof & exterior shell (dry-in)",
      "desc": "Get the building dried in: roof first, then close new or altered openings, "
              "set windows and exterior doors, and side. On conversions the storefront / "
-             "roll-up infill is framed and weathered-in before window install.",
+             "roll-up infill is framed and weathered-in before window install. Coordinate "
+             "with the rough-in trades: stub roof penetrations (vent stacks, flues) and "
+             "set exterior service equipment before final roofing and siding, or carry "
+             "the roofer's and sider's return trips for flashing.",
      "keys": ("roof_replace", "storefront_infill", "windows_egress", "windows",
               "exterior_doors", "siding")},
-    {"key": "rough", "title": "Rough-in — plumbing, electrical, HVAC",
+    {"key": "rough", "title": "Rough-in — plumbing, HVAC, electrical",
      "desc": "All in-wall and under-slab systems while walls are open: sewer and "
-             "underground drainage first, then supply repipe, rewire and panel, HVAC "
-             "and ducting, and fire sprinklers. HOLD POINT: rough inspections must be "
-             "signed off before anything closes up.",
-     "keys": ("sewer_lateral", "dwv_underslab", "plumbing_repipe", "electrical_rewire",
-              "electrical_panel", "hvac", "fire_sprinklers")},
+             "underground drainage first, then HVAC and ducting (the big runs claim "
+             "joist bays and chases first), then supply repipe and fire sprinklers, "
+             "with the rewire and panel last — wire routes around everything else. "
+             "HOLD POINT: rough inspections must be signed off before anything "
+             "closes up.",
+     "keys": ("sewer_lateral", "dwv_underslab", "hvac", "plumbing_repipe",
+              "fire_sprinklers", "electrical_rewire", "electrical_panel")},
     {"key": "drywall", "title": "Insulation & drywall",
      "desc": "Insulate walls and attic after rough sign-off (insulation inspection where "
              "required), then hang, tape and finish drywall.",
@@ -136,7 +142,13 @@ li { margin: 2pt 0; }
 
 
 def _row(r: dict, dollars: bool) -> str:
-    cells = f"<td>{html.escape(r['label'])}</td><td>{html.escape(_qty_str(r))}</td>"
+    label = r["label"]
+    if not dollars:
+        # Some labels embed a $ rate (e.g. "abatement (pre-1978, $12.0/sqft)")
+        # which, with the sqft in the header, reconstructs the allowance —
+        # strip it so the competitive-bid variant truly carries no figures.
+        label = re.sub(r",?\s*\$[^),]*", "", label)
+    cells = f"<td>{html.escape(label)}</td><td>{html.escape(_qty_str(r))}</td>"
     if dollars:
         cells += f"<td class='num'>${r['amount']:,.0f}</td>"
     return f"<tr>{cells}</tr>"
