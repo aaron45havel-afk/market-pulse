@@ -58,6 +58,20 @@
   .va-use-btn { display:inline-block; background:var(--primary); color:#fff; text-decoration:none;
                 font-weight:700; font-size:0.82rem; padding:0.5rem 0.9rem; border-radius:6px; }
   .va-use-btn:hover { background:var(--primary-ink); }
+
+  .fv { border-radius:10px; padding:0.8rem 1rem; margin-top:0.7rem; border:2px solid; }
+  .fv-buy  { background:var(--mint-soft);  border-color:var(--mint);  }
+  .fv-fair { background:rgba(217,119,6,0.08); border-color:#d97706; }
+  .fv-no   { background:var(--coral-soft); border-color:var(--coral); }
+  .fv-head { font-size:1.15rem; font-weight:800; letter-spacing:0.01em; display:flex; align-items:baseline; gap:0.7rem; flex-wrap:wrap; }
+  .fv-buy .fv-head  { color:var(--mint-ink); }
+  .fv-fair .fv-head { color:#b45309; }
+  .fv-no .fv-head   { color:var(--coral-ink); }
+  .fv-margin { font-size:0.78rem; font-weight:600; color:var(--ink-2); }
+  .fv-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:0.5rem 1rem; margin-top:0.6rem; font-size:0.78rem; }
+  .fv-grid .k { color:var(--ink-3); font-size:0.62rem; text-transform:uppercase; letter-spacing:0.04em; }
+  .fv-grid .v { font-weight:700; font-variant-numeric:tabular-nums; }
+  .fv-src { font-size:0.7rem; color:var(--ink-3); margin-top:0.55rem; line-height:1.5; }
 </style>
 {% endblock %}
 
@@ -85,7 +99,7 @@
   <p class="desc">Paste a needs-work listing: as-is price, units, your rehab estimate, expected post-reno rent per unit (defaults to ZIP market rent). ARV is the <em>lower</em> of comp-multiple and income approaches — first-pass underwriting, not an appraisal. No rehab number yet? <a href="#budgeter">Build one below</a>.</p>
   <form class="va-form" method="get" action="/value-add">
     <input type="hidden" name="region" value="{{ res.region }}">
-    {% if budget %}{% for k, v in {'bsqft': budget.sqft, 'bbeds': budget.beds, 'bbaths': budget.baths, 'byear': budget.year_built or '', 'bscope': budget.scope, 'blevel': budget.level, 'bconv': 1 if budget.conversion else 0, 'bmasonry': 1 if budget.masonry else 0, 'bfound': 1 if budget.foundation_replace else 0, 'bwin': budget.windows}.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}{% endif %}
+    {% if budget %}{% for k, v in {'bsqft': budget.sqft, 'bbeds': budget.beds, 'bbaths': budget.baths, 'byear': budget.year_built or '', 'bscope': budget.scope, 'blevel': budget.level, 'bstate': budget.state, 'bprice': (bprice|int if bprice else ''), 'bzip': bzip, 'barv': (barv|int if barv else ''), 'bconv': 1 if budget.conversion else 0, 'bmasonry': 1 if budget.masonry else 0, 'bfound': 1 if budget.foundation_replace else 0, 'bwin': budget.windows}.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}{% endif %}
     <div class="f"><label>ZIP</label><input name="zip" value="{{ check.zip if check else '' }}" placeholder="94601" required pattern="[0-9]{5}"></div>
     <div class="f"><label>As-is price $</label><input name="price" type="number" value="{{ check.price|int if check else '' }}" placeholder="550000" required min="50000"></div>
     <div class="f"><label>Units</label><select name="units">{% for u in (2,3,4) %}<option value="{{ u }}" {% if check and check.units == u %}selected{% endif %}>{{ u }}</option>{% endfor %}</select></div>
@@ -131,11 +145,12 @@
 </div>
 
 <div class="va-card" id="budgeter">
-  <h2>🧱 Remodel budget builder — full SFR rehab</h2>
-  <p class="desc">Build the rehab number instead of guessing it. Enter the house, pick the extent and finish level, and it prices an itemized California/Bay-Area budget — GC overhead, contingency, permits, and pre-1978 abatement included. Toggle <em>commercial → residential conversion</em> for a change-of-use job (like a former storefront back to a home): it itemizes egress openings, under-slab drainage, fire sprinklers, capacity fees, and environmental. Then send the total up to the checker. First-pass numbers, not a contractor bid.</p>
+  <h2>🛠️ Remodel budget builder — full SFR rehab</h2>
+  <p class="desc">Build the rehab number instead of guessing it. <strong>Pick the state</strong>, enter the house, pick the extent and finish level, and it prices an itemized budget at that state's construction costs — GC overhead, contingency, permits, and pre-1978 abatement included. Toggle <em>commercial → residential conversion</em> for a change-of-use job. Then add the <strong>asking price</strong> (and a ZIP or your own ARV) and it calls the deal: <span style="color:var(--mint-ink);font-weight:700">should buy</span> or <span style="color:var(--coral-ink);font-weight:700">too much remodel work</span>. First-pass numbers, not a contractor bid.</p>
   <form class="va-form" method="get" action="/value-add#budgeter">
     <input type="hidden" name="region" value="{{ res.region }}">
     {% if check %}{% for k, v in {'zip': check.zip, 'price': check.price|int, 'units': check.units, 'rent': check.market_rent|int, 'income': (check.income|int if check.income else '')}.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}{% endif %}
+    <div class="f"><label>State</label><select name="bstate" style="width:auto;min-width:150px">{% for code, name in state_names.items() %}<option value="{{ code }}" {% if budget and budget.state == code %}selected{% elif not budget and code == 'CA-BAY' %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></div>
     <div class="f"><label>Sq ft</label><input name="bsqft" type="number" value="{{ budget.sqft if budget else '' }}" placeholder="1703" required min="200"></div>
     <div class="f"><label>Beds</label><input name="bbeds" type="number" value="{{ budget.beds if budget else 3 }}" min="0" max="12"></div>
     <div class="f"><label>Baths</label><input name="bbaths" type="number" step="0.5" value="{{ budget.baths if budget else 1 }}" min="1" max="10"></div>
@@ -143,6 +158,9 @@
     <div class="f"><label>Extent</label><select name="bscope">{% for s in scopes %}<option value="{{ s }}" {% if budget and budget.scope == s %}selected{% endif %}>{{ s|capitalize }}</option>{% endfor %}</select></div>
     <div class="f"><label>Finish</label><select name="blevel">{% for l in levels %}<option value="{{ l }}" {% if budget and budget.level == l %}selected{% endif %}>{{ {'low':'Budget','mid':'Mid','high':'High'}[l] }}</option>{% endfor %}</select></div>
     <div class="f"><label>Windows (opt)</label><input name="bwin" type="number" value="{{ budget.windows if budget else '' }}" placeholder="auto" min="0"></div>
+    <div class="f"><label>Asking price $ (opt)</label><input name="bprice" type="number" value="{{ bprice|int if bprice else '' }}" placeholder="500000" min="0"></div>
+    <div class="f"><label>ZIP (opt — for ARV)</label><input name="bzip" value="{{ bzip }}" placeholder="94553" pattern="[0-9]{5}"></div>
+    <div class="f"><label>ARV override $ (opt)</label><input name="barv" type="number" value="{{ barv|int if barv else '' }}" placeholder="ZIP median" min="0"></div>
     <label class="va-chk"><input type="checkbox" name="bconv" value="1" {% if budget and budget.conversion %}checked{% endif %}> Commercial → residential conversion</label>
     <label class="va-chk"><input type="checkbox" name="bmasonry" value="1" {% if budget and budget.masonry %}checked{% endif %}> Unreinforced masonry (URM)</label>
     <label class="va-chk"><input type="checkbox" name="bfound" value="1" {% if budget and budget.foundation_replace %}checked{% endif %}> Full foundation replacement</label>
@@ -153,16 +171,37 @@
   {% set cats = [('structural','Structural & shell'),('envelope','Envelope'),('mep','Mechanical / electrical / plumbing'),('interior','Interior finishes'),('fees','Fees & specialty (not marked up)')] %}
   <div class="va-verdict">
     <div class="headline">
-      Full remodel · {{ budget.scope|capitalize }} · {{ '{:,}'.format(budget.sqft) }} sqft{% if budget.conversion %} · conversion{% endif %} —
+      Full remodel · {{ budget.scope|capitalize }} · {{ '{:,}'.format(budget.sqft) }} sqft · {{ budget.state_name }}{% if budget.conversion %} · conversion{% endif %} —
       <span class="v-DISCOUNT">${{ '{:,.0f}'.format(budget.total) }}</span>
-      <span class="va-note">${{ budget.psf }}/sqft · {{ {'low':'budget','mid':'mid','high':'high'}[budget.level] }} finish</span>
+      <span class="va-note">${{ budget.psf }}/sqft · {{ {'low':'budget','mid':'mid','high':'high'}[budget.level] }} finish{% if budget.mult != 1.0 %} · {{ '{:.0f}'.format(budget.mult * 100) }}% of Bay-Area cost{% endif %}</span>
     </div>
     <div class="grid">
       <div><div class="k">Total rehab (this finish)</div><div class="v">${{ '{:,.0f}'.format(budget.total) }}</div></div>
       <div><div class="k">Range (budget → high finish)</div><div class="v">${{ '{:,.0f}'.format(budget.band.low) }} – ${{ '{:,.0f}'.format(budget.band.high) }}</div></div>
       <div><div class="k">Hard cost</div><div class="v">${{ '{:,.0f}'.format(budget.hard) }} <span class="va-note">before markups</span></div></div>
-      <div><div class="k">Extent benchmark</div><div class="v">~${{ budget.tier_psf }}/sqft <span class="va-note">Bay Area {{ budget.scope }}</span></div></div>
+      <div><div class="k">Extent benchmark</div><div class="v">~${{ budget.tier_psf }}/sqft <span class="va-note">{{ budget.state }} {{ budget.scope }}</span></div></div>
     </div>
+
+    {% if verdict %}
+    <div class="fv fv-{{ verdict.cls }}">
+      <div class="fv-head">
+        {% if verdict.cls == 'buy' %}✓ SHOULD BUY{% elif verdict.cls == 'fair' %}△ FAIR — THIN MARGIN{% else %}✗ TOO MUCH REMODEL WORK{% endif %}
+        <span class="fv-margin">{{ verdict.margin }}% equity margin vs ARV</span>
+      </div>
+      <div class="fv-grid">
+        <div><div class="k">Asking price</div><div class="v">${{ '{:,.0f}'.format(verdict.price) }}</div></div>
+        <div><div class="k">+ Remodel</div><div class="v">${{ '{:,.0f}'.format(verdict.rehab) }}</div></div>
+        <div><div class="k">+ Carry (6 mo)</div><div class="v">${{ '{:,.0f}'.format(verdict.carry) }}</div></div>
+        <div><div class="k">= All-in</div><div class="v">${{ '{:,.0f}'.format(verdict.all_in) }}</div></div>
+        <div><div class="k">After-repair value</div><div class="v">${{ '{:,.0f}'.format(verdict.arv) }}</div></div>
+        <div><div class="k">Equity created</div><div class="v" style="color:{{ 'var(--mint-ink)' if verdict.equity > 0 else 'var(--coral-ink)' }}">${{ '{:,.0f}'.format(verdict.equity) }}</div></div>
+        <div><div class="k">Max offer for a green light</div><div class="v">${{ '{:,.0f}'.format(verdict.max_offer) }}</div></div>
+      </div>
+      {% if bmarket and not barv %}<div class="fv-src">ARV = ZIP {{ bmarket.zip }} median home value (${{ '{:,.0f}'.format(bmarket.median_home_value) }}, {{ bmarket.name }}) — a renovated house usually clears the median, so this is conservative. Override with your own ARV for comps-based math.</div>{% endif %}
+    </div>
+    {% elif bprice and bprice > 0 %}
+    <div class="va-budget-flag">To get the buy / no-buy verdict, add a <b>ZIP</b> (uses the area's median home value as the ARV) or your own <b>ARV override</b>.</div>
+    {% endif %}
 
     {% for f in budget.flags %}<div class="va-budget-flag">⚠ {{ f }}</div>{% endfor %}
 
@@ -190,7 +229,7 @@
     </div>
 
     <div style="margin-top:0.7rem">
-      <a class="va-use-btn" href="/value-add?region={{ res.region|urlencode }}{% if check %}&zip={{ check.zip }}&price={{ check.price|int }}&units={{ check.units }}&rent={{ check.market_rent|int }}{% if check.income %}&income={{ check.income|int }}{% endif %}{% endif %}&rehab={{ budget.total }}&bsqft={{ budget.sqft }}&bbeds={{ budget.beds }}&bbaths={{ budget.baths }}&byear={{ budget.year_built or '' }}&bscope={{ budget.scope }}&blevel={{ budget.level }}&bconv={{ 1 if budget.conversion else 0 }}&bmasonry={{ 1 if budget.masonry else 0 }}&bfound={{ 1 if budget.foundation_replace else 0 }}&bwin={{ budget.windows }}#checker">↑ Use ${{ '{:,.0f}'.format(budget.total) }} as the rehab estimate in the checker</a>
+      <a class="va-use-btn" href="/value-add?region={{ res.region|urlencode }}{% if check %}&zip={{ check.zip }}&price={{ check.price|int }}&units={{ check.units }}&rent={{ check.market_rent|int }}{% if check.income %}&income={{ check.income|int }}{% endif %}{% endif %}&rehab={{ budget.total }}&bsqft={{ budget.sqft }}&bbeds={{ budget.beds }}&bbaths={{ budget.baths }}&byear={{ budget.year_built or '' }}&bscope={{ budget.scope }}&blevel={{ budget.level }}&bstate={{ budget.state }}{% if bprice %}&bprice={{ bprice|int }}{% endif %}{% if bzip %}&bzip={{ bzip }}{% endif %}{% if barv %}&barv={{ barv|int }}{% endif %}&bconv={{ 1 if budget.conversion else 0 }}&bmasonry={{ 1 if budget.masonry else 0 }}&bfound={{ 1 if budget.foundation_replace else 0 }}&bwin={{ budget.windows }}#checker">↑ Use ${{ '{:,.0f}'.format(budget.total) }} as the rehab estimate in the checker</a>
     </div>
   </div>
   {% endif %}
