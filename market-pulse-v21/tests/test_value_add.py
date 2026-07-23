@@ -87,6 +87,45 @@ check(V.remodel_budget(1000, 3, 1, 2010)["pre1978"] is False, "post-1978 skips a
 check(V.remodel_budget(1703, 2, 1, 1922, "gut", "mid")["windows"] == V._est_windows(1703),
       "window count auto-estimates from sqft")
 
+# ── state regionalization (validated: Bay = 2.29× national remodel market) ──
+check(V.remodel_budget(1500, 3, 2, 1960, "gut", "mid", state="CA-BAY")["mult"] == 1.0,
+      "CA-BAY is the 1.0 baseline (existing numbers unchanged)")
+_in = V.remodel_budget(1500, 3, 2, 1960, "gut", "mid", state="IN")
+_tx = V.remodel_budget(1500, 3, 2, 1960, "gut", "mid", state="TX")
+_nyc = V.remodel_budget(1500, 3, 2, 1960, "gut", "mid", state="NY-NYC")
+between(_in["psf"], 115, 155, "Indiana gut $/sqft near the published ~$135")
+between(_tx["psf"], 120, 160, "Texas gut $/sqft near the published ~$140")
+between(_nyc["psf"], 175, 225, "NYC gut $/sqft near the published ~$200")
+check(_in["total"] < _tx["total"] < _nyc["total"] < gut["total"],
+      "IN < TX < NYC < Bay Area for the same house")
+check(V.remodel_budget(1500, 3, 2, 1960, "gut", "mid", state="NY")["total"] < _nyc["total"],
+      "upstate NY cheaper than NYC metro")
+check(V.remodel_budget(1500, 3, 2, 1960, "gut", "mid", state="XX")["state"] == "CA-BAY",
+      "unknown state code falls back to the default")
+check(len(V.STATE_COST_FACTORS) == 53, "50 states + DC + CA-Bay + NYC breakouts present")
+check(all(c in V.STATE_NAMES for c in V.STATE_COST_FACTORS), "every factor has a display name")
+
+# ── buy / no-buy verdict ──
+green = V.flip_verdict(100_000, 50_000, 300_000)
+check(green["cls"] == "buy" and green["margin"] >= 20, "wide margin → green SHOULD BUY")
+fair = V.flip_verdict(300_000, 60_000, 420_000)
+check(fair["cls"] == "fair" and 8 <= fair["margin"] < 20, "thin margin → amber FAIR")
+red = V.flip_verdict(450_000, 200_000, 500_000)
+check(red["cls"] == "no" and red["margin"] < 8, "all-in over ARV → red TOO MUCH")
+check(red["equity"] < 0, "red case shows negative equity")
+# max offer lands exactly on the 20% green line
+at_max = V.flip_verdict(green["max_offer"], 50_000, 300_000)
+check(at_max is not None and abs(at_max["margin"] - 20.0) < 0.2, "max_offer hits the 20% line")
+check(V.flip_verdict(0, 50_000, 300_000) is None, "no price → no verdict")
+check(V.flip_verdict(100_000, 50_000, None) is None, "no ARV → no verdict")
+
+# ── any-state ZIP lookup (ARV source) — guarded on the bundled zips.db ──
+if V._ZIPS_DB.exists():
+    fw = V.zip_market("46802")
+    check(fw is not None and fw["state"] == "IN" and (fw["median_home_value"] or 0) > 0,
+          "Fort Wayne 46802 resolves with a median value (national coverage)")
+    check(V.zip_market("00000") is None, "unknown ZIP → None")
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

@@ -379,12 +379,14 @@ async def value_add_page(request: Request, region: str = "All CA",
                          rehab: float = 0, rent: float = 0, income: float = 0,
                          bsqft: float = 0, bbeds: int = 3, bbaths: float = 1,
                          byear: int = 0, bscope: str = "gut", blevel: str = "mid",
+                         bstate: str = "CA-BAY", bprice: float = 0, bzip: str = "", barv: float = 0,
                          bconv: int = 0, bmasonry: int = 0, bfound: int = 0, bwin: int = 0):
     """CA needs-work multifamily finder: hunting-ground ZIP ranking +
-    203(k)-first rehab underwriting + an SFR full-remodel budget builder
-    that feeds the checker's rehab estimate. See value_add.py."""
+    203(k)-first rehab underwriting + a state-aware SFR full-remodel budget
+    builder with a buy / no-buy verdict. See value_add.py."""
     from value_add import (hunting_grounds, rehab_check, remodel_budget,
-                           REMODEL_SCOPES, REMODEL_LEVELS)
+                           flip_verdict, zip_market,
+                           REMODEL_SCOPES, REMODEL_LEVELS, STATE_NAMES)
     from norcal import REGIONS
     if region not in REGIONS:
         region = "All CA"
@@ -394,16 +396,23 @@ async def value_add_page(request: Request, region: str = "All CA",
         check = await asyncio.to_thread(
             rehab_check, zip.strip(), price, int(units), max(0.0, rehab),
             rent or None, income or None)
-    budget = None
+    budget = verdict = bmarket = None
     if bsqft and bsqft > 0:
         budget = await asyncio.to_thread(
             remodel_budget, bsqft, bbeds, bbaths, (byear or None), bscope, blevel,
-            conversion=bool(bconv), masonry=bool(bmasonry),
+            state=bstate, conversion=bool(bconv), masonry=bool(bmasonry),
             foundation_replace=bool(bfound), windows=(bwin or None))
+        if bzip.strip():
+            bmarket = await asyncio.to_thread(zip_market, bzip)
+        if bprice > 0:
+            arv = barv if barv > 0 else (bmarket or {}).get("median_home_value")
+            verdict = flip_verdict(bprice, budget["total"], arv)
     return templates.TemplateResponse("value_add.html", {
         "request": request, "res": res, "check": check, "budget": budget,
+        "verdict": verdict, "bmarket": bmarket,
+        "bprice": bprice, "bzip": bzip, "barv": barv,
         "regions": REGIONS, "rehab": rehab,
-        "scopes": REMODEL_SCOPES, "levels": REMODEL_LEVELS,
+        "scopes": REMODEL_SCOPES, "levels": REMODEL_LEVELS, "state_names": STATE_NAMES,
     })
 
 

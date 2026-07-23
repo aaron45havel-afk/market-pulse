@@ -169,6 +169,105 @@ REMODEL_TIER_DESC = {
 }
 
 
+# ── State cost regionalization ───────────────────────────────────────
+# Remodel-market location factors vs US national average = 1.00, from
+# multi-source research (RSMeans-style location indices + state remodel
+# cost comparisons) hardened by adversarial validation. Two validator
+# corrections are baked in (WV 0.95→0.92, MI 0.93→0.96), and — the big
+# one — the transfer from our Bay-Area-calibrated line items uses a
+# REMODEL-MARKET anchor, not the hard-cost index: expensive-metro remodel
+# pricing scales super-linearly vs RSMeans-style indices, so the Bay Area
+# runs ~2.29× the national standard-gut baseline (~$344 vs ~$150/sqft),
+# not its 1.40 hard-cost index. Spot-validated: Indiana ⇒ ~$135/sqft gut,
+# Texas ⇒ ~$140, NYC ⇒ ~$200 — all matching published figures. State
+# averages; a dense urban core can run above its state figure (use the
+# high finish level as the downside there).
+BAY_REMODEL_FACTOR = 2.29        # Bay Area remodel market vs national avg
+STATE_COST_FACTORS: dict[str, float] = {
+    "CA-BAY": BAY_REMODEL_FACTOR, "CA": 1.20,
+    "NY-NYC": 1.33, "NY": 1.02,
+    "HI": 1.35, "AK": 1.28, "MA": 1.16, "DC": 1.13, "NJ": 1.12, "WA": 1.12,
+    "CT": 1.10, "RI": 1.10, "IL": 1.09, "OR": 1.07, "MD": 1.04, "DE": 1.04,
+    "MN": 1.04, "NV": 1.04, "CO": 1.03, "PA": 1.02, "VA": 1.00, "NH": 1.00,
+    "AZ": 0.97, "FL": 0.97, "UT": 0.96, "MT": 0.96, "GA": 0.96, "WI": 0.96,
+    "MI": 0.96, "ID": 0.95, "VT": 0.95, "NC": 0.94, "TN": 0.94, "WY": 0.93,
+    "TX": 0.93, "SC": 0.93, "AL": 0.93, "LA": 0.93, "KY": 0.93, "ME": 0.93,
+    "WV": 0.92, "NM": 0.92, "MO": 0.92, "OH": 0.91, "AR": 0.90, "IN": 0.90,
+    "ND": 0.90, "OK": 0.89, "MS": 0.88, "IA": 0.88, "NE": 0.88, "KS": 0.87,
+    "SD": 0.87,
+}
+STATE_NAMES: dict[str, str] = {
+    "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas",
+    "CA-BAY": "California — Bay Area", "CA": "California — So-Cal / other",
+    "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "DC": "Washington DC",
+    "FL": "Florida", "GA": "Georgia", "HI": "Hawaii", "ID": "Idaho",
+    "IL": "Illinois", "IN": "Indiana", "IA": "Iowa", "KS": "Kansas",
+    "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland",
+    "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi",
+    "MO": "Missouri", "MT": "Montana", "NE": "Nebraska", "NV": "Nevada",
+    "NH": "New Hampshire", "NJ": "New Jersey", "NM": "New Mexico",
+    "NY-NYC": "New York — NYC metro", "NY": "New York — upstate/other",
+    "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio", "OK": "Oklahoma",
+    "OR": "Oregon", "PA": "Pennsylvania", "RI": "Rhode Island", "SC": "South Carolina",
+    "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah",
+    "VT": "Vermont", "VA": "Virginia", "WA": "Washington", "WV": "West Virginia",
+    "WI": "Wisconsin", "WY": "Wyoming",
+}
+
+
+def state_multiplier(state: str | None) -> float:
+    """Effective multiplier on the Bay-Area-calibrated cost table for a
+    state (CA-BAY → 1.0; Indiana → ~0.39). Unknown/blank → national avg."""
+    f = STATE_COST_FACTORS.get((state or "").upper(), 1.00)
+    return round(f / BAY_REMODEL_FACTOR, 3)
+
+
+def zip_market(zip_code: str) -> dict | None:
+    """Any-state ZIP lookup: state + median home value (an ARV first-pass
+    for a fully-renovated SFR) + median rent. None if unknown."""
+    if not _ZIPS_DB.exists() or not zip_code:
+        return None
+    conn = sqlite3.connect(str(_ZIPS_DB))
+    conn.row_factory = sqlite3.Row
+    try:
+        r = conn.execute(
+            "SELECT zip, state, name, median_home_value, median_rent_monthly "
+            "FROM zips WHERE zip = ?", (zip_code.strip(),)).fetchone()
+    finally:
+        conn.close()
+    if r is None:
+        return None
+    return {"zip": r["zip"], "state": r["state"], "name": r["name"],
+            "median_home_value": r["median_home_value"],
+            "median_rent": r["median_rent_monthly"]}
+
+
+def flip_verdict(price: float, rehab_total: float, arv: float | None) -> dict | None:
+    """Purchase-price → buy / no-buy. margin = (ARV − all-in) / ARV with a
+    6-month financed carry, judged on the same 70-75%-rule thresholds as the
+    MF checker: ≥20% green BUY, 8-20% amber FAIR, <8% red TOO MUCH."""
+    if not price or price <= 0 or arv is None or arv <= 0:
+        return None
+    k = 1 + 0.965 * (RATE_DEFAULT / 100) * (REHAB_CARRY_MONTHS / 12)  # 6-mo financed carry
+    carry = (price + rehab_total) * (k - 1)
+    all_in = price + rehab_total + carry
+    equity = arv - all_in
+    margin = equity / arv * 100
+    if margin >= 20:
+        verdict, cls = "SHOULD BUY", "buy"
+    elif margin >= 8:
+        verdict, cls = "FAIR — thin margin", "fair"
+    else:
+        verdict, cls = "TOO MUCH REMODEL WORK", "no"
+    # Max purchase price that still hits the 20% green line.
+    max_offer = 0.80 * arv / k - rehab_total
+    return {"price": round(price), "rehab": round(rehab_total), "carry": round(carry),
+            "all_in": round(all_in), "arv": round(arv),
+            "equity": round(equity), "margin": round(margin, 1),
+            "verdict": verdict, "cls": cls,
+            "max_offer": round(max_offer) if max_offer > 0 else 0}
+
+
 def _est_windows(sqft: float) -> int:
     return max(6, round(sqft / 130))
 
@@ -192,18 +291,23 @@ def _active_items(scope: str, opts: dict) -> list[dict]:
 
 def remodel_budget(sqft: float, beds: int = 3, baths: float = 1, year_built: int | None = None,
                    scope: str = "gut", level: str = "mid", *,
+                   state: str = "CA-BAY",
                    conversion: bool = False, masonry: bool = False,
                    foundation_replace: bool = False, pre1978: bool | None = None,
                    windows: int | None = None) -> dict:
-    """Build an itemized California SFR remodel budget → total rehab $.
-
-    Returns the line items at the chosen finish `level`, the soft-cost stack,
-    the total, and a low/mid/high band (finish level swept). All costs are
-    Bay-Area 2025-26. First-pass underwriting, not a contractor bid."""
+    """Build an itemized SFR remodel budget → total rehab $, regionalized
+    by state (cost table is Bay-Area-calibrated; a per-state location
+    factor scales every dollar line). Returns the line items at the chosen
+    finish `level`, the soft-cost stack, the total, and a low/mid/high band
+    (finish level swept). First-pass underwriting, not a contractor bid."""
     sqft = max(200.0, float(sqft or 0))
     baths = max(1.0, float(baths or 1))
     scope = scope if scope in REMODEL_SCOPES else "gut"
     level = level if level in REMODEL_LEVELS else "mid"
+    state = (state or "CA-BAY").upper()
+    if state not in STATE_NAMES:
+        state = "CA-BAY"
+    mult = state_multiplier(state)
     if pre1978 is None:
         pre1978 = bool(year_built and year_built < 1978)
     win = int(windows) if windows and int(windows) > 0 else _est_windows(sqft)
@@ -214,7 +318,7 @@ def remodel_budget(sqft: float, beds: int = 3, baths: float = 1, year_built: int
         hard_lines, soft_lines = [], []
         for it in items:
             q = _qty(it["basis"], sqft, baths, win)
-            amt = it[lv] * q
+            amt = it[lv] * q * mult
             row = {"key": it["key"], "label": it["label"], "cat": it["cat"],
                    "qty": q, "basis": it["basis"], "amount": round(amt)}
             (soft_lines if it.get("soft") else hard_lines).append(row)
@@ -226,7 +330,7 @@ def remodel_budget(sqft: float, beds: int = 3, baths: float = 1, year_built: int
         contingency = (hard + gc) * cont_pct / 100
         design = hard * design_pct / 100
         permit = 0.0 if conversion else hard * g["permit_pct"] / 100
-        abatement = sqft * g["abatement_psf"][lv] if pre1978 else 0.0
+        abatement = sqft * g["abatement_psf"][lv] * mult if pre1978 else 0.0
         soft_fee_sum = sum(r["amount"] for r in soft_lines)
         addons = [
             {"key": "gc_op", "label": f"General contractor overhead & profit ({g['gc_op_pct']}%)", "amount": round(gc)},
@@ -236,7 +340,7 @@ def remodel_budget(sqft: float, beds: int = 3, baths: float = 1, year_built: int
         if not conversion:
             addons.append({"key": "permit", "label": f"Building permits & fees ({g['permit_pct']}%)", "amount": round(permit)})
         if pre1978:
-            addons.append({"key": "abatement", "label": f"Lead / asbestos abatement (pre-1978, ${g['abatement_psf'][lv]}/sqft)", "amount": round(abatement)})
+            addons.append({"key": "abatement", "label": f"Lead / asbestos abatement (pre-1978, ${round(g['abatement_psf'][lv] * mult, 1)}/sqft)", "amount": round(abatement)})
         total = hard + gc + contingency + design + permit + abatement + soft_fee_sum
         return {"hard_lines": hard_lines, "soft_lines": soft_lines, "addons": addons,
                 "hard": round(hard), "total": round(total)}
@@ -255,11 +359,12 @@ def remodel_budget(sqft: float, beds: int = 3, baths: float = 1, year_built: int
     return {
         "sqft": round(sqft), "beds": beds, "baths": baths, "year_built": year_built,
         "scope": scope, "level": level, "windows": win,
+        "state": state, "state_name": STATE_NAMES.get(state, state), "mult": mult,
         "conversion": conversion, "masonry": masonry, "foundation_replace": foundation_replace, "pre1978": pre1978,
         "hard_lines": sel["hard_lines"], "soft_lines": sel["soft_lines"], "addons": sel["addons"],
         "hard": sel["hard"], "total": sel["total"], "band": band,
         "psf": round(sel["total"] / sqft),
-        "tier_desc": REMODEL_TIER_DESC[scope], "tier_psf": REMODEL_TIER_PSF[scope],
+        "tier_desc": REMODEL_TIER_DESC[scope], "tier_psf": round(REMODEL_TIER_PSF[scope] * mult),
         "flags": flags,
     }
 
