@@ -379,14 +379,15 @@ async def value_add_page(request: Request, region: str = "All CA",
                          rehab: float = 0, rent: float = 0, income: float = 0,
                          bsqft: float = 0, bbeds: int = 3, bbaths: float = 1,
                          byear: int = 0, bscope: str = "gut", blevel: str = "mid",
-                         bstate: str = "CA-BAY", bprice: float = 0, bzip: str = "", barv: float = 0,
+                         bstate: str = "AUTO", bprice: float = 0, bzip: str = "", barv: float = 0,
                          bgreen: float = 20, bred: float = 8,
                          bconv: int = 0, bmasonry: int = 0, bfound: int = 0, bwin: int = 0):
     """CA needs-work multifamily finder: hunting-ground ZIP ranking +
-    203(k)-first rehab underwriting + a state-aware SFR full-remodel budget
-    builder with a buy / no-buy verdict. See value_add.py."""
+    203(k)-first rehab underwriting + a metro-aware SFR full-remodel budget
+    builder with a buy / no-buy verdict. Paste the property address and the
+    budgeter resolves the closest metro's costs itself. See value_add.py."""
     from value_add import (hunting_grounds, rehab_check, remodel_budget,
-                           flip_verdict, zip_market,
+                           flip_verdict, locate_market,
                            REMODEL_SCOPES, REMODEL_LEVELS, STATE_NAMES)
     from norcal import REGIONS
     if region not in REGIONS:
@@ -397,20 +398,24 @@ async def value_add_page(request: Request, region: str = "All CA",
         check = await asyncio.to_thread(
             rehab_check, zip.strip(), price, int(units), max(0.0, rehab),
             rent or None, income or None)
-    budget = verdict = bmarket = None
+    budget = verdict = bmarket = loc = None
     if bsqft and bsqft > 0:
+        if bzip.strip():
+            loc = await asyncio.to_thread(locate_market, bzip)
+            bmarket = loc["market"] if loc else None
+        auto = bstate.strip().upper() in ("", "AUTO")
+        effective_state = (loc["code"] if (auto and loc) else ("CA-BAY" if auto else bstate))
         budget = await asyncio.to_thread(
             remodel_budget, bsqft, bbeds, bbaths, (byear or None), bscope, blevel,
-            state=bstate, conversion=bool(bconv), masonry=bool(bmasonry),
+            state=effective_state, conversion=bool(bconv), masonry=bool(bmasonry),
             foundation_replace=bool(bfound), windows=(bwin or None))
-        if bzip.strip():
-            bmarket = await asyncio.to_thread(zip_market, bzip)
         if bprice > 0:
             arv = barv if barv > 0 else (bmarket or {}).get("median_home_value")
             verdict = flip_verdict(bprice, budget["total"], arv, bgreen, bred)
     return templates.TemplateResponse("value_add.html", {
         "request": request, "res": res, "check": check, "budget": budget,
-        "verdict": verdict, "bmarket": bmarket,
+        "verdict": verdict, "bmarket": bmarket, "loc": loc,
+        "bstate_raw": bstate,
         "bprice": bprice, "bzip": bzip, "barv": barv, "bgreen": bgreen, "bred": bred,
         "regions": REGIONS, "rehab": rehab,
         "scopes": REMODEL_SCOPES, "levels": REMODEL_LEVELS, "state_names": STATE_NAMES,
