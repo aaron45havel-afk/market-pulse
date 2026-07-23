@@ -246,6 +246,13 @@
     <div style="margin-top:0.7rem">
       <a class="va-use-btn" href="/value-add?region={{ res.region|urlencode }}{% if check %}&zip={{ check.zip }}&price={{ check.price|int }}&units={{ check.units }}&rent={{ check.market_rent|int }}{% if check.income %}&income={{ check.income|int }}{% endif %}{% endif %}&rehab={{ budget.total }}&bsqft={{ budget.sqft }}&bbeds={{ budget.beds }}&bbaths={{ budget.baths }}&byear={{ budget.year_built or '' }}&bscope={{ budget.scope }}&blevel={{ budget.level }}&bstate={{ bstate_raw|urlencode }}{% if bprice %}&bprice={{ bprice|int }}{% endif %}{% if bzip %}&bzip={{ bzip|urlencode }}{% endif %}{% if barv %}&barv={{ barv|int }}{% endif %}&bgreen={{ bgreen }}&bred={{ bred }}&bconv={{ 1 if budget.conversion else 0 }}&bmasonry={{ 1 if budget.masonry else 0 }}&bfound={{ 1 if budget.foundation_replace else 0 }}&bwin={{ budget.windows }}#checker">↑ Use ${{ '{:,.0f}'.format(budget.total) }} as the rehab estimate in the checker</a>
     </div>
+
+    {% set planq = 'bsqft=' ~ budget.sqft ~ '&bbeds=' ~ budget.beds ~ '&bbaths=' ~ budget.baths ~ '&byear=' ~ (budget.year_built or '') ~ '&bscope=' ~ budget.scope ~ '&blevel=' ~ budget.level ~ '&bstate=' ~ bstate_raw|urlencode ~ '&bzip=' ~ bzip|urlencode ~ '&bconv=' ~ (1 if budget.conversion else 0) ~ '&bmasonry=' ~ (1 if budget.masonry else 0) ~ '&bfound=' ~ (1 if budget.foundation_replace else 0) ~ '&bwin=' ~ budget.windows %}
+    <div style="margin-top:0.45rem">
+      <a class="va-use-btn" href="/value-add/contractor-plan.pdf?{{ planq }}">📄 Contractor plan (PDF) — scope &amp; phasing to send for bids</a>
+      <a class="va-note" style="margin-left:0.6rem;text-decoration:underline" href="/value-add/contractor-plan.pdf?{{ planq }}&bdollars=0">version without $ allowances</a>
+    </div>
+    <div class="va-note" style="margin-top:0.3rem">The plan sequences every line item into build-order phases (permits → abatement/demo → structural → dry-in → rough-in → drywall → finishes → punch list) with inspection hold points. It never includes your asking price, ARV, or margins — safe to hand to the person you're negotiating with. The no-$ version is for competitive bids.</div>
   </div>
   {% endif %}
 </div>

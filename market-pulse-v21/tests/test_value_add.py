@@ -187,6 +187,74 @@ if V._ZIPS_DB.exists():
           "Fort Wayne 46802 resolves with a median value (national coverage)")
     check(V.zip_market("00000") is None, "unknown ZIP → None")
 
+# ── contractor plan: phase mapping, reconciliation, PDF ──
+import remodel_plan as P
+from datetime import date as _date
+
+mapped = [k for ph in P.PLAN_PHASES for k in ph["keys"]] + list(P.MGMT_KEYS)
+check(len(mapped) == len(set(mapped)), "no line key is mapped to two phases")
+item_keys = {it["key"] for it in V.REMODEL_ITEMS}
+check(item_keys <= set(mapped),
+      f"every REMODEL_ITEMS key has a phase (missing: {item_keys - set(mapped)})")
+
+# maximal budget (gut + conversion + URM + full foundation + pre-1978):
+# nothing lands in the leftover phase, dollars reconcile, order is the build order
+big = V.remodel_budget(1703, 2, 1, 1922, "gut", "mid",
+                       conversion=True, masonry=True, foundation_replace=True)
+plan = P.build_plan(big)
+check(all(p["title"] != "Additional scope items" for p in plan["phases"]),
+      "maximal budget leaves no unphased leftovers")
+check(abs(plan["phases_subtotal"] + plan["mgmt_subtotal"] - big["total"]) <= 5,
+      "phase subtotals + management reconcile with the budget total")
+check([p["n"] for p in plan["phases"]] == list(range(1, len(plan["phases"]) + 1)),
+      "phases number contiguously from 1")
+titles = [p["title"] for p in plan["phases"]]
+def _idx(frag):
+    return next(i for i, t in enumerate(titles) if frag in t)
+check(_idx("Pre-construction") < _idx("abatement") < _idx("Foundation") < _idx("dry-in")
+      < _idx("Rough-in") < _idx("Insulation") < _idx("Interior") < _idx("punch"),
+      "maximal budget runs all 8 phases in build order")
+check(len(plan["management"]) == 2 and plan["mgmt_subtotal"] > 0,
+      "GC O&P + contingency carried as management, not phases")
+phase_of = {r["key"]: p["title"] for p in plan["phases"] for r in p["items"]}
+check("change_of_use" in phase_of and "Pre-construction" in phase_of["change_of_use"],
+      "change-of-use permits land in pre-construction")
+check("Rough-in" in phase_of.get("fire_sprinklers", ""), "sprinklers land in rough-in")
+check("windows_egress" in phase_of and "windows" not in phase_of,
+      "conversion swaps egress windows into the dry-in phase")
+
+# cosmetic post-1978 job collapses to a short plan but still starts with permits
+cos = V.remodel_budget(1200, 3, 2, 1995, "cosmetic", "mid", state="TX")
+cplan = P.build_plan(cos)
+check(2 <= len(cplan["phases"]) <= 5, "cosmetic job collapses to a short phase list")
+check(cplan["phases"][0]["n"] == 1 and "Pre-construction" in cplan["phases"][0]["title"],
+      "cosmetic plan renumbers from Phase 1 (permits first)")
+check(abs(cplan["phases_subtotal"] + cplan["mgmt_subtotal"] - cos["total"]) <= 5,
+      "cosmetic plan dollars reconcile too")
+
+# HTML: escaping + no deal economics ever
+h = P.plan_html(big, address='<script>alert(1)</script> 516 Ward St, Martinez, CA 94553')
+check("<script>" not in h, "address is HTML-escaped in the plan")
+for frag in ("Asking", "ARV", "margin", "max offer"):
+    check(frag.lower() not in h.lower(), f"plan never leaks deal economics ({frag})")
+
+# PDF: real bytes, both variants, deterministic date, phased content present
+# (assertions avoid words with 'fi' — extraction renders them as ligatures)
+pdf = P.plan_pdf(big, address="516 Ward St, Martinez, CA 94553",
+                 generated=_date(2026, 1, 15))
+check(pdf[:5] == b"%PDF-" and len(pdf) > 5000, "plan PDF renders with the PDF magic")
+import fitz
+_doc = fitz.open(stream=pdf, filetype="pdf")
+_text = "".join(pg.get_text() for pg in _doc)
+for frag in ("Renovation Scope of Work", "516 Ward St", "Phase 1", "Rough-in",
+             "January 15, 2026", f"${big['total']:,}"):
+    check(frag in _text, f"plan PDF contains {frag!r}")
+nodollar = P.plan_pdf(big, address="516 Ward St, Martinez, CA 94553", dollars=False)
+_text2 = "".join(pg.get_text() for pg in fitz.open(stream=nodollar, filetype="pdf"))
+check("Allowance" not in _text2 and f"${big['total']:,}" not in _text2,
+      "no-$ variant strips allowances and totals")
+check("Phase 1" in _text2 and "Rough-in" in _text2, "no-$ variant keeps scope + sequence")
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")
