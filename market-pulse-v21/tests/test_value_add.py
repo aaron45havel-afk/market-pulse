@@ -102,9 +102,34 @@ check(V.remodel_budget(1500, 3, 2, 1960, "gut", "mid", state="NY")["total"] < _n
       "upstate NY cheaper than NYC metro")
 check(V.remodel_budget(1500, 3, 2, 1960, "gut", "mid", state="XX")["state"] == "CA-BAY",
       "unknown state code falls back to the default")
-check(len(V.STATE_COST_FACTORS) == 61, "50 states + DC + 10 metro breakouts present")
+check(len(V.STATE_COST_FACTORS) == 107, "50 states + DC + 56 metro breakouts present")
 check(all(c in V.STATE_NAMES for c in V.STATE_COST_FACTORS), "every factor has a display name")
 check(set(V.STATE_NAMES) == set(V.STATE_COST_FACTORS), "names and factors cover the same codes")
+check(all(0.8 <= f <= 2.3 for f in V.STATE_COST_FACTORS.values()), "every factor in a sane 0.8-2.3 band")
+check(all(c in V.STATE_COST_FACTORS for c in V.METRO_GEO), "every geo anchor has a cost factor")
+# boom metros sit above their state; spot values from the research
+check(V.STATE_COST_FACTORS["TN-BNA"] > V.STATE_COST_FACTORS["TN"] > V.STATE_COST_FACTORS["TN-MEM"],
+      "Nashville above TN statewide, Memphis below")
+check(V.STATE_COST_FACTORS["NC-RDU"] > V.STATE_COST_FACTORS["NC-CLT"] > V.STATE_COST_FACTORS["NC"],
+      "Raleigh > Charlotte > rest-NC")
+check(V.STATE_COST_FACTORS["CA-SD"] < V.STATE_COST_FACTORS["CA-BAY"], "San Diego below Bay Area")
+
+# ── address → closest-metro locator ──
+if V._ZIPS_DB.exists():
+    loc_ward = V.locate_market("516 Ward St, Martinez, CA 94553")
+    check(loc_ward is not None and loc_ward["code"] == "CA-BAY" and loc_ward["metro_matched"],
+          "Martinez address resolves to the Bay Area metro")
+    check(V.locate_market("98101")["code"] == "WA-SEA", "bare Seattle ZIP resolves to Seattle metro")
+    check(V.locate_market("1310 W Jefferson Blvd, Fort Wayne, IN 46802")["code"] == "IN",
+          "Fort Wayne falls back to Indiana statewide (no metro in range)")
+    check(V.locate_market("37206")["code"] == "TN-BNA", "East Nashville ZIP → Nashville metro")
+    check(V.locate_market("92104")["code"] == "CA-SD", "San Diego ZIP → San Diego metro")
+    kck = V.locate_market("66101")
+    check(kck is not None and kck["code"] == "MO-KC", "Kansas City KS ZIP crosses state line to the KC metro")
+    esb = V.locate_market("350 5th Ave, New York, NY 10118")
+    check(esb is not None and esb["code"] == "NY-NYC", "single-building Manhattan ZIP resolves via prefix fallback")
+    check(V.locate_market("no zip here at all") is None, "address without a ZIP → None")
+    check(V.extract_zip("12345 Main St, Austin TX 78704") == "78704", "last 5-digit group wins (house numbers lose)")
 
 # ── metro breakouts: metro > rest-of-state, and the blend still ≈ statewide ──
 METRO_PAIRS = [("IL-CHI", "IL"), ("WA-SEA", "WA"), ("TX-AUS", "TX"), ("MA-BOS", "MA"),

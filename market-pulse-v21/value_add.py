@@ -238,11 +238,158 @@ STATE_NAMES: dict[str, str] = {
 }
 
 
+# Nationwide metro coverage (two-agent research sweep, each factor
+# spot-checked against published metro remodel $/sqft via the validated
+# $344 × factor/2.29 transfer). Remodel-market calibrated: boom metros
+# (Nashville, Raleigh, San Diego, Portland) sit above their RSMeans
+# hard-cost index; slow interior metros track it.
+STATE_COST_FACTORS.update({
+    # West / Central
+    "AZ-PHX": 1.00, "AZ-TUS": 0.93, "NV-LV": 1.02, "OR-PDX": 1.15,
+    "CA-SAC": 1.15, "CA-SD": 1.28, "CA-FRE": 1.05, "UT-SLC": 0.95,
+    "NM-ABQ": 0.89, "ID-BOI": 0.97, "AK-ANC": 1.25, "MN-MSP": 1.10,
+    "MO-STL": 1.02, "MO-KC": 1.00, "OK-OKC": 0.85, "OK-TUL": 0.84,
+    "TX-SAT": 0.90, "TX-DFW": 0.93, "TX-HOU": 0.91, "TX-ELP": 0.84,
+    "NE-OMA": 0.91, "IA-DSM": 0.92, "KS-ICT": 0.86, "WI-MKE": 1.04, "WI-MAD": 1.02,
+    # East / South
+    "MI-DET": 1.00, "MI-GR": 0.94, "OH-CLE": 0.97, "OH-COL": 0.96, "OH-CIN": 0.94,
+    "IN-IND": 0.93, "PA-PIT": 0.97, "NY-BUF": 1.02, "MD-BAL": 1.01,
+    "VA-RIC": 0.95, "VA-HR": 0.93, "NC-CLT": 1.02, "NC-RDU": 1.05,
+    "TN-BNA": 1.08, "TN-MEM": 0.88, "KY-LOU": 0.92, "AL-BHM": 0.89,
+    "LA-NO": 0.96, "FL-JAX": 0.93, "FL-TPA": 1.01, "FL-ORL": 0.96,
+})
+STATE_NAMES.update({
+    "AZ-PHX": "Arizona — Phoenix metro", "AZ-TUS": "Arizona — Tucson metro",
+    "NV-LV": "Nevada — Las Vegas metro", "OR-PDX": "Oregon — Portland metro",
+    "CA-SAC": "California — Sacramento metro", "CA-SD": "California — San Diego metro",
+    "CA-FRE": "California — Fresno / Central Valley", "UT-SLC": "Utah — Salt Lake City metro",
+    "NM-ABQ": "New Mexico — Albuquerque metro", "ID-BOI": "Idaho — Boise metro",
+    "AK-ANC": "Alaska — Anchorage metro", "MN-MSP": "Minnesota — Minneapolis–St. Paul",
+    "MO-STL": "Missouri — St. Louis metro", "MO-KC": "Missouri/Kansas — Kansas City metro",
+    "OK-OKC": "Oklahoma — Oklahoma City metro", "OK-TUL": "Oklahoma — Tulsa metro",
+    "TX-SAT": "Texas — San Antonio metro", "TX-DFW": "Texas — Dallas–Fort Worth metro",
+    "TX-HOU": "Texas — Houston metro", "TX-ELP": "Texas — El Paso metro",
+    "NE-OMA": "Nebraska — Omaha metro", "IA-DSM": "Iowa — Des Moines metro",
+    "KS-ICT": "Kansas — Wichita metro", "WI-MKE": "Wisconsin — Milwaukee metro",
+    "WI-MAD": "Wisconsin — Madison metro",
+    "MI-DET": "Michigan — Detroit metro", "MI-GR": "Michigan — Grand Rapids metro",
+    "OH-CLE": "Ohio — Cleveland metro", "OH-COL": "Ohio — Columbus metro",
+    "OH-CIN": "Ohio — Cincinnati metro", "IN-IND": "Indiana — Indianapolis metro",
+    "PA-PIT": "Pennsylvania — Pittsburgh metro", "NY-BUF": "New York — Buffalo metro",
+    "MD-BAL": "Maryland — Baltimore metro", "VA-RIC": "Virginia — Richmond metro",
+    "VA-HR": "Virginia — Hampton Roads (VB/Norfolk)", "NC-CLT": "North Carolina — Charlotte metro",
+    "NC-RDU": "North Carolina — Raleigh–Durham", "TN-BNA": "Tennessee — Nashville metro",
+    "TN-MEM": "Tennessee — Memphis metro", "KY-LOU": "Kentucky — Louisville metro",
+    "AL-BHM": "Alabama — Birmingham metro", "LA-NO": "Louisiana — New Orleans metro",
+    "FL-JAX": "Florida — Jacksonville metro", "FL-TPA": "Florida — Tampa metro",
+    "FL-ORL": "Florida — Orlando metro",
+})
+
+
 def state_multiplier(state: str | None) -> float:
     """Effective multiplier on the Bay-Area-calibrated cost table for a
     state (CA-BAY → 1.0; Indiana → ~0.39). Unknown/blank → national avg."""
     f = STATE_COST_FACTORS.get((state or "").upper(), 1.00)
     return round(f / BAY_REMODEL_FACTOR, 3)
+
+
+# ── Address → closest metro resolution ───────────────────────────────
+# Anchor coordinates + a match radius (statute miles) per metro code. A ZIP
+# inside a radius prices at that metro; otherwise the containing state's
+# factor applies. Cross-state matches are intentional — construction labor
+# markets ignore state lines (Camden NJ prices like Philadelphia, Vancouver
+# WA like Portland). Codes only take effect once they also exist in
+# STATE_COST_FACTORS, so geo entries may lead their factors.
+METRO_GEO: dict[str, tuple[float, float, float]] = {
+    "CA-BAY": (37.77, -122.42, 55), "CA": (34.05, -118.24, 70),      # CA = So-Cal/LA anchor
+    "CA-SD": (32.72, -117.16, 45), "CA-SAC": (38.58, -121.49, 45), "CA-FRE": (36.74, -119.79, 60),
+    "NY-NYC": (40.71, -74.01, 45), "NY-BUF": (42.89, -78.88, 45),
+    "IL-CHI": (41.88, -87.63, 50), "WA-SEA": (47.61, -122.33, 45),
+    "TX-AUS": (30.27, -97.74, 40), "TX-DFW": (32.78, -96.80, 55),
+    "TX-HOU": (29.76, -95.37, 55), "TX-SAT": (29.42, -98.49, 45), "TX-ELP": (31.76, -106.49, 40),
+    "MA-BOS": (42.36, -71.06, 45), "PA-PHL": (39.95, -75.17, 40), "PA-PIT": (40.44, -79.99, 45),
+    "FL-MIA": (26.14, -80.21, 75), "FL-TPA": (27.95, -82.46, 50),
+    "FL-ORL": (28.54, -81.38, 45), "FL-JAX": (30.33, -81.66, 45),
+    "CO-DEN": (39.74, -104.99, 45), "GA-ATL": (33.75, -84.39, 55),
+    "AZ-PHX": (33.45, -112.07, 50), "AZ-TUS": (32.22, -110.97, 40),
+    "NV-LV": (36.17, -115.14, 45), "OR-PDX": (45.52, -122.68, 45),
+    "UT-SLC": (40.76, -111.89, 45), "NM-ABQ": (35.08, -106.65, 45),
+    "ID-BOI": (43.62, -116.20, 45), "AK-ANC": (61.22, -149.90, 60),
+    "MN-MSP": (44.98, -93.27, 50), "MO-STL": (38.63, -90.20, 45), "MO-KC": (39.10, -94.58, 45),
+    "OK-OKC": (35.47, -97.52, 45), "OK-TUL": (36.15, -95.99, 40),
+    "NE-OMA": (41.26, -95.94, 40), "IA-DSM": (41.59, -93.62, 40), "KS-ICT": (37.69, -97.34, 40),
+    "WI-MKE": (43.04, -87.91, 40), "WI-MAD": (43.07, -89.40, 35),
+    "MI-DET": (42.33, -83.05, 50), "MI-GR": (42.96, -85.66, 40),
+    "OH-CLE": (41.50, -81.69, 45), "OH-COL": (39.96, -83.00, 45), "OH-CIN": (39.10, -84.51, 45),
+    "IN-IND": (39.77, -86.16, 45), "MD-BAL": (39.29, -76.61, 40), "DC": (38.90, -77.04, 40),
+    "VA-RIC": (37.54, -77.44, 40), "VA-HR": (36.85, -76.29, 45),
+    "NC-CLT": (35.23, -80.84, 45), "NC-RDU": (35.78, -78.64, 45),
+    "TN-BNA": (36.16, -86.78, 45), "TN-MEM": (35.15, -90.05, 45),
+    "KY-LOU": (38.25, -85.76, 40), "AL-BHM": (33.52, -86.80, 45),
+    "LA-NO": (29.95, -90.07, 45),
+}
+
+
+def _haversine_mi(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    from math import asin, cos, radians, sin, sqrt
+    la1, lo1, la2, lo2 = map(radians, (lat1, lng1, lat2, lng2))
+    h = sin((la2 - la1) / 2) ** 2 + cos(la1) * cos(la2) * sin((lo2 - lo1) / 2) ** 2
+    return 3958.8 * 2 * asin(sqrt(h))
+
+
+def extract_zip(text: str | None) -> str | None:
+    """Pull the ZIP out of a pasted address (takes the LAST 5-digit group,
+    so street numbers don't win; tolerates ZIP+4)."""
+    import re
+    if not text:
+        return None
+    hits = re.findall(r"\b(\d{5})(?:-\d{4})?\b", text)
+    return hits[-1] if hits else None
+
+
+def locate_market(address_or_zip: str | None) -> dict | None:
+    """Address/ZIP → the market that should price the remodel: the closest
+    metro anchor within its radius, else the containing state. Returns
+    {code, label, zip, place, distance_mi, metro_matched, market} or None
+    if no ZIP could be resolved."""
+    z = extract_zip(address_or_zip)
+    if not z:
+        return None
+    m = zip_market(z)
+    if m is None or m.get("lat") is None:
+        # Unique/PO-box ZIPs (e.g. single-building Manhattan ZIPs) aren't in
+        # the residential table — same first-3-digit sectional prefix is the
+        # same postal region, so borrow a neighbor's coordinates/market.
+        if _ZIPS_DB.exists():
+            conn = sqlite3.connect(str(_ZIPS_DB))
+            conn.row_factory = sqlite3.Row
+            try:
+                r = conn.execute(
+                    "SELECT zip FROM zips WHERE substr(zip,1,3) = ? AND lat IS NOT NULL "
+                    "ORDER BY population DESC LIMIT 1", (z[:3],)).fetchone()
+            finally:
+                conn.close()
+            m = zip_market(r["zip"]) if r else None
+    if m is None or m.get("lat") is None:
+        return None
+    best_code, best_dist = None, 1e12
+    for code, (lat, lng, radius) in METRO_GEO.items():
+        if code not in STATE_COST_FACTORS:
+            continue
+        d = _haversine_mi(m["lat"], m["lng"], lat, lng)
+        if d <= radius and d < best_dist:
+            best_code, best_dist = code, d
+    if best_code:
+        return {"code": best_code, "label": STATE_NAMES.get(best_code, best_code),
+                "zip": z, "place": m["name"], "distance_mi": round(best_dist),
+                "metro_matched": True, "market": m}
+    st = (m["state"] or "").upper()
+    code = st if st in STATE_COST_FACTORS else None
+    if code is None:
+        return None
+    return {"code": code, "label": STATE_NAMES.get(code, code),
+            "zip": z, "place": m["name"], "distance_mi": None,
+            "metro_matched": False, "market": m}
 
 
 def zip_market(zip_code: str) -> dict | None:
@@ -254,13 +401,14 @@ def zip_market(zip_code: str) -> dict | None:
     conn.row_factory = sqlite3.Row
     try:
         r = conn.execute(
-            "SELECT zip, state, name, median_home_value, median_rent_monthly "
+            "SELECT zip, state, name, lat, lng, median_home_value, median_rent_monthly "
             "FROM zips WHERE zip = ?", (zip_code.strip(),)).fetchone()
     finally:
         conn.close()
     if r is None:
         return None
     return {"zip": r["zip"], "state": r["state"], "name": r["name"],
+            "lat": r["lat"], "lng": r["lng"],
             "median_home_value": r["median_home_value"],
             "median_rent": r["median_rent_monthly"]}
 
