@@ -102,8 +102,29 @@ check(V.remodel_budget(1500, 3, 2, 1960, "gut", "mid", state="NY")["total"] < _n
       "upstate NY cheaper than NYC metro")
 check(V.remodel_budget(1500, 3, 2, 1960, "gut", "mid", state="XX")["state"] == "CA-BAY",
       "unknown state code falls back to the default")
-check(len(V.STATE_COST_FACTORS) == 53, "50 states + DC + CA-Bay + NYC breakouts present")
+check(len(V.STATE_COST_FACTORS) == 61, "50 states + DC + 10 metro breakouts present")
 check(all(c in V.STATE_NAMES for c in V.STATE_COST_FACTORS), "every factor has a display name")
+check(set(V.STATE_NAMES) == set(V.STATE_COST_FACTORS), "names and factors cover the same codes")
+
+# ── metro breakouts: metro > rest-of-state, and the blend still ≈ statewide ──
+METRO_PAIRS = [("IL-CHI", "IL"), ("WA-SEA", "WA"), ("TX-AUS", "TX"), ("MA-BOS", "MA"),
+               ("PA-PHL", "PA"), ("FL-MIA", "FL"), ("CO-DEN", "CO"), ("GA-ATL", "GA"),
+               ("NY-NYC", "NY"), ("CA-BAY", "CA")]
+for metro, rest in METRO_PAIRS:
+    check(V.STATE_COST_FACTORS[metro] > V.STATE_COST_FACTORS[rest],
+          f"{metro} factor exceeds {rest} (rest of state)")
+# researched population-weighted blends reproduce the statewide averages
+BLENDS = [("IL-CHI", "IL", 0.67, 1.09), ("WA-SEA", "WA", 0.51, 1.12), ("TX-AUS", "TX", 0.08, 0.93),
+          ("MA-BOS", "MA", 0.63, 1.16), ("PA-PHL", "PA", 0.31, 1.02), ("FL-MIA", "FL", 0.27, 0.97),
+          ("CO-DEN", "CO", 0.51, 1.03), ("GA-ATL", "GA", 0.57, 0.96)]
+for metro, rest, share, statewide in BLENDS:
+    blend = share * V.STATE_COST_FACTORS[metro] + (1 - share) * V.STATE_COST_FACTORS[rest]
+    check(abs(blend - statewide) < 0.02, f"{metro}+{rest} pop-weighted blend ≈ statewide {statewide} (got {blend:.3f})")
+# metro $/sqft sanity (published-band midpoints via the validated transfer)
+between(V.remodel_budget(1500, 3, 2, 1960, "gut", "mid", state="WA-SEA")["psf"], 165, 215, "Seattle gut $/sqft near ~$188")
+between(V.remodel_budget(1500, 3, 2, 1960, "gut", "mid", state="MA-BOS")["psf"], 175, 220, "Boston gut $/sqft near ~$195")
+between(V.remodel_budget(1500, 3, 2, 1960, "gut", "mid", state="IL-CHI")["psf"], 155, 200, "Chicago gut $/sqft near ~$177")
+between(V.remodel_budget(1500, 3, 2, 1960, "gut", "mid", state="TX-AUS")["psf"], 135, 170, "Austin gut $/sqft near ~$150")
 
 # ── buy / no-buy verdict ──
 green = V.flip_verdict(100_000, 50_000, 300_000)
@@ -118,6 +139,21 @@ at_max = V.flip_verdict(green["max_offer"], 50_000, 300_000)
 check(at_max is not None and abs(at_max["margin"] - 20.0) < 0.2, "max_offer hits the 20% line")
 check(V.flip_verdict(0, 50_000, 300_000) is None, "no price → no verdict")
 check(V.flip_verdict(100_000, 50_000, None) is None, "no ARV → no verdict")
+
+# ── adjustable thresholds ──
+# fair["margin"] is ~11.6% — flips class as the bar moves
+mid_case = (300_000, 60_000, 420_000)
+check(V.flip_verdict(*mid_case)["cls"] == "fair", "≈12% margin is FAIR at the default 20/8 bar")
+check(V.flip_verdict(*mid_case, green_pct=10)["cls"] == "buy", "lowering the buy bar to 10% flips it green")
+check(V.flip_verdict(*mid_case, green_pct=30, fair_pct=15)["cls"] == "no", "raising the pass bar to 15% flips it red")
+strict = V.flip_verdict(100_000, 50_000, 300_000, green_pct=30)
+at_strict_max = V.flip_verdict(strict["max_offer"], 50_000, 300_000, green_pct=30)
+check(abs(at_strict_max["margin"] - 30.0) < 0.2, "max_offer tracks a custom 30% green bar")
+check(strict["max_offer"] < green["max_offer"], "a stricter bar lowers the max offer")
+clamped = V.flip_verdict(*mid_case, green_pct=200, fair_pct=90)
+check(clamped["green_pct"] == 60 and clamped["fair_pct"] < 60, "thresholds clamp sanely (fair stays below green)")
+check(V.flip_verdict(*mid_case, green_pct=20, fair_pct=8)["verdict"] == V.flip_verdict(*mid_case)["verdict"],
+      "explicit defaults match implicit defaults")
 
 # ── any-state ZIP lookup (ARV source) — guarded on the bundled zips.db ──
 if V._ZIPS_DB.exists():

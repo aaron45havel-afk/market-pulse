@@ -380,6 +380,7 @@ async def value_add_page(request: Request, region: str = "All CA",
                          bsqft: float = 0, bbeds: int = 3, bbaths: float = 1,
                          byear: int = 0, bscope: str = "gut", blevel: str = "mid",
                          bstate: str = "CA-BAY", bprice: float = 0, bzip: str = "", barv: float = 0,
+                         bgreen: float = 20, bred: float = 8,
                          bconv: int = 0, bmasonry: int = 0, bfound: int = 0, bwin: int = 0):
     """CA needs-work multifamily finder: hunting-ground ZIP ranking +
     203(k)-first rehab underwriting + a state-aware SFR full-remodel budget
@@ -406,11 +407,11 @@ async def value_add_page(request: Request, region: str = "All CA",
             bmarket = await asyncio.to_thread(zip_market, bzip)
         if bprice > 0:
             arv = barv if barv > 0 else (bmarket or {}).get("median_home_value")
-            verdict = flip_verdict(bprice, budget["total"], arv)
+            verdict = flip_verdict(bprice, budget["total"], arv, bgreen, bred)
     return templates.TemplateResponse("value_add.html", {
         "request": request, "res": res, "check": check, "budget": budget,
         "verdict": verdict, "bmarket": bmarket,
-        "bprice": bprice, "bzip": bzip, "barv": barv,
+        "bprice": bprice, "bzip": bzip, "barv": barv, "bgreen": bgreen, "bred": bred,
         "regions": REGIONS, "rehab": rehab,
         "scopes": REMODEL_SCOPES, "levels": REMODEL_LEVELS, "state_names": STATE_NAMES,
     })

@@ -183,15 +183,28 @@ REMODEL_TIER_DESC = {
 # averages; a dense urban core can run above its state figure (use the
 # high finish level as the downside there).
 BAY_REMODEL_FACTOR = 2.29        # Bay Area remodel market vs national avg
+# Metro breakouts follow the NYC pattern: the metro gets a remodel-market
+# factor (often above its RSMeans hard-cost index — hot metro trades), and
+# the base state code becomes "rest of state", rebalanced so the population-
+# weighted blend still reproduces the researched statewide average
+# (e.g. Chicago 67% of IL: 0.67×1.18 + 0.33×0.92 ≈ 1.09 statewide).
 STATE_COST_FACTORS: dict[str, float] = {
     "CA-BAY": BAY_REMODEL_FACTOR, "CA": 1.20,
     "NY-NYC": 1.33, "NY": 1.02,
-    "HI": 1.35, "AK": 1.28, "MA": 1.16, "DC": 1.13, "NJ": 1.12, "WA": 1.12,
-    "CT": 1.10, "RI": 1.10, "IL": 1.09, "OR": 1.07, "MD": 1.04, "DE": 1.04,
-    "MN": 1.04, "NV": 1.04, "CO": 1.03, "PA": 1.02, "VA": 1.00, "NH": 1.00,
-    "AZ": 0.97, "FL": 0.97, "UT": 0.96, "MT": 0.96, "GA": 0.96, "WI": 0.96,
+    "IL-CHI": 1.18, "IL": 0.92,
+    "WA-SEA": 1.25, "WA": 0.98,
+    "TX-AUS": 1.00, "TX": 0.92,
+    "MA-BOS": 1.30, "MA": 0.94,
+    "PA-PHL": 1.12, "PA": 0.97,
+    "FL-MIA": 1.10, "FL": 0.92,
+    "CO-DEN": 1.08, "CO": 0.98,
+    "GA-ATL": 1.02, "GA": 0.88,
+    "HI": 1.35, "AK": 1.28, "DC": 1.13, "NJ": 1.12,
+    "CT": 1.10, "RI": 1.10, "OR": 1.07, "MD": 1.04, "DE": 1.04,
+    "MN": 1.04, "NV": 1.04, "VA": 1.00, "NH": 1.00,
+    "AZ": 0.97, "UT": 0.96, "MT": 0.96, "WI": 0.96,
     "MI": 0.96, "ID": 0.95, "VT": 0.95, "NC": 0.94, "TN": 0.94, "WY": 0.93,
-    "TX": 0.93, "SC": 0.93, "AL": 0.93, "LA": 0.93, "KY": 0.93, "ME": 0.93,
+    "SC": 0.93, "AL": 0.93, "LA": 0.93, "KY": 0.93, "ME": 0.93,
     "WV": 0.92, "NM": 0.92, "MO": 0.92, "OH": 0.91, "AR": 0.90, "IN": 0.90,
     "ND": 0.90, "OK": 0.89, "MS": 0.88, "IA": 0.88, "NE": 0.88, "KS": 0.87,
     "SD": 0.87,
@@ -199,19 +212,29 @@ STATE_COST_FACTORS: dict[str, float] = {
 STATE_NAMES: dict[str, str] = {
     "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas",
     "CA-BAY": "California — Bay Area", "CA": "California — So-Cal / other",
-    "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "DC": "Washington DC",
-    "FL": "Florida", "GA": "Georgia", "HI": "Hawaii", "ID": "Idaho",
-    "IL": "Illinois", "IN": "Indiana", "IA": "Iowa", "KS": "Kansas",
+    "CO-DEN": "Colorado — Denver metro", "CO": "Colorado — rest of state",
+    "CT": "Connecticut", "DE": "Delaware", "DC": "Washington DC",
+    "FL-MIA": "Florida — Miami / South FL", "FL": "Florida — rest of state",
+    "GA-ATL": "Georgia — Atlanta metro", "GA": "Georgia — rest of state",
+    "HI": "Hawaii", "ID": "Idaho",
+    "IL-CHI": "Illinois — Chicago metro", "IL": "Illinois — downstate/other",
+    "IN": "Indiana", "IA": "Iowa", "KS": "Kansas",
     "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland",
-    "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi",
+    "MA-BOS": "Massachusetts — Boston metro", "MA": "Massachusetts — rest of state",
+    "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi",
     "MO": "Missouri", "MT": "Montana", "NE": "Nebraska", "NV": "Nevada",
     "NH": "New Hampshire", "NJ": "New Jersey", "NM": "New Mexico",
     "NY-NYC": "New York — NYC metro", "NY": "New York — upstate/other",
     "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio", "OK": "Oklahoma",
-    "OR": "Oregon", "PA": "Pennsylvania", "RI": "Rhode Island", "SC": "South Carolina",
-    "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah",
-    "VT": "Vermont", "VA": "Virginia", "WA": "Washington", "WV": "West Virginia",
-    "WI": "Wisconsin", "WY": "Wyoming",
+    "OR": "Oregon",
+    "PA-PHL": "Pennsylvania — Philadelphia metro", "PA": "Pennsylvania — rest (incl. Pittsburgh)",
+    "RI": "Rhode Island", "SC": "South Carolina",
+    "SD": "South Dakota", "TN": "Tennessee",
+    "TX-AUS": "Texas — Austin metro", "TX": "Texas — rest (incl. Dallas, Houston)",
+    "UT": "Utah",
+    "VT": "Vermont", "VA": "Virginia",
+    "WA-SEA": "Washington — Seattle metro", "WA": "Washington — rest of state",
+    "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming",
 }
 
 
@@ -242,29 +265,39 @@ def zip_market(zip_code: str) -> dict | None:
             "median_rent": r["median_rent_monthly"]}
 
 
-def flip_verdict(price: float, rehab_total: float, arv: float | None) -> dict | None:
+GREEN_PCT_DEFAULT = 20.0   # ≥ this equity margin → green SHOULD BUY (70-75% rule)
+FAIR_PCT_DEFAULT = 8.0     # ≥ this (but < green) → amber FAIR; below → red
+
+
+def flip_verdict(price: float, rehab_total: float, arv: float | None,
+                 green_pct: float = GREEN_PCT_DEFAULT,
+                 fair_pct: float = FAIR_PCT_DEFAULT) -> dict | None:
     """Purchase-price → buy / no-buy. margin = (ARV − all-in) / ARV with a
-    6-month financed carry, judged on the same 70-75%-rule thresholds as the
-    MF checker: ≥20% green BUY, 8-20% amber FAIR, <8% red TOO MUCH."""
+    6-month financed carry. Thresholds are adjustable (defaults mirror the
+    MF checker's 70-75% rule): ≥green_pct → green BUY, ≥fair_pct → amber
+    FAIR, below → red TOO MUCH."""
     if not price or price <= 0 or arv is None or arv <= 0:
         return None
+    green = min(60.0, max(1.0, float(green_pct or GREEN_PCT_DEFAULT)))
+    fair = min(green - 0.5, max(0.0, float(fair_pct if fair_pct is not None else FAIR_PCT_DEFAULT)))
     k = 1 + 0.965 * (RATE_DEFAULT / 100) * (REHAB_CARRY_MONTHS / 12)  # 6-mo financed carry
     carry = (price + rehab_total) * (k - 1)
     all_in = price + rehab_total + carry
     equity = arv - all_in
     margin = equity / arv * 100
-    if margin >= 20:
+    if margin >= green:
         verdict, cls = "SHOULD BUY", "buy"
-    elif margin >= 8:
+    elif margin >= fair:
         verdict, cls = "FAIR — thin margin", "fair"
     else:
         verdict, cls = "TOO MUCH REMODEL WORK", "no"
-    # Max purchase price that still hits the 20% green line.
-    max_offer = 0.80 * arv / k - rehab_total
+    # Max purchase price that still clears the green threshold.
+    max_offer = (1 - green / 100) * arv / k - rehab_total
     return {"price": round(price), "rehab": round(rehab_total), "carry": round(carry),
             "all_in": round(all_in), "arv": round(arv),
             "equity": round(equity), "margin": round(margin, 1),
             "verdict": verdict, "cls": cls,
+            "green_pct": round(green, 1), "fair_pct": round(fair, 1),
             "max_offer": round(max_offer) if max_offer > 0 else 0}
 
 
