@@ -449,6 +449,44 @@ def flip_verdict(price: float, rehab_total: float, arv: float | None,
             "max_offer": round(max_offer) if max_offer > 0 else 0}
 
 
+def house_hack_scenario(piti: dict, units: int, rent_unit: float) -> dict | None:
+    """Rent side of the /multifamily scenario card: what the tenants pay
+    vs what the note costs. Mirrors the per-ZIP table math exactly (same
+    stressed definition: rents −10%, insurance +30%, one vacant month a
+    year) so the card and the table can never tell different stories.
+
+    piti: an _fha_piti()-shaped dict (needs 'piti' and 'monthly_ins').
+    units: 2-4 (owner occupies one, rents units−1).
+    rent_unit: expected monthly rent for ONE unit.
+    """
+    if not piti or not rent_unit or rent_unit <= 0 or units < 2:
+        return None
+    p = piti["piti"]
+    rented = units - 1
+    offset = rented * rent_unit
+    net = p - offset
+    stressed = (p + 0.30 * piti["monthly_ins"]) - offset * 0.90 * (11 / 12)
+    out = {
+        "rent_unit": round(rent_unit), "rented_units": rented,
+        "offset": round(offset), "net": round(net), "stressed": round(stressed),
+        # Each tenant unit must fetch this for the tenants to carry the
+        # whole note while you live in yours.
+        "breakeven_rent": round(p / rented),
+        # All units rented after you move out (gross — the card labels it
+        # as before vacancy/maintenance).
+        "moveout_cashflow": round(units * rent_unit - p),
+    }
+    # FHA self-sufficiency gate (3-4 unit only): 75% of ALL units' rent
+    # (including the one you occupy) must cover PITI or the loan won't fund.
+    if units >= 3:
+        out["fha_required_rent"] = round(p / (0.75 * units))
+        out["fha_pass"] = 0.75 * units * rent_unit >= p
+    else:
+        out["fha_required_rent"] = None
+        out["fha_pass"] = None
+    return out
+
+
 def _est_windows(sqft: float) -> int:
     return max(6, round(sqft / 130))
 
