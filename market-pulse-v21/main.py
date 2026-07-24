@@ -3543,9 +3543,10 @@ def _fha_piti(home_value: float, state_code: str, rate_pct: float,
 async def multifamily_page(
     request: Request,
     state: str = "OH",
-    max_price: int = 550000,
-    down_pct: float = 3.5,
-    units: int = 2,
+    max_price: str = "550000",
+    down_pct: str = "3.5",
+    units: str = "2",
+    rent_unit: str = "",
 ):
     """Multifamily ZIP scout, tuned for first-time FHA owner-occupants.
 
@@ -3572,10 +3573,13 @@ async def multifamily_page(
     from bisect import bisect_left
     from data_providers import MORTGAGE_30Y_RATE
     state = (state or "OH").upper()
-    # Clamp inputs so a wonky URL param can't blow up the math.
-    max_price = max(50_000, min(2_000_000, int(max_price or 550_000)))
-    down_pct = max(0.0, min(50.0, float(down_pct or 3.5)))
-    units = max(2, min(4, int(units or 2)))
+    # Clamp inputs so a wonky URL param can't blow up the math. Parsed
+    # tolerantly (_qnum) — an emptied number field submits "" and must
+    # fall back to the default, never 422.
+    max_price = max(50_000, min(2_000_000, int(_qnum(max_price, 550_000))))
+    down_pct = max(0.0, min(50.0, _qnum(down_pct, 3.5)))
+    units = max(2, min(4, int(_qnum(units, 2))))
+    rent_unit_n = max(0.0, min(50_000.0, _qnum(rent_unit)))
 
     db_path = Path(__file__).resolve().parent / "data" / "zips.db"
     if not db_path.exists():
@@ -3583,6 +3587,8 @@ async def multifamily_page(
             "request": request, "rows": [], "state": state, "states": [],
             "has_mf_data": False, "data_pending": True,
             "max_price": max_price, "down_pct": down_pct, "units": units,
+            "rent_unit": (int(rent_unit_n) if rent_unit_n > 0 else ""),
+            "hh_scenario": None, "rent_source": None,
         })
     conn = sqlite3.connect(str(db_path))
     cur = conn.cursor()
@@ -3795,11 +3801,25 @@ async def multifamily_page(
     # so they can see what their max-price scenario costs.
     sample_piti = _fha_piti(max_price, state, MORTGAGE_30Y_RATE, down_pct=down_pct)
 
+    # Rent side of the same card: user-supplied rent/unit, else the median
+    # rent across the state's matching ZIPs, so the card answers "do the
+    # tenants carry the note?" out of the box instead of stopping at PITI.
+    import statistics
+    from value_add import house_hack_scenario
+    zip_rents = [r[8] for r in rows_raw if r[8]]
+    state_rent = statistics.median(zip_rents) if zip_rents else None
+    eff_rent = rent_unit_n if rent_unit_n > 0 else (state_rent or 0)
+    hh_scenario = house_hack_scenario(sample_piti, units, eff_rent) if sample_piti else None
+    rent_source = ("your input" if rent_unit_n > 0 else
+                   (f"median across {len(zip_rents)} matching {state} ZIPs" if state_rent else None))
+
     return templates.TemplateResponse("multifamily.html", {
         "request": request,
         "rows": rows[:100],
         "state": state, "states": states,
         "max_price": max_price, "down_pct": down_pct, "units": units,
+        "rent_unit": (int(rent_unit_n) if rent_unit_n > 0 else ""),
+        "hh_scenario": hh_scenario, "rent_source": rent_source,
         "sample_piti": sample_piti,
         "mortgage_rate": MORTGAGE_30Y_RATE,
         "has_mf_data": has_mf_data,

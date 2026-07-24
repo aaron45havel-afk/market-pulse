@@ -264,6 +264,29 @@ check(not _re.search(r"\$\s*\d", _text2),
       "no-$ variant contains no dollar figure anywhere (incl. $-rates inside labels)")
 check("Phase 1" in _text2 and "Rough-in" in _text2, "no-$ variant keeps scope + sequence")
 
+# ── house-hack rent offset (multifamily scenario card) ──
+piti_stub = {"piti": 6000.0, "monthly_ins": 200.0}
+hh3 = V.house_hack_scenario(piti_stub, 3, 2000)
+check(hh3["rented_units"] == 2 and hh3["offset"] == 4000, "3-unit rents 2 tenant units")
+check(hh3["net"] == 2000, "net cost = PITI − tenant rent")
+check(hh3["breakeven_rent"] == 3000, "break-even = PITI / rented units")
+check(hh3["stressed"] == round(6060 - 4000 * 0.9 * 11 / 12),
+      "stressed matches the table's definition (rents −10%, ins +30%, 1 mo vacant)")
+check(hh3["moveout_cashflow"] == 0, "move-out cash flow = all units − PITI")
+check(hh3["fha_required_rent"] == round(6000 / 2.25), "FHA needs PITI/(0.75×units) per unit")
+check(V.house_hack_scenario(piti_stub, 3, 2700)["fha_pass"] is True,
+      "rent above the self-sufficiency bar passes")
+check(V.house_hack_scenario(piti_stub, 3, 2600)["fha_pass"] is False,
+      "rent below the self-sufficiency bar fails")
+hh2 = V.house_hack_scenario(piti_stub, 2, 3000)
+check(hh2["fha_pass"] is None and hh2["fha_required_rent"] is None,
+      "duplexes are exempt from self-sufficiency")
+rich = V.house_hack_scenario(piti_stub, 4, 2500)
+check(rich["net"] < 0 and rich["moveout_cashflow"] == 4000,
+      "high rents → negative net (live free + cash flow)")
+check(V.house_hack_scenario(piti_stub, 4, 0) is None, "no rent → no scenario")
+check(V.house_hack_scenario(None, 4, 2000) is None, "no PITI → no scenario")
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

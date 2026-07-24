@@ -138,6 +138,10 @@
                 <option value="4" {% if units == 4 %}selected{% endif %}>4-unit</option>
             </select>
         </div>
+        <div class="field">
+            <label for="rentUnit">Rent/unit $ (opt)</label>
+            <input type="number" name="rent_unit" id="rentUnit" value="{{ rent_unit }}" min="0" max="50000" step="25" placeholder="state median">
+        </div>
         <button type="submit" class="apply-btn">Apply</button>
     </form>
 
@@ -154,6 +158,27 @@
             <div class="item"><span class="label">Down payment</span><span class="val">${{ '{:,.0f}'.format(sample_piti.down_cash) }}</span></div>
             <div class="item"><span class="label">Closing est (3%)</span><span class="val">${{ '{:,.0f}'.format(sample_piti.closing_est) }}</span></div>
         </div>
+
+        {% if hh_scenario %}
+        <div class="piti-card-head" style="margin-top:0.8rem">Rent offset — you live in one unit, tenants rent {{ hh_scenario.rented_units }} at ${{ '{:,.0f}'.format(hh_scenario.rent_unit) }}/mo each ({{ rent_source }})</div>
+        <div class="piti-grid">
+            <div class="item"><span class="label">Tenant rent /mo</span><span class="val">${{ '{:,.0f}'.format(hh_scenario.offset) }}</span></div>
+            <div class="item total"><span class="label">Your net cost /mo</span><span class="val" style="color:{{ 'var(--mint-ink)' if hh_scenario.net <= 0 else 'var(--coral-ink)' }}">{% if hh_scenario.net <= 0 %}+${{ '{:,.0f}'.format(-hh_scenario.net) }} cash flow{% else %}${{ '{:,.0f}'.format(hh_scenario.net) }}{% endif %}</span></div>
+            <div class="item"><span class="label" title="Rents −10%, insurance +30%, one vacant month a year — same definition as the table's Stressed column">Stressed net /mo</span><span class="val" style="color:{{ 'var(--mint-ink)' if hh_scenario.stressed <= 0 else 'var(--coral-ink)' }}">{% if hh_scenario.stressed <= 0 %}+${{ '{:,.0f}'.format(-hh_scenario.stressed) }}{% else %}${{ '{:,.0f}'.format(hh_scenario.stressed) }}{% endif %}</span></div>
+            <div class="item"><span class="label">Break-even rent /unit</span><span class="val">${{ '{:,.0f}'.format(hh_scenario.breakeven_rent) }}</span></div>
+            {% if hh_scenario.fha_required_rent %}
+            <div class="item"><span class="label" title="FHA won't fund a 3-4 unit unless 75% of ALL units' market rent (including yours) covers PITI">FHA self-sufficiency</span><span class="val">{% if hh_scenario.fha_pass %}<span class="fha-pill ok">PASS</span>{% else %}<span class="fha-pill bad">FAIL</span>{% endif %} needs ${{ '{:,.0f}'.format(hh_scenario.fha_required_rent) }}/unit</span></div>
+            {% endif %}
+            <div class="item"><span class="label" title="All units rented at the same rent, before vacancy and maintenance">If you move out /mo</span><span class="val" style="color:{{ 'var(--mint-ink)' if hh_scenario.moveout_cashflow >= 0 else 'var(--coral-ink)' }}">{% if hh_scenario.moveout_cashflow >= 0 %}+{% endif %}${{ '{:,.0f}'.format(hh_scenario.moveout_cashflow) }}</span></div>
+        </div>
+        <div style="font-size:0.72rem;color:var(--ink-3);margin-top:0.4rem">
+            Net cost = PITI − tenant rent; a green figure means the tenants cover your entire housing cost. Break-even is what each tenant unit must fetch for you to live free.
+            {% if hh_scenario.fha_required_rent %}The FHA self-sufficiency gate is a hard funding rule on 3–4 units — if market rents are below ${{ '{:,.0f}'.format(hh_scenario.fha_required_rent) }}/unit, the loan doesn't close regardless of your income.{% endif %}
+            Enter your target property's actual rent in <strong>Rent/unit</strong> to replace the state median. Excludes utilities, maintenance and capex reserves.
+        </div>
+        {% elif sample_piti %}
+        <div style="font-size:0.72rem;color:var(--ink-3);margin-top:0.55rem">No rent data for this state yet — enter a <strong>Rent/unit</strong> figure above to see the offset math (net cost, break-even, FHA self-sufficiency).</div>
+        {% endif %}
     </div>
     {% endif %}
 
