@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "as_of": "2026-07-19",
-    "count": 6671,
+    "as_of": "2026-07-26",
+    "count": 6676,
     "source": "Photon (komoot.io OSM reverse-geocoder), neighbourhood/suburb/district tags"
   },
   "neighborhoods": {
@@ -293,6 +293,7 @@
     "02842": "Whitehall",
     "02852": "Wickford",
     "02858": "Oakland",
+    "02865": "Saylesville",
     "02873": "Rockville",
     "02879": "Wakefield",
     "02881": "Kingston",
@@ -1761,6 +1762,7 @@
     "14840": "Hammondsport",
     "14842": "Himrod",
     "14846": "Hunt",
+    "14850": "Ward 3",
     "14859": "Reniff",
     "14860": "Lodi",
     "14864": "Millport",
@@ -1959,6 +1961,7 @@
     "16323": "Bleakley Hill",
     "16335": "Neason Hill",
     "16341": "Allegheny Township",
+    "16343": "Reno",
     "16350": "Chandlers Valley",
     "16354": "Breedtown",
     "16374": "Scrubgrass Generating Plant",
@@ -3678,6 +3681,7 @@
     "33980": "River Club",
     "34102": "Old Naples",
     "34103": "The Colonade",
+    "34108": "The Crescent",
     "34109": "Pipers Grove",
     "34110": "Mediterra",
     "34116": "Golden Gate",
@@ -6670,6 +6674,7 @@
     "95659": "Catlett",
     "95660": "North Highlands",
     "95662": "Orangevale",
+    "95663": "Penryn",
     "95665": "Pine Acres",
     "95668": "Pleasant Grove",
     "95670": "Soudan",
