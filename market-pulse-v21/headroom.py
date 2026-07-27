@@ -338,6 +338,59 @@ def _flip_after_tax_profit(pretax: float, market_code: str, fed: float = FED_ORD
     return pretax - fed_tax - se - state_tax
 
 
+def calibration(scope: str) -> dict:
+    """Fixer entry discount x and renovated premium y for a scope (verified
+    July-2026 calibration: Zillow hedonic fixer discounts + distressed-sale
+    literature + JBREC/Kiavi 65%-of-ARV cross-check; conservative vs the
+    ATTOM 25.4% observed national flip ROI)."""
+    t = _cal("calibration")["table"]["defaults"]
+    return {"x": t[f"x_{scope}"], "y": t[f"y_{scope}"]}
+
+
+def market_headroom(code: str, median_value: float, median_rent: float,
+                    appreciation: float, *, scope: str = "moderate",
+                    level: str = "mid", sqft: float = 1500.0,
+                    rate_pct: float = 6.55, target: float = TARGET_DEFAULT,
+                    mode: str = "brrrr", trajectory: str | None = None,
+                    rehab_total: float | None = None) -> dict | None:
+    """One market's answer: max buy $/sqft at the after-tax target vs what
+    fixers actually cost there → headroom % → verdict tier.
+
+    median_value/median_rent: the market's aggregates (1,500-sqft prototype:
+    the median-value home IS the prototype). appreciation: annual fraction,
+    already clamped/vetoed upstream is fine — a 'declining' trajectory also
+    demotes the verdict here. rehab_total overrides the cost model (tests)."""
+    calib = calibration(scope)
+    arv = calib["y"] * median_value
+    entry_psf = calib["x"] * median_value / sqft
+    if rehab_total is None:
+        from value_add import remodel_budget
+        rehab_total = remodel_budget(sqft, 3, 2, 1965, scope, level, state=code)["total"]
+    market = {"code": code, "arv": arv, "rent": median_rent,
+              "appreciation": max(0.0, min(0.04, appreciation or 0.0))}
+    inputs = {"rehab": rehab_total, "sqft": sqft, "scope": scope,
+              "rate_pct": rate_pct, "target": target}
+    sol = brrrr_max_price(market, inputs) if mode == "brrrr" else flip_max_price(market, inputs)
+    if sol is None:
+        return {"code": code, "feasible": False, "verdict": "NO PATH",
+                "entry_psf": entry_psf, "arv_psf": arv / sqft,
+                "rehab_psf": rehab_total / sqft, "max_psf": 0.0, "headroom": None}
+    headroom = (sol["max_psf"] - entry_psf) / entry_psf
+    if headroom >= 0.05:
+        verdict = "PRIMED"
+    elif headroom >= -0.20:
+        verdict = "DEAL-DEPENDENT"
+    else:
+        verdict = "PRICED OUT"
+    vetoed = False
+    if trajectory == "declining" and verdict == "PRIMED":
+        verdict, vetoed = "DEAL-DEPENDENT", True
+    return {"code": code, "feasible": True, "verdict": verdict, "vetoed": vetoed,
+            "headroom": headroom, "max_psf": sol["max_psf"],
+            "entry_psf": entry_psf, "arv_psf": arv / sqft,
+            "rehab_psf": rehab_total / sqft, "detail": sol}
+
+
 def flip_max_price(market: dict, inputs: dict) -> dict | None:
     """After-tax flip max price by bisection; $25k floor on after-tax profit."""
     arv, code = market["arv"], market["code"]

@@ -2,7 +2,7 @@
  "_meta": {
   "item": "utilities",
   "as_of": "2026-07",
-  "status": "researched-unverified",
+  "status": "verified-2026-07 (accurate_with_corrections, 3 corrections applied)",
   "sources": [
    "https://www.eia.gov/electricity/sales_revenue_price/pdf/table_5A.pdf (EIA 2024 Average Monthly Bill - Residential, Table 5a: kWh, c/kWh, $ bill by state)",
    "https://www.eia.gov/todayinenergy/detail.php?id=65244 (EIA Today in Energy: 2024 residential bills - HI/CT highest, NM/UT lowest; verified state anchors)",
@@ -13,7 +13,8 @@
    "https://www.move.org/utility-bills-101/ (state utility cost cross-check)",
    "https://www.chooseenergy.com/data-center/natural-gas-rates-by-state/ (state gas rate cross-check)",
    "NOAA population-weighted heating degree day normals (HDD bands for freeze-protect model)"
-  ]
+  ],
+  "verification": "10 state entries + core anchors, checked against sources the researcher did not cite (RateWatt, energyprofile.org, priceofelectricity.com, Statista, unleashprosperity/thisoldhouse doxo summaries, businesswire Nov-2025 doxo release, uswaterbillguide/datapandas/wtov9, heatfleet/gethomeheat/maine.gov weekly surveys, NEADA). (1) CA CONFIRMED: EIA-2024 31.97c/kWh, 503 kWh/mo (RateWatt) -> their 300-kWh floor x 31.97c + $12 = $107.9, matches $107 exactly. (2) TX CONFIRMED on stated 2024 basis: usage 1,096 kWh (half=548 vs their 545), implied 15.23c matches 2024 annual; note current Apr-2026 rate is ~17c. (3) FL CONFIRMED: rate ~15.1c, usage ~1,090 -> $95 reproduces. (4) NY CONFIRMED: implied 24.3c on 300-kWh floor, usage ~590-602 -> floor correct; ConEd/upstate blend disclosed. (5) SC CONFIRMED: energyprofile.org 14.96c vs implied 14.87c; SC is a top-usage state, 538 kWh half-usage plausible. (6) IN CONFIRMED on 2024 basis (implied 15.9c); flagged: Apr-2026 IN is 17.9c (+13%). (7) MI CONFIRMED: 19.3-19.5c 2024 (RateWatt 19.30c), usage ~655 -> $76 within $1. (8) LA CONFIRMED: 1,223 kWh @ 12.6c ($154 bill) matches EIA TIE anchor; 600-kWh cap applied correctly. (9) ND CONFIRMED: implied 11.34c consistent with ND being cheapest-tier (12.35c Apr-2026, cheapest in US per energybot). (10) VT electric fine (implied 22.3c vs ~21.7-24.6c range) but oil-heat anchor WRONG -> corrected. ANCHOR CHECKS: EIA-2024 national 865 kWh/16.5c/$144 and CT 695 kWh @ 28.75c (2nd-highest) CONFIRMED verbatim via EIA Today in Energy #65244 search results; HI ~40.75-42.7c CONFIRMED (Statista Sep-2024 40.75c, $213 annual bill); MA ~29.5-30.1c CONFIRMED. doxo water/sewer anchors CONFIRMED: national median $86, AL/TN $55 lowest (businesswire Nov-2025 doxo release), MD $189 highest (unleashprosperity/thisoldhouse). WV CONFIRMED as reasonable: although doxo-2025 oddly ranks WV 47th at $59, four independent sources (wtov9, uswaterbillguide 2026 $123, datapandas $105 3-sigma outlier, worldpopulationreview) c"
  },
  "rules": "UNIT CONVENTION: monthly_usd is flat USD per month (owner-paid, all four utilities combined: electric + gas/heat + water/sewer + trash) for a mostly-vacant 1,500-sqft SFR during the reno/lease-up hold, ANNUALIZED over 12 months (winter heating is spread across the year, matching how the engine multiplies monthly carry x hold months). ENGINE DEFAULTS: national fallback = 185 (median of table) if a state key is somehow missing. MODEL (how each figure was built, so the engine can re-derive or seasonalize): (1) Electricity = clamp(0.50 x EIA-2024 state avg residential kWh, 300, 600) x EIA-2024 state avg c/kWh + $12 fixed customer charge. The 300-kWh floor covers work lighting/tools/dehumidifier; the 600 cap strips full-occupancy loads. Hot-humid states land near the cap because vacancy still needs humidity/mold control. (2) Gas: cold states (HDD>=4000): freeze-protect hold at ~50F -> therms/yr = HDD x 0.055, converted at 10.37 therms/Mcf x EIA state residential gas price + $13/mo customer charge, divided by 12. Moderate states (HDD 2800-3999): HDD x 0.030 therms + $12/mo minimum. Warm states (<2800 HDD): $0 - gas capped/off (rare freeze nights handled by electric space heat, already in the electric figure). Overrides: ME/NH/VT modeled as heating oil (~$2.40/therm-equivalent, no monthly customer charge); CA held at $15 service minimum. (3) Water/sewer = max($32, 0.55 x occupied state median from doxo 2025) - base/meter/CIP charges survive vacancy even at near-zero usage. (4) Trash = state-typical curbside ($10 where tax-funded in the dominant metro: DC, Honolulu; $40-45 mandatory-hauler West Coast). SPECIAL-STATE RULES the engine should expose: (a) WINTERIZATION TOGGLE - in hard-freeze states (AK ME NH VT MN ND SD WI MT WY MI NY MA CT RI) an owner who drains plumbing instead of heating cuts the figure by the amount in the note (~$35-80/mo), but this is incompatible with active plumbing work and wet trades (paint, drywall mud, tile) - default OFF. (b) SEASONALITY - if the engine models a short hold with known months, winter months in cold states run ~2.5x the annualized gas figure and summer months ~$13 (customer charge only); the table value is the correct expectation for a randomly-timed 6-12 month BRRRR hold. (c) TX freeze-event risk: gas $0 but note flags budgeting electric space heat for Feb-2021-style events. (d) NV is Vegas-basis; Reno adds ~$35/mo gas. NY is a ConEd/upstate blend. (e) Rounding: all totals rounded to nearest $5 - engine should not imply more precision.",
  "notes": "Data quality and environment constraints: the sandbox egress proxy denied CONNECT to eia.gov and every direct-fetch mirror (WebFetch 403 on all hosts tested), so state tables could not be downloaded verbatim; figures were built from EIA/doxo anchors verified through search: EIA 2024 Table 5a residential (US avg 865 kWh / 16.5 c/kWh / $144-mo; verified state points: HI $213, CT $199.66 @ 695 kWh/28.75c, NM $92.88, UT $94.57, CO $107.91, MT $107.91, WY $107.65, AL 1143 kWh @ 15.18c, LA 1223 kWh/$154) plus my training-data copy of the same table for remaining states (release Oct-2025, within knowledge cutoff; error typically +/- a few percent). Gas: EIA residential price anchors (national $16.25/Mcf Mar-2026; CO $10.21/Mcf Apr-2025) + EIA Natural Gas Navigator state levels. Water/sewer: doxo 2025 report (national median $86, payer avg $116, MD $189 high, AL/TN $55 low). Trash: city rate data (Houston $0 tax-funded -> San Jose $53.45 high). The vacancy scaling (40-60% of occupied, 300-kWh floor, 50F freeze-protect, 55% water with $32 base floor) is a disclosed model, not survey data - no survey of vacant-home utility bills exists. estimated:true flags the 13 states where a major component relied on regional inference (thin state-specific water/trash data or oil-heat modeling): AK DE DC HI ID ME MT ND NH SD VT WV WY. Totals range $145 (NV) to $255 (AK/CT/MA), median $185 - deliberately above naive half-of-average because base charges and winter freeze protection do not scale down with vacancy. Working files: /tmp/claude-0/-home-user-Accounting/25f1ee53-e3dd-5523-ac7d-732911c7f0ca/scratchpad/utilities_model.py (full input table: kWh, c/kWh, HDD, $/Mcf, occupied W/S, trash per state) and final_table.json. Recommendation for Phase 2: keep the component inputs, not just totals, so the engine can seasonalize and apply the winterization toggle.",
@@ -114,8 +115,8 @@
    "estimated": false
   },
   "ME": {
-   "monthly_usd": 245,
-   "note": "elec $92 (308 kWh) + gas $81 + water/sewer $47 + trash $25; OIL heat freeze-protect (~290 gal/winter @ ~$3.40); winterizing saves ~$80/mo",
+   "monthly_usd": 270,
+   "note": "elec $92 (308 kWh) + OIL heat $106 (~290 gal/winter @ ~$4.40; Jul-2026 ME retail $4.39-4.50/gal, Mar-2026 state survey avg $3.94 and rising - not $3.40) + water/sewer $47 + trash $25; winterizing (drained plumbing) saves ~$105/mo",
    "estimated": true
   },
   "MD": {
@@ -164,8 +165,8 @@
    "estimated": false
   },
   "NH": {
-   "monthly_usd": 230,
-   "note": "elec $84 (300 kWh) + gas $77 + water/sewer $44 + trash $25; oil/propane freeze-protect; winterizing saves ~$75/mo",
+   "monthly_usd": 260,
+   "note": "elec $84 (300 kWh) + oil/propane $109 (~280 gal @ ~$4.70; NH Jul-2026 avg $4.71/gal) + water/sewer $44 + trash $25; winterizing saves ~$105/mo",
    "estimated": true
   },
   "NJ": {
@@ -244,8 +245,8 @@
    "estimated": false
   },
   "VT": {
-   "monthly_usd": 240,
-   "note": "elec $79 (300 kWh) + gas $81 + water/sewer $50 + trash $30; oil/propane freeze-protect; winterizing saves ~$75/mo",
+   "monthly_usd": 270,
+   "note": "elec $79 (300 kWh) + oil/propane $113 (~300 gal @ ~$4.55, New England Jul-2026 retail) + water/sewer $50 + trash $30; winterizing saves ~$110/mo",
    "estimated": true
   },
   "VA": {

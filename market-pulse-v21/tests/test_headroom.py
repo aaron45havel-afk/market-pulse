@@ -133,6 +133,32 @@ check(0.60 * 100_000 < at < 0.80 * 100_000, f"TX dealer keeps 60-80% of $100k (g
 at_ca = H._flip_after_tax_profit(100_000, "CA")
 check(at_ca < at, "CA dealer keeps less than TX dealer")
 
+# ── calibration + market bridge ──
+cal_m = H.calibration("moderate")
+check(cal_m["x"] == 0.83 and cal_m["y"] == 1.04, "verified moderate calibration loads")
+check(H.calibration("gut")["x"] == 0.70, "gut fixer discount = 0.70")
+# implied gross flip ROI stays at/below ATTOM's observed 25.4% for moderate
+check((cal_m["y"] - cal_m["x"]) / cal_m["x"] <= 0.2554,
+      "moderate implied ROI ≤ observed ATTOM national")
+
+mh = H.market_headroom("MO-KC", 320_000, 2_300, 0.03, scope="moderate",
+                      rehab_total=60_000, trajectory="steady")
+check(mh is not None and mh["feasible"], "market_headroom solves KC")
+if mh and mh["feasible"]:
+    check(mh["verdict"] in ("PRIMED", "DEAL-DEPENDENT", "PRICED OUT"), "verdict tier assigned")
+    check(abs(mh["entry_psf"] - 0.83 * 320_000 / 1500) < 0.01, "entry psf = x × median psf")
+    check(abs(mh["arv_psf"] - 1.04 * 320_000 / 1500) < 0.01, "ARV psf = y × median psf")
+    check(mh["headroom"] == (mh["max_psf"] - mh["entry_psf"]) / mh["entry_psf"],
+          "headroom formula")
+# declining trajectory demotes a PRIMED verdict
+cheap = H.market_headroom("MO-KC", 320_000, 2_600, 0.03, scope="moderate",
+                         rehab_total=45_000, trajectory="steady")
+if cheap and cheap["feasible"] and cheap["verdict"] == "PRIMED":
+    demoted = H.market_headroom("MO-KC", 320_000, 2_600, 0.03, scope="moderate",
+                               rehab_total=45_000, trajectory="declining")
+    check(demoted["verdict"] == "DEAL-DEPENDENT" and demoted["vetoed"],
+          "declining trajectory vetoes PRIMED")
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")
