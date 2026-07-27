@@ -1,0 +1,333 @@
+{
+ "_meta": {
+  "item": "insurance",
+  "as_of": "2026-07",
+  "status": "researched-unverified",
+  "sources": [
+   "https://www.insurance.com/home-and-renters-insurance/home-insurance-basics/average-homeowners-insurance-rates-by-state (2026 series, $300k dwelling: national $2,543; FL $7,136; OK $5,298; NE $4,956; CO $4,310; HI $659)",
+   "https://www.insure.com/home-insurance/home-insurance-rates-by-state/ (2026 state pages: OH $2,144; IN $2,969; MD $1,707; RI $1,932; LA $5,986)",
+   "https://insurify.com/homeowners-insurance/average-cost-of-homeowners-insurance/ (2026: national $2,868; LA $5,136; WA $1,753; UT $647; OR $712)",
+   "https://www.moneygeek.com/insurance/homeowners/average-cost-home-insurance-louisiana/ (LA $3,576 at $300k/$100k liability) and /average-cost-home-insurance-georgia/ (GA $2,004)",
+   "https://www.lendingtree.com/insurance/state-of-home-insurance/ (2026 increase rankings: LA +58%, MI +48%, VA +37%, KY +33%, MN +29%)",
+   "https://homeguide.com/costs/landlord-insurance-cost (2026 landlord national avg $1,478, +9% YoY; landlord = 15-25% over homeowners)",
+   "https://www.steadily.com/blog/how-much-does-landlord-insurance-cost-in-each-state (state medians: AL $1,089, GA $1,280, NV $739)",
+   "https://www.insuranceopedia.com/homeowners-insurance/landlord-insurance-florida (FL DP-3 avg $2,208; NE-FL typical $1,986; Q1 2026 rate filings at $300k dwelling)",
+   "https://www.citizensfla.com/discounts and securesupport.citizensfla.com (Citizens DP-3 available for tenant-occupied; wind-mitigation credits ~15%)",
+   "https://www.latentinsure.com/california-fair-plan/cost and https://www.realcostreport.com/insurance/home-insurance/california-fair-plan/ (FAIR avg ~$3.0-3.2k, $5k-12k high-risk ZIPs, +29.1% approved eff Oct 2026; ~41% FAIR share in highest-risk ZIPs; non-wildfire HO-3 $1.4k-2.4k)",
+   "https://www.kplctv.com/2026/03/24/louisiana-home-insurance-costs-remain-among-highest-state-officials-point-signs-market-improvement/ (LA Citizens +63% approved increase)",
+   "https://fitsmallbusiness.com/vacant-home-insurance/ and https://copelandins.com/how-much-does-vacant-home-insurance-cost/ (vacant runs 25-60%, typically 50-60%, above occupied; MEP conventions)",
+   "https://hotalinginsurance.com/hotaling-insurance-blog/how-much-is-builders-risk-insurance-2 and https://www.nerdwallet.com/article/small-business/builders-risk-insurance (renovation builders risk 1-4% of project value; 100% minimum-earned / fully-earned conventions; some carriers partial MEP)",
+   "https://insureyourcompany.com/blog/what-does-minimum-earned-premium-mean/ (25% MEP / short-rate cancellation conventions)"
+  ]
+ },
+ "rules": "UNITS: landlord_annual is USD per year (dollars, not a fraction of value) for a DP-3 landlord/dwelling-fire policy on a tenant-occupied SFR with $300k dwelling (Coverage A), ~$300k liability, $1k all-peril deductible, at 2026 pricing (wind/hail and named-storm percentage deductibles apply where noted). This REPLACES the old homeowners-based STATE_INSURANCE_ANNUAL. DERIVATION: landlord_annual = state 2026 HO-3 average at $300k dwelling x 1.15 landlord uplift (III convention: landlord runs 15-25% over HO-3; low end used because DP-3 drops contents/loss-of-use), rounded to $50 \u2014 except FL/LA/CA, which are set directly from post-2025 crisis-market data. ENGINE DEFAULT for a missing state: 2900 (national $2,543 x 1.15). VALUE SCALING: premium scales with replacement cost, not market price \u2014 for the 1,500-sqft prototype use premium = landlord_annual x (dwelling_replacement_value / 300000), floored at 0.6x; never scale by land-inclusive ARV. RENO MULTIPLIER: annualized vacant-renovation policy rate (vacant DP with renovation endorsement, or builders risk) divided by landlord_annual. BRRRR reno-months cost = landlord_annual x reno_multiplier x (reno_months / 12), FLOORED at 25% of the annualized vacant premium (industry minimum-earned-premium convention: 25% MEP / 3-month minimum on vacant programs; pure builders risk is often 100% fully earned \u2014 the 25% floor is the realistic modeling choice since BRRRR renovations run 3-6 months anyway). After refi + tenant placement, revert to landlord_annual pro-rata for the remainder of the 5-yr hold. FLIP MODE: the vacant/reno policy runs the entire hold \u2014 cost = landlord_annual x reno_multiplier x (months_held / 12) with the same 25% MEP floor; no reversion. MULTIPLIER TIERS: 1.6 default; 1.8 hail/wind belt (TX OK KS NE CO IA MN MO AR MS AL SD ND MT WY); 2.0 CA (E&S vacant market + wildfire); 2.5 FL and LA (vacant/reno is surplus-lines-only in much of both states). SPECIAL STATES: HI landlord_annual excludes the hurricane rider (roughly doubles cost in exposed areas \u2014 treat HI metro figures as fire-only); FL/LA/CA state averages hide extreme intra-state variance (coastal vs inland, WUI vs urban) \u2014 the metro-level engine should apply metro overrides before trusting the state number; crisis_note strings are written to surface directly in the Headroom UI.",
+ "notes": "CONFIDENCE: 27 states are anchored to a directly retrieved 2026 figure (estimated:false); 24 are synthesized from the same series' relative rankings, regional scaling, and 2026 rate-trend data (estimated:true) \u2014 the synthesized ones are consistent with the series but were not individually corroborated this pass. METHOD CAVEAT: the sandbox proxy gateway blocked ALL direct page fetches (WebFetch and curl both got CONNECT 403 for every host tried, including Wikipedia and NAIC), so every figure comes from WebSearch result summaries rather than full source tables; when network policy allows, a follow-up pass should pull the full insurance.com 2026 state table and the NAIC Dwelling Fire report to tighten the estimated:true entries. KNOWN TENSIONS: (1) published landlord/DP-3 quote averages (Steadily, HomeGuide: national ~$1.5k, FL ~$2.2k) run well BELOW HO-3 x 1.15 because they mix coverage amounts, ACV roofs, and ex-wind placements \u2014 this table deliberately prices all-in replacement-cost DP-3 at $300k dwelling, which is what the BRRRR underwriting model needs; (2) sources disagree on some states by 2x (e.g. UT $647 Insurify vs ~$1,236 insurance.com series) \u2014 mid-series values chosen; (3) ND/SD were scaled down from $350k-coverage figures. FL landlord_annual of $4,800 is intentionally between the quoted-DP-3 average ($2.2k, unrealistically low for coastal wind) and HO-3 x 1.15 ($8.2k, overweights owner-occupied coastal stock). The reno_multiplier applies to the landlord_annual base, so crisis-state renovation-period insurance is 5-6x a normal state's \u2014 this is real and materially hurts FL/LA headroom, which is the point of the table.",
+ "table": {
+  "AL": {
+   "landlord_annual": 3350,
+   "reno_multiplier": 1.8,
+   "crisis_note": "Gulf wind: Mobile/Baldwin coastal counties need the AIUA wind pool; 2-5% named-storm deductibles standard on the coast",
+   "estimated": true
+  },
+  "AK": {
+   "landlord_annual": 1600,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": false
+  },
+  "AZ": {
+   "landlord_annual": 2650,
+   "reno_multiplier": 1.6,
+   "crisis_note": "Growing wildfire non-renewals in WUI foothill ZIPs (Prescott, Flagstaff edges); metro market still functional",
+   "estimated": true
+  },
+  "AR": {
+   "landlord_annual": 3900,
+   "reno_multiplier": 1.8,
+   "crisis_note": null,
+   "estimated": true
+  },
+  "CA": {
+   "landlord_annual": 2400,
+   "reno_multiplier": 2.0,
+   "crisis_note": "WILDFIRE AVAILABILITY CRISIS. Non-wildfire ZIPs $1.4k-2.4k all-in; wildfire ZIPs need FAIR Plan (fire-only, avg ~$3.0-3.2k, commonly $5k-12k in high-risk ZIPs, +29.1% increase approved eff Oct 2026) plus a DIC wrap; ~41% of structures in highest-risk ZIPs are on FAIR. Table value is a statewide non-FAIR blend - apply metro/ZIP overrides for WUI",
+   "estimated": false
+  },
+  "CO": {
+   "landlord_annual": 4950,
+   "reno_multiplier": 1.8,
+   "crisis_note": "Hail belt + Front Range wildfire: %-hail deductibles and roof cosmetic-damage exclusions now standard; new CO FAIR Plan (2025) is the WUI fallback",
+   "estimated": false
+  },
+  "CT": {
+   "landlord_annual": 2300,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": true
+  },
+  "DE": {
+   "landlord_annual": 1550,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": false
+  },
+  "DC": {
+   "landlord_annual": 1700,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": true
+  },
+  "FL": {
+   "landlord_annual": 4800,
+   "reno_multiplier": 2.5,
+   "crisis_note": "AVAILABILITY CRISIS. Quoted private DP-3 averages (~$2.2k) typically reflect inland or ex-wind placements; realistic all-in with hurricane wind on a $300k coastal-metro SFR is $4k-6.5k. Citizens DP-3 is the tenant-occupied fallback; 2% hurricane deductible standard; wind-mitigation inspection earns ~15% credit. Vacant/reno coverage is E&S-only in much of the state",
+   "estimated": false
+  },
+  "GA": {
+   "landlord_annual": 2300,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": false
+  },
+  "HI": {
+   "landlord_annual": 750,
+   "reno_multiplier": 1.6,
+   "crisis_note": "Base premium excludes hurricane - separate hurricane rider roughly doubles cost in exposed areas; lava zones 1-2 near-uninsurable privately",
+   "estimated": false
+  },
+  "ID": {
+   "landlord_annual": 1700,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": true
+  },
+  "IL": {
+   "landlord_annual": 2650,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": true
+  },
+  "IN": {
+   "landlord_annual": 3400,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": false
+  },
+  "IA": {
+   "landlord_annual": 3100,
+   "reno_multiplier": 1.8,
+   "crisis_note": null,
+   "estimated": true
+  },
+  "KS": {
+   "landlord_annual": 6000,
+   "reno_multiplier": 1.8,
+   "crisis_note": "Hail belt: %-wind/hail deductibles and cosmetic-damage exclusions standard",
+   "estimated": false
+  },
+  "KY": {
+   "landlord_annual": 3350,
+   "reno_multiplier": 1.6,
+   "crisis_note": "+33% 2026 rate trend (LendingTree) - tornado/derecho losses repricing the state",
+   "estimated": true
+  },
+  "LA": {
+   "landlord_annual": 5200,
+   "reno_multiplier": 2.5,
+   "crisis_note": "AVAILABILITY CRISIS. Statewide HO averages $5.1k-6k (2026); LA Citizens took a 63% approved increase; private capacity south of I-10 remains thin with 2-5% named-storm deductibles; vacant/reno coverage is E&S surplus-lines only in coastal parishes",
+   "estimated": false
+  },
+  "ME": {
+   "landlord_annual": 1600,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": true
+  },
+  "MD": {
+   "landlord_annual": 1950,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": false
+  },
+  "MA": {
+   "landlord_annual": 2150,
+   "reno_multiplier": 1.6,
+   "crisis_note": "Cape/coastal wind placed through MPIUA fallback",
+   "estimated": true
+  },
+  "MI": {
+   "landlord_annual": 3200,
+   "reno_multiplier": 1.6,
+   "crisis_note": "+48% 2026 rate trend (LendingTree) - fastest repricing in the Midwest",
+   "estimated": true
+  },
+  "MN": {
+   "landlord_annual": 3100,
+   "reno_multiplier": 1.8,
+   "crisis_note": "Top-tier hail exposure; +29% 2026 rate trend",
+   "estimated": true
+  },
+  "MS": {
+   "landlord_annual": 4600,
+   "reno_multiplier": 1.8,
+   "crisis_note": "Gulf coast wind via MWUA pool below I-10; 2-5% named-storm deductibles",
+   "estimated": true
+  },
+  "MO": {
+   "landlord_annual": 3800,
+   "reno_multiplier": 1.8,
+   "crisis_note": null,
+   "estimated": true
+  },
+  "MT": {
+   "landlord_annual": 2800,
+   "reno_multiplier": 1.8,
+   "crisis_note": null,
+   "estimated": false
+  },
+  "NE": {
+   "landlord_annual": 5700,
+   "reno_multiplier": 1.8,
+   "crisis_note": "Hail belt: %-wind/hail deductibles and cosmetic-damage exclusions standard",
+   "estimated": false
+  },
+  "NV": {
+   "landlord_annual": 1450,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": true
+  },
+  "NH": {
+   "landlord_annual": 1450,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": true
+  },
+  "NJ": {
+   "landlord_annual": 1700,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": false
+  },
+  "NM": {
+   "landlord_annual": 2350,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": false
+  },
+  "NY": {
+   "landlord_annual": 2300,
+   "reno_multiplier": 1.6,
+   "crisis_note": "Downstate/Long Island coastal wind surcharge - NYC-metro landlord rates run 1.5-2x upstate",
+   "estimated": true
+  },
+  "NC": {
+   "landlord_annual": 3000,
+   "reno_multiplier": 1.6,
+   "crisis_note": "Coastal wind via NCIUA Beach Plan; post-Helene rate pressure in western mountains",
+   "estimated": true
+  },
+  "ND": {
+   "landlord_annual": 2400,
+   "reno_multiplier": 1.8,
+   "crisis_note": null,
+   "estimated": true
+  },
+  "OH": {
+   "landlord_annual": 2450,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": false
+  },
+  "OK": {
+   "landlord_annual": 6100,
+   "reno_multiplier": 1.8,
+   "crisis_note": "Highest-in-nation tornado/hail rates; %-wind/hail deductibles and cosmetic exclusions standard",
+   "estimated": false
+  },
+  "OR": {
+   "landlord_annual": 1300,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": true
+  },
+  "PA": {
+   "landlord_annual": 1850,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": true
+  },
+  "RI": {
+   "landlord_annual": 2650,
+   "reno_multiplier": 1.6,
+   "crisis_note": "Coastal wind surcharge on southern-shore ZIPs",
+   "estimated": false
+  },
+  "SC": {
+   "landlord_annual": 3050,
+   "reno_multiplier": 1.6,
+   "crisis_note": "Charleston/HHI coastal wind via SCWHUA pool; inland market normal",
+   "estimated": false
+  },
+  "SD": {
+   "landlord_annual": 2650,
+   "reno_multiplier": 1.8,
+   "crisis_note": null,
+   "estimated": true
+  },
+  "TN": {
+   "landlord_annual": 3500,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": false
+  },
+  "TX": {
+   "landlord_annual": 5650,
+   "reno_multiplier": 1.8,
+   "crisis_note": "Structurally high, not availability-crisis: Gulf-coast counties require TWIA wind pool; 1-2% wind/hail deductibles standard statewide; hail belt in DFW/Panhandle",
+   "estimated": false
+  },
+  "UT": {
+   "landlord_annual": 1250,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": true
+  },
+  "VT": {
+   "landlord_annual": 1200,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": false
+  },
+  "VA": {
+   "landlord_annual": 2450,
+   "reno_multiplier": 1.6,
+   "crisis_note": "+37% 2026 rate trend (LendingTree)",
+   "estimated": false
+  },
+  "WA": {
+   "landlord_annual": 2000,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": false
+  },
+  "WV": {
+   "landlord_annual": 2150,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": false
+  },
+  "WI": {
+   "landlord_annual": 1850,
+   "reno_multiplier": 1.6,
+   "crisis_note": null,
+   "estimated": true
+  },
+  "WY": {
+   "landlord_annual": 2100,
+   "reno_multiplier": 1.8,
+   "crisis_note": null,
+   "estimated": true
+  }
+ }
+}

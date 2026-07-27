@@ -1,0 +1,169 @@
+{
+ "_meta": {
+  "item": "financing",
+  "as_of": "2026-07",
+  "status": "researched-unverified",
+  "sources": [
+   "https://fred.stlouisfed.org/series/MORTGAGE30US (30-yr fixed ~6.55%, July 2026 baseline per product spec)",
+   "https://dscrauthority.com/rates/ (DSCR 6.50-9.25% by tier, standard files 7.00-8.00%, July 2026)",
+   "https://www.offermarket.us/blog/dscr-loan-rates (DSCR spread to conforming 0.75-1.5%, July 2026 index)",
+   "https://griffinfunding.com/non-qm-mortgages/dscr-loans/ (min DSCR tiers, sub-1.0 and no-ratio programs)",
+   "https://www.mothebroker.com/blog/dscr-loan-prepayment-penalty-guide-2026 (PPP structures: 5-4-3-2-1 base, 3-2-1 +0.125-0.25, no-PPP +0.5-1.0)",
+   "https://ahlend.com/dscr-loan-prepayment-penalties-explained/ (step-down PPP mechanics, buydown options)",
+   "https://easystreetcap.com/dscr-loan-cash-out-refinance-guide/ (0-3 mo seasoning = lower of cost basis vs appraised, 75% max LTV, 700 FICO; 75% cash-out cap)",
+   "https://www.graftonfunding.com/post/dscr-cash-out-refinance (0-month seasoning DSCR programs, BRRRR exit)",
+   "https://selling-guide.fanniemae.com/sel/b2-1.3-03/cash-out-refinance-transactions (12-mo note seasoning, 6-mo title, delayed financing, 75%/70% cash-out LTV caps)",
+   "https://homebuyer.com/guidelines/fannie-mae/cash-out-refinance-transactions-b2-1-3-03 (seasoning rule summary, Apr-2023 effective)",
+   "https://selling-guide.fanniemae.com/sel/b4-1.3-06/property-condition-and-quality-construction-improvements (C6/Q6 ineligible, subject-to repair to >= C5; C5 eligible as-is)",
+   "https://www.mckissock.com/blog/appraisal/understanding-appraisal-condition-ratings-c1-to-c6/ (C1-C6 rating definitions under UAD 3.6)",
+   "https://singlefamily.fanniemae.com/media/9391/display (LLPA matrix \u2014 investment property 2.125/3.375 pts at 70-75/75-80 LTV; direct fetch 403, values corroborated via fitsmallbusiness.com and purerate.com LLPA explainers)",
+   "https://www.crestmontcapital.com/blog/hard-money-loan-rates-2026 (hard money 9.5-13.0%, points 1.5-3, 2026)",
+   "https://www.welendllc.com/blog/fix-and-flip-loan-rates (fix-flip 8-14% band, experienced as low as 7.75%, rate drivers)",
+   "https://www.offermarket.us/blog/hard-money-fix-and-flip-loans (LTC/LTARV definitions, 70% LTARV hard ceiling, 90% purchase + 100% rehab structures)",
+   "https://noteservicingcenter.com/hard-money-loan-renewals-extensions-a-practical-guide-for-borrowers/ (extension fees 0.5-2.0% per 3-6 mo period)",
+   "https://www.stacking.capital/articles/dscr-investor-loan-real-estate-property-types-2026.html (DSCR loan minimums, property-type pricing)"
+  ]
+ },
+ "rules": "UNIT CONVENTION (single, consistent): all rates, spreads, points, penalties and fee percentages are in PERCENT units (1.0 = 1.00%); all ratios (LTV, LTC, LTARV, DSCR) are DECIMAL fractions (0.75 = 75%, DSCR 1.2 = 1.20x). Dollar fields are absolute USD. This intentionally differs from the old data_providers.py decimal-fraction tax rates \u2014 the new engine should normalize everything at load.\n\nENGINE APPLICATION (BRRRR default path, July 2026, FRED MORTGAGE30US ~= 6.55):\n(1) ACQUISITION = HARD_MONEY: note rate = MORTGAGE30US + 4.00 = 10.55% I/O on drawn balance; 2.0 points + ~$2,000 fixed + $250/draw (assume 4 draws). Loan sizing = min(0.85 x (purchase + rehab), 0.90 x purchase + 1.00 x rehab, 0.70 x ARV) \u2014 the 0.70 LTARV cap binds on heavy value-add deals and sets the cash-in. Term 12 months; base case 6-month carry, downside case one 6-month extension at +1.0 point. Use 0.75 LTARV only in an 'experienced investor' toggle.\n(2) REFI = DSCR cash-out (default exit): rate = MORTGAGE30US + 1.00 + 0.25 cash-out add = 7.80%; 2.0 points + $1,750 fixed; max 0.75 x ARV; seasoning 3-6 months (0-3 month programs cap proceeds at cost basis \u2014 so the engine's month-6 refi at full ARV is the realistic base case, matching the 6-month hard-money carry). Refi must pass DSCR >= 1.20 at market rent for par pricing (floor 1.00 with +0.5 rate / -0.05 LTV); if DSCR < 1.0, BRRRR refi fails \u2014 score the metro on the flip path instead. Prepay penalty on the refi loan: default 3-2-1 (already included via the +0.25 in the 1.00 spread vs a 5-4-3-2-1 base); a 5-yr hold sells at month 60, after the 3-2-1 expires (month 36), so the exit penalty is $0 \u2014 do NOT model a prepay hit on the 5-yr hold. In no-PPP states (see DSCR.state_notes) add +0.375 to the DSCR rate instead.\n(3) CONV_INVEST is the cheaper refi/purchase alternative ONLY for cosmetic-scope deals or all-cash acquisitions: effective rate = MORTGAGE30US + 0.625 at <=0.75 LTV (+0.875 at 0.80) with ~1 point; hard-money-financed deals must wait 12 months (note seasoning) so it is NOT the default BRRRR exit; C5/C6-condition acquisitions (any gut/heavy scope) cannot fund conventional at purchase.\n(4) FLIP MODE reuses HARD_MONEY as the only loan (no refi leg).\n(5) FLOORS: if 0.75 x ARV < $100k (ARV < ~$135k) or the hard-money loan < $100k, mark the metro/deal 'non-financeable' \u2014 this bites in the cheapest Midwest/South metros and must gate the ranking. Store SPREADS, not absolute rates: recompute note rates from live MORTGAGE30US each precompute run.",
+ "notes": "Verification status: DSCR spread (+0.75 to +1.5 over conforming; standard-tier files 7.00-8.00% in July 2026), prepay structures/rate-adds, and hard-money rate/points/LTARV bands were each corroborated by 2+ independent July-2026 lender/rate-sheet sources. Fannie 12-month note-date seasoning for cash-out (effective Apr-2023), 6-month title seasoning, delayed-financing exception, 75% max cash-out LTV (1-unit investment), and C6/Q6 ineligibility per B4-1.3-06 are current agency rules confirmed via selling-guide summaries. The investment-property LLPAs (2.125 pts at 70.01-75 LTV, 3.375 pts at 75.01-80) come from secondary sources quoting the post-May-2023 FHFA matrix \u2014 the fanniemae.com matrix PDF itself returned 403 to fetch \u2014 so the FICO-grid stacking figure is marked estimated:true; the derived effective spreads (+0.625/+0.875) are the industry-standard conversion (~4-5 pts per 1% rate) and safe for ranking purposes. State-variation adders (no-PPP states, thin hard-money coverage states) are lender-overlay-dependent and marked estimated:true \u2014 they shift returns ~10-25 bps, not rankings. This task's table is by PRODUCT (DSCR/CONV_INVEST/HARD_MONEY/REFI) per the task spec, not by state; state effects are encoded as notes with flat adders.",
+ "table": {
+  "DSCR": {
+   "product": "30-yr fixed DSCR investor loan (non-QM, business purpose)",
+   "spread_over_mortgage30us_pct": 1.0,
+   "spread_range_pct": [
+    0.75,
+    1.5
+   ],
+   "implied_note_rate_jul2026_pct": 7.55,
+   "origination_points_pct": 1.75,
+   "points_range_pct": [
+    1.0,
+    2.5
+   ],
+   "fixed_closing_costs_usd": 1750,
+   "min_dscr_par_pricing": 1.2,
+   "min_dscr_floor": 1.0,
+   "sub_1_0_dscr": {
+    "available": true,
+    "rate_add_pct": 0.5,
+    "ltv_haircut": 0.05,
+    "note": "no-ratio programs exist at ~70% max LTV"
+   },
+   "max_ltv_purchase": 0.8,
+   "typical_ltv": 0.75,
+   "min_fico": 680,
+   "fico_for_80_ltv": 700,
+   "min_loan_usd": 100000,
+   "min_loan_note": "many lenders floor at $100k (some $75k); properties whose loan amount would be below this are effectively non-financeable via DSCR",
+   "prepay_penalty": {
+    "default_structure": "3-2-1",
+    "base_structure": "5-4-3-2-1 (lowest rate)",
+    "rate_add_3_2_1_pct": 0.25,
+    "rate_add_1yr_pct": 0.375,
+    "rate_add_no_ppp_pct": 0.75,
+    "clears_5yr_brrrr_hold": true,
+    "note": "3-2-1 penalty fully expires after month 36, so a 5-yr hold exits penalty-free; a 5-4-3-2-1 only clears at month 60+ (boundary risk) \u2014 engine default is 3-2-1 with the +0.25 rate add"
+   },
+   "state_notes": {
+    "note": "prepay penalties on 1-4 unit investor loans are restricted or prohibited in several states (lender sheets commonly flag AK, KS, MI, MN, NM, OH, RI, VT, NJ, and PA below ~$319k loan size; MD structure-dependent); lenders there price roughly +0.25 to +0.50 in lieu of PPP",
+    "no_ppp_state_rate_add_pct": 0.375,
+    "estimated": true
+   }
+  },
+  "CONV_INVEST": {
+   "product": "Conventional agency (Fannie/Freddie) investment-property 30-yr fixed",
+   "effective_spread_over_mortgage30us_pct_at_75ltv": 0.625,
+   "effective_spread_over_mortgage30us_pct_at_80ltv": 0.875,
+   "implied_note_rate_jul2026_pct_75ltv": 7.18,
+   "points_pct": 1.0,
+   "llpa_investment_property": {
+    "ltv_70_01_to_75_pct": 2.125,
+    "ltv_75_01_to_80_pct": 3.375,
+    "note": "FHFA/Fannie LLPA matrix (May-2023 redesign, still in effect); FICO/LTV grid LLPA stacks on top (~0.375-0.875 pts for 740-779 at 75-80% LTV); lenders convert points to rate at roughly 4-5 pts per 1% rate",
+    "estimated_fico_grid": true
+   },
+   "max_ltv_purchase_1unit": 0.8,
+   "max_ltv_1unit_absolute": 0.85,
+   "max_ltv_2_4unit": 0.75,
+   "min_fico_practical": 680,
+   "financed_property_limit": 10,
+   "documentation": "full income doc, DTI <= 45-50% \u2014 not usable for DTI-constrained or entity borrowers",
+   "property_condition_limits": {
+    "rule": "C6/Q6 ineligible per Fannie B4-1.3-06 \u2014 appraisal must be completed subject-to repair to at least C5 before delivery; C5 is technically eligible as-is but widespread lender overlays decline C5",
+    "excluded_scopes": "gut/down-to-studs renovations, non-functional kitchen/bath/mechanicals, active roof leaks, structural or safety deficiencies \u2014 i.e., the typical BRRRR heavy-rehab acquisition will NOT fund conventional; only cosmetic/light-remodel scopes qualify at purchase",
+    "engine_rule": "offer CONV_INVEST only when rehab scope class is cosmetic/light; heavy/gut scopes must route acquisition through HARD_MONEY"
+   },
+   "prepay_penalty": "none",
+   "seasoning": "n/a at purchase"
+  },
+  "HARD_MONEY": {
+   "product": "Hard-money / fix-and-flip bridge loan (purchase + rehab) \u2014 the BRRRR acquisition loan",
+   "rate_spread_over_mortgage30us_pct": 4.0,
+   "typical_note_rate_jul2026_pct": 10.55,
+   "rate_range_pct": [
+    9.5,
+    12.75
+   ],
+   "experienced_borrower_rate_pct": 9.5,
+   "origination_points_pct": 2.0,
+   "points_range_pct": [
+    1.5,
+    3.0
+   ],
+   "max_ltc": 0.85,
+   "max_purchase_advance": 0.9,
+   "rehab_funded_pct": 1.0,
+   "max_ltarv": 0.7,
+   "max_ltarv_experienced": 0.75,
+   "term_months": 12,
+   "term_range_months": [
+    12,
+    18
+   ],
+   "interest_type": "interest-only, monthly; many lenders charge on drawn balance only (Kiavi-style), others on full commitment \u2014 engine default: interest on drawn balance",
+   "extension_fee_pct_per_6mo": 1.0,
+   "extension_fee_range_pct": [
+    0.5,
+    2.0
+   ],
+   "extension_note": "priced per 3-6 month extension on outstanding balance; engine base case = 6-month carry with no extension, downside case = one 6-month extension (+1 pt)",
+   "draw_fee_usd": 250,
+   "fixed_closing_costs_usd": 2000,
+   "min_loan_usd": 100000,
+   "min_property_value_usd": 100000,
+   "state_notes": {
+    "note": "licensing-heavy states (AZ, NV, UT, OR, ND, SD, VT, MN) have thinner lender coverage; judicial-foreclosure states (NY, NJ, IL) price ~+0.25 to +0.75 and many national HMLs exclude NY (esp. NYC 1-4 unit)",
+    "thin_coverage_rate_add_pct": 0.5,
+    "estimated": true
+   }
+  },
+  "REFI": {
+   "product": "BRRRR cash-out refinance rules (the R that returns the cash)",
+   "conventional_path": {
+    "note_seasoning_months": 12,
+    "note_seasoning_rule": "Fannie SEL rule effective Apr-2023: any existing first lien being paid off by a cash-out refi must be >= 12 months old, note date to note date \u2014 so a hard-money-financed BRRRR cannot conventional cash-out until month 12",
+    "title_seasoning_months": 6,
+    "delayed_financing_exception": "all-cash purchases may cash-out within 6 months but loan is capped at documented cost basis (purchase + closing), not ARV; after 6 months on title with no lien to pay off, full appraised-value cash-out allowed",
+    "max_cashout_ltv_1unit": 0.75,
+    "max_cashout_ltv_2_4unit": 0.7,
+    "engine_rule": "model conventional refi only for all-cash acquisitions at month 6+ using appraised ARV at 75% LTV"
+   },
+   "dscr_path": {
+    "standard_seasoning_months": 6,
+    "three_month_programs": true,
+    "zero_seasoning": {
+     "available": true,
+     "constraint": "0-3 month seasoning caps loan at lower of appraised ARV vs cost basis (purchase + documented rehab) at 75% LTV, typically 700+ FICO (Easy Street Capital-style); a few lenders allow full ARV at 0-3 months with pricing adds",
+     "pricing_add_pct": 0.25,
+     "llpa_add_points": 0.5
+    },
+    "max_cashout_ltv": 0.75,
+    "max_rate_term_ltv": 0.8,
+    "cashout_rate_add_pct": 0.25,
+    "engine_rule": "BRRRR default exit = DSCR cash-out at 75% of ARV after 3-6 months seasoning; note rate = MORTGAGE30US + 1.00 (DSCR spread) + 0.25 (cash-out) = 7.80% at Jul-2026; points ~2.0 + ~$1,750 fixed; min DSCR 1.20 computed at the refi rate on market rent \u2014 if DSCR < 1.0 the refi fails and cash stays trapped (engine must check)"
+   },
+   "min_refi_loan_usd": 100000,
+   "min_refi_note": "75% of ARV must exceed ~$100k (i.e., ARV >= ~$135k) for the DSCR refi to exist \u2014 flag cheap metros below this as non-financeable via BRRRR"
+  }
+ }
+}

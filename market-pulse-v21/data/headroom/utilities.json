@@ -1,0 +1,277 @@
+{
+ "_meta": {
+  "item": "utilities",
+  "as_of": "2026-07",
+  "status": "researched-unverified",
+  "sources": [
+   "https://www.eia.gov/electricity/sales_revenue_price/pdf/table_5A.pdf (EIA 2024 Average Monthly Bill - Residential, Table 5a: kWh, c/kWh, $ bill by state)",
+   "https://www.eia.gov/todayinenergy/detail.php?id=65244 (EIA Today in Energy: 2024 residential bills - HI/CT highest, NM/UT lowest; verified state anchors)",
+   "https://www.eia.gov/dnav/ng/ng_pri_sum_a_epg0_prs_dmcf_a.htm (EIA Natural Gas Navigator: residential price by state, $/Mcf; national $16.25/Mcf Mar-2026, CO $10.21/Mcf Apr-2025)",
+   "https://www.doxo.com/w/insights/new-report-shows-what-americans-really-pay-for-utilities/ (doxo 2025 US Household Bill Pay Report: water/sewer median $86, avg $116/mo; MD $189 high, AL/TN $55 low)",
+   "https://finance.yahoo.com/news/doxo-report-ranks-states-household-171800220.html (doxo state bill-burden ranking)",
+   "https://dropcurb.com/blog/average-garbage-bill-by-city (curbside trash by city: Houston $0 tax-funded to San Jose $53.45; national $20-50)",
+   "https://www.move.org/utility-bills-101/ (state utility cost cross-check)",
+   "https://www.chooseenergy.com/data-center/natural-gas-rates-by-state/ (state gas rate cross-check)",
+   "NOAA population-weighted heating degree day normals (HDD bands for freeze-protect model)"
+  ]
+ },
+ "rules": "UNIT CONVENTION: monthly_usd is flat USD per month (owner-paid, all four utilities combined: electric + gas/heat + water/sewer + trash) for a mostly-vacant 1,500-sqft SFR during the reno/lease-up hold, ANNUALIZED over 12 months (winter heating is spread across the year, matching how the engine multiplies monthly carry x hold months). ENGINE DEFAULTS: national fallback = 185 (median of table) if a state key is somehow missing. MODEL (how each figure was built, so the engine can re-derive or seasonalize): (1) Electricity = clamp(0.50 x EIA-2024 state avg residential kWh, 300, 600) x EIA-2024 state avg c/kWh + $12 fixed customer charge. The 300-kWh floor covers work lighting/tools/dehumidifier; the 600 cap strips full-occupancy loads. Hot-humid states land near the cap because vacancy still needs humidity/mold control. (2) Gas: cold states (HDD>=4000): freeze-protect hold at ~50F -> therms/yr = HDD x 0.055, converted at 10.37 therms/Mcf x EIA state residential gas price + $13/mo customer charge, divided by 12. Moderate states (HDD 2800-3999): HDD x 0.030 therms + $12/mo minimum. Warm states (<2800 HDD): $0 - gas capped/off (rare freeze nights handled by electric space heat, already in the electric figure). Overrides: ME/NH/VT modeled as heating oil (~$2.40/therm-equivalent, no monthly customer charge); CA held at $15 service minimum. (3) Water/sewer = max($32, 0.55 x occupied state median from doxo 2025) - base/meter/CIP charges survive vacancy even at near-zero usage. (4) Trash = state-typical curbside ($10 where tax-funded in the dominant metro: DC, Honolulu; $40-45 mandatory-hauler West Coast). SPECIAL-STATE RULES the engine should expose: (a) WINTERIZATION TOGGLE - in hard-freeze states (AK ME NH VT MN ND SD WI MT WY MI NY MA CT RI) an owner who drains plumbing instead of heating cuts the figure by the amount in the note (~$35-80/mo), but this is incompatible with active plumbing work and wet trades (paint, drywall mud, tile) - default OFF. (b) SEASONALITY - if the engine models a short hold with known months, winter months in cold states run ~2.5x the annualized gas figure and summer months ~$13 (customer charge only); the table value is the correct expectation for a randomly-timed 6-12 month BRRRR hold. (c) TX freeze-event risk: gas $0 but note flags budgeting electric space heat for Feb-2021-style events. (d) NV is Vegas-basis; Reno adds ~$35/mo gas. NY is a ConEd/upstate blend. (e) Rounding: all totals rounded to nearest $5 - engine should not imply more precision.",
+ "notes": "Data quality and environment constraints: the sandbox egress proxy denied CONNECT to eia.gov and every direct-fetch mirror (WebFetch 403 on all hosts tested), so state tables could not be downloaded verbatim; figures were built from EIA/doxo anchors verified through search: EIA 2024 Table 5a residential (US avg 865 kWh / 16.5 c/kWh / $144-mo; verified state points: HI $213, CT $199.66 @ 695 kWh/28.75c, NM $92.88, UT $94.57, CO $107.91, MT $107.91, WY $107.65, AL 1143 kWh @ 15.18c, LA 1223 kWh/$154) plus my training-data copy of the same table for remaining states (release Oct-2025, within knowledge cutoff; error typically +/- a few percent). Gas: EIA residential price anchors (national $16.25/Mcf Mar-2026; CO $10.21/Mcf Apr-2025) + EIA Natural Gas Navigator state levels. Water/sewer: doxo 2025 report (national median $86, payer avg $116, MD $189 high, AL/TN $55 low). Trash: city rate data (Houston $0 tax-funded -> San Jose $53.45 high). The vacancy scaling (40-60% of occupied, 300-kWh floor, 50F freeze-protect, 55% water with $32 base floor) is a disclosed model, not survey data - no survey of vacant-home utility bills exists. estimated:true flags the 13 states where a major component relied on regional inference (thin state-specific water/trash data or oil-heat modeling): AK DE DC HI ID ME MT ND NH SD VT WV WY. Totals range $145 (NV) to $255 (AK/CT/MA), median $185 - deliberately above naive half-of-average because base charges and winter freeze protection do not scale down with vacancy. Working files: /tmp/claude-0/-home-user-Accounting/25f1ee53-e3dd-5523-ac7d-732911c7f0ca/scratchpad/utilities_model.py (full input table: kWh, c/kWh, HDD, $/Mcf, occupied W/S, trash per state) and final_table.json. Recommendation for Phase 2: keep the component inputs, not just totals, so the engine can seasonalize and apply the winterization toggle.",
+ "table": {
+  "AL": {
+   "monthly_usd": 160,
+   "note": "elec $99 (572 kWh) + gas $0 + water/sewer $38 + trash $25; gas off during hold; elec covers rare freeze nights",
+   "estimated": false
+  },
+  "AK": {
+   "monthly_usd": 255,
+   "note": "elec $86 (300 kWh) + gas $66 + water/sewer $66 + trash $35; Enstar gas freeze-protect a must Oct-Apr; winterizing (drained plumbing) saves ~$55/mo",
+   "estimated": true
+  },
+  "AZ": {
+   "monthly_usd": 165,
+   "note": "elec $91 (532 kWh) + gas $0 + water/sewer $47 + trash $27; summer AC hold for workers/materials drives elec; no heat load",
+   "estimated": false
+  },
+  "AR": {
+   "monthly_usd": 165,
+   "note": "elec $77 (530 kWh) + gas $24 + water/sewer $38 + trash $25; light gas freeze-protect Dec-Feb",
+   "estimated": false
+  },
+  "CA": {
+   "monthly_usd": 230,
+   "note": "elec $107 (300 kWh) + gas $15 + water/sewer $66 + trash $40; high c/kWh + mandatory-service trash (SB1383); gas at service minimum",
+   "estimated": false
+  },
+  "CO": {
+   "monthly_usd": 180,
+   "note": "elec $66 (342 kWh) + gas $42 + water/sewer $47 + trash $25; gas freeze-protect at ~50F Nov-Mar, annualized; cheap gas (~$10.5/Mcf)",
+   "estimated": false
+  },
+  "CT": {
+   "monthly_usd": 255,
+   "note": "elec $112 (348 kWh) + gas $60 + water/sewer $52 + trash $30; 28.75c/kWh (2nd-highest) + real winter heat; winterizing saves ~$45/mo",
+   "estimated": false
+  },
+  "DE": {
+   "monthly_usd": 210,
+   "note": "elec $92 (474 kWh) + gas $44 + water/sewer $47 + trash $30; moderate winter freeze-protect",
+   "estimated": true
+  },
+  "DC": {
+   "monthly_usd": 180,
+   "note": "elec $67 (308 kWh) + gas $45 + water/sewer $61 + trash $10; DPW trash tax-funded; DC Water base charges high",
+   "estimated": true
+  },
+  "FL": {
+   "monthly_usd": 165,
+   "note": "elec $95 (545 kWh) + gas $0 + water/sewer $50 + trash $22; elec is humidity/mold control (dehumidify or AC ~78F), not comfort; no gas",
+   "estimated": false
+  },
+  "GA": {
+   "monthly_usd": 170,
+   "note": "elec $89 (540 kWh) + gas $0 + water/sewer $55 + trash $25; gas off; Atlanta W/S base charges among priciest in Southeast",
+   "estimated": false
+  },
+  "HI": {
+   "monthly_usd": 210,
+   "note": "elec $140 (300 kWh) + gas $0 + water/sewer $61 + trash $10; 42.7c/kWh floor even at low usage; Honolulu trash tax-funded; no heat",
+   "estimated": true
+  },
+  "ID": {
+   "monthly_usd": 170,
+   "note": "elec $68 (482 kWh) + gas $45 + water/sewer $33 + trash $22; cold-winter freeze-protect on cheap Intermountain gas",
+   "estimated": true
+  },
+  "IL": {
+   "monthly_usd": 175,
+   "note": "elec $69 (342 kWh) + gas $43 + water/sewer $38 + trash $25; gas freeze-protect Nov-Mar (Nicor/Peoples ~$11/Mcf)",
+   "estimated": false
+  },
+  "IN": {
+   "monthly_usd": 195,
+   "note": "elec $85 (459 kWh) + gas $42 + water/sewer $44 + trash $22; gas freeze-protect; higher elec rate than IL",
+   "estimated": false
+  },
+  "IA": {
+   "monthly_usd": 180,
+   "note": "elec $68 (419 kWh) + gas $47 + water/sewer $41 + trash $25; long heating season, cheap gas",
+   "estimated": false
+  },
+  "KS": {
+   "monthly_usd": 180,
+   "note": "elec $74 (426 kWh) + gas $40 + water/sewer $44 + trash $22; moderate-cold freeze-protect",
+   "estimated": false
+  },
+  "KY": {
+   "monthly_usd": 185,
+   "note": "elec $80 (514 kWh) + gas $37 + water/sewer $41 + trash $25; borderline-cold; short freeze-protect season",
+   "estimated": false
+  },
+  "LA": {
+   "monthly_usd": 155,
+   "note": "elec $88 (600 kWh) + gas $0 + water/sewer $44 + trash $25; humidity control drives elec (600 kWh cap); gas off",
+   "estimated": false
+  },
+  "ME": {
+   "monthly_usd": 245,
+   "note": "elec $92 (308 kWh) + gas $81 + water/sewer $47 + trash $25; OIL heat freeze-protect (~290 gal/winter @ ~$3.40); winterizing saves ~$80/mo",
+   "estimated": true
+  },
+  "MD": {
+   "monthly_usd": 240,
+   "note": "elec $97 (478 kWh) + gas $43 + water/sewer $82 + trash $20; WSSC water/sewer base charges highest in US (doxo: $189 occupied)",
+   "estimated": false
+  },
+  "MA": {
+   "monthly_usd": 255,
+   "note": "elec $102 (300 kWh) + gas $67 + water/sewer $55 + trash $30; 30.1c/kWh + real winter heat; winterizing saves ~$55/mo",
+   "estimated": false
+  },
+  "MI": {
+   "monthly_usd": 190,
+   "note": "elec $76 (328 kWh) + gas $46 + water/sewer $41 + trash $25; 19.5c/kWh but low vacant usage; gas freeze-protect Nov-Mar",
+   "estimated": false
+  },
+  "MN": {
+   "monthly_usd": 190,
+   "note": "elec $69 (375 kWh) + gas $50 + water/sewer $41 + trash $30; 7,900 HDD freeze-protect is non-negotiable; cheap CenterPoint gas",
+   "estimated": false
+  },
+  "MS": {
+   "monthly_usd": 155,
+   "note": "elec $90 (573 kWh) + gas $0 + water/sewer $38 + trash $25; humidity control drives elec; gas off",
+   "estimated": false
+  },
+  "MO": {
+   "monthly_usd": 185,
+   "note": "elec $76 (501 kWh) + gas $42 + water/sewer $41 + trash $25; gas freeze-protect Dec-Feb",
+   "estimated": false
+  },
+  "MT": {
+   "monthly_usd": 180,
+   "note": "elec $66 (429 kWh) + gas $47 + water/sewer $38 + trash $28; long winter, cheap NorthWestern gas; winterizing saves ~$35/mo",
+   "estimated": true
+  },
+  "NE": {
+   "monthly_usd": 170,
+   "note": "elec $69 (482 kWh) + gas $43 + water/sewer $38 + trash $22; cold winter, cheap public-power elec + gas",
+   "estimated": false
+  },
+  "NV": {
+   "monthly_usd": 145,
+   "note": "elec $84 (459 kWh) + gas $0 + water/sewer $41 + trash $20; cheapest hold in US (Vegas basis); Reno properties add ~$35/mo gas freeze-protect",
+   "estimated": false
+  },
+  "NH": {
+   "monthly_usd": 230,
+   "note": "elec $84 (300 kWh) + gas $77 + water/sewer $44 + trash $25; oil/propane freeze-protect; winterizing saves ~$75/mo",
+   "estimated": true
+  },
+  "NJ": {
+   "monthly_usd": 195,
+   "note": "elec $78 (330 kWh) + gas $41 + water/sewer $58 + trash $20; gas freeze-protect; many towns tax-fund trash",
+   "estimated": false
+  },
+  "NM": {
+   "monthly_usd": 160,
+   "note": "elec $58 (316 kWh) + gas $34 + water/sewer $41 + trash $25; lowest elec bill in US; ABQ altitude still needs freeze-protect",
+   "estimated": false
+  },
+  "NY": {
+   "monthly_usd": 220,
+   "note": "elec $85 (300 kWh) + gas $59 + water/sewer $50 + trash $25; downstate ConEd rates/upstate cheaper; NYC trash tax-funded (used $25 blend)",
+   "estimated": false
+  },
+  "NC": {
+   "monthly_usd": 170,
+   "note": "elec $83 (520 kWh) + gas $25 + water/sewer $44 + trash $20; light freeze-protect; trash often on property tax",
+   "estimated": false
+  },
+  "ND": {
+   "monthly_usd": 185,
+   "note": "elec $72 (529 kWh) + gas $48 + water/sewer $38 + trash $25; 8,800 HDD but cheapest gas in US (~$9/Mcf); winterizing saves ~$35/mo",
+   "estimated": true
+  },
+  "OH": {
+   "monthly_usd": 200,
+   "note": "elec $81 (426 kWh) + gas $45 + water/sewer $47 + trash $25; gas freeze-protect Nov-Mar",
+   "estimated": false
+  },
+  "OK": {
+   "monthly_usd": 170,
+   "note": "elec $78 (538 kWh) + gas $23 + water/sewer $44 + trash $22; short freeze-protect season",
+   "estimated": false
+  },
+  "OR": {
+   "monthly_usd": 220,
+   "note": "elec $77 (445 kWh) + gas $43 + water/sewer $61 + trash $40; Portland W/S + mandatory hauler trash are the cost drivers, not energy",
+   "estimated": false
+  },
+  "PA": {
+   "monthly_usd": 220,
+   "note": "elec $88 (414 kWh) + gas $50 + water/sewer $52 + trash $28; real winter heat + above-avg W/S base",
+   "estimated": false
+  },
+  "RI": {
+   "monthly_usd": 240,
+   "note": "elec $99 (300 kWh) + gas $63 + water/sewer $52 + trash $25; 28.9c/kWh + winter heat; winterizing saves ~$50/mo",
+   "estimated": false
+  },
+  "SC": {
+   "monthly_usd": 165,
+   "note": "elec $92 (538 kWh) + gas $0 + water/sewer $47 + trash $25; gas off; elec covers rare freeze nights",
+   "estimated": false
+  },
+  "SD": {
+   "monthly_usd": 190,
+   "note": "elec $76 (498 kWh) + gas $45 + water/sewer $44 + trash $25; long winter, cheap gas",
+   "estimated": true
+  },
+  "TN": {
+   "monthly_usd": 170,
+   "note": "elec $83 (570 kWh) + gas $24 + water/sewer $36 + trash $25; TVA elec cheap; light freeze-protect; lowest W/S in US (doxo $55 occupied)",
+   "estimated": false
+  },
+  "TX": {
+   "monthly_usd": 170,
+   "note": "elec $95 (545 kWh) + gas $0 + water/sewer $52 + trash $25; gas off BUT budget space-heater elec during Feb-2021-style freeze events; deregulated mkt",
+   "estimated": false
+  },
+  "UT": {
+   "monthly_usd": 150,
+   "note": "elec $59 (388 kWh) + gas $39 + water/sewer $33 + trash $20; 2nd-cheapest hold; cheap elec + Dominion gas freeze-protect",
+   "estimated": false
+  },
+  "VT": {
+   "monthly_usd": 240,
+   "note": "elec $79 (300 kWh) + gas $81 + water/sewer $50 + trash $30; oil/propane freeze-protect; winterizing saves ~$75/mo",
+   "estimated": true
+  },
+  "VA": {
+   "monthly_usd": 205,
+   "note": "elec $91 (532 kWh) + gas $40 + water/sewer $52 + trash $20; moderate winter freeze-protect",
+   "estimated": false
+  },
+  "WA": {
+   "monthly_usd": 230,
+   "note": "elec $68 (463 kWh) + gas $44 + water/sewer $72 + trash $45; cheap hydro elec but Seattle W/S + mandatory trash are highest-in-US city charges",
+   "estimated": false
+  },
+  "WV": {
+   "monthly_usd": 220,
+   "note": "elec $88 (523 kWh) + gas $43 + water/sewer $66 + trash $25; WV American Water among priciest W/S in US; gas freeze-protect",
+   "estimated": true
+  },
+  "WI": {
+   "monthly_usd": 170,
+   "note": "elec $72 (345 kWh) + gas $47 + water/sewer $36 + trash $18; freeze-protect Nov-Mar; Milwaukee/Madison tax-funded trash",
+   "estimated": false
+  },
+  "WY": {
+   "monthly_usd": 180,
+   "note": "elec $66 (427 kWh) + gas $47 + water/sewer $41 + trash $28; long winter, cheap gas; winterizing saves ~$35/mo",
+   "estimated": true
+  }
+ }
+}

@@ -1,0 +1,245 @@
+{
+ "_meta": {
+  "item": "inctax",
+  "as_of": "2026-07",
+  "status": "researched-unverified",
+  "sources": [
+   "https://taxfoundation.org/data/all/state/state-income-tax-rates-2026/",
+   "https://taxfoundation.org/research/all/state/2026-state-tax-changes/",
+   "https://www.cbsnews.com/news/nine-states-cutting-income-taxes-2026/",
+   "https://atr.org/income-tax-cuts-take-effect-in-nine-states-on-new-years-day/",
+   "https://dor.sc.gov/news/information-about-h-4216",
+   "https://governor.sc.gov/news/2026-04/governor-mcmaster-ceremonially-signs-income-tax-bill-law",
+   "https://atr.org/utah-enacts-6th-income-tax-cut-in-6-years-and-shaves-6-cents-off-gas-tax/",
+   "https://taxfoundation.org/blog/arkansas-income-tax-cut-rates/",
+   "https://www.arkansashouse.org/news/post/35262/tax-cuts-passed-in-special-session",
+   "https://talkbusiness.net/2026/05/governor-signs-tax-cuts-into-law/",
+   "https://rsmus.com/insights/tax-alerts/2025/missouri-eliminates-capital-gains-tax.html",
+   "https://dor.mo.gov/news/newsitem/uuid/15044650-59dd-48f4-975a-01988d485255",
+   "https://news.bloombergtax.com/daily-tax-report-state/kansas-dor-announces-no-2026-income-tax-rate-cut-under-sb-269",
+   "https://www.anchin.com/articles/new-york-states-2026-fiscal-year-budget-finally-passes/",
+   "https://ustax.tools/hawaii-tax-brackets-2026/",
+   "https://services.marylandcomptroller.gov/taxes?id=kb_article_view&sysparm_article=KB0010014",
+   "https://revenue.mt.gov/news/recent-news/HB-337",
+   "https://www.visaverge.com/taxes/oklahoma-2026-tax-rates-three-brackets-top-rate-4-5/",
+   "https://oklahoma.gov/content/dam/ok/en/tax/documents/resources/publications/legislation/2025LegislativeUpdate.pdf",
+   "https://taxfoundation.org/location/indiana/",
+   "https://www.visaverge.com/taxes/indiana-2026-state-income-tax-flat-2-95-rate-and-local-surtaxes/",
+   "https://taxfoundation.org/location/hawaii/",
+   "https://www.visaverge.com/taxes/north-dakota-2026-state-income-tax-rates-and-brackets-explained/",
+   "https://ustax.tools/connecticut-tax-brackets-2026/",
+   "https://taxfoundation.org/location/vermont/",
+   "IRS Rev. Proc. 2025-32 (2026 federal brackets/standard deduction)",
+   "IRS Pub 527 & Pub 946 (27.5-yr residential straight-line, basis capitalization, mid-month convention)",
+   "IRC Sec 469(g) suspended passive-loss release; Sec 1(h)/1250 unrecaptured gain 25% cap; Sec 1411 NIIT; Sec 168(k) as amended by OBBBA (permanent 100% bonus, <=20-yr property); Sec 1402 SE tax; SSA 2026 wage base $184,500"
+  ]
+ },
+ "rules": "UNITS AND CONVENTION. marginal_pct is in PERCENT form (9.3 = 9.3%); engine uses s = marginal_pct/100. This table replaces the decimal-fraction STATE_* dicts in data_providers.py and the percent-form structural.py tables - one convention: percent. Rates are the marginal rate on the NEXT dollar of ordinary income at the owner persona (~$150k taxable single, primary; ~$200k MFJ divergences flagged in notes - single is used because it is the conservative/higher of the two nearly everywhere, e.g. OR 9.9 vs 8.75). All rates are 2026 law as of July 2026, including cuts effective 1/1/2026 and retroactive 2026 legislation (SC H.4216, AR May-2026 special session).\n\nFEDERAL DEFAULTS. fed_ordinary = 24% (0.24). Justification for 24 over 32: OBBBA (7/2025) made TCJA rates permanent; the 2026 24% single bracket runs ~$105,700-$201,775 taxable (Rev. Proc. 2025-32), so $150k single sits mid-bracket with ~$50k of headroom; $200k-gross MFJ is actually in the 22% bracket (taxable ~$168k after the ~$32.2k standard deduction), so 24% is already conservative for the MFJ persona; 32% does not begin until ~$201,775 single / ~$403,550 MFJ taxable, and because depreciation drives modeled net rental income toward zero, incremental BRRRR income cannot realistically push the persona into 32% - using 32% would systematically overstate tax and kill valid deals. Expose fed_ordinary as an override for high earners. Other federal constants: fed_ltcg = 15% (20% bracket starts ~$550k single taxable - out of persona range); recapture_rate = min(25%, fed_ordinary) = 24% at default (unrecaptured Sec 1250 gain is taxed at ordinary rates CAPPED at 25%); NIIT = 3.8% (MAGI > $200k single/$250k MFJ; default OFF for annual rental income - persona at/below threshold - and ON in the exit year, because the sale gain itself lifts MAGI over the threshold); QBI toggle default OFF (if user asserts Sec 162 trade-or-business / 250-hr safe harbor: fed on positive ordinary rental income becomes fed_ordinary*0.8 = 19.2%; OBBBA made 199A permanent).\n\nRENTAL-YEAR ENGINE (BRRRR default). (1) Depreciation: dep_basis = building_share*(purchase_price + buyer_closing_costs) + rehab_capitalized; building_share default 0.80 (override 0.60-0.70 for high-land CA coastal/HI/urban cores). Rehab treatment (verified): a pre-rental renovation is entirely CAPITALIZED into basis - no expensing of 'repairs' before the property is placed in service - and as building improvement it depreciates on the same 27.5-yr straight line; so 100% of rehab is depreciable, default all in the 27.5-yr class. annual_dep = dep_basis/27.5, with year-1 = annual_dep*(months_in_service - 0.5)/12 (mid-month convention; simple default: half year). Bonus-depreciation status 2026: OBBBA restored PERMANENT 100% bonus for <=20-yr property acquired after 1/19/2025 - the 27.5-yr building is NOT eligible; only 5-yr (appliances/flooring) and 15-yr (site work) carve-outs via cost segregation are. cost_seg toggle default OFF (simple; and with passive losses suspended by default, front-loading deductions only grows the suspended bank). If ON: bonus_deduction_yr1 = cost_seg_share*rehab_capitalized (suggest 0.25), remainder to 27.5-yr. (2) Taxable income: taxable_rent(t) = NOI(t) - mortgage_interest(t) - annual_dep - amortized_loan_costs(t) (refi points/fees amortize over the new loan term; unamortized fees on the retired loan deduct at refi). (3) Tax: if taxable_rent(t) >= 0: tax(t) = taxable_rent(t)*(fed_ordinary + s + local_addon). If taxable_rent(t) < 0 (typical early BRRRR years): PASSIVE-LOSS RULE - Sec 469 active-participation allowance = max(0, 25000 - 0.5*max(0, MAGI - 100000)); at persona MAGI >= $150k the allowance is 0, therefore ENGINE DEFAULT: deduct 0 now, suspended_losses += -taxable_rent(t) (losses carried forward, not deducted; the allowance formula is included so lower-MAGI personas work). PA and NJ exception: no state carryforward exists - state-side loss value is permanently 0. (4) after_tax_cf(t) = pretax_cf(t) - tax(t). (5) REFI: cash-out proceeds are NON-TAXABLE (return of capital via debt) - tax = 0, full stop; interest-tracing default: 100% of post-refi interest remains deductible (assume proceeds redeployed into the rental/next deal).\n\nEXIT ENGINE (year-5 sale). selling_costs = 7%*sale_price (deductible - they reduce amount realized). amount_realized = sale_price - selling_costs. adj_basis = purchase + buyer_closing + rehab_capitalized - accum_dep. gain = amount_realized - adj_basis. recap = min(gain, accum_dep); fed_recap_tax = recap*min(0.25, fed_ordinary). ltcg = gain - recap; fed_ltcg_tax = ltcg*fed_ltcg (15%). niit = 3.8%*gain (default ON in exit year). state_exit_tax = [recap + ltcg*(1 - state_ltcg_exclusion)]*s_exit, where s_exit = s except special states and state_ltcg_exclusion defaults 0; special-state table (from notes): MO exclusion=1.0 (gain fully exempt), WA s_exit=0 (realty exempt from CG excise), OK exclusion=1.0 when held >=5 yrs (the default hold!), ID exclusion=0.60, AR 0.50, SC 0.44, ND 0.40, VT 0.40 (held>3yr), WI 0.30, AZ 0.25, HI s_exit=min(s,7.25), MT s_exit=4.1, MA s_exit=5.0; most states treat the recapture portion as ordinary gain with no 25% analog - apply the same state rate; states with exclusions generally exclude the whole gain incl. recapture where noted (MO/OK/WA) but conservatively apply exclusions only to the ltcg slice elsewhere. Suspended-loss release (Sec 469(g), full taxable disposition): released_benefit = suspended_losses*(fed_ordinary + s) (PA/NJ: fed component only). after_tax_proceeds = amount_realized - loan_payoff - fed_recap_tax - fed_ltcg_tax - niit - state_exit_tax + released_benefit. If gain < 0 it is a Sec 1231 ordinary loss: benefit = -gain*(fed_ordinary + s). 1031 toggle default OFF (hurdle measures realized after-tax return).\n\nRETURN METRIC. After-tax compounded return = IRR on: t0: -(down_payment + rehab + closing + carry_to_refi); refi month (default month 8): +cash_out (untaxed); end of years 1-5: after_tax_cf(t); year 5 additionally: +after_tax_proceeds. Compute on a monthly grid, report (1+irr_monthly)^12 - 1. PASS = after-tax IRR >= 14% AND forced equity (ARV - all-in cost) >= $25,000 flat floor, on the 1,500-sqft prototype. Max purchase $/sqft = binary-search the highest purchase price satisfying both, / 1500.\n\nFLIP MODE (secondary). Dealer default: property bought to renovate and resell is INVENTORY - no capital-gain rates regardless of holding period, no depreciation, no 1031, no installment deferral. profit = sale_price - selling_costs - purchase - rehab - holding_costs - financing_costs. fed_tax = profit*fed_ordinary. SE TAX (dealer = self-employment): se_base = 0.9235*profit; SSWB_2026 = $184,500 (SSA); ss_room = max(0, SSWB - w2_wages), default w2_wages = $150,000 -> ss_room = $34,500; se_tax = 0.124*min(se_base, ss_room) + 0.029*se_base + 0.009*max(0, se_base + w2_wages - 200000); half deductible: fed_tax -= 0.5*se_tax*fed_ordinary. SIMPLE DEFAULT if one number needed: 15.3% on the first ~$35k of profit, ~3.8% above. state_tax = profit*(s + local_addon) - ordinary in every state (MO/OK/WA capital-gain breaks do NOT apply to dealer profit; WA still 0 - no income tax and realty exempt from excise). after_tax_profit = profit - fed_tax - se_tax - state_tax. Flip hurdle: (1 + after_tax_profit/cash_invested)^(12/project_months) - 1 >= 14%, and $25k minimum profit floor per owner lock. Mitigant toggle (default OFF): S-corp election caps SE base at reasonable_salary_share (~0.4) of profit. QBI toggle (default OFF) also available - flipping is a non-SSTB trade or business.\n\nLOCAL ADDONS (local_addon, percent, default 0 unless stated): MD +3.0 (mandatory county tax on all taxable income - baked into MD by default), IN +1.5 typical county, OH +2.0 metro override only (munis tax net rental profit), NYC +3.876 / MI cities / KY metros as metro-level overrides only. AL: engine may substitute effective 3.8 for the listed 5.0 (federal deductibility). Fallback for missing key: 4.5 (should never trigger - table is complete).",
+ "notes": "Research caveats: (1) The sandbox proxy blocked direct fetches of taxfoundation.org and most aggregators (HTTP 403 CONNECT denial), so figures were assembled from WebSearch result content citing Tax Foundation's 2026 tables, state DORs, and 2026 news coverage; every state was individually researched - no placeholders and no entries marked estimated. (2) Soft spots to re-verify at engine build: WV 4.58 (2026 trigger cut, single secondary source), SSA 2026 wage base $184,500, MD county-cap 3.2 vs 3.3 after the 2025 budget, and OK's 5-year qualifying capital-gain deduction mechanics (Form 561) which materially benefits the default 5-yr hold. (3) Notable 2026 movers captured: KY 3.5, NC 3.99, MS 4.0, NE 4.55, OH flat 2.75, OK 4.5, IN 2.95, MT 5.65, GA 4.99, UT 4.45, AR 3.7 (May 2026 retroactive), SC 5.21 (H.4216 signed 3/30/2026, effective TY2026), NY 5.9 (middle-bracket cut), WV 4.58. (4) Persona convention: single-$150k marginal used where single/MFJ diverge (OR 9.9 vs 8.75, RI 4.75 vs 5.99, CT 6.0 vs 5.5, MD 5.5 vs 5.25) - divergences are in each note so the engine can switch personas. (5) States where the state-side model departs from 'marginal x taxable income': PA/NJ (no loss offset/carryforward), MO/OK/WA (exit gain exempt), AZ/ID/AR/SC/ND/VT/WI (LTCG exclusions), HI/MT/MA (special LTCG rates), AL (federal deductibility), MD/IN/OH (local addons) - all encoded as rules in defaults_and_rules. (6) Federal 2026 figures reflect OBBBA permanence: 24% bracket ~$105.7k-$201.8k single, 100% bonus depreciation permanent for <=20-yr property (not the 27.5-yr building), QBI permanent.",
+ "table": {
+  "AL": {
+   "marginal_pct": 5.0,
+   "note": "Top rate over $3k. Federal income tax fully deductible on AL return: effective marginal ~= 5.0 x (1 - fed 24%) ~ 3.8; engine may apply 3.8 effective. City occupational taxes hit wages only, not rents."
+  },
+  "AK": {
+   "marginal_pct": 0,
+   "note": "No individual income tax."
+  },
+  "AZ": {
+   "marginal_pct": 2.5,
+   "note": "Flat 2.5%. 25% subtraction for LTCG on assets acquired after 2011: effective LTCG ~1.875% at exit."
+  },
+  "AR": {
+   "marginal_pct": 3.7,
+   "note": "Top rate cut 3.9->3.7 in May 2026 special session, retroactive to 1/1/2026. 50% LTCG exclusion: effective LTCG ~1.85% at exit."
+  },
+  "CA": {
+   "marginal_pct": 9.3,
+   "note": "9.3% bracket ~$63.6k-$360.7k single / to ~$721k MFJ (indexed). NO capital-gains preference: exit gain incl. recapture taxed at full 9.3%. Consider building_share override 0.60-0.70 (high land values). 1% surcharge only >$1M."
+  },
+  "CO": {
+   "marginal_pct": 4.4,
+   "note": "Flat 4.4%; TABOR surplus can trigger temporary ~0.1-0.15pt cuts in refund years. No LTCG preference."
+  },
+  "CT": {
+   "marginal_pct": 6.0,
+   "note": "6.0% bracket $100k-$200k single at $150k; MFJ $200k sits at 5.5/6.0 boundary. 3%-bracket phase-out ('benefit recapture') above ~$105k AGI adds a small effective bump. No LTCG preference."
+  },
+  "DE": {
+   "marginal_pct": 6.6,
+   "note": "Top rate over $60k, all filing statuses. No LTCG preference. Wilmington 1.25% wage tax does not hit rents."
+  },
+  "DC": {
+   "marginal_pct": 8.5,
+   "note": "8.5% bracket $60k-$250k, same brackets all statuses. No LTCG preference."
+  },
+  "FL": {
+   "marginal_pct": 0,
+   "note": "No individual income tax; pass-through rental/flip income untaxed at state level."
+  },
+  "GA": {
+   "marginal_pct": 4.99,
+   "note": "Flat rate cut 5.19->4.99 for TY2026; trigger path to 3.99. No LTCG preference."
+  },
+  "HI": {
+   "marginal_pct": 8.25,
+   "note": "2026 single: 8.25% bracket $96k-$300k (Act 46 widening through 2031); MFJ $200k also 8.25%. LTCG rate capped at 7.25% - use for exit. Consider lower building_share (high land value)."
+  },
+  "ID": {
+   "marginal_pct": 5.3,
+   "note": "Flat 5.3% (HB 40, retroactive 2025; unchanged 2026). 60% capital-gains deduction for Idaho real property held >=12 months: effective exit LTCG ~2.12%."
+  },
+  "IL": {
+   "marginal_pct": 4.95,
+   "note": "Flat 4.95%. No LTCG preference."
+  },
+  "IN": {
+   "marginal_pct": 2.95,
+   "note": "Flat 2.95% (2026 step of phase-down; 2.9% in 2027) PLUS mandatory county income tax 0.5-3.15% on same return (applies to rental income); typical addon ~1.5."
+  },
+  "IA": {
+   "marginal_pct": 3.8,
+   "note": "Flat 3.8% since 2025. No LTCG preference for rentals (farm-only exclusions)."
+  },
+  "KS": {
+   "marginal_pct": 5.58,
+   "note": "Two brackets 5.2/5.58; 5.58% above ~$23k single/$46k MFJ. SB 269 trigger produced NO cut for 2026 (KDOR determination). No LTCG preference."
+  },
+  "KY": {
+   "marginal_pct": 3.5,
+   "note": "Flat rate cut 4.0->3.5 effective 1/1/2026 (2025 HB 1); further trigger cuts possible. Local occupational license taxes (e.g. Louisville, Lexington ~2%+) can apply to net profits if rental rises to a business; wages-focused - default ignore."
+  },
+  "LA": {
+   "marginal_pct": 3.0,
+   "note": "Flat 3.0% since 2025. No LTCG preference for realty."
+  },
+  "ME": {
+   "marginal_pct": 7.15,
+   "note": "Top rate over ~$63k single / ~$127k MFJ (indexed) - both personas at 7.15%. No LTCG preference."
+  },
+  "MD": {
+   "marginal_pct": 5.5,
+   "note": "State 5.5% at $150k single (5.25% just below; MFJ $200k -> 5.25%) PLUS mandatory county piggyback 2.25-3.3% on all taxable income incl. rents - engine default addon +3.0 (effective ~8.5). 2025 budget added 6.25/6.5% brackets only >$500k."
+  },
+  "MA": {
+   "marginal_pct": 5.0,
+   "note": "Flat 5% on ordinary income and LTCG; short-term gains (<=1yr, non-dealer) 8.5%; dealer flip profit is ordinary 5%. 4% millionaire surtax only >$1M (could bite a very large exit year)."
+  },
+  "MI": {
+   "marginal_pct": 4.25,
+   "note": "Flat 4.25%. City income taxes (Detroit 2.4% resident/1.2% nonresident) apply to rental income located/resident in city - default 0, metro override."
+  },
+  "MN": {
+   "marginal_pct": 7.85,
+   "note": "7.85% bracket ~$107k-$199k single, ~$189k-$330k MFJ. No LTCG preference; +1% surtax only on net investment income >$1M."
+  },
+  "MS": {
+   "marginal_pct": 4.0,
+   "note": "Flat 4.0% for 2026 (4.4 in 2025); phasing to 3% by 2030, then trigger path toward elimination. First ~$10k exempt."
+  },
+  "MO": {
+   "marginal_pct": 4.7,
+   "note": "Top rate 4.7% (no 2026 trigger cut). 100% individual capital-gains exemption from 2025 (HB 594): BRRRR exit gain incl. recapture = 0 state tax; flip (dealer/ordinary) still taxed. KC/StL 1% earnings tax generally not on passive rents."
+  },
+  "MT": {
+   "marginal_pct": 5.65,
+   "note": "Top rate 5.9->5.65 for 2026 (5.4 in 2027), over $21,600 single. LTCG taxed at preferential 3.0/4.1%: use 4.1 at exit."
+  },
+  "NE": {
+   "marginal_pct": 4.55,
+   "note": "Top rate 5.2->4.55 for 2026 (LB 754 path; 3.99 in 2027), over ~$38k single. No LTCG preference."
+  },
+  "NV": {
+   "marginal_pct": 0,
+   "note": "No individual income tax."
+  },
+  "NH": {
+   "marginal_pct": 0,
+   "note": "No tax on wages or rental income (I&D tax fully repealed 2025). Business Profits Tax 7.5% only if gross business receipts > ~$298k/yr - single-property investors exempt."
+  },
+  "NJ": {
+   "marginal_pct": 6.37,
+   "note": "6.37% bracket $75k-$500k single / $150k-$500k MFJ. QUIRK: gross-income-category system - rental losses cannot offset wages and cannot carry forward (suspended-loss release does NOT work for NJ; engine: state benefit of losses = 0). No LTCG preference."
+  },
+  "NM": {
+   "marginal_pct": 4.9,
+   "note": "4.9% bracket ~$66.5k-$210k single (2025 restructure). Capital-gains deduction now limited to greater of $2,500 or 40% of gain from sale of NM business assets - assume no material exit benefit."
+  },
+  "NY": {
+   "marginal_pct": 5.9,
+   "note": "2026 middle-bracket cut: 6.0->5.9% for $80,650-$215,400 single / $161,550-$323,200 MFJ (5.8% in 2027). NYC residents add 3.078-3.876% (default 0; NYC-metro override). No LTCG preference."
+  },
+  "NC": {
+   "marginal_pct": 3.99,
+   "note": "Flat 4.25->3.99% effective 1/1/2026 (final scheduled cut; trigger path lower). No LTCG preference. No local income taxes."
+  },
+  "ND": {
+   "marginal_pct": 1.95,
+   "note": "1.95% bracket ~$48k-$245k single (0% below). 40% LTCG exclusion: effective exit LTCG ~1.17%."
+  },
+  "OH": {
+   "marginal_pct": 2.75,
+   "note": "NEW flat 2.75% for 2026 (>$26,050). Municipal income taxes (commonly 1.5-3%) DO tax net rental profits for properties in taxing municipalities - default 0, metro override +2.0."
+  },
+  "OK": {
+   "marginal_pct": 4.5,
+   "note": "2026: brackets collapse to three, top 4.75->4.5% (>$7,200 single); trigger path to zero. QUIRK: 100% OK capital-gain deduction for Oklahoma real property held >=5 uninterrupted years - the default 5-yr BRRRR exit is state-tax-free (recapture portion included as gain)."
+  },
+  "OR": {
+   "marginal_pct": 9.9,
+   "note": "9.9% over $125k single ($150k persona); MFJ $200k is 8.75% (9.9 starts $250k) - engine uses single persona. No LTCG preference. Portland metro: Multnomah PFA +1.5-2.3% and Metro SHS +1% above local thresholds - metro override."
+  },
+  "PA": {
+   "marginal_pct": 3.07,
+   "note": "Flat 3.07%. QUIRK: eight separate income classes - rental losses cannot offset wages, cannot carry forward (state benefit of losses = 0); local EIT generally exempts passive rents. Flip profit = business income 3.07% + possible local."
+  },
+  "RI": {
+   "marginal_pct": 4.75,
+   "note": "4.75% bracket $73,450-$166,950 (same brackets all statuses): $150k single -> 4.75, but $200k MFJ -> 5.99. Proposed 3% surtax only >$640k. No LTCG preference."
+  },
+  "SC": {
+   "marginal_pct": 5.21,
+   "note": "H.4216 (signed 3/30/2026, effective TY2026): 1.99% <$30k, 5.21% above; trigger cuts ahead. 44% LTCG exclusion: effective exit LTCG ~2.92%."
+  },
+  "SD": {
+   "marginal_pct": 0,
+   "note": "No individual income tax."
+  },
+  "TN": {
+   "marginal_pct": 0,
+   "note": "No individual income tax (Hall tax gone). If held in an LLC, TN franchise & excise tax (6.5% excise) can apply unless FONCE exemption (family-owned passive rental entity) - direct/personal ownership fully untaxed."
+  },
+  "TX": {
+   "marginal_pct": 0,
+   "note": "No individual income tax; franchise tax irrelevant below $2.47M revenue."
+  },
+  "UT": {
+   "marginal_pct": 4.45,
+   "note": "Flat rate cut 4.5->4.45 in 2026 session (6th straight cut). No LTCG preference (de minimis credit only)."
+  },
+  "VT": {
+   "marginal_pct": 7.6,
+   "note": "7.6% bracket ~$110k-$230k single; MFJ $200k also 7.6%. 40% exclusion on gains from assets held >3 years (capped): 5-yr BRRRR exit LTCG effective ~4.56% - apply exclusion at exit."
+  },
+  "VA": {
+   "marginal_pct": 5.75,
+   "note": "Top rate over $17k. No LTCG preference. No local income taxes on rents."
+  },
+  "WA": {
+   "marginal_pct": 0,
+   "note": "No ordinary income tax. 7%/9.9% capital-gains excise EXPLICITLY EXEMPTS real estate - BRRRR exit and flips of realty owe 0 state tax."
+  },
+  "WV": {
+   "marginal_pct": 4.58,
+   "note": "Trigger cut 4.82->4.58% top for TY2026; further annual trigger cuts likely. No LTCG preference."
+  },
+  "WI": {
+   "marginal_pct": 5.3,
+   "note": "5.3% bracket ~$29k-$323k single (MFJ similar). 30% LTCG exclusion (assets held >1 yr): effective exit LTCG ~3.71%."
+  },
+  "WY": {
+   "marginal_pct": 0,
+   "note": "No individual income tax."
+  }
+ }
+}
