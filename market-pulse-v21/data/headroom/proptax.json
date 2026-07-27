@@ -1,0 +1,285 @@
+{
+ "_meta": {
+  "item": "proptax",
+  "as_of": "2026-07",
+  "status": "verified-2026-07 (accurate, 0 corrections applied)",
+  "sources": [
+   "https://taxfoundation.org/data/all/state/property-taxes-by-state-county-2024/ (CY2023 effective owner-occupied rates: NJ 2.23, IL 2.07, CT 1.92, HI 0.27)",
+   "https://www.legislature.mi.gov/publications/TaxpayerGuide.pdf and https://www.treadstonemortgage.com/blog/michigan-property-tax-millage-rates-by-county/ (MI 18-mill non-PRE school operating; non-homestead ~50 mills; uncapping at transfer)",
+   "https://www.in.gov/dlgf/files/user-guides/251113-Fact-Sheet-Circuit-Breaker-Caps.pdf (IN 2% rental circuit breaker)",
+   "https://mgcrealestate.com/property-taxes-in-south-carolina-4-vs-6/ and https://palmettopromise.org/taxing-times-for-south-carolina-renters-investors-vacationers/ (SC 6% ratio + Act 388 school millage + 25% ATI exemption, Jan 30 deadline)",
+   "https://archive.legmt.gov/content/Committees/Interim/2025-2026/RIC/Meetings/July_11_2025/7.1.HB231-SB542-summary.pdf and https://montanafreepress.org/2025/12/30/more-questions-and-answers-about-montanas-new-second-home-tax/ (MT 2026 LTR homestead-tier rates 0.76/0.9/1.1, application window)",
+   "https://tax.vermont.gov/press-release/commissioner-taxes-releases-fy2026-education-tax-rate-letter (VT FY2026 non-homestead $1.703/$100)",
+   "https://tax.utah.gov/propertytax/tax-relief/primary-residential-exemption/ (UT 45% exemption incl. tenant primary residences)",
+   "https://tax.wv.gov/Business/PropertyTax/Pages/PropertyTaxClassifications.aspx (WV Class III/IV = 1.5-2x Class II levies)",
+   "https://floridarevenue.com/property/Documents/2024_County_Profiles.pdf (FL ~17 mills statewide avg; non-homestead 10% cap resets at sale)",
+   "https://realproperty.honolulu.gov/media/ugxijaid/residential-a-information-rev-june-2025.pdf (Honolulu Res-A $4.00/$11.40 per $1,000 FY2025-26)",
+   "https://www.legislature.ohio.gov/download?key=26937 and https://www.squirepattonboggs.com/insights/publications/update-on-real-property-tax-reform-recent-legislation-and-proposed-ohio-constitutional-amendment/ (OH non-business credit phase-out for rentals TY2026-29; owner-occupancy credit expansion)",
+   "https://www.ownwell.com/blog/how-much-is-property-tax-in-texas and https://www.propertytaxes.law/texas-property-tax-rates-by-county/ (TX investor full-value rates ~1.9-2.5% metro; no homestead for rentals)",
+   "https://burgelmanhomes.com/blog/property-tax-rate and https://www.realpha.com/blog/california-property-tax (CA new-purchase 1% + bonds = 1.1-1.3%; SF FY25-26 1.18268%)",
+   "https://propertytaxrates.org/blog/colorado-property-tax-guide-2026 and https://www.summitcountyco.gov/services/assessor/understanding_property_taxes_in_colorado.php (CO 2026 residential ratios 7.05% school / 6.8% local, 10% reduction first $700k)",
+   "https://mylrc.sdlegislature.gov/api/Documents/282154.html and https://news.bloombergtax.com/daily-tax-report/south-dakota-revises-school-district-property-tax-levies (SD SB121: owner-occupied school GF levy $0.669 vs other $4.867 per $1,000)",
+   "https://www.clarkcountynv.gov/government/general_information/tax-abatement and https://www.washoecounty.gov/assessor/taxcap/index.php (NV 3%/8% abatement caps, reset at transfer, 35% assessment ratio)"
+  ],
+  "verification": "10 table entries + 6 rule/default claims independently verified, mostly against sources the researcher did not cite:\n\nBIG STATES \u2014 CA (1.18): CONFIRMED. Prop 13 resets assessed value to purchase price; 1% base + voter bonds puts LA County at ~1.2\u20131.45% and SF at ~1.18% (legalclarity.org, kdainc.com LA County breakdowns \u2014 not cited by researcher). The 1.1\u20131.3 typical range and \"do not use ~0.7% owner avg\" are right. TX (1.9): CONFIRMED. Nov 4, 2025 Prop 13 raised the school homestead exemption to $140k (Ballotpedia, Fox26 \u2014 retroactive to TY2025), owner-only, so investors pay full appraised value; metro total nominal rates ~1.8\u20132.5% support the 1.9 scalar. FL (1.5): CONFIRMED structurally. 10% non-homestead cap excludes school millage and resets on change of ownership/control (Palm Beach PAO, Orange County PAO, F.S. 193.1556 \u2014 none cited); typical total millage 15\u201322 mills on near-market just value makes 1.5 a reasonable statewide investor level. NY (1.95, estimated): CONFIRMED as a bounded estimate. Independent county data: NYC Class 1 effective ~0.88%, Monroe ~2.4%, Oneida ~2.97% (truehomepayment.com, propertytaxexplorer.com); the deliverable's 0.8\u20130.9 NYC vs 2.5\u20133.3 upstate-city spread and per-metro-override warning are sound.\n\nQUIRKY STATES \u2014 SC (1.4): CONFIRMED. 6% ratio for rentals vs 4% owner, Act 388 school-operating exemption applies only to the 4% class, and the 25% ATI exemption must be claimed by Jan 30 of the year after purchase (SC REALTORS, York County ATI form, Burr & Forman \u2014 not cited). IN (1.75): CONFIRMED structure. Constitutional circuit breaker: 1% homestead / 2% rental of gross AV (DLGF fact sheet); urban gross rates exceed the cap so rentals sit at ~2% in metros; 1.75 statewide is defensible. MI (2.3): CONFIRMED. Taxable value uncaps to SEV (50% of market) the year after transfer; non-PRE property pays the full 18 school-operating mills (michigan.gov/taxes change-ownership page, appealdesk.com, Midland/Lapeer city pages); example non-homestead"
+ },
+ "rules": "UNIT CONVENTION: rate_pct is in PERCENT of purchase price per year (1.18 = 1.18%/yr). Engine must divide by 100. This intentionally matches structural.py's percent form and REPLACES data_providers.STATE_PROPERTY_TAX_RATE, which is (a) decimal-fraction form and (b) homeowner-effective \u2014 its CA 0.0075, FL 0.0091, SC 0.0057, IN 0.0084, TX 0.0180 values are all WRONG for an investor purchase and must not be blended with this table. Fallback for missing/invalid code: 1.10 (unweighted table median ~1.10). ENGINE RULES: (1) Year-1 tax = rate_pct x PURCHASE price; from the first post-renovation assessment (model as year 2+) use rate_pct x ARV, because nearly all states capture the rehab at reassessment \u2014 exceptions: OR (only 'exception value' of the remodel is added at the changed-property ratio), NV (depreciated-replacement-cost basis mutes it), AZ (LPV growth capped 5%/yr, no sale reset). (2) LTR-conditional rates baked into this table assume the BRRRR default (long-term tenant) AND timely filing: MT reduced-rate application (Dec 1\u2013Mar 1 annually), UT primary-residential declaration, SC 25% ATI exemption by Jan 30 after purchase, NV low-income-rent 3% cap election. Flip mode: MT reverts to second-home tiers (~1.2\u20131.9x shown rate), UT to 1.0, and DC risks the 5% vacant / 10% blighted class mid-rehab unless the active-construction exemption is filed. (3) Known drift to encode: OH rentals +~0.1pp by TY2029 (non-business credit phase-out, HB335); TX non-homestead 20% appraisal circuit breaker expires end-2026. (4) Annual-growth caps that survive for a HOLD (bill/assessment growth, all reset at next sale): FL 10% non-homestead, NV 8% (3% low-income), IN hard ceiling 2% of AV, NM 3% (after reset year), AR 10%. (5) High-variance states where a statewide scalar is least trustworthy for metro ranking \u2014 prefer per-metro overrides: NY (0.8 NYC vs 3.3 upstate), TX, FL, PA, RI, AK, LA, HI.",
+ "notes": "Method: baseline = Tax Foundation effective rates on owner-occupied housing (CY2023 ACS, published 2025), then per-state investor adjustment: (a) acquisition-value reset states set to new-purchase rate (CA 1% + local adds = 1.1\u20131.3; FL/OK/AR/NM/SC/MI reset or uncap at transfer); (b) classification-ratio states scaled to the investor ratio (SC 6/4 + Act 388 school millage, AL 20/10, MS 15/10, WV Class III\u2013IV 1.5\u20132x, SD school-levy split, IN 2% cap, MI +18 non-PRE mills, VT non-homestead $1.703); (c) homestead/credit removal (ID 50%/$125k, LA $75k, ME $25k, TX $140k school, IN deductions, AZ rebate, ND $1,600 credit, WY 25%, OH 2.5% + rollback phase-out, NY STAR, MD/MA/RI owner programs); (d) investor-favorable carve-outs kept per BRRRR default (UT 45% exemption and MT homestead-tier rates both extend to long-term rentals). 2025\u201326 law changes are incorporated: MT HB231/SB542, OH HB335 rollback phase-out, SD SB121, TX Nov-2025 $140k homestead (owner-only, so it RAISES the investor-vs-owner gap), CO 2026 split ratios, VT FY26 rates, Honolulu FY2025-26 Res-A tiers. 11 entries are estimated:true where statewide investor averages required judgment (AK, AR, DE, LA, MT, NV, NM, NY, RI, SD); they are bounded by statutory structure, not guesses. Sanity anchors vs old repo table: investor rate > repo homeowner rate in every overlapping state, with the biggest deltas exactly where theory predicts (SC 0.57\u21921.40, IN 0.84\u21921.75, FL 0.91\u21921.50, CA 0.75\u21921.18 purchase-reset).",
+ "table": {
+  "AL": {
+   "rate_pct": 0.75,
+   "basis_note": "Class II rental assessed at 20% vs 10% owner-occupied Class III -> ~2x owner effective (0.36%); no homestead. Same millages.",
+   "estimated": false
+  },
+  "AK": {
+   "rate_pct": 1.25,
+   "basis_note": "Anchorage/Mat-Su dominate; investor loses Anchorage 20%-up-to-$75k residential exemption; Anchorage mill rates ~1.3-1.45%. Some rural boroughs levy no property tax.",
+   "estimated": true
+  },
+  "AZ": {
+   "rate_pct": 0.6,
+   "basis_note": "Class 4 rental = same 10% ratio as owner Class 3, but investor loses the Homeowner Rebate (state pays ~40-50% of school primary tax, cap ~$600). Limited Property Value does NOT reset on sale.",
+   "estimated": false
+  },
+  "AR": {
+   "rate_pct": 0.75,
+   "basis_note": "20% ratio x ~45-50 avg mills; Amendment 79 caps reset on transfer (assessed -> full appraised); investor loses ~$500 homestead credit; county appraisals lag market.",
+   "estimated": true
+  },
+  "CA": {
+   "rate_pct": 1.18,
+   "basis_note": "Prop 13: reassessed to PURCHASE PRICE; 1% base + voter-approved debt = 1.1-1.3% typical (SF 1.18%, LA ~1.25%). Do NOT use the ~0.7% homeowner average. Mello-Roos extra in some subdivisions.",
+   "estimated": false
+  },
+  "CO": {
+   "rate_pct": 0.5,
+   "basis_note": "Same residential assessment ratio for rentals (2026: ~7.05% school / 6.8% local, 10% reduction on first $700k) x ~75 avg mills. No owner-occupant break.",
+   "estimated": false
+  },
+  "CT": {
+   "rate_pct": 1.9,
+   "basis_note": "70% assessment x ~30 avg mills; no meaningful homestead (new municipal-option exemption barely adopted); investor = owner (1.92% TF 2023).",
+   "estimated": false
+  },
+  "DE": {
+   "rate_pct": 0.58,
+   "basis_note": "No homestead (senior school credit only); investor = owner. First countywide reassessments in ~50 years (2024-25) normalized values; rates rebalanced.",
+   "estimated": true
+  },
+  "DC": {
+   "rate_pct": 0.85,
+   "basis_note": "Class 1 residential $0.85/$100 of assessed (near market); investor loses homestead deduction (~$89k) and 10% assessment cap. WARNING: registered-vacant 5%/blighted 10% class during rehab unless active-construction exemption filed.",
+   "estimated": false
+  },
+  "FL": {
+   "rate_pct": 1.5,
+   "basis_note": "New purchase assessed near market; statewide avg ~17 mills (FL DOR). No homestead/Save Our Homes for investors; 10% non-homestead cap starts after yr 1 and RESETS at sale. Do NOT use the ~0.8% homeowner average.",
+   "estimated": false
+  },
+  "GA": {
+   "rate_pct": 1.0,
+   "basis_note": "40% ratio, county millages; investor loses county/school homestead exemptions and 2025 HB581 floating homestead (owner-only). Owner eff ~0.85 -> investor ~1.0.",
+   "estimated": false
+  },
+  "HI": {
+   "rate_pct": 0.5,
+   "basis_note": "Honolulu Residential A (no home exemption, >$1M): 0.40% first $1M + 1.14% above; NOO under $1M: 0.35%. Maui NOO tiers higher (LTR exemption available); blended SFR investor ~0.5%. Lowest in US but 2-3x the 0.27% owner average.",
+   "estimated": false
+  },
+  "ID": {
+   "rate_pct": 0.65,
+   "basis_note": "Investor loses homeowner's exemption (50% of value up to $125k, ~25-30% of a median home). Owner eff 0.47 -> investor ~0.65.",
+   "estimated": false
+  },
+  "IL": {
+   "rate_pct": 2.2,
+   "basis_note": "Owner eff 2.07% (TF 2023) + loss of General Homestead Exemption ($6k/$10k EAV). Cook Co rentals (<=6 units) same 10% level as owner SFR. Highest-tier state.",
+   "estimated": false
+  },
+  "IN": {
+   "rate_pct": 1.75,
+   "basis_note": "Rentals under 2% constitutional circuit-breaker cap (vs 1% homestead); urban districts at/near the 2% cap, rural below; no homestead/supplemental deductions. Do NOT use ~0.85% homeowner avg.",
+   "estimated": false
+  },
+  "IA": {
+   "rate_pct": 1.5,
+   "basis_note": "Residential rollback (~47%) applies to rentals too; x ~$33/1000 avg consolidated levy. Homestead exemption small, so investor ~= owner.",
+   "estimated": false
+  },
+  "KS": {
+   "rate_pct": 1.35,
+   "basis_note": "11.5% ratio x ~130 avg mills; investor loses only the $75k exemption from the 20-mill statewide school levy (trivial). Appraisals near market.",
+   "estimated": false
+  },
+  "KY": {
+   "rate_pct": 0.85,
+   "basis_note": "Full-value assessment; state 11.4c/$100 + local; homestead only for 65+/disabled, so investor = owner.",
+   "estimated": false
+  },
+  "LA": {
+   "rate_pct": 0.9,
+   "basis_note": "10% ratio x ~110 avg mills = ~1.1% statutory; investor loses the $75k (market) homestead exemption, a huge share of modest-value homes -> ~1.8x owner eff (0.51). Parish variance is wide.",
+   "estimated": true
+  },
+  "ME": {
+   "rate_pct": 1.1,
+   "basis_note": "Investor loses $25k homestead exemption; otherwise same mill rates. Owner eff ~1.0.",
+   "estimated": false
+  },
+  "MD": {
+   "rate_pct": 1.1,
+   "basis_note": "Investor gets no Homestead assessment-growth cap or Homeowners' credit; new purchase at full phased-in assessment; state 11.2c + county (Baltimore City 2.25%).",
+   "estimated": false
+  },
+  "MA": {
+   "rate_pct": 1.15,
+   "basis_note": "Near-market assessments x ~$11-12/1000 avg; residential exemption (Boston ~35%, Cambridge, Somerville etc.) is owner-only so investors pay materially more in those cities.",
+   "estimated": false
+  },
+  "MI": {
+   "rate_pct": 2.3,
+   "basis_note": "Taxable value UNCAPS to SEV (50% of market) at transfer + rentals pay ~18 extra school operating mills (non-PRE avg ~50 mills total) -> ~2.2-2.5% of purchase. Do NOT use the ~1.3% homeowner avg.",
+   "estimated": false
+  },
+  "MN": {
+   "rate_pct": 1.15,
+   "basis_note": "Non-homestead SFR (4bb) class rate 1.00% <=$500k same as homestead, but loses homestead market-value exclusion (up to ~$38k) and refunds; rentals exempt from state general levy.",
+   "estimated": false
+  },
+  "MS": {
+   "rate_pct": 1.1,
+   "basis_note": "Class II non-owner-occupied assessed 15% vs 10% Class I owner (1.5x) + loss of homestead credit. Owner eff ~0.75 -> ~1.1.",
+   "estimated": false
+  },
+  "MO": {
+   "rate_pct": 1.0,
+   "basis_note": "19% residential ratio for both; no investor/owner rate distinction (senior credit only); KC/STL metro levies above state avg.",
+   "estimated": false
+  },
+  "MT": {
+   "rate_pct": 0.62,
+   "basis_note": "2025-26 reform (HB231/SB542): LONG-TERM RENTALS qualify for the reduced graduated homestead rates (0.76%/0.9%/1.1% tiers of market -> taxable, x ~550-680 mills) IF owner applies (window Dec 2025-Mar 2026, then annually). Second homes/STRs pay up to 1.9% tier (~2x).",
+   "estimated": true
+  },
+  "NE": {
+   "rate_pct": 1.5,
+   "basis_note": "No owner/investor distinction; LB34 school-tax credits apply to all property. Owner eff ~1.5.",
+   "estimated": false
+  },
+  "NV": {
+   "rate_pct": 0.7,
+   "basis_note": "35% ratio on taxable value (land + depreciated replacement cost, 1.5%/yr up to 75% - favors older BRRRR stock); abatement resets at sale, then 8% annual bill cap for rentals (3% if rents within low-income limits).",
+   "estimated": true
+  },
+  "NH": {
+   "rate_pct": 1.8,
+   "basis_note": "No homestead exemption; investor = owner; town rates on near-market equalized values.",
+   "estimated": false
+  },
+  "NJ": {
+   "rate_pct": 2.25,
+   "basis_note": "Highest in US (owner eff 2.23% TF 2023); ANCHOR/Senior Freeze are owner rebates, not rate cuts, so investor pays full levy.",
+   "estimated": false
+  },
+  "NM": {
+   "rate_pct": 0.9,
+   "basis_note": "3% annual valuation cap does NOT protect the year after a transfer (resets toward market); residential rates same for rentals; small head-of-family exemption lost.",
+   "estimated": true
+  },
+  "NY": {
+   "rate_pct": 1.95,
+   "basis_note": "STAR is owner-only. Massive intrastate spread: NYC Class 1 ~0.8-0.9%, Long Island ~2.1-2.3%, upstate metros (Buffalo/Rochester/Syracuse) 2.5-3.3%. Statewide blend for SFR investor ~1.95; MUST override per-metro.",
+   "estimated": true
+  },
+  "NC": {
+   "rate_pct": 0.8,
+   "basis_note": "No owner/investor distinction; 2025 revaluations pulled assessed toward market with partial rate rollbacks.",
+   "estimated": false
+  },
+  "ND": {
+   "rate_pct": 1.05,
+   "basis_note": "Investor loses the primary-residence credit ($1,600 by 2025 HB1176, owner-only); otherwise same levies on 4.5% of half... (net ~1% of market).",
+   "estimated": false
+  },
+  "OH": {
+   "rate_pct": 1.6,
+   "basis_note": "35% ratio; rentals lose the 2.5% owner-occupancy credit, and the 10% non-business credit for rentals is PHASING OUT (7.5% TY2026 -> 0% TY2029, HB335) so drift +~0.1pp by 2029. Recent reappraisals jumped values.",
+   "estimated": false
+  },
+  "OK": {
+   "rate_pct": 0.95,
+   "basis_note": "~11% ratio x ~90-110 mills; 5% assessment cap resets on sale (new purchase at market); homestead exemption ($1k assessed) trivial but owner-only.",
+   "estimated": false
+  },
+  "OR": {
+   "rate_pct": 0.85,
+   "basis_note": "Measure 50: Maximum Assessed Value does NOT reset on sale (investor = owner, ~0.85% of market); BUT major remodel adds exception value at the changed-property ratio - BRRRR rehab partially reassesses.",
+   "estimated": false
+  },
+  "PA": {
+   "rate_pct": 1.5,
+   "basis_note": "County/school millage on often-stale assessments; Act 1 homestead exclusions are owner-only but modest. Investor ~1.5 of purchase (Philly ~1.4 near-market; Pittsburgh higher on 2012 base).",
+   "estimated": false
+  },
+  "RI": {
+   "rate_pct": 1.55,
+   "basis_note": "Providence and several cities tax non-owner-occupied residential at materially higher rates / deny 40%+ homestead exemptions -> investor ~1.5-1.65 vs owner ~1.35.",
+   "estimated": true
+  },
+  "SC": {
+   "rate_pct": 1.4,
+   "basis_note": "6% ratio (vs 4% owner) AND school operating millage applies (Act 388 exempts only the 4% class) -> ~2.5-3x owner eff (0.5); ATI reassessment to sale price (file 25% ATI exemption by Jan 30 after purchase). Do NOT use the 0.5% homeowner avg.",
+   "estimated": false
+  },
+  "SD": {
+   "rate_pct": 1.4,
+   "basis_note": "Non-owner-occupied 'other' school GF levy $4.867/1000 vs $0.669 owner-occupied (SB121, payable 2027) -> ~+0.35-0.45pp over owner eff ~1.0.",
+   "estimated": true
+  },
+  "TN": {
+   "rate_pct": 0.6,
+   "basis_note": "25% residential ratio for both; no homestead; reappraisal-cycle lag keeps effective-on-purchase ~0.55-0.65.",
+   "estimated": false
+  },
+  "TX": {
+   "rate_pct": 1.9,
+   "basis_note": "Investor gets NO homestead ($140k school exemption + rate compression are owner-only post-Nov 2025) - full appraised value x total rates ~1.9-2.5% in major metros. Temporary 20%/yr non-homestead appraisal circuit breaker (<=$5M) through 2026. Do NOT use ~1.36% homeowner avg.",
+   "estimated": false
+  },
+  "UT": {
+   "rate_pct": 0.55,
+   "basis_note": "45% primary residential exemption APPLIES to long-term rentals (tenant's primary residence, 183+ days; owner files declaration) -> LTR investor ~= owner. Second home/STR pays full value (~1.0%).",
+   "estimated": false
+  },
+  "VT": {
+   "rate_pct": 2.1,
+   "basis_note": "Statewide NON-homestead education rate $1.703/$100 (FY26, CLA-adjusted to market) + municipal ~0.4-0.5 -> ~2.1% of market. Investor cannot use income-sensitized homestead rate.",
+   "estimated": false
+  },
+  "VA": {
+   "rate_pct": 0.87,
+   "basis_note": "No homestead; investor = owner; near-market assessments; NoVa ~0.9-1.1, rural lower.",
+   "estimated": false
+  },
+  "WA": {
+   "rate_pct": 0.85,
+   "basis_note": "No general homestead (senior/disabled only); statutory levy caps; investor = owner ~0.85 of market.",
+   "estimated": false
+  },
+  "WV": {
+   "rate_pct": 1.0,
+   "basis_note": "Rentals are Class III (outside city, 1.5x Class II max levies) or Class IV (in city, 2x) -> ~2x owner eff (0.5); 60% assessment ratio, values lag market.",
+   "estimated": false
+  },
+  "WI": {
+   "rate_pct": 1.55,
+   "basis_note": "School levy credit applies to all parcels but lottery credit is primary-residence-only (small); investor ~ owner eff ~1.5.",
+   "estimated": false
+  },
+  "WY": {
+   "rate_pct": 0.62,
+   "basis_note": "9.5% ratio x ~65-70 mills; 25% owner-occupied exemption (2025-26) is owner-only, so investor pays full: ~0.62 vs owner ~0.55.",
+   "estimated": false
+  }
+ }
+}

@@ -1,0 +1,78 @@
+{
+ "_meta": {
+  "item": "calibration",
+  "as_of": "2026-07",
+  "status": "verified-2026-07 (accurate, 0 corrections)",
+  "sources": [
+   "Zillow research press release, Feb 19 2026-02-19: 'The end of the fixer-upper' - fixer-uppers sold 7.3% below similar homes (largest in 3 yrs), 'needs work/TLC' ~-8%, remodeled premium +3.7% (+$13,194) - https://zillow.mediaroom.com/2025-02-19-The-end-of-the-fixer-upper-Remodeled-homes-sell-for-the-highest-premiums (syndicated: https://www.prnewswire.com/news-releases/the-end-of-the-fixer-upper-remodeled-homes-sell-for-the-highest-premiums-302379387.html ; https://finance.yahoo.com/news/end-fixer-upper-remodeled-homes-130000672.html)",
+   "Zillow data via CNN Business, Jul 17 2026: fixer-uppers selling at 14% discount vs similar move-in-ready homes, steepest recorded, ~double prior year - https://www.cnn.com/2026/07/17/business/america-fixer-upper-homes (syndicated: https://www.abc12.com/news/fixer-uppers-selling-at-steepest-discount-in-years-zillow-finds/article_97877ff3-87e5-5273-b98e-b2cefcb63ec0.html)",
+   "Zillow 2026 home features release, Mar 24 2026: remodeled homes +2.2% vs similar homes - https://zillow.mediaroom.com/2026-03-24-Cottagecore,-customization-quartzite-Zillows-2026-home-features-that-sell-for-more (coverage: https://www.rismedia.com/2026/03/25/zillows-2026-home-features-that-sell-for-more/)",
+   "ATTOM 2024 Year-End Home Flipping Report: gross ROI 29.6% (28.6% in 2023), median purchase $243,000, median resale $315,000 - https://www.attomdata.com/news/most-recent/2024-year-end-home-flipping-report/",
+   "ATTOM 2025 Year-End Home Flipping Report: gross ROI 25.5% (lowest since 2008), purchase $259,019, resale $325,000, gross profit $65,981; median flipped home built 1978 (oldest recorded) - https://www.attomdata.com/news/market-trends/flipping/2025-year-end-home-flipping-report/",
+   "ATTOM Q1 2026 Home Flipping Report: gross ROI 25.4%, purchase $260,000, resale $326,000, gross $66,000; ATTOM/Backflip: net profit after reno/holding/transaction ~$15,200 (5.8%) - https://www.attomdata.com/news/market-trends/flipping/q1-2026-home-flipping-report/ and https://www.attomdata.com/news/market-trends/flipping/special-analysis-how-pricing-renovation-costs-and-timing-shaped-returns-in-q1-2026/",
+   "Campbell, Giglio & Pathak, 'Forced Sales and House Prices', AER 2011: foreclosure discount ~27% (raw, includes condition + forced-sale) - https://www.nber.org/papers/w14866",
+   "Clauretie & Daneshvary, Real Estate Economics 2009: foreclosure discount 7.5-7.9% after controlling for condition, occupancy, marketing time, spatial dependence - https://www.researchgate.net/publication/24016236_Estimating_the_House_Foreclosure_Discount_Corrected_For_Spatial_Price_Interdependence_and_Endogeneity_of_Marketing_Time",
+   "John Burns Research & Consulting Fix-and-Flip Survey (with Kiavi), 2025: flippers paid avg 66% of ARV; max willingness fell to 64% - https://jbrec.com/research/fix-and-flip-survey/ ; https://www.kiavi.com/blog/fix-and-flip-market-updates-highlights-from-john-burns-q1-2025-survey",
+   "Realtor.com/HousingWire new-construction premium series: record-low 7.8% premium Q2 2025; new builds $218.66/sqft vs existing $226.56/sqft; premium widened to ~15.1% by 2026 (composition-driven) - https://www.housingwire.com/articles/urban-new-construction-premium-builders-shift-suburbs-2026-q1/ ; https://finviz.com/news/131301/realtorcom-price-premium-for-new-construction-hits-all-time-low"
+  ],
+  "verification": "This deliverable is national calibration constants (per its own notes), not a 51-state map, so I checked its 11 numeric anchors plus the 3 highest-impact rule claims against sources the researcher did not cite. (1) ATTOM Q1-2026: 25.4% gross ROI, $66,000 gross, $260k purchase/$326k resale \u2014 CONFIRMED via HousingWire (attom-q1-2026-home-flipping), Mortgage Professional America, mecktimes.com, PRNewswire 302804083; also confirmed 25.4% was an uptick from 24.7% after seven declining quarters. (2) ATTOM FY2025: 25.5% ROI lowest since 2008, gross $65,981, median flipped home built 1978 (oldest ATTOM has recorded) \u2014 CONFIRMED via HousingWire, TheMortgagePoint, MBA Newslink, 10news.com; $259,019 purchase reconciles exactly ($325,000 \u2212 $65,981). (3) ATTOM FY2024 29.6% \u2014 matches ATTOM's original 2024 year-end release as cited, but see notes: later ATTOM releases restate 2024 at 32.1%. (4) Zillow Feb-2025: fixer \u22127.3% (largest in 3 yrs), remodeled +3.7% (+$13,194), 'needs work/TLC' ~\u22128% \u2014 ALL CONFIRMED via Daily Astorian, National Mortgage Professional, Zillow Front Porch, StockTitan, AOL syndications. (5) Zillow Jul-2026: \u221214% fixer discount, steepest recorded, ~double prior year \u2014 CONFIRMED via CNN plus independent affiliates (wxow, localnews8, KESQ, ABC Columbia) and Baltimore Sun. (6) Zillow Mar-2026: remodeled +2.2% \u2014 CONFIRMED via RISMedia, Chicago Agent Magazine, PRNewswire 302722915. (7) JBREC/Kiavi: flippers pay avg 66% of ARV \u2014 CONFIRMED via HousingWire and Scotsman Guide (down from 67% YoY; 42% now target \u226460%); the specific '64% max willingness' appears only in the cited Kiavi blog \u2014 PLAUSIBLE, and the 64-66% band the deliverable anchors x_gut/y_gut=0.648 to is corroborated at the 66% end. (8) Campbell/Giglio/Pathak AER 2011: 27% avg foreclosure discount \u2014 CONFIRMED via AEA article page, phys.org, MIT PDF. (9) Clauretie & Daneshvary 2009: 7.5-7.9% residual after condition/occupancy/marketing-time/spatial controls (Las Vegas 2004-07) \u2014 CONFIRMED via independent dis"
+ },
+ "rules": "UNIT CONVENTION: x and y are dimensionless multipliers on the metro median $/sqft, condition-only, same micro-location and prototype size (1,500 sqft): entry price/sqft = x * median $/sqft; post-renovation ARV/sqft = y * median $/sqft. Composition bias (flipped stock is smaller, median build year 1978 - oldest ATTOM has recorded - and in below-median neighborhoods) is EXCLUDED from x by construction: do not also apply a neighborhood/age haircut or you double-count. DEFAULTS (mid-2026 market): x_cosmetic 0.92, x_moderate 0.83, x_gut 0.70; y_cosmetic 1.02, y_moderate 1.04, y_gut 1.08. DERIVATION: (a) x anchors - Zillow hedonically-controlled fixer discount (vs SIMILAR homes, i.e. condition-only, exactly our definition): 'needs work/TLC' ~-8%, marketed fixer-uppers -7.3% (Feb 2025) widening to -14% (Jul 2026, steepest recorded); cosmetic sits at the light end (-8%, x=0.92), moderate at the deep half of listed fixers (-17%, x=0.83). Gut stock trades off-MLS/unfinanceable: academic distressed lit brackets it - Campbell/Giglio/Pathak (AER 2011) raw foreclosure discount ~27% vs Clauretie/Daneshvary (2009) 7.5-7.9% residual after condition controls, implying condition+marketability ~19-25 pts; x_gut=0.70 (-30%) sits at the conservative-deep end AND independently reproduces JBREC/Kiavi surveyed flipper purchase of 64-66% of ARV (x_gut/y_gut=0.648). ATTOM cross-check: raw flip purchase $260k vs ~$400k US median (ratio 0.65) minus composition (small-home $/sqft premium, 1978 stock, cheaper tracts) leaves ~15-22% condition-only for the modal flip - consistent with x_moderate. (b) y anchors - Zillow controlled remodeled premium +3.7% (2025), +2.2% (2026): y_cosmetic 1.02, y_moderate 1.04 at/just above its range; y_gut 1.08 capped below the new-construction premium (record-low 7.8% Q2-2025; new builds actually CHEAPER per sqft than existing, $218.66 vs $226.56), because appraisal comps and neighborhood ceilings bind hardest at gut scope. CONSISTENCY IDENTITY (deliberately conservative): implied gross flip ROI (y-x)/x = 10.9% cosmetic / 25.3% moderate / 54.3% gut; moderate (ATTOM's modal flip) lands at or below every recent ATTOM national print (25.4% Q1-2026, 25.5% FY2025, 29.6% FY2024 - note the market has deteriorated below the 29-30% figure in the task brief; we calibrated to the tougher current prints); flip-mix-weighted (55/35/10) = 20.3%, well below observed. Gut exceeding the ATTOM median is correct, not an error: gut deals are the deep-discount tail acquired at 64-66% of ARV per JBREC, and the wide gross spread must fund $60-110/sqft of hard cost - ATTOM/Backflip Q1-2026 shows net flip profit after renovation/holding/transaction costs is only ~$15.2k (5.8%), so gross spread conservatism, not gross spread size, is the binding check. TIGHTNESS RULE: see table_json.tightness_rule - x-only, additive, bounded [-0.02,+0.05], with a hard clamp that implied moderate ROI never exceeds latest ATTOM national gross ROI + 500bps. ENGINE USE: for BRRRR, ARV for the 75% refi = y_scope * median $/sqft * 1500; forced equity vs the $25k floor = (y-x) * median $/sqft * 1500 - renovation cost. When a metro's median $/sqft makes moderate-scope forced equity negative at defaults, the deal fails regardless of rent - that is the intended conservative behavior.",
+ "notes": "(1) This task's table_json is intentionally {defaults, bands, tightness_rule(+consistency_check)}, not a 51-state map - these are national market-calibration constants per the task spec; state/metro variation enters only through the bounded tightness rule and the metro median $/sqft the multipliers scale. (2) Freshness: task brief cited ATTOM ~29-30% (2024-25); live data through Q1 2026 shows 25.4-25.5% (FY2025 lowest since 2008), so constants were tightened to the current prints - stricter than the brief required. Zillow's fixer discount doubled to 14% between Feb 2025 and Jul 2026; defaults reflect the current (soft) national market, which is why the baseline tightness band (MoS 3.0-4.5) carries zero adjustment. (3) Key bias warning encoded in the convention: Zillow figures are condition-only (vs similar homes) and can be used directly; ATTOM raw purchase-vs-median ratios CANNOT (composition: smaller/older/cheaper-tract stock) - they were used only as a bracket after decomposition. (4) All figures from public/press sources only (Zillow research releases via media syndication, ATTOM press summaries, NBER/AER and Real Estate Economics abstracts, JBREC survey highlights via Kiavi) - no licensed data. Several primary URLs (zillow.mediaroom.com, attomdata.com, prnewswire.com, cnn.com) returned 403 to automated fetch; figures were corroborated across at least two independent syndications each via search. (5) Uncertainty bands are calibration ranges for sensitivity analysis, not confidence intervals; the widest relative uncertainty is x_gut/y_gut (off-market pricing is thinly documented publicly) - the engine's flip-mode outputs for gut scope should be labeled lower-confidence in the UI. (6) Downstream tasks: if the Phase-2 engine also applies a distress/motivated-seller assumption, do not stack it on x - the gut anchor already embeds the marketability component per the C&D decomposition.",
+ "table": {
+  "defaults": {
+   "x_cosmetic": 0.92,
+   "x_moderate": 0.83,
+   "x_gut": 0.7,
+   "y_cosmetic": 1.02,
+   "y_moderate": 1.04,
+   "y_gut": 1.08
+  },
+  "bands": {
+   "x_cosmetic": [
+    0.88,
+    0.95
+   ],
+   "x_moderate": [
+    0.78,
+    0.88
+   ],
+   "x_gut": [
+    0.62,
+    0.76
+   ],
+   "y_cosmetic": [
+    1.0,
+    1.04
+   ],
+   "y_moderate": [
+    1.01,
+    1.07
+   ],
+   "y_gut": [
+    1.04,
+    1.12
+   ]
+  },
+  "tightness_rule": "Adjust x ONLY (entry discount is the cyclical margin; y gets NO adjustment - insufficient evidence: Zillow's controlled remodeled premium moved just 0.8%->3.7%->2.2% across a full cycle, within band noise). Tightness metric: metro months-of-supply (MoS) from public Realtor.com/Redfin series. Additive adjustment to all three x values: MoS<=2.0 (tight): +0.05; 2.0<MoS<=3.0: +0.025; 3.0<MoS<=4.5 (national baseline, defaults already reflect mid-2026 conditions): 0; 4.5<MoS<=6.0 (soft): -0.01; MoS>6.0: -0.02. Hard bounds [-0.02, +0.05]. Post-adjustment clamp: implied moderate-scope gross flip ROI (y_moderate - x_adj)/x_adj must not exceed latest ATTOM national median gross flip ROI + 500bps metro-dispersion allowance (currently 25.4% + 5.0% = 30.4%); if exceeded, raise x_adj to equality. Justification of magnitude: Zillow's hedonically-controlled fixer discount swung ~10-11 pts across the last cycle (~3-4% in the 2022 frenzy -> 7.3% Feb-2025 -> 14% Jul-2026, steepest recorded); total rule swing of 7 pts is inside that observed range, and asymmetric on purpose - full effect when tightness hurts the deal (entry discount compresses), half credit when it helps (soft-market discounts are partly offset by weaker exits, which we hold flat).",
+  "consistency_check": {
+   "implied_gross_flip_roi": {
+    "cosmetic": 0.109,
+    "moderate": 0.253,
+    "gut": 0.543
+   },
+   "implied_purchase_pct_of_arv": {
+    "cosmetic": 0.902,
+    "moderate": 0.798,
+    "gut": 0.648
+   },
+   "flip_mix_weighted_roi": 0.203,
+   "observed_attom_gross_roi": {
+    "fy2024": 0.296,
+    "fy2025": 0.255,
+    "q1_2026": 0.254
+   },
+   "verdict": "moderate 25.3% <= 25.4% (Q1-2026) <= 29.6% (FY2024); mix-weighted 20.3% well below all prints; gut x/y = 0.648 independently matches JBREC/Kiavi surveyed flipper purchase at 64-66% of ARV"
+  }
+ }
+}

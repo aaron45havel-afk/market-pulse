@@ -482,6 +482,49 @@ async def contractor_plan_pdf(bsqft: str = "", bbeds: str = "3", bbaths: str = "
                     headers={"Content-Disposition": f'attachment; filename="{fn}"'})
 
 
+@app.get("/headroom")
+async def headroom_page(request: Request, mode: str = "brrrr", scope: str = "moderate",
+                        level: str = "low", target: str = "14", rate: str = "",
+                        sqft: str = "1500", xadj: str = "0", metro: str = "",
+                        universe: str = "all"):
+    """Headroom — the remodel deal engine. Ranks all ~107 markets by the
+    max purchase $/sqft that clears the after-tax compounded-return target
+    (BRRRR or flip) vs what fixers actually cost there. See headroom.py.
+    All numeric params parsed tolerantly."""
+    import headroom as HR
+    from data_providers import MORTGAGE_30Y_RATE
+    mode = mode if mode in ("brrrr", "flip") else "brrrr"
+    scope = scope if scope in ("cosmetic", "moderate", "gut") else "moderate"
+    level = level if level in ("low", "mid", "high") else "low"
+    target_n = max(1.0, min(60.0, _qnum(target, 14)))
+    rate_n = _qnum(rate) or MORTGAGE_30Y_RATE or 6.55
+    sqft_n = max(600.0, min(6000.0, _qnum(sqft, 1500)))
+    xadj_n = max(-0.02, min(0.05, _qnum(xadj)))
+    board = await asyncio.to_thread(
+        HR.build_board, mode=mode, scope=scope, level=level, target=target_n,
+        rate_pct=rate_n, sqft=sqft_n, x_adjust=xadj_n,
+        metros_only=(universe == "metros"))
+    feasible = [r for r in board if r.get("feasible")]
+    n_primed = sum(1 for r in feasible if r["verdict"] == "PRIMED")
+    drill = None
+    metro = metro.strip().upper()
+    if metro:
+        drill = await asyncio.to_thread(
+            HR.zip_drilldown, metro, mode=mode, scope=scope, level=level,
+            target=target_n, rate_pct=rate_n, sqft=sqft_n)
+    calib = HR.calibration(scope)
+    fin = HR.financing_terms(rate_n)
+    return templates.TemplateResponse("headroom.html", {
+        "request": request, "board": board, "n_primed": n_primed,
+        "mode": mode, "scope": scope, "level": level, "target": target_n,
+        "rate": rate_n, "sqft": sqft_n, "xadj": xadj_n, "universe": universe,
+        "metro": metro, "drill": drill,
+        "metro_name": next((r["name"] for r in board if r["code"] == metro), metro),
+        "calib": calib, "fin": fin,
+        "profit_floor": HR.PROFIT_FLOOR, "hold_years": HR.HOLD_YEARS,
+    })
+
+
 @app.get("/landscaper")
 async def landscaper_page(request: Request, book: str = ""):
     """Bilingual (ES-first) Bay Area landscaping pricing tool: ZIP wealth
