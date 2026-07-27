@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Headroom — remodel deal engine — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+    .hr-page { max-width: 1400px; margin: 0 auto; padding: 0 1.25rem; }
+    .hr-head h1 { font-size: clamp(1.5rem, 3vw, 2rem); margin: 1rem 0 0.15rem; }
+    .hr-head .subtitle { color: var(--ink-3); font-size: 0.92rem; }
+    .hr-controls { display: flex; gap: 0.7rem; align-items: end; margin: 0.85rem 0 1rem; flex-wrap: wrap;
+        background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 0.85rem 1rem; }
+    .hr-controls .field { display: flex; flex-direction: column; gap: 0.2rem; }
+    .hr-controls label { font-size: 0.7rem; color: var(--ink-3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .hr-controls select, .hr-controls input { background: var(--surface2); border: 1px solid var(--border);
+        border-radius: 6px; padding: 0.4rem 0.55rem; color: var(--text); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+    .hr-controls input { width: 6.2em; }
+    .hr-apply { background: var(--accent, #4a6741); color: #fff; border: none; border-radius: 6px; padding: 0.5rem 1.1rem; font-weight: 700; cursor: pointer; }
+    .hr-heroes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.8rem; margin: 0 0 0.8rem; }
+    .hr-hero { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 0.8rem 1rem; }
+    .hr-hero .rank { font-size: 0.7rem; color: var(--ink-3); font-weight: 700; text-transform: uppercase; }
+    .hr-hero .mkt { font-weight: 800; font-size: 1.05rem; margin: 0.1rem 0; }
+    .hr-hero .nums { font-size: 0.82rem; color: var(--ink-2); }
+    .hr-sentence { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent, #4a6741);
+        border-radius: var(--r); padding: 0.7rem 1rem; font-size: 0.92rem; margin-bottom: 1rem; }
+    .hr-chip { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.02em; white-space: nowrap; }
+    .hr-chip.primed { background: rgba(34,197,94,0.16); color: #16a34a; }
+    .hr-chip.dd { background: rgba(245,158,11,0.16); color: #b45309; }
+    .hr-chip.out { background: rgba(239,68,68,0.13); color: #dc2626; }
+    .hr-chip.nopath { background: var(--surface2); color: var(--ink-3); }
+    .hr-scroll { overflow-x: auto; }
+    .hr-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .hr-table th { text-align: right; padding: 0.45rem 0.5rem; color: var(--ink-3); font-size: 0.68rem;
+        text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .hr-table th:nth-child(-n+3), .hr-table td:nth-child(-n+3) { text-align: left; }
+    .hr-table td { padding: 0.42rem 0.5rem; border-bottom: 1px solid var(--border); text-align: right;
+        font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .hr-table tr:hover td { background: var(--surface2); }
+    .hr-bar { display: inline-block; width: 74px; height: 8px; border-radius: 4px; background: var(--surface2);
+        position: relative; overflow: hidden; vertical-align: middle; margin-left: 6px; }
+    .hr-bar span { position: absolute; top: 0; bottom: 0; }
+    .hr-maxpsf { font-weight: 800; }
+    .hr-note { font-size: 0.74rem; color: var(--ink-3); }
+    .hr-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 1rem 1.1rem; margin-bottom: 1rem; }
+    .hr-explain summary { cursor: pointer; font-weight: 700; }
+    .hr-explain .body { font-size: 0.85rem; color: var(--ink-2); margin-top: 0.6rem; line-height: 1.55; }
+    .hr-explain code { background: var(--surface2); padding: 0 4px; border-radius: 4px; }
+    @media (max-width: 900px) { .hr-table { font-size: 0.72rem; } }
+</style>
+{% endblock %}
+{% block content %}
+<div class="hr-page">
+    <div class="hr-head">
+        <h1>📐 Headroom — the remodel deal engine</h1>
+        <div class="subtitle">Which market is primed for remodel value-add right now: the <b>max purchase $/sqft</b> that still compounds
+            <b>{{ '%.0f'|format(target) }}% after tax</b> on your cash at today's debt costs, versus what fixers actually trade for.
+            Headroom &gt; 0 → pay list and clear the bar. Headroom &lt; 0 → the number IS your offer discipline: buy that far below the typical fixer ask.</div>
+    </div>
+
+    <form class="hr-controls" method="get" action="/headroom">
+        <div class="field"><label>Strategy</label><select name="mode">
+            <option value="brrrr" {% if mode == 'brrrr' %}selected{% endif %}>BRRRR (buy·reno·rent·refi, 5-yr)</option>
+            <option value="flip" {% if mode == 'flip' %}selected{% endif %}>Flip (buy·reno·sell)</option>
+        </select></div>
+        <div class="field"><label>Scope</label><select name="scope">
+            {% for s in ('cosmetic','moderate','gut') %}<option value="{{ s }}" {% if scope == s %}selected{% endif %}>{{ s|capitalize }}</option>{% endfor %}
+        </select></div>
+        <div class="field"><label>Finish</label><select name="level">
+            {% for l, lab in (('low','Rental-grade'),('mid','Mid'),('high','High')) %}<option value="{{ l }}" {% if level == l %}selected{% endif %}>{{ lab }}</option>{% endfor %}
+        </select></div>
+        <div class="field"><label>After-tax target %</label><input name="target" type="number" step="0.5" min="1" max="60" value="{{ '%.1f'|format(target) }}"></div>
+        <div class="field"><label>30-yr rate %</label><input name="rate" type="number" step="0.01" min="1" max="15" value="{{ '%.2f'|format(rate) }}"></div>
+        <div class="field"><label>Sqft</label><input name="sqft" type="number" step="50" min="600" max="6000" value="{{ sqft|int }}"></div>
+        <div class="field"><label title="Competition knob: shifts the fixer entry price. Negative = soft market, fixers negotiable (helps you). Bounds −0.02..+0.05 per the calibration's months-of-supply rule.">Competition ±x</label>
+            <select name="xadj">
+                <option value="-0.02" {% if xadj <= -0.015 %}selected{% endif %}>Soft / no bidders (−0.02)</option>
+                <option value="-0.01" {% if -0.015 < xadj <= -0.005 %}selected{% endif %}>Cooling (−0.01)</option>
+                <option value="0" {% if -0.005 < xadj < 0.0125 %}selected{% endif %}>Baseline (0)</option>
+                <option value="0.025" {% if 0.0125 <= xadj < 0.0375 %}selected{% endif %}>Tight (+0.025)</option>
+                <option value="0.05" {% if xadj >= 0.0375 %}selected{% endif %}>Bidding wars (+0.05)</option>
+            </select></div>
+        <div class="field"><label>Universe</label><select name="universe">
+            <option value="all" {% if universe != 'metros' %}selected{% endif %}>All 107 markets</option>
+            <option value="metros" {% if universe == 'metros' %}selected{% endif %}>Metros only</option>
+        </select></div>
+        <button class="hr-apply" type="submit">Run</button>
+    </form>
+
+    {% set feas = board | selectattr('feasible') | list %}
+    {% if feas %}
+    <div class="hr-heroes">
+        {% for r in feas[:3] %}
+        <div class="hr-hero">
+            <div class="rank">#{{ loop.index }} · {{ r.verdict }}{% if r.vetoed %} (trend-vetoed){% endif %}</div>
+            <div class="mkt">{{ r.name }}</div>
+            <div class="nums">max <b>${{ '%.0f'|format(r.max_psf) }}/sqft</b> vs fixer ask ~${{ '%.0f'|format(r.entry_psf) }}/sqft
+                → <b>{{ '%+.1f'|format(r.headroom * 100) }}%</b> headroom<br>
+                <span class="hr-note">{{ r.competition }} · rehab ${{ '%.0f'|format(r.rehab_psf) }}/sqft · median ${{ '{:,.0f}'.format(r.median_value) }}</span></div>
+        </div>
+        {% endfor %}
+    </div>
+    {% set best = feas[0] %}
+    <div class="hr-sentence">
+        At <b>{{ '%.2f'|format(rate) }}%</b> debt and a <b>{{ '%.0f'|format(target) }}% after-tax</b> target on a {{ scope }}/{{ level }} {{ 'flip' if mode == 'flip' else 'BRRRR (5-yr hold)' }}:
+        <b>{{ n_primed }}</b> of {{ feas|length }} markets clear the bar at typical fixer pricing.
+        {% if n_primed == 0 %}Best is <b>{{ best.name }}</b> at {{ '%+.1f'|format(best.headroom * 100) }}% — a deal there needs
+        ~{{ '%.0f'|format(-best.headroom * 100) }}% below the typical fixer ask to pencil. That number is the offer, not a verdict on you.{% endif %}
+        {% if mode == 'brrrr' and n_primed == 0 %}<span class="hr-note">Rent-to-price is the villain: at current rates a 5-yr levered hold needs deep-discount entry almost everywhere — check the flip toggle and the ZIP drill-downs for the pockets.</span>{% endif %}
+    </div>
+    {% endif %}
+
+    <div class="hr-card">
+        <div class="hr-scroll">
+        <table class="hr-table">
+            <thead><tr>
+                <th>#</th><th>Market</th><th>Verdict</th><th>Max buy $/sf</th><th>Fixer ask $/sf</th>
+                <th>Headroom</th><th>Rehab $/sf</th><th>ARV $/sf</th><th>Median</th><th>Rent</th>
+                <th>3-yr</th><th>Competition</th><th>ZIPs</th>
+            </tr></thead>
+            <tbody>
+            {% for r in board %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td><b>{{ r.name }}</b></td>
+                <td>{% if not r.feasible %}<span class="hr-chip nopath" title="rents too weak to refinance — no BRRRR path at any price">NO PATH</span>
+                    {% elif r.verdict == 'PRIMED' %}<span class="hr-chip primed">PRIMED</span>
+                    {% elif r.verdict == 'DEAL-DEPENDENT' %}<span class="hr-chip dd">{{ 'needs %.0f%% off'|format(-r.headroom * 100) if r.headroom < 0 else 'DEAL-DEPENDENT' }}</span>
+                    {% else %}<span class="hr-chip out">needs {{ '%.0f'|format(-r.headroom * 100) }}% off</span>{% endif %}
+                    {% if r.vetoed %}<span class="hr-note" title="values declining — PRIMED demoted">▼</span>{% endif %}</td>
+                <td class="hr-maxpsf">{% if r.feasible %}${{ '%.0f'|format(r.max_psf) }}{% else %}—{% endif %}</td>
+                <td>${{ '%.0f'|format(r.entry_psf) }}</td>
+                <td>{% if r.headroom is not none %}{{ '%+.1f'|format(r.headroom * 100) }}%
+                    <span class="hr-bar"><span style="{% if r.headroom >= 0 %}left:50%;width:{{ [r.headroom * 250, 50] | min }}%;background:#16a34a{% else %}right:50%;width:{{ [-r.headroom * 62.5, 50] | min }}%;background:#dc2626{% endif %}"></span></span>
+                    {% else %}—{% endif %}</td>
+                <td>${{ '%.0f'|format(r.rehab_psf) }}</td>
+                <td>${{ '%.0f'|format(r.arv_psf) }}</td>
+                <td>${{ '{:,.0f}'.format(r.median_value) }}</td>
+                <td>${{ '{:,.0f}'.format(r.rent) }}</td>
+                <td>{{ '%+.1f'|format(r.cagr3_pct) if r.cagr3_pct is not none else '—' }}%</td>
+                <td class="hr-note">{{ r.competition }}</td>
+                <td>{% if '-' in r.code or r.code == 'DC' %}<a href="/headroom?mode={{ mode }}&scope={{ scope }}&level={{ level }}&target={{ target }}&rate={{ '%.2f'|format(rate) }}&sqft={{ sqft|int }}&xadj={{ xadj }}&universe={{ universe }}&metro={{ r.code }}#drill">{{ r.n_zips }} ↓</a>{% else %}{{ r.n_zips }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <div class="hr-note" style="margin-top:0.5rem">Fixer ask = market median × {{ '%.2f'|format(calib.x) }} ({{ scope }} entry discount, verified calibration);
+            ARV = median × {{ '%.2f'|format(calib.y) }} renovated premium. Rents: ZORI-observed ZIPs only. "NO PATH" = median rents can't support any refi loan (DSCR &lt; 1).</div>
+    </div>
+
+    {% if metro and drill %}
+    <div class="hr-card" id="drill">
+        <h2 style="margin:0 0 0.2rem">Best pockets in {{ metro_name }}</h2>
+        <div class="hr-note" style="margin-bottom:0.6rem">Top ZIPs by rent-to-value (the BRRRR fuel) — each solved with its own median value & rent at {{ metro }} construction costs. Metro medians hide these; this is where deals live.</div>
+        <div class="hr-scroll">
+        <table class="hr-table">
+            <thead><tr><th>ZIP</th><th>Place</th><th>Verdict</th><th>Max buy $/sf</th><th>Fixer ask $/sf</th><th>Headroom</th><th>Median</th><th>Rent</th><th>Rent/Value</th><th>Trend</th></tr></thead>
+            <tbody>
+            {% for z in drill %}
+            <tr>
+                <td><b>{{ z.zip }}</b></td>
+                <td style="text-align:left">{{ z.place }}, {{ z.state }}</td>
+                <td>{% if not z.feasible %}<span class="hr-chip nopath">NO PATH</span>
+                    {% elif z.verdict == 'PRIMED' %}<span class="hr-chip primed">PRIMED</span>
+                    {% elif z.verdict == 'DEAL-DEPENDENT' %}<span class="hr-chip dd">{{ 'needs %.0f%% off'|format(-z.headroom * 100) if z.headroom < 0 else 'DEAL-DEPENDENT' }}</span>
+                    {% else %}<span class="hr-chip out">needs {{ '%.0f'|format(-z.headroom * 100) }}% off</span>{% endif %}</td>
+                <td class="hr-maxpsf">{% if z.feasible %}${{ '%.0f'|format(z.max_psf) }}{% else %}—{% endif %}</td>
+                <td>${{ '%.0f'|format(z.entry_psf) }}</td>
+                <td>{% if z.headroom is not none %}{{ '%+.1f'|format(z.headroom * 100) }}%{% else %}—{% endif %}</td>
+                <td>${{ '{:,.0f}'.format(z.median_value) }}</td>
+                <td>${{ '{:,.0f}'.format(z.rent) }}</td>
+                <td>{{ '%.1f'|format(z.rtv_pct) }}%</td>
+                <td class="hr-note">{{ z.trajectory or '—' }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <div style="margin-top:0.7rem"><a href="/value-add?bstate={{ metro }}#budgeter"><b>→ Underwrite a specific address in {{ metro_name }}</b></a> — the remodel budgeter prices the exact house, calls the deal, and exports the contractor plan.</div>
+    </div>
+    {% endif %}
+
+    <details class="hr-explain hr-card">
+        <summary>How the math works — and the two questions everyone asks</summary>
+        <div class="body">
+            <p><b>The solve.</b> For each market: fixer entry = median × {{ '%.2f'|format(calib.x) }}, renovated ARV = median × {{ '%.2f'|format(calib.y) }} (verified July-2026 calibration: Zillow hedonic fixer discounts, distressed-sale research, at/below ATTOM's observed 25.4% national flip ROI). Rehab from the validated 107-market cost model. {% if mode == 'brrrr' %}BRRRR: hard-money acquisition ({{ '%.2f'|format(fin.hm_rate * 100) }}%, LTARV-capped), DSCR cash-out refi at month 6 ({{ '%.2f'|format(fin.refi_rate * 100) }}%, 75% ARV, rent must cover the payment), {{ hold_years }}-yr hold at ZORI median rent, then sale — after-tax IRR on a monthly grid: 27.5-yr depreciation, suspended passive losses, non-taxable refi cash, recapture + LTCG + NIIT + state at exit.{% else %}Flip: dealer taxation — ordinary income + self-employment tax, no capital-gains rates.{% endif %}
+            The engine bisects to the highest purchase price where the after-tax return ≥ {{ '%.0f'|format(target) }}% <i>and</i> {% if mode == 'brrrr' %}the deal's total after-tax profit over the {{ hold_years }}-yr hold{% else %}after-tax profit{% endif %} ≥ ${{ '{:,.0f}'.format(profit_floor) }} — in yield pockets that $25k comes from years of cash flow, not a day-one equity pop, and the gate honors that.</p>
+            <p><b>"Is 14% even the right bar?"</b> Anchor it to your debt: money costs you {{ '%.2f'|format(fin.hm_rate * 100) }}% (hard money) to {{ '%.2f'|format(fin.refi_rate * 100) }}% (DSCR) here. Levered equity below the debt rate means the leverage is working against you — so 5–10% would be irrational at today's rates: you'd be taking construction risk to earn less than your lender. The rational floor is <i>debt rate + a real spread</i> for the work and risk; {{ '%.0f'|format(target) }}% after-tax ≈ 18–19% pre-tax ≈ debt + ~10%. If rates fall, lower the bar with them — edit the rate and target above and the whole board re-solves.</p>
+            <p><b>Competition.</b> Two places: the <i>Competition</i> column is each market's price-trajectory read (accelerating = you're bidding against people; declining = negotiable but values falling — take the ▼ veto seriously). The <i>Competition ±x</i> knob shifts what fixers actually cost: in a no-bidders market fixers sell further below median (helps you); in bidding wars the discount evaporates. Bounds follow the calibration's months-of-supply rule; a live inventory feed is the roadmap upgrade.</p>
+            <p class="hr-note">First-pass screen on market medians — never an appraisal, never tax advice. A green market can hold bad deals and a red market great ones; the ZIP drill-down and the address underwriter are the next two clicks.</p>
+        </div>
+    </details>
+</div>
+{% endblock %}

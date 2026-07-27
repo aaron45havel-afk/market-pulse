@@ -71,14 +71,15 @@ check(sol is not None, "max-price solve succeeds on the healthy deal")
 if sol:
     at = H.brrrr_after_tax_irr(sol["max_price"], mkt, inp)
     hurdle_on = abs(at["irr_annual"] - 0.14) < 0.004
-    floor_on = abs(at["forced_equity"] - 25_000) < 1_500
+    floor_on = abs(at["total_profit"] - 25_000) < 1_500
     check(hurdle_on or floor_on,
-          f"at P_max either the 14% hurdle or the $25k floor binds "
-          f"(irr {at['irr_annual']:.3%}, forced ${at['forced_equity']:,.0f})")
+          f"at P_max either the 14% hurdle or the $25k total-profit floor binds "
+          f"(irr {at['irr_annual']:.3%}, profit ${at['total_profit']:,.0f})")
     worse = H.brrrr_after_tax_irr(sol["max_price"] + 5_000, mkt, inp)
-    check(worse["irr_annual"] < 0.14 or worse["forced_equity"] < 25_000,
+    check(worse["irr_annual"] < 0.14 or worse["total_profit"] < 25_000,
           "P_max + $5k violates a gate")
     check(sol["max_psf"] * 1500 == sol["max_price"], "psf is price/sqft")
+    check(at["total_profit"] >= 25_000 - 1_500, "deal makes at least the floor")
 
 # DSCR gate: rent far too low to support any refi → structurally infeasible
 starved = {"code": "MO-KC", "arv": 320_000.0, "rent": 300.0, "appreciation": 0.0}
