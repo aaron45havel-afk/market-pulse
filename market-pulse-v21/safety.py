@@ -27,9 +27,13 @@ from pathlib import Path
 
 _CRIME_PATH = Path(__file__).resolve().parent / "data" / "headroom" / "crime.json"
 
-# FBI national benchmarks (per 100k residents), confirmed during research.
-US_VIOLENT = 364.0
-US_PROPERTY = 1954.0
+# FBI national benchmarks (per 100k residents), FBI "Crime in the Nation 2024"
+# released Aug/Sep 2025 and cross-checked against BJS + USAFacts during the
+# research pass. Violent fell 4.5% and property 8.1% vs 2023 — property in
+# particular is well below the ~1,900-2,000 figure that older sources quote,
+# so comparisons must use these.
+US_VIOLENT = 359.1
+US_PROPERTY = 1760.1
 
 # Tiers on the violent-crime rate per 100k. Anchored to the national rate
 # rather than invented: "very safe" is under ~40% of national, "safe" under
@@ -64,8 +68,19 @@ def _norm(city: str, state: str) -> str:
 
 def zip_safety(city: str, state: str) -> dict:
     """Safety record for a ZIP, keyed by its city agency. Always returns a
-    dict; tier 'unknown' when we have no verified figure."""
+    dict; tier 'unknown' when we have no verified figure.
+
+    confidence == "suspect" is also treated as UNKNOWN: those are cities
+    where the researcher found the published figure implausible (partial
+    NIBRS submission, conflicting aggregators, or a non-reporting CDP).
+    A suspiciously LOW rate is the dangerous failure mode here — it would
+    label a place safe for a family — so suspect never passes the gate."""
     rec = _crime_table().get(_norm(city, state))
+    if rec and rec.get("confidence") == "suspect":
+        return {"tier": "unknown", "label": "UNVERIFIED", "violent": None,
+                "property": None, "year": rec.get("year"), "confidence": "suspect",
+                "source": rec.get("source"), "note": rec.get("note"),
+                "vs_us": None, "published_violent": rec.get("violent_per_100k")}
     if not rec or rec.get("violent_per_100k") is None:
         return {"tier": "unknown", "label": "UNKNOWN", "violent": None,
                 "property": None, "year": None, "confidence": None,

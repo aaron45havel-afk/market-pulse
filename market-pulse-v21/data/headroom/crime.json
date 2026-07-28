@@ -1,0 +1,344 @@
+{
+ "_meta": {
+  "item": "crime",
+  "as_of": "2026-07",
+  "status": "partial \u2014 Indiana mid-size batch only (research swarm hit session limit)",
+  "us_violent_2024": 359.1,
+  "us_property_2024": 1760.1,
+  "benchmark_source": "FBI Crime in the Nation 2024 (rel. Aug/Sep 2025), cross-checked BJS + USAFacts",
+  "resolution": "city police agency \u2014 citywide, cannot distinguish ZIPs within a city",
+  "verified": false,
+  "coverage_note": "34 mid-size Indiana cities. Largest IN cities (Indianapolis, Fort Wayne, Gary, South Bend, Evansville, Terre Haute), small IN towns, and the national top-45 batches did not complete.",
+  "sources": [
+   "https://www.fbi.gov/news/press-releases/fbi-releases-2024-reported-crimes-in-the-nation-statistics",
+   "https://cde.ucr.cjis.gov/LATEST/resources/reports/UCR%20Summary%20of%20Reported%20Crimes%20in%20the%20Nation%202024.pdf",
+   "https://bjs.ojp.gov/library/publications/crime-known-law-enforcement-2024",
+   "https://usafacts.org/answers/what-is-the-crime-rate-in-the-us/country/united-states/",
+   "https://usafacts.org/answers/what-is-the-crime-rate-in-the-us/state/indiana/",
+   "https://www.beautifydata.com/united-states-crimes/fbi-ucr/2023/total-violent-and-property-crimes-per-city/indiana/hammond",
+   "https://beautifydata.com/united-states-crimes/fbi-ucr/2023/total-violent-and-property-crimes-per-city/indiana/anderson",
+   "https://crimeexplorer.com/indiana/hammond/",
+   "https://crimeexplorer.com/indiana/marion/",
+   "https://crimeexplorer.com/indiana/warsaw/",
+   "https://crimeexplorer.com/indiana/jasper/",
+   "https://www.opencrime.us/cities/marion-indiana",
+   "https://www.city-data.com/crime/crime-Lake-Station-Indiana.html",
+   "https://www.city-data.com/crime/crime-Marion-Indiana.html",
+   "https://www.city-data.com/crime/crime-Alexandria-Indiana.html",
+   "https://www.areavibes.com/auburn-in/crime/",
+   "https://www.areavibes.com/new+haven-in/crime/",
+   "https://www.areavibes.com/angola-in/crime/",
+   "https://www.areavibes.com/kendallville-in/crime/",
+   "https://www.areavibes.com/bluffton-in/crime/",
+   "https://www.areavibes.com/north+vernon-in/crime/",
+   "https://www.areavibes.com/sellersburg-in/crime/",
+   "https://www.areavibes.com/washington-in/crime/",
+   "https://www.areavibes.com/tell+city-in/crime/",
+   "https://www.areavibes.com/mount+vernon-in/crime/",
+   "https://www.areavibes.com/huntingburg-in/crime/",
+   "https://www.areavibes.com/greencastle-in/crime/",
+   "https://www.areavibes.com/lake+station-in/crime/",
+   "https://www.neighborhoodscout.com/in/marion/crime",
+   "https://www.neighborhoodscout.com/in/warsaw/crime",
+   "https://www.neighborhoodscout.com/in/decatur/crime",
+   "https://www.neighborhoodscout.com/in/greencastle/crime",
+   "https://www.neighborhoodscout.com/in/monticello/crime",
+   "https://www.neighborhoodscout.com/in/new-palestine/crime",
+   "https://www.neighborhoodscout.com/in/rochester/crime",
+   "https://www.neighborhoodscout.com/in/de-motte/crime",
+   "https://www.neighborhoodscout.com/in/floyds-knobs/crime",
+   "https://www.neighborhoodscout.com/in/spencer/crime",
+   "https://www.neighborhoodscout.com/in/knox/crime",
+   "https://www.neighborhoodscout.com/in/brookville/crime",
+   "https://www.neighborhoodscout.com/in/bargersville/crime",
+   "https://www.neighborhoodscout.com/in/syracuse/crime",
+   "https://www.neighborhoodscout.com/in/west-terre-haute/crime",
+   "https://www.neighborhoodscout.com/in/lake-station/crime",
+   "https://www.homesnacks.com/in/lowell-crime/",
+   "https://www.homesnacks.com/in/linton-crime/",
+   "https://www.homesnacks.com/in/jasper-crime/",
+   "https://www.homesnacks.com/in/hammond-crime/",
+   "https://crimegrade.org/safest-places-in-demotte-in/",
+   "https://crimegrade.org/safest-places-in-alexandria-in/",
+   "https://crimegrade.org/safest-places-in-west-terre-haute-in/",
+   "https://neindiananews.com/angola-police-department-reports-461-tracked-offenses-in-2024-fbi-crime-data",
+   "https://krcrtv.com/news/local/anderson-sees-drop-in-property-crime-but-rise-in-violent-offenses-in-2024",
+   "https://www.in.gov/isp/crime-reporting/statewide-crime-statistics-nibrs/"
+  ]
+ },
+ "notes": "NATIONAL BENCHMARKS - VERIFIED, with a correction to the brief. FBI 2024 (Crime in the Nation, released Aug/Sep 2025, confirmed via FBI CDE, BJS \"Crime Known to Law Enforcement, 2024\", and USAFacts): violent crime 359.1 per 100k, property crime 1,760.1 per 100k. Violent fell 4.5% and property fell 8.1% vs 2023; violent is the lowest recorded since 1969 and property the lowest since 1961. The brief's violent range (~360-380) matches 2024 at its low end, but the brief's property range (~1,900-2,000) is now STALE - it reflects 2022/2023. Property crime comparisons in this table are made against 1,760 (2024) where I flag a city as above/below national; a few notes reference the 1,900-2,000 band where the city's own year was 2023. INDIANA statewide 2024: violent ~308-313 per 100k, property ~1,321-1,379 per 100k, i.e. Indiana runs below the US on both, so \"below national\" is a weaker compliment here than it sounds - the right peer bar for these towns is the Indiana average, not the US one.\n\nCOVERAGE: 33 of 34 cities have real rates; 1 (Alexandria, IN) is null. Confidence: 2 high (Hammond, Anderson), 8 medium (Warsaw, Jasper, Auburn, Washington, New Haven, Kendallville, Bluffton, Lake Station), 24 low. Years: 20 cities at 2024, 13 at 2023, 1 null. Per the brief's rule 4, every place under ~10,000 population is marked low regardless of how clean the source looked.\n\nDATA QUALITY TIERS - this matters for how the table should be consumed. Tier 1 (trustworthy, published FBI offense COUNTS that reconcile arithmetically with the published rate against census population): Hammond, Anderson, Jasper, Auburn, New Haven, Kendallville, Bluffton, Angola, Sellersburg, North Vernon, Tell City, Mount Vernon, Huntingburg, Washington, Linton, Lake Station. I verified each of these by recomputing count/population*100,000 and confirming it matched the published rate within ~1%. Tier 2 (rates back-derived from NeighborhoodScout victimization odds or rounded per-1,000 figures, no counts available): Decatur, Monticello, New Palestine, Rochester, DeMotte, Floyds Knobs, Spencer, Knox, Brookville, Bargersville, Syracuse, West Terre Haute, Loogootee, Greencastle. These are directionally usable but should not be ranked against each other at fine granularity - the rounding alone is worth +/- 50 per 100k on small towns.\n\nFOUR SPECIFIC WARNINGS FOR AN OWNER-OCCUPANT DECISION:\n1. HAMMOND is the clear outlier to avoid at citywide level - 741 violent (106% above US) and 3,072 property (75% above), and violent ROSE 2023->2024 while the nation fell to a 20-year low. Two independent FBI-sourced series agree, so this is high confidence.\n2. MARION is the dangerous false-negative in this batch. Three aggregators publish ~107 violent / ~1,105 per 100k for 2024 with zero murders, which would make a 28,000-person former industrial city safer than most affluent suburbs. That contradicts city-data's own FBI-sourced 5-year series by roughly 10x and is far more consistent with incomplete Marion PD NIBRS submission than with a real crime collapse. I set confidence low and flagged it UNVERIFIED rather than let a clean-looking number read as a safe label.\n3. LOWELL has the same signature - 3 violent and 23 property offenses for a town of 11,400 is roughly 10x lower than every comparable Indiana town here. Almost certainly a partial-year submission. Do not rank Lowell as safest.\n4. Three small towns read WORSE than average and should not get a free pass for being small: DeMotte (~377 violent, at/above the US average, source says worse than 90% of Indiana communities), Spencer (~360 violent, also worse than 90% of Indiana), and Knox (~495 violent, characterized as among the highest in the nation for its size). Greencastle is the other caution - sources disagree by ~40% and I deliberately published the higher figure.\n\nOTHER CAVEATS: (a) Floyds Knobs is an unincorporated CDP with NO police department - policed by Floyd County Sheriff, which reports at county level. Its numbers are modeled, not an agency submission, and are not apples-to-apples with the cities here; the low-crime direction is nonetheless well supported. (b) Three college/resort towns have property rates inflated by a non-resident numerator over a resident denominator: Angola (Trine University, 2,250 property), Greencastle (DePauw), Syracuse (Lake Wawasee seasonal). (c) Where a source gave a count but not a rate I computed the rate myself and said so explicitly in the note - this applies to Washington (property), Jasper (property), and Lake Station (both). (d) I discarded several numbers that looked like rates but were not: BestPlaces/AreaVibes \"crime index\" values (e.g. Washington 25/67.2, Loogootee 8.2) are indices on a ~22.7/35.4 US scale, not per-100k rates, and an early search summary mis-converted Warsaw's 4-per-1,000 to \"40 per 100,000\" (correct: 400). (e) All city figures are CITYWIDE. For Hammond and Anderson especially, intra-city variation by ZIP is large enough that the citywide rate should never be applied to a specific address. (f) Direct HTTP was blocked throughout (city-data, beautifydata, plaincrime all returned 403 to WebFetch), so every figure here comes from WebSearch result summaries of those pages rather than from fetching the pages myself - a second pass with working HTTP or the FBI CDE agency API would let the Tier 2 cities be upgraded and would settle Marion, Lowell, Greencastle, and Alexandria.",
+ "table": {
+  "Warsaw, IN": {
+   "violent_per_100k": 413.7,
+   "property_per_100k": 1759.8,
+   "year": 2024,
+   "source": "FBI UCR via HomeSnacks/crimeexplorer city report; cross-checked against NeighborhoodScout (violent 4/1,000, property 18/1,000)",
+   "confidence": "medium",
+   "note": "Pop ~16,200 (Warsaw PD is its own reporting agency). Total ~2,173/100k implies ~67 violent and ~285 property offenses. Violent rate is slightly ABOVE the US average (359) and property is right at it (1,760) - Warsaw is NOT a low-crime outlier despite being a prosperous orthopedics hub. Aggregators disagree on whether these are 2023 or 2024 figures; rates are effectively unchanged between the two years."
+  },
+  "Jasper, IN": {
+   "violent_per_100k": 119.0,
+   "property_per_100k": 607.0,
+   "year": 2024,
+   "source": "FBI UCR 2024 via areavibes/HomeSnacks city crime report (20 violent, 102 property offenses)",
+   "confidence": "medium",
+   "note": "Pop ~16,800; counts and rates are internally consistent (20/16,805 = 119). Property rate computed from the published 102-offense count. Roughly one-third the national violent rate and one-third national property rate - genuinely low-crime. Violent rate fell ~39% vs 2023."
+  },
+  "North Vernon, IN": {
+   "violent_per_100k": 139.0,
+   "property_per_100k": 2246.0,
+   "year": 2023,
+   "source": "FBI UCR 2023 (released Sept 2024) via areavibes/NeighborhoodScout city report (9 violent, 145 property offenses)",
+   "confidence": "low",
+   "note": "Pop ~6,500 - under the 10k noise threshold, so the violent rate rests on only 9 incidents and can swing hard year to year. The property rate is the real signal here: 2,246/100k is ~15% ABOVE the national average (1,900-2,000) and well above Indiana's ~1,320-1,380. Low violent / elevated property profile."
+  },
+  "Auburn, IN": {
+   "violent_per_100k": 51.0,
+   "property_per_100k": 1239.0,
+   "year": 2023,
+   "source": "FBI UCR 2023 (released Sept 2024) via areavibes city crime report (7 violent, 169 property offenses)",
+   "confidence": "medium",
+   "note": "Pop ~13,700; counts/rates internally consistent. Violent rate ~86% below national average - one of the safer mid-size cities in this batch. Property rate ~35% below national. Violent count rose 57% year-over-year but off a base of 4-5 incidents, so treat that trend as noise."
+  },
+  "Sellersburg, IN": {
+   "violent_per_100k": 82.0,
+   "property_per_100k": 491.0,
+   "year": 2023,
+   "source": "FBI UCR 2023 (released Sept 2024) via areavibes/NeighborhoodScout city report (8 violent, 48 property offenses)",
+   "confidence": "low",
+   "note": "Pop ~9,700 - just under the 10k threshold, so flagged low. Both rates are far below national (violent -78%, property -75%), and the direction is confirmed by a 5-year declining trend. Louisville-metro commuter town; this is one of the cleanest safety profiles in the batch, but only 8 violent incidents underpin the violent rate."
+  },
+  "Greencastle, IN": {
+   "violent_per_100k": 505.0,
+   "property_per_100k": 3226.0,
+   "year": 2023,
+   "source": "NeighborhoodScout analysis of FBI UCR 2023 (violent 1-in-198, property 1-in-31)",
+   "confidence": "suspect",
+   "note": "CONFLICTING SOURCES - do not treat as settled. NeighborhoodScout gives ~505 violent / ~3,226 property; AreaVibes gives ~362 violent / ~1,667 property for the same city/year; one aggregator states Greencastle has no separately published FBI agency figures at all. I report the HIGHER (more conservative for a family) set. Pop ~10,000 but includes DePauw University, whose campus incidents inflate the numerator against a residential denominator. Both source sets agree Greencastle is worse than the Indiana average - verify directly with Greencastle PD before treating any ZIP here as safe."
+  },
+  "Decatur, IN": {
+   "violent_per_100k": 160.0,
+   "property_per_100k": 900.0,
+   "year": 2023,
+   "source": "NeighborhoodScout analysis of FBI UCR 2023 (violent 1-in-626; property 9 per 1,000; total 11 per 1,000)",
+   "confidence": "low",
+   "note": "Pop ~9,500 - under 10k, flagged low. Rates reported by the source only in per-1,000 rounded form, so these are conversions (2/1,000 violent, 9/1,000 property) and carry rounding error of roughly +/- 50 on violent and +/- 50 on property. Adams County seat with its own PD. Both rates comfortably below national."
+  },
+  "Anderson, IN": {
+   "violent_per_100k": 423.3,
+   "property_per_100k": 2947.1,
+   "year": 2023,
+   "source": "FBI UCR 2023 via beautifydata city page (234 violent, 1,629 property offenses)",
+   "confidence": "high",
+   "note": "Pop ~55,300; counts and rates reconcile exactly. This is the second-worst profile in the batch after Hammond: violent ~18% above the US average and property ~50% above it. 2024 is mixed and messy - local reporting (via FBI figures) shows violent offenses UP sharply year-over-year while property fell ~50%, so the 2024 violent picture is likely worse than the 2023 number shown. Largest city here after Hammond; expect wide intra-city variation by ZIP, so do not apply this citywide rate to a specific neighborhood."
+  },
+  "Angola, IN": {
+   "violent_per_100k": 78.0,
+   "property_per_100k": 2250.0,
+   "year": 2023,
+   "source": "FBI UCR 2023 (released Sept 2024) via areavibes city report (7 violent, 203 property offenses)",
+   "confidence": "low",
+   "note": "Pop ~9,000 - under 10k, flagged low. Very low violent rate (-79% vs national) but property at 2,250/100k is ~15% ABOVE national. Trine University is in town, which lifts the property/larceny count against a small residential base. Angola PD logged 461 total NIBRS offenses in 2024; per-100k 2024 splits not yet published."
+  },
+  "Lowell, IN": {
+   "violent_per_100k": 26.3,
+   "property_per_100k": 201.4,
+   "year": 2024,
+   "source": "FBI UCR via crimeexplorer/HomeSnacks city report (3 violent, 23 property offenses)",
+   "confidence": "suspect",
+   "note": "TREAT AS SUSPECT UNDER-REPORTING, not as a safety endorsement. Pop ~11,400 (above the small-town threshold), yet only 23 property crimes for a whole year is roughly 10x lower than any comparable Indiana town in this batch - that pattern almost always means Lowell PD submitted a partial year of NIBRS data rather than that crime is near zero. The rates are arithmetically consistent with the counts, but the counts themselves look incomplete. Do not use this to label Lowell 'safest in batch' without checking Lowell PD directly."
+  },
+  "Washington, IN": {
+   "violent_per_100k": 58.0,
+   "property_per_100k": 862.0,
+   "year": 2024,
+   "source": "FBI UCR 2024 via areavibes city report (7 violent, 104 property offenses)",
+   "confidence": "medium",
+   "note": "Pop ~12,070. The 58/100k violent rate is published directly; the property rate is MY computation from the published 104-offense count over that population (source gave property only as a ratio to state/national averages). Violent offenses rose ~43% year-over-year but from 5 to 7 incidents, so ignore that trend. Daviess County seat, own PD; both rates well below national."
+  },
+  "Marion, IN": {
+   "violent_per_100k": 106.9,
+   "property_per_100k": 1104.9,
+   "year": 2024,
+   "source": "FBI UCR 2024 via crimeexplorer/OpenCrime/HomeSnacks (30 violent, 310 property offenses); NeighborhoodScout independently shows 1/1,000 violent and 11/1,000 property",
+   "confidence": "suspect",
+   "note": "FIGURES ARE PUBLISHED BUT I DO NOT TRUST THEM AS A SAFETY SIGNAL. Three aggregators agree on ~107 violent / ~1,105 property for a city of ~28,000 with 0 reported murders in 2024, and violent crime supposedly down 41.5%. That is implausibly low for Marion's profile, and city-data's FBI-sourced 5-year series (1,435 violent offenses 2019-2024, i.e. ~287/yr = ~1,025/100k) contradicts it by roughly 10x. The most likely explanation is incomplete Marion PD NIBRS submission in the recent year. For an owner-occupant decision, treat Marion as UNVERIFIED rather than safe, and pull Grant County / Marion PD figures directly."
+  },
+  "New Haven, IN": {
+   "violent_per_100k": 196.0,
+   "property_per_100k": 1179.0,
+   "year": 2023,
+   "source": "FBI UCR 2023 (released Sept 2024) via areavibes city report (31 violent, 187 property offenses)",
+   "confidence": "medium",
+   "note": "Pop ~15,900; counts and rates reconcile. Violent ~47% below and property ~40% below national. 2024 figures are similar and slightly better (~178 violent / ~1,000 property per 100k), and the 5-year trend is declining on both. Fort Wayne suburb with its own PD - solid, well-supported profile."
+  },
+  "Kendallville, IN": {
+   "violent_per_100k": 246.0,
+   "property_per_100k": 1497.0,
+   "year": 2024,
+   "source": "FBI UCR 2024 (released Sept 2025) via areavibes city report (25 violent, 152 property offenses)",
+   "confidence": "medium",
+   "note": "Pop ~10,150; counts and rates reconcile exactly. Both rates below national (violent -33%, property -24%) but noticeably higher than nearby Auburn. Overall crime fell ~16% vs 2023. Own PD, just above the small-town noise threshold."
+  },
+  "Monticello, IN": {
+   "violent_per_100k": 145.0,
+   "property_per_100k": 700.0,
+   "year": 2024,
+   "source": "NeighborhoodScout analysis of FBI UCR (violent 1-in-690; property 7 per 1,000; total 8 per 1,000)",
+   "confidence": "low",
+   "note": "Pop ~5,300 - well under 10k, so a single cluster of incidents moves the rate materially. Source publishes only rounded per-1,000 figures, so the property number carries roughly +/- 50 of rounding error. Both rates below national. White County seat on Lake Freeman; seasonal population swings make the per-capita denominator soft."
+  },
+  "Bluffton, IN": {
+   "violent_per_100k": 87.0,
+   "property_per_100k": 813.0,
+   "year": 2023,
+   "source": "FBI UCR 2023 (released Sept 2024) via areavibes city report (9 violent, 84 property offenses)",
+   "confidence": "medium",
+   "note": "Pop ~10,350; counts and rates reconcile. Violent -76% and property -58% vs national - one of the better-supported low-crime profiles in this batch. Overall 2024 rate essentially flat (-1%). Wells County seat with its own PD."
+  },
+  "New Palestine, IN": {
+   "violent_per_100k": 169.0,
+   "property_per_100k": 339.0,
+   "year": 2024,
+   "source": "NeighborhoodScout analysis of FBI UCR (violent 1-in-590, property 1-in-295)",
+   "confidence": "low",
+   "note": "Pop ~2,600 - very small, rates are statistically noisy and derived from odds-of-victimization rather than published counts. Both rates far below national; property especially low. Indianapolis/Hancock County commuter suburb. Directionally this is a safe town, but the precise numbers should not be compared head-to-head against cities with real counts."
+  },
+  "Rochester, IN": {
+   "violent_per_100k": 82.0,
+   "property_per_100k": 392.0,
+   "year": 2024,
+   "source": "NeighborhoodScout analysis of FBI UCR 2024 (released Oct 2025); violent 1-in-1,222, property 1-in-255",
+   "confidence": "low",
+   "note": "Pop ~6,215 - under 10k, flagged low; implied counts are roughly 5 violent and 24 property offenses for the year, so both rates hinge on a handful of incidents. Both far below national. Fulton County seat with its own PD."
+  },
+  "DeMotte, IN": {
+   "violent_per_100k": 377.0,
+   "property_per_100k": 1700.0,
+   "year": 2024,
+   "source": "NeighborhoodScout analysis of FBI UCR (violent 1-in-265, property 17 per 1,000, total 21 per 1,000)",
+   "confidence": "low",
+   "note": "Pop ~4,200 - very small and very noisy, but worth flagging because this is the one small town here that reads WORSE than average: violent ~377 is at/above the US average (359) and the source states DeMotte's crime rate is higher than 90% of Indiana communities. That could be a genuine signal (US-231 corridor) or an artifact of ZIP-level modeling over a tiny denominator that includes surrounding unincorporated Jasper County. Verify with DeMotte PD before dismissing or accepting."
+  },
+  "Mount Vernon, IN": {
+   "violent_per_100k": 266.0,
+   "property_per_100k": 1661.0,
+   "year": 2024,
+   "source": "FBI UCR 2024 (released Sept 2025) via areavibes city report (17 violent, 106 property offenses)",
+   "confidence": "low",
+   "note": "Pop ~6,390 - under 10k so flagged low, but unlike most small towns here the figures come from published offense counts that reconcile exactly with the rates. Violent -28% and property -15% vs national; overall rate fell 9% vs 2023. Posey County seat with its own PD."
+  },
+  "Lake Station, IN": {
+   "violent_per_100k": 267.0,
+   "property_per_100k": 2761.0,
+   "year": 2023,
+   "source": "FBI UCR 2023 via city-data offense counts (31 violent: 0 murder/3 rape/11 robbery/17 assault; 321 property: 35 burglary/253 larceny/33 MV theft), rate computed over pop 11,626; NeighborhoodScout cross-check gives 259 / 2,703",
+   "confidence": "medium",
+   "note": "Rates are MY computation from published FBI offense counts over the 2020 census population; two independent derivations agree within 3%. Violent is below national but property at ~2,760 is ~45% ABOVE national. Note the robbery count (11) is high relative to town size. NW Indiana / Gary-adjacent - the property crime exposure here is real and is the main risk for an owner-occupant."
+  },
+  "Floyds Knobs, IN": {
+   "violent_per_100k": 64.0,
+   "property_per_100k": 278.0,
+   "year": 2024,
+   "source": "NeighborhoodScout analysis of FBI UCR (violent 1-in-1,573, property 1-in-360)",
+   "confidence": "suspect",
+   "note": "NOT A REPORTING AGENCY. Floyds Knobs is an unincorporated CDP (pop ~4,500) in Lafayette Township with no police department - policing is by the Floyd County Sheriff's Office, which reports to the FBI at the county/unincorporated level, not for this place name. These figures are modeled/allocated by NeighborhoodScout, not a published agency submission, so they are not directly comparable to the city figures in this table. The low-crime direction is well supported (affluent New Albany/Louisville-metro suburb, safer than 80% of US communities), but the precise numbers should be treated as indicative only."
+  },
+  "Spencer, IN": {
+   "violent_per_100k": 360.0,
+   "property_per_100k": 1800.0,
+   "year": 2024,
+   "source": "NeighborhoodScout analysis of FBI UCR (violent 1-in-278 = 4 per 1,000; property 18 per 1,000; total 22 per 1,000)",
+   "confidence": "low",
+   "note": "Pop ~2,200 - one of the smallest places in the batch, so these rates are extremely noisy. Flagging anyway because the direction is bad, not good: violent sits right at the US average (359) and the source states Spencer's crime rate is higher than 90% of Indiana communities, with a 1-in-46 chance of being a crime victim. Owen County seat with a small town PD. Do not label this town safe on small-population reasoning alone - verify with Spencer PD / Owen County."
+  },
+  "Knox, IN": {
+   "violent_per_100k": 495.0,
+   "property_per_100k": 500.0,
+   "year": 2024,
+   "source": "NeighborhoodScout analysis of FBI UCR (violent 1-in-202; property 5 per 1,000)",
+   "confidence": "low",
+   "note": "Pop ~3,600 - tiny denominator, and the violent figure is the kind that a handful of aggravated assaults can produce. NeighborhoodScout characterizes Knox's violent crime rate as among the highest in the nation for communities of any size (~495/100k, ~38% above the US average) while property crime is unusually LOW (~500, about a quarter of national). That divergent pattern is itself a reason for caution - it is atypical and may reflect classification or reporting quirks at a small agency. Starke County seat. Verify before treating as either safe or unsafe."
+  },
+  "Tell City, IN": {
+   "violent_per_100k": 224.0,
+   "property_per_100k": 1951.0,
+   "year": 2023,
+   "source": "FBI UCR 2023 (released Sept 2024) via areavibes city report (17 violent, 148 property offenses)",
+   "confidence": "low",
+   "note": "Pop ~7,590 - under 10k so flagged low, though rates reconcile exactly with published counts. Violent -39% vs national but property at 1,951 is essentially AT the national average. Property offenses fell 29% and overall crime fell a further 17% in 2024. Perry County seat with its own PD."
+  },
+  "Hammond, IN": {
+   "violent_per_100k": 741.3,
+   "property_per_100k": 3072.3,
+   "year": 2024,
+   "source": "FBI UCR 2024 via crimeexplorer/HomeSnacks; 2023 comparison from beautifydata FBI UCR 2023 (503 violent / 661.9 per 100k; 2,576 property / 3,389.9 per 100k)",
+   "confidence": "high",
+   "note": "WORST PROFILE IN THIS BATCH BY A WIDE MARGIN. Pop ~75,800. Violent is ~106% above the US average (741 vs 359) and property ~75% above (3,072 vs 1,760). Note the violent rate ROSE from 662 (2023) to 741 (2024) even as the national rate fell to a 20-year low. Two independent FBI-sourced series agree. For an owner-occupant with family this is the one city here that warrants an explicit unsafe flag at the citywide level; if the investor is looking at specific Hammond ZIPs (e.g. 46323/46324 south of the Borman) the sub-city variation is large and needs ZIP-level data, not this citywide number."
+  },
+  "Brookville, IN": {
+   "violent_per_100k": 134.0,
+   "property_per_100k": 621.0,
+   "year": 2023,
+   "source": "NeighborhoodScout analysis of FBI UCR 2023 (violent 1-in-745, property 1-in-161)",
+   "confidence": "low",
+   "note": "Pop ~2,500 - very small, rates derived from victimization odds rather than published counts, so treat as indicative. Both rates well below national. Source notes Brookville is safer than 70% of US communities but only ~44% of Indiana communities have a lower rate, i.e. it is unremarkable by Indiana standards. Franklin County seat."
+  },
+  "Alexandria, IN": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "No violent/property split found in any FBI-citing source",
+   "confidence": "low",
+   "note": "GENUINELY UNREPORTED AT THIS GRANULARITY - returning null rather than guessing. Alexandria (pop ~5,000, Madison County, has its own PD and appears in FBI UCR) shows up in aggregators only as a combined figure: CrimeGrade gives ~20.0 crimes per 1,000 residents (~2,001/100k total) and city-data gives a 2025 crime index of 52 with a 1-in-76 chance of victimization. None of these publish the violent-vs-property breakdown, and I will not derive one from the total. Directionally the total is near the US combined rate (~2,119/100k) with a noted 5-year pattern of falling violent and rising property crime. Pull Alexandria PD or Indiana State Police NIBRS directly for the split."
+  },
+  "Huntingburg, IN": {
+   "violent_per_100k": 108.4,
+   "property_per_100k": 402.5,
+   "year": 2023,
+   "source": "FBI UCR via areavibes/HomeSnacks city report (7 violent, 26 property offenses)",
+   "confidence": "low",
+   "note": "Pop ~6,460 - under 10k, flagged low; counts and rates reconcile exactly. Both rates very low (violent -70%, property -77% vs national), and the same rates are carried forward in the 2024 release, suggesting the 2024 figure may simply repeat 2023. Overall rate rose 54% vs 2022 but off a tiny base. Dubois County, own PD; consistent with neighboring Jasper's low-crime profile."
+  },
+  "Bargersville, IN": {
+   "violent_per_100k": 62.0,
+   "property_per_100k": 435.0,
+   "year": 2024,
+   "source": "NeighborhoodScout analysis of FBI UCR (violent 1-in-1,612, property 1-in-230)",
+   "confidence": "low",
+   "note": "Pop ~8,600 - under 10k so flagged low, and figures are derived from victimization odds rather than published counts (I could not locate a Bargersville PD NIBRS count or an areavibes offense table). Both rates far below national; source calls it one of the safest places in America for its size. Fast-growing Johnson County / south-Indy suburb with its own PD - rapid population growth also means the per-capita denominator lags reality, which biases the reported rate slightly HIGH, so the true rate is likely even lower."
+  },
+  "Syracuse, IN": {
+   "violent_per_100k": 287.0,
+   "property_per_100k": 800.0,
+   "year": 2024,
+   "source": "NeighborhoodScout analysis of FBI UCR (total 11 per 1,000 = 1-in-92; property 8 per 1,000; violent derived as the residual)",
+   "confidence": "suspect",
+   "note": "WEAKEST DERIVATION IN THE BATCH - the violent number is a residual (total minus property) from rounded per-1,000 figures, not a published violent rate, so its true value could plausibly sit anywhere from ~200 to ~400. Pop ~3,000. Source notes Syracuse's crime rate is higher than 75% of Indiana communities. Lake Wawasee resort town - large seasonal/second-home population inflates the numerator against a small year-round denominator. Treat as unverified."
+  },
+  "West Terre Haute, IN": {
+   "violent_per_100k": 279.0,
+   "property_per_100k": 1389.0,
+   "year": 2024,
+   "source": "NeighborhoodScout analysis of FBI UCR 2024 (violent 1-in-359, property 1-in-72)",
+   "confidence": "suspect",
+   "note": "CONFLICTING SOURCES. NeighborhoodScout implies ~279 violent / ~1,389 property (total ~1,668/100k); CrimeGrade states a total crime rate of 25.26 per 1,000 (~2,526/100k) for the same town - a 50% disagreement I could not resolve. Pop ~2,000 with a 7-officer PD, so the rates are noisy either way. Both sources agree it is materially worse than the surrounding Vigo County average and it ranks only ~46th percentile for safety nationally. Do not treat as safe on the lower estimate."
+  },
+  "Linton, IN": {
+   "violent_per_100k": 230.2,
+   "property_per_100k": 1899.1,
+   "year": 2024,
+   "source": "FBI UCR via crimeexplorer/HomeSnacks city report (12 violent, ~99 property, 111 total offenses)",
+   "confidence": "low",
+   "note": "Pop ~5,210 - under 10k, flagged low, though counts and rates reconcile exactly (230.2 + 1,899.1 = 2,129.3 total). Violent -36% vs national but property is essentially AT the national average (1,899 vs 1,900-2,000) and well above Indiana's ~1,320-1,380. Ranks #98 of 125 Indiana cities for safety in the source's list; overall rate fell 12% vs 2023. Greene County, own PD."
+  },
+  "Loogootee, IN": {
+   "violent_per_100k": 154.0,
+   "property_per_100k": 714.0,
+   "year": 2024,
+   "source": "NeighborhoodScout analysis of FBI UCR (violent 1-in-649, property 1-in-140)",
+   "confidence": "low",
+   "note": "Pop ~2,700 - very small; rates derived from victimization odds, not published counts, and implied annual counts are roughly 4 violent and 19 property offenses. Both rates well below national and below the Indiana average. Martin County, own PD. Note a separate source (BestPlaces) reports a violent 'index' of 8.2 vs a US 22.7 - that is an index, not a per-100k rate, and I did not use it."
+  }
+ }
+}
