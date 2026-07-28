@@ -37,6 +37,34 @@ check(S.TIER_ORDER["very_safe"] < S.TIER_ORDER["safe"] < S.TIER_ORDER["average"]
       < S.TIER_ORDER["elevated"] < S.TIER_ORDER["high"] < S.TIER_ORDER["unknown"],
       "tier ordering is monotone and unknown sorts last")
 
+# ── a user-supplied tier must never DISABLE the gate ──
+# TIER_ORDER doubles as a sort key and contains "unknown": 9. Validating a
+# query param against it let ?safetier=unknown through, and every verified
+# tier compares <= 9, so the gate turned off while the UI still showed
+# "Very safe". That is the one failure mode this module exists to prevent.
+check("unknown" not in S.SELECTABLE, "the 'unknown' sentinel is not a selectable bar")
+check(S.SELECTABLE == {t[0] for t in S.TIERS}, "selectable bars are exactly the real tiers")
+for junk in ("unknown", "", "UNKNOWN", "safest", "9", None, "high "):
+    check(S.valid_tier(junk) == S.DEFAULT_TIER,
+          f"a junk tier {junk!r} falls back to the default bar, not wide open")
+check(S.valid_tier("high") == "high" and S.valid_tier("very_safe") == "very_safe",
+      "real tiers pass through valid_tier unchanged")
+_hi = {"tier": "high", "violent": 1031.0}
+for bad in ("unknown", "", "nonsense", None):
+    check(not S.passes(_hi, bad),
+          f"a HIGH-crime ZIP does not clear a {bad!r} bar (gate tightens, never opens)")
+check(S.passes(_hi, "high"), "a HIGH ZIP clears an explicit 'no filter' bar")
+
+# ── coverage must not count what the gate will reject ──
+cov = S.coverage()
+check(cov["usable"] <= cov["with_data"], "usable coverage never exceeds rows with a figure")
+check(cov["with_data"] - cov["usable"] == cov["suspect"], "suspect count reconciles")
+check(all(S.zip_safety(k.rsplit(", ", 1)[0], k.rsplit(", ", 1)[1])["tier"] == "unknown"
+          for k, v in list(S._crime_table().items())
+          if v.get("confidence") == "suspect")
+      if any(v.get("confidence") == "suspect" for v in S._crime_table().values()) else True,
+      "every suspect city resolves to unknown, so 'usable' is the honest headline")
+
 # ── classification of real-shaped records ──
 tbl = S._crime_table()
 have_data = sum(1 for v in tbl.values() if v.get("violent_per_100k") is not None)
