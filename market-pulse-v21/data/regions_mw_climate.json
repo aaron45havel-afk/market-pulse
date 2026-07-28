@@ -1,0 +1,271 @@
+{
+ "_meta": {
+  "kind": "climate",
+  "market": "MW",
+  "as_of": "2026-07",
+  "status": "researched",
+  "methodology": "## What this layer is calibrated against\n\nBoth layers are scored against the **Midwest's own internal distribution**, not a national standard. The anchors are set explicitly: the Twin Cities defines the cold end (Jan mean low 9F, 51 in snow), Cincinnati defines the mild end (Jan mean low 24F, 20 in snow), Kansas City defines the hot/humid end (Jul mean high 89F, 72-78F dewpoints), and Pittsburgh defines the gloom end (~203 cloudy days, ~8 sunny days in December). A \"moderate\" here would score as harsh in coastal California and mild in interior Minnesota \u2014 that is intentional and correct.\n\n## Climate tiers (4 levels, 12 subregions)\n\n- **`river-valley-temperate`** (the best-in-region tier I defined) \u2014 Cincinnati / Ohio River valley only. The only subregion with a Jan low above 22F AND under 22 in of snow AND a ~190-day growing season. Named for the mechanism (river-valley position at the region's southern edge), not for comfort.\n- **`moderate`** \u2014 Columbus, Indianapolis, Chicago lakefront/inner ring, Milwaukee lakeshore. Includes the two lake-moderated shore subregions per the region's own rule that lake moderation is real.\n- **`harsh`** \u2014 Chicago inland collar, SE Michigan, SW Pennsylvania plateau, Kansas City. Note two different mechanisms land in the same tier: gloom + snow (Detroit, Pittsburgh) and summer heat/humidity extremes (Kansas City).\n- **`harsh-interior`** \u2014 Twin Cities, Madison, Des Moines. Deep-winter north.\n\n## The four Midwest-specific axes I encoded\n\n**1. Winter severity by latitude.** Jan mean low spans 9F (Minneapolis) to 24F (Cincinnati) \u2014 a 15F range inside one region. This is the primary tier driver.\n\n**2. Lake moderation, treated as a scored axis rather than color.** Two hard tests in the data:\n- *Same state, same latitude*: Milwaukee Jan low 17F vs Madison 11F, 75 mi inland. **The lake is worth ~6F of January.**\n- *Same metro, 20 miles*: Chicago lakefront ~21F vs O'Hare 17.6F, plus 3 in more snow inland. **This is why I split Chicago into two subregions** \u2014 a single \"Chicago\" row would average away the single most defensible climate distinction in the region and would misclassify Arlington Heights and Chicago as the same buy.\n\n**3. Lake-effect snowbelt \u2014 an explicit NEGATIVE finding.** None of these 50 towns sit in a true snowbelt. The real belts are the west Michigan shore (72-100+ in) and NE Ohio's Geauga County (120+ in, vs ~70 in at Cleveland). SE Michigan sits in the lee shadow at ~42 in from clippers and lake-*enhanced* flow; Milwaukee's west-shore position gets lake-enhanced synoptic snow, not classic lake-effect. I encoded this explicitly so the screen doesn't wrongly penalize Michigan towns by association with \"Michigan snow.\"\n\n**4. Winter cloud cover / gloom.** Given real weight because it silently drives buyer regret. Pittsburgh ~203 cloudy days, Jan overcast 68%, ~8 December sunshine days; SE Michigan Jan cloud 68%, ~2.6 h/day of December sun; central Ohio under the same Great Lakes stratus deck. **Counterintuitive but important: Minneapolis is *sunnier* in January than Cleveland** \u2014 its winter darkness is a sun-angle problem at 45N, not a cloud problem, so the two should not be scored with the same mechanism.\n\n## Numbers\n\n`jan_low_f`, `jul_high_f`, `snow_in` are NOAA 1991-2020 station normals for the metro's primary station, adjusted where the listed towns sit meaningfully off that station (Chicago collar = O'Hare not Midway; SW PA plateau adjusted +3-5 in snow for Washington/Irwin's 1,000-1,170 ft vs the Pittsburgh river bottoms). `elevation_ft` is a metro-representative value for the listed towns, not the airport. Dewpoint and heat-index figures are characterizations of typical July-August conditions, not station normals \u2014 they carry more uncertainty than the temperature/snow fields.\n\n**`smoke_days` is the weakest field and should be treated as directional.** It is not a long-run normal \u2014 Canadian wildfire smoke only became a Midwest factor in 2023. Values are keyed to that reference year,",
+  "sources": [
+   "https://www.dnr.state.mn.us/climate/twin_cities/normals.html \u2014 NOAA 1991-2020 normals for Minneapolis-St. Paul (Jan mean low 9F, Jul mean high 84F, ~51 in snow)",
+   "https://www.dnr.state.mn.us/climate/journal/at_or_below_zero_13_14.html \u2014 Minnesota DNR: Twin Cities averaged 22 days/yr at or below 0F, 1991-2020",
+   "https://climatology.nelson.wisc.edu/first-order-station-climate-data/madison-climate/historical-snowfall \u2014 Wisconsin State Climatology Office: Madison 51.8 in annual snowfall normal",
+   "https://climatology.nelson.wisc.edu/first-order-station-climate-data/milwaukee-climate/historical-snowfall \u2014 Wisconsin State Climatology Office: Milwaukee 48.7 in annual snowfall normal",
+   "https://www.weather.gov/lot/chicago_normals \u2014 NWS Chicago 1991-2020 normals (O'Hare Jan mean low 17.6F, 38.4 in snow)",
+   "https://stateclimatologist.isws.illinois.edu/climate-of-illinois/climate-of-chicago/ \u2014 Illinois State Climatologist: Lake Michigan moderating influence and O'Hare vs Midway station history",
+   "https://www.weather.gov/iln/climate_normals_cvg \u2014 NWS Wilmington OH: Cincinnati/CVG 1991-2020 normals (Jul mean high 86F)",
+   "https://www.weather.gov/iln/climate_normals_cmh \u2014 NWS Wilmington OH: Columbus/CMH 1991-2020 normals (Jan mean low ~20F, Jul mean high 85.3F)",
+   "https://www.weather.gov/ind/newnormals2021 \u2014 NWS Indianapolis 1991-2020 normals (Jan mean low ~21F, ~25 in snow)",
+   "https://www.weather.gov/eax/kcrecnorm-jan \u2014 NWS Kansas City/Pleasant Hill: KC normals (Jan mean low ~21F, Jul mean high ~90F)",
+   "https://www.currentresults.com/Weather/Iowa/Places/des-moines-snowfall-totals-snow-accumulation-averages.php \u2014 Des Moines 1991-2020 normals (36.5 in snow, Jan low 13F, Jul high 85F)",
+   "https://www.weather.gov/pbz/climate \u2014 NWS Pittsburgh climate normals (Jan mean low 23F, Jul mean high 85F, ~44 in snow)",
+   "https://www.currentresults.com/Weather/Michigan/Places/ann-arbor-snowfall-totals-snow-accumulation-averages.php \u2014 Ann Arbor ~43 in annual snowfall; Jan cloud cover 68%",
+   "https://www.weather.gov/cle/event_20250105_LES \u2014 NWS Cleveland: NE Ohio lake-effect snowbelt (Geauga County 120+ in vs ~70 in Cleveland)",
+   "https://glisa.umich.edu/resources-tools/climate-impacts/lake-effect-snow-in-the-great-lakes-region/ \u2014 GLISA/Univ. of Michigan: lake-effect mechanism and west Michigan 72-100+ in belt",
+   "https://spectrumnews1.com/wi/milwaukee/weather/2020/11/24/wisconsin-weather-blog-lake-michigan-natures-thermostat \u2014 Lake Michigan summer water temps 57-68F; up to 25F lakefront vs Waukesha differential",
+   "https://www.worldatlas.com/cities/the-cloudiest-cities-in-the-united-states-58542.html \u2014 Pittsburgh ~203 cloudy days/yr, Jan overcast 68%, ~8 December sunshine days; Cleveland 202 overcast days",
+   "https://www.pca.state.mn.us/news-and-stories/air-quality-alerts-record \u2014 MPCA: record 52 air-quality alert days in Minnesota in 2023, 16 from wildfire PM2.5, 9 red-category",
+   "https://dph.illinois.gov/resource-center/news/2023/july/2023-7-25---illinois-officials-expand-air-quality-messaging-to-e.html \u2014 Illinois EPA/IDPH: 29 unhealthy-for-sensitive-groups days in greater Chicago in 2023, 8 broadly unhealthy",
+   "https://www.epa.gov/system/files/documents/2024-05/radon-zones-map_text_link.pdf \u2014 EPA Map of Radon Zones (Zone 1 = predicted indoor screening >4 pCi/L)",
+   "https://hhs.iowa.gov/health-prevention/providers-professionals/radiological-health/radon/radon-resources \u2014 Iowa HHS: 71.6% of Iowa homes at/above 4 pCi/L, state average 8.5 pCi/L vs 1.3 national; entire state EPA Zone 1",
+   "https://www.health.state.mn.us/news/pressrel/2024/radon010824.html \u2014 Minnesota Dept. of Health: 44% of tested properties at/above 4 pCi/L, state average 4.2 pCi/L; Radon Awareness Act disclosure requirement",
+   "https://www.epa.gov/sites/production/files/2014-08/documents/ohio.pdf \u2014 EPA Map of Radon Zones, Ohio: 53 of 88 counties Zone 1 including Franklin and Hamilton",
+   "https://www.epa.gov/sites/default/files/2014-08/documents/indiana.pdf \u2014 EPA Map of Radon Zones, Indiana (Marion and Hamilton counties Zone 1)",
+   "https://www.homeradonpros.com/radon-washington-county \u2014 Washington County PA average 5.9 pCi/L, ~40% of homes elevated; PA residential average 7-8 pCi/L",
+   "https://www.pa.gov/services/dep/apply-for-department-of-environmental-protection-mine-subsidence-insurance \u2014 PA DEP Mine Subsidence Insurance: 1M+ PA buildings over abandoned mines; $150,000 coverage for $41.25/yr; excluded from standard HO policies",
+   "https://pubs.usgs.gov/publication/b2059A \u2014 USGS Bulletin 2059-A: Overview of landslide problems, research and mitigation, Cincinnati, Ohio area",
+   "https://www.hcswcd.org/uploads/1/5/4/8/15484824/landslides_in_hamilton_county_hcswcd_2011.pdf \u2014 Hamilton County SWCD: highest per-capita landslide repair cost in the US; Mt. Adams remediation $44.5M (2005 dollars)",
+   "https://www.cincinnati-oh.gov/stormwater/flood-management/ \u2014 City of Cincinnati: Ohio River flood stage 52 ft, Local Flood Protection Project (Mill Creek Barrier Dam, floodwall, 14 floodgates)",
+   "https://www.wcpo.com/news/local-news/photos-a-look-at-flooding-now-compared-to-floods-in-2018-and-1997 \u2014 March 1997 Ohio River crest 64.48 ft at Cincinnati, ~$180M damage",
+   "https://www.nrdc.org/bio/anna-weber/blueprint-buyout-des-plaines-il \u2014 Des Plaines IL: 1,200 acres in FEMA floodplain, most NFIP policies in Illinois, homes flooded 8-9 times since mid-1980s, 68 properties bought out (75% FEMA / 25% IDNR)",
+   "https://www.dupagecounty.gov/government/departments/stormwater_management/voluntary_flood-prone_buyout_program.php \u2014 DuPage County Stormwater voluntary buyout program: 130+ homes purchased",
+   "https://insideclimatenews.org/news/15082023/cicero-chicago-flooding-rainready/ \u2014 Cicero/Berwyn/Oak Park July 2 and Sept 17, 2023 urban flooding; combined sewer mechanism",
+   "https://www.chicagobusiness.com/crains-forum-urban-flooding/basement-flooding-and-how-mitigate-risks \u2014 Cook County: 87% of flood-damage claims 2007-2016 paid in communities of color; 3/4 of Chicago claims from 13 ZIP codes",
+   "https://www.insurancejournal.com/news/midwest/2025/07/15/831701.htm \u2014 State Farm 27% Illinois homeowners rate increase, mandatory minimum 1% wind/hail deductible, effective July 15 / Aug 15, 2025",
+   "https://newsroom.statefarm.com/understanding-the-issues-in-illinois/ \u2014 State Farm: Illinois has more hail damage than any state except Texas; catastrophe losses exceeded provision in 13 of last 15 years",
+   "https://www.marshmma.com/us/insights/details/insurance-market-update-midwest.html \u2014 Cumulative 2019-2024 homeowners rate change: Illinois +56.9%, Indiana +36.3%, Ohio +32.1%",
+   "https://www.cbsnews.com/minnesota/news/hail-claims-roof-coverage-changes-insurance/ \u2014 Minnesota hail claims regularly $40,000-$60,000; roof coverage shifting from replacement cost to actual cash value",
+   "https://owlroofing.com/blog/average-hail-claim-minnesota/ \u2014 Minnesota #1 nationally in 2024 hail-claim payouts at $799M; average MN hail claim ~$30,000",
+   "https://www.minnpost.com/environment/2026/04/home-insurance-rates-minnesota-stack-up/ \u2014 Minnesota posted the steepest US home insurance rate increase in 2025 (+34%)",
+   "https://iowacapitaldispatch.com/2026/03/18/nearly-all-states-have-rising-home-insurance-premiums-iowas-rose-28-in-2025/ \u2014 Iowa homeowners premiums +28% in 2025; at least four insurers retreating from the state",
+   "https://insurify.com/homeowners-insurance/insights/hailstorms-next-insurance-crisis/ \u2014 Severe convective storm losses $127B in 2025 (27% above long-term average); Kansas +15% in 2025, Nebraska +25%; 83.2% of 2023-24 Kansas hailstorms rated severe",
+   "https://iid.iowa.gov/press-release/2020-11-09/iowa-derecho-claims-top-16-billion \u2014 Iowa Insurance Division: 200,597 claims totaling $1,612,459,493 in insured losses from the Aug 10, 2020 derecho",
+   "https://www.washingtonpost.com/weather/2020/10/17/iowa-derecho-damage-cost/ \u2014 NOAA: Aug 10, 2020 derecho $7.5B total damage, costliest US thunderstorm event; 100-130 mph sustained winds, ~140 mph in SW Cedar Rapids",
+   "https://www.iowapublicradio.org/ipr-news/2025-06-17/central-iowa-lawn-watering-ban-high-nitrate-levels-des-moines-river \u2014 Central Iowa Water Works first-ever lawn watering ban June 12, 2025; Des Moines River 15.6 mg/L and Raccoon River 15.3 mg/L nitrate vs 10 mg/L EPA limit",
+   "https://www.wosu.org/2024-12-30/ohio-had-record-number-of-tornadoes-in-2024-more-than-20-million-in-property-damage \u2014 Ohio record 74 tornadoes in 2024 vs 30-year average of 21; previous record 62 (1992)",
+   "https://www.weather.gov/ind/tornadostats \u2014 NWS Indianapolis: Indiana averages ~22-25 tornadoes/yr; 57 in 2024, 54 in 2023",
+   "https://www.weather.gov/ict/KSTornadoClimo \u2014 NWS Wichita: Kansas tornado climatology (~96/yr, second nationally)",
+   "https://fox8.com/news/tornado-alley-shifts-east-toward-ohio/ \u2014 NWS meteorologists on the eastward shift/widening of the tornado corridor into Ohio and Indiana",
+   "https://www.liveinsurancenews.com/michigan-worst-states-home-ins/8571668/ \u2014 Michigan homeowners rates +21.6% 2024 to 2025 despite no hurricane or wildfire exposure; hail, wind, ice and sewer-backup claim severity",
+   "https://www.cbsnews.com/amp/detroit/news/michigan-homeowners-dread-flood-insurance-rate-hikes/ \u2014 Michigan $300M+ in flood damage in 2020; sewer backup claims growing as municipal drainage systems fail",
+   "https://www.fema.gov/sites/default/files/documents/fema_urban_flooding_guidance_for_homeowners_and_renters.pdf \u2014 FEMA: urban flooding and sewer backup are excluded from standard HO policies and from NFIP coverage"
+  ]
+ },
+ "table": {
+  "cincinnati_ohio_valley": {
+   "tier": "river-valley-temperate",
+   "elevation_ft": 600,
+   "jan_low_f": 24,
+   "jul_high_f": 86,
+   "snow_in": 20,
+   "humidity_note": "Wettest-feeling summer in this screen east of the Mississippi. July mean dewpoint near 68F; the Ohio River valley traps moisture and haze under summer ridges, and 25-35 days a year reach a heat index of 95F+. Nights barely relax (July mean low ~67F).",
+   "smoke_days": 7,
+   "ac_dependence": "high",
+   "note": "BEST-IN-REGION on the winter axis and the reason this tier exists: Jan mean low 24F (15F warmer than Minneapolis), only ~20 in of snow, ~190-day growing season, roughly half the sub-freezing days of the Twin Cities. The tradeoff is that a climate hovering AT 32F rather than below it produces the heaviest freeze-thaw cycling in the screen -- highest per-year spend in this list on driveways, retaining walls, chimney crowns and hillside footings. Winter gloom is real (Dec-Jan overcast roughly two-thirds of daylight) but a clear notch better than Pittsburgh or Detroit. 'Best in the Midwest' still means a continental climate that swings from -5F to 100F inside one calendar year.",
+   "towns": [
+    "Cincinnati, OH",
+    "Hamilton, OH",
+    "Fairfield, OH",
+    "West Chester, OH",
+    "Mason, OH",
+    "Loveland, OH"
+   ]
+  },
+  "columbus_central_ohio": {
+   "tier": "moderate",
+   "elevation_ft": 800,
+   "jan_low_f": 21,
+   "jul_high_f": 85,
+   "snow_in": 24,
+   "humidity_note": "July mean dewpoint 66-68F -- muggy, a half-step below Cincinnati and well below Des Moines. About 20 days a year at heat index 95F+. Spring and fall are genuinely pleasant, the strongest thing about this climate.",
+   "smoke_days": 8,
+   "ac_dependence": "high",
+   "note": "The middle of the Midwest distribution on every axis: Jan low 21F, ~24 in snow, no lake influence in either direction. On the Till Plains north of the Ohio valley, so ~3F colder in January and ~4 in snowier than Cincinnati. Delaware (elev ~940 ft) runs colder and snowier than Grove City or Lincoln Village. The differentiator a national screen misses is WINTER GLOOM -- central Ohio sits under the same Great Lakes stratus deck that grays out Cleveland, and Dec-Feb daylight is overcast the majority of the time. Buyers relocating from the Sun Belt consistently underrate this.",
+   "towns": [
+    "Columbus, OH",
+    "Westerville, OH",
+    "Hilliard, OH",
+    "Gahanna, OH",
+    "Reynoldsburg, OH",
+    "Grove City, OH",
+    "Pickerington, OH",
+    "Delaware, OH",
+    "Lincoln Village, OH"
+   ]
+  },
+  "indianapolis_central_indiana": {
+   "tier": "moderate",
+   "elevation_ft": 790,
+   "jan_low_f": 21,
+   "jul_high_f": 85,
+   "snow_in": 25,
+   "humidity_note": "July mean dewpoint 67-69F. Central Indiana sits inside the corn belt, so late-July and August evapotranspiration ('corn sweat') pushes dewpoints into the low 70s for stretches -- a Midwestern humidity mechanism with no coastal analog.",
+   "smoke_days": 8,
+   "ac_dependence": "high",
+   "note": "Climatologically near-identical to Columbus (Jan low 21F, Jul high 85F, 25 in snow), with slightly higher summer dewpoints and a bit more snow than Cincinnati. Flat, open terrain means no local modifier at all -- no lake, no river valley, no elevation. Winters are short but grim and gray; summers are hot with heavy overnight humidity. The Hamilton County northern suburbs (Carmel, Fishers, Noblesville) run 1-2F cooler on winter nights than the downtown Indianapolis heat island.",
+   "towns": [
+    "Indianapolis, IN",
+    "Carmel, IN",
+    "Fishers, IN",
+    "Noblesville, IN",
+    "Greenwood, IN"
+   ]
+  },
+  "chicago_lakefront_inner": {
+   "tier": "moderate",
+   "elevation_ft": 600,
+   "jan_low_f": 21,
+   "jul_high_f": 84,
+   "snow_in": 36,
+   "humidity_note": "July mean dewpoint 65-67F, but the lake breeze is the story: on 30-50 afternoons a summer an onshore flow drops near-shore temperatures 8-20F below the inland suburbs within hours. Humidity is high but heat-index extremes are blunted.",
+   "smoke_days": 12,
+   "ac_dependence": "medium",
+   "note": "LAKE MODERATION IS A REAL, MEASURABLE AXIS -- not marketing. Lakefront and inner-ring Chicago (Midway-area normals) runs ~3F warmer on January nights and meaningfully cooler on summer afternoons than O'Hare 17 mi northwest, with the urban heat island stacked on top. Cicero, Berwyn and Oak Lawn are 8-12 mi from the water and capture most, not all, of that buffer. Snow ~36 in, ~3 in less than the collar. Net: the mildest WINTER in this screen outside the Ohio valley, priced in 36 in of snow and a raw, late-arriving spring -- the lake that protects you in January holds you back through May.",
+   "towns": [
+    "Chicago, IL",
+    "Cicero, IL",
+    "Berwyn, IL",
+    "Oak Lawn, IL"
+   ]
+  },
+  "chicago_inland_collar": {
+   "tier": "harsh",
+   "elevation_ft": 700,
+   "jan_low_f": 17,
+   "jul_high_f": 85,
+   "snow_in": 39,
+   "humidity_note": "July mean dewpoint 66-68F with far fewer lake-breeze reprieves -- the lake breeze front typically stalls 5-15 mi inland and these towns sit on the wrong side of it most summer afternoons. Heat index 95F+ on ~15-20 days.",
+   "smoke_days": 12,
+   "ac_dependence": "high",
+   "note": "SAME METRO, DIFFERENT CLIMATE -- the split a national screen misses. O'Hare's Jan mean low is 17.6F against roughly 21F at the lakefront, and the collar picks up ~39 in of snow versus ~36 in. Twenty miles is worth ~4F of winter night-time warmth and a full tier. Radiational cooling on clear calm nights makes the gap far larger than monthly means suggest -- 10-15F differences between Arlington Heights and the lakefront on a February morning are routine. Combined with 100+ annual freeze-thaw crossings, this is the Chicago sub-market where driveway, stoop and foundation-crack maintenance actually shows up in the budget.",
+   "towns": [
+    "Des Plaines, IL",
+    "Mount Prospect, IL",
+    "Arlington Heights, IL",
+    "Elmhurst, IL",
+    "Lombard, IL"
+   ]
+  },
+  "milwaukee_lake_shore": {
+   "tier": "moderate",
+   "elevation_ft": 620,
+   "jan_low_f": 17,
+   "jul_high_f": 82,
+   "snow_in": 49,
+   "humidity_note": "Coolest, least oppressive summer in this screen: July mean high 82F, mean low 65F. Lake Michigan's 57-68F summer surface water drives a lake breeze measured at up to a 25F difference between downtown Milwaukee and Waukesha 20 mi west. AC exists but is not a survival item near the shore.",
+   "smoke_days": 12,
+   "ac_dependence": "medium",
+   "note": "Scored 'moderate' on the LAKE-MODERATED SHORE rule, not on absolute winter temperature. A Jan mean low of 17F is cold in absolute terms but ~6F warmer than Madison 75 mi west at the same latitude -- the lake is worth roughly six degrees of January. The cost of that deal is 49 in of snow (west-shore locations get little classic lake-effect but plenty of lake-ENHANCED synoptic snow) and a cold, raw April-May with the lake still near 40F. Winters are cloudy on the Great Lakes stratus pattern. Genuinely a different climate from Madison despite being 90 minutes away.",
+   "towns": [
+    "Milwaukee, WI"
+   ]
+  },
+  "detroit_ann_arbor_se_michigan": {
+   "tier": "harsh",
+   "elevation_ft": 700,
+   "jan_low_f": 20,
+   "jul_high_f": 84,
+   "snow_in": 42,
+   "humidity_note": "July mean dewpoint 64-66F -- the LOWEST summer humidity in this screen and the one thing SE Michigan does better than anywhere else here. Roughly 10-14 days a year at heat index 95F+.",
+   "smoke_days": 10,
+   "ac_dependence": "medium",
+   "note": "WINTER GLOOM is the deciding axis, not temperature. Cloud cover ~68% in January, ~180-200 cloudy days a year, and December averages only ~2.6 hours of sun per day -- Seattle-grade darkness with none of Seattle's mildness. Critically these towns are NOT in the true lake-effect snowbelt (west Michigan shore 72-100+ in; northeast Ohio's Geauga County 120+ in); SE Michigan sits in the lee shadow and takes ~42 in from Alberta clippers and modest lake-enhanced flow. Ann Arbor (~840 ft) and Howell (~950 ft) run 1-2F colder and a few inches snowier than Taylor or Westland on the Detroit River plain. Tiered 'harsh' for gloom plus 42 in of snow despite a Jan low no worse than Columbus.",
+   "towns": [
+    "Ann Arbor, MI",
+    "Ypsilanti, MI",
+    "Canton, MI",
+    "Westland, MI",
+    "Taylor, MI",
+    "Howell, MI"
+   ]
+  },
+  "pittsburgh_sw_pennsylvania_plateau": {
+   "tier": "harsh",
+   "elevation_ft": 1100,
+   "jan_low_f": 21,
+   "jul_high_f": 84,
+   "snow_in": 41,
+   "humidity_note": "July mean dewpoint 65-67F. Valley terrain traps morning fog and haze; humidity is moderate by Midwest standards but ventilation is poor in the hollows, and hilltop vs valley-bottom microclimates differ 5-10F on calm mornings.",
+   "smoke_days": 8,
+   "ac_dependence": "medium",
+   "note": "THE GLOOMIEST SUBREGION IN THE SCREEN, and the reason winter cloud cover has to be a scored axis in the Midwest at all: ~203 cloudy days a year, January overcast ~68% of the time, and roughly 8 days of measurable sunshine in an average December. Washington PA (~1,170 ft) and Irwin (~1,030 ft) sit on the Allegheny Plateau 300-400 ft above the Pittsburgh river bottoms, buying ~3-5 extra inches of snow and roughly two extra weeks of winter versus the city. Freeze-thaw cycling is severe on the plateau -- hillside driveways, retaining walls and slope stability become recurring line items, not one-time repairs.",
+   "towns": [
+    "Washington, PA",
+    "Irwin, PA"
+   ]
+  },
+  "kansas_city_johnson_county": {
+   "tier": "harsh",
+   "elevation_ft": 1050,
+   "jan_low_f": 21,
+   "jul_high_f": 89,
+   "snow_in": 17,
+   "humidity_note": "HOTTEST AND MOST HUMID SUMMER IN THE SCREEN. July mean high 89F; corn-belt evapotranspiration routinely drives afternoon dewpoints to 72-78F in July-August, producing heat index values of 105-110F several times a summer. Overnight lows stay near 70F for weeks. AC is not optional and undersized systems fail here.",
+   "smoke_days": 5,
+   "ac_dependence": "high",
+   "note": "Tiered 'harsh' on the SUMMER end of continental extremes rather than the winter end -- the mirror image of the Twin Cities. Winter is the mildest-but-one here (Jan low 21F, only ~17 in of snow), but the winter hazard is ICE, not snow: freezing-rain events from Gulf overrunning are the signature Kansas City winter storm and do far more damage than accumulation. Olathe's ~1,050 ft on the open Kansas prairie means no terrain, no water body and no shelter in any direction. Sharpest day-to-day swings of any subregion listed -- 50F changes in 36 hours occur multiple times each spring.",
+   "towns": [
+    "Olathe, KS"
+   ]
+  },
+  "twin_cities_minnesota": {
+   "tier": "harsh-interior",
+   "elevation_ft": 900,
+   "jan_low_f": 9,
+   "jul_high_f": 84,
+   "snow_in": 51,
+   "humidity_note": "Do not mistake cold winters for cool summers -- July mean high 84F with dewpoints commonly 68-72F. You buy a furnace AND an air conditioner and use both hard. Roughly 12-18 days a year at heat index 90F+, on top of ~72 days that never reach 32F.",
+   "smoke_days": 16,
+   "ac_dependence": "medium",
+   "note": "THE DEEP-WINTER ANCHOR of this region's distribution -- everything else in the screen is scored relative to here. Jan mean low 9F (1991-2020 MSP normals), 22 days a year at or below 0F, ~72 days that never reach freezing, 51 in of snow, and -20F to -30F airmasses every few winters (record -32F). Lakeville and Andover (~950-1,000 ft) run 1-3F colder than Saint Paul's river-valley heat island on clear calm nights. Also the MOST WILDFIRE-SMOKE-EXPOSED subregion here: MPCA logged a record 52 air-quality alert days in 2023, 16 driven by wildfire fine particulates and 9 reaching the red AQI category -- a genuinely new Midwest cost that did not exist a decade ago. Winter darkness here is a sun-ANGLE problem (short days at 45N) rather than the cloud problem it is in Ohio and Pennsylvania; MSP is actually sunnier in January than Cleveland.",
+   "towns": [
+    "Saint Paul, MN",
+    "Woodbury, MN",
+    "Burnsville, MN",
+    "Apple Valley, MN",
+    "Lakeville, MN",
+    "Shakopee, MN",
+    "New Brighton, MN",
+    "Ramsey, MN",
+    "Andover, MN"
+   ]
+  },
+  "madison_south_central_wisconsin": {
+   "tier": "harsh-interior",
+   "elevation_ft": 870,
+   "jan_low_f": 11,
+   "jul_high_f": 82,
+   "snow_in": 52,
+   "humidity_note": "July mean dewpoint 66-68F, nudged up locally by the Yahara chain of lakes around the isthmus. Summer is short and pleasant; the humidity complaint is mid-July through August only.",
+   "smoke_days": 12,
+   "ac_dependence": "medium",
+   "note": "THE CLEAN PROOF THAT LAKE MODERATION IS REAL: Madison sits at essentially the same latitude as Milwaukee but 75 mi inland, and pays ~6F colder January nights (11F vs 17F) plus more snow (~52 in, the most in this screen) for the privilege. Same state, same latitude, one tier apart. Mendota and Monona are far too small to moderate anything -- they freeze over and become a cold-air-pooling asset, not a buffer. Snow is synoptic and clipper-driven with no lake-effect component. Tiered 'harsh-interior' alongside the Twin Cities.",
+   "towns": [
+    "Madison, WI"
+   ]
+  },
+  "des_moines_central_iowa": {
+   "tier": "harsh-interior",
+   "elevation_ft": 920,
+   "jan_low_f": 13,
+   "jul_high_f": 85,
+   "snow_in": 36,
+   "humidity_note": "THE MOST EXTREME SUMMER DEWPOINTS IN THE COUNTRY. Central Iowa's July-August corn evapotranspiration regularly produces 75-80F dewpoints -- higher than Houston or Miami on those days -- yielding heat index readings of 105-115F. The single most underrated item on a Midwest screen for anyone relocating from a dry climate.",
+   "smoke_days": 12,
+   "ac_dependence": "high",
+   "note": "Full continental extremes with nothing to buffer either end: Jan mean low 13F and 36 in of snow on one side, Jul mean high 85F with tropical dewpoints on the other. Ankeny (~940 ft) sits on the open Des Moines Lobe plain north of the city -- no terrain, no water, no shelter, which is also why straight-line wind exposure is so high here (see hazards). Tiered 'harsh-interior' for winter severity, but note it is a MILDER winter than Madison or the Twin Cities paired with a HOTTER, far more humid summer than either: the worst of both ends of the region's distribution in one location.",
+   "towns": [
+    "Ankeny, IA"
+   ]
+  }
+ }
+}

@@ -1,0 +1,222 @@
+{
+ "_meta": {
+  "kind": "hazard",
+  "market": "SE",
+  "as_of": "2026-07",
+  "status": "researched",
+  "methodology": "SOUTHEAST CLIMATE + HAZARD LAYER \u2014 METHODOLOGY\n\nSCOPE AND GRANULARITY\n10 subregions, keyed identically across both layers so they can be joined. All 50 towns appear exactly once in each layer (validated programmatically: 50 town slots, 0 duplicates, 0 missing, 0 string mismatches, all enums in range). Granularity is the metro/physiographic province, as requested \u2014 defensible and maintainable, and it avoids pretending a subregion table can resolve parcel-level flood or surge.\n\nCLIMATE AXIS (summer heat + humidity, moderated by elevation and coastal distance)\nPrimary discriminator is NOT July mean maximum \u2014 that single number is misleading in this region (Atlanta posts the LOWEST July max in the set at 89.0F purely from its ~1,000 ft plateau, while Chattanooga posts 89.9F yet runs a far longer hot season). The tier is set on a composite:\n  1. Annual days >= 90F (the length of the hot season) \u2014 primary\n  2. July mean minimum (overnight humidity retention / no-relief nights)\n  3. July mean dewpoint\n  4. Elevation and distance from coast as the moderating terms\n  5. Winter mildness (Jan mean low, annual snow) as a credit, and ice-storm exposure as a debit\n\nObserved regional distribution of days >= 90F across these 50 towns produced three clean breaks: 43\u201348 (Piedmont/upland band), 54\u201360 (interior valley/basin band), 78\u201380 (Lowcountry). Tiers follow those breaks:\n  temperate-upland = 1 subregion, moderate = 4, harsh-interior = 3, harsh = 2.\n\nTHREE CALLS THAT DEPART FROM THE BRIEF \u2014 STATED PLAINLY\n1. NO TOWN ON THIS LIST IS IN THE TRUE APPALACHIAN UPLAND BAND. Asheville (2,165 ft, July max 83.6F) is the regional benchmark and nothing here is close. Upstate SC (Simpsonville/Greer) receives temperate-upland because it is the only elevated, escarpment-adjacent band present \u2014 but GSP's normals (90.3F / 32.1F, ~48 days >= 90F) sit within ~1F of Charlotte and Raleigh, and its 90F-day count is mid-pack. The tier is awarded on elevation and terrain access, not on measured heat relief, and the note says so explicitly so the screen does not overclaim.\n2. CHATTANOOGA IS TIERED harsh-interior, NOT temperate-upland. The brief named \"Chattanooga ridges,\" and that phrasing is exactly right: the ridges (Signal Mtn 1,703 ft, Lookout Mtn ~1,900\u20132,100 ft) do earn the upland tier, but the string \"Chattanooga, TN\" resolves to the 686 ft valley floor, which posts ~55 days >= 90F \u2014 hotter than Charlotte, Raleigh, or Atlanta \u2014 plus documented inversion/stagnation. A strict screen must fail closed on the valley. The note carries an explicit manual-override instruction for confirmed brow addresses.\n3. NASHVILLE IS harsh-interior, a boundary call. Its July max (89.5F) reads benign, but ~54 days >= 90F and a 30.2F Jan low make it simultaneously hotter in summer and colder in winter than the Piedmont \u2014 textbook continentality, and the reason the \"mild winter as an advantage\" argument does not transfer there. Madison AL (~60 days >= 90F) anchors the hot end of that band.\n\nAlso encoded as non-obvious signal: the inland Charleston suburbs (Summerville, Goose Creek) run 2\u20134F HOTTER by day than downtown Charleston because they sit past the sea-breeze front \u2014 the opposite of what buyers assume. And Richmond is flagged as the weakest fit for anyone optimizing on mild winters (10.5in snow, 28.9F Jan low, ~2x any other subregion here).\n\nHAZARD AXIS\nEvery field is anchored to a documented event or a published rate action, not a generic risk adjective. Key encodings:\n  - Inland tropical flooding treated as a first-class hazard, per the brief. Helene's Upstate SC toll (49 deaths, 600k+ outages, >$370M public cost, 8\u201324in rain) is applied 200+ mi from landfall, and the note identifies TREE FALL, not inundation, as the dominant loss mode there \u2014 canopy screening, not floodplain screening.\n  - Atlanta is flood_risk=high on the strength of Sept 2009 (18 gauges above the 500-yr flood; Sweetwater Creek >6 ft above the 500-yr stage) and Sept 2024 (11.12in/48hr, first-ever flash fl",
+  "sources": [
+   "NOAA NCEI, U.S. Climate Normals 1991-2020 (station normals for ATL, CLT, RDU, RIC, BNA, CHA, GSP, HSV, CHS, SAV) \u2014 https://www.ncei.noaa.gov/products/land-based-station/us-climate-normals",
+   "NWS Greenville-Spartanburg, GSP/CLT daily climate normals 1991-2020 \u2014 https://www.weather.gov/gsp/gspcli and https://www.weather.gov/media/gsp/Climate/CLT/CLTJULNORM.pdf",
+   "NWS Raleigh, Climate Normals 1991-2020 \u2014 https://www.weather.gov/rah/ClimateNormals1991-2020",
+   "NWS Huntsville, Huntsville Climate Narrative \u2014 https://www.weather.gov/hun/huntsvilleclimatenarrative",
+   "North Carolina State Climate Office, Winter Weather Climatology (western Piedmont = iciest part of the SE, ~4 freezing-rain days/yr 1948-2000; cold-air damming) \u2014 https://products.climate.ncsu.edu/weather/winter/types/",
+   "North Carolina State Climate Office, Rapid Reaction: Historic Flooding Follows Helene in Western NC (Sept 2024; French Broad at Asheville 24.7 ft, record by >1 ft; 29.5 in max rainfall) \u2014 https://climate.ncsu.edu/blog/2024/09/rapid-reaction-historic-flooding-follows-helene-in-western-nc/",
+   "North Carolina State Climate Office, Helene's Damage Presents Fire Management and Monitoring Challenges (June 2025) \u2014 https://climate.ncsu.edu/blog/2025/06/helenes-damage-presents-fire-management-monitoring-challenges/",
+   "NWS Greenville-Spartanburg, Post-Storm Report / Impact Narratives, Hurricane Helene (AL092024) \u2014 https://www.weather.gov/media/gsp/TropicalEventSummary/PSHGSP_2024AL09_Helene_Summary.pdf",
+   "USGS, Epic Flooding in Georgia, 2009, Fact Sheet 2010-3107 (18 metro Atlanta gauges above the 0.2% AEP flood; Sweetwater Creek near Austell >6 ft above the 500-yr stage; 28 record crests) \u2014 https://pubs.usgs.gov/fs/2010/3107/pdf/fs2010-3107.pdf",
+   "NWS Peachtree City (FFC), Epic Floods of September 2009 \u2014 https://www.weather.gov/ffc/0909epicflood",
+   "NOAA/NWS Nashville (OHX), Record Floods of Greater Nashville, May 1-4 2010 (13.57 in in 2 days; Cumberland crest 51.86 ft vs 40 ft flood stage) \u2014 https://www.weather.gov/ohx/may2010flood",
+   "NOAA Central Library / NWS Service Assessment, Record Floods of Greater Nashville May 2010 \u2014 https://repository.library.noaa.gov/view/noaa/6978",
+   "NWS Charleston (CHS), Hurricane Hugo September 21-22 1989 (Cat 4 landfall Sullivan's Island, ~20 ft storm tide at Bulls Bay) \u2014 https://www.weather.gov/chs/Hurricanehugo-Sep1989",
+   "NWS Charleston, Coastal Flood Event Database \u2014 https://www.weather.gov/chs/coastalflood",
+   "NOAA Tides and Currents, 2024-2025 Annual High Tide Flooding Outlook (Charleston record 17 flood days 2023-24 met year; Fort Pulaski GA record 18 days) \u2014 https://tidesandcurrents.noaa.gov/cms/wp-content/uploads/2025/08/2024-2025-Annual-High-Tide-Flooding-Outlook.pdf",
+   "NOAA NCCOS, Past, Present, and Future High Tide Flooding in Charleston SC (~2 days/yr 1950, 25 by 2014, ~60 days / 103 hours projected by 2051) \u2014 https://coastalscience.noaa.gov/news/past-present-and-future-nuisance-tidal-flooding-in-charleston-sc/",
+   "NOAA NHC, Tropical Cyclone Report: Hurricane Matthew (AL142016) \u2014 3-5 ft inundation along the GA coast, 3-3.75 ft on Delegal Creek, Chatham County \u2014 https://www.nhc.noaa.gov/data/tcr/AL142016_Matthew.pdf",
+   "NOAA NHC, Tropical Cyclone Report: Hurricane Gaston (AL072004) \u2014 Richmond flash flood, ~1 ft rain, 8-9 deaths, $130M, 19 tornadoes \u2014 https://www.nhc.noaa.gov/data/tcr/AL072004_Gaston.pdf",
+   "NWS Wakefield (AKQ), The Hurricane History of Central and Eastern Virginia \u2014 https://www.weather.gov/media/akq/miscNEWS/hurricanehistory.pdf",
+   "USGS, The 1886 Charleston South Carolina Earthquake \u2014 A 1986 Perspective, Circular 985 (M6.9-7.3, ~60 deaths, 2,000 buildings) \u2014 https://pubs.usgs.gov/circ/1986/0985/report.pdf",
+   "USGS, Studies Related to the Charleston SC Earthquake of 1886 \u2014 Tectonics and Seismicity, Professional Paper 1313 \u2014 https://pubs.usgs.gov/publication/pp1313",
+   "USGS, Seismic Hazard in the South Carolina Coastal Plain \u2014 2002 update to the National Seismic Hazard Maps \u2014 https://www.usgs.gov/publications/seismic-hazard-south-carolina-coastal-plain-2002-update-usgs-national-seismic-hazard",
+   "Central US Earthquake Consortium, Our Earthquake Risk (Eastern Tennessee Seismic Zone = 2nd most active in the eastern US; Central Virginia Seismic Zone) \u2014 https://cusec.org/our-earthquake-risk/",
+   "NWS Huntsville, April 27 2011 Limestone/Madison County Tornado Tracks \u2014 https://www.weather.gov/hun/april27_maps_revised_madison_zoom",
+   "NOAA, 50 Years Later: Remembering the 1974 Super Outbreak \u2014 https://www.noaa.gov/news/50-years-later-remembering-1974-super-outbreak",
+   "Gagan, Gerard and Gordon, A Historical and Statistical Comparison of 'Tornado Alley' to 'Dixie Alley', National Weather Association Digest Vol 34 No 2 (2010) \u2014 https://nwafiles.nwas.org/file/nwafiles/digest/papers/2010/Vol34No2/Pg145-Gagan-etal.pdf",
+   "Ashley et al. (2008), Weather and Forecasting \u2014 nocturnal tornadoes ~2.5x deadlier than daytime; ~34% of Dixie Alley killer tornadoes 9pm-7am; TN highest share of nighttime tornado fatalities (>73%)",
+   "Southeast Regional Climate Center (SERCC), Tornado Climatology of the Southeast \u2014 https://sercc.com/tornado-climatology-of-the-southeast/",
+   "TVA, Flood Damage Reduction and Saving Chattanooga (32 upstream dams; ~$9.7B valley-wide and ~$8B at Chattanooga in averted flood damage) \u2014 https://www.tva.com/environment/managing-the-river/flood-management",
+   "USDA Forest Service, National Forests in North Carolina: After Helene, wildfire risk is increased for Western North Carolina families \u2014 https://www.fs.usda.gov/r08/northcarolina/newsroom/stories/after-helene-wildfire-risk-increased-western-north-carolina",
+   "Pickens County SC, Table Rock Fire Information (Table Rock 13,287 ac + Persimmon Ridge 2,078 ac = 15,365 ac, Mar-Apr 2025) \u2014 https://www.co.pickens.sc.us/news_detail_T8_R121.php",
+   "NC Department of Insurance, Commissioner Causey negotiates settlement on Rate Bureau's homeowners' insurance request (Jan 17 2025: 7.5% 6/1/2025 + 7.5% 6/1/2026; Mecklenburg 9.3% + 9.2%; coastal 31.9%; no refiling before 6/1/2027) \u2014 https://www.ncdoi.gov/news/press-releases/2025/01/17/commissioner-causey-negotiates-settlement-rate-bureaus-homeowners-insurance-request",
+   "South Carolina Department of Insurance, 2024 Status Report on the South Carolina Coastal Property Insurance Market (SCWHUA residual market) \u2014 https://doi.sc.gov/DocumentCenter/View/14909/2024-Status-Report-on-the-South-Carolina-Coastal-Property-Insurance-Market",
+   "South Carolina DNR State Climatology Office, 1991-2020 South Carolina Climate Normals contour maps \u2014 https://www.dnr.sc.gov/climate/sco/climatedata/cli_sc_climate.php",
+   "Inside Climate News, Hurricane Helene Killed 49 in South Carolina's Upstate Region as Costs of Damage and Response Exceed $370 Million (Dec 2024) \u2014 https://insideclimatenews.org/news/16122024/south-carolina-hurricane-helene-damage-costs/",
+   "Fox Weather, Atlanta sees first-ever Flash Flood Emergency as Helene's fury forces water rescues (11.12 in / 48 hr, record back to 1878; Peachtree Creek rescues) \u2014 https://www.foxweather.com/weather-news/helene-atlanta-georgia-southeast",
+   "Marsh McLennan Agency, Insurance Market Update: Southeastern states confront severe weather and increased rates in 2025 \u2014 https://www.marshmma.com/us/insights/details/insurance-market-update-southeast.html",
+   "City of Raleigh, Know Your Flood Risks (Crabtree Creek urban flood corridor) \u2014 https://raleighnc.gov/stormwater/services/know-your-flood-risks",
+   "NWS Wilmington (ILM), Hurricane Matthew in the Carolinas: October 8 2016 (12-18 in across interior SC/NC) \u2014 https://www.weather.gov/ilm/matthew"
+  ]
+ },
+ "table": {
+  "upstate_sc_blue_ridge_escarpment": {
+   "primary_hazard": "Inland tropical-remnant wind and flooding (Helene 2024 is the case study)",
+   "wildfire_risk": "moderate",
+   "flood_risk": "moderate",
+   "quake_risk": "low",
+   "tornado_hail_risk": "moderate",
+   "insurance_climate": "strained",
+   "water_risk": "Low - Reedy/Saluda basins backed by Lake Keowee and Lake Hartwell storage; no structural scarcity",
+   "note": "FAR-INLAND TROPICAL RISK IS REAL AND UNDERPRICED - THIS IS THE HELENE LESSON APPLIED 200+ MI FROM LANDFALL. Helene (Sept 2024) made landfall in the Florida Big Bend and still killed 49 people in South Carolina, with Greenville, Spartanburg and Aiken counties hit hardest; 600,000+ Upstate customers lost power, Greenville/Spartanburg/Anderson alone accounting for 300,000+; public damage, debris and response costs exceeded $370M and that figure EXCLUDES insured, residential, private and agricultural losses. The Upstate took 8-24in of rain and the Reedy River at Falls Park peaked at 16.19 ft. Critically, the dominant loss mode was TREE FALL ON STRUCTURES, not inundation - mature-canopy lots, not floodplain lots, produced the claims. Screen the tree canopy over the roofline and the driveway, and confirm the policy has no coverage gap for tree removal. WILDFIRE IS NEWLY ELEVATED AND WILL STAY THAT WAY: Helene blowdown left hundreds of thousands of acres of downed timber across the southern Appalachians, and the March-April 2025 Table Rock Complex (Table Rock Fire 13,287 ac plus Persimmon Ridge 2,078 ac, 15,365 ac total) burned in Pickens and Greenville counties roughly 25 mi northwest of Greer, with debris explicitly cited as increasing fuel load and blocking access. SC and NC forestry leaders, using the post-Hugo 1989 analog, expect 10-15 YEARS of elevated fire behavior. Treat Upstate wildfire as a decade-long condition, not a 2025 anomaly. Hail is the other carrier concern here - reinsurers price SC for coastal hurricane AND Upstate hail together.",
+   "towns": [
+    "Simpsonville, SC",
+    "Greer, SC"
+   ]
+  },
+  "atlanta_metro_piedmont_plateau": {
+   "primary_hazard": "Flash and creek-corridor flooding from tropical remnants and training thunderstorms",
+   "wildfire_risk": "low",
+   "flood_risk": "high",
+   "quake_risk": "low",
+   "tornado_hail_risk": "moderate",
+   "insurance_climate": "strained",
+   "water_risk": "Moderate - Lake Lanier is a single point of failure for the metro's supply; the ACF tri-state litigation resolved favorably for Georgia but the system remains drought-sensitive",
+   "note": "FLOOD, NOT WIND, IS THE ATLANTA STORY - AND MOST OF IT IS OUTSIDE THE MAPPED FLOODPLAIN. September 2009: eighteen metro streamgages exceeded the estimated 0.2% annual-exceedance (500-year) flood; Sweetwater Creek near Austell peaked more than 6 FEET above the estimated 500-year stage; a Douglas County site recorded more than 21in of rain in 24 hours; 28 new record crests were set, one dating to 1919; 23 Georgia counties were federally declared, 16,981 homes and 3,482 businesses were flooded, 10 people died. September 2024 Helene: Atlanta recorded 11.12in in 48 hours, breaking an 1886 record in a series running back to 1878, and the city issued its FIRST-EVER Flash Flood Emergency, with Atlanta Fire Rescue pulling 25 people out of the Peachtree Creek flooding at Peachtree Battle in Buckhead. Georgia's Helene property damage exceeded $6.46 billion with 37 deaths. THE OPERATIONAL RULE: the hazard here is pluvial and creek-corridor - Sweetwater, Powder Springs, Nancy, Peachtree, Big Creek - and a large share of the damaged stock sat OUTSIDE the FEMA Special Flood Hazard Area. Douglasville, Powder Springs, Austell and Buckhead's Peachtree Creek are documented repeat corridors. Do not clear a parcel on the FEMA panel alone: pull an elevation certificate, walk the nearest stream, and buy flood coverage even in Zone X. Tornado is the eastern flank of Dixie Alley - nocturnal and rain-wrapped, with the March 2021 Newnan EF4 on the southwest metro fringe. Insurance: Georgia premiums rose 8.6% in 2025 against a 5.6% national average and roughly 39.7% cumulatively since 2021, with separate wind/hail deductibles now standard.",
+   "towns": [
+    "Lawrenceville, GA",
+    "Powder Springs, GA",
+    "Stockbridge, GA",
+    "Duluth, GA",
+    "Lilburn, GA",
+    "Douglasville, GA",
+    "Johns Creek, GA",
+    "Atlanta, GA",
+    "Lithonia, GA",
+    "Marietta, GA",
+    "Stone Mountain, GA",
+    "McDonough, GA",
+    "Kennesaw, GA",
+    "Roswell, GA",
+    "Smyrna, GA",
+    "Jonesboro, GA",
+    "Hampton, GA",
+    "Snellville, GA",
+    "Norcross, GA"
+   ]
+  },
+  "charlotte_metro_western_piedmont": {
+   "primary_hazard": "Ice storms from Appalachian cold-air damming",
+   "wildfire_risk": "low",
+   "flood_risk": "moderate",
+   "quake_risk": "low",
+   "tornado_hail_risk": "moderate",
+   "insurance_climate": "strained",
+   "water_risk": "Low - Catawba River and the Duke Energy reservoir chain; the 2007-08 drought was the stress test and the system held",
+   "note": "THE ICE STORM CAPITAL OF THE SOUTHEAST - THIS IS THE DEFINING, RECURRING, UNDERPRICED HAZARD. The western Piedmont of North Carolina is the iciest part of the southeastern US, with some areas averaging 4 freezing-rain days per year across 1948-2000. The mechanism is cold-air damming: dense cold air wedges against the east slope of the Blue Ridge and holds at the surface while warm air overruns it, so precipitation falls as freezing rain rather than snow. The December 2002 event laid down nearly an inch of accretion across the NC Piedmont in 12 hours and produced multi-week outages; February 2021 brought back-to-back ice storms to the northern Piedmont. Practical consequences: standing generator, aggressive tree/limb management over service drops, and a policy that covers food spoilage and additional living expense. Flood risk is genuine but ordinary for the region and largely creek-corridor. INSURANCE: North Carolina's January 2025 settlement caps the statewide base-rate increase at 7.5% on 1 June 2025 plus 7.5% on 1 June 2026 (15% combined, against the 42.2% the Rate Bureau requested), with no further filing permitted before 1 June 2027. Mecklenburg County specifically takes 9.3% then 9.2%. Note the structural advantage: coastal NC counties absorbed 31.9% over the same period, so the Piedmont is comparatively protected inside the NC rate structure - a real, quantifiable reason to prefer inland NC over coastal NC. Rock Hill SC sits in the same damming corridor but is rated under South Carolina rules, which are less favorable.",
+   "towns": [
+    "Concord, NC",
+    "Charlotte, NC",
+    "Huntersville, NC",
+    "Waxhaw, NC",
+    "Mint Hill, NC",
+    "Rock Hill, SC",
+    "Monroe, NC",
+    "Mooresville, NC"
+   ]
+  },
+  "nc_triangle_eastern_piedmont": {
+   "primary_hazard": "Inland flooding from decaying tropical systems",
+   "wildfire_risk": "low",
+   "flood_risk": "moderate",
+   "quake_risk": "low",
+   "tornado_hail_risk": "moderate",
+   "insurance_climate": "strained",
+   "water_risk": "Low-moderate - Falls Lake and Jordan Lake supply; nutrient-management rules and periodic drought restrictions recur but supply is adequate",
+   "note": "THE WIND ATTENUATES INLAND; THE RAINFALL DOES NOT. At ~130 mi from the coast the Triangle is largely out of reach of destructive tropical wind - Fran in 1996, still a hurricane at Raleigh, is the modern exception that proves the rule - but it is fully exposed to the rainfall. NWS and the state emphasize that inland flooding is the deadliest hurricane threat to interior North Carolina: Floyd (1999) killed 35 people in NC through inland flooding; Matthew (2016) dropped 12-18in across interior SC and NC onto already-saturated ground and sent the Neuse and Tar rivers up fast enough that Kinston and Goldsboro had minutes; Florence (2018) stalled and produced 30in+ in places. Crabtree Creek in Raleigh is the named urban flood corridor and the City of Raleigh publishes its own flood-risk mapping that is worth checking alongside FEMA. Tornado is real but secondary - the 16 April 2011 outbreak drove an EF3 through Raleigh. INSURANCE: Wake County falls under the same NC settlement (7.5% + 7.5% statewide base, no refiling before June 2027), with Triangle territory increases in the high single digits - far below the 31.9% imposed on the NC coast. This subregion has no dominant catastrophic exposure, which for a strict screen is its strongest attribute.",
+   "towns": [
+    "Raleigh, NC",
+    "Wake Forest, NC",
+    "Cary, NC",
+    "Durham, NC",
+    "Fuquay Varina, NC",
+    "Garner, NC",
+    "Apex, NC"
+   ]
+  },
+  "richmond_va_fall_line": {
+   "primary_hazard": "Urban flash flooding from stalled tropical remnants",
+   "wildfire_risk": "low",
+   "flood_risk": "moderate",
+   "quake_risk": "moderate",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "normal",
+   "water_risk": "Low - James River supply, no scarcity issue",
+   "note": "TWO GENUINELY UNDERPRICED ITEMS HERE, AND THE SECOND ONE IS UNUSUAL FOR THE SOUTHEAST. (1) SEISMIC: Midlothian and Henrico sit in the Central Virginia Seismic Zone. The 23 August 2011 M5.8 Mineral earthquake struck roughly 40 mi northwest, cracked the Washington Monument and the National Cathedral, and was felt by more people than any earthquake in US history. Richmond's older housing stock includes a lot of unreinforced masonry and unretrofitted brick, which is exactly the vulnerable class. Standard Virginia homeowners policies EXCLUDE earthquake; effectively no local buyer carries the rider. Price it. (2) STALLED TROPICAL REMNANTS ON THE FALL LINE: Tropical Storm Gaston (30 August 2004) parked over Richmond, dropped close to a foot of rain, submerged Shockoe Bottom when the drainage system was overwhelmed, killed 8-9 people (five of them driving into flooded roadways), caused $130M in damage, and spawned 19 tornadoes; the NWS characterized the Richmond flooding as a 1,000-year event. Flash flooding is the region's most persistent weather hazard, concentrated in paved urban catchments. Tropical-storm-force winds reach Richmond every 3-5 years. Insurance is the healthiest market in this 50-town set - Virginia is not experiencing the rate stress seen in SC, GA, TN or coastal NC - which is a real, quantifiable carrying-cost advantage. Offsetting that: this subregion also has the coldest winter and most snow on the list, so winter-storm preparedness is a larger line item than buyers moving south expect.",
+   "towns": [
+    "Midlothian, VA",
+    "Henrico, VA"
+   ]
+  },
+  "nashville_basin_middle_tn": {
+   "primary_hazard": "Nocturnal Dixie Alley tornadoes",
+   "wildfire_risk": "low",
+   "flood_risk": "high",
+   "quake_risk": "low",
+   "tornado_hail_risk": "high",
+   "insurance_climate": "strained",
+   "water_risk": "Low - Cumberland River, abundant supply",
+   "note": "NOCTURNAL TORNADO IS THE BINDING CONSTRAINT, AND TENNESSEE IS THE WORST STATE IN THE COUNTRY FOR IT. Tennessee logs the highest share of nighttime tornado FATALITIES of any state, above 73%. Roughly 34% of killer tornadoes in Dixie Alley occur between 9pm and 7am, and Ashley et al. (2008, Weather and Forecasting) found nighttime tornadoes are about 2.5 times deadlier than daytime ones - people are asleep, sirens are not audible indoors, and Dixie Alley storms are rain-wrapped and low-topped so they are not visible even in daylight. About 40% of EF2+ tornadoes in Dixie Alley occur October through February, so this is a year-round exposure, not a spring one. Local record: the 3 March 2020 Nashville outbreak (overnight, EF3/EF4, fatal) and the 9 December 2023 Hendersonville/Madison and Clarksville tornadoes both hit towns in this subregion. Tennessee recorded 60 confirmed tornadoes in 2025. NON-NEGOTIABLES: an interior windowless room on the lowest floor or a FEMA P-361 safe room, and a NOAA weather radio with battery backup - a phone on Do Not Disturb is not a warning system. FLOOD IS THE SECOND MAJOR EXPOSURE AND IT BREAKS THE MAPS: 1-2 May 2010 produced 13.57in at Nashville across two days - the all-time wettest day and the third-wettest day back to back - with 18-20in locally; the Cumberland River crested at 51.86 ft against a 40 ft flood stage; 18 people died in Middle Tennessee (27 across three states), ~10,000 were displaced, and damage exceeded $2 billion. A large share of the flooded stock was OUTSIDE the mapped floodplain. Verify the 2010 high-water mark for the specific parcel, not just the FEMA panel. Insurance: Tennessee ranks 7th nationally at roughly $3,408/yr average, with carriers tightening wind/hail deductibles and moving roofs to actual cash value.",
+   "towns": [
+    "Nashville, TN",
+    "Hendersonville, TN",
+    "Mount Juliet, TN",
+    "Smyrna, TN",
+    "Murfreesboro, TN",
+    "Gallatin, TN"
+   ]
+  },
+  "chattanooga_tn_river_valley": {
+   "primary_hazard": "Nocturnal tornado and severe convective wind",
+   "wildfire_risk": "moderate",
+   "flood_risk": "moderate",
+   "quake_risk": "moderate",
+   "tornado_hail_risk": "high",
+   "insurance_climate": "strained",
+   "water_risk": "Low - Tennessee River, abundant",
+   "note": "A UNIQUELY STACKED HAZARD PROFILE: NOCTURNAL TORNADO PLUS AN ACTIVE SEISMIC ZONE PLUS VALLEY STAGNATION. TORNADO: the Easter Sunday outbreak of 12 April 2020 put an EF3 with 145 mph winds on the ground for 14 minutes across 14.5 mi from southeast Chattanooga to Ooltewah, at night, damaging 12,218 structures with roughly $1.99 billion in reconstruction cost. The 1974 Super Outbreak devastated the Tennessee Valley. Treat this as Nashville-equivalent nocturnal exposure and require the same interior shelter and NOAA radio. SEISMIC: Chattanooga sits on the Eastern Tennessee Seismic Zone, the SECOND MOST ACTIVE seismic zone in the eastern United States, which produces hundreds of earthquakes per year (nearly all unfelt) and is assessed as capable of M6 or greater. Earthquake is excluded from standard Tennessee homeowners policies and essentially nobody local carries the rider. FLOOD - AND HERE AN ENGINEERED SYSTEM GENUINELY MOVES THE UNDERWRITING: Chattanooga is the most flood-prone city in the Tennessee Valley because it sits just upstream of the narrow gorge where the river cuts the Cumberland Plateau, but 32 upstream dams (24 TVA, 4 Duke Energy, 4 Brookfield) are operated as a coordinated flood-control system that has averted roughly $8 billion in damage at Chattanooga alone out of $9.7 billion valley-wide. Mainstem Tennessee River risk is therefore materially lower than the topography suggests; the residual exposure is tributary and flash flooding on South Chickamauga, Mountain and Lookout creeks. WILDFIRE moderate on the ridges (Walden Ridge, Signal and Lookout Mountain WUI) in the southern Appalachian fall fire season; low on the valley floor.",
+   "towns": [
+    "Chattanooga, TN"
+   ]
+  },
+  "tennessee_valley_north_alabama": {
+   "primary_hazard": "Violent nocturnal tornadoes - Dixie Alley core",
+   "wildfire_risk": "low",
+   "flood_risk": "moderate",
+   "quake_risk": "low",
+   "tornado_hail_risk": "high",
+   "insurance_climate": "strained",
+   "water_risk": "Low - TVA-regulated Tennessee River",
+   "note": "THE HIGHEST-SEVERITY TORNADO EXPOSURE OF ANY TOWN ON THIS LIST. Alabama averages roughly 64 tornadoes per year, the highest of the six states in scope. On 27 APRIL 2011, 39 tornadoes moved through the Tennessee Valley in three distinct rounds in a single day, including 3 EF5s; 252-253 people died statewide with 2,092+ injuries, and nearly 100 of those deaths were in the Tennessee Valley. The Hackleburg-Phil Campbell EF5 tracked 107 mi at 210 mph directly through Franklin, Lawrence, Limestone and MADISON counties. This is not a distant historical event - it is the design case for Madison County. Earlier precedent: the 15 November 1989 Airport Road F4 in Huntsville destroyed 259 homes, 80 businesses, 3 churches and Jones Valley Elementary School. A majority of Alabama tornado deaths occur at night, and Dixie Alley storms are rain-wrapped and often invisible. NON-NEGOTIABLES FOR THIS SUBREGION: a FEMA P-361 compliant safe room or an interior windowless room on the lowest floor; an impact-rated, braced garage door (the most common structural failure initiation point); verification that the roof deck is fully sheathed with ring-shank nailing and hurricane strapping; and a NOAA weather radio with battery backup. INSURANCE: Alabama's state wind pool (AIUA) covers the Gulf coast, NOT Madison County, so there is no residual-market backstop inland - if admitted carriers restrict, options narrow. Expect separate wind/hail deductibles and increasing use of actual-cash-value roof schedules; confirm replacement cost on the roof in writing before closing, because an ACV roof endorsement can turn a total roof loss into a five-figure out-of-pocket. Flood is ordinary (Flint River, Indian Creek) and secondary.",
+   "towns": [
+    "Madison, AL"
+   ]
+  },
+  "charleston_inland_lowcountry": {
+   "primary_hazard": "Hurricane wind with pluvial and tidal-backwater flooding",
+   "wildfire_risk": "moderate",
+   "flood_risk": "high",
+   "quake_risk": "high",
+   "tornado_hail_risk": "moderate",
+   "insurance_climate": "strained",
+   "water_risk": "Moderate - documented saltwater intrusion pressure on the Middendorf aquifer and tidal salinity migration up the Cooper and Ashley rivers",
+   "note": "EARTHQUAKE IS THE MOST UNDERPRICED HAZARD IN THE ENTIRE 50-TOWN LIST, AND SUMMERVILLE IS AT ITS CENTER. The 31 August 1886 Charleston earthquake was M6.9-7.3, killed about 60 people and damaged 2,000 buildings; USGS treats the Charleston source zone as the highest seismic hazard on the US East Coast and states that a recurrence today would have serious national consequences. Summerville sits essentially on top of the meizoseismal area, in the Middleton Place-Summerville microseismicity cluster where the modern activity concentrates. Standard South Carolina homeowners policies EXCLUDE earthquake; the rider carries a 5-10% deductible and almost no local buyer holds one. Underwrite this explicitly. FLOOD: at 20-25 mi inland, surge exposure is sharply lower than the peninsula or the barrier islands - Hugo's 20 ft surge in 1989 was a coastal and Bulls Bay event - but the terrain is dead flat with a high water table, so rainfall has nowhere to drain and tidal backwater limits the outfall. Charleston recorded 54 tidal flood days in 2024 (7th worst on record) and a record 17 high-tide flood days in the 2023-24 meteorological year, against about 2 days per year in 1950 and 25 by 2014; projections put it near 60 flood days and 103 flood hours annually by 2051. BUY FLOOD COVERAGE EVEN IN ZONE X. WILDFIRE is genuinely moderate, not low: Berkeley and Dorchester counties carry extensive planted-pine and Francis Marion WUI, the 2025 Carolina Forest fire near Myrtle Beach burned 2,059 acres into subdivisions, and post-Hugo blowdown drove 10-15 years of elevated fire behavior in eastern SC - the exact precedent state forestry now cites. INSURANCE strained rather than crisis: these two towns generally sit outside the SCWHUA coastal wind-pool territory, but SC's average premium of about $2,708/yr against a $2,423 national average, separate wind/hail deductibles, and Charleston-driven reinsurance costs all flow through.",
+   "towns": [
+    "Goose Creek, SC",
+    "Summerville, SC"
+   ]
+  },
+  "coastal_ga_beaufort_lowcountry": {
+   "primary_hazard": "Hurricane storm surge",
+   "wildfire_risk": "low",
+   "flood_risk": "high",
+   "quake_risk": "moderate",
+   "tornado_hail_risk": "moderate",
+   "insurance_climate": "crisis",
+   "water_risk": "Moderate - saltwater intrusion into the Upper Floridan aquifer around Savannah and Hilton Head is a documented, regulated problem with capped Chatham County withdrawals",
+   "note": "THE HARDEST UNDERWRITE ON THIS LIST - SURGE, NOT WIND, IS THE LOSS DRIVER, AND THE DEDUCTIBLE STACK IS THE REAL CARRYING COST. Savannah's estuarine geometry funnels surge up the Savannah River, and Bluffton sits directly on the May River tidal creeks in Beaufort County. Matthew (2016) put 3-5 ft of inundation along the Georgia coast with Chatham County taking the brunt (3-3.75 ft measured on Delegal Creek) and caused severe sea-island damage across Beaufort County, with surge scouring out a lane of the Harbor Island Bridge and depositing four boats on the Beaufort County airport runway. Irma (2017) delivered a LARGER surge than Matthew to Beaufort and flooded Savannah; CEMA's operational planning case was a 10-15 ft high-tide surge with 12-14 hours of Category 3-4 winds. Fort Pulaski recorded 18 high-tide flood days in the 2023-24 meteorological year, a record. MODEL THE SPECIFIC PARCEL against the NHC storm-surge inundation layer - metro-level scoring is not sufficient at this exposure. INSURANCE IS AT CRISIS LEVEL AND GEORGIA HAS NO BACKSTOP: Georgia premiums rose 8.6% in 2025 against a 5.6% national average and roughly 39.7% cumulatively since 2021, and coastal Chatham and Glynn counties pay the steepest premiums in the state. Georgia operates NO state wind pool - unlike Alabama's AIUA, Mississippi's MWUA, or Florida Citizens - so there is no residual-market carrier if admitted capacity withdraws. A Savannah hurricane claim can run THREE separate deductibles - standard, wind/hail, and a distinct named-storm deductible - before the policy pays anything, on top of a separate NFIP flood policy. Price the stack, not the premium. Bluffton sits in SCWHUA wind-pool territory, which provides a last-resort market but at penalty pricing. Seismic is moderate rather than low: the 1886 Charleston event reached MMI VII-VIII at Savannah. Tornado exposure is dominated by tropical-cyclone tornado outbreaks rather than classic Dixie Alley supercells.",
+   "towns": [
+    "Savannah, GA",
+    "Bluffton, SC"
+   ]
+  }
+ }
+}

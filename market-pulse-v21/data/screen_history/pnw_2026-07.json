@@ -1,0 +1,14 @@
+{
+ "period": "2026-07",
+ "market": "PNW",
+ "params": {
+  "assets": 200000,
+  "down_pct": 20.0,
+  "safety_tier": "safe",
+  "winter": "moderate"
+ },
+ "max_purchase": 800000,
+ "universe_n": 355,
+ "buyable": {},
+ "aspirational": {}
+}

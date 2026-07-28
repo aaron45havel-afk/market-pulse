@@ -1,0 +1,267 @@
+{
+ "_meta": {
+  "kind": "hazard",
+  "market": "PNW",
+  "as_of": "2026-07",
+  "status": "researched",
+  "methodology": "PNW LAYER \u2014 11 climate subregions, 14 hazard subregions, 50/50 towns mapped exactly once in each (validated programmatically; see /tmp/claude-0/-home-user-Accounting/25f1ee53-e3dd-5523-ac7d-732911c7f0ca/scratchpad/pnw_validate.py, which checks town coverage, duplicates, unlisted towns, schema keys and enum domains \u2014 result PASS).\n\nWHY THIS REGION NEEDS ITS OWN AXES\nThe CA layer's axes (fog belt, wind corridors, inland heat) and the New England layer's (maritime moderation) both fail here. The PNW's organizing fact is the CASCADE RAIN SHADOW, and it is the sharpest climate divide in the country: Bellingham 36 in of rain vs Yakima 8 in, over 150 miles inside one state. Everything scores against THIS distribution, not a national one.\n\nCLIMATE TIERING LOGIC\n- \"temperate-marine\" is the best-in-region tier: the west-side band where Jan lows sit 33-38F, Jul highs 74-83F, snow is 4-16 in, and there is no meaningful hard-freeze or heat season. Awarded to 5 subregions (Puget core, Puget foothills, South Sound, Kitsap, Portland/Willamette core).\n- Critically, \"temperate-marine\" is NOT a free pass. Every one of those subregions carries an explicit GLOOM figure \u2014 ~155-160 cloudy days at SEA and PDX, ~165 at Olympia, ~165-170 in the north Sound, and only ~2 hrs/day of December sun. Winter darkness is encoded as a liveability factor in humidity_note and note for every west-side subregion, because it is the region's real, chronic, under-disclosed cost. A buyer who tours in July sees only the 79F/0.7-in-of-rain summer.\n- \"moderate\" is used for three west-side subregions downgraded on a specific, named mechanism rather than on averages: north-sound (Fraser Gap arctic outflow + a 74F summer ceiling), Gorge fringe (1-3 freezing-rain events/winter vs ~zero in the west metro; Jan 2024 ice storm), south Willamette (multi-day radiation-fog inversions + the highest west-side smoke load).\n- \"harsh\" and \"harsh-interior\" are reserved for east of the crest. Spokane and Bend are \"harsh\" (continental/high-desert: 44 in and 22 in of snow, 24F/22F Jan lows, AC mandatory). Yakima is \"harsh-interior\" \u2014 the only one that stacks BOTH tails: 89F Jul highs and 8 in of rain, but also a notorious multi-week winter inversion, so it does not even earn the compensating sunshine Spokane and Bend get.\n\nAC DEPENDENCE \u2014 THE HEAT-DOME ADJUSTMENT\nHistorically most of the west side would score \"low.\" It is deliberately scored \"medium\" for every metro subregion instead, because the 2021 heat dome broke that assumption: Portland 108/112/116F on three consecutive days, Seattle 108F, 250+ regional deaths, against pre-event AC penetration of only ~44% (Seattle) and ~78% (Portland). AC is now a resale expectation. Only Kitsap and the north Sound keep \"low\" \u2014 74-77F July normal highs with constant marine ventilation make it honestly still optional there.\n\nSMOKE AS A QUANTIFIED CLIMATE FIELD\nsmoke_days is populated for all 11 subregions as annual unhealthy-for-sensitive-groups-or-worse days, with a clear east-west gradient: 5-7 west-side marine, 9 south Willamette (Holiday Farm Fire corridor), 15 central Oregon, 18 Spokane, 20 Yakima. Anchored on Oregon DEQ's wildfire smoke-trend series and Puget Sound Clean Air Agency data. These are averages across a high-variance distribution (Puget Sound had ~12 days in 2020 and 3 in 2025) \u2014 the notes say to treat them as planning floors.\n\nHAZARD LAYER \u2014 WHY 14 SUBREGIONS, NOT 11\nHazard geography does not follow climate geography, so the layers are deliberately cut differently. Three splits do most of the work:\n1. Kent/Auburn/Renton are pulled OUT of the Puget climate core into \"green-cedar-valley-floor\" \u2014 same climate, catastrophically different ground (high-to-very-high liquefaction fill + Howard Hanson Dam dependency + the White River lahar footprint at Auburn). A strict screen should fail this subregion.\n2. Portland is split into \"portland-basin-core\" (liquefaction, Portland Hills Fault, low wildfire) and \"willamette-slopes-wui\" (Oregon City/W",
+  "sources": [
+   "https://www.ncei.noaa.gov/products/land-based-station/us-climate-normals \u2014 NOAA NCEI 1991-2020 U.S. Climate Normals (temperature, precipitation, snowfall base data for SEA, PDX, GEG, YKM, EUG, OLM, BLI, BDN)",
+   "https://www.weather.gov/media/pqr/climate/ClimateBookPortland/toc.pdf \u2014 NOAA/NWS Portland 'Climate of Portland, Oregon' technical memorandum (Jan 2024 update)",
+   "https://www.weather.gov/media/wrh/online_publications/TMs/TM-248.pdf \u2014 NOAA Technical Memorandum NWS WR-248, Climate of Eugene, Oregon",
+   "https://pubs.usgs.gov/publication/fs20253050/full \u2014 USGS Fact Sheet 2025-3050, 'Earthquake probabilities and hazards in the U.S. Pacific Northwest' (85% M6.5+ deep / 17% M6.5+ crustal / 10-15% M9 Cascadia in 50 yrs; ~500-yr Cascadia recurrence)",
+   "https://www.usgs.gov/programs/earthquake-hazards/science/2023-50-state-long-term-national-seismic-hazard-model-0 \u2014 USGS 2023 50-State National Seismic Hazard Model (basis for east-vs-west-of-Cascades quake_risk split)",
+   "https://pnsn.org/education/pnw-earthquakes/sources/cascadia \u2014 Pacific Northwest Seismic Network, Cascadia Subduction Zone megathrust",
+   "https://pnsn.org/education/earthquake-hazards/liquefaction \u2014 PNSN, liquefaction hazards (Duwamish, Harbor Island, Interbay, Puget Sound fill)",
+   "https://www.usgs.gov/publications/seismic-hazard-maps-seattle-washington-incorporating-3d-sedimentary-basin-effects \u2014 USGS, Seattle 3-D sedimentary basin amplification",
+   "https://www.seattle.gov/documents/Departments/Emergency/PlansOEM/SHIVA/SHIVAv7.0-Earthquake.pdf \u2014 City of Seattle CEMP SHIVA, geologic hazards / earthquake chapter",
+   "https://dnr.wa.gov/washington-geological-survey/geologic-hazards-and-environment/geologic-hazard-maps \u2014 Washington DNR / Washington Geological Survey liquefaction susceptibility, NEHRP site class, landslide and tsunami-inundation hazard maps",
+   "https://gis.dogami.oregon.gov/arcgis/rest/services/HV/StatewideEQ/MapServer/2 \u2014 Oregon DOGAMI Earthquake Liquefaction (Soft Soil) Hazard layer",
+   "https://www.oregon.gov/dogami/hazvu/pages/index.aspx \u2014 Oregon DOGAMI HazVu Statewide Geohazards Viewer (liquefaction, SLIDO landslide inventory)",
+   "https://www.oregon.gov/oem/hazardsprep/pages/cascadia-subduction-zone.aspx \u2014 Oregon Dept. of Emergency Management, Cascadia Subduction Zone hazards and preparedness",
+   "https://www.usgs.gov/centers/pcmsc/news/threat-coastal-flooding-cascadia-earthquake-driven-land-subsidence \u2014 USGS PCMSC, Cascadia coseismic subsidence and coastal flooding",
+   "https://pubs.usgs.gov/gip/265/gip265.pdf \u2014 USGS GIP-265, Mount Rainier Volcanic Hazard Information (Case I/II lahar zones, Puyallup/Carbon/Nisqually/White River)",
+   "https://www.usgs.gov/volcanoes/mount-rainier/science/monitoring-lahars-mount-rainier \u2014 USGS, lahar detection and warning system at Mount Rainier",
+   "https://data.usgs.gov/datacatalog/data/USGS:697ba3e5b66b0197c3043d2f \u2014 USGS pedestrian evacuation time maps and population exposure for Mount Rainier lahar zones (Orting 40-50 min arrival; 78,049 residents in the Electron Mudflow footprint)",
+   "https://www.usgs.gov/index.php/news/featured-story/preparing-volcano-hazards-where-worlds-largest-lahar-evacuation-drill-held \u2014 USGS, Mar 2024 Pierce County lahar evacuation drill (45,000 students)",
+   "https://www.oregon.gov/deq/wildfires/Documents/wf2024wfTrendsRep.pdf \u2014 Oregon DEQ, Wildfire Smoke Trends and the Air Quality Index, data 2000-2025 (Portland, Eugene, Bend USG+ day counts)",
+   "https://pscleanair.gov/615/Data-Summary \u2014 Puget Sound Clean Air Agency data summary (smoke-impacted days, record PM2.5 since 1980)",
+   "https://en.wikipedia.org/wiki/2023_Washington_wildfires \u2014 2023 Washington wildfire season, Gray Fire and Oregon Road Fire (366 structures destroyed, 2 deaths, Spokane County, Aug 2023)",
+   "https://www.climate.gov/news-features/event-tracker/astounding-heat-obliterates-all-time-records-across-pacific-northwest \u2014 NOAA Climate.gov, June 2021 heat dome (Portland 108/112/116F, Seattle 108F)",
+   "https://www.oregonencyclopedia.org/articles/heat-dome-2021/ \u2014 Oregon Encyclopedia, 2021 Pacific Northwest heat dome (mortality, AC penetration: Seattle ~44%, Portland ~78%)",
+   "https://water.noaa.gov/gauges/mvew1 \u2014 NOAA National Water Prediction Service, Skagit River near Mount Vernon gauge and flood stages",
+   "https://www.kuow.org/stories/go-now-100-000-evacuated-in-historic-skagit-flood \u2014 Dec 2025 record flooding: all-time crests on the Skagit, Snohomish and Cedar; ~100,000 under evacuation",
+   "https://www.urban.org/urban-wire/after-catastrophic-flooding-washington-state-three-factors-will-likely-shape-long-term \u2014 Urban Institute: six federally declared disasters per decade in Skagit, Snohomish and Whatcom counties; 3,891 homes damaged, 440 destroyed/major",
+   "https://governor.wa.gov/news/2026/governor-ferguson-encourages-washingtonians-impacted-decembers-historic-flooding-apply-assistance \u2014 WA Governor's Office, FEMA Individual Assistance counties for the Dec 2025 flood",
+   "https://blog.itscovered.com/state-guides/washington-home-insurance-market \u2014 Washington home insurance market: +16% (2023), +12% (2024), +21.7% YoY at top carriers through Dec 2024; avg $1,410",
+   "https://www.opb.org/article/2025/02/06/oregon-homeowners-face-rising-insurance-costs-wildfire-risk-grows/ \u2014 OPB, Oregon homeowners insurance and wildfire risk (avg ~$1,039; $212M in 2023 wildfire payouts)",
+   "https://www.bendsource.com/news/homeowners-insurance-continues-to-rise-in-vulnerable-areas-22516501/ \u2014 Deschutes County wildfire-driven premium increases and non-renewals",
+   "https://usclimatedata.com/climate/bend/oregon/united-states/usor0031 \u2014 Bend, OR climate averages (precip ~13 in, snow ~21 in, 22-86F range)",
+   "https://www.rediinfo.com/about-redmond/climate \u2014 Redmond Economic Development, Central Oregon climate (3,077 ft elevation, ~300 sun days)",
+   "https://usclimatedata.com/climate/spokane/washington/united-states/uswa0422 \u2014 Spokane, WA climate averages (precip, 42-45 in snow, Jan low 24F, Jul high 85F)",
+   "https://en.climate-data.org/north-america/united-states-of-america/washington/yakima-1026973/ \u2014 Yakima, WA climate (1,065 ft elevation, arid warm-summer regime)",
+   "https://yvcog.us/202/Climate-Element \u2014 Yakima Valley Council of Governments, Climate Element (basin water supply, irrigation dependence)",
+   "https://weatherspark.com/y/913/Average-Weather-in-Seattle-Washington-United-States-Year-Round \u2014 Seattle cloud-cover and temperature climatology (cloudy-day counts, 37-79F range)"
+  ]
+ },
+ "table": {
+  "central-puget-upland": {
+   "primary_hazard": "Cascadia M9 megathrust + Seattle Fault crustal rupture, amplified by the deep Seattle sedimentary basin",
+   "wildfire_risk": "low",
+   "flood_risk": "low",
+   "quake_risk": "high",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "strained",
+   "water_risk": "low - Cedar and Tolt surface supply is abundant, but both transmission mains cross liquefiable ground and SPU plans for multi-week post-quake outages",
+   "note": "Glacial-till uplands from Shoreline to Federal Way: the best seismic ground in the metro, on the metro's worst seismic setting. USGS FS 2025-3050 puts the next 50 years at an 85% chance of an M6.5+ deep Slab quake in Puget Sound, 17% for an M6.5+ crustal fault quake, and 10-15% for the full-margin ~M9 Cascadia rupture (~500-yr recurrence; last was 26 Jan 1700). The SEATTLE FAULT runs east-west through the city and produced ~7 m of uplift plus a local Puget Sound tsunami ~1,100 years ago - a repeat gives Elliott Bay wave arrival in roughly 3 minutes, no useful warning. The 3-D Seattle Basin amplifies long-period shaking 2-3x, which is a high-rise and soft-story problem more than a rambler problem. Parcel-level disqualifiers: (a) LIQUEFACTION on Duwamish/SODO/Interbay/Harbor Island fill - run a WA DNR liquefaction-susceptibility and NEHRP site-class lookup before offer; (b) COASTAL BLUFF LANDSLIDE along the Puget Sound shoreline (Magnolia, Perkins Lane, west Burien, Des Moines, Normandy Park) - Seattle's ECA landslide overlay is the screen. Wildfire is genuinely low; flood is low outside a few creek ravines. Insurance is strained on statewide dynamics (WA homeowners rates +16% in 2023, +12% in 2024, +21.7% YoY at top carriers through Dec 2024), not on this subregion's own loss history. There is no meaningful earthquake-insurance market at reasonable cost - typical WA EQ endorsements carry 10-20% deductibles, so budget shake risk as self-insured.",
+   "towns": [
+    "Seattle, WA",
+    "Shoreline, WA",
+    "Lynnwood, WA",
+    "Burien, WA",
+    "Des Moines, WA",
+    "Seatac, WA",
+    "Federal Way, WA"
+   ]
+  },
+  "green-cedar-valley-floor": {
+   "primary_hazard": "Valley-floor liquefaction stacked on Green/Cedar River flooding held back by a single aging dam",
+   "wildfire_risk": "low",
+   "flood_risk": "high",
+   "quake_risk": "high",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "strained",
+   "water_risk": "low",
+   "note": "The Kent-Auburn-Renton valley floor is the worst ground in the Seattle metro and it is not close. THREE stacked hazards. (1) LIQUEFACTION: Green and Cedar valley fill is mapped by WA DNR as high-to-very-high susceptibility across essentially its full width - in a Cascadia M9 (10-15%/50yr, USGS FS 2025-3050) expect lateral spreading, differential settlement and utility rupture. Liquefaction damage is excluded from standard HO policies and commonly sub-limited even under EQ endorsements. (2) FLOOD: the valley sits behind Howard Hanson Dam on the Green; the 2009 abutment-seepage emergency forced provisional re-mapping of tens of thousands of Kent/Auburn parcels into the SFHA and had whole business districts sandbagged. Cedar River flooding drives the Renton exposure. Any offer here needs an Elevation Certificate and a bindable NFIP quote before it is priced. (3) LAHAR: Auburn sits inside the USGS Mount Rainier White River / Osceola Mudflow footprint - a Case I lahar reached the present Auburn-Kent valley floor and Puget Sound ~5,600 years ago. Low annual probability, total consequence, and no retrofit addresses it. Wildfire is negligible. For a strict screen this subregion should fail on flood and liquefaction alone.",
+   "towns": [
+    "Kent, WA",
+    "Auburn, WA",
+    "Renton, WA"
+   ]
+  },
+  "puget-foothill-wui": {
+   "primary_hazard": "Cascade wildland-urban-interface fire and slope instability on the King County plateau, plus full Cascadia exposure",
+   "wildfire_risk": "moderate",
+   "flood_risk": "moderate",
+   "quake_risk": "high",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "strained",
+   "water_risk": "low",
+   "note": "Covington and Maple Valley - the transition from suburb to Cascade forest. Seismically identical to central Puget (85% M6.5+ deep, 17% M6.5+ crustal, 10-15% M9 over 50 years) but on firmer upland ground than the valley floor. What changes is FIRE: these are second-growth Douglas-fir WUI parcels, and west-side fuels that historically never carried fire now do during the 2-4 week late-summer drought windows the region reliably gets. WA DNR's wildfire-risk portal rates much of the Covington/Maple Valley/Black Diamond fringe moderate; defensible space and Class-A roof condition are underwriting items here in a way they are not in Seattle. Also screen the Cedar River and Covington Creek floodplains, ravine flooding, and DNR-mapped landslide-hazard slopes along the plateau edges. Insurance is strained rather than crisis - WA carriers are re-rating and tightening brush-clearance requirements, not yet non-renewing at scale west of the crest.",
+   "towns": [
+    "Covington, WA",
+    "Maple Valley, WA"
+   ]
+  },
+  "north-sound-river-deltas": {
+   "primary_hazard": "Repeat catastrophic river-delta flooding on the Nooksack, Skagit and Snohomish - the most flood-exposed corridor in western Washington",
+   "wildfire_risk": "low",
+   "flood_risk": "high",
+   "quake_risk": "high",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "strained",
+   "water_risk": "low",
+   "note": "Everett, Mount Vernon, Ferndale, Bellingham. FLOOD dominates and the record is unambiguous: Skagit, Snohomish and Whatcom counties have each absorbed six federally declared natural-hazard disasters in the last decade - better than one major disaster every two years. In the Dec 2025 event the Skagit, Snohomish and Cedar all set all-time record crests, roughly 100,000 residents were under evacuation orders, and statewide ~3,891 homes were damaged with 440 destroyed or majorly damaged. The Nov 2021 Nooksack flood hit Ferndale and Everson hard. Mount Vernon's 2018 downtown floodwall genuinely works and held in 2021 - a real, parcel-specific mitigation to verify, not a reason to relax the screen. Elevation Certificate plus NFIP quote is mandatory on anything in or near the mapped SFHA; FEMA Risk Rating 2.0 keeps lifting premiums on exactly these repetitive-loss parcels and private flood capacity is thin. Secondary: delta fill (Snohomish estuary, Skagit flats, Everett waterfront) is high-liquefaction ground under Cascadia shaking, and the SOUTH WHIDBEY ISLAND FAULT crosses the corridor. Wildfire is genuinely low. Scored strained rather than crisis because the binding constraint is flood cost and availability, not homeowners non-renewal.",
+   "towns": [
+    "Everett, WA",
+    "Mount Vernon, WA",
+    "Ferndale, WA",
+    "Bellingham, WA"
+   ]
+  },
+  "tacoma-fault-lahar-fringe": {
+   "primary_hazard": "Tacoma Fault crustal rupture and Cascadia M9, on the shoulder of the Mount Rainier lahar corridor",
+   "wildfire_risk": "moderate",
+   "flood_risk": "moderate",
+   "quake_risk": "high",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "strained",
+   "water_risk": "low",
+   "note": "Tacoma, Lakewood, University Place, Spanaway, Clover Creek. Three mechanisms, and the parcel matters enormously. (1) LAHAR - be precise: the USGS Case I zone follows the PUYALLUP and CARBON river valleys (Orting, Sumner, Puyallup, Fife, the Port of Tacoma tideflats) and the NISQUALLY valley. Orting can be reached in 40-50 minutes with no eruption warning; the Mar 2024 Pierce County drill moved 45,000 students. The upland towns in this subregion - Lakewood, University Place, Spanaway, Clover Creek and most of residential Tacoma - sit ABOVE modeled inundation and are not in the flow path. They still lose bridges, rail, port and water lifelines for months, so treat lahar here as an economic and access hazard rather than a life-safety one, and reject outright any parcel on the Puyallup/Fife/Sumner valley floor. Verify each address against the Pierce County lahar-zone viewer - the boundary is sharp and elevation-defined. (2) TACOMA FAULT: a shallow crustal source that produced ~M7.3 with several meters of shoreline uplift and a local Sound tsunami roughly 1,100 years ago, directly beneath this subregion - a bigger near-field shaking threat to these towns than Cascadia. (3) FIRE: the Spanaway/Clover Creek prairie-and-pine belt around JBLM is real WUI, with repeat prairie and range fires, unlike the fir suburbs to the north. Flood is moderate (Puyallup River, Chambers and Clover creeks). Waterfront Tacoma and the tideflats are high-liquefaction fill.",
+   "towns": [
+    "Tacoma, WA",
+    "Lakewood, WA",
+    "University Place, WA",
+    "Spanaway, WA",
+    "Clover Creek, WA"
+   ]
+  },
+  "olympia-nisqually-basin": {
+   "primary_hazard": "Cascadia M9 at the shortest distance of any metro in this screen, plus downtown Olympia fill liquefaction and chronic tidal flooding",
+   "wildfire_risk": "moderate",
+   "flood_risk": "moderate",
+   "quake_risk": "high",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "strained",
+   "water_risk": "low",
+   "note": "Olympia, Lacey, Shelton. The south Sound is the closest major metro to the deforming Cascadia margin, and it sits over the deep Slab source that produced the 2001 M6.8 NISQUALLY earthquake - epicentered here, roughly $2B in damage, with the worst effects concentrated exactly where the fill is. Downtown Olympia is built on hydraulic fill over tideflat mud and has documented liquefaction and settlement in 1949, 1965 AND 2001; three events in one lifetime is a pattern, not bad luck. Layer on SEA LEVEL: downtown Olympia already floods on king tides with no storm involved, the city runs a formal SLR response program and is engineering a barrier, and Cascadia coseismic subsidence would drop the shoreline abruptly on top of that. Buy on the glacial uplands (most of Lacey, west Olympia) and refuse the downtown fill. Flood is moderate on the Deschutes, Nisqually and Chehalis-basin margins. Shelton adds Mason County timber WUI, so its fire risk is materially above Olympia's. Insurance strained on statewide re-rating; EQ endorsement here is expensive with a 10-20% deductible.",
+   "towns": [
+    "Olympia, WA",
+    "Lacey, WA",
+    "Shelton, WA"
+   ]
+  },
+  "kitsap-peninsula": {
+   "primary_hazard": "Seattle/Tacoma Fault near-field rupture with local Puget Sound tsunami, compounded by total bridge-and-ferry isolation",
+   "wildfire_risk": "moderate",
+   "flood_risk": "moderate",
+   "quake_risk": "high",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "strained",
+   "water_risk": "moderate - the peninsula is entirely groundwater-dependent with no surface-water backup, and shoreline aquifers are monitored for seawater intrusion",
+   "note": "Bremerton, Port Orchard, Poulsbo. The distinguishing hazard is not shaking severity, it is ISOLATION. The peninsula's only links are the Tacoma Narrows and Agate Pass bridges plus the ferry system, and each is a single point of failure in a Cascadia M9 or Seattle Fault event; state resilience planning assumes weeks-to-months of degraded access. The SEATTLE FAULT passes through south Bainbridge and north Kitsap, and modeled local tsunami in Sinclair, Dyes and Liberty bays leaves under five minutes of warning - shoreline parcels in Bremerton and Port Orchard need a Washington DNR tsunami-inundation lookup, not just a FEMA flood map, because the two do not agree. Also screen the steep marine bluffs (DNR landslide-hazard layer) ringing most of the waterfront. Fire is moderate: heavy timber WUI as soon as you leave the town centers. Flood is moderate, mostly coastal and creek. Fully groundwater-supplied, a real long-horizon risk most PNW buyers never think to check.",
+   "towns": [
+    "Bremerton, WA",
+    "Port Orchard, WA",
+    "Poulsbo, WA"
+   ]
+  },
+  "portland-basin-core": {
+   "primary_hazard": "Cascadia M9 plus the Portland Hills Fault, over extensive Willamette/Columbia floodplain liquefaction",
+   "wildfire_risk": "low",
+   "flood_risk": "moderate",
+   "quake_risk": "high",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "strained",
+   "water_risk": "moderate - Bull Run surface supply is excellent, but the backup Columbia South Shore wellfield sits on liquefiable ground and Portland's own resilience planning assumes multi-week water outages after a megathrust event",
+   "note": "Portland, Milwaukie, Beaverton, Tigard, Tualatin, Hillsboro. Oregon's seismic exposure is systematically UNDER-BUILT relative to Washington's - much of the housing stock predates meaningful seismic code, unreinforced masonry is widespread on the inner eastside, and cripple-wall/foundation-bolt retrofits are the single highest-return diligence item on any pre-1975 house here. The PORTLAND HILLS FAULT runs beneath the west side of downtown. Use the DOGAMI HazVu Statewide Geohazards Viewer liquefaction layer at parcel level: the Willamette and Columbia floodplain - NW industrial, St. Johns, Sellwood and Johnson Creek riverfront, Milwaukie's river margin - maps high to very high, while the Tualatin Valley terraces under Beaverton/Hillsboro/Tigard are markedly better ground. Add the systemic risk: the CEI Hub on the Willamette's liquefiable west bank holds roughly 90% of Oregon's liquid fuel on soil expected to fail, a months-long regional recovery problem regardless of your parcel. Flood is moderate - Johnson Creek is a chronic repetitive-loss corridor, the Tualatin backs up, and the Feb 1996 flood crested near 28 ft on the Willamette. Wildfire is low in the basin proper. Insurance strained: Oregon still averages roughly $1,000-1,100/yr statewide, below national, but is re-rating fast; earthquake coverage is a separate, expensive, high-deductible endorsement almost nobody carries.",
+   "towns": [
+    "Portland, OR",
+    "Milwaukie, OR",
+    "Beaverton, OR",
+    "Tigard, OR",
+    "Tualatin, OR",
+    "Hillsboro, OR"
+   ]
+  },
+  "willamette-slopes-wui": {
+   "primary_hazard": "DOGAMI-mapped landslide terrain on Willamette and Clackamas bluffs, combined with Coast Range / Chehalem WUI wildfire",
+   "wildfire_risk": "moderate",
+   "flood_risk": "moderate",
+   "quake_risk": "high",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "strained",
+   "water_risk": "low",
+   "note": "Oregon City, West Linn, Happy Valley, Sherwood, Newberg, Forest Grove - the hillside and rural-fringe ring of the Portland metro, split from the basin because the hazard mix genuinely differs. (1) LANDSLIDE is the lead risk and is chronically under-screened by buyers: the Willamette and Clackamas bluffs through Oregon City and West Linn, and the Mount Scott slopes under Happy Valley, are extensively mapped in DOGAMI's SLIDO landslide inventory. Oregon's wet-season deep-seated slides are slow and expensive rather than sudden, and standard homeowners policies exclude earth movement entirely - a geotech letter on any sloped lot is not optional here. (2) WILDFIRE steps up from the basin's low: the Chehalem Mountains, the Coast Range foothills above Forest Grove, and the Clackamas corridor are real interface. The Sept 2020 east-wind event drove the Riverside Fire to roughly 138,000 acres in Clackamas County with Level 3 evacuations reaching the metro's edge - that is the design event for this ring. (3) Cascadia and Portland Hills Fault exposure is unchanged from the basin (10-15%/50yr for M9), though hillside parcels sit on better ground than the floodplain. Flood is moderate on the Clackamas, Tualatin and Willamette. Oregon carriers are actively re-rating wildfire in exactly this WUI band.",
+   "towns": [
+    "Oregon City, OR",
+    "West Linn, OR",
+    "Happy Valley, OR",
+    "Sherwood, OR",
+    "Newberg, OR",
+    "Forest Grove, OR"
+   ]
+  },
+  "columbia-gorge-east-wind": {
+   "primary_hazard": "East-wind-driven wildfire and ice storms out of the Columbia Gorge, over Columbia River floodplain liquefaction",
+   "wildfire_risk": "moderate",
+   "flood_risk": "moderate",
+   "quake_risk": "high",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "strained",
+   "water_risk": "low",
+   "note": "Vancouver, Camas, Battle Ground, Gresham. The Gorge is a wind machine and it cuts both ways. In SUMMER, an east-wind event under drought conditions is the single most dangerous fire setup in western Oregon and Washington - the 2017 Eagle Creek Fire burned ~50,000 acres of the Gorge, and the Sept 2020 Labor Day east-wind outbreak ignited the Riverside and Beachie Creek fires and produced the worst air quality on Earth over this metro for several days. Camas/Washougal and the Gorge-fringe parcels carry genuine interface risk; Vancouver proper is more urban. In WINTER the same corridor delivers 1-3 freezing-rain events per season - the Jan 2024 ice storm caused deaths, days-long outages for roughly 150,000 customers, and heavy tree-fall property damage. Seismically this is the Portland basin: 10-15%/50yr for Cascadia M9, with Columbia alluvium under Vancouver's waterfront, Fruit Valley and the lower Salmon Creek corridor mapping high-liquefaction on Washington DNR's layer. Flood is moderate - Columbia River, Lacamas Lake, Salmon Creek, Burnt Bridge Creek, plus the systemic upstream-dam question. Verify Clark County wildfire and flood overlays parcel by parcel; the difference between a Camas ridge lot and a Vancouver flat is large.",
+   "towns": [
+    "Vancouver, WA",
+    "Camas, WA",
+    "Battle Ground, WA",
+    "Gresham, OR"
+   ]
+  },
+  "south-willamette-cascade-wui": {
+   "primary_hazard": "McKenzie/Cascade-front wildfire and multi-week smoke, on top of full Cascadia M9 exposure",
+   "wildfire_risk": "high",
+   "flood_risk": "moderate",
+   "quake_risk": "high",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "strained",
+   "water_risk": "low",
+   "note": "Eugene and Springfield - the only WEST-SIDE subregion in this screen scoring high wildfire, and it earns it. The Sept 2020 HOLIDAY FARM FIRE ran roughly 173,000 acres down the McKenzie corridor, destroyed about 500 structures including most of Blue River and Vida, and stopped roughly 20 miles from Springfield's eastern edge; the same east-wind synoptic pattern will recur. Oregon DEQ smoke-trend data puts the south valley among the highest unhealthy-air-day counts of any Oregon metro outside Medford and Bend, with AQI above 400 for multiple consecutive days in Sept 2020. Springfield's eastern and Eugene's southern hill neighborhoods are true interface; the valley floor is not, so this is a parcel-level distinction worth making. FLOOD: the Willamette and McKenzie converge here and valley flood safety depends entirely on the Army Corps reservoir system - the Feb 1996 flood is the benchmark event, and Springfield's low-lying west side plus the Willamette confluence remain the exposure. SEISMIC: Eugene is only ~110 miles from the trench with full Cascadia M9 exposure (10-15%/50yr) and an older, largely un-retrofitted housing stock; DOGAMI maps liquefaction on the Willamette/McKenzie alluvium through both cities. Oregon carriers are re-rating wildfire aggressively in the south valley.",
+   "towns": [
+    "Eugene, OR",
+    "Springfield, OR"
+   ]
+  },
+  "inland-northwest-wui": {
+   "primary_hazard": "Wildland-urban-interface wildfire - the Aug 2023 Gray and Oregon Road fires destroyed 366 structures and killed two people inside Spokane County",
+   "wildfire_risk": "high",
+   "flood_risk": "moderate",
+   "quake_risk": "low",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "crisis",
+   "water_risk": "moderate - the Spokane Valley-Rathdrum Prairie Aquifer is the EPA sole-source supply for roughly 600,000 people and is hydraulically continuous with the Spokane River, so summer instream-flow and withdrawal conflicts recur and remain unresolved",
+   "note": "Spokane and Spokane Valley - the hazard profile inverts completely once you cross the Cascade crest. QUAKE drops to low: the 2023 USGS National Seismic Hazard Model shows dramatically lower ground motion east of the Cascades, with no Cascadia megathrust or crustal-fault exposure comparable to Puget Sound (Spokane does get shallow seismic swarms, as in 2001, but they are nuisance-grade). In its place FIRE becomes the defining risk. On 18 Aug 2023 the Gray Fire and Oregon Road Fire burned simultaneously, destroying 366 structures, killing two, and generating over $212 million in insurance payouts - these were not remote forest fires, they burned into Medical Lake and Elk. The ponderosa-and-grass interface reaches straight into Spokane Valley subdivisions. INSURANCE is scored crisis rather than strained because this is where Washington carriers are actually restricting brush-zone appetite, imposing wildfire deductibles and non-renewing, on top of statewide increases of 16% (2023) and 12% (2024). Require a Class-A roof, ember-resistant venting and documented defensible space, and get a bindable quote before removing contingencies. Flood is moderate (Spokane River, Latah Creek, ice-jam events). Hail is more frequent than anywhere west of the crest but still low by national standards.",
+   "towns": [
+    "Spokane, WA",
+    "Spokane Valley, WA"
+   ]
+  },
+  "yakima-basin-arid": {
+   "primary_hazard": "Irrigation-water curtailment in an over-appropriated basin, plus shrub-steppe wildfire",
+   "wildfire_risk": "high",
+   "flood_risk": "moderate",
+   "quake_risk": "moderate",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "crisis",
+   "water_risk": "high - the Yakima Basin is over-appropriated and junior water rights have been prorated to roughly 37-50% of entitlement in 2001, 2005, 2015, 2021 and 2024; Reclamation's Yakima Basin Integrated Plan projects drought frequency rising several-fold by mid-century",
+   "note": "Yakima. WATER is the lead hazard and it is the one out-of-area buyers never price. This is an 8-inch-precipitation basin whose entire economy and landscape run on stored snowmelt, and junior-right proration is now recurring rather than exceptional - it hits irrigation districts, orchard values and, indirectly, exurban parcels on shared systems. Verify the water right, its priority date and the district before offer; a rural parcel here without a senior right is a different asset than it looks. FIRE: shrub-steppe and cheatgrass carry fast, wind-driven fire right to the WUI edge - Yakima County records some of the largest annual acreage in Washington and smoke seasons run 15-25 unhealthy days. QUAKE is scored moderate rather than low, unlike Spokane: the YAKIMA FOLD BELT (Ahtanum Ridge, Rattlesnake Hills, Toppenish Ridge) is a system of active reverse faults capable of M6.5-7 and the 2023 NSHM carries real hazard here - far below Puget Sound, but not the near-zero of the Spokane area. Flood is moderate on the Naches and Yakima. Insurance scored crisis on the wildfire-driven availability squeeze in central Washington's brush zones.",
+   "towns": [
+    "Yakima, WA"
+   ]
+  },
+  "central-oregon-high-desert-wui": {
+   "primary_hazard": "Ponderosa/juniper wildland-urban-interface wildfire, with groundwater decline as the slower structural risk",
+   "wildfire_risk": "high",
+   "flood_risk": "low",
+   "quake_risk": "low",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "crisis",
+   "water_risk": "high - the Deschutes Basin has been closed to new groundwater appropriation without mitigation credits since 2002, USGS documents regional water-table decline through the upper basin, and mitigation credits are a real and rising cost line on new rural construction",
+   "note": "Bend and Redmond. WILDFIRE is the defining hazard and Bend is consistently ranked among the highest-WUI-exposure metros in the West - the city has grown directly into a ponderosa and western-juniper fuel bed that historically burned on a short interval, and Deschutes County has adopted WUI code overlays and defensible-space requirements as a result. Smoke season is now a reliable multi-week annual event, from both local fires and Cascade fires to the west. INSURANCE is scored crisis, the clearest case in Oregon: Deschutes County homeowners are documented facing steep premium increases and non-renewals driven specifically by wildfire scoring, so treat a bindable quote as a contingency item rather than an afterthought - a parcel that cannot be insured cannot be financed. WATER is the second structural risk and unusual enough to flag explicitly: this is a groundwater-mitigation regime, not an open appropriation regime, and a rural lot's water status materially affects its value. QUAKE is low per the NSHM - no Cascadia or crustal exposure comparable to the west side - but note NEWBERRY VOLCANO, 20 miles south of Bend, is on the USGS very-high-threat list, and the Tumalo and Sisters fault zones are Holocene-active. Flood is low: 12 inches of precipitation and highly permeable volcanic soils confine riverine flood to a narrow Deschutes corridor. Hail and wind are low.",
+   "towns": [
+    "Bend, OR",
+    "Redmond, OR"
+   ]
+  }
+ }
+}

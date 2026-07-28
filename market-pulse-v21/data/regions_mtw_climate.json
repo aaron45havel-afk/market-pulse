@@ -1,0 +1,266 @@
+{
+ "_meta": {
+  "kind": "climate",
+  "market": "MTW",
+  "as_of": "2026-07",
+  "status": "researched",
+  "methodology": "SCOPE AND FRAME\nMountain West layer covering CO, UT, ID, MT, NM, AZ, NV, WY. Scored against THIS region's own distribution, not a national absolute. The California layer's axes (fog belt / wind corridor / inland heat) and the New England layer's axis (maritime moderation) do not apply and are not used. The Mountain West climate axis is ARIDITY + ALTITUDE + SUMMER HEAT, with wildfire smoke days treated as a first-class climate variable rather than a hazard footnote.\n\nTIER DEFINITION (in-region, relative)\n- temperate-highland (best-in-region): 4,500-6,100ft, July normal high 86-94F, low humidity, snow that clears in days rather than accumulating for months, AC needed but not life-critical. 6 subregions / 33 towns.\n- moderate: would score temperate-highland on temperature alone but is demoted by a non-temperature climate burden severe enough to change daily life - smoke burden (Truckee Meadows) or playa dust (Tooele Valley). 2 subregions / 3 towns.\n- harsh: BOTH arms of the regional exclusion. (a) extreme-heat low desert - Phoenix metro under 1,300ft with a 106.5F July normal and 54-70 days a year at 110F+, plus Tucson at 100F. (b) severe-winter high altitude - Bozeman at 4,820ft with 84-91in of snow, an 11-12F January normal low and ~8,000 heating degree days. 3 subregions / 14 towns. A screen that only excludes heat would silently pass Bozeman, which is why the tier is defined on both arms.\n\"harsh-interior\" was left unused: in this region the interior IS the whole region, so the label carries no information. All three used tiers are populated.\n\nCLIMATE VALUES\njan_low_f / jul_high_f / snow_in are NOAA NCEI 1991-2020 station normals at the primary metro station, rounded to whole degrees/inches, cross-checked against NWS forecast-office normals pages where published (NWS Pueblo for Colorado Springs: 86.5F / 18.5F / 32.5in; NWS PSR for Phoenix Sky Harbor: 106.5F July normal high; Boise Air Terminal 92.7F / 25.5F). Where the NCEI value is known to be biased, the note says so and gives both - Denver DIA's NCEI normal snowfall is 49.0in but NWS Boulder documents that single-daily-observation measurement under-counts and the true seasonal mean is nearer 56in, so 52 is carried with the discrepancy disclosed.\nelevation_ft is the subregion's population-weighted approximate centroid, not the airport station, with the internal spread stated in the note wherever it exceeds ~800ft (e.g. Brighton 4,981ft to Highlands Ranch 5,919ft in the Denver row).\nsmoke_days is a DIRECTIONAL 10-year mean (roughly 2015-2024) of days per year with measurable surface wildfire-smoke PM2.5 - not a regulatory \"unhealthy day\" count, which is a much smaller number. It is calibrated by ranking rather than by absolute precision, and the ranking is the load-bearing part: Truckee Meadows 42 (Reno recorded 188 smoke-affected days across 2013-2018 alone, and 6 of the 10 worst air days in northern Nevada history fall in the last 5 years) > Gallatin Valley 35 and Treasure Valley 32 (in MT/ID, wildfire smoke caused more than 3 of every 4 unhealthy air days 2020-2022) > Tooele 28 / Wasatch 26 / Northern Front Range 25 > Denver 22 / Middle Rio Grande 20 / Pikes Peak 18 >> Tucson 9 / Phoenix 6. Treat as ordinal.\nac_dependence is anchored to cooling degree days, not to peak temperature: low = AC optional (Colorado Springs, Bozeman); medium = needed on summer afternoons for 2-3 months, evaporative cooling still viable (Denver, Northern Front Range, Wasatch, Boise, ABQ, Reno, Tooele); high = continuous May-October and life-safety, refrigerated only (Phoenix, Tucson). This deliberately keeps Salt Lake at medium despite a 94F July normal - SLC cooling load is roughly a quarter of Phoenix's.\n\nSUBREGION PARTITIONS ARE DELIBERATELY DIFFERENT BETWEEN THE TWO LAYERS\n11 climate subregions, 14 hazard subregions. Climate splits on elevation and airshed; hazard splits on fault trace, WUI edge, and water provider - which do not follow the same lines. Examples: Dakota Ridge/Highlands Ranch/Pa",
+  "sources": [
+   "https://www.ncei.noaa.gov/access/us-climate-normals/ - NOAA NCEI U.S. Climate Normals 1991-2020 (primary source for all jan_low_f / jul_high_f / snow_in values)",
+   "https://weather.gov/pub/climateCosDailyNormalsRecords - NWS Pueblo, Colorado Springs 1991-2020 normals (July high 86.5F, Jan low 18.5F, snowfall 32.5in)",
+   "https://www.weather.gov/psr/19912020Normals - NWS Phoenix, 1991-2020 normals for Sky Harbor and Arizona stations (July normal high 106.5F)",
+   "https://www.weather.gov/bou/seasonalsnowfall - NWS Boulder, History of Snowfall Observations at Denver (NCEI 1991-2020 normal 49.0in; documented under-count, true seasonal mean nearer 56in)",
+   "https://www.weather.gov/twc/TucsonMonthlyNormalExtremes - NWS Tucson monthly normals and extremes",
+   "https://www.weather.gov/boi/Cliplot - NWS Boise climate graphs / normals (July high 92.7F, Jan low 25.5F)",
+   "https://www.weather.gov/bou/HighWinds12_30_2021 - NWS Boulder, High Winds and Marshall Fire, 30 December 2021 (70-100 mph foothills gusts)",
+   "https://www.climate.gov/news-features/event-tracker/wet-then-dry-extremes-contributed-devastating-marshall-fire-colorado - NOAA Climate.gov, wet-then-dry fuel conditions preceding the Marshall Fire",
+   "https://www.pbs.org/newshour/nation/phoenix-hit-110-degrees-on-54-days-in-2023-setting-another-heat-record - Phoenix 54 days at 110F+ in 2023 (prior record 53 in 2020)",
+   "https://www.bloomberg.com/news/articles/2024-09-05/phoenix-is-set-to-break-record-for-110f-days-weather-watch - Phoenix record 70 days at 110F+ in 2024",
+   "https://www.yourvalley.net/stories/phoenix-hits-record-118-degrees-but-there-is-good-news,598314 - Phoenix 118F record, July 2025; July normal high 107F",
+   "https://pubs.usgs.gov/fs/2016/3019/fs20163019.pdf - USGS Fact Sheet 2016-3019, Working Group on Utah Earthquake Probabilities: 43% chance of M6.75+ on the Wasatch Front in 50 years, 5.8% on the Salt Lake City segment, severe liquefaction projected in Salt Lake City and West Valley City",
+   "https://earthquakes.utah.gov/ - Utah Geological Survey / Utah Seismic Safety Commission, Wasatch Fault segments and 2020 M5.7 Magna earthquake",
+   "https://earthquake.usgs.gov/cfusion/external_grants/reports/G21AP10014.pdf - USGS external grant report, liquefaction susceptibility mapping in the Reno-Sparks urban area (Holocene Truckee floodplain deposits, high water table)",
+   "https://www.washoecounty.gov/em/Hazards/Earthquake.php - Washoe County Emergency Management, Reno-Sparks earthquake hazard",
+   "https://mbmg.mtech.edu/MontanaGeology/geohazards/earthquakes/seismicity.asp - Montana Bureau of Mines and Geology, Intermountain Seismic Belt seismicity",
+   "https://www.readygallatin.com/community-resources/preparedness-information/montana-is-earthquake-country/ - Gallatin County Emergency Management, earthquake and flood hazard in the Gallatin Valley",
+   "https://www.azwater.gov/phoenix-ama-groundwater-supply-updates - Arizona Department of Water Resources, Phoenix AMA groundwater supply updates and the June 2023 100-year assured-supply determination",
+   "https://morrisoninstitute.asu.edu/sites/default/files/kyl_center_phoenix_ama_groundwater_model_explainer_062023.pdf - ASU Kyl Center for Water Policy, Phoenix AMA groundwater model explainer (4.86 million acre-foot 100-year shortfall)",
+   "https://azcapitoltimes.com/news/2026/04/22/judge-rules-against-adwrs-water-based-restrictions-on-phoenix-housing-developments/ - Maricopa County Superior Court decision, 21 April 2026, vacating ADWR's 2023 groundwater subdivision restrictions",
+   "https://azmirror.com/briefs/judge-blocks-arizona-water-rule-that-halted-new-housing-developments-across-the-valley/ - Arizona Mirror, court blocks ADWR rule; Buckeye, Queen Creek and Goodyear impact",
+   "https://www.usbr.gov/ColoradoRiverBasin/post2026/index.html - US Bureau of Reclamation, Colorado River Post-2026 Operations (2007 Interim Guidelines and 2019 DCPs expiring end-2026; five alternatives)",
+   "https://www.cap-az.com/water/water-supply/colorado-river-operations-2/ - Central Arizona Project, Colorado River shortage tiers and Arizona's 320,000 AF reduction plus 192,000 AF DCP contribution",
+   "https://www.crc.nv.gov/more-information/drought-and-colorado-river-declared-shortage/ - Colorado River Commission of Nevada, declared shortage and Nevada's 13,000 AF / 8,000 AF reductions",
+   "https://www.western-water.com/2026/07/17/colorado-river-forecast-water-use-rising-in-2026/ - Colorado River forecast July 2026: Lake Mead ~1,041-1,042ft, ~27% of capacity; states missed the 14 Feb 2026 deadline",
+   "https://www.cpr.org/2026/02/11/hail-increase-homeowners-insurance-premiums-colorado/ - Colorado Public Radio on the 2026 Colorado Division of Insurance / Governor's office analysis: hail, not wildfire, is the number-one premium driver (26-54% of Front Range premium)",
+   "https://doi.colorado.gov/polis-primavera-administrations-landmark-reinsurance-program-to-save-coloradans-477-million-on - Colorado Division of Insurance, premium trends and state reinsurance program",
+   "https://governorsoffice.colorado.gov/governor/news/governor-polis-announces-roadmap-reduce-homeowners-insurance-saving-colorado-homeowners-money - Colorado Governor's office, roadmap to reduce homeowners insurance; premium increase figures",
+   "https://csuredi.org/redi_reports/homeowners-insurance-trends-in-colorado-implications-of-natural-hazard-dynamics/ - Colorado State University REDI, homeowners insurance trends and natural hazard dynamics in Colorado (57.9% premium increase 2018-2023)",
+   "https://www.accuweather.com/en/severe-weather/hail-causes-costliest-catastrophe-in-colorado-history/1166453 - 8 May 2017 Denver hailstorm: $2.3B insured, ~100,600 homeowner and ~167,000 auto claims",
+   "https://www.denver7.com/news/local-news/colorado-hail-season-what-you-need-to-know - Colorado hail season: 7-9 hail days/yr on the eastern plains, 3-4 catastrophic storms per season, CO second nationally in hail claims 2013-2015",
+   "https://bouldercounty.gov/disasters/wildfires/marshall/ - Boulder County, Marshall Fire recovery (1,091 structures destroyed, 97% residential)",
+   "https://www.cbsnews.com/colorado/news/marshall-fire-damage-estimate-2-billion/ - Marshall Fire damage estimate exceeding $2B, Colorado's most expensive wildfire",
+   "https://hazards.colorado.edu/quick-response-report/the-2021-marshall-fire - Natural Hazards Center, The 2021 Marshall Fire quick response report",
+   "https://geology.utah.gov/ - Utah Geological Survey, surface-fault-rupture special study zones and liquefaction mapping along the Wasatch Front",
+   "https://www.kpcw.org/state-regional/2025-12-18/state-releases-map-of-high-risk-wildfire-areas-assessed-new-fee - Utah releases official high-risk WUI maps under HB 48 (effective 1 Jan 2026), ~60,000 structures designated",
+   "https://beehiveinsurance.com/blog/2026/02/13/utahs-new-wildfire-maps-what-the-2026-changes-actually-mean-for-your-insurance/ - Utah HB 48 mechanics: mandatory state maps, 20% increase justification requirement, $20-100/yr mitigation fee 2026-27 shifting to triage-based in 2028",
+   "https://www.abc4.com/utah-weather/wildfire/wildfires-homeowners-insurance-costs-rising-utah/ - Utah wildfire-area premiums up ~38-40% 2018-2022; WUI non-renewals along the Wasatch Front",
+   "https://science.utah.edu/news/toxic-dust-hot-spots/ - University of Utah, toxic dust hot spots: arsenic, lead, cadmium in Great Salt Lake playa dust",
+   "https://www.usu.edu/today/story/new-research-toxins-from-great-salt-lake-dust-absorbed-by-plants-soils-human-bodies - Utah State University 2026 study: arsenic, uranium, lithium, antimony, beryllium uptake into leafy vegetables; not removed by washing",
+   "https://townlift.com/2026/07/whats-in-the-dust-great-salt-lake-plume-renews-concern-over-toxic-exposure-risks/ - 8 July 2026 dust plume, particulate ~4x the health limit; NASA study identifying Tooele and Salt Lake west side as highest exposure; ~800 sq mi exposed lakebed, ~15 large dust events/yr",
+   "https://www.healutah.org/gsl2026/ - HEAL Utah, Great Salt Lake 2026 level and exposed-lakebed update",
+   "https://www.kunr.org/2025-12-29/idaho-colorado-homeowners-insurance-wildfire-climate-change - Idaho homeowners insurance crisis: non-renewals 3,900 (2022) to 27,798 (2023)",
+   "https://valleylookout.com/2026/02/02/its-outrageous-thousands-of-idahoans-faced-with-canceled-homeowners-insurance-policies-spike-in-rates-over-wildfire-risk/ - Idaho statewide average premium $1,468 to $1,798 in one year; Boise Foothills and Garden Valley coverage loss",
+   "https://www.kivitv.com/news/local-news/in-your-neighborhood/boise-county/we-wont-insure-you-robie-creek-homeowners-struggle-to-get-home-insurance-due-to-wildfire-risks - Boise County ranked 87th nationally for non-renewal rate (US Senate Budget Committee); Robie Creek coverage refusals",
+   "https://sourcenm.com/2026/07/23/new-mexico-insurers-refused-to-renew-policies-for-record-number-of-homes-in-2025-official-says/ - New Mexico record 6,200+ non-renewals in 2025, nearly triple 2021; Rio Arriba, Taos, Sandoval, Santa Fe flagged",
+   "https://www.osi.state.nm.us/en/news/pr-2025-07-14/ - New Mexico Office of Superintendent of Insurance, NM FAIR Plan and wildfire mitigation program",
+   "https://sourcenm.com/2025/11/20/nm-insurance-superintendent-asks-for-extension-of-nations-largest-wildfire-mitigation-program/ - New Mexico $10M wildfire mitigation grant program",
+   "https://www.fema.gov/hermits-peak - FEMA Hermit's Peak/Calf Canyon Claims Office (2022 fire, 341,000+ acres, largest in New Mexico history)",
+   "https://extension.arizona.edu/sites/default/files/2025-10/az2170-2025-10-20-25-2.pdf - University of Arizona Cooperative Extension az2170 (Oct 2025): Maricopa County non-renewal 0.6-1.2%, Pima 0.6-1.3%, Navajo 4.8% in 2022",
+   "https://difi.az.gov/consumers/homeowners-insurance - Arizona Department of Insurance and Financial Institutions, homeowners insurance consumer information",
+   "https://climatecheck.com/nevada/reno - Reno wildfire exposure: ~74% of buildings at high wildfire risk",
+   "https://www.newtoreno.com/disaster-preparedness-reno-nevada.htm - Reno-Sparks flood history including the January 1997 Truckee River flood",
+   "https://iopscience.iop.org/article/10.1088/1748-9326/ac9a5d - Environmental Research Letters: wildfire activity driving summertime air quality degradation across the western US, model-based attribution to smoke source regions",
+   "https://pubs.acs.org/doi/abs/10.1021/acs.est.2c02934 - Childs et al., Environmental Science & Technology: daily local-level estimates of ambient wildfire smoke PM2.5 for the contiguous US (basis for smoke_days ranking)",
+   "https://news.agu.org/press-release/smokiest-cities-in-america/ - AGU, smokiest cities in America; smoke share of unhealthy air days by state (>3 of 4 unhealthy days in ID and MT, 2020-2022)",
+   "https://www.lung.org/getmedia/32f0646d-c5de-4501-b0ac-07cd63c974d4/State-of-the-Air-2026-Report.pdf - American Lung Association State of the Air 2026: Phoenix 4th, Denver 8th, Salt Lake City 13th, Fort Collins 18th, Albuquerque 19th, Boise 24th for ozone",
+   "https://www.upr.org/environment/2026-05-07/salt-lake-city-ozone-pollution-air-quality - Salt Lake City air quality: winter inversions, summer ozone, wildfire smoke",
+   "https://statesummaries.ncics.org/chapter/id/ - NOAA NCICS Idaho State Climate Summary 2022",
+   "https://www.weather.gov/pub/climate19912020upatedclimatenormals - NWS Pueblo, updated 1991-2020 climate normals for southern Colorado"
+  ]
+ },
+ "table": {
+  "denver-metro-front-range": {
+   "tier": "temperate-highland",
+   "elevation_ft": 5400,
+   "jan_low_f": 18,
+   "jul_high_f": 90,
+   "snow_in": 52,
+   "humidity_note": "Semi-arid steppe (Koppen BSk). July afternoon RH typically 20-30%, July mean dewpoint ~52F. A 90F day here is not a 90F day in Dallas: nights fall to the upper 50s/low 60s, so the house sheds heat overnight and evaporative cooling still works. Costs of the aridity are static, cracked trim, split wood floors, and a 300+ day irrigation obligation.",
+   "smoke_days": 22,
+   "ac_dependence": "medium",
+   "note": "The reference point for the whole layer. 5,280ft is worth roughly 20F off Phoenix in July at the same latitude band, and it is why the Front Range is the region's comfort core. NOAA 1991-2020 at DEN: July normal high 90.3F, January normal low ~18F, NCEI normal snowfall 49.0in (NWS Boulder notes the single-daily-observation method under-counts and the true seasonal mean is nearer 56in, so 52 is used). Roughly 245 sunny days. Real weaknesses: violent spring transition (heavy wet March/April snow is the snow-load month, not January), 100F stretches that now occur most summers (Denver's all-time high 105F), and upslope trapping of regional wildfire smoke in August. Snow melts within days on south-facing pavement, so this is not a Bozeman-style winter burden. Elevation range within the subregion is real: Brighton 4,981ft to Highlands Ranch 5,919ft, a ~3F July spread.",
+   "towns": [
+    "Denver, CO",
+    "Aurora, CO",
+    "Thornton, CO",
+    "Brighton, CO",
+    "Broomfield, CO",
+    "Centennial, CO",
+    "Littleton, CO",
+    "Highlands Ranch, CO",
+    "Parker, CO",
+    "Dakota Ridge, CO"
+   ]
+  },
+  "northern-front-range": {
+   "tier": "temperate-highland",
+   "elevation_ft": 4850,
+   "jan_low_f": 16,
+   "jul_high_f": 89,
+   "snow_in": 46,
+   "humidity_note": "Same BSk steppe as Denver but slightly drier and windier. Chinook downslope winds through the Poudre and Big Thompson canyon mouths produce 30-60F single-day temperature swings in winter and 70-100mph gusts along the foothills edge a few times a year. Summer dewpoints run 48-54F.",
+   "smoke_days": 25,
+   "ac_dependence": "medium",
+   "note": "Slightly cooler and snowier than Denver on the Fort Collins/Loveland side (5,003ft / 4,982ft), slightly hotter and drier on the Greeley/Windsor plains side (4,675ft / 4,793ft) - Greeley runs ~2-3F above Fort Collins in July. Smoke is measurably worse than Denver because the Cache la Poudre and Big Thompson drainages funnel smoke out of the Larimer County high country: the 2020 Cameron Peak Fire (208,913 acres, the largest in Colorado history) sat directly upwind for two months and Fort Collins ranks 18th nationally for ozone. Winters are colder than Denver by ~2F on lows with more consecutive sub-freezing days, because the Cheyenne Ridge lets Arctic air spill south.",
+   "towns": [
+    "Fort Collins, CO",
+    "Loveland, CO",
+    "Greeley, CO",
+    "Windsor, CO"
+   ]
+  },
+  "pikes-peak-front-range": {
+   "tier": "temperate-highland",
+   "elevation_ft": 6035,
+   "jan_low_f": 19,
+   "jul_high_f": 86,
+   "snow_in": 33,
+   "humidity_note": "Driest-feeling summer of the Colorado subregions and the coolest. 6,035ft plus proximity to the Rampart Range means daily afternoon convection in July/August that caps the high and drops temperatures 15-20F in twenty minutes. July dewpoints ~52F during the monsoon push, under 40F otherwise.",
+   "smoke_days": 18,
+   "ac_dependence": "low",
+   "note": "The single best summer climate in this 50-town set, and it is a straight elevation dividend: NWS Pueblo 1991-2020 normals for Colorado Springs are July high 86.5F, January low 18.5F, annual snowfall 32.5in. Nearly 4F cooler in July than Denver and 20F cooler than Phoenix, on 20in less snow than Denver because storms track north of the Palmer Divide as often as over it. AC is genuinely optional in shaded, well-oriented construction - the only subregion here where that is true alongside Bozeman. Caveat that belongs on the climate side: this comfort is bought at a hazard price, see the wildfire layer.",
+   "towns": [
+    "Colorado Springs, CO"
+   ]
+  },
+  "wasatch-front-valleys": {
+   "tier": "temperate-highland",
+   "elevation_ft": 4500,
+   "jan_low_f": 24,
+   "jul_high_f": 94,
+   "snow_in": 51,
+   "humidity_note": "Very dry in summer (July afternoon RH 15-25%), which makes 94F tolerable and lets evaporative cooling carry much of the load. The airshed, not the humidity, is the problem: the Salt Lake, Utah, and Davis basins are closed bowls that trap PM2.5 under winter temperature inversions for 3-10 day stretches (Dec-Feb), stack summer ozone (SLC ranks 13th nationally), and now receive arsenic-bearing dust off the exposed Great Salt Lake playa.",
+   "smoke_days": 26,
+   "ac_dependence": "medium",
+   "note": "NOAA 1991-2020 at SLC: July normal high ~94F (late-July peak near 96F), January normal low ~24F, snowfall ~49-54in depending on siting. Hotter in July than Denver by 4F and than Colorado Springs by 8F, but the winters are milder and shorter. Elevation and aspect matter a lot inside this subregion: valley-floor towns (West Valley City 4,285ft, Kearns 4,340ft) sit at the bottom of the inversion column, while bench towns (Cottonwood Heights ~4,800ft, Herriman ~5,000ft, Bountiful ~4,800ft) sit above the worst of it, run 2-3F cooler in summer, and pick up 60-75in of snow from orographic and lake-effect enhancement versus ~50in on the floor. If air quality is a household priority, buy elevation on the bench, not the floor. Summers are lengthening - Salt Lake has recorded 107F.",
+   "towns": [
+    "Lehi, UT",
+    "American Fork, UT",
+    "Herriman, UT",
+    "Riverton, UT",
+    "South Jordan, UT",
+    "West Jordan, UT",
+    "West Valley City, UT",
+    "Kearns, UT",
+    "Cottonwood Heights, UT",
+    "Bountiful, UT",
+    "Layton, UT",
+    "Kaysville, UT"
+   ]
+  },
+  "tooele-valley": {
+   "tier": "moderate",
+   "elevation_ft": 5050,
+   "jan_low_f": 22,
+   "jul_high_f": 92,
+   "snow_in": 45,
+   "humidity_note": "Marginally drier and less inversion-prone than the Salt Lake Valley because it is a wider, better-ventilated basin with no lake-effect. The demotion is entirely dust: Tooele Valley lies directly downwind of the largest exposed sections of the Great Salt Lake and Great Salt Lake Desert playa, and a 2026 NASA / University of Utah exposure study identifies Tooele plus the Salt Lake Valley west side as the highest-risk populations in the state for playa dust.",
+   "smoke_days": 28,
+   "ac_dependence": "medium",
+   "note": "On temperature alone Tooele would score temperate-highland - it is 2F cooler than Salt Lake in July, 2F colder in January, and slightly less snowy. It is tiered moderate because the airshed is the worst-trending one in the Mountain West on a hazard basis that is not yet priced into anything. Roughly 800 square miles of former lakebed is exposed and generates about 15 large dust events per year, and the July 8 (2026) event pushed valley particulate to about four times the health limit. A household screening on air quality should treat Tooele as a materially worse buy than a Wasatch bench address at the same price.",
+   "towns": [
+    "Tooele, UT"
+   ]
+  },
+  "treasure-valley": {
+   "tier": "temperate-highland",
+   "elevation_ft": 2600,
+   "jan_low_f": 25,
+   "jul_high_f": 93,
+   "snow_in": 18,
+   "humidity_note": "High-desert dry (Boise annual precipitation ~11.7in), July afternoon RH 15-25%, dewpoints in the 40s. The mildest winter of the temperate-highland band because 2,600ft is 2,000-3,400ft lower than the Front Range or Wasatch - snow rarely persists more than a few days on the valley floor. The offsetting negative is smoke: the Treasure Valley sits in a bowl at the confluence of the Boise, Payette, and Owyhee fire regimes.",
+   "smoke_days": 32,
+   "ac_dependence": "medium",
+   "note": "NOAA 1991-2020 at Boise Air Terminal: July normal high 92.7F, January normal low 25.5F, annual snowfall ~18-19in. This is the lowest winter burden and the lowest elevation in the temperate-highland tier, which is exactly why Boise/Meridian have been the region's fastest-growing housing market - you get near-Front-Range summers without Front-Range snow removal. The honest cost is smoke: Stanford/Childs work and state DEQ records show that between 2020 and 2022 wildfire smoke caused more than three of every four unhealthy air days in Idaho, and Aug-Sep is now a reliably degraded month. Valley-floor towns (Caldwell 2,369ft, Nampa 2,493ft) run 1-2F warmer and get a bit less snow than Boise (2,730ft).",
+   "towns": [
+    "Boise, ID",
+    "Meridian, ID",
+    "Nampa, ID",
+    "Caldwell, ID"
+   ]
+  },
+  "middle-rio-grande-valley": {
+   "tier": "temperate-highland",
+   "elevation_ft": 5300,
+   "jan_low_f": 26,
+   "jul_high_f": 92,
+   "snow_in": 10,
+   "humidity_note": "The driest comfortable climate in the set and the best aridity-per-dollar trade here. Spring RH regularly falls into single digits; annual precipitation is ~9-10in. Then the North American Monsoon lifts dewpoints to ~55F from early July through mid-September, delivering roughly half the year's moisture in eight weeks of late-afternoon storms - the only genuinely humid stretch, and it is mild. This is the swamp-cooler capital of the United States for a reason: evaporative cooling works nine months a year and costs a fraction of refrigerated air.",
+   "smoke_days": 20,
+   "ac_dependence": "medium",
+   "note": "Albuquerque (5,312ft) and Rio Rancho (5,290ft) run July normal highs of ~92F with January lows near 26F and only ~10in of snow - warmer winters than Denver, warmer summers than Colorado Springs, and a third of the snow of either. It is the mildest-winter high-elevation option in the layer. Elevation stratifies sharply within the metro: the Northeast Heights and Rio Rancho mesa sit 500-1,000ft above the Rio Grande valley floor and run measurably cooler at night. Sun is relentless (~280 clear days), which is a UV/roofing/exterior-finish cost, not a comfort cost. Do not confuse this subregion with the East Mountains (Tijeras, Cedar Crest), which are a different climate and a much worse hazard bucket.",
+   "towns": [
+    "Albuquerque, NM",
+    "Rio Rancho, NM"
+   ]
+  },
+  "truckee-meadows": {
+   "tier": "moderate",
+   "elevation_ft": 4470,
+   "jan_low_f": 22,
+   "jul_high_f": 93,
+   "snow_in": 21,
+   "humidity_note": "The driest metro in the layer, full stop. Sitting in the direct rain shadow of the Sierra Nevada, Reno records annual precipitation around 7in, summer afternoon RH routinely under 15%, and dewpoints in the 30s. Diurnal swings of 35-40F are normal in summer - 93F afternoons and 53F nights, so the house cools itself every night. Superb for comfort, hard on wood, stucco, irrigation, and sinuses.",
+   "smoke_days": 42,
+   "ac_dependence": "medium",
+   "note": "Tiered moderate rather than temperate-highland, and the demotion is smoke, not temperature. On thermometer alone Reno/Sparks would sit alongside Boise. But the Truckee Meadows is immediately downwind of the northern Sierra and northern California fire complexes: air quality in Reno was affected by wildfire smoke on 188 days between 2013 and 2018, more than 100 separate fires impacted the metro across a 19-month window, and six of the ten worst air-quality days in northern Nevada history have occurred in the last five years - all smoke. That is a July-October quality-of-life tax that is materially worse than anywhere else in this layer. Secondary demotion: at 4,470ft with those diurnal swings, Reno logs one of the highest freeze-thaw cycle counts in the region, which is a real maintenance cost on driveways, stucco, and roofing.",
+   "towns": [
+    "Reno, NV",
+    "Sparks, NV"
+   ]
+  },
+  "phoenix-low-desert": {
+   "tier": "harsh",
+   "elevation_ft": 1120,
+   "jan_low_f": 46,
+   "jul_high_f": 107,
+   "snow_in": 0,
+   "humidity_note": "True hot desert (Koppen BWh). November through March is genuinely superb - 70F, 15-25% RH, the best winter climate in the United States, and the entire reason the metro exists. Then the 'but it's a dry heat' defense fails exactly when it is needed: the monsoon (Jul-Sep) pushes dewpoints to 55-65F on top of 105-115F air, producing the worst heat-index conditions of the year. Urban heat island has pushed overnight lows above 90F on a growing number of nights, meaning the built environment never sheds its heat load.",
+   "smoke_days": 6,
+   "ac_dependence": "high",
+   "note": "THIS IS THE REGION'S INLAND-HEAT EXCLUSION - the Mountain West analogue of the California layer's inland-heat screen. NOAA 1991-2020 at Sky Harbor: July normal high 106.5F. Recent observed: 2023 recorded 54 days at or above 110F including 31 consecutive; 2024 broke it with 70 days at or above 110F; July 2025 hit 118F. That is not an outlier tail, it is the new central tendency. At 1,013-1,257ft this subregion is roughly 4,200ft below Denver, which is essentially the entire 20F+ July difference. Air conditioning here is life-safety infrastructure, not comfort - a multi-day summer grid outage is a mass-casualty scenario, and Maricopa County has recorded 600+ heat-associated deaths annually in recent years. Budget $250-450/month in cooling June-September, plan on ~15-year shingle life and ~12-year HVAC life from UV and 110F operating temperatures, and understand that the outdoor half of the property is unusable for four months a year. Zero snow, zero heating burden, and a spectacular winter are the genuine offsets - they do not clear a strict screen.",
+   "towns": [
+    "Phoenix, AZ",
+    "Mesa, AZ",
+    "Chandler, AZ",
+    "Gilbert, AZ",
+    "Tempe, AZ",
+    "Scottsdale, AZ",
+    "Glendale, AZ",
+    "Peoria, AZ",
+    "Goodyear, AZ",
+    "Surprise, AZ",
+    "Avondale, AZ",
+    "Tolleson, AZ"
+   ]
+  },
+  "tucson-basin": {
+   "tier": "harsh",
+   "elevation_ft": 2389,
+   "jan_low_f": 42,
+   "jul_high_f": 100,
+   "snow_in": 1,
+   "humidity_note": "Same BWh desert as Phoenix but with the strongest monsoon signal in the layer - roughly half of Tucson's ~12in annual precipitation falls July-September, with real dewpoints near 60F, dramatic storms, and a visible green-up. Winter is superb and slightly cooler than Phoenix. Occasional trace-to-1in snow on the valley floor.",
+   "smoke_days": 9,
+   "ac_dependence": "high",
+   "note": "Tucson is 1,300ft higher than Phoenix and that elevation buys real relief: July normal high ~100F against Phoenix's 106.5F, and much better nights (July normal low ~75F versus Phoenix's ~84F), because the basin is less paved and radiates better. It is the most livable of the low-desert options. It still scores harsh: based on 1991-2020 normals, roughly half the days in June and July reach 100F+, and 100F+ weather is normal from May through September. AC dependence remains high - this is a five-month cooling season, not a three-month one. Included in the exclusion set on a strict screen, with the note that the margin over Phoenix is genuine and Tucson's water position is far better.",
+   "towns": [
+    "Tucson, AZ"
+   ]
+  },
+  "gallatin-valley": {
+   "tier": "harsh",
+   "elevation_ft": 4820,
+   "jan_low_f": 12,
+   "jul_high_f": 84,
+   "snow_in": 86,
+   "humidity_note": "Dry continental, not maritime - annual precipitation ~19in but it arrives as snow. Summers are objectively the most comfortable in the entire 50-town set: July highs near 84F, nights in the low 50s, RH low, and essentially no cooling load. The penalty is entirely on the winter side, and it is severe. Cold-season inversions in the Gallatin Valley also trap woodsmoke and, increasingly, late-summer wildfire smoke out of the Gallatin and Yellowstone country.",
+   "smoke_days": 35,
+   "ac_dependence": "low",
+   "note": "THIS IS THE SEVERE-WINTER-AT-ALTITUDE ARM OF THE EXCLUSION - Bozeman is harsh for the opposite reason to Phoenix, and a screen that only excludes heat would silently pass it. January normal high ~29F and normal low ~11-12F, with -20F to -30F Arctic outbreaks most winters. Snowfall runs 84-91in per year across 120+ days with measurable snow, roughly 1.7x Denver on nearly 2.5x the snow-days. Heating degree days are on the order of 8,000, about 30% above Denver. Practical consequences a buyer must underwrite: engineered snow-load roof spec and ice-dam detailing, freeze-protected plumbing and heat tape, a 6-7 month heating season, mandatory winter tires, and a shoulder-season that arrives in October and does not leave until May. Beautiful and increasingly expensive; not a low-friction climate.",
+   "towns": [
+    "Bozeman, MT"
+   ]
+  }
+ }
+}

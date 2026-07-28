@@ -2,7 +2,7 @@
  "_meta": {
   "item": "crime",
   "as_of": "2026-07",
-  "status": "partial \u2014 IN mid-size + NE batches 1-2 + CA batch; NE batch 3 blocked by WebSearch quota",
+  "status": "partial \u2014 IN + NE + CA hand-researched; MTW/SE/MW/PNW from batch research (b3/b5 blocked by web-search quota; b1 aggregator-sourced and capped at medium confidence after its fact-checker found the internal-consistency evidence circular). FBI CDE auto-refresh Action will replace aggregator rows with agency records once CDE_API_KEY is set.",
   "us_violent_2024": 359.1,
   "us_property_2024": 1760.1,
   "benchmark_source": "FBI Crime in the Nation 2024 (rel. Aug/Sep 2025), cross-checked BJS + USAFacts",
@@ -93,6 +93,36 @@
     "corrections": 3,
     "suspect": 0,
     "verdict": "accurate_with_corrections"
+   },
+   "b1": {
+    "cities": 40,
+    "usable": 18,
+    "verdict": "unreliable",
+    "suspect": 22
+   },
+   "b2": {
+    "cities": 40,
+    "usable": 36,
+    "verdict": "accurate_with_corrections",
+    "suspect": 2
+   },
+   "b3": {
+    "cities": 40,
+    "usable": 0,
+    "verdict": null,
+    "suspect": 40
+   },
+   "b4": {
+    "cities": 40,
+    "usable": 33,
+    "verdict": null,
+    "suspect": 2
+   },
+   "b5": {
+    "cities": 40,
+    "usable": 0,
+    "verdict": null,
+    "suspect": 40
    }
   }
  },
@@ -1809,6 +1839,2006 @@
    "confidence": "high",
    "note": "Milpitas PD. Violent below US average; property well above, partly the Great Mall regional retail draw.",
    "batch": "ca1"
+  },
+  "Lehi, UT": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "none",
+   "confidence": "suspect",
+   "note": "Not resolved. Searches returned four mutually contradictory figures from low-quality aggregators (10/100k, 45.2/100k described as a 2019-2024 average, 88.2/100k, and a 629.3/100k 'total crime rate'). None could be reconciled or tied to a specific FBI agency submission, so no number is reported. Lehi PD is a real reporting agency; retry against Utah BCI 'Crime in Utah' or FBI CDE agency UT0250100.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Albuquerque, NM": {
+   "violent_per_100k": 1182.1,
+   "property_per_100k": 4628.8,
+   "year": 2024,
+   "source": "FBI 2024 UCR via aggregator compilations - NOT confirmed against FBI CDE or a state UCR portal",
+   "confidence": "medium",
+   "note": "DOWNGRADED high->medium. Source class is SEO crime aggregators (opencrime.us/plaincrime.com/crimebycity.com/areavibes/doorprofit), not an FBI CDE agency record or a state UCR portal. No row in this batch was ever checked against a primary FBI CDE agency record or state UCR portal, so 'high' overstates what was established. The batch's own notes show this source class emitting arithmetically impossible values elsewhere (Tempe property 262 per 100k, below its violent rate). The supporting evidence used - offence counts reconciling with the published rate and population - is circular: an aggregator that computes rate=count/pop always reconciles, including when the underlying count is an incomplete agency submission. That check cannot detect the one failure mode that matters here. The values are plausible against each city's history and are probably broadly right, but they are unconfirmed.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Parker, CO": {
+   "violent_per_100k": 209.1,
+   "property_per_100k": 1647.7,
+   "year": 2024,
+   "source": "areavibes/doorprofit compilations (unverified)",
+   "confidence": "low",
+   "note": "DOWNGRADED medium->low. Property is not a published figure - it is 1,856.8 total minus 209.1 violent. An aggregator 'total crime rate' is not a defined FBI quantity and need not equal violent+property, so the subtraction may be invalid. The 'components sum exactly' check is tautological here. Also 134 violent offenses runs ABOVE Parker's historical level, so the error direction is unclear and could unfairly penalise a low-crime town.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Aurora, CO": {
+   "violent_per_100k": 947.8,
+   "property_per_100k": 3103.9,
+   "year": 2024,
+   "source": "FBI 2024 UCR via aggregator compilations - NOT confirmed against FBI CDE or a state UCR portal",
+   "confidence": "medium",
+   "note": "DOWNGRADED high->medium. Source class is SEO crime aggregators (opencrime.us/plaincrime.com/crimebycity.com/areavibes/doorprofit), not an FBI CDE agency record or a state UCR portal. No row in this batch was ever checked against a primary FBI CDE agency record or state UCR portal, so 'high' overstates what was established. The batch's own notes show this source class emitting arithmetically impossible values elsewhere (Tempe property 262 per 100k, below its violent rate). The supporting evidence used - offence counts reconciling with the published rate and population - is circular: an aggregator that computes rate=count/pop always reconciles, including when the underlying count is an incomplete agency submission. That check cannot detect the one failure mode that matters here. The values are plausible against each city's history and are probably broadly right, but they are unconfirmed.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Chandler, AZ": {
+   "violent_per_100k": 133.4,
+   "property_per_100k": null,
+   "year": 2024,
+   "source": "PlainCrime citing FBI UCR 2024 (unverified against primary)",
+   "confidence": "suspect",
+   "note": "CONFIDENCE RAISED medium->suspect on the violent figure. 133.4 per 100k on a claimed 23.1% one-year drop would put Chandler at roughly Gilbert's level, materially below Chandler's longer-run violent range, and 2 murders in a ~281k city is at the very bottom of its historical spread. The two corroborating hits are aggregators that likely share one upstream scrape, so they are not independent. Dangerous direction (a wrongly-LOW 'safe' signal). Property correctly left null.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Centennial, CO": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "none - retry against Colorado CBI coloradocrimestats portal",
+   "confidence": "suspect",
+   "note": "CHARACTERISATION CORRECTED (value stays null). Centennial is an INCORPORATED home-rule city (incorporated 2001), not a CDP or unincorporated place, so grouping it with Dakota Ridge under Rule 6 is wrong. Contracting patrol from the Arapahoe County Sheriff's Office does not mean no city-level figure exists - contract cities are commonly broken out under their own UCR jurisdiction/ORI, and Colorado's CBI portal generally reports Centennial separately. The note as written tells a family 'no municipal police agency, county-only, unattributable', which likely understates what is retrievable. Correct action is RETRY, not a standing null. Declining to pass off the ACSO county rate as a city rate was right.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Meridian, ID": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "none",
+   "confidence": "suspect",
+   "note": "Not researched - session web-search budget (200/200) exhausted before reaching Idaho. Meridian PD is a real reporting agency; retry via Idaho State Police 'Crime in Idaho' or FBI CDE.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Herriman, UT": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "none",
+   "confidence": "suspect",
+   "note": "Not researched - search budget exhausted. Herriman stood up its own municipal police department (est. 2019-2020) after leaving the Unified Police Department, so agency-level data should exist but was not retrieved. Verify against Utah BCI.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Phoenix, AZ": {
+   "violent_per_100k": 800.0,
+   "property_per_100k": 2325.3,
+   "year": 2024,
+   "source": "FBI 2024 UCR via aggregator compilations - NOT confirmed against FBI CDE or a state UCR portal",
+   "confidence": "medium",
+   "note": "DOWNGRADED high->medium. Source class is SEO crime aggregators (opencrime.us/plaincrime.com/crimebycity.com/areavibes/doorprofit), not an FBI CDE agency record or a state UCR portal. No row in this batch was ever checked against a primary FBI CDE agency record or state UCR portal, so 'high' overstates what was established. The batch's own notes show this source class emitting arithmetically impossible values elsewhere (Tempe property 262 per 100k, below its violent rate). The supporting evidence used - offence counts reconciling with the published rate and population - is circular: an aggregator that computes rate=count/pop always reconciles, including when the underlying count is an incomplete agency submission. That check cannot detect the one failure mode that matters here. The values are plausible against each city's history and are probably broadly right, but they are unconfirmed.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Tempe, AZ": {
+   "violent_per_100k": 470.0,
+   "property_per_100k": 2894.0,
+   "year": 2024,
+   "source": "FBI 2024 UCR via aggregator compilations (areavibes/DoorProfit)",
+   "confidence": "suspect",
+   "note": "SUSPECT - possible incomplete agency submission. The arithmetic is internally consistent (900 violent, 5,538 property, population ~191,500), but 900 violent offenses is far below Tempe's longer-run level (roughly 1,300-1,500/yr, rates near 700-800/100k). A ~36% two-year drop is larger than plausible and looks like a partial submission. Treat 470.0 as a FLOOR, not a true rate. Either way Tempe is above both US benchmarks.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Glendale, AZ": {
+   "violent_per_100k": 488.0,
+   "property_per_100k": 2671.0,
+   "year": 2024,
+   "source": "FBI 2024 UCR via aggregator compilations - NOT confirmed against FBI CDE or a state UCR portal",
+   "confidence": "medium",
+   "note": "DOWNGRADED high->medium. Source class is SEO crime aggregators (opencrime.us/plaincrime.com/crimebycity.com/areavibes/doorprofit), not an FBI CDE agency record or a state UCR portal. No row in this batch was ever checked against a primary FBI CDE agency record or state UCR portal, so 'high' overstates what was established. The batch's own notes show this source class emitting arithmetically impossible values elsewhere (Tempe property 262 per 100k, below its violent rate). The supporting evidence used - offence counts reconciling with the published rate and population - is circular: an aggregator that computes rate=count/pop always reconciles, including when the underlying count is an incomplete agency submission. That check cannot detect the one failure mode that matters here. The values are plausible against each city's history and are probably broadly right, but they are unconfirmed.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Mesa, AZ": {
+   "violent_per_100k": 482.7,
+   "property_per_100k": 1464.6,
+   "year": 2024,
+   "source": "FBI 2024 UCR via aggregator compilations; property figure corroborated by Mesa PD numbers reported in the Mesa Tribune / East Valley Tribune",
+   "confidence": "medium",
+   "note": "2,479 violent and 7,522 property offenses over population ~513k. Property cross-checks against Mesa PD's own 2024 reporting (larceny 5,562, motor vehicle theft 1,020, plus burglary), so the low property rate appears genuine rather than a partial submission. Violent is ~1.3x the US benchmark; property is below the US benchmark.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Denver, CO": {
+   "violent_per_100k": 993.0,
+   "property_per_100k": 4761.6,
+   "year": 2024,
+   "source": "FBI 2024 UCR via aggregator compilations - NOT confirmed against FBI CDE or a state UCR portal",
+   "confidence": "medium",
+   "note": "DOWNGRADED high->medium. Source class is SEO crime aggregators (opencrime.us/plaincrime.com/crimebycity.com/areavibes/doorprofit), not an FBI CDE agency record or a state UCR portal. No row in this batch was ever checked against a primary FBI CDE agency record or state UCR portal, so 'high' overstates what was established. The batch's own notes show this source class emitting arithmetically impossible values elsewhere (Tempe property 262 per 100k, below its violent rate). The supporting evidence used - offence counts reconciling with the published rate and population - is circular: an aggregator that computes rate=count/pop always reconciles, including when the underlying count is an incomplete agency submission. That check cannot detect the one failure mode that matters here. The values are plausible against each city's history and are probably broadly right, but they are unconfirmed.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Greeley, CO": {
+   "violent_per_100k": 670.7,
+   "property_per_100k": 3019.6,
+   "year": 2024,
+   "source": "FBI 2024 UCR via aggregator compilations - NOT confirmed against FBI CDE or a state UCR portal",
+   "confidence": "medium",
+   "note": "DOWNGRADED high->medium. Source class is SEO crime aggregators (opencrime.us/plaincrime.com/crimebycity.com/areavibes/doorprofit), not an FBI CDE agency record or a state UCR portal. No row in this batch was ever checked against a primary FBI CDE agency record or state UCR portal, so 'high' overstates what was established. The batch's own notes show this source class emitting arithmetically impossible values elsewhere (Tempe property 262 per 100k, below its violent rate). The supporting evidence used - offence counts reconciling with the published rate and population - is circular: an aggregator that computes rate=count/pop always reconciles, including when the underlying count is an incomplete agency submission. That check cannot detect the one failure mode that matters here. The values are plausible against each city's history and are probably broadly right, but they are unconfirmed.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Peoria, AZ": {
+   "violent_per_100k": 254.7,
+   "property_per_100k": 1205.1,
+   "year": 2024,
+   "source": "FBI 2024 UCR via aggregator compilations of FBI data",
+   "confidence": "medium",
+   "note": "512 violent and 2,423 property offenses over population ~201,000; arithmetic consistent. Both rates below US benchmarks. Single-source, hence medium.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Goodyear, AZ": {
+   "violent_per_100k": 182.2,
+   "property_per_100k": 1462.9,
+   "year": 2024,
+   "source": "aggregator compilations (unverified)",
+   "confidence": "low",
+   "note": "DOWNGRADED medium->low. Violent is derived as 1,645.1 total minus 1,462.9 property - same invalid-subtraction problem as Parker. Only the property figure has any independent basis. Goodyear is also one of the fastest-growing cities in the batch, so the population denominator is unusually uncertain.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Boise, ID": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "none",
+   "confidence": "suspect",
+   "note": "Not researched - session web-search budget exhausted before reaching Idaho. Boise PD is a real reporting agency; retry via Idaho State Police 'Crime in Idaho' or FBI CDE.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Tucson, AZ": {
+   "violent_per_100k": 589.7,
+   "property_per_100k": 3313.1,
+   "year": 2024,
+   "source": "FBI 2024 UCR via aggregator compilations - NOT confirmed against FBI CDE or a state UCR portal",
+   "confidence": "medium",
+   "note": "DOWNGRADED high->medium. Source class is SEO crime aggregators (opencrime.us/plaincrime.com/crimebycity.com/areavibes/doorprofit), not an FBI CDE agency record or a state UCR portal. No row in this batch was ever checked against a primary FBI CDE agency record or state UCR portal, so 'high' overstates what was established. The batch's own notes show this source class emitting arithmetically impossible values elsewhere (Tempe property 262 per 100k, below its violent rate). The supporting evidence used - offence counts reconciling with the published rate and population - is circular: an aggregator that computes rate=count/pop always reconciles, including when the underlying count is an incomplete agency submission. That check cannot detect the one failure mode that matters here. The values are plausible against each city's history and are probably broadly right, but they are unconfirmed.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Rio Rancho, NM": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "none",
+   "confidence": "suspect",
+   "note": "Not researched - search budget exhausted. Rio Rancho has its own municipal police department, so agency-level FBI data should exist. Retry via FBI CDE or NM DPS.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Nampa, ID": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "none",
+   "confidence": "suspect",
+   "note": "Not researched - search budget exhausted. Nampa PD is a real reporting agency; retry via Idaho State Police 'Crime in Idaho'.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Thornton, CO": {
+   "violent_per_100k": 273.6,
+   "property_per_100k": 2835.8,
+   "year": 2024,
+   "source": "FBI 2024 UCR via aggregator compilations of FBI data",
+   "confidence": "medium",
+   "note": "Internally consistent: 4,535 total offenses of which 4,136 property and 399 violent, over population ~145,850. Violent below the US benchmark; property ~1.6x it. Violent down 1% and property down 5% YoY.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Tooele, UT": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "none",
+   "confidence": "suspect",
+   "note": "Not researched - search budget exhausted. Tooele City PD is a real reporting agency; retry via Utah BCI 'Crime in Utah' or FBI CDE.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Fort Collins, CO": {
+   "violent_per_100k": 273.9,
+   "property_per_100k": 2155.3,
+   "year": 2024,
+   "source": "CrimeByCity (crimebycity.com) citing FBI UCR 2024",
+   "confidence": "suspect",
+   "note": "Components sum exactly to the published 2,429.2/100k total crime rate. Total down 11.2% YoY, violent down 7.5%. Violent well below the US benchmark; property ~1.2x it. An earlier search surfaced a conflicting ~2,958/100k property figure from a weaker source, which the internally consistent set contradicts.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Layton, UT": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "none",
+   "confidence": "suspect",
+   "note": "Not researched - search budget exhausted. Layton City PD is a real reporting agency; retry via Utah BCI 'Crime in Utah'.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Gilbert, AZ": {
+   "violent_per_100k": 132.2,
+   "property_per_100k": 968.2,
+   "year": 2024,
+   "source": "FBI 2024 UCR via aggregator compilations - NOT confirmed against FBI CDE or a state UCR portal",
+   "confidence": "medium",
+   "note": "DOWNGRADED high->medium. Source class is SEO crime aggregators (opencrime.us/plaincrime.com/crimebycity.com/areavibes/doorprofit), not an FBI CDE agency record or a state UCR portal. No row in this batch was ever checked against a primary FBI CDE agency record or state UCR portal, so 'high' overstates what was established. The batch's own notes show this source class emitting arithmetically impossible values elsewhere (Tempe property 262 per 100k, below its violent rate). The supporting evidence used - offence counts reconciling with the published rate and population - is circular: an aggregator that computes rate=count/pop always reconciles, including when the underlying count is an incomplete agency submission. That check cannot detect the one failure mode that matters here. The values are plausible against each city's history and are probably broadly right, but they are unconfirmed.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "American Fork, UT": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "none",
+   "confidence": "suspect",
+   "note": "Not researched - search budget exhausted. American Fork PD is a real reporting agency; retry via Utah BCI 'Crime in Utah'.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Broomfield, CO": {
+   "violent_per_100k": 148.2,
+   "property_per_100k": 1862.2,
+   "year": 2024,
+   "source": "FBI 2024 UCR via aggregator compilations of FBI data",
+   "confidence": "medium",
+   "note": "116 violent offenses at 148.16/100k implies population ~78,300, matching the City and County of Broomfield; components sum exactly to the published 2,010.37/100k total. Violent down 8% and property down 19% YoY. Violent far below the US benchmark; property near it.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "West Jordan, UT": {
+   "violent_per_100k": 294.2,
+   "property_per_100k": 1358.9,
+   "year": 2024,
+   "source": "FBI 2024 UCR via aggregator compilations (unverified)",
+   "confidence": "suspect",
+   "note": "CONFIDENCE RAISED medium->suspect. The researcher's own note concedes the property rate 'is well under West Jordan's longer-run level' yet still graded it medium; Rule 4 requires suspect. 1,552 property offenses for a ~116k city is roughly half West Jordan's historical volume. Treat property as a FLOOR.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "West Valley City, UT": {
+   "violent_per_100k": 470.3,
+   "property_per_100k": 1841.9,
+   "year": 2024,
+   "source": "CrimeByCity citing FBI UCR 2024, population base 132,686 (disputed)",
+   "confidence": "suspect",
+   "note": "SUSPECT EXTENDED TO BOTH FIGURES, not property alone. The researcher asserted 'violent 470.3 is consistent with West Valley City's historical level' - that is wrong; WVC violent has run appreciably higher, so violent is low too. Separately the population base is bad: crimebycity used 132,686 against an actual ~140k, and correcting it pushes the implied property rate DOWN to about 1,746 per 100k (2,444 offenses / 140k), making the figure more implausible, not less. Both values are floors; do not use for a live decision.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Colorado Springs, CO": {
+   "violent_per_100k": 718.3,
+   "property_per_100k": 3448.8,
+   "year": 2024,
+   "source": "FBI 2024 UCR via aggregator compilations - NOT confirmed against FBI CDE or a state UCR portal",
+   "confidence": "medium",
+   "note": "DOWNGRADED high->medium. Source class is SEO crime aggregators (opencrime.us/plaincrime.com/crimebycity.com/areavibes/doorprofit), not an FBI CDE agency record or a state UCR portal. No row in this batch was ever checked against a primary FBI CDE agency record or state UCR portal, so 'high' overstates what was established. The batch's own notes show this source class emitting arithmetically impossible values elsewhere (Tempe property 262 per 100k, below its violent rate). The supporting evidence used - offence counts reconciling with the published rate and population - is circular: an aggregator that computes rate=count/pop always reconciles, including when the underlying count is an incomplete agency submission. That check cannot detect the one failure mode that matters here. The values are plausible against each city's history and are probably broadly right, but they are unconfirmed.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Loveland, CO": {
+   "violent_per_100k": 314.8,
+   "property_per_100k": 2018.2,
+   "year": 2024,
+   "source": "aggregator compilations (unverified)",
+   "confidence": "low",
+   "note": "DOWNGRADED medium->low. Property is derived, single aggregator source, no corroboration. Figures are plausible against Loveland's history but nothing here confirms them.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Riverton, UT": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "none",
+   "confidence": "suspect",
+   "note": "Not researched - search budget exhausted. Riverton left the Unified Police Department and stood up its own Riverton City PD (2021), so recent agency-level data should exist. Retry via Utah BCI.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Surprise, AZ": {
+   "violent_per_100k": 109.1,
+   "property_per_100k": 875.6,
+   "year": 2024,
+   "source": "FBI 2024 UCR via aggregator compilations (unverified)",
+   "confidence": "suspect",
+   "note": "CONFIDENCE RAISED medium->suspect. This is the LOWEST pair in the batch and the most dangerous to get wrong. Only a single TOTAL was sourced (1,607 offenses / 984.7 per 100k); the 109.1/875.6 split reproduces that total by construction, so the researcher's 'internally consistent' check is tautological and proves nothing about the split. 109.1 violent implies ~178 violent offenses for a 163k city, well under Surprise's longer-run level, and 875.6 property is roughly half its historical range. Consistent with a partial submission or a bad aggregator split. Treat BOTH as floors.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Sparks, NV": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "none",
+   "confidence": "suspect",
+   "note": "Not researched - session web-search budget exhausted before reaching Nevada. Sparks PD is a real reporting agency; retry via FBI CDE or Nevada DPS.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Bountiful, UT": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "none",
+   "confidence": "suspect",
+   "note": "Not researched - search budget exhausted. Bountiful City PD is a real reporting agency; retry via Utah BCI 'Crime in Utah'.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Reno, NV": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "none",
+   "confidence": "suspect",
+   "note": "Not researched - session web-search budget exhausted before reaching Nevada. Reno PD is a real reporting agency; retry via FBI CDE or Nevada DPS.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Littleton, CO": {
+   "violent_per_100k": 213.3,
+   "property_per_100k": 2518.4,
+   "year": 2024,
+   "source": "FBI 2024 UCR via aggregator compilations of FBI data",
+   "confidence": "medium",
+   "note": "Internally consistent: 1,204 total offenses of which 1,110 property and 94 violent, over population ~44,076. Note small-N volatility on violent crime (94 offenses), so year-to-year swings are noisy. Violent well below the US benchmark; property ~1.4x it.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Avondale, AZ": {
+   "violent_per_100k": 420.1,
+   "property_per_100k": 3157.0,
+   "year": 2024,
+   "source": "aggregator compilations (unverified, two sources conflict)",
+   "confidence": "low",
+   "note": "DOWNGRADED medium->low. The researcher's own note records two irreconcilable violent figures (420.1 vs 369.8, a 14% spread) and then reported one at medium confidence. An unresolved source conflict is low confidence by definition. Note the researcher nulled Chandler's property for exactly this reason but did not apply the same rule here - inconsistent treatment.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Dakota Ridge, CO": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "Wikipedia (Dakota Ridge, Colorado); Jefferson County Sheriff's Office",
+   "confidence": "suspect",
+   "note": "NOT A MUNICIPALITY AND NO POLICE AGENCY. Dakota Ridge is an unincorporated census-designated place in Jefferson County (CDP population 33,892 at the 2020 Census; voters rejected incorporation in 1988). Law enforcement is the Jefferson County Sheriff's Office. There is no Dakota Ridge UCR reporting agency. The JCSO agency figure covers all of unincorporated Jefferson County and contract cities, so it cannot be attributed to Dakota Ridge; no county rate is reported here rather than pass one off as a city rate.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Tolleson, AZ": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "none",
+   "confidence": "suspect",
+   "note": "Not resolved. Tolleson does have its own police department (38 sworn officers), but the only figures found were 2023-vintage victimization odds ('1 in 291' violent, '1 in 67' property) rather than published FBI rates. Converting those would be an estimate, not a real statistic. Additional hazard: Tolleson has ~7,200 residents but a very large industrial/commercial base, so any per-resident rate is inflated by non-resident activity and small-N noise. Needs the Arizona DPS TOPS portal (azcrimestatistics.azdps.gov) or FBI CDE agency record.",
+   "batch": "b1",
+   "batch_verified": "unreliable"
+  },
+  "Highlands Ranch, CO": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "FBI CDE / Douglas County Sheriff's Office",
+   "confidence": "low",
+   "note": "CDP, NOT an incorporated municipality - there is no Highlands Ranch police agency and no FBI agency record under this name. Policed by the Douglas County Sheriff's Office out of the Highlands Ranch Substation (9250 Zotos Dr). Could not attribute a DCSO agency-level per-100k rate before research budget ran out, so returning null rather than passing a county or vendor-modeled figure off as a city rate. Any 'Highlands Ranch crime rate' from BestPlaces/AreaVibes/CrimeGrade is a vendor model, not a published agency statistic.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Bozeman, MT": {
+   "violent_per_100k": 434,
+   "property_per_100k": 1755,
+   "year": 2024,
+   "source": "FBI UCR 2024 via NeighborhoodScout (Bozeman PD): 254 violent, 1,027 property crimes",
+   "confidence": "high",
+   "note": "Counts and rates are internally consistent at an implied population of ~58,500, matching Bozeman's actual population. Violent rate is above the US benchmark (359.1) - Montana runs high statewide, and Bozeman is still typically MT's lowest-crime city. Property rate is essentially at the US average. Earlier aggregator hits quoting '113 violent / 169 property' are index scores, not rates - discarded.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Windsor, CO": {
+   "violent_per_100k": 46,
+   "property_per_100k": 520.3,
+   "year": 2024,
+   "source": "Vendor compilations citing FBI UCR 2024 (Windsor PD): 20 violent crimes quoted with a 46/100k rate; property quoted only as a 520.3/100k rate",
+   "confidence": "suspect",
+   "note": "SUSPECT FLAG UPHELD, SOURCE ATTRIBUTION CORRECTED. The researcher's source line cited '20 violent, 224 property crimes' as if both were published counts. The 224 property count appears nowhere in the evidence - it was back-computed from 520.3/100k times an assumed ~43,050 population. Worse, the 520.3 figure comes from the same result block as a violent rate of '16.9 per 100,000, 84.1% below the national average', which is self-inconsistent (16.9 against a 359.1 benchmark is 95% below, not 84%; the implied benchmark of ~106 is index-scale, not per-100k). So the property figure's provenance is a block already shown to be mixing index values with rates. Combined with the reasons the researcher gave - ~5x below Colorado's statewide property rate, peer Brighton CO at 2,519/100k, and violent quoted as both 16.9 and 46 - Windsor should NOT be treated as verified-safe. Resolve against Colorado CBI agency data before use.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Kearns, UT": {
+   "violent_per_100k": 267,
+   "property_per_100k": 2564,
+   "year": null,
+   "source": "NeighborhoodScout (FBI-derived) victimization odds: 1 in 374 violent, 1 in 39 property",
+   "confidence": "suspect",
+   "note": "Kearns is a METRO TOWNSHIP with no municipal police department of its own - law enforcement is the Unified Police Department of Greater Salt Lake, Kearns Precinct (4250 W 5415 S). Figures are back-computed from NeighborhoodScout victimization odds, not read off a published agency table, and the reporting year could not be confirmed. Property rate ~2,564/100k is well above the US benchmark; NeighborhoodScout ranks Kearns higher-crime than 95% of Utah municipalities. Directionally reliable, numerically soft.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Brighton, CO": {
+   "violent_per_100k": 471.9,
+   "property_per_100k": 2519.0,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Brighton PD): 204 violent, 1,089 property crimes",
+   "confidence": "high",
+   "note": "Counts and rates both resolve to ~43,230 population, matching Brighton. Violent is 31% above the US benchmark and property is 43% above - Brighton reads as a genuinely above-average-crime Denver exurb, not a reporting artifact.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Scottsdale, AZ": {
+   "violent_per_100k": 153.3,
+   "property_per_100k": 1875.3,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Scottsdale PD) via crime compilations",
+   "confidence": "medium",
+   "note": "Published rates only; I could not cross-check against raw counts before the research budget ran out. Violent well below the US benchmark, property slightly above - a normal profile for an affluent, retail-heavy Sun Belt city where property crime tracks daytime/visitor population. Violent reportedly down 8% and property down 15% year over year.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Cottonwood Heights, UT": {
+   "violent_per_100k": 88.1,
+   "property_per_100k": 1614.3,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Cottonwood Heights PD): 513 property crimes; total crime rate 1,702.4/100k",
+   "confidence": "medium",
+   "note": "Has its own municipal police department (43 sworn). Property rate derived as total (1,702.4) minus violent (88.1); the 513 property-crime count implies a population of ~31,800, close to the city's ~33,500. Both rates below US benchmarks.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Caldwell, ID": {
+   "violent_per_100k": 443.7,
+   "property_per_100k": 1307.2,
+   "year": 2022,
+   "source": "FBI UCR 2022 (Caldwell PD) via HomeSnacks: 297 violent, 875 property crimes",
+   "confidence": "low",
+   "note": "YEAR CORRECTED to 2022. The researcher labeled this 2023 and said the compilation gave it 'variously as 2022 and 2023'. The only count-backed evidence states one year explicitly: FBI UCR 2022 per the HomeSnacks source. The competing 2024-labeled figures from the same batch (116.4 violent / 48.0 property per 100k) are arithmetically impossible and were correctly discarded, so they cannot support a 2023-24 label either. Rates are internally consistent (297 and 875 both resolve to ~66,940). Reporting 2022 honestly rather than implying data two years fresher than it is; this is outside the preferred 2023-2025 window.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Kaysville, UT": {
+   "violent_per_100k": 97.2,
+   "property_per_100k": 531.7,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Kaysville PD): 32 violent, 175 property crimes; total 628.9/100k",
+   "confidence": "medium",
+   "note": "Fully internally consistent: both counts resolve to ~32,900 population, matching Kaysville, and violent + property equals the published total exactly. Property at 531.7 is very low (70% below US benchmark) - I checked this rather than flagging it, and it holds up: Kaysville is consistently ranked among Utah's safest cities and reported property declines three years running. Small absolute counts mean year-to-year swings will look dramatic.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "South Jordan, UT": {
+   "violent_per_100k": 115.1,
+   "property_per_100k": 867.1,
+   "year": 2024,
+   "source": "FBI UCR 2024 (South Jordan PD): 100 violent, 753 property crimes; total 982.2/100k",
+   "confidence": "high",
+   "note": "Cleanest data set in this batch - both counts resolve to ~86,850 population (South Jordan is ~88,000) and violent + property sums exactly to the published total. Both rates well below US benchmarks.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Lawrenceville, GA": {
+   "violent_per_100k": 324.1,
+   "property_per_100k": 2172.7,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Lawrenceville PD): 101 violent, 677 property crimes; total 2,496.8/100k",
+   "confidence": "high",
+   "note": "Both counts resolve to ~31,160 population, matching Lawrenceville, and the components sum to the published total. Violent slightly below the US benchmark; property ~23% above it.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Nashville, TN": {
+   "violent_per_100k": 1124.1,
+   "property_per_100k": 4510,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Metro Nashville PD): 31,521 property crimes",
+   "confidence": "high",
+   "note": "Property count resolves to ~699,000 population, matching Nashville-Davidson. NOTE ON GEOGRAPHY: MNPD polices the consolidated city-county, so this is a Davidson County-wide figure, not a downtown-only one. Violent rate is roughly 3x the US benchmark and ranked among the 15 highest of major US cities in 2024, though down from ~1,313/100k in 2023. Property is ~2.6x the benchmark.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Raleigh, NC": {
+   "violent_per_100k": 488.9,
+   "property_per_100k": 2819.2,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Raleigh PD): 2,386 violent crimes",
+   "confidence": "high",
+   "note": "Violent count resolves to ~488,000 population, matching Raleigh. Violent is 36% above the US benchmark, property 60% above. Raleigh runs above national averages on both measures despite its reputation.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Concord, NC": {
+   "violent_per_100k": 159,
+   "property_per_100k": 1105,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Concord PD): 178 violent, 1,237 property crimes; total 1,264.3/100k",
+   "confidence": "medium",
+   "note": "Internally consistent - both counts resolve to ~111,950 population, matching Concord, and components sum to the published total. Downgraded from high because both rates run far below North Carolina averages (state total 2,343.9/100k) for a city of 110,000, which is worth a sanity check against NC SBI agency tables. Violent reportedly rose 42% year over year off a low base.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Wake Forest, NC": {
+   "violent_per_100k": 146.8,
+   "property_per_100k": 1304.8,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Wake Forest PD); total crime rate 1,451.5/100k",
+   "confidence": "medium",
+   "note": "Components sum exactly to the published total, but I could not cross-check against raw counts. Both rates comfortably below US benchmarks. Total crime reportedly down 16.9% and violent down 8.1% year over year.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Charlotte, NC": {
+   "violent_per_100k": 733,
+   "property_per_100k": 3705,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Charlotte-Mecklenburg PD): 7,355 violent, 37,169 property crimes",
+   "confidence": "medium",
+   "note": "DENOMINATOR CAVEAT: both rates resolve to a population of ~1,003,000, which is CMPD's service population (city plus policed unincorporated Mecklenburg County), not the ~943,000 city population. On city population alone the violent rate would be ~780/100k. Either way Charlotte runs about 2x the US benchmark on violent and 2.1x on property.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Hendersonville, TN": {
+   "violent_per_100k": 136,
+   "property_per_100k": 836,
+   "year": 2023,
+   "source": "FBI UCR 2023 (Hendersonville PD): 85 violent, 522 property crimes",
+   "confidence": "medium",
+   "note": "Reported as 2023 because that is the year for which I could get a matched violent/property pair; both counts resolve to ~62,450 population, matching Hendersonville. A 2024 figure of 123.2/100k violent was also published, so the trend is flat-to-down. Both rates well below US benchmarks - and consistent with neighboring Gallatin in the same county, which cross-supports both.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Powder Springs, GA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "FBI Crime Data Explorer (Powder Springs PD) - submission incomplete",
+   "confidence": "suspect",
+   "note": "RETURNING NULL DELIBERATELY. FBI CDE shows only 75 violent and 127 property offenses for Powder Springs across the entire five-year span 2019-2024 - for a city of ~16,000 that is roughly 25 property crimes per year, which is not credible and indicates the agency's submissions are largely missing. One search explicitly reported that Powder Springs has no FBI crime statistics published under its name. Vendor pages (NeighborhoodScout implies ~264 violent / ~1,351 property per 100k) are model estimates, not published agency totals, so reporting them would violate the real-data-only rule. Treat any published Powder Springs rate as unreliable in both directions.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Stockbridge, GA": {
+   "violent_per_100k": 278,
+   "property_per_100k": 1744,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Stockbridge PD) via CrimeGrade: 2.78 and 17.44 per 1,000 residents",
+   "confidence": "low",
+   "note": "SOURCES CONFLICT MATERIALLY. CrimeGrade gives 278 violent / 1,744 property per 100k, while NeighborhoodScout's victimization odds (1 in 262 violent) imply closer to 380/100k violent and ~2,500/100k total. A third source's five-year averages (158.2 violent, 254.5 property per 100k) are arithmetically self-contradictory against their own crime counts and were discarded. Best read: Stockbridge is at or somewhat above US average on violent and clearly above on property - but do not rely on the precise figures.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Duluth, GA": {
+   "violent_per_100k": 169.2,
+   "property_per_100k": 1193.4,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Duluth PD): 388 property crimes; total 1,362.6/100k",
+   "confidence": "medium",
+   "note": "Property count resolves to ~32,500 population, matching Duluth, and components sum to the published total. Both rates below US benchmarks. Property is lower than Duluth's historical levels, which is plausible given the closure/redevelopment of the Gwinnett Place Mall retail cluster that used to drive theft volume.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Huntersville, NC": {
+   "violent_per_100k": 143.0,
+   "property_per_100k": 1364.2,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Huntersville PD): 94 violent, 897 property crimes; total 1,507.2/100k",
+   "confidence": "high",
+   "note": "Both counts resolve to ~65,730 population, matching Huntersville, and components sum to the published total. Both rates below US benchmarks; total crime down ~8% from 2023.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Lilburn, GA": {
+   "violent_per_100k": 176.5,
+   "property_per_100k": 2561.6,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Lilburn PD): 374 property crimes against ~14,600 population; published violent rate 176.5/100k",
+   "confidence": "low",
+   "note": "PROPERTY CORRECTED upward from 2,276.9. The researcher derived property as published total (2,453.4) minus violent (176.5), then noted in their own text that the 374-crime count against Lilburn's actual ~14,600 population implies ~2,560/100k instead - and published the lower derived figure anyway. The count-plus-real-population calculation is the sounder of the two, so 2,561.6 is used here. Understating property crime is the dangerous direction. Violent rate left as published. Still low confidence: the vendor total implies a ~16,400 denominator that does not match the city.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Douglasville, GA": {
+   "violent_per_100k": 532.1,
+   "property_per_100k": 4636.0,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Douglasville PD): 216 violent, 1,882 property crimes; total 5,168.1/100k",
+   "confidence": "medium",
+   "note": "Counts and rates are internally consistent at ~40,600 population, though Douglasville's residential population is nearer 36,000-38,000, which would push the rates higher still. Violent ~48% above the US benchmark; property ~2.6x it. The extreme property rate is consistent with Douglasville being a regional retail hub (Arbor Place Mall) where shoplifting/larceny volume is generated by non-residents.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Simpsonville, SC": {
+   "violent_per_100k": 231.75,
+   "property_per_100k": 2756.42,
+   "year": 2023,
+   "source": "FBI UCR 2023 (Simpsonville PD) via BeautifyData: 66 violent, 785 property crimes",
+   "confidence": "medium",
+   "note": "2023 is the most recent year for which I could get a matched, count-backed pair. Both counts resolve to ~28,480 population versus an actual ~25,500, so true rates may be ~10% higher than shown. Violent below the US benchmark; property ~57% above it. City-Data indicates overall crime fell a further 16% in 2024.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Cary, NC": {
+   "violent_per_100k": 71,
+   "property_per_100k": 1317,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Cary PD): 129 violent, 2,395 property crimes",
+   "confidence": "medium",
+   "note": "CONFIDENCE DOWNGRADED from high. The researcher dismissed a 217/100k violent figure as a 'stray' contradicted by the counts. It is not a stray: 217 is exactly 100,000/461, derived from NeighborhoodScout's own '1 in 461 chance of violent victimization' in the same result block, and it pairs with that source's property rate of 1,612/100k. So two FBI-derived compilations disagree on Cary's violent rate by roughly 3x (71 vs 217). The 71/1,317 pair is count-backed (129 and 2,395 resolve to ~181,700, matching Cary) and its sum (1,388) matches the separately quoted '14 crimes per one thousand residents', so it remains the better estimate - but an unreconciled 3x conflict cannot be 'high' confidence. Cary is low-crime either way; the violent figure may be understated.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Johns Creek, GA": {
+   "violent_per_100k": 41.2,
+   "property_per_100k": 644.8,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Johns Creek PD) offense counts: 34 violent (1 murder, 12 robbery, 17 assault, 4 rape), 532 property (90 burglary, 427 larceny, 15 auto theft), against ~82,500 population",
+   "confidence": "low",
+   "note": "CORRECTED - COUNT/RATE CONFLATION. The researcher published 34 violent and 536.7 property as PER-100K RATES. They are not: the aggregator's own breakdown sums to exactly 34 (1+12+17+4) and 532 (90+427+15), i.e. these are raw offense COUNTS mislabeled as rates by a vendor page that implicitly assumes a 100,000 population. Johns Creek's population is ~82,500, so the true rates are ~41 violent and ~645 property per 100k. The researcher spotted this discrepancy in their own note but still published the lower numbers. Both figures were understated - the dangerous direction. Conclusion is unchanged (Johns Creek is genuinely very low-crime, routinely ranked Georgia's safest), but the published rates were wrong. Confidence low: derived from counts plus an estimated denominator, not read off an agency table.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Mount Juliet, TN": {
+   "violent_per_100k": 158.9,
+   "property_per_100k": 964.8,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Mt. Juliet PD): 495 total crimes; total rate 1,123.7/100k",
+   "confidence": "high",
+   "note": "Violent plus property sums exactly to the published total, and the 495-crime count resolves to ~44,050 population, matching Mount Juliet. Both rates well below US benchmarks. Mt. Juliet PD was recognized in 2025 as the safest Tennessee city over 18,500 population, consistent with these figures.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Atlanta, GA": {
+   "violent_per_100k": 707.3,
+   "property_per_100k": 3892.5,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Atlanta PD); total crime rate 4,599.8/100k",
+   "confidence": "medium",
+   "note": "Components sum exactly to the published total, and 707.3 against Atlanta's ~511,000 population implies ~3,600 violent offenses, which matches APD's reported 2024 volume. A second source quoted 841/100k violent - likely a 2023 figure or a different denominator - hence medium rather than high. Violent ~2x the US benchmark, property ~2.2x.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Lithonia, GA": {
+   "violent_per_100k": 352,
+   "property_per_100k": 2619,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Lithonia PD): 9 violent, 67 property crimes",
+   "confidence": "low",
+   "note": "SMALL-NUMBERS WARNING. These are real published counts and they resolve correctly to Lithonia's ~2,560 population, but the entire violent rate rests on 9 incidents - two more or two fewer would swing it by ~80 points. A per-100k rate is close to meaningless as a stability signal at this population. Lithonia PD is an 11-employee, 8-officer agency. Judge this place on the surrounding DeKalb County context rather than on its own rate.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Marietta, GA": {
+   "violent_per_100k": 298.3,
+   "property_per_100k": 1810.5,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Marietta PD), population 63,354",
+   "confidence": "medium",
+   "note": "Published rates against a stated population of 63,354. Sum (2,108.8) is close to but under NeighborhoodScout's ~2,400/100k total for the city, so there is modest source spread. Violent modestly below the US benchmark; property slightly above it.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Waxhaw, NC": {
+   "violent_per_100k": 84,
+   "property_per_100k": 734,
+   "year": 2023,
+   "source": "FBI UCR 2023 (Waxhaw PD): 19 violent, 166 property crimes",
+   "confidence": "medium",
+   "note": "2023 is the latest matched pair I could confirm. Both counts resolve to ~22,620 population, matching Waxhaw. Both rates far below US benchmarks; violent and property reportedly fell a further 29% and 34% respectively the following year. Small absolute counts (19 violent) mean the rate is volatile year to year.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Smyrna, TN": {
+   "violent_per_100k": 279.0,
+   "property_per_100k": 2386.4,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Smyrna PD): 164 violent, 1,403 property crimes; total 2,665.4/100k",
+   "confidence": "high",
+   "note": "Both counts resolve to ~58,780 population, matching Smyrna, and components sum exactly to the published total. Violent ~22% below the US benchmark but property ~36% above it - the property figure is the one that matters here.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Stone Mountain, GA": {
+   "violent_per_100k": 538.05,
+   "property_per_100k": 2564,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Stone Mountain PD): 35 violent crimes; property reported as 25.64 per 1,000 residents",
+   "confidence": "low",
+   "note": "Violent is solid: 35 offenses against ~6,500 population gives 538/100k, about 50% above the US benchmark. Property is CONVERTED from a per-1,000 rate (25.64 per 1,000 = 2,564 per 100,000); one search summary mis-converted this to 256.4, which is impossible, so treat the property figure as approximate. Overall crime reportedly rose 23% year over year. 19 sworn officers.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "McDonough, GA": {
+   "violent_per_100k": 334.9,
+   "property_per_100k": 2625.3,
+   "year": 2024,
+   "source": "FBI UCR 2024 (McDonough PD): 111 violent, 870 property crimes; total 2,960.2/100k",
+   "confidence": "medium",
+   "note": "Components sum exactly to the published total and counts resolve to ~33,140 population, a little above McDonough's ~30,000, so true rates may run somewhat higher. Violent just below the US benchmark; property ~49% above it.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Durham, NC": {
+   "violent_per_100k": 619.2,
+   "property_per_100k": 3799.7,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Durham PD): 1,859 violent crimes; total 4,418.9/100k",
+   "confidence": "high",
+   "note": "Violent count resolves to ~300,000 population, matching Durham, and components sum exactly to the published total. Violent is ~72% above the US benchmark and property ~2.2x it. Note that one source rendered the comparison as '777% higher than the national average', which is wrong - the correct figure is 72% higher.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Murfreesboro, TN": {
+   "violent_per_100k": 420.0,
+   "property_per_100k": 2022.2,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Murfreesboro PD): 3,428 property crimes; total 2,442.2/100k",
+   "confidence": "high",
+   "note": "Property derived as total minus violent; the 3,428 count then resolves to ~169,500 population, matching Murfreesboro. Violent ~17% above the US benchmark, property ~15% above.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Goose Creek, SC": {
+   "violent_per_100k": 256.5,
+   "property_per_100k": 1465.4,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Goose Creek PD); total crime rate 1,721.9/100k",
+   "confidence": "medium",
+   "note": "Components sum exactly to the published total, but no raw counts available to cross-check. Both rates below US benchmarks and well below South Carolina's (state violent 436.7/100k). Consistently listed among SC's safer municipalities.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Mint Hill, NC": {
+   "violent_per_100k": 86,
+   "property_per_100k": 969,
+   "year": 2023,
+   "source": "FBI UCR 2023 (Mint Hill PD): 23 violent, 259 property crimes",
+   "confidence": "medium",
+   "note": "Both counts resolve to ~26,740 population against an actual ~28,000, so true rates may be slightly lower than shown. Both far below US and NC benchmarks. Note the source's separately quoted total (934.2/100k) does not quite match the sum of the components (1,055), suggesting the two figures come from different years.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Gallatin, TN": {
+   "violent_per_100k": 208.2,
+   "property_per_100k": 748.9,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Gallatin PD); total crime rate 957.1/100k",
+   "confidence": "medium",
+   "note": "Components sum exactly to the published total. Property at 748.9 is low enough (57% below the US benchmark) that I initially flagged it as a possible partial submission - but it cross-checks against Hendersonville, TN, the neighboring Sumner County city in this same batch, which independently reports 836/100k. Two adjacent agencies landing in the same band argues these are real, not artifacts. Tennessee's mandatory TIBRS incident-based reporting also supports completeness. Still worth confirming against TBI agency tables before relying on it.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Summerville, SC": {
+   "violent_per_100k": 222.4,
+   "property_per_100k": 1768.1,
+   "year": 2024,
+   "source": "FBI UCR 2024 (Summerville PD): 116 violent, 922 property crimes; total 1,990.5/100k",
+   "confidence": "high",
+   "note": "Both counts resolve to ~52,160 population, matching Summerville, and components sum exactly to the published total. Violent 38% below the US benchmark; property essentially at it. Large reported year-over-year declines (violent -49%, property -43%) mean the 2023 baseline was considerably worse.",
+   "batch": "b2",
+   "batch_verified": "accurate_with_corrections"
+  },
+  "Kennesaw, GA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Savannah, GA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Rock Hill, SC": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Roswell, GA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Fuquay Varina, NC": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session. Officially hyphenated 'Fuquay-Varina' - search that spelling, as the unhyphenated form misses the agency record.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Midlothian, VA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "NOT A MUNICIPALITY. Midlothian is a census-designated place / unincorporated community in Chesterfield County with no municipal police agency; policed by the Chesterfield County Police Department. Only a county-wide rate is attributable and it must not be passed off as a city rate. Jurisdiction note is from prior knowledge and unverified this session; rate not retrieved.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Henrico, VA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "NOT A MUNICIPALITY. Henrico is an unincorporated county with no incorporated city of that name, so no municipal crime rate exists. It is policed by the Henrico County Police Division - a county police department (Henrico is one of the few Virginia counties with its own police force rather than sheriff-only patrol). Any usable figure is a COUNTY-WIDE rate covering ~330k residents and must be labeled as such, never as a city rate. Jurisdiction note is from prior knowledge and unverified this session; rate not retrieved.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Monroe, NC": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Greer, SC": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Garner, NC": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Smyrna, GA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Jonesboro, GA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session. Very small city in Clayton County with a large daytime/commuter population relative to residents; per-100k rates computed on the small resident denominator are inflated and not comparable to suburb rates.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Chattanooga, TN": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Hampton, GA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session. Small city in Henry County - small-denominator population means one or two incidents swing the per-100k rate hard; treat any single-year figure with care and prefer a multi-year average.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Snellville, GA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Norcross, GA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session. Small Gwinnett County city with a large commercial/daytime population relative to residents; per-100k rates on the small resident denominator overstate resident-experienced risk.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Madison, AL": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Apex, NC": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Bluffton, SC": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Mooresville, NC": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Chicago, IL": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session. HAZARD ON RE-RUN: Chicago PD has had incomplete/absent NIBRS submissions in recent FBI collection years, and Chicago's rape counts have historically been reported under a non-UCR-conforming definition. Figures pulled for Chicago need an explicit completeness check before use.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Cicero, IL": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session. HAZARD ON RE-RUN: Illinois agencies had substantial NIBRS transition reporting gaps; verify months-reported before trusting a low figure.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Olathe, KS": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Hamilton, OH": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Ypsilanti, MI": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Grove City, OH": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Westerville, OH": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Berwyn, IL": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session. HAZARD ON RE-RUN: Illinois agencies had substantial NIBRS transition reporting gaps; verify months-reported before trusting a low figure.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Hilliard, OH": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Taylor, MI": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Des Plaines, IL": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session. HAZARD ON RE-RUN: Illinois agencies had substantial NIBRS transition reporting gaps; verify months-reported before trusting a low figure.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Lakeville, MN": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Milwaukee, WI": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Reynoldsburg, OH": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Greenwood, IN": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session. HAZARD ON RE-RUN: Indiana has had weak/uneven UCR-NIBRS participation; confirm the agency submitted a full 12 months before trusting a low figure.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Gahanna, OH": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Delaware, OH": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Oak Lawn, IL": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session. HAZARD ON RE-RUN: Illinois agencies had substantial NIBRS transition reporting gaps; verify months-reported before trusting a low figure.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Saint Paul, MN": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "Incorporated municipality with its own police agency; an FBI CDE/NIBRS agency record should exist for it, but could not be retrieved this session.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Lincoln Village, OH": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - no research egress this session: WebSearch budget exhausted (200/200 calls used before this task began) and WebFetch/direct HTTPS blocked by agent proxy (403 on CONNECT to api.usa.gov, cde.ucr.cjis.gov, ucr.fbi.gov, state and compilation hosts). No figure asserted rather than one recalled from memory.",
+   "confidence": "suspect",
+   "note": "NOT A MUNICIPALITY. Lincoln Village is a census-designated place in Prairie Township, Franklin County (Columbus area), with no municipal police agency of its own; law enforcement is provided at the township/Franklin County Sheriff level. No city-level FBI agency record should be expected. Jurisdiction note is from prior knowledge and unverified this session; rate not retrieved.",
+   "batch": "b3",
+   "batch_verified": null
+  },
+  "Mason, OH": {
+   "violent_per_100k": 27.9,
+   "property_per_100k": 580.3,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "medium",
+   "note": "10 violent and 208 property offenses on FBI-published population 35,845. 3-yr violent 14/14/28, property 511/668/580. Well below both US benchmarks. Only 10 violent offenses on 35,845 residents (27.9/100k, ~13x below the US rate). The level is extreme, but it is STABLE across three consecutive FBI years rather than a one-year collapse, which argues for a genuine low-crime suburb rather than a partial submission. Property:violent ratio 20.8:1 vs a US norm near 4.9:1 - typical of affluent suburbs but worth noting. Treat as genuinely safe, but verify the violent figure before relying on the exact number.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Indianapolis, IN": {
+   "violent_per_100k": 1031.0,
+   "property_per_100k": 3622.5,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "high",
+   "note": "9146 violent and 32136 property offenses on FBI-published population 887,131. 3-yr violent 718/1028/1031, property 3442/3377/3622. Roughly 2.9x the US violent benchmark and 2.1x property - among the highest violent rates in this batch. IMPD polices the consolidated Indianapolis/Marion County (Unigov) government, so this is a city-county figure covering ~887k, not a small core city. The 2021 violent figure (718) is the outlier; 2022 and 2023 agree closely.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Mount Prospect, IL": {
+   "violent_per_100k": 103.8,
+   "property_per_100k": 1010.5,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "medium",
+   "note": "56 violent and 545 property offenses on FBI-published population 53,932. 2023 only. Well below both US benchmarks. Illinois agencies were largely absent from the FBI's 2021 and 2022 city tables during the NIBRS transition, so no multi-year cross-check is possible - single-year figure. Values and property:violent ratio (9.7:1) are unremarkable for a Chicago suburb.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Apple Valley, MN": {
+   "violent_per_100k": 241.8,
+   "property_per_100k": 1847.4,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "high",
+   "note": "133 violent and 1016 property offenses on FBI-published population 54,995. 3-yr violent 175/243/242, property 2002/1636/1847. Violent well below the US benchmark, property slightly above it. Three consistent years (2022 and 2023 nearly identical). Minnesota BCA/NIBRS reporting is complete and reliable.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "West Chester, OH": {
+   "violent_per_100k": 82.7,
+   "property_per_100k": 1423.8,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "medium",
+   "note": "52 violent and 895 property offenses on FBI-published population 62,860. 3-yr violent 130/91/83, property 1726/1677/1424. NOT a city - West Chester Township, Butler County. It does have its own municipal-equivalent agency (West Chester Township Police Department) and reports to the FBI in its own right, so this figure is properly attributable to the place, not borrowed from a county sheriff. Both rates well below US benchmarks, declining steadily over three years. Property:violent ratio 17.2:1 is high.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Loveland, OH": {
+   "violent_per_100k": 15.3,
+   "property_per_100k": 475.3,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "suspect",
+   "note": "2 violent and 62 property offenses on FBI-published population 13,045. 3-yr violent 60/46/15, property 604/603/475. DO NOT read as measured. Only 2 violent offenses on 13,045 residents (15.3/100k, ~23x below the US rate) with a property:violent ratio of 31:1 - far outside any normal range. Prior years were 8 and 6 offenses (60 and 46/100k), so 2023 is a further drop on an already tiny base. Loveland is a genuinely low-crime small suburb, but the 2023 number is too low to trust as a complete submission; the three-year mean near 40/100k is the safer read.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Columbus, OH": {
+   "violent_per_100k": 385.1,
+   "property_per_100k": 2704.0,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "suspect",
+   "note": "3500 violent and 24575 property offenses on FBI-published population 908,834. 3-yr violent 588/450/385, property 3230/3484/2704. DO NOT read as measured. Violent fell 588 -> 450 -> 385/100k and property fell 3484 -> 2704 in the same year - a simultaneous large drop in BOTH categories is the classic signature of an incomplete agency submission, not a real crime decline. 385/100k would put Ohio's largest city only marginally above the US benchmark, well under its long-run 550-600/100k range. Ohio agencies had known NIBRS transition problems. Treat 385 as a floor, not a measurement, and verify before drawing any safety conclusion.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Ann Arbor, MI": {
+   "violent_per_100k": 311.7,
+   "property_per_100k": 1746.4,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "high",
+   "note": "368 violent and 2062 property offenses on FBI-published population 118,072. 3-yr violent 288/308/312, property 1440/1716/1746. Violent slightly below the US benchmark, property essentially at it. Three highly consistent years. Note a separate University of Michigan police agency reports independently, so campus offenses are not necessarily in this city figure.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Canton, MI": {
+   "violent_per_100k": 201.2,
+   "property_per_100k": 1065.6,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "high",
+   "note": "199 violent and 1054 property offenses on FBI-published population 98,915. 3-yr violent 213/193/201, property 895/1027/1066. NOT a city - Canton Township, Wayne County - but it has its own Canton Township Police Department reporting directly to the FBI, so the figure is properly attributable. Both rates well below US benchmarks, very consistent across three years.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Lombard, IL": {
+   "violent_per_100k": 126.2,
+   "property_per_100k": 1578.1,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "medium",
+   "note": "55 violent and 688 property offenses on FBI-published population 43,596. 2023 only. Violent well below the US benchmark, property below it. Illinois agencies were largely missing from the FBI's 2021/2022 city tables (NIBRS transition), so this is a single-year figure with no cross-check.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Arlington Heights, IL": {
+   "violent_per_100k": 83.7,
+   "property_per_100k": 935.3,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "medium",
+   "note": "62 violent and 693 property offenses on FBI-published population 74,094. 2023 only. Both rates well below US benchmarks. Single-year figure only - Illinois agencies were largely absent from the FBI's 2021 and 2022 city tables during the NIBRS transition, so no completeness cross-check is available.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Ramsey, MN": {
+   "violent_per_100k": 80.4,
+   "property_per_100k": 517.5,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "medium",
+   "note": "23 violent and 148 property offenses on FBI-published population 28,598. 3-yr violent 76/70/80, property 840/714/518. Both rates well below US benchmarks and violent is stable across three years (76/70/80). Property, however, fell 840 -> 714 -> 518 without an obvious cause, so the property figure specifically is less certain than the violent one.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Carmel, IN": {
+   "violent_per_100k": 58.2,
+   "property_per_100k": 834.8,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "medium",
+   "note": "60 violent and 860 property offenses on FBI-published population 103,013. 3-yr violent 48/65/58, property 655/808/835. Both rates far below US benchmarks. Three consistent years support a genuinely low-crime affluent Hamilton County suburb. Property:violent ratio 14.3:1 is high but consistent with the suburb profile; Indiana's UCR participation is uneven statewide, so the exact figure carries more uncertainty than a Minnesota or Michigan equivalent.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Washington, PA": {
+   "violent_per_100k": 593.7,
+   "property_per_100k": 1883.6,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "medium",
+   "note": "81 violent and 257 property offenses on FBI-published population 13,644. 2023 only. The HIGH-crime entry among the small towns here: violent 593.7/100k is about 1.65x the US benchmark. This is the City of Washington (Washington County seat, pop 13,644), not any of the several Pennsylvania 'Washington Township' entries. Single-year figure - Pennsylvania has notoriously incomplete UCR participation and the city is absent from the 2021/2022 tables. The property:violent ratio of 3.2:1 is unusually LOW, suggesting property offenses may be undercounted, i.e. the property rate is more likely understated than overstated.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Madison, WI": {
+   "violent_per_100k": 301.2,
+   "property_per_100k": 2334.9,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "high",
+   "note": "826 violent and 6403 property offenses on FBI-published population 274,234. 3-yr violent 308/301/301, property 2520/2396/2335. Violent slightly below the US benchmark, property above it. Exceptionally stable across three years (violent 308/301/301). Note separate UW-Madison police agency reports independently.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Andover, MN": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "Checked FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement, by State by City) for 2021, 2022 and 2023 - no agency record published for this place in any year. No substitute figure asserted.",
+   "confidence": "suspect",
+   "note": "NO MUNICIPAL POLICE AGENCY. Andover is an incorporated city (~32k) but does not run its own police department - law enforcement is provided under contract by the ANOKA COUNTY SHERIFF'S OFFICE, so Andover has no separate FBI agency record and no city-level rate exists. This is corroborated structurally by the data itself: neighbouring Ramsey, MN, which does have its own police department, appears in all three FBI years, while Andover appears in none. A countywide Anoka County Sheriff figure would cover a far larger and different population and is NOT attributable to Andover, so none is given. Andover is generally a low-crime outer suburb, but that is a reputation, not a measurement.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Westland, MI": {
+   "violent_per_100k": 518.8,
+   "property_per_100k": 1613.9,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "high",
+   "note": "433 violent and 1347 property offenses on FBI-published population 83,463. 3-yr violent 430/454/519, property 1284/1288/1614. Violent 518.8/100k is about 1.4x the US benchmark and the highest in the Michigan group here; property is below the US benchmark. Rising violent trend across all three years (430 -> 454 -> 519), so this is a real and worsening signal, not a reporting artifact.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Shakopee, MN": {
+   "violent_per_100k": 135.2,
+   "property_per_100k": 1317.7,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "medium",
+   "note": "63 violent and 614 property offenses on FBI-published population 46,597. 3-yr violent 110/135/135, property 2124/1600/1318. Both rates below US benchmarks. Violent is stable (110/135/135), but property fell steadily 2124 -> 1600 -> 1318 across three years, so the property figure is less certain than the violent one.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Elmhurst, IL": {
+   "violent_per_100k": 40.0,
+   "property_per_100k": 916.8,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "suspect",
+   "note": "18 violent and 413 property offenses on FBI-published population 45,046. 2023 only. DO NOT read as measured. 18 violent offenses on 45,046 residents (40/100k, ~9x below the US rate) gives a property:violent ratio of 22.9:1 against a US norm near 4.9:1 - a strong signature of under-classified or under-submitted violent offenses (typically aggravated assault). Illinois agencies were largely absent from the 2021/2022 FBI tables, so there is NO multi-year cross-check to rule this out. Elmhurst is a genuinely affluent, low-crime DuPage County suburb, but 40/100k should be treated as a floor.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Burnsville, MN": {
+   "violent_per_100k": 263.9,
+   "property_per_100k": 2004.7,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "high",
+   "note": "168 violent and 1276 property offenses on FBI-published population 63,650. 3-yr violent 212/279/264, property 2545/2473/2005. Violent below the US benchmark, property above it. Three consistent years; Minnesota reporting is complete and reliable.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Noblesville, IN": {
+   "violent_per_100k": 105.1,
+   "property_per_100k": 601.0,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "medium",
+   "note": "78 violent and 446 property offenses on FBI-published population 74,211. 2023 only. Both rates well below US benchmarks, and the property:violent ratio (5.7:1) is close to the US norm, which argues against a violent undercount. Single-year figure only - absent from the 2021/2022 FBI city tables, and Indiana UCR participation is uneven statewide.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Cincinnati, OH": {
+   "violent_per_100k": 728.0,
+   "property_per_100k": 4228.7,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "high",
+   "note": "2253 violent and 13087 property offenses on FBI-published population 309,484. 3-yr violent 812/842/728, property 3285/3751/4229. Violent about 2x the US benchmark and property about 2.4x - the second-highest violent rate in this batch. Internally coherent: violent eased while property rose sharply over three years, which is inconsistent with an under-submission. Unlike Columbus, this Ohio figure shows no completeness red flag.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Fishers, IN": {
+   "violent_per_100k": 98.8,
+   "property_per_100k": 609.2,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "medium",
+   "note": "102 violent and 629 property offenses on FBI-published population 103,247. 3-yr violent 78/78/99, property 672/750/609. Both rates far below US benchmarks, and the property:violent ratio (6.2:1) is near the US norm - a good sign that violent offenses are not being undercounted. Three consistent years support a genuinely very safe suburb. Indiana's uneven statewide UCR participation is the only reason this is not marked high.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Irwin, PA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "Checked FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement, by State by City) for 2021, 2022 and 2023 - no agency record published for this place in any year. No substitute figure asserted.",
+   "confidence": "low",
+   "note": "No published FBI figure. Irwin is a very small Westmoreland County borough (~3,700 residents). Pennsylvania has among the weakest UCR/NIBRS participation of any state and many small boroughs either do not submit or are covered by Pennsylvania State Police coverage rather than a reporting municipal agency; Irwin is absent from the FBI city table in 2021, 2022 and 2023. Separately, at this population a single incident moves the rate by roughly 27 per 100k, so even a published figure would be too volatile to compare against suburb rates. Retry via the Pennsylvania State Police 'Crime in Pennsylvania' UCR portal, which lists non-submitting agencies explicitly.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Howell, MI": {
+   "violent_per_100k": 287.7,
+   "property_per_100k": 753.9,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "low",
+   "note": "29 violent and 76 property offenses on FBI-published population 10,081. 3-yr violent 124/129/288, property 610/990/754. Small-denominator volatility dominates: 29 violent offenses on 10,081 residents. The violent rate more than doubled (124 -> 129 -> 288/100k) on a swing of only 16 offenses, and the property:violent ratio of 2.6:1 is unusually low. The 2023 violent rate of 287.7 sits below the US benchmark but a single year should not be treated as a stable estimate - use a multi-year average.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "New Brighton, MN": {
+   "violent_per_100k": 104.6,
+   "property_per_100k": 1291.7,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "low",
+   "note": "23 violent and 284 property offenses on FBI-published population 21,987. 3-yr violent 109/144/105, property 2981/1859/1292. Violent is below the US benchmark and roughly stable, but the data are shaky: the FBI's published population swings 23,012 -> 26,408 -> 21,987 across the three years, and property fell steadily 2981 -> 1859 -> 1292. Both rates are computed on an unstable denominator, so treat the exact values as approximate.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Pickerington, OH": {
+   "violent_per_100k": 55.6,
+   "property_per_100k": 1143.7,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "low",
+   "note": "14 violent and 288 property offenses on FBI-published population 25,182. 3-yr violent 77/97/56, property 955/937/1144. Both rates below US benchmarks, but the violent count is small and bounced 18 -> 24 -> 14 offenses, and the property:violent ratio of 20.6:1 is well outside the US norm near 4.9:1. Ohio agencies had known NIBRS transition issues in this period. Genuinely a low-crime Columbus suburb, but the precise violent rate is not well determined.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Fairfield, OH": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "Checked FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement, by State by City) for 2021, 2022 and 2023 - no agency record published for this place in any year. No substitute figure asserted.",
+   "confidence": "low",
+   "note": "No published FBI figure for the CITY of Fairfield (Butler County, ~44,500 residents), which does operate its own Fairfield Police Department - it is simply absent from the FBI city table in 2021, 2022 and 2023, consistent with Ohio's known NIBRS transition gaps. IMPORTANT TRAP: the table does contain 'Fairfield Township' (Butler County, pop 23,206 in 2021, 10 violent / 208 property). That is a DIFFERENT, adjacent jurisdiction with its own separate police department and roughly half the population; it must not be substituted for the city. No figure asserted. Retry via Ohio's OIBRS portal or the FBI Crime Data Explorer agency page for Fairfield PD.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Woodbury, MN": {
+   "violent_per_100k": 58.6,
+   "property_per_100k": 1298.8,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "low",
+   "note": "47 violent and 1041 property offenses on FBI-published population 80,153. 3-yr violent 110/97/59, property 1897/1476/1299. Both rates below US benchmarks, but the violent rate fell 110 -> 97 -> 59/100k, a 39% single-year drop (76 -> 47 offenses) that is much steeper than the concurrent property decline. Property:violent ratio 22.1:1 is well above the US norm. Woodbury is a genuinely affluent, safe suburb and Minnesota reporting is generally complete, but 58.6/100k is likely a low read of the true level.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Ankeny, IA": {
+   "violent_per_100k": 134.7,
+   "property_per_100k": 1190.8,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "high",
+   "note": "100 violent and 884 property offenses on FBI-published population 74,233. 3-yr violent 133/196/135, property 977/1076/1191. Both rates below US benchmarks. Three consistent years with property trending mildly upward; property:violent ratio (8.8:1) is unremarkable.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Portland, OR": {
+   "violent_per_100k": 715.2,
+   "property_per_100k": 5860.6,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "high",
+   "note": "4478 violent and 36696 property offenses on FBI-published population 626,146. 3-yr violent 720/751/715, property 5577/6324/5861. Violent about 2x the US benchmark and property about 3.3x - the highest property rate in this batch. Very stable across three years. Note the FBI's published population fell from 664k to 626k over the period, which raises the computed rates somewhat.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Vancouver, WA": {
+   "violent_per_100k": 650.5,
+   "property_per_100k": 4490.2,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "high",
+   "note": "1276 violent and 8808 property offenses on FBI-published population 196,159. 3-yr violent 589/636/650, property 4933/5576/4490. Violent about 1.8x the US benchmark and property about 2.6x. Three consistent years with a rising violent trend (589 -> 636 -> 650).",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Everett, WA": {
+   "violent_per_100k": 389.9,
+   "property_per_100k": 4156.3,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "high",
+   "note": "435 violent and 4637 property offenses on FBI-published population 111,566. 3-yr violent 313/443/390, property 4013/4351/4156. Violent slightly above the US benchmark, property about 2.4x it. Three consistent years.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Spokane, WA": {
+   "violent_per_100k": 712.8,
+   "property_per_100k": 5414.7,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "high",
+   "note": "1644 violent and 12489 property offenses on FBI-published population 230,648. 3-yr violent 651/672/713, property 4785/5736/5415. Violent about 2x the US benchmark and property about 3.1x. Consistent across three years with violent rising steadily (651 -> 672 -> 713).",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Oregon City, OR": {
+   "violent_per_100k": 231.7,
+   "property_per_100k": 1592.6,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "medium",
+   "note": "86 violent and 591 property offenses on FBI-published population 37,109. 3-yr violent 225/366/232, property 1800/2216/1593. Violent below the US benchmark, property below it. Values bounce year to year (violent 225 -> 366 -> 232) on a modest base of 86-136 offenses, so the single-year figure is not a stable estimate; the three-year average violent rate is closer to 275/100k.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Hillsboro, OR": {
+   "violent_per_100k": 292.2,
+   "property_per_100k": 2503.3,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "high",
+   "note": "314 violent and 2690 property offenses on FBI-published population 107,459. 3-yr violent 242/296/292, property 2004/2567/2503. Violent below the US benchmark, property about 1.4x it. Three consistent years (2022 and 2023 nearly identical).",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Eugene, OR": {
+   "violent_per_100k": 347.9,
+   "property_per_100k": 3197.1,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "high",
+   "note": "620 violent and 5697 property offenses on FBI-published population 178,191. 3-yr violent 408/377/348, property 3702/3415/3197. Violent slightly below the US benchmark, property about 1.8x it. Three consistent years with both measures easing steadily.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Bend, OR": {
+   "violent_per_100k": 183.6,
+   "property_per_100k": 1589.0,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "high",
+   "note": "193 violent and 1670 property offenses on FBI-published population 105,099. 3-yr violent 174/151/184, property 1554/1586/1589. Violent about half the US benchmark, property below it - the safest of the Oregon group. Remarkably stable across three years (property 1554/1586/1589).",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Spanaway, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "Checked FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement, by State by City) for 2021, 2022 and 2023 - no agency record published for this place in any year. No substitute figure asserted.",
+   "confidence": "suspect",
+   "note": "NOT A MUNICIPALITY. Spanaway is an unincorporated census-designated place in Pierce County with no city government and NO municipal police agency; policing is provided by the PIERCE COUNTY SHERIFF'S DEPARTMENT. It therefore has no FBI city-level agency record, which is why it is absent from the city table in all three years. The only attributable figure would be the countywide Pierce County Sheriff rate, which covers all unincorporated Pierce County - a very large and heterogeneous area spanning both affluent and high-crime communities - and would badly misrepresent Spanaway specifically. That county figure is reported in the FBI's county/metropolitan table, not the city table used here, so it could not be attributed this session and no number is passed off as a Spanaway rate. Context: nearby Federal Way (642.5 violent / 5,410 property) and Tacoma both run well above US benchmarks, so Spanaway should NOT be assumed safe by default.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Federal Way, WA": {
+   "violent_per_100k": 642.5,
+   "property_per_100k": 5410.0,
+   "year": 2023,
+   "source": "FBI UCR, Crime in the United States 2023, Table 8 (Offenses Known to Law Enforcement, by State by City). Rates computed from the published offense counts and the published agency population; cross-checked against the same table for 2021 and 2022.",
+   "confidence": "high",
+   "note": "619 violent and 5212 property offenses on FBI-published population 96,340. 3-yr violent 508/550/643, property 4885/5252/5410. Three consistent years with both rising steadily - a real and worsening trend, not a reporting artifact.",
+   "batch": "b4",
+   "batch_verified": null
+  },
+  "Shoreline, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "NO municipal police force - policing contracted from the King County Sheriff Office, staffing the locally-branded Shoreline Police Department. Incorporated city holding its own reporting ORI, so a city-attributable figure should exist; on re-run use the contract-city ORI, NOT the countywide unincorporated ORI.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Tigard, OR": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / Oregon UCR Report of Criminal Offenses and Arrests. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Bellingham, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Covington, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "NO municipal police force - policing contracted from the King County Sheriff Office, staffing the locally-branded Covington Police Department. Incorporated city holding its own reporting ORI, so a city-attributable figure should exist; on re-run use the contract-city ORI, NOT the countywide unincorporated ORI.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Seattle, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session. Large agency; prefer the CDE/WASPC record over news restatements.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Beaverton, OR": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / Oregon UCR Report of Criminal Offenses and Arrests. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Gresham, OR": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / Oregon UCR Report of Criminal Offenses and Arrests. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Olympia, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Yakima, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Redmond, OR": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / Oregon UCR Report of Criminal Offenses and Arrests. Not retrieved this session. CAUTION: Redmond in Deschutes County OREGON - not Redmond WASHINGTON.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Spokane Valley, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "NO municipal police force - policing contracted from the Spokane County Sheriff Office, staffing the locally-branded Spokane Valley Police Department. Incorporated city holding its own reporting ORI, so a city-attributable figure should exist; on re-run use the contract-city ORI, NOT the countywide unincorporated ORI.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Lacey, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Renton, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Lynnwood, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Kent, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Springfield, OR": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / Oregon UCR Report of Criminal Offenses and Arrests. Not retrieved this session. CAUTION: Springfield, Lane County OREGON - confirm state on the record.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Des Moines, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session. CAUTION: Des Moines, King County WASHINGTON - not Iowa.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Shelton, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session. Small city (~10-11k): one reporting gap swings the rate hard - check month-count completeness.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Maple Valley, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "NO municipal police force - policing contracted from the King County Sheriff Office, staffing the locally-branded Maple Valley Police Department. Incorporated city holding its own reporting ORI, so a city-attributable figure should exist; on re-run use the contract-city ORI, NOT the countywide unincorporated ORI.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Port Orchard, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Battle Ground, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Milwaukie, OR": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / Oregon UCR Report of Criminal Offenses and Arrests. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Auburn, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Seatac, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "NO municipal police force - policing contracted from the King County Sheriff Office, staffing the locally-branded SeaTac Police Department. Incorporated city holding its own reporting ORI, so a city-attributable figure should exist; on re-run use the contract-city ORI, NOT the countywide unincorporated ORI.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Camas, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Lakewood, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session. CAUTION: Lakewood in Pierce County WA (own PD since 2004) - not Lakewood CO/OH/CA/NJ nor the Lakewood CDP in Snohomish County WA.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Clover Creek, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "UNINCORPORATED CDP in Pierce County - not a city, no municipal government, NO municipal police agency. Policed by the Pierce County Sheriff Department, whose ORI covers ALL unincorporated Pierce County (Parkland, Spanaway, Frederickson, Midland), so no Clover-Creek-specific rate exists in any FBI or state UCR publication. Null returned rather than passing a countywide figure off as a city rate.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Poulsbo, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Happy Valley, OR": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / Oregon UCR Report of Criminal Offenses and Arrests. Not retrieved this session. CAUTION: own PD only since 2022 (previously Clackamas County Sheriff contract); pre-2023 years may be sparse or absent - treat an implausibly low early-year count as a reporting artifact, not safety.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Bremerton, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Newberg, OR": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / Oregon UCR Report of Criminal Offenses and Arrests. Not retrieved this session. Served by the consolidated Newberg-Dundee PD covering both cities - check whether the population base includes Dundee.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Mount Vernon, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "University Place, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "NO municipal police force - policing contracted from the Pierce County Sheriff Department, staffing the locally-branded University Place Police Department. Incorporated city holding its own reporting ORI, so a city-attributable figure should exist; on re-run use the contract-city ORI, NOT the countywide unincorporated ORI.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "West Linn, OR": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / Oregon UCR Report of Criminal Offenses and Arrests. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Forest Grove, OR": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / Oregon UCR Report of Criminal Offenses and Arrests. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Tualatin, OR": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / Oregon UCR Report of Criminal Offenses and Arrests. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Tacoma, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Sherwood, OR": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / Oregon UCR Report of Criminal Offenses and Arrests. Not retrieved this session.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Burien, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "NO municipal police force - policing contracted from the King County Sheriff Office, staffing the locally-branded Burien Police Department. Incorporated city holding its own reporting ORI, so a city-attributable figure should exist; on re-run use the contract-city ORI, NOT the countywide unincorporated ORI.",
+   "batch": "b5",
+   "batch_verified": null
+  },
+  "Ferndale, WA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "NO DATA RETRIEVED - WebSearch budget exhausted (200/200) and all HTTPS egress 403-blocked by the agent proxy this session. No figure asserted from memory.",
+   "confidence": "suspect",
+   "note": "Own municipal PD; agency record should exist in FBI CDE / WASPC Crime in Washington. Not retrieved this session. CAUTION: Ferndale, Whatcom County WA - not Ferndale MI/CA.",
+   "batch": "b5",
+   "batch_verified": null
   }
  }
 }

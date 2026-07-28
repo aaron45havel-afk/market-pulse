@@ -82,6 +82,78 @@ MARKETS = {
     },
 }
 
+
+# ── National expansion markets ───────────────────────────────────────
+# Each carries its OWN climate axis — porting New England's maritime
+# logic to Phoenix or Minneapolis would be meaningless. Anchors are
+# metro job markets; tiers are scored within each region's distribution.
+MTW_ANCHORS = {
+    "DEN": (39.7392, -104.9903), "COS": (38.8339, -104.8214),
+    "FNL": (40.5853, -105.0844), "SLC": (40.7608, -111.8910),
+    "BOI": (43.6150, -116.2023), "BZN": (45.6770, -111.0429),
+    "ABQ": (35.0844, -106.6504), "PHX": (33.4484, -112.0740),
+    "TUS": (32.2226, -110.9747), "RNO": (39.5296, -119.8138),
+}
+SE_ANCHORS = {
+    "RDU": (35.7796, -78.6382), "CLT": (35.2271, -80.8431),
+    "AVL": (35.5951, -82.5515), "GSP": (34.8526, -82.3940),
+    "CHS": (32.7765, -79.9311), "SAV": (32.0809, -81.0912),
+    "BNA": (36.1627, -86.7816), "TYS": (35.9606, -83.9207),
+    "CHA": (35.0456, -85.3097), "HSV": (34.7304, -86.5861),
+    "RIC": (37.5407, -77.4360), "ATL": (33.7490, -84.3880),
+}
+MW_ANCHORS = {
+    "MSP": (44.9778, -93.2650), "MSN": (43.0731, -89.4012),
+    "ARB": (42.2808, -83.7430), "CHI": (41.8781, -87.6298),
+    "CMH": (39.9612, -82.9988), "IND": (39.7684, -86.1581),
+    "PIT": (40.4406, -79.9959), "CVG": (39.1031, -84.5120),
+    "MKC": (39.0997, -94.5786), "DSM": (41.5868, -93.6250),
+    "OMA": (41.2565, -95.9345), "MKE": (43.0389, -87.9065),
+}
+PNW_ANCHORS = {
+    "SEA": (47.6062, -122.3321), "PDX": (45.5152, -122.6784),
+    "GEG": (47.6588, -117.4260), "BND": (44.0582, -121.3153),
+    "EUG": (44.0521, -123.0868), "OLM": (47.0379, -122.9007),
+    "BLI": (48.7519, -122.4787), "YKM": (46.6021, -120.5059),
+}
+
+MARKETS.update({
+    "MTW": {"label": "Mountain West", "states": ("CO", "UT", "ID", "MT", "NM", "AZ", "NV", "WY"),
+            "anchors": MTW_ANCHORS, "universe_radius_mi": 35.0,
+            "regions": ("All Mountain West", "Front Range", "Wasatch", "Desert Southwest",
+                        "Northern Rockies", "Inland"),
+            "default_region": "All Mountain West",
+            "climate_axis": "aridity + altitude — desert extreme heat and severe-winter altitude excluded"},
+    "SE": {"label": "Southeast", "states": ("NC", "SC", "GA", "TN", "VA", "AL"),
+           "anchors": SE_ANCHORS, "universe_radius_mi": 35.0,
+           "regions": ("All Southeast", "Carolina Piedmont", "Appalachian Upland",
+                       "Atlantic Coast", "Tennessee Valley", "Inland"),
+           "default_region": "All Southeast",
+           "climate_axis": "summer heat + humidity, moderated by Appalachian elevation"},
+    "MW": {"label": "Midwest", "states": ("MN", "WI", "MI", "IL", "OH", "IN", "IA", "MO", "KS", "NE", "PA"),
+           "anchors": MW_ANCHORS, "universe_radius_mi": 35.0,
+           "regions": ("All Midwest", "Ohio Valley", "Great Lakes", "Upper Midwest", "Inland"),
+           "default_region": "All Midwest",
+           "climate_axis": "continental extremes — deep-winter north and lake-effect snow belts excluded"},
+    "PNW": {"label": "Pacific NW", "states": ("WA", "OR"),
+            "anchors": PNW_ANCHORS, "universe_radius_mi": 35.0,
+            "regions": ("All Pacific NW", "Puget Sound", "Willamette Valley",
+                        "East of the Cascades", "Inland"),
+            "default_region": "All Pacific NW",
+            "climate_axis": "the Cascade rain shadow — east-side extremes excluded, winter gloom labelled"},
+})
+
+# Tier vocabularies differ per market (each region's "best" has its own
+# name), so the pass/fail ladder is resolved per market rather than
+# assuming New England's words.
+MARKET_TIER_LADDER = {
+    "NE": ("temperate-coastal", "moderate", "harsh-interior"),
+    "MTW": ("temperate-highland", "moderate", "harsh"),
+    "SE": ("temperate-upland", "moderate", "harsh-interior", "harsh"),
+    "MW": ("river-valley-temperate", "moderate", "harsh-interior", "harsh"),
+    "PNW": ("temperate-marine", "moderate", "harsh"),
+}
+
 MARKET_KEYS = tuple(MARKETS)
 
 
@@ -142,11 +214,19 @@ def climate_of(market: str, city: str, state: str,
         return False, "unclassified — needs review", None
     rec = _layer(market, "climate").get(sub, {})
     tier = rec.get("tier", "unclassified")
-    if tier not in CLIMATE_TIERS:
+    ladder = MARKET_TIER_LADDER.get(market, CLIMATE_TIERS)
+    if tier not in ladder:
         return False, tier, {**rec, "subregion": sub}
-    limit = winter_tolerance if winter_tolerance in CLIMATE_TIERS else "moderate"
-    ok = CLIMATE_TIERS.index(tier) <= CLIMATE_TIERS.index(limit)
-    return ok, tier, {**rec, "subregion": sub}
+    # Map the caller's generic tolerance onto this market's own ladder.
+    if winter_tolerance in ladder:
+        limit_i = ladder.index(winter_tolerance)
+    elif winter_tolerance == "temperate-coastal":
+        limit_i = 0
+    elif winter_tolerance == "harsh-interior":
+        limit_i = len(ladder) - 1
+    else:
+        limit_i = 1 if len(ladder) > 1 else 0
+    return ladder.index(tier) <= limit_i, tier, {**rec, "subregion": sub}
 
 
 def hazard_of(market: str, city: str, state: str) -> dict | None:
@@ -219,6 +299,8 @@ def region_tag(market: str, county: str | None, state: str | None,
                climate_sub: str | None = None) -> str:
     c = county or ""
     st = (state or "").upper()
+    if market in _SUB_PILL:
+        return _pill_from_sub(market, climate_sub)
     if market == "CA":
         if c == "San Diego County":
             return "San Diego"
@@ -239,4 +321,32 @@ def region_tag(market: str, county: str | None, state: str | None,
         if "south coast" in sub.lower() or "cape" in sub.lower():
             return "RI + South Coast"
         return "Boston metro" if c in _BOSTON_COUNTIES else "Inland"
+    return "Inland"
+
+
+# Region pills for the expansion markets are derived from the climate
+# sub-region key, which already encodes the geography the pills describe.
+_SUB_PILL = {
+    "MTW": ((("front-range", "denver", "pikes", "boulder"), "Front Range"),
+            (("wasatch", "salt-lake", "utah-valley", "tooele"), "Wasatch"),
+            (("phoenix", "sonoran", "tucson", "desert", "vegas", "rio-grande", "albuquerque"), "Desert Southwest"),
+            (("treasure", "boise", "bozeman", "gallatin", "montana", "reno", "truckee"), "Northern Rockies")),
+    "SE": ((("piedmont", "charlotte", "triangle", "raleigh", "richmond"), "Carolina Piedmont"),
+           (("upland", "blue_ridge", "blue-ridge", "escarpment", "appalach", "asheville", "chattanooga"), "Appalachian Upland"),
+           (("coast", "charleston", "savannah", "lowcountry", "low_country"), "Atlantic Coast"),
+           (("nashville", "tennessee", "middle_tn", "huntsville"), "Tennessee Valley")),
+    "MW": ((("ohio_valley", "ohio-valley", "cincinnati", "river_valley", "river-valley"), "Ohio Valley"),
+           (("lake", "chicago", "milwaukee", "michigan", "erie"), "Great Lakes"),
+           (("minne", "twin_cities", "twin-cities", "madison", "wisconsin", "iowa", "upper"), "Upper Midwest")),
+    "PNW": ((("puget", "seattle", "sound", "kitsap"), "Puget Sound"),
+            (("willamette", "portland", "eugene", "salem"), "Willamette Valley"),
+            (("east", "spokane", "yakima", "bend", "cascade-east", "columbia"), "East of the Cascades")),
+}
+
+
+def _pill_from_sub(market: str, sub: str | None) -> str:
+    s = (sub or "").lower()
+    for keys, pill in _SUB_PILL.get(market, ()):
+        if any(k in s for k in keys):
+            return pill
     return "Inland"

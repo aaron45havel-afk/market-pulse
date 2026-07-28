@@ -1,0 +1,56 @@
+name: Check research-layer freshness
+
+# The researched layers (crime, climate, hazards, financing calibration)
+# do not refresh themselves. This opens/updates a single tracking issue
+# when any layer ages past the TTL that matches how fast that source
+# actually drifts — so a stale number is loud rather than silent.
+on:
+  schedule:
+    - cron: '0 17 3 * *'   # 3rd of each month
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - id: fresh
+        working-directory: market-pulse-v21
+        run: |
+          python - <<'PY' >> $GITHUB_OUTPUT
+          import sys; sys.path.insert(0, '.')
+          import screen_history as H
+          stale = [f for f in H.layer_freshness() if f["stale"]]
+          print(f"count={len(stale)}")
+          body = "\n".join(
+              f"- **{f['layer']}** — as of {f['as_of']}, {f['age_days']}d old (TTL {f.get('ttl_days')}d)"
+              for f in stale)
+          print("body<<EOF"); print(body or "none"); print("EOF")
+          PY
+      - name: Open or update the tracking issue
+        if: steps.fresh.outputs.count != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `These research layers are past their refresh window:\n\n${{ toJSON(steps.fresh.outputs.body) }}\n\n` +
+              `**Crime** can be refreshed automatically — run the *Refresh crime layer (FBI CDE)* workflow (needs the \`CDE_API_KEY\` secret).\n` +
+              `**Climate / hazards / calibration** need a research re-run; they have no free bulk API.\n\n` +
+              `Until refreshed, /norcal and /headroom flag these columns as stale rather than presenting them as current.`;
+            const title = 'Research layers need a refresh';
+            const existing = (await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: 'open' })).data
+              .find(i => i.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({ owner: context.repo.owner,
+                repo: context.repo.repo, issue_number: existing.number, body });
+            } else {
+              await github.rest.issues.create({ owner: context.repo.owner,
+                repo: context.repo.repo, title, body });
+            }
