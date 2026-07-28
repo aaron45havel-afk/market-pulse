@@ -486,20 +486,40 @@ async def contractor_plan_pdf(bsqft: str = "", bbeds: str = "3", bbaths: str = "
 async def headroom_page(request: Request, mode: str = "brrrr", scope: str = "moderate",
                         level: str = "low", target: str = "14", rate: str = "",
                         sqft: str = "1500", xadj: str = "0", metro: str = "",
-                        universe: str = "all"):
+                        universe: str = "all", hstate: str = "", units: str = "4",
+                        maxprice: str = "300000"):
     """Headroom — the remodel deal engine. Ranks all ~107 markets by the
     max purchase $/sqft that clears the after-tax compounded-return target
     (BRRRR or flip) vs what fixers actually cost there. See headroom.py.
     All numeric params parsed tolerantly."""
     import headroom as HR
     from data_providers import MORTGAGE_30Y_RATE
-    mode = mode if mode in ("brrrr", "flip") else "brrrr"
+    mode = mode if mode in ("brrrr", "flip", "hh") else "brrrr"
     scope = scope if scope in ("cosmetic", "moderate", "gut") else "moderate"
     level = level if level in ("low", "mid", "high") else "low"
     target_n = max(1.0, min(60.0, _qnum(target, 14)))
     rate_n = _qnum(rate) or MORTGAGE_30Y_RATE or 6.55
     sqft_n = max(600.0, min(6000.0, _qnum(sqft, 1500)))
     xadj_n = max(-0.02, min(0.05, _qnum(xadj)))
+    units_n = max(2, min(4, int(_qnum(units, 4))))
+    maxprice_n = max(50_000.0, min(2_000_000.0, _qnum(maxprice, 300_000)))
+    hstate = hstate.strip().upper()[:2]
+    if mode == "hh":
+        # Owner-occupant house-hack: ZIP-level, no DSCR (FHA self-sufficiency
+        # is the funding gate), solved for the max offer per ZIP.
+        hh_board = await asyncio.to_thread(
+            HR.zip_board_hh, state=(hstate or None), units=units_n, scope=scope,
+            level=level, rate_pct=rate_n, max_price=maxprice_n)
+        from value_add import STATE_NAMES as _SN
+        return templates.TemplateResponse("headroom.html", {
+            "request": request, "board": [], "hh_board": hh_board, "n_primed": 0,
+            "mode": mode, "scope": scope, "level": level, "target": target_n,
+            "rate": rate_n, "sqft": sqft_n, "xadj": xadj_n, "universe": universe,
+            "metro": "", "drill": None, "metro_name": "",
+            "hstate": hstate, "units": units_n, "maxprice": maxprice_n,
+            "calib": HR.calibration(scope), "fin": HR.financing_terms(rate_n),
+            "profit_floor": HR.PROFIT_FLOOR, "hold_years": HR.HOLD_YEARS,
+        })
     board = await asyncio.to_thread(
         HR.build_board, mode=mode, scope=scope, level=level, target=target_n,
         rate_pct=rate_n, sqft=sqft_n, x_adjust=xadj_n,
