@@ -51,23 +51,49 @@
 {% endblock %}
 
 {% block content %}
+{% set qs = 'assets=' ~ power.assets|int ~ '&reserves=' ~ power.reserves|int ~ '&down_pct=' ~ power.down_pct|int ~ '&safetier=' ~ safetier ~ '&unknown=' ~ (1 if allow_unknown else 0) ~ '&surge=' ~ (1 if allow_surge else 0) ~ '&foodpct=' ~ foodpct|int ~ '&access=' ~ access_max|int %}
 <div class="nc-hero">
-  <h1>🌉 California Real Estate — strict screen</h1>
+  <h1>{{ '🌉' if market == 'CA' else '🦞' }} {{ res.market_label }} Real Estate — strict screen</h1>
   <span class="nc-power">${{ '{:,.0f}'.format(power.assets) }} assets − ${{ '{:,.0f}'.format(power.reserves) }} reserves = ${{ '{:,.0f}'.format(power.deployable) }} down → max ${{ '{:,.0f}'.format(power.max_purchase) }} at {{ power.down_pct|int }}% down</span>
 </div>
 <p class="nc-sub">
-  Every California ZIP graded on five strict gates — <strong>≤ ~20-30 min off-peak</strong> to any CA city ≥300k (14 anchors, bridge-penalty aware in the Bay),
-  <strong>top-tier dining</strong> (Bay-calibrated, with documented overrides where the density metric is blind),
-  <strong>excellent safety</strong> (top quintile), <strong>temperate microclimate</strong> (fog belt / wind corridors / inland heat excluded — hand-encoded, labeled),
-  and <strong>steady appreciation</strong> (positive trend, low volatility, shallow drawdowns) — plus the sixth gate:
-  <strong>can we actually buy it.</strong> Tune via URL: <code>?assets=…&amp;reserves=…&amp;down_pct=…</code>
+  Every ZIP graded on strict gates — <strong>≤ {{ access_max|int }} min off-peak</strong> to a real job market
+  ({% if market == 'CA' %}CA cities ≥300k, 14 anchors, bridge-penalty aware in the Bay{% else %}metro-gravity anchors — Boston, Providence, Hartford, Worcester, New Haven, Stamford/Bridgeport, Portland ME, Manchester, Portsmouth, New London. A &ldquo;city ≥300k&rdquo; rule admits only Boston here{% endif %}),
+  <strong>top-tier dining</strong> (top {{ (100 - foodpct)|int }}% of this market — bar {{ res.food_bar }}),
+  <strong>real safety</strong> (FBI city violent-crime rate, {{ safetier|replace('_',' ') }} or better — <em>not</em> the income-derived proxy),
+  <strong>climate</strong> ({{ res.climate_axis }}),
+  <strong>steady appreciation</strong>{% if market != 'CA' %}, and <strong>coastal hazards</strong> (storm surge / insurance crisis excluded){% endif %} — plus the last gate:
+  <strong>can we actually buy it.</strong>
 </p>
 
 <div class="nc-pills">
-  {% for reg in regions %}
-  <a class="nc-pill {{ 'active' if reg == res.region }}" href="/norcal?region={{ reg | urlencode }}{% if power.assets != 200000 %}&assets={{ power.assets|int }}{% endif %}">{{ reg }}</a>
+  {% for mk, m in markets.items() %}
+  <a class="nc-pill {{ 'active' if mk == market }}" href="/norcal?market={{ mk }}&{{ qs }}">{{ m.label }}</a>
   {% endfor %}
 </div>
+<div class="nc-pills">
+  {% for reg in regions %}
+  <a class="nc-pill {{ 'active' if reg == res.region }}" href="/norcal?market={{ market }}&region={{ reg | urlencode }}&{{ qs }}">{{ reg }}</a>
+  {% endfor %}
+</div>
+{% set qs2 = 'market=' ~ market ~ '&region=' ~ res.region|urlencode ~ '&assets=' ~ power.assets|int ~ '&reserves=' ~ power.reserves|int ~ '&down_pct=' ~ power.down_pct|int ~ '&unknown=' ~ (1 if allow_unknown else 0) ~ '&surge=' ~ (1 if allow_surge else 0) ~ '&foodpct=' ~ foodpct|int ~ '&access=' ~ access_max|int %}
+<div class="nc-pills" style="font-size:0.72rem;align-items:center">
+  <span style="color:var(--ink-3);font-weight:700;align-self:center">SAFETY BAR</span>
+  {% for t, lbl in (('very_safe','Very safe &lt;150'), ('safe','Safe &lt;250'), ('average','Average &lt;450'), ('high','No filter')) %}
+  <a class="nc-pill {{ 'active' if safetier == t }}" href="/norcal?{{ qs2 }}&safetier={{ t }}">{{ lbl|safe }}</a>
+  {% endfor %}
+  <span style="color:var(--ink-3);margin-left:0.3rem">real FBI rates · {{ res.safety_coverage.with_data }} cities verified · unverified towns are excluded, never assumed safe</span>
+</div>
+{% if market != 'CA' %}
+<div class="nc-pills" style="font-size:0.72rem;align-items:center">
+  <span style="color:var(--ink-3);font-weight:700;align-self:center">WINTER TOLERANCE</span>
+  {% for t, lbl in (('temperate-coastal','Mildest only (CT/RI shore, Cape)'), ('moderate','+ Boston, North Shore, Providence'), ('harsh-interior','+ Maine &amp; NH — all classified')) %}
+  <a class="nc-pill {{ 'active' if winter == t }}" href="/norcal?market={{ market }}&region={{ res.region|urlencode }}&assets={{ power.assets|int }}&reserves={{ power.reserves|int }}&down_pct={{ power.down_pct|int }}&safetier={{ safetier }}&unknown={{ 1 if allow_unknown else 0 }}&surge={{ 1 if allow_surge else 0 }}&foodpct={{ foodpct|int }}&access={{ access_max|int }}&winter={{ t }}">{{ lbl|safe }}</a>
+  {% endfor %}
+  <a class="nc-pill {{ 'active' if allow_surge }}" href="/norcal?market={{ market }}&region={{ res.region|urlencode }}&assets={{ power.assets|int }}&reserves={{ power.reserves|int }}&down_pct={{ power.down_pct|int }}&safetier={{ safetier }}&unknown={{ 1 if allow_unknown else 0 }}&surge={{ 0 if allow_surge else 1 }}&foodpct={{ foodpct|int }}&access={{ access_max|int }}&winter={{ winter }}">{{ 'Surge zones EXCLUDED' if allow_surge else 'Exclude surge subregions' }}</a>
+  <span style="color:var(--ink-3);margin-left:0.3rem">Maine &amp; the NH Seacoast classify as <b>harsh-interior</b> on New England's own scale — Portland takes 62&Prime; of snow and a 15&deg;F January low vs 25&Prime; on the CT shore. Surge risk is sub-regional, so it flags the waterfront strip rather than excluding a whole town unless you ask.</span>
+</div>
+{% endif %}
 
 <div class="nc-card">
   <h2>🔍 Deal checker</h2>
@@ -108,13 +134,13 @@
   <h2>✅ Buyable now — all five gates + budget ({{ res.buyable|length }})</h2>
   {% if res.buyable %}
   <div class="nc-scroll"><table class="nc-table">
-    <thead><tr><th>ZIP</th><th>Town</th><th>Region</th><th>Entry</th><th>Segment</th><th>Min</th><th>Food</th><th>Crime</th><th>CAGR</th><th>Worst DD</th></tr></thead>
+    <thead><tr><th>ZIP</th><th>Town</th><th>Region</th><th>Entry</th><th>Segment</th><th>Min</th><th>Food</th><th>Safety (FBI)</th><th>Climate</th>{% if market != 'CA' %}<th>Coastal</th>{% endif %}<th>CAGR</th><th>Worst DD</th></tr></thead>
     <tbody>{% for s in res.buyable %}
       <tr><td><a href="/zip/{{ s.zip }}">{{ s.zip }}</a></td><td>{{ s.name }}</td>
       <td>{{ s.region }}</td>
       <td>${{ '{:,.0f}'.format(s.entry_price) }}</td><td>{{ s.entry_kind }}</td>
       <td>{{ s.minutes }} {{ s.anchor }}</td><td>{{ s.food }}{% if s.food_override %}<span class="food-star" title="{{ s.food_override }}">*</span>{% endif %}</td>
-      <td>{{ s.crime }}</td><td>{{ s.steady.cagr if s.steady else '—' }}%</td><td>{{ s.steady.max_dd if s.steady else '—' }}%</td></tr>
+      {% include 'partials/_nc_safety_cells.html' %}<td>{{ s.steady.cagr if s.steady else '—' }}%</td><td>{{ s.steady.max_dd if s.steady else '—' }}%</td></tr>
     {% endfor %}</tbody>
   </table></div>
   {% else %}
@@ -127,7 +153,7 @@
   <h2>🎯 Aspirational — passes all five quality gates, above budget ({{ res.aspirational|length }})</h2>
   <p class="desc">Your ladder. The gap column shows what asset base makes each reachable at {{ power.down_pct|int }}% down.</p>
   <div class="nc-scroll"><table class="nc-table">
-    <thead><tr><th>ZIP</th><th>Town</th><th>Region</th><th>Entry</th><th>Segment</th><th>Assets needed</th><th>Min</th><th>Food</th><th>Crime</th><th>Climate</th><th>CAGR</th><th>Worst DD</th></tr></thead>
+    <thead><tr><th>ZIP</th><th>Town</th><th>Region</th><th>Entry</th><th>Segment</th><th>Assets needed</th><th>Min</th><th>Food</th><th>Safety (FBI)</th><th>Climate</th>{% if market != 'CA' %}<th>Coastal</th>{% endif %}<th>CAGR</th><th>Worst DD</th></tr></thead>
     <tbody>{% for s in res.aspirational %}
       <tr><td><a href="/zip/{{ s.zip }}">{{ s.zip }}</a></td><td>{{ s.name }}</td>
       <td>{{ s.region }}</td>
@@ -135,7 +161,7 @@
       <td>${{ '{:,.0f}'.format(s.entry_price * power.down_pct / 100 + power.reserves) }}</td>
       <td>{{ s.minutes }} {{ s.anchor }}</td>
       <td>{{ s.food }}{% if s.food_override %}<span class="food-star" title="{{ s.food_override }}">*</span>{% endif %}</td>
-      <td>{{ s.crime }}</td><td>{{ s.climate_tier }}</td>
+      {% include 'partials/_nc_safety_cells.html' %}
       <td>{{ s.steady.cagr if s.steady else '—' }}%</td><td>{{ s.steady.max_dd if s.steady else '—' }}%</td></tr>
     {% endfor %}</tbody>
   </table></div>

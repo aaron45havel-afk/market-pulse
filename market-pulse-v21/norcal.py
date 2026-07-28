@@ -277,17 +277,22 @@ _ANCHOR_SIDE = {"SF": "west", "OAK": "east"}
 _BRIDGE_PENALTY_MIN = 25.0
 
 
-def _access(lat, lng, county: str | None) -> tuple[str, float]:
-    """(nearest anchor, est. off-peak minutes) with a bridge penalty
-    when ZIP and anchor sit on opposite sides of the Bay."""
+def _access(lat, lng, county: str | None, anchors: dict | None = None,
+            market: str = "CA") -> tuple[str, float]:
+    """(nearest anchor, est. off-peak minutes). The Bay bridge penalty is
+    California geography — New England's anchors carry no equivalent
+    water crossing, so it applies only in the CA market."""
+    anchors = anchors or ANCHORS
     c = county or ""
-    zip_side = "east" if c in _EAST_COUNTIES else \
-               "west" if c in _BAY_WEST_COUNTIES else None
+    zip_side = None
+    if market == "CA":
+        zip_side = "east" if c in _EAST_COUNTIES else \
+                   "west" if c in _BAY_WEST_COUNTIES else None
     best, minutes = "", 9e9
-    for name, (alat, alng) in ANCHORS.items():
+    for name, (alat, alng) in anchors.items():
         road = _haversine_mi(lat, lng, alat, alng) * CORRIDOR_FACTOR
         mins = road / AVG_MPH * 60 + SURFACE_BUFFER_MIN
-        aside = _ANCHOR_SIDE.get(name)
+        aside = _ANCHOR_SIDE.get(name) if market == "CA" else None
         if aside and zip_side and aside != zip_side:
             mins += _BRIDGE_PENALTY_MIN
         if mins < minutes:
@@ -354,19 +359,24 @@ def buying_power(assets: float, reserves: float, down_pct: float) -> dict:
             "down_pct": down_pct, "max_purchase": round(max_purchase)}
 
 
-def _universe(conn) -> list[sqlite3.Row]:
+def _universe(conn, market: str = "CA") -> list[sqlite3.Row]:
+    import regions as RG
     conn.row_factory = sqlite3.Row
-    rows = conn.execute("""
-        SELECT zip, name, county, lat, lng, population, restaurant_score,
+    mkt = RG.MARKETS.get(market, RG.MARKETS["CA"])
+    states, anchors = mkt["states"], mkt["anchors"]
+    radius = mkt["universe_radius_mi"]
+    ph = ",".join("?" * len(states))
+    rows = conn.execute(f"""
+        SELECT zip, name, state, county, lat, lng, population, restaurant_score,
                crime_index, walk_score, median_home_value, median_rent_monthly,
                history_zhvi
         FROM zips
-        WHERE state = 'CA' AND lat IS NOT NULL AND population > 3000
-    """).fetchall()
+        WHERE state IN ({ph}) AND lat IS NOT NULL AND population > 3000
+    """, states).fetchall()
     out = []
     for r in rows:
         if min(_haversine_mi(r["lat"], r["lng"], a[0], a[1])
-               for a in ANCHORS.values()) <= UNIVERSE_RADIUS_MI:
+               for a in anchors.values()) <= radius:
             out.append(r)
     return out
 
@@ -378,36 +388,72 @@ def screen(assets: float = ASSETS_DEFAULT, reserves: float = RESERVES_DEFAULT,
            down_pct: float = DOWN_PCT_DEFAULT,
            crime_max: float = CRIME_MAX, food_min: float = FOOD_MIN,
            access_max: float = ACCESS_MIN_MAX,
-           region: str = "All CA") -> dict:
-    """Run the six gates over the CA universe. Returns tiers + stats,
-    filtered to `region` (All CA / NorCal / SoCal / San Diego)."""
+           region: str = "All CA", market: str = "CA",
+           safety_tier: str = "safe", allow_unknown_safety: bool = False,
+           strict_surge: bool = False, food_pct: float = 75.0,
+           winter: str = "moderate") -> dict:
+    """Run the six gates over a market's universe (CA or NE).
+
+    The safety gate uses REAL FBI city-agency crime rates via safety.py —
+    never the zips.db crime_index, which is a socioeconomic heuristic
+    (density + income + education) correlating −0.76 with median income.
+    Gating on that made "excellent safety" a synonym for "expensive", so
+    the five quality gates collapsed into one wealth filter and nothing
+    was ever buyable. Dining is calibrated by percentile WITHIN the
+    market for the same reason: an absolute Bay-Area bar fails genuinely
+    strong regional food towns."""
+    import regions as RG
+    import safety as SF
+    mkt = RG.MARKETS.get(market, RG.MARKETS["CA"])
     if not _ZIPS_DB.exists():
         return {"buyable": [], "aspirational": [], "near": [], "rest": [],
                 "power": buying_power(assets, reserves, down_pct),
                 "universe_n": 0, "condo_as_of": None, "region": region,
+                "market": market, "market_label": mkt["label"],
                 "thresholds": {"crime_max": crime_max, "food_min": food_min,
                                "access_max": access_max}}
     conn = sqlite3.connect(str(_ZIPS_DB))
     try:
-        universe = _universe(conn)
+        universe = _universe(conn, market)
     finally:
         conn.close()
     condo = _load_condo_overlay()
     condo_series = condo.get("series") or {}
     power = buying_power(assets, reserves, down_pct)
+    anchors = mkt["anchors"]
+
+    # Dining bar: percentile of THIS market's own universe, so "top-tier"
+    # means top-tier for the region rather than relative to San Francisco.
+    food_bar = RG.food_threshold([r["restaurant_score"] for r in universe], food_pct)
+    if market == "CA":
+        food_bar = max(food_bar, food_min) if food_min else food_bar
 
     scored = []
     for r in universe:
         z = r["zip"]
-        reg = _region(r["county"])
-        if region != "All CA" and reg != region:
+        st = (r["state"] if "state" in r.keys() else "CA") or "CA"
+        if market == "CA":
+            reg = _region(r["county"])
+            clim_ok, clim_tier = _climate(z, r["name"], r["county"])
+            clim_rec = None
+        else:
+            clim_ok, clim_tier, clim_rec = RG.climate_of(market, r["name"], st, winter)
+            reg = RG.region_tag(market, r["county"], st,
+                                (clim_rec or {}).get("subregion"))
+        if region not in (mkt["default_region"], "All CA") and reg != region:
             continue
-        anchor, minutes = _access(r["lat"], r["lng"], r["county"])
-        clim_ok, clim_tier = _climate(z, r["name"], r["county"])
+        anchor, minutes = _access(r["lat"], r["lng"], r["county"], anchors, market)
         food = r["restaurant_score"]
-        food_ok = (food is not None and food >= food_min) or z in FOOD_OVERRIDES
-        crime = r["crime_index"]
-        crime_ok = crime is not None and crime <= crime_max
+        food_ok = (food is not None and food >= food_bar) or z in FOOD_OVERRIDES
+
+        # ── Safety: real FBI figures, fail-closed on unknown/suspect ──
+        sf = SF.zip_safety(r["name"], st)
+        crime_ok = SF.passes(sf, safety_tier, allow_unknown_safety)
+        crime = sf["violent"]
+
+        # ── Coastal hazards (New England add-on gate) ──
+        hz = RG.hazard_of(market, r["name"], st)
+        hz_ok, hz_flags = RG.hazard_ok(hz, strict_surge=strict_surge)
 
         c_entry = condo_series.get(z) if isinstance(condo_series.get(z), dict) else None
         if c_entry and isinstance(c_entry.get("price"), (int, float)):
@@ -434,33 +480,44 @@ def screen(assets: float = ASSETS_DEFAULT, reserves: float = RESERVES_DEFAULT,
             "climate": clim_ok,
             "steady": steady_ok,
         }
+        # Coastal hazard is a New England gate only — California's screen
+        # has no surge/insurance-crisis equivalent encoded.
+        if market != "CA":
+            gates["hazard"] = hz_ok
+        n_quality = len(gates)
         quality_n = sum(gates.values())
         buyable_ok = entry_price is not None and entry_price <= power["max_purchase"]
         gates["budget"] = buyable_ok
 
         scored.append({
-            "zip": z, "region": reg,
-            "name": (r["name"] or "").replace(", CA", ""),
+            "zip": z, "region": reg, "state": st,
+            "name": (r["name"] or "").replace(f", {st}", ""),
             "county": r["county"], "population": r["population"],
             "anchor": anchor, "minutes": minutes,
             "food": food, "food_override": FOOD_OVERRIDES.get(z),
-            "crime": crime, "walk": r["walk_score"],
-            "climate_tier": clim_tier,
+            "crime": crime, "safety": sf, "walk": r["walk_score"],
+            "climate_tier": clim_tier, "climate": clim_rec,
+            "hazard": hz, "hazard_flags": hz_flags,
             "entry_price": entry_price, "entry_kind": entry_kind,
             "median_home_value": r["median_home_value"],
             "median_rent": r["median_rent_monthly"],
             "steady": steady,
-            "gates": gates, "quality_n": quality_n,
+            "gates": gates, "quality_n": quality_n, "n_quality": n_quality,
         })
 
-    buyable = [s for s in scored if s["quality_n"] == 5 and s["gates"]["budget"]]
-    aspirational = [s for s in scored if s["quality_n"] == 5 and not s["gates"]["budget"]]
-    near = [s for s in scored if s["quality_n"] == 4]
+    buyable = [s for s in scored if s["quality_n"] == s["n_quality"] and s["gates"]["budget"]]
+    aspirational = [s for s in scored if s["quality_n"] == s["n_quality"] and not s["gates"]["budget"]]
+    near = [s for s in scored if s["quality_n"] == s["n_quality"] - 1]
     key = lambda s: (s["minutes"], -(s["food"] or 0))
     for lst in (buyable, aspirational, near):
         lst.sort(key=key)
     return {
         "buyable": buyable, "aspirational": aspirational, "near": near,
+        "market": market, "market_label": mkt["label"],
+        "market_regions": mkt["regions"], "climate_axis": mkt["climate_axis"],
+        "food_bar": food_bar, "food_pct": food_pct,
+        "safety_tier": safety_tier, "safety_coverage": SF.coverage(),
+        "winter": winter,
         "universe_n": len(scored), "power": power,
         "condo_as_of": condo.get("as_of"), "region": region,
         "thresholds": {"crime_max": crime_max, "food_min": food_min,

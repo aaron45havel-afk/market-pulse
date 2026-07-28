@@ -1,0 +1,11 @@
+{# Shared safety / climate / coastal cells. `s` is the scored ZIP row. #}
+<td>{% set sf = s.safety %}
+  {% if sf.tier == 'very_safe' %}<span style="color:#16a34a;font-weight:800">VERY SAFE</span>
+  {% elif sf.tier == 'safe' %}<span style="color:#16a34a">SAFE</span>
+  {% elif sf.tier == 'average' %}<span style="color:#b45309">AVG</span>
+  {% elif sf.tier == 'elevated' %}<span style="color:#dc2626">ELEV</span>
+  {% elif sf.tier == 'high' %}<span style="color:#dc2626;font-weight:800">HIGH</span>
+  {% else %}<span style="color:var(--ink-3)" title="{{ sf.note or 'no verified FBI figure' }}">unverified</span>{% endif %}
+  {% if sf.violent %}<span style="color:var(--ink-3);font-size:0.9em" title="{{ sf.source }} ({{ sf.year }})"> {{ sf.violent }}{% if sf.vs_us %} · {{ sf.vs_us }}×US{% endif %}</span>{% endif %}</td>
+<td title="{{ (s.climate.note if s.climate else '') or s.climate_tier }}">{{ s.climate_tier }}{% if s.climate and s.climate.hardiness_zone %} <span style="color:var(--ink-3);font-size:0.9em">{{ s.climate.hardiness_zone }}{% if s.climate.snow_in %} · {{ s.climate.snow_in }}"{% endif %}</span>{% endif %}</td>
+{% if market != 'CA' %}<td>{% if s.hazard %}<span title="{{ s.hazard.note or '' }}">{{ s.hazard.surge_flood_risk }} surge · {{ s.hazard.insurance_climate }} ins{% if s.hazard.seasonality != 'year-round' %} · {{ s.hazard.seasonality }}{% endif %}</span>{% else %}—{% endif %}</td>{% endif %}
