@@ -534,7 +534,7 @@ async def headroom_page(request: Request, mode: str = "brrrr", scope: str = "mod
         # REAL city-level crime data (safety.py) — unknown never passes as
         # safe unless the user explicitly opts in.
         import safety as SF
-        safetier = safetier if safetier in SF.TIER_ORDER else "safe"
+        safetier = SF.valid_tier(safetier)
         allow_unknown = _qnum(unknown) > 0
         hh_board = await asyncio.to_thread(
             HR.zip_board_hh, state=(hstate or None), units=units_n, scope=scope,
@@ -3641,8 +3641,22 @@ async def multifamily_page(
     down_pct: str = "3.5",
     units: str = "2",
     rent_unit: str = "",
+    safetier: str = "safe",
+    unknown: str = "0",
+    check_price: str = "",
+    check_rent: str = "",
+    check_income: str = "",
+    check_debts: str = "",
 ):
     """Multifamily ZIP scout, tuned for first-time FHA owner-occupants.
+
+    SAFETY: this board ranks where a family would LIVE, so it runs the
+    same real-FBI safety gate as the strict screen (safety.py) — never
+    the zips.db crime_index, which is density+income+education and
+    correlates -0.76 with median income. Ranking on yield alone sorts
+    *toward* the crime discount: the highest cap rates in a metro are
+    frequently its most distressed tracts. Unverified cities are shown
+    but flagged, and excluded from the ranked board unless opted in.
 
     Default frame: a small-and-mighty investor with ~3.5% FHA cash
     buying a 2-4 unit under $550k and house-hacking (lives in one
@@ -3666,6 +3680,10 @@ async def multifamily_page(
     import sqlite3
     from bisect import bisect_left
     from data_providers import MORTGAGE_30Y_RATE
+    import safety as SF
+    import househack as HH
+    safetier = SF.valid_tier(safetier)
+    allow_unknown_safety = _qnum(unknown) > 0
     state = (state or "OH").upper()
     # Clamp inputs so a wonky URL param can't blow up the math. Parsed
     # tolerantly (_qnum) — an emptied number field submits "" and must
@@ -3674,6 +3692,14 @@ async def multifamily_page(
     down_pct = max(0.0, min(50.0, _qnum(down_pct, 3.5)))
     units = max(2, min(4, int(_qnum(units, 2))))
     rent_unit_n = max(0.0, min(50_000.0, _qnum(rent_unit)))
+    # Deal checker: a specific listing at a specific ask with the rents
+    # the seller claims. This is the only place on the page where the two
+    # weakest board inputs — an ESTIMATED building price and an often
+    # IMPUTED rent — are replaced by numbers the user actually has.
+    chk_price = max(0.0, min(5_000_000.0, _qnum(check_price)))
+    chk_rent = max(0.0, min(50_000.0, _qnum(check_rent)))
+    chk_income = max(0.0, min(10_000_000.0, _qnum(check_income)))
+    chk_debts = max(0.0, min(50_000.0, _qnum(check_debts)))
 
     db_path = Path(__file__).resolve().parent / "data" / "zips.db"
     if not db_path.exists():
@@ -3683,6 +3709,17 @@ async def multifamily_page(
             "max_price": max_price, "down_pct": down_pct, "units": units,
             "rent_unit": (int(rent_unit_n) if rent_unit_n > 0 else ""),
             "hh_scenario": None, "rent_source": None,
+            # The template dereferences these unconditionally; a bare
+            # Undefined raises in Jinja, so a missing database has to
+            # degrade to an empty page, not a 500.
+            "safetier": safetier, "allow_unknown_safety": allow_unknown_safety,
+            "safety_coverage": SF.coverage(), "gate": None, "deal": None,
+            "sample_piti": None, "vs_rent": None, "qualify": None,
+            "selfsuff": None, "reserves": None, "rent_observed_pct": 0,
+            "check_price": "", "check_rent": "", "check_income": "",
+            "check_debts": "", "state_struct": None, "has_history": False,
+            "suggest": None, "unit_factor": 1.0, "hv_ceiling": 0,
+            "mortgage_rate": MORTGAGE_30Y_RATE,
         })
     conn = sqlite3.connect(str(db_path))
     cur = conn.cursor()
@@ -3695,13 +3732,15 @@ async def multifamily_page(
         cur.execute("select count(*) from zips where pct_renter_occupied is not null")
         has_mf_data = cur.fetchone()[0] > 0
 
-    # Affordability filter: median_home_value must be within
-    # 1.2× of the user's cap. The 20% headroom accounts for the
-    # fact that median is a midpoint — there are cheaper duplexes
-    # *and* the user may stretch slightly above their target.
-    # ZIPs >1.2× the cap are dropped entirely so the table only
-    # shows places the user could plausibly shop in.
-    hv_ceiling = int(max_price * 1.2)
+    # Affordability filter. The user's cap is what they'd pay for the
+    # BUILDING, and a 2-4 unit does not cost the single-family median —
+    # so the SFR ceiling is the cap divided by the unit price factor,
+    # not the cap itself. Filtering on the raw SFR median let a $426k-
+    # median ZIP onto a $550k board when the triplex there is ~$661k.
+    # The 20% headroom stays: a median is a midpoint, so there is cheaper
+    # stock in the ZIP and the user may stretch a little.
+    unit_factor = HH.UNIT_PRICE_FACTOR.get(units, 1.55)
+    hv_ceiling = int(max_price * 1.2 / unit_factor)
 
     has_history = "history_zhvi" in cols
     hist_col = "history_zhvi" if has_history else "NULL"
@@ -3763,8 +3802,14 @@ async def multifamily_page(
         durable = durable_cap_rate(r[9], hv, state)
         durable_caps.append(durable)
 
-        purchase = min(hv, max_price)
-        piti = _fha_piti(purchase, state, MORTGAGE_30Y_RATE, down_pct=down_pct)
+        # Price and insure the row exactly as the scenario card and the
+        # deal checker do. When only the card applied the unit factors,
+        # a ZIP could show +$932 cash flow and a passing FHA badge in the
+        # table while the same building priced as a triplex was -$968 and
+        # failed the funding gate — a $1,900/mo swing on one screen.
+        purchase = min(hv * unit_factor, max_price)
+        piti = HH.apply_unit_insurance(
+            _fha_piti(purchase, state, MORTGAGE_30Y_RATE, down_pct=down_pct), units)
         if not piti:
             house_hack_costs.append(None)
             stressed_costs.append(None)
@@ -3875,6 +3920,7 @@ async def multifamily_page(
             "zip": zip_code, "name": name, "neighborhood": neigh or "",
             "lat": lat, "lng": lng, "population": pop,
             "median_home_value": hv, "median_rent_monthly": rent,
+            "building_price": round(min(hv * unit_factor, max_price)),
             "cap_rate_pct": cap,
             "pct_renter_occupied": pct_rent,
             "pct_multi_unit": pct_mu,
@@ -3888,33 +3934,166 @@ async def multifamily_page(
             "traj_badge": TRAJECTORY_BADGES.get(traj["label"]) if traj else None,
             "durable_cap_pct": durable["durable_cap_pct"] if durable else None,
             "durable_detail": durable,
+            "safety": SF.zip_safety(name, state),
+            "rent_observed": HH.rent_is_observed(rent, hv),
         })
-    rows.sort(key=lambda r: r["mf_score"], reverse=True)
+    # Safety gate: drop rows above the bar. A yield ranking with no
+    # safety gate is a ranking of distress; this is the same gate and the
+    # same fail-closed rule the strict screen uses.
+    #
+    # Account for what it removed, because a board that silently falls
+    # from 835 rows to 3 reads as broken while the same board showing its
+    # arithmetic reads as strict. The distinction that matters to the
+    # user is "we measured it and it isn't safe" vs "nobody published a
+    # figure" — different problems, and only the second is ours to fix.
+    gate = {"before": len(rows), "unverified": 0, "above_tier": 0}
+    kept = []
+    for r in rows:
+        if SF.passes(r["safety"], safetier, allow_unknown_safety):
+            kept.append(r)
+        elif r["safety"]["tier"] == "unknown":
+            gate["unverified"] += 1
+        else:
+            gate["above_tier"] += 1
+    rows = kept
+    gate["after"] = len(rows)
 
-    # PITI breakdown at the user's exact cap — shown above the table
-    # so they can see what their max-price scenario costs.
-    sample_piti = _fha_piti(max_price, state, MORTGAGE_30Y_RATE, down_pct=down_pct)
+    # An empty board should name the binding constraint instead of just
+    # being empty. Applying the cap to the BUILDING (correctly) means a
+    # $550k cap on a 4-unit needs a ZIP whose single-family median is
+    # under ~$357k, and in a state where the safe cities are the
+    # expensive ones that can be nothing. Find the cheapest ZIP that DOES
+    # clear the safety bar and quote the cap it would take, so the user
+    # can tell "too strict" apart from "nothing exists".
+    suggest = None
+    if not rows:
+        c2 = sqlite3.connect(str(db_path))
+        cand = c2.execute(
+            "select zip, name, median_home_value from zips "
+            "where state = ? and population >= 1500 "
+            "and median_home_value is not null and median_rent_monthly is not null "
+            "order by median_home_value asc limit 4000", (state,)).fetchall()
+        c2.close()
+        for z2, n2, hv2 in cand:
+            if hv2 and SF.passes(SF.zip_safety(n2, state), safetier, allow_unknown_safety):
+                bp = hv2 * unit_factor
+                # Round the suggested cap UP: rounding to the nearest
+                # $10k can land just under the threshold, producing a
+                # "retry at $550,000" link on a page already at $550,000.
+                suggest = {"zip": z2, "name": n2, "sfr": round(hv2),
+                           "building": round(bp),
+                           "cap_needed": int(math.ceil(bp / 1.2 / 10_000) * 10_000)}
+                break
+    rows.sort(key=lambda r: (SF.TIER_ORDER[r["safety"]["tier"]], -r["mf_score"]))
 
-    # Rent side of the same card: user-supplied rent/unit, else the median
-    # rent across the state's matching ZIPs, so the card answers "do the
-    # tenants carry the note?" out of the box instead of stopping at PITI.
+    # ── Scenario: price the PROPERTIES RETURNED, not the filter cap ──
+    # The cap is a filter. Pricing the scenario AT the cap described a
+    # property that does not exist in these ZIPs ($350k cap over stock
+    # worth $75-160k), overstating PITI, cash and required income on
+    # every row. Anchor on the median of the qualifying set instead, and
+    # adjust the single-family median up to a 2-4 unit building price.
     import statistics
     from value_add import house_hack_scenario
-    zip_rents = [r[8] for r in rows_raw if r[8]]
-    state_rent = statistics.median(zip_rents) if zip_rents else None
-    eff_rent = rent_unit_n if rent_unit_n > 0 else (state_rent or 0)
+    shown = rows[:100]
+    sfr_medians = [r["median_home_value"] for r in shown if r["median_home_value"]]
+    # No qualifying ZIPs means no building to price. Falling back to the
+    # filter cap produced a card quoting PITI, required income and cash to
+    # close for a $550k property on a page that had just said nothing in
+    # the state qualifies — while the card's own footnote claimed it was
+    # priced from "the ZIPs actually listed below".
+    sfr_anchor = statistics.median(sfr_medians) if sfr_medians else None
+    bld = HH.est_building_price(sfr_anchor, units) if sfr_anchor else None
+    scenario_price = min(bld["estimated_price"], max_price) if bld else None
+    price_capped = bool(bld and bld["estimated_price"] > max_price)
+
+    # An owner-occupied 2-4 unit is not an SFR risk: more units, more
+    # liability, higher rebuild. Same helper the table rows use.
+    sample_piti = (HH.apply_unit_insurance(
+        _fha_piti(scenario_price, state, MORTGAGE_30Y_RATE, down_pct=down_pct), units)
+        if scenario_price else None)
+
+    # ── Rent basis: OBSERVED rents only ──
+    # ~69% of ZIP rents nationally (73% in OH) are the imputed
+    # value/17/12 placeholder. A median built from those is largely a
+    # restatement of home values, so the scenario would be quoting
+    # circular arithmetic back at the user as "market rent".
+    observed = [r["median_rent_monthly"] for r in shown
+                if HH.rent_is_observed(r["median_rent_monthly"], r["median_home_value"])]
+    all_rents = [r["median_rent_monthly"] for r in shown if r["median_rent_monthly"]]
+    # Use observed rents whenever ANY exist. The old rule needed 5 before
+    # it would use them, so with 3 observed ZIPs the median silently
+    # included imputed placeholders while the card claimed they were
+    # "excluded from this median" — and the header read "mostly IMPUTED"
+    # directly above "100% observed". Whichever basis we use, name it.
+    THIN_RENT_SAMPLE = 5
+    obs_rent = statistics.median(observed) if observed else None
+    eff_rent = (rent_unit_n if rent_unit_n > 0
+                else (obs_rent if obs_rent is not None
+                      else (statistics.median(all_rents) if all_rents else 0)))
+    rent_thin = 0 < len(observed) < THIN_RENT_SAMPLE
+    rent_basis = ("input" if rent_unit_n > 0 else
+                  "observed" if obs_rent is not None else
+                  "imputed" if all_rents else "none")
+    rent_source = {
+        "input": "your input",
+        "observed": (f"median of {len(observed)} ZIP{'s' if len(observed) != 1 else ''} "
+                     f"with OBSERVED (ZORI) rents, of {len(all_rents)} shown"
+                     + (" — a thin sample, treat as indicative" if rent_thin else "")),
+        "imputed": (f"median of {len(all_rents)} shown ZIPs — every one IMPUTED "
+                    "(value÷17÷12), so this restates home values, not market rent"),
+        "none": None,
+    }[rent_basis]
+    rent_observed_pct = round(len(observed) / len(all_rents) * 100) if all_rents else 0
+
     hh_scenario = house_hack_scenario(sample_piti, units, eff_rent) if sample_piti else None
-    rent_source = ("your input" if rent_unit_n > 0 else
-                   (f"median across {len(zip_rents)} matching {state} ZIPs" if state_rent else None))
+    piti_m = sample_piti["piti"] if sample_piti else 0.0
+    vs_rent = HH.vs_renting(piti_m, units, eff_rent) if sample_piti and eff_rent else None
+    qualify = HH.income_to_qualify(piti_m, units, eff_rent) if sample_piti else None
+    selfsuff = HH.fha_self_sufficiency(piti_m, units, eff_rent) if sample_piti else None
+    reserves = (HH.reserves_needed(piti_m, sample_piti["closing_est"],
+                                   sample_piti["down_cash"], units)
+                if sample_piti else None)
+
+    # ── Deal checker: one real listing, real rents ──
+    # Everything above is a market-level estimate. This runs the same
+    # underwriting on numbers the user typed off an actual listing, so
+    # the answer stops depending on our SFR-to-building price factor or
+    # on whether this ZIP happens to have an observed rent series.
+    deal = None
+    if chk_price > 0 and chk_rent > 0:
+        dp = _fha_piti(chk_price, state, MORTGAGE_30Y_RATE, down_pct=down_pct)
+        if dp:
+            HH.apply_unit_insurance(dp, units)
+            deal = HH.check_deal(
+                dp["piti"], units, chk_rent, chk_price,
+                insurance_monthly=dp["monthly_ins"],
+                closing=dp["closing_est"], down=dp["down_cash"],
+                your_income=(chk_income or None), other_debts=chk_debts)
+            deal["piti"] = dp
 
     return templates.TemplateResponse("multifamily.html", {
         "request": request,
-        "rows": rows[:100],
+        "rows": shown,
         "state": state, "states": states,
         "max_price": max_price, "down_pct": down_pct, "units": units,
         "rent_unit": (int(rent_unit_n) if rent_unit_n > 0 else ""),
         "hh_scenario": hh_scenario, "rent_source": rent_source,
         "sample_piti": sample_piti,
+        "scenario_price": scenario_price, "price_basis": bld,
+        "price_capped": price_capped,
+        "sfr_anchor": (round(sfr_anchor) if sfr_anchor else None),
+        "vs_rent": vs_rent, "qualify": qualify, "selfsuff": selfsuff,
+        "reserves": reserves, "rent_observed_pct": rent_observed_pct,
+        "rent_basis": rent_basis, "rent_thin": rent_thin,
+        "n_observed": len(observed), "n_rents": len(all_rents),
+        "deal": deal,
+        "check_price": (int(chk_price) if chk_price > 0 else ""),
+        "check_rent": (int(chk_rent) if chk_rent > 0 else ""),
+        "check_income": (int(chk_income) if chk_income > 0 else ""),
+        "check_debts": (int(chk_debts) if chk_debts > 0 else ""),
+        "safetier": safetier, "allow_unknown_safety": allow_unknown_safety,
+        "safety_coverage": SF.coverage(), "gate": gate, "suggest": suggest,
+        "unit_factor": unit_factor, "hv_ceiling": hv_ceiling,
         "mortgage_rate": MORTGAGE_30Y_RATE,
         "has_mf_data": has_mf_data,
         "data_pending": not has_mf_data,

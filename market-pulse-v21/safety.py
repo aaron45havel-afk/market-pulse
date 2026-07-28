@@ -48,6 +48,22 @@ TIERS = (
 TIER_ORDER = {"very_safe": 0, "safe": 1, "average": 2, "elevated": 3, "high": 4,
               "unknown": 9}
 
+# TIER_ORDER is a SORT key and includes "unknown" so unverified rows sink
+# to the bottom of a board. It is NOT the set of bars a user may select.
+# Validating a user-supplied tier against TIER_ORDER lets ?safetier=unknown
+# through, and because unknown sorts at 9 every verified tier compares
+# <= 9 — the gate silently turns off while the UI still shows the first
+# option. Validate against this instead.
+SELECTABLE = frozenset(t[0] for t in TIERS)
+DEFAULT_TIER = "safe"
+
+
+def valid_tier(tier: str | None) -> str:
+    """Coerce a query param to a real, selectable tier. Anything else —
+    empty, junk, or the internal 'unknown' sentinel — falls back to the
+    default bar rather than disabling the gate."""
+    return tier if tier in SELECTABLE else DEFAULT_TIER
+
 
 @lru_cache(maxsize=1)
 def _crime_table() -> dict:
@@ -102,7 +118,9 @@ def passes(safety: dict, max_tier: str, allow_unknown: bool = False) -> bool:
     unless the user explicitly opts in to seeing unverified markets."""
     if safety["tier"] == "unknown":
         return allow_unknown
-    return TIER_ORDER[safety["tier"]] <= TIER_ORDER.get(max_tier, 1)
+    # Defence in depth: an unrecognised (or "unknown") bar must tighten to
+    # the default, never widen to "everything passes".
+    return TIER_ORDER[safety["tier"]] <= TIER_ORDER[valid_tier(max_tier)]
 
 
 def coverage() -> dict:
@@ -110,6 +128,13 @@ def coverage() -> dict:
     always knows what fraction of the country we can actually vouch for."""
     t = _crime_table()
     with_data = sum(1 for v in t.values() if v.get("violent_per_100k") is not None)
-    return {"cities": len(t), "with_data": with_data,
+    # A published figure we've flagged "suspect" is demoted to unknown by
+    # zip_safety, so it can never clear the gate. Reporting it under
+    # "verified" overstates coverage — count what is actually usable.
+    usable = sum(1 for v in t.values()
+                 if v.get("violent_per_100k") is not None
+                 and v.get("confidence") != "suspect")
+    return {"cities": len(t), "with_data": with_data, "usable": usable,
+            "suspect": with_data - usable,
             "meta": (json.loads(_CRIME_PATH.read_text()).get("_meta", {})
                      if _CRIME_PATH.exists() else {})}

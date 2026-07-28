@@ -73,6 +73,57 @@
     .fha-pill { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 0.62rem; font-weight: 700; margin-left: 0.25rem; }
     .fha-pill.ok { background: rgba(34,197,94,0.15); color: #16a34a; }
     .fha-pill.bad { background: rgba(239,68,68,0.15); color: #dc2626; }
+    /* Imputed-rent marker. Deliberately quiet but always present: it is the
+       single input the whole board rests on, and ~69% of ZIPs nationally
+       have no observed rent series at all. */
+    .imputed-flag { color: #d97706; font-weight: 800; margin-left: 1px; cursor: help; }
+
+    /* Deal checker — the one place on the page where nothing is estimated. */
+    .deal-check { border: 1px solid var(--border); border-radius: 12px; margin: 0.9rem 0;
+                  background: var(--surface); }
+    .deal-check > summary { cursor: pointer; padding: 0.7rem 0.9rem; font-weight: 700; font-size: 0.9rem; }
+    .deal-check > .body { padding: 0 0.9rem 0.9rem; }
+    .deal-why { font-size: 0.75rem; color: var(--ink-3); margin: 0 0 0.6rem; }
+    .deal-form { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: flex-end; }
+    .deal-form .field { display: flex; flex-direction: column; gap: 0.2rem; }
+    .deal-form label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em;
+                       color: var(--ink-3); font-weight: 700; }
+    .deal-form input, .deal-form select { padding: 0.35rem 0.5rem; border-radius: 8px;
+                       border: 1px solid var(--border); background: var(--surface2);
+                       color: inherit; font: inherit; font-size: 0.85rem; width: 8.5rem; }
+    .deal-verdict { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.9rem;
+                    padding: 0.55rem 0.8rem; border-radius: 10px; font-size: 0.88rem; }
+    .deal-verdict.v-yes      { background: rgba(34,197,94,0.10);  border: 1px solid rgba(34,197,94,0.35); }
+    .deal-verdict.v-marginal { background: rgba(217,119,6,0.10);  border: 1px solid rgba(217,119,6,0.35); }
+    .deal-verdict.v-no       { background: rgba(239,68,68,0.10);  border: 1px solid rgba(239,68,68,0.35); }
+    .deal-badge { font-weight: 800; letter-spacing: 0.06em; font-size: 0.72rem;
+                  padding: 3px 10px; border-radius: 999px; }
+    .v-yes .deal-badge      { background: rgba(34,197,94,0.2);  color: #16a34a; }
+    .v-marginal .deal-badge { background: rgba(217,119,6,0.2);  color: #b45309; }
+    .v-no .deal-badge       { background: rgba(239,68,68,0.2);  color: #dc2626; }
+    .deal-headline { font-weight: 600; }
+    .deal-checks { list-style: none; padding: 0; margin: 0.7rem 0 0; font-size: 0.82rem; }
+    .deal-checks li { display: flex; gap: 0.5rem; align-items: baseline; padding: 0.3rem 0;
+                      border-top: 1px solid var(--line, var(--border)); flex-wrap: wrap; }
+    .deal-checks .c-mark { font-weight: 800; width: 1rem; flex: none; text-align: center; }
+    .deal-checks li.c-pass .c-mark { color: #16a34a; }
+    .deal-checks li.c-fail .c-mark { color: #dc2626; }
+    .deal-checks li.c-warn .c-mark { color: #d97706; }
+    .deal-checks li.c-info .c-mark, .deal-checks li.c-na .c-mark { color: var(--ink-3); }
+    .deal-checks .c-detail { color: var(--ink-3); font-size: 0.78rem; flex: 1 1 20rem; }
+    .hard-gate { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.05em; padding: 1px 7px;
+                 border-radius: 999px; background: rgba(239,68,68,0.15); color: #dc2626; }
+    .not-modeled { font-size: 0.75rem; color: var(--ink-3); margin: 0.9rem 0;
+                   padding: 0.65rem 0.9rem; border: 1px dashed var(--border); border-radius: 10px; }
+    .not-modeled b { color: var(--ink-2, inherit); }
+    .not-modeled a { color: var(--accent2); }
+    /* Gate accounting. A board that drops 40 rows to 3 without saying why
+       reads as broken; the same board that shows its arithmetic reads as
+       strict, which is what it is. */
+    .gate-tally { font-size: 0.75rem; color: var(--ink-3); line-height: 1.55;
+                  margin: 0 0 0.9rem; padding: 0.55rem 0.85rem; border-radius: 10px;
+                  background: var(--surface2); border: 1px solid var(--border); }
+    .gate-tally b { color: var(--text); }
 
     /* Structural lens: stressed-cell spans reuse the cash colors. */
     .mf-table span.cash-positive { color: var(--accent); font-weight: 700; }
@@ -142,12 +193,53 @@
             <label for="rentUnit">Rent/unit $ (opt)</label>
             <input type="number" name="rent_unit" id="rentUnit" value="{{ rent_unit }}" min="0" max="50000" step="25" placeholder="state median">
         </div>
+        <div class="field">
+            <label for="safetier" title="Real FBI violent-crime rate per 100k. US average 359.">Safety (real FBI)</label>
+            <select name="safetier" id="safetier">
+                <option value="very_safe" {% if safetier == 'very_safe' %}selected{% endif %}>Very safe &lt;150</option>
+                <option value="safe" {% if safetier == 'safe' %}selected{% endif %}>Safe &lt;250</option>
+                <option value="average" {% if safetier == 'average' %}selected{% endif %}>Average &lt;450</option>
+                <option value="elevated" {% if safetier == 'elevated' %}selected{% endif %}>Elevated &lt;800</option>
+                <option value="high" {% if safetier == 'high' %}selected{% endif %}>No safety filter</option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="unknown" title="Cities with no verified FBI figure">Unverified</label>
+            <select name="unknown" id="unknown">
+                <option value="0" {% if not allow_unknown_safety %}selected{% endif %}>Hide</option>
+                <option value="1" {% if allow_unknown_safety %}selected{% endif %}>Show</option>
+            </select>
+        </div>
         <button type="submit" class="apply-btn">Apply</button>
     </form>
+    <div style="font-size:0.75rem;color:var(--ink-3);margin:-0.5rem 0 0.9rem">
+        <b>This board ranks where you would LIVE</b>, so it runs the same real-FBI safety gate as the strict screen — never the database's <code>crime_index</code>, which is density + income + education and correlates −0.76 with income.
+        Ranking on yield alone sorts <i>toward</i> the crime discount: a metro's highest cap rates are frequently its most distressed tracts.
+        {{ safety_coverage.usable }} cities can actually clear this gate ({{ safety_coverage.with_data }} have a published figure, {{ safety_coverage.suspect }} of which we've flagged suspect — partial NIBRS submissions reading implausibly low — and those are treated as unverified, not as safe).
+        <a href="/headroom?mode=hh&hstate={{ state }}&units={{ units }}&maxprice={{ max_price|int }}">Max-offer view for a specific building →</a>
+    </div>
+    {% if gate is defined and gate and gate.before %}
+    <div class="gate-tally">
+        <b>{{ gate.before }}</b> {{ state }} ZIPs matched your price filter →
+        <b>{{ gate.after }}</b> cleared the safety gate.
+        {% if gate.above_tier or gate.unverified %}{% if gate.above_tier %}<b>{{ gate.above_tier }}</b> dropped for a verified crime rate above <i>{{ safetier.replace('_', ' ') }}</i>{% endif %}{% if gate.above_tier and gate.unverified %} · {% endif %}{% if gate.unverified %}<b>{{ gate.unverified }}</b> dropped as <i>unverified</i> — no city-level FBI figure exists for them, which is a gap in the data, not a finding about the place{% endif %}.{% endif %}
+        {% if gate.unverified and not allow_unknown_safety %}
+        Those are excluded by design: an unmeasured ZIP must never pass as safe. If you want to see them and judge for yourself, set <b>Unverified → Show</b>.
+        {% endif %}
+        {% if gate.after < 5 %}
+        <b>A short board here is the gate working, not a bug.</b> To widen it: loosen the safety tier, raise your max price, or show unverified ZIPs.
+        {% endif %}
+    </div>
+    {% endif %}
 
     {% if sample_piti %}
     <div class="piti-card">
-        <div class="piti-card-head">Your scenario: ${{ '{:,}'.format(max_price) }} purchase, {{ down_pct }}% down, {{ units }}-unit, 30-yr at {{ '%.2f'|format(mortgage_rate) }}% (FHA)</div>
+        <div class="piti-card-head">Your scenario: ${{ '{:,.0f}'.format(scenario_price) }} {{ units }}-unit building, {{ down_pct }}% down, 30-yr at {{ '%.2f'|format(mortgage_rate) }}% (FHA)</div>
+        <div style="font-size:0.72rem;color:var(--ink-3);margin:0.15rem 0 0.5rem">
+            Priced from the <b>median of the ZIPs actually listed below</b> (SFR median ${{ '{:,.0f}'.format(sfr_anchor) }}{% if price_basis %} × {{ price_basis.factor }} for {{ units }} units{% endif %}) — not your ${{ '{:,.0f}'.format(max_price) }} filter cap, which would describe a building that doesn't exist in these ZIPs.{% if price_capped %} Capped at your max price.{% endif %}
+            2–4 unit ask prices aren't in the dataset, so this is an <b>estimate</b>. Insurance carries a {{ sample_piti.insurance_factor }}× multi-unit uplift over the SFR premium.
+            <b>Every row in the table below is priced and insured the same way</b>, and your ${{ '{:,.0f}'.format(max_price) }} cap is applied to the building — so the ZIPs shown are those whose single-family median is under ${{ '{:,.0f}'.format(max_price * 1.2 / (price_basis.factor if price_basis else 1)) }}, not those under the cap itself.
+        </div>
         <div class="piti-grid">
             <div class="item"><span class="label">Loan amount</span><span class="val">${{ '{:,.0f}'.format(sample_piti.loan) }}</span></div>
             <div class="item"><span class="label">P&amp;I</span><span class="val">${{ '{:,.0f}'.format(sample_piti.p_and_i) }}</span></div>
@@ -155,32 +247,121 @@
             <div class="item"><span class="label">Insurance/mo</span><span class="val">${{ '{:,.0f}'.format(sample_piti.monthly_ins) }}</span></div>
             <div class="item"><span class="label">FHA MIP/mo</span><span class="val">${{ '{:,.0f}'.format(sample_piti.monthly_mip) }}</span></div>
             <div class="item total"><span class="label">PITI/mo</span><span class="val">${{ '{:,.0f}'.format(sample_piti.piti) }}</span></div>
-            <div class="item"><span class="label">Down payment</span><span class="val">${{ '{:,.0f}'.format(sample_piti.down_cash) }}</span></div>
-            <div class="item"><span class="label">Closing est (3%)</span><span class="val">${{ '{:,.0f}'.format(sample_piti.closing_est) }}</span></div>
         </div>
 
-        {% if hh_scenario %}
-        <div class="piti-card-head" style="margin-top:0.8rem">Rent offset — you live in one unit, tenants rent {{ hh_scenario.rented_units }} at ${{ '{:,.0f}'.format(hh_scenario.rent_unit) }}/mo each ({{ rent_source }})</div>
+        {% if vs_rent %}
+        <div class="piti-card-head" style="margin-top:0.8rem">The number that matters — you live in one unit, {{ units - 1 }} tenant{{ 's' if units > 2 }} at ${{ '{:,.0f}'.format(vs_rent.rent_equivalent) }}/mo ({{ rent_source }})</div>
         <div class="piti-grid">
-            <div class="item"><span class="label">Tenant rent /mo</span><span class="val">${{ '{:,.0f}'.format(hh_scenario.offset) }}</span></div>
-            <div class="item total"><span class="label">Your net cost /mo</span><span class="val" style="color:{{ 'var(--mint-ink)' if hh_scenario.net <= 0 else 'var(--coral-ink)' }}">{% if hh_scenario.net <= 0 %}+${{ '{:,.0f}'.format(-hh_scenario.net) }} cash flow{% else %}${{ '{:,.0f}'.format(hh_scenario.net) }}{% endif %}</span></div>
-            <div class="item"><span class="label" title="Rents −10%, insurance +30%, one vacant month a year — same definition as the table's Stressed column">Stressed net /mo</span><span class="val" style="color:{{ 'var(--mint-ink)' if hh_scenario.stressed <= 0 else 'var(--coral-ink)' }}">{% if hh_scenario.stressed <= 0 %}+${{ '{:,.0f}'.format(-hh_scenario.stressed) }}{% else %}${{ '{:,.0f}'.format(hh_scenario.stressed) }}{% endif %}</span></div>
-            <div class="item"><span class="label">Break-even rent /unit</span><span class="val">${{ '{:,.0f}'.format(hh_scenario.breakeven_rent) }}</span></div>
-            {% if hh_scenario.fha_required_rent %}
-            <div class="item"><span class="label" title="FHA won't fund a 3-4 unit unless 75% of ALL units' market rent (including yours) covers PITI">FHA self-sufficiency</span><span class="val">{% if hh_scenario.fha_pass %}<span class="fha-pill ok">PASS</span>{% else %}<span class="fha-pill bad">FAIL</span>{% endif %} needs ${{ '{:,.0f}'.format(hh_scenario.fha_required_rent) }}/unit</span></div>
+            <div class="item total"><span class="label">{{ 'Cheaper than renting' if vs_rent.beats_renting else 'MORE than renting' }}</span>
+                <span class="val" style="color:{{ 'var(--mint-ink, #16a34a)' if vs_rent.beats_renting else '#dc2626' }};font-size:1.05rem">
+                {%- if vs_rent.beats_renting %}+${{ '{:,.0f}'.format(vs_rent.monthly_advantage) }}/mo{% else %}−${{ '{:,.0f}'.format(-vs_rent.monthly_advantage) }}/mo{% endif %}</span></div>
+            <div class="item"><span class="label">Your net housing cost</span><span class="val">{% if vs_rent.net_cost <= 0 %}<span style="color:var(--mint-ink,#16a34a)">+${{ '{:,.0f}'.format(-vs_rent.net_cost) }} cash flow</span>{% else %}${{ '{:,.0f}'.format(vs_rent.net_cost) }}{% endif %}</span></div>
+            <div class="item"><span class="label">vs renting that unit</span><span class="val">${{ '{:,.0f}'.format(vs_rent.rent_equivalent) }}</span></div>
+            <div class="item"><span class="label">Per year</span><span class="val">${{ '{:,.0f}'.format(vs_rent.annual_advantage) }}</span></div>
+            {% if hh_scenario %}<div class="item"><span class="label" title="Rents −10%, insurance +30%, one vacant month a year">Stressed net /mo</span><span class="val">${{ '{:,.0f}'.format(hh_scenario.stressed) }}</span></div>{% endif %}
+            <div class="item"><span class="label" title="Identical to the advantage above: units × rent − PITI is the same quantity either way">If you move out /mo</span><span class="val">{% if hh_scenario %}{% if hh_scenario.moveout_cashflow >= 0 %}+{% endif %}${{ '{:,.0f}'.format(hh_scenario.moveout_cashflow) }} <span style="font-weight:400;font-size:0.72rem;color:var(--ink-3)">(same figure)</span>{% else %}—{% endif %}</span></div>
+        </div>
+        <div style="font-size:0.72rem;color:var(--ink-3);margin-top:0.35rem">
+            Zero is not the benchmark — <b>rent is</b>.
+            {% if vs_rent.beats_renting %}Paying ${{ '{:,.0f}'.format(vs_rent.net_cost) }} to live somewhere that rents for ${{ '{:,.0f}'.format(vs_rent.rent_equivalent) }} is a <b>${{ '{:,.0f}'.format(vs_rent.monthly_advantage) }}/mo win</b>, before principal paydown.
+            {% else %}But this one loses on that benchmark: ${{ '{:,.0f}'.format(vs_rent.net_cost) }}/mo to own versus ${{ '{:,.0f}'.format(vs_rent.rent_equivalent) }}/mo to rent the same unit is <b>${{ '{:,.0f}'.format(-vs_rent.monthly_advantage) }}/mo worse</b>. Principal paydown and appreciation are the case for doing it anyway — they are not shown here and should not be assumed.
             {% endif %}
-            <div class="item"><span class="label" title="All units rented at the same rent, before vacancy and maintenance">If you move out /mo</span><span class="val" style="color:{{ 'var(--mint-ink)' if hh_scenario.moveout_cashflow >= 0 else 'var(--coral-ink)' }}">{% if hh_scenario.moveout_cashflow >= 0 %}+{% endif %}${{ '{:,.0f}'.format(hh_scenario.moveout_cashflow) }}</span></div>
+            <b>Not included:</b> utilities, maintenance, capex reserves, vacancy, or management. The <i>Stressed</i> column is where those live.
+            Rent basis: {% if rent_basis == 'input' %}your ${{ '{:,.0f}'.format(vs_rent.rent_equivalent) }}/unit input.{% elif rent_basis == 'observed' %}median of the <b>{{ n_observed }}</b> ZIP{{ 's' if n_observed != 1 }} (of {{ n_rents }} shown) with an observed ZORI rent series — imputed ZIPs are excluded from this median.{% if rent_thin %} <b>That is a thin sample</b>; treat it as indicative, not as a market read.{% endif %}{% elif rent_basis == 'imputed' %}<b>none of the {{ n_rents }} shown ZIPs has an observed rent series</b>, so this median is built from value÷17÷12 placeholders and restates home values rather than measuring rent. Enter a rent you've actually seen listed.{% else %}—{% endif %}
         </div>
-        <div style="font-size:0.72rem;color:var(--ink-3);margin-top:0.4rem">
-            Net cost = PITI − tenant rent; a green figure means the tenants cover your entire housing cost. Break-even is what each tenant unit must fetch for you to live free.
-            {% if hh_scenario.fha_required_rent %}The FHA self-sufficiency gate is a hard funding rule on 3–4 units — if market rents are below ${{ '{:,.0f}'.format(hh_scenario.fha_required_rent) }}/unit, the loan doesn't close regardless of your income.{% endif %}
-            Enter your target property's actual rent in <strong>Rent/unit</strong> to replace the state median. Excludes utilities, maintenance and capex reserves.
+        {% endif %}
+
+        {% if qualify or selfsuff or reserves %}
+        <div class="piti-card-head" style="margin-top:0.8rem">Can you actually get the loan, and what does it take in cash</div>
+        <div class="piti-grid">
+            {% if qualify %}
+            <div class="item"><span class="label" title="{{ qualify.basis }}. Rental income is added to your income; the full PITI stays in the ratio — it is never netted out of the payment.">W-2 income to qualify</span><span class="val">${{ '{:,.0f}'.format(qualify.annual_income) }}/yr</span></div>
+            {% if qualify.rent_liability %}
+            <div class="item"><span class="label" title="75% of all units' rent doesn't cover PITI, so the shortfall counts as a monthly debt against you">Rental income</span><span class="val" style="color:#dc2626">−${{ '{:,.0f}'.format(qualify.rent_liability) }}/mo liability</span></div>
+            {% else %}
+            <div class="item"><span class="label" title="{{ qualify.basis }}">Rental income added</span><span class="val">${{ '{:,.0f}'.format(qualify.rent_income) }}/mo</span></div>
+            {% endif %}
+            {% endif %}
+            {% if selfsuff %}
+            <div class="item"><span class="label" title="FHA hard funding rule on 3–4 units: 75% × ALL units' rent ≥ PITI">FHA self-sufficiency</span>
+                <span class="val">{% if selfsuff.passes %}<span style="color:var(--mint-ink,#16a34a)">PASS</span>{% else %}<span style="color:#dc2626">FAIL</span> needs ${{ '{:,.0f}'.format(selfsuff.required_rent_per_unit) }}/unit{% endif %}</span></div>
+            {% endif %}
+            {% if reserves %}
+            <div class="item"><span class="label">Cash to close</span><span class="val">${{ '{:,.0f}'.format(reserves.cash_to_close) }}</span></div>
+            <div class="item"><span class="label" title="{{ reserves.reserve_basis }}, plus a ${{ '{:,.0f}'.format(reserves.mechanical_reserve) }} mechanical reserve">Reserves needed</span><span class="val">${{ '{:,.0f}'.format(reserves.reserve_total) }}{% if not reserves.reserve_required %}<span style="font-weight:400;font-size:0.72rem;color:var(--ink-3)"> (our floor)</span>{% endif %}</span></div>
+            <div class="item total"><span class="label">All-in cash</span><span class="val">${{ '{:,.0f}'.format(reserves.all_in_cash) }}</span></div>
+            {% endif %}
         </div>
-        {% elif sample_piti %}
-        <div style="font-size:0.72rem;color:var(--ink-3);margin-top:0.55rem">No rent data for this state yet — enter a <strong>Rent/unit</strong> figure above to see the offset math (net cost, break-even, FHA self-sufficiency).</div>
+        <div style="font-size:0.72rem;color:var(--ink-3);margin-top:0.35rem">
+            {% if selfsuff and not selfsuff.passes %}<b>This card and the table now price identically</b> — same {{ price_basis.factor if price_basis else '' }}× unit factor, same {{ sample_piti.insurance_factor }}× insurance uplift — so the only thing that still differs is the rent: the card uses one median, the per-ZIP <span class="fha-pill ok">FHA</span> badges use each ZIP's own. Trust the badge for the ZIP you're actually buying in.{% endif %}
+            The deal doesn't fail on the monthly spread — it fails on a vacancy landing the same month as a furnace. That's what the reserve is for.
+        </div>
         {% endif %}
     </div>
     {% endif %}
+
+    {# ── Deal checker ──────────────────────────────────────────────
+       The board ranks ZIPs off an ESTIMATED building price and a rent
+       that is imputed in ~69% of ZIPs. Both of those disappear the
+       moment the user has a real listing in front of them, so this is
+       where the page stops estimating and starts underwriting. #}
+    <details class="deal-check" {% if deal %}open{% endif %}>
+        <summary>🔎 Check a specific listing — real ask, real rents</summary>
+        <div class="body">
+            <p class="deal-why">Everything above is a market estimate: an SFR median scaled by a unit factor, against a rent that is imputed in most ZIPs.
+            Type the numbers off an actual listing and the two weakest inputs go away.</p>
+            <form class="deal-form" method="get" action="/multifamily">
+                <input type="hidden" name="state" value="{{ state }}">
+                <input type="hidden" name="max_price" value="{{ max_price }}">
+                <input type="hidden" name="safetier" value="{{ safetier }}">
+                <input type="hidden" name="unknown" value="{{ 1 if allow_unknown_safety else 0 }}">
+                <input type="hidden" name="rent_unit" value="{{ rent_unit }}">
+                <div class="field"><label for="ckPrice">Asking price $</label>
+                    <input type="number" name="check_price" id="ckPrice" value="{{ check_price }}" min="0" max="5000000" step="1000" placeholder="189900"></div>
+                <div class="field"><label for="ckRent" title="What one unit actually rents for — from the listing's rent roll, not our median">Rent per unit $/mo</label>
+                    <input type="number" name="check_rent" id="ckRent" value="{{ check_rent }}" min="0" max="50000" step="25" placeholder="950"></div>
+                <div class="field"><label for="ckUnits">Units</label>
+                    <select name="units" id="ckUnits">
+                        <option value="2" {% if units == 2 %}selected{% endif %}>2</option>
+                        <option value="3" {% if units == 3 %}selected{% endif %}>3</option>
+                        <option value="4" {% if units == 4 %}selected{% endif %}>4</option>
+                    </select></div>
+                <div class="field"><label for="ckDown">Down %</label>
+                    <input type="number" name="down_pct" id="ckDown" value="{{ down_pct }}" min="0" max="50" step="0.5"></div>
+                <div class="field"><label for="ckInc" title="Optional — turns 'income to qualify' into a pass/fail">Your income $/yr</label>
+                    <input type="number" name="check_income" id="ckInc" value="{{ check_income }}" min="0" max="10000000" step="1000" placeholder="optional"></div>
+                <div class="field"><label for="ckDebt" title="Car, student loans, minimum card payments — counts against DTI">Other debts $/mo</label>
+                    <input type="number" name="check_debts" id="ckDebt" value="{{ check_debts }}" min="0" max="50000" step="25" placeholder="0"></div>
+                <button type="submit" class="apply-btn">Run it</button>
+            </form>
+
+            {% if deal %}
+            <div class="deal-verdict v-{{ deal.verdict }}">
+                <span class="deal-badge">{{ 'WORKS' if deal.verdict == 'yes' else ('MARGINAL' if deal.verdict == 'marginal' else 'NO') }}</span>
+                <span class="deal-headline">{{ deal.headline }}</span>
+            </div>
+            <div class="piti-grid" style="margin-top:0.5rem">
+                <div class="item"><span class="label">PITI/mo at ${{ '{:,.0f}'.format(deal.price) }}</span><span class="val">${{ '{:,.0f}'.format(deal.piti.piti) }}</span></div>
+                <div class="item"><span class="label">Rent from {{ units - 1 }} unit{{ 's' if units > 2 }}</span><span class="val">${{ '{:,.0f}'.format((units - 1) * deal.vs_rent.rent_equivalent) }}</span></div>
+                <div class="item total"><span class="label">{{ 'Cheaper than renting' if deal.vs_rent.beats_renting else 'MORE than renting' }}</span>
+                    <span class="val" style="color:{{ 'var(--mint-ink, #16a34a)' if deal.vs_rent.beats_renting else '#dc2626' }}">
+                    {%- if deal.vs_rent.beats_renting %}+${{ '{:,.0f}'.format(deal.vs_rent.monthly_advantage) }}/mo{% else %}−${{ '{:,.0f}'.format(-deal.vs_rent.monthly_advantage) }}/mo{% endif %}</span></div>
+            </div>
+            <ul class="deal-checks">
+                {% for c in deal.checks %}
+                <li class="c-{{ c.status }}"><span class="c-mark">{% if c.status == 'pass' %}✓{% elif c.status == 'fail' %}✗{% elif c.status == 'warn' %}!{% else %}·{% endif %}</span>
+                    <b>{{ c.label }}</b>{% if c.hard and c.status == 'fail' %} <span class="hard-gate">hard gate</span>{% endif %}
+                    <span class="c-detail">{{ c.detail }}</span></li>
+                {% endfor %}
+            </ul>
+            <p class="deal-why" style="margin-top:0.5rem">
+                Only the <b>hard gates</b> can sink the verdict — a 3–4 unit that fails FHA self-sufficiency does not fund at any spread, and a DTI you can't hit is not a deal you can close.
+                Everything else is margin, and margin is a judgment call you get to make.
+                Insurance carries the {{ deal.piti.insurance_factor }}× multi-unit uplift; taxes are the {{ state }} state rate, so a specific parcel's assessment will differ.
+            </p>
+            {% endif %}
+        </div>
+    </details>
 
     {% if state_struct is defined and state_struct and state_struct.chips %}
     <div class="struct-chips" role="note">
@@ -194,11 +375,32 @@
 
     {% if data_pending %}
     <div class="mf-banner">
-        <strong>Multifamily-specific signals (renter density, multi-unit stock, rent burden) populate on the next refresh-national-zips workflow run.</strong>
-        Until then this page ranks ZIPs with a fallback blend of cap rate + house-hack cost + density + walk.
-        <a href="https://github.com/aaron45havel-afk/market-pulse/actions/workflows/refresh-national-zips.yml" target="_blank" rel="noopener">Trigger it manually</a> to skip the wait.
+        <strong>Three of the five ranking signals are missing right now.</strong>
+        Renter density, 2–4 unit stock share and rent burden come from Census ACS and are not in the database yet, so this board is
+        <b>not</b> ranking on them — it is running a 4-signal fallback (cap rate 35% · house-hack cost 40% · population density 15% · walk score 10%).
+        Density and walk score are <em>weaker proxies</em> for renter demand, not substitutes: a dense ZIP can be dense with owner-occupied
+        single-family, and neither one tells you whether there is any 2–4 unit stock to actually buy. Treat the ordering as provisional
+        and lean on the house-hack, durable-cap and safety columns, which do not depend on the missing data.
+        <a href="https://github.com/aaron45havel-afk/market-pulse/actions/workflows/refresh-national-zips.yml" target="_blank" rel="noopener">Run refresh-national-zips</a> to fill them in.
     </div>
     {% endif %}
+
+    {# What this page does NOT know. Named explicitly, because the
+       tempting fix — scoring schools off pct_bachelors — would be
+       inventing a number: adult educational attainment is a
+       demographic fact about who lives there, not a measurement of
+       any school, and using it as a proxy would smuggle the same
+       income correlation back in that got crime_index thrown out. #}
+    <div class="not-modeled">
+        <b>Not modeled here, on purpose:</b>
+        <b>Schools.</b> There is no school-quality data in this database and no honest proxy for one, so the board does not score it and does not pretend to.
+        If you have kids, check the ZIP yourself before anything else — it is the one factor that can override every column on this page:
+        <a href="https://www.greatschools.org/search/search.zipcode" target="_blank" rel="noopener">GreatSchools by ZIP</a> ·
+        <a href="https://nces.ed.gov/ccd/schoolsearch/" target="_blank" rel="noopener">NCES school search</a> ·
+        <a href="https://www.niche.com/k12/search/best-school-districts/" target="_blank" rel="noopener">Niche districts</a>.
+        <b>Also absent:</b> flood/wildfire exposure at the parcel, actual 2–4 unit inventory (we estimate building price from the single-family median),
+        condition and deferred maintenance, rent control and local landlord ordinances, and the specific parcel's tax assessment — the tax line uses a state rate.
+    </div>
 
     <details class="mf-explain">
         <summary>How does Multifamily Score work? (FHA-tuned)</summary>
@@ -221,9 +423,11 @@
                 <li><strong>Walk score</strong> (10%) — walkable urban form correlates with renter preference.</li>
             </ul>
             {% endif %}
-            <p style="margin-top:0.6rem;"><strong>House-hack math:</strong> purchase = min(local median home value, your cap). PITI = P&amp;I + state-level
-            property tax + state-level insurance + FHA MIP (0.55% annual, life-of-loan when down &lt; 10%). Expected rent = (units − 1) × local median rent.
-            <strong>Net monthly cost = PITI − expected rent.</strong> Negative = you live free + cash flow.</p>
+            <p style="margin-top:0.6rem;"><strong>House-hack math:</strong> purchase = min(local single-family median × the {{ units }}-unit price factor, your cap).
+            A 2–4 unit does not cost the single-family median, so every row is adjusted before anything is underwritten, and insurance carries a multi-unit uplift over the SFR premium.
+            Those factors are conservative <em>defaults, not measurements</em> — 2–4 unit ask prices aren't in this dataset.
+            PITI = P&amp;I + state-level property tax + state-level insurance + FHA MIP (0.55% annual, life-of-loan when down &lt; 10%). Expected rent = (units − 1) × local median rent.
+            <strong>Net monthly cost = PITI − expected rent</strong>, before utilities, maintenance, capex and vacancy. Negative = you live free + cash flow.</p>
             <p style="margin-top:0.4rem;"><strong>FHA self-sufficiency</strong> (3- and 4-unit only): FHA requires 75% × total rents ≥ PITI for the loan to fund.
             Two-unit purchases are exempt from this rule. We mark <span class="fha-pill ok">FHA</span> on rows that pass, <span class="fha-pill bad">FHA ✗</span> on rows that fail at your input price.</p>
             <p style="margin-top:0.6rem;"><strong>Structural lens (new):</strong></p>
@@ -239,8 +443,38 @@
     </details>
 
     {% if not rows %}
-    <div class="mf-explain"><div class="body">No ZIPs in <strong>{{ state }}</strong> match your filters. Try a higher max price or a different state.</div></div>
+    <div class="mf-explain"><div class="body">
+        <strong>Nothing in {{ state }} clears these filters.</strong>
+        {% if gate is defined and gate and gate.before %}
+        Your ${{ '{:,.0f}'.format(max_price) }} cap is a <b>building</b> cap, and a {{ units }}-unit runs about {{ unit_factor }}× the single-family median —
+        so it only admits ZIPs whose single-family median is under ${{ '{:,.0f}'.format(hv_ceiling) }}.
+        {{ gate.before }} ZIPs cleared that, then the safety gate removed all of them —
+        {% if gate.unverified %}{{ gate.unverified }} because no city-level FBI crime figure exists for them{% endif %}{% if gate.unverified and gate.above_tier %}, {% endif %}{% if gate.above_tier %}{{ gate.above_tier }} because their measured rate is above <i>{{ safetier.replace('_', ' ') }}</i>{% endif %}.
+        {% if suggest %}
+        <div style="margin-top:0.5rem">
+            <b>What it would take:</b> the cheapest {{ state }} ZIP that clears this safety bar is
+            <a href="/zip/{{ suggest.zip }}">{{ suggest.zip }}</a> ({{ suggest.name }}), single-family median
+            ${{ '{:,.0f}'.format(suggest.sfr) }} — which puts a {{ units }}-unit at roughly
+            <b>${{ '{:,.0f}'.format(suggest.building) }}</b> at the {{ unit_factor }}× unit factor.
+            <a href="/multifamily?state={{ state }}&amp;units={{ units }}&amp;down_pct={{ down_pct }}&amp;safetier={{ safetier }}&amp;unknown={{ 1 if allow_unknown_safety else 0 }}&amp;max_price={{ suggest.cap_needed }}">Retry at a ${{ '{:,.0f}'.format(suggest.cap_needed) }} cap →</a>
+        </div>
+        {% endif %}
+        {% if gate.unverified > gate.above_tier %}
+        <b>That is mostly a coverage problem, not a verdict on {{ state }}.</b> The FBI publishes by police agency, so small towns and unincorporated areas often have no figure at all — and this board refuses to call an unmeasured place safe.
+        Set <b>Unverified → Show</b> to see them flagged rather than hidden, or loosen the tier.
+        {% else %}
+        Loosen the safety tier or raise your max price.
+        {% endif %}
+        {% else %}
+        Try a higher max price or a different state.
+        {% endif %}
+    </div></div>
     {% else %}
+    <div style="font-size:0.72rem;color:var(--ink-3);margin:0 0 0.4rem">
+        Rent legend: <span class="imputed-flag">*</span> = <b>imputed</b> rent (home value ÷ 17 ÷ 12), not an observed ZORI series.
+        {{ rent_observed_pct }}% of the ZIPs below have observed rents. On a starred row the cap rate is 5.88% by construction — it is
+        restating the home value, so read the house-hack and durable columns on those rows as arithmetic, not as measured income.
+    </div>
     <div class="mf-tablewrap">
         <div class="mf-scroll">
             <table class="mf-table" id="mfTable">
@@ -249,13 +483,13 @@
                         <th data-col="rank" data-numeric="1" class="sorted">#<span class="arrow">▲</span></th>
                         <th data-col="zip">ZIP<span class="arrow"></span></th>
                         <th data-col="name">Area<span class="arrow"></span></th>
-                        <th data-col="score" data-numeric="1">Score<span class="arrow"></span></th>
+                        <th data-col="safety">Safety (FBI)<span class="arrow"></span></th><th data-col="score" data-numeric="1">Score<span class="arrow"></span></th>
                         <th data-col="hh" data-numeric="1">House-hack<span class="arrow"></span></th>
                         <th data-col="stress" data-numeric="1" title="House-hack net at rents −10%, insurance +30%, 1 vacant month/yr">Stressed<span class="arrow"></span></th>
                         <th data-col="cap" data-numeric="1">Cap rate<span class="arrow"></span></th>
                         <th data-col="durable" data-numeric="1" title="Gross yield − vacancy − property tax − insurance − maintenance reserve">Durable<span class="arrow"></span></th>
                         <th data-col="traj" data-numeric="1" title="Annualized change over the ZIP's last 36 months of home values, with acceleration/deceleration">3-yr trend<span class="arrow"></span></th>
-                        <th data-col="rent" data-numeric="1">Rent/mo<span class="arrow"></span></th>
+                        <th data-col="rent" data-numeric="1" title="* = imputed (home value ÷ 17 ÷ 12), not an observed ZORI rent">Rent/mo<span class="arrow"></span></th>
                         <th data-col="hv" data-numeric="1">Home value<span class="arrow"></span></th>
                         {% if has_mf_data %}
                         <th data-col="renter" data-numeric="1">% Renter<span class="arrow"></span></th>
@@ -293,13 +527,23 @@
                         <td class="rank" data-sort="{{ loop.index }}">{{ loop.index }}</td>
                         <td class="zip-cell" data-sort="{{ r.zip }}"><a href="/zip/{{ r.zip }}">{{ r.zip }}</a></td>
                         <td data-sort="{{ r.name }}">{% if r.neighborhood %}{{ r.neighborhood }} · {% endif %}{{ r.name }}</td>
+                        <td data-sort="{{ 9 - (0 if r.safety.tier == 'very_safe' else 1 if r.safety.tier == 'safe' else 2 if r.safety.tier == 'average' else 3 if r.safety.tier == 'elevated' else 4 if r.safety.tier == 'high' else 9) }}">
+                          {% set sf = r.safety %}
+                          {% if sf.tier == 'very_safe' %}<span style="color:#16a34a;font-weight:800">VERY SAFE</span>
+                          {% elif sf.tier == 'safe' %}<span style="color:#16a34a">SAFE</span>
+                          {% elif sf.tier == 'average' %}<span style="color:#b45309">AVG</span>
+                          {% elif sf.tier == 'elevated' %}<span style="color:#dc2626">ELEV</span>
+                          {% elif sf.tier == 'high' %}<span style="color:#dc2626;font-weight:800">HIGH</span>
+                          {% else %}<span style="color:var(--ink-3)" title="{{ sf.note or 'no verified FBI figure for this city' }}">unverified</span>{% endif %}
+                          {% if sf.violent %}<span style="color:var(--ink-3);font-size:0.9em" title="{{ sf.source }} ({{ sf.year }})"> {{ sf.violent }}{% if sf.vs_us %}·{{ sf.vs_us }}×{% endif %}</span>{% endif %}
+                        </td>
                         <td class="score-cell" data-sort="{{ r.mf_score }}">{{ '%.0f'|format(r.mf_score) }}{% if r.vetoed %}<span class="veto-pill" title="Trajectory veto: this ZIP's own home-value history is {{ r.traj.label if r.traj else 'weak' }}{% if state_struct and state_struct.flags %}, and {{ state }} has {{ state_struct.flags|length }} state-level structural flag(s){% endif %} — the level score can't ride to the top of the table.">capped</span>{% endif %}</td>
                         <td class="{{ hh_class }}" data-sort="{{ r.house_hack_net if r.house_hack_net is not none else 99999 }}">{{ hh_text }}{% if r.fha_self_suff is not none %}{% if r.fha_self_suff %}<span class="fha-pill ok" title="FHA self-sufficiency test passes at {{ units }} units">FHA</span>{% else %}<span class="fha-pill bad" title="FHA self-sufficiency requires 75% × {{ units }} units × rent ≥ PITI">FHA ✗</span>{% endif %}{% endif %}</td>
                         <td data-sort="{{ r.house_hack_stressed if r.house_hack_stressed is not none else 99999 }}">{% if r.house_hack_stressed is none %}—{% elif r.house_hack_stressed <= 0 %}<span class="cash-positive">+${{ '%.0f'|format(-r.house_hack_stressed|float) }}</span>{% else %}<span class="{% if r.house_hack_stressed >= 1500 %}cash-bad{% elif r.house_hack_stressed >= 500 %}cash-warn{% endif %}">-${{ '%.0f'|format(r.house_hack_stressed|float) }}</span>{% endif %}</td>
                         <td data-sort="{{ r.cap_rate_pct }}">{{ '%.2f'|format(r.cap_rate_pct) }}%</td>
                         <td data-sort="{{ r.durable_cap_pct if r.durable_cap_pct is not none else -99 }}">{% if r.durable_cap_pct is not none %}<span title="gross {{ r.durable_detail.gross_cap_pct }}% − vacancy {{ r.durable_detail.vacancy_drag }} − tax {{ r.durable_detail.tax_pct }} − insurance {{ r.durable_detail.insurance_pct }} − maintenance {{ r.durable_detail.maintenance_pct }}">{{ '%.1f'|format(r.durable_cap_pct) }}%</span>{% else %}—{% endif %}</td>
                         <td data-sort="{{ r.traj.cagr_3yr_pct if r.traj else -99 }}">{% if r.traj %}<span class="{{ r.traj_badge.cls }}" title="{{ r.traj_badge.label }} — 1yr {{ r.traj.chg_1yr_pct }}% vs prior-2yr {{ r.traj.prior_2yr_pct }}%/yr ({{ '%+.1f'|format(r.traj.decel_pct) }} pts)">{{ r.traj_badge.glyph }} {{ '%+.1f'|format(r.traj.cagr_3yr_pct) }}%</span>{% else %}—{% endif %}</td>
-                        <td data-sort="{{ r.median_rent_monthly }}">${{ '{:,}'.format(r.median_rent_monthly) }}</td>
+                        <td data-sort="{{ r.median_rent_monthly }}">${{ '{:,}'.format(r.median_rent_monthly) }}{% if not r.rent_observed %}<span class="imputed-flag" title="Imputed, not observed: this ZIP has no ZORI rent series, so rent = home value ÷ 17 ÷ 12. Cap rate on an imputed rent is 5.88% by construction — it restates the home value, it does not measure income.">*</span>{% endif %}</td>
                         <td data-sort="{{ r.median_home_value }}">${{ '{:,}'.format(r.median_home_value) }}</td>
                         {% if has_mf_data %}
                         <td data-sort="{{ r.pct_renter_occupied if r.pct_renter_occupied is not none else -1 }}">{% if r.pct_renter_occupied is not none %}{{ '%.0f'|format(r.pct_renter_occupied) }}%{% else %}—{% endif %}</td>
