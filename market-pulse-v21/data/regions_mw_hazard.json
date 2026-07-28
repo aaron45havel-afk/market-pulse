@@ -1,0 +1,259 @@
+{
+ "_meta": {
+  "kind": "hazard",
+  "market": "MW",
+  "as_of": "2026-07",
+  "status": "researched",
+  "methodology": "## What this layer is calibrated against\n\nBoth layers are scored against the **Midwest's own internal distribution**, not a national standard. The anchors are set explicitly: the Twin Cities defines the cold end (Jan mean low 9F, 51 in snow), Cincinnati defines the mild end (Jan mean low 24F, 20 in snow), Kansas City defines the hot/humid end (Jul mean high 89F, 72-78F dewpoints), and Pittsburgh defines the gloom end (~203 cloudy days, ~8 sunny days in December). A \"moderate\" here would score as harsh in coastal California and mild in interior Minnesota \u2014 that is intentional and correct.\n\n## Climate tiers (4 levels, 12 subregions)\n\n- **`river-valley-temperate`** (the best-in-region tier I defined) \u2014 Cincinnati / Ohio River valley only. The only subregion with a Jan low above 22F AND under 22 in of snow AND a ~190-day growing season. Named for the mechanism (river-valley position at the region's southern edge), not for comfort.\n- **`moderate`** \u2014 Columbus, Indianapolis, Chicago lakefront/inner ring, Milwaukee lakeshore. Includes the two lake-moderated shore subregions per the region's own rule that lake moderation is real.\n- **`harsh`** \u2014 Chicago inland collar, SE Michigan, SW Pennsylvania plateau, Kansas City. Note two different mechanisms land in the same tier: gloom + snow (Detroit, Pittsburgh) and summer heat/humidity extremes (Kansas City).\n- **`harsh-interior`** \u2014 Twin Cities, Madison, Des Moines. Deep-winter north.\n\n## The four Midwest-specific axes I encoded\n\n**1. Winter severity by latitude.** Jan mean low spans 9F (Minneapolis) to 24F (Cincinnati) \u2014 a 15F range inside one region. This is the primary tier driver.\n\n**2. Lake moderation, treated as a scored axis rather than color.** Two hard tests in the data:\n- *Same state, same latitude*: Milwaukee Jan low 17F vs Madison 11F, 75 mi inland. **The lake is worth ~6F of January.**\n- *Same metro, 20 miles*: Chicago lakefront ~21F vs O'Hare 17.6F, plus 3 in more snow inland. **This is why I split Chicago into two subregions** \u2014 a single \"Chicago\" row would average away the single most defensible climate distinction in the region and would misclassify Arlington Heights and Chicago as the same buy.\n\n**3. Lake-effect snowbelt \u2014 an explicit NEGATIVE finding.** None of these 50 towns sit in a true snowbelt. The real belts are the west Michigan shore (72-100+ in) and NE Ohio's Geauga County (120+ in, vs ~70 in at Cleveland). SE Michigan sits in the lee shadow at ~42 in from clippers and lake-*enhanced* flow; Milwaukee's west-shore position gets lake-enhanced synoptic snow, not classic lake-effect. I encoded this explicitly so the screen doesn't wrongly penalize Michigan towns by association with \"Michigan snow.\"\n\n**4. Winter cloud cover / gloom.** Given real weight because it silently drives buyer regret. Pittsburgh ~203 cloudy days, Jan overcast 68%, ~8 December sunshine days; SE Michigan Jan cloud 68%, ~2.6 h/day of December sun; central Ohio under the same Great Lakes stratus deck. **Counterintuitive but important: Minneapolis is *sunnier* in January than Cleveland** \u2014 its winter darkness is a sun-angle problem at 45N, not a cloud problem, so the two should not be scored with the same mechanism.\n\n## Numbers\n\n`jan_low_f`, `jul_high_f`, `snow_in` are NOAA 1991-2020 station normals for the metro's primary station, adjusted where the listed towns sit meaningfully off that station (Chicago collar = O'Hare not Midway; SW PA plateau adjusted +3-5 in snow for Washington/Irwin's 1,000-1,170 ft vs the Pittsburgh river bottoms). `elevation_ft` is a metro-representative value for the listed towns, not the airport. Dewpoint and heat-index figures are characterizations of typical July-August conditions, not station normals \u2014 they carry more uncertainty than the temperature/snow fields.\n\n**`smoke_days` is the weakest field and should be treated as directional.** It is not a long-run normal \u2014 Canadian wildfire smoke only became a Midwest factor in 2023. Values are keyed to that reference year,",
+  "sources": [
+   "https://www.dnr.state.mn.us/climate/twin_cities/normals.html \u2014 NOAA 1991-2020 normals for Minneapolis-St. Paul (Jan mean low 9F, Jul mean high 84F, ~51 in snow)",
+   "https://www.dnr.state.mn.us/climate/journal/at_or_below_zero_13_14.html \u2014 Minnesota DNR: Twin Cities averaged 22 days/yr at or below 0F, 1991-2020",
+   "https://climatology.nelson.wisc.edu/first-order-station-climate-data/madison-climate/historical-snowfall \u2014 Wisconsin State Climatology Office: Madison 51.8 in annual snowfall normal",
+   "https://climatology.nelson.wisc.edu/first-order-station-climate-data/milwaukee-climate/historical-snowfall \u2014 Wisconsin State Climatology Office: Milwaukee 48.7 in annual snowfall normal",
+   "https://www.weather.gov/lot/chicago_normals \u2014 NWS Chicago 1991-2020 normals (O'Hare Jan mean low 17.6F, 38.4 in snow)",
+   "https://stateclimatologist.isws.illinois.edu/climate-of-illinois/climate-of-chicago/ \u2014 Illinois State Climatologist: Lake Michigan moderating influence and O'Hare vs Midway station history",
+   "https://www.weather.gov/iln/climate_normals_cvg \u2014 NWS Wilmington OH: Cincinnati/CVG 1991-2020 normals (Jul mean high 86F)",
+   "https://www.weather.gov/iln/climate_normals_cmh \u2014 NWS Wilmington OH: Columbus/CMH 1991-2020 normals (Jan mean low ~20F, Jul mean high 85.3F)",
+   "https://www.weather.gov/ind/newnormals2021 \u2014 NWS Indianapolis 1991-2020 normals (Jan mean low ~21F, ~25 in snow)",
+   "https://www.weather.gov/eax/kcrecnorm-jan \u2014 NWS Kansas City/Pleasant Hill: KC normals (Jan mean low ~21F, Jul mean high ~90F)",
+   "https://www.currentresults.com/Weather/Iowa/Places/des-moines-snowfall-totals-snow-accumulation-averages.php \u2014 Des Moines 1991-2020 normals (36.5 in snow, Jan low 13F, Jul high 85F)",
+   "https://www.weather.gov/pbz/climate \u2014 NWS Pittsburgh climate normals (Jan mean low 23F, Jul mean high 85F, ~44 in snow)",
+   "https://www.currentresults.com/Weather/Michigan/Places/ann-arbor-snowfall-totals-snow-accumulation-averages.php \u2014 Ann Arbor ~43 in annual snowfall; Jan cloud cover 68%",
+   "https://www.weather.gov/cle/event_20250105_LES \u2014 NWS Cleveland: NE Ohio lake-effect snowbelt (Geauga County 120+ in vs ~70 in Cleveland)",
+   "https://glisa.umich.edu/resources-tools/climate-impacts/lake-effect-snow-in-the-great-lakes-region/ \u2014 GLISA/Univ. of Michigan: lake-effect mechanism and west Michigan 72-100+ in belt",
+   "https://spectrumnews1.com/wi/milwaukee/weather/2020/11/24/wisconsin-weather-blog-lake-michigan-natures-thermostat \u2014 Lake Michigan summer water temps 57-68F; up to 25F lakefront vs Waukesha differential",
+   "https://www.worldatlas.com/cities/the-cloudiest-cities-in-the-united-states-58542.html \u2014 Pittsburgh ~203 cloudy days/yr, Jan overcast 68%, ~8 December sunshine days; Cleveland 202 overcast days",
+   "https://www.pca.state.mn.us/news-and-stories/air-quality-alerts-record \u2014 MPCA: record 52 air-quality alert days in Minnesota in 2023, 16 from wildfire PM2.5, 9 red-category",
+   "https://dph.illinois.gov/resource-center/news/2023/july/2023-7-25---illinois-officials-expand-air-quality-messaging-to-e.html \u2014 Illinois EPA/IDPH: 29 unhealthy-for-sensitive-groups days in greater Chicago in 2023, 8 broadly unhealthy",
+   "https://www.epa.gov/system/files/documents/2024-05/radon-zones-map_text_link.pdf \u2014 EPA Map of Radon Zones (Zone 1 = predicted indoor screening >4 pCi/L)",
+   "https://hhs.iowa.gov/health-prevention/providers-professionals/radiological-health/radon/radon-resources \u2014 Iowa HHS: 71.6% of Iowa homes at/above 4 pCi/L, state average 8.5 pCi/L vs 1.3 national; entire state EPA Zone 1",
+   "https://www.health.state.mn.us/news/pressrel/2024/radon010824.html \u2014 Minnesota Dept. of Health: 44% of tested properties at/above 4 pCi/L, state average 4.2 pCi/L; Radon Awareness Act disclosure requirement",
+   "https://www.epa.gov/sites/production/files/2014-08/documents/ohio.pdf \u2014 EPA Map of Radon Zones, Ohio: 53 of 88 counties Zone 1 including Franklin and Hamilton",
+   "https://www.epa.gov/sites/default/files/2014-08/documents/indiana.pdf \u2014 EPA Map of Radon Zones, Indiana (Marion and Hamilton counties Zone 1)",
+   "https://www.homeradonpros.com/radon-washington-county \u2014 Washington County PA average 5.9 pCi/L, ~40% of homes elevated; PA residential average 7-8 pCi/L",
+   "https://www.pa.gov/services/dep/apply-for-department-of-environmental-protection-mine-subsidence-insurance \u2014 PA DEP Mine Subsidence Insurance: 1M+ PA buildings over abandoned mines; $150,000 coverage for $41.25/yr; excluded from standard HO policies",
+   "https://pubs.usgs.gov/publication/b2059A \u2014 USGS Bulletin 2059-A: Overview of landslide problems, research and mitigation, Cincinnati, Ohio area",
+   "https://www.hcswcd.org/uploads/1/5/4/8/15484824/landslides_in_hamilton_county_hcswcd_2011.pdf \u2014 Hamilton County SWCD: highest per-capita landslide repair cost in the US; Mt. Adams remediation $44.5M (2005 dollars)",
+   "https://www.cincinnati-oh.gov/stormwater/flood-management/ \u2014 City of Cincinnati: Ohio River flood stage 52 ft, Local Flood Protection Project (Mill Creek Barrier Dam, floodwall, 14 floodgates)",
+   "https://www.wcpo.com/news/local-news/photos-a-look-at-flooding-now-compared-to-floods-in-2018-and-1997 \u2014 March 1997 Ohio River crest 64.48 ft at Cincinnati, ~$180M damage",
+   "https://www.nrdc.org/bio/anna-weber/blueprint-buyout-des-plaines-il \u2014 Des Plaines IL: 1,200 acres in FEMA floodplain, most NFIP policies in Illinois, homes flooded 8-9 times since mid-1980s, 68 properties bought out (75% FEMA / 25% IDNR)",
+   "https://www.dupagecounty.gov/government/departments/stormwater_management/voluntary_flood-prone_buyout_program.php \u2014 DuPage County Stormwater voluntary buyout program: 130+ homes purchased",
+   "https://insideclimatenews.org/news/15082023/cicero-chicago-flooding-rainready/ \u2014 Cicero/Berwyn/Oak Park July 2 and Sept 17, 2023 urban flooding; combined sewer mechanism",
+   "https://www.chicagobusiness.com/crains-forum-urban-flooding/basement-flooding-and-how-mitigate-risks \u2014 Cook County: 87% of flood-damage claims 2007-2016 paid in communities of color; 3/4 of Chicago claims from 13 ZIP codes",
+   "https://www.insurancejournal.com/news/midwest/2025/07/15/831701.htm \u2014 State Farm 27% Illinois homeowners rate increase, mandatory minimum 1% wind/hail deductible, effective July 15 / Aug 15, 2025",
+   "https://newsroom.statefarm.com/understanding-the-issues-in-illinois/ \u2014 State Farm: Illinois has more hail damage than any state except Texas; catastrophe losses exceeded provision in 13 of last 15 years",
+   "https://www.marshmma.com/us/insights/details/insurance-market-update-midwest.html \u2014 Cumulative 2019-2024 homeowners rate change: Illinois +56.9%, Indiana +36.3%, Ohio +32.1%",
+   "https://www.cbsnews.com/minnesota/news/hail-claims-roof-coverage-changes-insurance/ \u2014 Minnesota hail claims regularly $40,000-$60,000; roof coverage shifting from replacement cost to actual cash value",
+   "https://owlroofing.com/blog/average-hail-claim-minnesota/ \u2014 Minnesota #1 nationally in 2024 hail-claim payouts at $799M; average MN hail claim ~$30,000",
+   "https://www.minnpost.com/environment/2026/04/home-insurance-rates-minnesota-stack-up/ \u2014 Minnesota posted the steepest US home insurance rate increase in 2025 (+34%)",
+   "https://iowacapitaldispatch.com/2026/03/18/nearly-all-states-have-rising-home-insurance-premiums-iowas-rose-28-in-2025/ \u2014 Iowa homeowners premiums +28% in 2025; at least four insurers retreating from the state",
+   "https://insurify.com/homeowners-insurance/insights/hailstorms-next-insurance-crisis/ \u2014 Severe convective storm losses $127B in 2025 (27% above long-term average); Kansas +15% in 2025, Nebraska +25%; 83.2% of 2023-24 Kansas hailstorms rated severe",
+   "https://iid.iowa.gov/press-release/2020-11-09/iowa-derecho-claims-top-16-billion \u2014 Iowa Insurance Division: 200,597 claims totaling $1,612,459,493 in insured losses from the Aug 10, 2020 derecho",
+   "https://www.washingtonpost.com/weather/2020/10/17/iowa-derecho-damage-cost/ \u2014 NOAA: Aug 10, 2020 derecho $7.5B total damage, costliest US thunderstorm event; 100-130 mph sustained winds, ~140 mph in SW Cedar Rapids",
+   "https://www.iowapublicradio.org/ipr-news/2025-06-17/central-iowa-lawn-watering-ban-high-nitrate-levels-des-moines-river \u2014 Central Iowa Water Works first-ever lawn watering ban June 12, 2025; Des Moines River 15.6 mg/L and Raccoon River 15.3 mg/L nitrate vs 10 mg/L EPA limit",
+   "https://www.wosu.org/2024-12-30/ohio-had-record-number-of-tornadoes-in-2024-more-than-20-million-in-property-damage \u2014 Ohio record 74 tornadoes in 2024 vs 30-year average of 21; previous record 62 (1992)",
+   "https://www.weather.gov/ind/tornadostats \u2014 NWS Indianapolis: Indiana averages ~22-25 tornadoes/yr; 57 in 2024, 54 in 2023",
+   "https://www.weather.gov/ict/KSTornadoClimo \u2014 NWS Wichita: Kansas tornado climatology (~96/yr, second nationally)",
+   "https://fox8.com/news/tornado-alley-shifts-east-toward-ohio/ \u2014 NWS meteorologists on the eastward shift/widening of the tornado corridor into Ohio and Indiana",
+   "https://www.liveinsurancenews.com/michigan-worst-states-home-ins/8571668/ \u2014 Michigan homeowners rates +21.6% 2024 to 2025 despite no hurricane or wildfire exposure; hail, wind, ice and sewer-backup claim severity",
+   "https://www.cbsnews.com/amp/detroit/news/michigan-homeowners-dread-flood-insurance-rate-hikes/ \u2014 Michigan $300M+ in flood damage in 2020; sewer backup claims growing as municipal drainage systems fail",
+   "https://www.fema.gov/sites/default/files/documents/fema_urban_flooding_guidance_for_homeowners_and_renters.pdf \u2014 FEMA: urban flooding and sewer backup are excluded from standard HO policies and from NFIP coverage"
+  ]
+ },
+ "table": {
+  "cincinnati_ohio_valley": {
+   "primary_hazard": "River/flash flooding in the valley bottoms, hillside landslides, and Zone 1 radon",
+   "wildfire_risk": "low",
+   "flood_risk": "high",
+   "quake_risk": "low",
+   "tornado_hail_risk": "moderate",
+   "insurance_climate": "strained",
+   "water_risk": "Supply is not the risk -- Ohio River plus the Great Miami buried-valley aquifer is one of the most secure water positions in the country. The risk is contamination (industrial legacy and PFAS in the lower Mill Creek corridor) and, for outlying Butler/Warren County parcels, private-well quality.",
+   "note": "FLOOD: Ohio River flood stage at Cincinnati is 52 ft; the March 1997 flood crested at 64.48 ft with ~$180M damage, and at 58 ft homes flood along the Little Miami (Loveland). The Mill Creek valley is protected by the 1948 Corps Local Flood Protection Project -- a barrier dam, floodwall and 14 bulkhead floodgates -- which is a real dependency, not a guarantee. Hamilton and Fairfield sit on the Great Miami, the epicenter of the 1913 flood, now protected by Miami Conservancy District dry dams. Parcel-level FEMA panel checks are mandatory here; upland Mason and West Chester are largely clean while river-terrace lots are not. LANDSLIDES: USGS reports Hamilton County spends more per capita repairing landslide damage than anywhere else in the nation -- glacial lakebed clays fail on gentle slopes, and the Mt. Adams remediation alone ran $44.5M in 2005 dollars. Standard HO policies exclude earth movement. Get a geotech opinion on any hillside lot. RADON: Hamilton County is EPA Zone 1 with reported averages above 8 pCi/L; roughly half of Ohio homes exceed the 4 pCi/L action level per ODH. Budget $1,200-$2,500 for mitigation and treat it as expected, not contingent. INSURANCE: Ohio homeowners premiums rose 32.1% 2019-2024; Ohio set an all-time record 74 tornadoes in 2024 against a 30-year average of 21.",
+   "towns": [
+    "Cincinnati, OH",
+    "Hamilton, OH",
+    "Fairfield, OH",
+    "West Chester, OH",
+    "Mason, OH",
+    "Loveland, OH"
+   ]
+  },
+  "columbus_central_ohio": {
+   "primary_hazard": "Tornado and hail in a record-setting Ohio decade, layered on Zone 1 radon",
+   "wildfire_risk": "low",
+   "flood_risk": "moderate",
+   "quake_risk": "low",
+   "tornado_hail_risk": "moderate",
+   "insurance_climate": "strained",
+   "water_risk": "Secure -- Columbus draws from the Scioto/Big Walnut reservoir system (Griggs, O'Shaughnessy, Hoover, Alum Creek). Watch nitrate and algal advisories on the upground reservoirs in wet springs; no scarcity risk.",
+   "note": "TORNADO/HAIL: Ohio recorded 74 tornadoes in 2024, an all-time state record against a 30-year average of 21, and led the nation early that year -- this is the eastward broadening of the tornado corridor into Ohio and Indiana, and it is the single biggest change to Midwest hazard scoring in the last decade. Scored 'moderate' rather than 'high' only because it is calibrated against Kansas (~96 tornadoes/yr) and Iowa within this region. FLOOD: the Scioto, Olentangy, Alum Creek, Blacklick and Big Walnut corridors thread through these suburbs -- Reynoldsburg, Gahanna and Pickerington all have creek-adjacent subdivisions with real SFHA exposure while Hilliard and Grove City are mostly upland. Flash flooding on paved-over headwater streams is the more common loss than mainstem river flooding. RADON: Franklin County is EPA Zone 1 with reported county averages near 7.5 pCi/L; 53 of Ohio's 88 counties are Zone 1. Assume a mitigation system is needed and negotiate it into the deal. INSURANCE: Ohio premiums +32.1% 2019-2024; carriers are moving to percentage wind/hail deductibles and roof actual-cash-value schedules on older roofs -- verify RCV vs ACV on the roof before closing.",
+   "towns": [
+    "Columbus, OH",
+    "Westerville, OH",
+    "Hilliard, OH",
+    "Gahanna, OH",
+    "Reynoldsburg, OH",
+    "Grove City, OH",
+    "Pickerington, OH",
+    "Delaware, OH",
+    "Lincoln Village, OH"
+   ]
+  },
+  "indianapolis_central_indiana": {
+   "primary_hazard": "Tornado and severe hail on open, unsheltered terrain",
+   "wildfire_risk": "low",
+   "flood_risk": "moderate",
+   "quake_risk": "low",
+   "tornado_hail_risk": "high",
+   "insurance_climate": "strained",
+   "water_risk": "Adequate -- White River plus the Geist, Morse and Eagle Creek reservoirs, though central Indiana ran supply-constrained in the 2012 and 2023 droughts and Citizens Energy has imposed watering restrictions. Nitrate and atrazine from row-crop runoff are recurring treatment costs.",
+   "note": "TORNADO: Indiana averages ~22-25 tornadoes a year and logged 57 in 2024, more than double average and up from 54 in 2023 -- the March 13-15, 2024 outbreak hit central Indiana directly. Flat open terrain and rapid greenfield subdivision growth in Hamilton County (Carmel, Fishers, Noblesville) means large tracts of newer, similar-vintage housing exposed to the same storm track, which is exactly the correlated-loss profile carriers are repricing. FLOOD: White River, Fall Creek, Cicero Creek and the Geist/Morse reservoir shorelines -- Noblesville and Fishers have meaningful riverine exposure; Greenwood is mostly upland with flash-flood-prone tributaries. QUAKE: scored low. The Wabash Valley Seismic Zone and New Madrid are 100-200 mi southwest and drive real hazard in far southern Indiana, but USGS national seismic hazard maps put Indianapolis in the low band -- do not carry a California-style quake screen up here. RADON: Marion and Hamilton counties are EPA Zone 1. INSURANCE: Indiana premiums rose 36.3% 2019-2024, among the steepest in the eastern Midwest, driven almost entirely by severe convective storm losses.",
+   "towns": [
+    "Indianapolis, IN",
+    "Carmel, IN",
+    "Fishers, IN",
+    "Noblesville, IN",
+    "Greenwood, IN"
+   ]
+  },
+  "chicago_lakefront_inner": {
+   "primary_hazard": "Combined-sewer basement backup flooding -- excluded from both standard HO policies and the NFIP",
+   "wildfire_risk": "low",
+   "flood_risk": "high",
+   "quake_risk": "low",
+   "tornado_hail_risk": "high",
+   "insurance_climate": "strained",
+   "water_risk": "Lake Michigan supply is the most secure large-city water position in this screen -- quantity is a non-issue. The risk is LEAD: Chicago has more lead service lines than any US city (roughly 400,000) and replacement is a multi-decade program, so assume a lateral test and possible filtration on any pre-1986 house.",
+   "note": "THE DEFINING HAZARD HERE IS NOT ON A FEMA MAP. Chicago and the inner ring run a COMBINED sewer that carries sewage and stormwater in the same pipe; in intense rain the mains surcharge and push back through private drains into finished basements. A standard HO policy excludes it and the NFIP does not cover it either -- you need a sewer/water backup endorsement, typically $10k-$25k of sublimit, and it is the single most-missed line item for buyers coming from the coasts. The July 2 and September 17, 2023 storms flooded Berwyn, Cicero and Oak Park directly. Cook County damage is heavily concentrated: 87% of flood-damage claims paid 2007-2016 went to communities of color and three-quarters of Chicago claims came from just 13 ZIP codes -- Cicero, Berwyn and Oak Lawn sit in that corridor. INSURANCE: State Farm took a 27% Illinois homeowners rate increase effective July 15 / August 15, 2025 with a MANDATORY minimum 1% wind/hail deductible; the company states Illinois has had more hail damage than any state except Texas and that Illinois catastrophe losses exceeded the catastrophe provision in 13 of the last 15 years. RADON: Cook County is EPA Zone 2 (predicted 2-4 pCi/L) -- notably lower than the collar counties. Illinois requires seller radon disclosure under the Radon Awareness Act.",
+   "towns": [
+    "Chicago, IL",
+    "Cicero, IL",
+    "Berwyn, IL",
+    "Oak Lawn, IL"
+   ]
+  },
+  "chicago_inland_collar": {
+   "primary_hazard": "Chronic riverine flooding on the Des Plaines River, Salt Creek and the DuPage branches",
+   "wildfire_risk": "low",
+   "flood_risk": "high",
+   "quake_risk": "low",
+   "tornado_hail_risk": "high",
+   "insurance_climate": "strained",
+   "water_risk": "Most collar towns are on Lake Michigan water via the Northwest Water Commission / DuPage Water Commission -- secure. Some outlying areas still draw deep sandstone aquifer wells with documented drawdown and radium exceedances; check the community's CCR before assuming lake water.",
+   "note": "DIFFERENT FLOOD MECHANISM FROM THE INNER RING -- this is real riverine flooding, mapped and insurable. Des Plaines has 1,200 acres in the FEMA-designated floodplain and the most NFIP policies of any community in Illinois; FEMA records show individual homes damaged eight or nine separate times since the mid-1980s, and the city bought out and demolished 68 properties (75% FEMA / 25% IDNR match) with permanent open-space deed restrictions. DuPage County Stormwater has bought out 130+ homes and continues a voluntary buyout program -- Elmhurst (Salt Creek) and Lombard (East Branch DuPage River) sit in that footprint. Mount Prospect has Weller Creek exposure. A repetitive-loss check and a full elevation certificate are non-negotiable in these five towns; if a seller cannot produce one, walk. RADON: DuPage County is EPA Zone 1 while Cook is Zone 2 -- the collar towns genuinely test higher than the city, an intra-metro split worth encoding. INSURANCE: same Illinois market as the lakefront -- State Farm +27% with a mandatory 1% minimum wind/hail deductible from mid-2025; on a $500k house that is a $5,000 first-dollar exposure on every hail event.",
+   "towns": [
+    "Des Plaines, IL",
+    "Mount Prospect, IL",
+    "Arlington Heights, IL",
+    "Elmhurst, IL",
+    "Lombard, IL"
+   ]
+  },
+  "milwaukee_lake_shore": {
+   "primary_hazard": "Basement backup and combined-sewer flooding in the older housing stock; lakeshore bluff erosion on the water",
+   "wildfire_risk": "low",
+   "flood_risk": "moderate",
+   "quake_risk": "low",
+   "tornado_hail_risk": "moderate",
+   "insurance_climate": "strained",
+   "water_risk": "Lake Michigan supply, secure on quantity. The live issue is lead: Milwaukee has roughly 65,000-70,000 lead service lines under an accelerated replacement mandate, and pre-1951 homes should be assumed to have one until proven otherwise.",
+   "note": "The MMSD Deep Tunnel captures the large majority of combined-sewer overflow volume, which makes Milwaukee meaningfully better protected than Chicago's inner ring -- but big convective rain still surcharges laterals and backs up basements across the older west and south side stock. Buy the sewer-backup endorsement. Lowest tornado/hail exposure of the four Great Lakes subregions here; Wisconsin's severe weather peak is west and south of Milwaukee. BLUFF EROSION is the genuinely local item: high Lake Michigan stands (the 2019-2020 record highs) drove accelerated bluff recession and several emergency shoreline armoring projects along the North Shore -- any lot within ~300 ft of the bluff line needs a setback and recession-rate review. RADON: Milwaukee County is EPA Zone 2, lower than Dane County to the west. INSURANCE: Wisconsin has been repriced with the rest of the Midwest on severe convective storm losses, with roof ACV schedules and percentage wind/hail deductibles now common.",
+   "towns": [
+    "Milwaukee, WI"
+   ]
+  },
+  "detroit_ann_arbor_se_michigan": {
+   "primary_hazard": "Sewer-backup and urban flooding on an undersized, aging combined system",
+   "wildfire_risk": "low",
+   "flood_risk": "high",
+   "quake_risk": "low",
+   "tornado_hail_risk": "moderate",
+   "insurance_climate": "strained",
+   "water_risk": "Great Lakes supply, effectively unlimited. Michigan's post-Flint Lead and Copper Rule is the strictest in the nation (5 ppb action level, mandatory full service-line replacement) and the cost is landing on local water rates -- expect rising utility bills rather than supply risk.",
+   "note": "FLOOD: This is a sewer-capacity problem, not a river problem, and it is the most expensive recurring loss in SE Michigan. The August 2014 and June 2021 events flooded tens of thousands of basements across Wayne County -- Taylor, Westland and Canton were all in the 2021 federal declaration -- and Michigan booked over $300M in flood damage in 2020 alone. Standard policies exclude backup; buy the endorsement and price a backwater valve and sump with battery backup into any offer on a finished basement. Ann Arbor and Ypsilanti add genuine Huron River riverine exposure, and Ypsilanti's older near-river housing is the most exposed stock in this subregion. RADON -- AND THIS IS AN INTRA-METRO SPLIT WORTH ENCODING: Washtenaw County (Ann Arbor, Ypsilanti) and Livingston County (Howell) are EPA Zone 1, while Wayne County (Taylor, Westland, Canton) is Zone 3. Two towns 25 minutes apart carry materially different radon expectations; test regardless, but budget differently. ICE STORMS are the underrated peril -- glaze events, not snow, are what take down SE Michigan's tree canopy and power grid. INSURANCE: Michigan homeowners rates rose roughly 21.6% from 2024 to 2025 despite no hurricane or wildfire exposure, driven by hail, wind, ice and sewer-backup claim severity plus national reinsurance costs.",
+   "towns": [
+    "Ann Arbor, MI",
+    "Ypsilanti, MI",
+    "Canton, MI",
+    "Westland, MI",
+    "Taylor, MI",
+    "Howell, MI"
+   ]
+  },
+  "pittsburgh_sw_pennsylvania_plateau": {
+   "primary_hazard": "Landslides and coal-mine subsidence -- both excluded from standard homeowners policies -- plus the worst radon in the nation",
+   "wildfire_risk": "low",
+   "flood_risk": "moderate",
+   "quake_risk": "low",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "normal",
+   "water_risk": "Abundant surface supply. The live issues are abandoned mine drainage in headwater streams and, on outlying township parcels with private wells, proximity to Marcellus development -- get a pre-drill baseline well test if one exists and a full panel if it does not.",
+   "note": "THREE GEOLOGIC ITEMS THAT NO NATIONAL SCREEN CATCHES, ALL OF THEM UNINSURED BY DEFAULT. (1) RADON: Pennsylvania has the highest residential radon in the country, with a state average around 7-8 pCi/L -- roughly double the 4 pCi/L EPA action level. Washington County averages 5.9 pCi/L with about 40% of homes elevated, and the county is EPA Zone 1. Treat mitigation as a certainty, not a contingency. (2) MINE SUBSIDENCE: more than 1 million Pennsylvania buildings sit over abandoned underground coal mines, and standard HO policies exclude subsidence entirely. The PA DEP Mine Subsidence Insurance program sells $150,000 of coverage for about $41.25/year -- absurdly cheap, which means there is no excuse for skipping it, but it also means you must pull the DEP mine maps for the parcel BEFORE you write an offer. Washington and Westmoreland counties are squarely in the mined belt. (3) LANDSLIDES: the plateau's steep clay-shale slopes fail regularly, especially after wet winters, and earth movement is excluded from standard policies. FLOOD: flash flooding in the hollows and on Chartiers Creek (Washington) and Brush Creek (Irwin); mainstem river flooding is a Pittsburgh Point problem, not a plateau one. INSURANCE is scored 'normal' -- the calmest of the twelve -- precisely because this is the LEAST hail- and tornado-exposed subregion in the screen.",
+   "towns": [
+    "Washington, PA",
+    "Irwin, PA"
+   ]
+  },
+  "kansas_city_johnson_county": {
+   "primary_hazard": "Giant hail and tornado -- the only true Tornado-Alley-adjacent subregion in this screen",
+   "wildfire_risk": "low",
+   "flood_risk": "moderate",
+   "quake_risk": "low",
+   "tornado_hail_risk": "high",
+   "insurance_climate": "crisis",
+   "water_risk": "Secure for this metro -- WaterOne draws the Kansas and Missouri Rivers. The Ogallala depletion crisis that dominates Kansas water policy is a western-Kansas problem and does NOT apply to Johnson County; do not let a state-level water screen down-rank Olathe.",
+   "note": "HAIL IS THE UNDERWRITING EVENT, NOT TORNADO. Kansas averages ~96 tornadoes a year (second nationally) and the Wichita-to-Kansas City corridor is core hail alley -- Kansas has ranked among the highest states for share of US hail events three years running, with roughly 83% of 2023 and 2024 Kansas hailstorms rated severe. Johnson and Douglas counties consistently rank among the top counties nationally for hail claims; local claims data put roughly 45% of Olathe homeowner claims as hail-related, with typical roof service life of 12-15 years driven by storms rather than age. PRACTICAL SCREEN: (a) roof age and whether the policy pays RCV or ACV is a first-order price question -- on a $290k Olathe house the gap can be $15,000+ out of pocket; (b) a Class 4 impact-resistant roof earns a meaningful premium credit and should be priced into any offer on a roof over 10 years old; (c) percentage wind/hail deductibles of 1-5% are now standard, so read the declarations page before waiving inspection. INSURANCE: Kansas premiums rose about 15% in 2025 on top of prior years; scored 'crisis' on availability and deductible structure, not on carrier exit. FLOOD: Olathe is upland prairie and mostly outside the SFHA, but Indian Creek, Cedar Creek and Blue River tributary flash flooding is real and undermapped. RADON: Johnson County KS is EPA Zone 1.",
+   "towns": [
+    "Olathe, KS"
+   ]
+  },
+  "twin_cities_minnesota": {
+   "primary_hazard": "Giant hail -- Minnesota led the entire nation in hail-claim payouts in 2024",
+   "wildfire_risk": "low",
+   "flood_risk": "moderate",
+   "quake_risk": "low",
+   "tornado_hail_risk": "high",
+   "insurance_climate": "crisis",
+   "water_risk": "Ample surface and groundwater. Two local caveats: north-metro private and municipal wells in Anoka County (Ramsey, Andover) have documented manganese and nitrate issues warranting a full-panel test, and the metro's very high radon is effectively a water-table-independent geology cost.",
+   "note": "THIS IS THE HARDEST INSURANCE MARKET IN THE SCREEN AND THE REASON 'crisis' IS USED HERE. Minnesota ranked FIRST in the nation for hail-claim payouts in 2024 at $799 million; the average Minnesota hail claim is now around $30,000 with claims regularly running $40,000-$60,000; and Minnesota posted the steepest home-insurance rate increase of any state in 2025 at 34% in a single year. Structurally, carriers have moved roofs from replacement cost to ACV depreciation schedules and from flat dollar deductibles to 1-5% percentage wind/hail deductibles -- on a $500,000 house a 2% deductible is $10,000 out of pocket per event, and industry commentary in the state is that essentially no carrier is still writing roofs the old way. Screen every listing for roof age, roof material and the exact deductible structure; a 15-year-old roof on an ACV policy is a five-figure liability the day you close. RADON: 44% of tested Minnesota properties are at or above 4 pCi/L against a state average of 4.2 pCi/L versus 1.3 nationally, and the Minnesota Radon Awareness Act requires seller disclosure before sale -- read that disclosure carefully, it is one of the few states that gives you the data for free. WINTER: 22 days a year at or below 0F drives ice-dam and frozen-pipe claims; attic insulation and ventilation quality is a real inspection item here, not a nicety. FLOOD: Shakopee and Burnsville front the Minnesota River valley; Saint Paul fronts the Mississippi and saw 2019 and 2023 crests close Water Street and Harriet Island. Upland Woodbury, Apple Valley, Lakeville and Andover are largely clean.",
+   "towns": [
+    "Saint Paul, MN",
+    "Woodbury, MN",
+    "Burnsville, MN",
+    "Apple Valley, MN",
+    "Lakeville, MN",
+    "Shakopee, MN",
+    "New Brighton, MN",
+    "Ramsey, MN",
+    "Andover, MN"
+   ]
+  },
+  "madison_south_central_wisconsin": {
+   "primary_hazard": "Tornado and hail, plus slow chain-of-lakes flooding on the isthmus",
+   "wildfire_risk": "low",
+   "flood_risk": "moderate",
+   "quake_risk": "low",
+   "tornado_hail_risk": "high",
+   "insurance_climate": "strained",
+   "water_risk": "Madison runs entirely on deep sandstone aquifer wells -- secure on quantity, but several municipal wells have had PFAS, chloride (road-salt) and manganese detections, and road-salt chloride in the Yahara lakes is a documented long-term trend. Get the utility's per-well water quality report for the specific service area.",
+   "note": "FLOOD MECHANISM IS UNUSUAL AND WORTH ENCODING SEPARATELY: the August 2018 event dropped 11-15 in of rain on western Dane County and pushed Lake Mendota and Monona to record levels, flooding isthmus and Yahara-chain shoreline properties for WEEKS, not hours. This is slow, prolonged, lake-level flooding driven by a constrained outlet -- entirely different from Chicago flash-and-drain or Ohio River crest-and-recede, and it means shoreline lots can be unusable for a month while never appearing on a flash-flood screen. TORNADO/HAIL: south-central Wisconsin sits in the region's active severe corridor, well above Milwaukee's lakeshore exposure. RADON: Dane County is EPA Zone 1, higher than Milwaukee County's Zone 2 -- another same-state split. INSURANCE: repriced with the rest of the Midwest on convective storm losses; roof ACV schedules and percentage wind/hail deductibles are now standard.",
+   "towns": [
+    "Madison, WI"
+   ]
+  },
+  "des_moines_central_iowa": {
+   "primary_hazard": "Derecho-class straight-line wind and tornado, on top of the worst radon in the United States",
+   "wildfire_risk": "low",
+   "flood_risk": "moderate",
+   "quake_risk": "low",
+   "tornado_hail_risk": "high",
+   "insurance_climate": "crisis",
+   "water_risk": "NITRATE, and it is now an operational constraint, not a theoretical one. Central Iowa Water Works issued its first-ever metro-wide lawn watering ban on June 12, 2025 as Des Moines River (15.6 mg/L) and Raccoon River (15.3 mg/L) nitrate ran well above the 10 mg/L EPA limit; demand fell 30%+ and the ban held into August. Expect recurring summer restrictions and rate increases to fund treatment capacity.",
+   "note": "DERECHO IS THE DEFINING PERIL AND IT DOES NOT EXIST AS A CATEGORY IN MOST NATIONAL SCREENS. The August 10, 2020 derecho drove 100-130 mph sustained straight-line winds across central and eastern Iowa (estimated 140 mph in southwest Cedar Rapids), sustained for 30-45 minutes -- a hurricane-force wind field with no warning lead time and no evacuation option. NOAA put total damage at $7.5 billion, the costliest thunderstorm event in US history; Iowa alone booked 200,597 claims totaling $1.61 billion in insured losses. Wind uplift on roof decking, garage doors and attached structures is the failure mode; a hurricane-rated garage door and hurricane clips are cheap retrofits that are almost never present on Iowa housing stock. INSURANCE: Iowa premiums rose 28% in 2025 and at least four insurers have pulled back from the state -- scored 'crisis' on both price and availability. RADON: Iowa is entirely EPA Zone 1 and has the highest radon in the nation -- 71.6% of homes at or above 4 pCi/L with a state average of 8.5 pCi/L versus 1.3 nationally, plus the highest share of homes above 20 pCi/L. In Ankeny, treat radon mitigation as a certainty; passive rough-in is common in newer construction, active mitigation should be assumed on anything older, and a post-mitigation retest is worth insisting on. FLOOD: Ankeny is upland on the Des Moines Lobe and largely outside the metro's SFHA -- the 1993 and 2008 Des Moines/Raccoon confluence floods that took out the Des Moines Water Works are a downtown and river-corridor story, but Four Mile Creek and Saylor Creek headwater flash flooding is a genuine parcel-level risk in eastern Ankeny.",
+   "towns": [
+    "Ankeny, IA"
+   ]
+  }
+ }
+}

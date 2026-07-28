@@ -1,0 +1,242 @@
+{
+ "_meta": {
+  "kind": "climate",
+  "market": "PNW",
+  "as_of": "2026-07",
+  "status": "researched",
+  "methodology": "PNW LAYER \u2014 11 climate subregions, 14 hazard subregions, 50/50 towns mapped exactly once in each (validated programmatically; see /tmp/claude-0/-home-user-Accounting/25f1ee53-e3dd-5523-ac7d-732911c7f0ca/scratchpad/pnw_validate.py, which checks town coverage, duplicates, unlisted towns, schema keys and enum domains \u2014 result PASS).\n\nWHY THIS REGION NEEDS ITS OWN AXES\nThe CA layer's axes (fog belt, wind corridors, inland heat) and the New England layer's (maritime moderation) both fail here. The PNW's organizing fact is the CASCADE RAIN SHADOW, and it is the sharpest climate divide in the country: Bellingham 36 in of rain vs Yakima 8 in, over 150 miles inside one state. Everything scores against THIS distribution, not a national one.\n\nCLIMATE TIERING LOGIC\n- \"temperate-marine\" is the best-in-region tier: the west-side band where Jan lows sit 33-38F, Jul highs 74-83F, snow is 4-16 in, and there is no meaningful hard-freeze or heat season. Awarded to 5 subregions (Puget core, Puget foothills, South Sound, Kitsap, Portland/Willamette core).\n- Critically, \"temperate-marine\" is NOT a free pass. Every one of those subregions carries an explicit GLOOM figure \u2014 ~155-160 cloudy days at SEA and PDX, ~165 at Olympia, ~165-170 in the north Sound, and only ~2 hrs/day of December sun. Winter darkness is encoded as a liveability factor in humidity_note and note for every west-side subregion, because it is the region's real, chronic, under-disclosed cost. A buyer who tours in July sees only the 79F/0.7-in-of-rain summer.\n- \"moderate\" is used for three west-side subregions downgraded on a specific, named mechanism rather than on averages: north-sound (Fraser Gap arctic outflow + a 74F summer ceiling), Gorge fringe (1-3 freezing-rain events/winter vs ~zero in the west metro; Jan 2024 ice storm), south Willamette (multi-day radiation-fog inversions + the highest west-side smoke load).\n- \"harsh\" and \"harsh-interior\" are reserved for east of the crest. Spokane and Bend are \"harsh\" (continental/high-desert: 44 in and 22 in of snow, 24F/22F Jan lows, AC mandatory). Yakima is \"harsh-interior\" \u2014 the only one that stacks BOTH tails: 89F Jul highs and 8 in of rain, but also a notorious multi-week winter inversion, so it does not even earn the compensating sunshine Spokane and Bend get.\n\nAC DEPENDENCE \u2014 THE HEAT-DOME ADJUSTMENT\nHistorically most of the west side would score \"low.\" It is deliberately scored \"medium\" for every metro subregion instead, because the 2021 heat dome broke that assumption: Portland 108/112/116F on three consecutive days, Seattle 108F, 250+ regional deaths, against pre-event AC penetration of only ~44% (Seattle) and ~78% (Portland). AC is now a resale expectation. Only Kitsap and the north Sound keep \"low\" \u2014 74-77F July normal highs with constant marine ventilation make it honestly still optional there.\n\nSMOKE AS A QUANTIFIED CLIMATE FIELD\nsmoke_days is populated for all 11 subregions as annual unhealthy-for-sensitive-groups-or-worse days, with a clear east-west gradient: 5-7 west-side marine, 9 south Willamette (Holiday Farm Fire corridor), 15 central Oregon, 18 Spokane, 20 Yakima. Anchored on Oregon DEQ's wildfire smoke-trend series and Puget Sound Clean Air Agency data. These are averages across a high-variance distribution (Puget Sound had ~12 days in 2020 and 3 in 2025) \u2014 the notes say to treat them as planning floors.\n\nHAZARD LAYER \u2014 WHY 14 SUBREGIONS, NOT 11\nHazard geography does not follow climate geography, so the layers are deliberately cut differently. Three splits do most of the work:\n1. Kent/Auburn/Renton are pulled OUT of the Puget climate core into \"green-cedar-valley-floor\" \u2014 same climate, catastrophically different ground (high-to-very-high liquefaction fill + Howard Hanson Dam dependency + the White River lahar footprint at Auburn). A strict screen should fail this subregion.\n2. Portland is split into \"portland-basin-core\" (liquefaction, Portland Hills Fault, low wildfire) and \"willamette-slopes-wui\" (Oregon City/W",
+  "sources": [
+   "https://www.ncei.noaa.gov/products/land-based-station/us-climate-normals \u2014 NOAA NCEI 1991-2020 U.S. Climate Normals (temperature, precipitation, snowfall base data for SEA, PDX, GEG, YKM, EUG, OLM, BLI, BDN)",
+   "https://www.weather.gov/media/pqr/climate/ClimateBookPortland/toc.pdf \u2014 NOAA/NWS Portland 'Climate of Portland, Oregon' technical memorandum (Jan 2024 update)",
+   "https://www.weather.gov/media/wrh/online_publications/TMs/TM-248.pdf \u2014 NOAA Technical Memorandum NWS WR-248, Climate of Eugene, Oregon",
+   "https://pubs.usgs.gov/publication/fs20253050/full \u2014 USGS Fact Sheet 2025-3050, 'Earthquake probabilities and hazards in the U.S. Pacific Northwest' (85% M6.5+ deep / 17% M6.5+ crustal / 10-15% M9 Cascadia in 50 yrs; ~500-yr Cascadia recurrence)",
+   "https://www.usgs.gov/programs/earthquake-hazards/science/2023-50-state-long-term-national-seismic-hazard-model-0 \u2014 USGS 2023 50-State National Seismic Hazard Model (basis for east-vs-west-of-Cascades quake_risk split)",
+   "https://pnsn.org/education/pnw-earthquakes/sources/cascadia \u2014 Pacific Northwest Seismic Network, Cascadia Subduction Zone megathrust",
+   "https://pnsn.org/education/earthquake-hazards/liquefaction \u2014 PNSN, liquefaction hazards (Duwamish, Harbor Island, Interbay, Puget Sound fill)",
+   "https://www.usgs.gov/publications/seismic-hazard-maps-seattle-washington-incorporating-3d-sedimentary-basin-effects \u2014 USGS, Seattle 3-D sedimentary basin amplification",
+   "https://www.seattle.gov/documents/Departments/Emergency/PlansOEM/SHIVA/SHIVAv7.0-Earthquake.pdf \u2014 City of Seattle CEMP SHIVA, geologic hazards / earthquake chapter",
+   "https://dnr.wa.gov/washington-geological-survey/geologic-hazards-and-environment/geologic-hazard-maps \u2014 Washington DNR / Washington Geological Survey liquefaction susceptibility, NEHRP site class, landslide and tsunami-inundation hazard maps",
+   "https://gis.dogami.oregon.gov/arcgis/rest/services/HV/StatewideEQ/MapServer/2 \u2014 Oregon DOGAMI Earthquake Liquefaction (Soft Soil) Hazard layer",
+   "https://www.oregon.gov/dogami/hazvu/pages/index.aspx \u2014 Oregon DOGAMI HazVu Statewide Geohazards Viewer (liquefaction, SLIDO landslide inventory)",
+   "https://www.oregon.gov/oem/hazardsprep/pages/cascadia-subduction-zone.aspx \u2014 Oregon Dept. of Emergency Management, Cascadia Subduction Zone hazards and preparedness",
+   "https://www.usgs.gov/centers/pcmsc/news/threat-coastal-flooding-cascadia-earthquake-driven-land-subsidence \u2014 USGS PCMSC, Cascadia coseismic subsidence and coastal flooding",
+   "https://pubs.usgs.gov/gip/265/gip265.pdf \u2014 USGS GIP-265, Mount Rainier Volcanic Hazard Information (Case I/II lahar zones, Puyallup/Carbon/Nisqually/White River)",
+   "https://www.usgs.gov/volcanoes/mount-rainier/science/monitoring-lahars-mount-rainier \u2014 USGS, lahar detection and warning system at Mount Rainier",
+   "https://data.usgs.gov/datacatalog/data/USGS:697ba3e5b66b0197c3043d2f \u2014 USGS pedestrian evacuation time maps and population exposure for Mount Rainier lahar zones (Orting 40-50 min arrival; 78,049 residents in the Electron Mudflow footprint)",
+   "https://www.usgs.gov/index.php/news/featured-story/preparing-volcano-hazards-where-worlds-largest-lahar-evacuation-drill-held \u2014 USGS, Mar 2024 Pierce County lahar evacuation drill (45,000 students)",
+   "https://www.oregon.gov/deq/wildfires/Documents/wf2024wfTrendsRep.pdf \u2014 Oregon DEQ, Wildfire Smoke Trends and the Air Quality Index, data 2000-2025 (Portland, Eugene, Bend USG+ day counts)",
+   "https://pscleanair.gov/615/Data-Summary \u2014 Puget Sound Clean Air Agency data summary (smoke-impacted days, record PM2.5 since 1980)",
+   "https://en.wikipedia.org/wiki/2023_Washington_wildfires \u2014 2023 Washington wildfire season, Gray Fire and Oregon Road Fire (366 structures destroyed, 2 deaths, Spokane County, Aug 2023)",
+   "https://www.climate.gov/news-features/event-tracker/astounding-heat-obliterates-all-time-records-across-pacific-northwest \u2014 NOAA Climate.gov, June 2021 heat dome (Portland 108/112/116F, Seattle 108F)",
+   "https://www.oregonencyclopedia.org/articles/heat-dome-2021/ \u2014 Oregon Encyclopedia, 2021 Pacific Northwest heat dome (mortality, AC penetration: Seattle ~44%, Portland ~78%)",
+   "https://water.noaa.gov/gauges/mvew1 \u2014 NOAA National Water Prediction Service, Skagit River near Mount Vernon gauge and flood stages",
+   "https://www.kuow.org/stories/go-now-100-000-evacuated-in-historic-skagit-flood \u2014 Dec 2025 record flooding: all-time crests on the Skagit, Snohomish and Cedar; ~100,000 under evacuation",
+   "https://www.urban.org/urban-wire/after-catastrophic-flooding-washington-state-three-factors-will-likely-shape-long-term \u2014 Urban Institute: six federally declared disasters per decade in Skagit, Snohomish and Whatcom counties; 3,891 homes damaged, 440 destroyed/major",
+   "https://governor.wa.gov/news/2026/governor-ferguson-encourages-washingtonians-impacted-decembers-historic-flooding-apply-assistance \u2014 WA Governor's Office, FEMA Individual Assistance counties for the Dec 2025 flood",
+   "https://blog.itscovered.com/state-guides/washington-home-insurance-market \u2014 Washington home insurance market: +16% (2023), +12% (2024), +21.7% YoY at top carriers through Dec 2024; avg $1,410",
+   "https://www.opb.org/article/2025/02/06/oregon-homeowners-face-rising-insurance-costs-wildfire-risk-grows/ \u2014 OPB, Oregon homeowners insurance and wildfire risk (avg ~$1,039; $212M in 2023 wildfire payouts)",
+   "https://www.bendsource.com/news/homeowners-insurance-continues-to-rise-in-vulnerable-areas-22516501/ \u2014 Deschutes County wildfire-driven premium increases and non-renewals",
+   "https://usclimatedata.com/climate/bend/oregon/united-states/usor0031 \u2014 Bend, OR climate averages (precip ~13 in, snow ~21 in, 22-86F range)",
+   "https://www.rediinfo.com/about-redmond/climate \u2014 Redmond Economic Development, Central Oregon climate (3,077 ft elevation, ~300 sun days)",
+   "https://usclimatedata.com/climate/spokane/washington/united-states/uswa0422 \u2014 Spokane, WA climate averages (precip, 42-45 in snow, Jan low 24F, Jul high 85F)",
+   "https://en.climate-data.org/north-america/united-states-of-america/washington/yakima-1026973/ \u2014 Yakima, WA climate (1,065 ft elevation, arid warm-summer regime)",
+   "https://yvcog.us/202/Climate-Element \u2014 Yakima Valley Council of Governments, Climate Element (basin water supply, irrigation dependence)",
+   "https://weatherspark.com/y/913/Average-Weather-in-Seattle-Washington-United-States-Year-Round \u2014 Seattle cloud-cover and temperature climatology (cloudy-day counts, 37-79F range)"
+  ]
+ },
+ "table": {
+  "puget-sound-marine-core": {
+   "tier": "temperate-marine",
+   "elevation_ft": 150,
+   "jan_low_f": 38,
+   "jul_high_f": 79,
+   "snow_in": 6,
+   "humidity_note": "Saltwater-moderated marine. Winter RH 80-90% under near-continuous low stratus: SEA averages ~155-160 days classed cloudy and only ~70 clear days/yr, with Dec-Jan running under 2.5 hrs of sun/day. Summers are the reward - Jul-Aug normal precip ~0.7 in each, dewpoints in the low-to-mid 50s.",
+   "smoke_days": 6,
+   "ac_dependence": "medium",
+   "note": "West of the Cascade crest, deep in the marine band. SEA 1991-2020 normals: 39.3 in annual precip (a mid-pack national figure delivered as ~150 drizzle days, not downpours), 5.9 in snow, Jan mean min 38.1F, Jul mean max 79.3F. The liveability tax here is not temperature, it is DARKNESS - a 5-month Nov-Mar gray season. AC was historically optional (only ~44% of Seattle homes had it pre-2021); the Jun 2021 heat dome (108F all-time record at SEA, 250+ regional deaths) reset that, so score medium not low. Snow is trivial in inches but arrives as 1-3 disruptive events on hills the region does not plow well.",
+   "towns": [
+    "Seattle, WA",
+    "Shoreline, WA",
+    "Lynnwood, WA",
+    "Everett, WA",
+    "Renton, WA",
+    "Kent, WA",
+    "Auburn, WA",
+    "Federal Way, WA",
+    "Des Moines, WA",
+    "Burien, WA",
+    "Seatac, WA"
+   ]
+  },
+  "puget-cascade-foothills": {
+   "tier": "temperate-marine",
+   "elevation_ft": 500,
+   "jan_low_f": 35,
+   "jul_high_f": 80,
+   "snow_in": 16,
+   "humidity_note": "Same marine air mass as the Sound but lifted 400-600 ft onto the Cascade front, which raises orographic precip to ~50-55 in/yr against Seattle's 39 in and roughly triples snow. Summer afternoons run 1-2F warmer than the waterfront, nights 2-4F cooler.",
+   "smoke_days": 7,
+   "ac_dependence": "medium",
+   "note": "The Cascade-foothill band of east King County. Still fully temperate-marine - Jan mean min ~35F, no meaningful hard-freeze season - but the elevation penalty is real and buyers underestimate it: 12-20 in of annual snow, 3-6 snow/ice days a year that close plateau roads, and a higher share of freezing-rain events than the lowland. Closer to Cascade fire drainages, so smoke seasons run slightly longer and denser than downtown Seattle.",
+   "towns": [
+    "Covington, WA",
+    "Maple Valley, WA"
+   ]
+  },
+  "south-sound-marine": {
+   "tier": "temperate-marine",
+   "elevation_ft": 200,
+   "jan_low_f": 35,
+   "jul_high_f": 79,
+   "snow_in": 9,
+   "humidity_note": "The wettest and foggiest corner of the metro marine band. Olympia averages ~50 in/yr and Shelton ~65 in; the enclosed south Sound basin generates dense radiation fog Oct-Feb. Olympia records only ~2 hrs of sun/day in Dec-Jan and roughly 165 cloudy days - the gloomiest metro figure in this screen outside the outer coast.",
+   "smoke_days": 6,
+   "ac_dependence": "medium",
+   "note": "Tacoma-Lakewood-Olympia. Climatologically the mildest thermal regime in the set (Olympia Jul mean max 79.9F, Tacoma ~78F) paired with the highest gloom load. Cold-air drainage into the Nisqually/Deschutes lowlands makes Olympia/Lacey mornings 3-5F colder than Tacoma and adds 15-25 frost mornings a season versus Seattle. Shelton is a distinct wet outlier at 60-70 in - underwrite it as a rainforest-fringe microclimate, not a suburb.",
+   "towns": [
+    "Tacoma, WA",
+    "Lakewood, WA",
+    "University Place, WA",
+    "Spanaway, WA",
+    "Clover Creek, WA",
+    "Olympia, WA",
+    "Lacey, WA",
+    "Shelton, WA"
+   ]
+  },
+  "kitsap-peninsula-marine": {
+   "tier": "temperate-marine",
+   "elevation_ft": 150,
+   "jan_low_f": 35,
+   "jul_high_f": 77,
+   "snow_in": 8,
+   "humidity_note": "Water on three sides gives the tightest annual temperature range in the set. Poulsbo and north Kitsap sit in the Olympic rain shadow at ~38 in/yr; Bremerton and Port Orchard, only 12 miles south, catch Olympic convergence flow at ~50 in/yr. A 12-inch precipitation gradient inside one county is a real underwriting variable.",
+   "smoke_days": 5,
+   "ac_dependence": "low",
+   "note": "Kitsap Peninsula. The single mildest summer regime in this screen - a 77F July normal high plus constant marine ventilation means AC genuinely remains optional, the last place in the PNW where that is honestly true. Winter is correspondingly the darkest-per-mile: heavy stratus plus valley fog. Snow is 6-10 in but comes with more freezing rain than Seattle, because cold Fraser-outflow air undercuts marine moisture over the peninsula.",
+   "towns": [
+    "Bremerton, WA",
+    "Port Orchard, WA",
+    "Poulsbo, WA"
+   ]
+  },
+  "north-sound-marine": {
+   "tier": "moderate",
+   "elevation_ft": 100,
+   "jan_low_f": 33,
+   "jul_high_f": 74,
+   "snow_in": 13,
+   "humidity_note": "Counterintuitively the DRIEST west-side band by rainfall - Bellingham ~36 in and Mount Vernon ~33 in, both below Seattle's 39 in, because the Olympics shadow the Skagit/Nooksack lowland. But it is also the gloomiest and coldest: ~165-170 cloudy days, Jul mean max only ~74F, Jan mean min ~33F.",
+   "smoke_days": 5,
+   "ac_dependence": "low",
+   "note": "Bellingham-Skagit-Nooksack lowland. Downgraded from temperate-marine on two region-specific mechanisms. (1) FRASER RIVER GAP OUTFLOW: several times per decade arctic air drains out of British Columbia through the Fraser canyon and hits Whatcom/Skagit with 30-50 mph NE winds and temps in the teens - a wind-chill and pipe-freeze exposure that does not exist 60 miles south, and when that dry cold undercuts marine moisture it produces the region's worst freezing-rain events. (2) Summers cap out near 74F - pleasant, but it removes the compensating summer that makes Seattle and Portland winters tolerable. Snow runs 11-15 in, roughly double Seattle.",
+   "towns": [
+    "Bellingham, WA",
+    "Ferndale, WA",
+    "Mount Vernon, WA"
+   ]
+  },
+  "portland-willamette-core": {
+   "tier": "temperate-marine",
+   "elevation_ft": 200,
+   "jan_low_f": 36,
+   "jul_high_f": 82,
+   "snow_in": 4,
+   "humidity_note": "The warm, dry end of the marine band. PDX 1991-2020 normal precip 43.4 in, with west-side Tualatin Valley pockets at 36-40 in - but July and August normals are ~0.5 in EACH, a genuinely Mediterranean summer. Dewpoints 50-55F; ~155 cloudy days, marginally fewer than Seattle.",
+   "smoke_days": 5,
+   "ac_dependence": "medium",
+   "note": "Portland metro and the north Willamette Valley - the best climate score available in this region and the benchmark the rest of the PNW is measured against. PDX 1991-2020: Jan mean min 36.4F, Jul mean max 81.8F, 4.3 in snow. Three degrees warmer in July and three fewer inches of snow than Seattle, with the same dark winter. AC penetration was already ~78% before 2021 and is now near-universal after Portland hit 116F on 28 Jun 2021, an all-time record broken on three consecutive days (108 / 112 / 116) - which is why this is medium, not low. Price the winter gloom honestly: ~5 months of overcast is what the summer costs.",
+   "towns": [
+    "Portland, OR",
+    "Milwaukie, OR",
+    "Happy Valley, OR",
+    "Oregon City, OR",
+    "West Linn, OR",
+    "Tigard, OR",
+    "Tualatin, OR",
+    "Sherwood, OR",
+    "Beaverton, OR",
+    "Hillsboro, OR",
+    "Forest Grove, OR",
+    "Newberg, OR"
+   ]
+  },
+  "columbia-gorge-east-wind-fringe": {
+   "tier": "moderate",
+   "elevation_ft": 250,
+   "jan_low_f": 35,
+   "jul_high_f": 82,
+   "snow_in": 7,
+   "humidity_note": "Thermally identical to the Portland core (Jul high ~82F) but wired directly to the Columbia Gorge, which acts as a sea-level conduit for continental air. Summer east winds drop RH into the teens and add 3-6F to afternoon highs; winter east winds pump sub-freezing Columbia Basin air in underneath marine moisture.",
+   "smoke_days": 6,
+   "ac_dependence": "medium",
+   "note": "The east-metro Gorge-outflow corridor. Downgraded from the Portland core on ICE, not on temperature. This corridor takes 1-3 freezing-rain events per winter against effectively zero on the west side of the metro; the Jan 2024 ice storm left roughly 150,000 metro customers without power for days and the Feb 2021 event was comparable. Snow totals of 6-10 in also run about double Portland's 4 in. Buyers who tour in July see a Portland climate and pay Portland prices - the differentiator only appears in January.",
+   "towns": [
+    "Vancouver, WA",
+    "Camas, WA",
+    "Battle Ground, WA",
+    "Gresham, OR"
+   ]
+  },
+  "south-willamette-valley": {
+   "tier": "moderate",
+   "elevation_ft": 430,
+   "jan_low_f": 35,
+   "jul_high_f": 83,
+   "snow_in": 4,
+   "humidity_note": "The valley's fog trap. Eugene normal precip ~41 in at EUG (1991-2020), rising to 45-50 in on the Coast Range and Cascade margins. The distinguishing feature is INVERSION: the south valley closes off and multi-day radiation-fog episodes hold highs near 40F with visibility under a quarter mile - a gloom load qualitatively worse than Portland's simple overcast.",
+   "smoke_days": 9,
+   "ac_dependence": "medium",
+   "note": "Eugene-Springfield. Hottest summer of any west-side subregion here (Jul mean max ~83F) and the wettest of the Willamette metros, which sounds like a wash - it is not. Downgraded to moderate on two counts: the winter fog/inversion regime above, and SMOKE. Sitting at the mouth of the McKenzie Cascade corridor, Eugene-Springfield carries the highest smoke exposure of any west-side metro in this screen; in Sept 2020 the Holiday Farm Fire held valley AQI above 400 (hazardous) for multiple consecutive days. Treat 9 smoke days as a planning floor, not a ceiling.",
+   "towns": [
+    "Eugene, OR",
+    "Springfield, OR"
+   ]
+  },
+  "inland-northwest-interior": {
+   "tier": "harsh",
+   "elevation_ft": 1900,
+   "jan_low_f": 24,
+   "jul_high_f": 85,
+   "snow_in": 44,
+   "humidity_note": "Fully east of the Cascade crest and semi-arid: GEG 1991-2020 annual precip ~16.7 in, one-third of Olympia's. Summer dewpoints in the 40s make 90F genuinely comfortable. Winter inverts the west-side problem - not drizzle but 45 in of snow, sub-zero cold snaps every few years, and Nov-Feb valley inversions that trap fog and freezing drizzle for a week at a time.",
+   "smoke_days": 18,
+   "ac_dependence": "high",
+   "note": "Spokane and Spokane Valley - the Cascade rain shadow at full strength. Against Seattle, 280 miles west: 14F colder January nights, 6F hotter July afternoons, one-third the rain, seven times the snow. GEG 1991-2020: Jan mean min ~24.5F, Jul mean max ~84.9F, 44.9 in snow at ~1,900 ft. AC is not optional. The compensations are real - roughly 170 clear days against Seattle's ~70, and no winter gloom problem at all - but this is a four-season continental climate wearing a PNW address. Smoke is the dominant summer liveability tax: Spokane routinely leads Washington in unhealthy-for-sensitive-groups air days, 15-25 in the bad years.",
+   "towns": [
+    "Spokane, WA",
+    "Spokane Valley, WA"
+   ]
+  },
+  "yakima-valley-shrub-steppe": {
+   "tier": "harsh-interior",
+   "elevation_ft": 1065,
+   "jan_low_f": 22,
+   "jul_high_f": 89,
+   "snow_in": 19,
+   "humidity_note": "True shrub-steppe desert - ~8 in annual precip, roughly one-sixth of Olympia's and less than Tucson gets in a wet year. Summer RH routinely single-digit. The paradox is winter: the enclosed Yakima Valley is one of the worst cold-air-inversion traps in the country, producing multi-week 'valley crud' with fog, freezing drizzle and highs stuck near 30F.",
+   "smoke_days": 20,
+   "ac_dependence": "high",
+   "note": "Yakima - the sharpest single expression of the Cascade rain shadow in this screen and the region's climate extreme. YKM normals: ~8.3 in precip, Jan mean min ~22F, Jul mean max ~89F, ~19 in snow at 1,065 ft. Bellingham to Yakima is 36 in versus 8 in of annual rain across 150 miles of one state. Scored harsh-interior rather than harsh because it stacks BOTH tails: the hottest summers in the set (105F+ most years) and a winter that is simultaneously cold AND gloomy - it does not even buy the compensating sunshine that Spokane and Bend do. Landscape irrigation is mandatory and metered.",
+   "towns": [
+    "Yakima, WA"
+   ]
+  },
+  "central-oregon-high-desert": {
+   "tier": "harsh",
+   "elevation_ft": 3400,
+   "jan_low_f": 22,
+   "jul_high_f": 84,
+   "snow_in": 22,
+   "humidity_note": "High desert on the Cascade lee at 3,077 ft (Redmond) to 3,623 ft (Bend). Bend ~11-13 in annual precip, Redmond ~9 in; 20-30% summer RH; ~160 fully clear days plus ~100 partly sunny. The defining feature is the DIURNAL SWING - 35-40F between afternoon high and pre-dawn low - so frost is possible in literally every month and the local growing season is only ~70-90 days.",
+   "smoke_days": 15,
+   "ac_dependence": "medium",
+   "note": "Bend-Redmond. The other side of the rain shadow and the mirror image of Seattle on every axis: 12 in of rain against 39, ~300 sun days against ~170, 22 in of snow against 6, and a July that is hot and bone-dry rather than mild and soft. Scored harsh on the elevation-plus-aridity stack, with one honest upside - the diurnal swing cools nights to the 50s even in August, so AC is medium (used, not the survival requirement it is in Yakima or Spokane). The two real climate costs are altitude-driven (a 7-month heating season, frost any month) and smoke: the ponderosa/juniper belt burns and Deschutes County smoke days have trended sharply up since 2017.",
+   "towns": [
+    "Bend, OR",
+    "Redmond, OR"
+   ]
+  }
+ }
+}

@@ -1,0 +1,291 @@
+{
+ "_meta": {
+  "kind": "hazard",
+  "market": "MTW",
+  "as_of": "2026-07",
+  "status": "researched",
+  "methodology": "SCOPE AND FRAME\nMountain West layer covering CO, UT, ID, MT, NM, AZ, NV, WY. Scored against THIS region's own distribution, not a national absolute. The California layer's axes (fog belt / wind corridor / inland heat) and the New England layer's axis (maritime moderation) do not apply and are not used. The Mountain West climate axis is ARIDITY + ALTITUDE + SUMMER HEAT, with wildfire smoke days treated as a first-class climate variable rather than a hazard footnote.\n\nTIER DEFINITION (in-region, relative)\n- temperate-highland (best-in-region): 4,500-6,100ft, July normal high 86-94F, low humidity, snow that clears in days rather than accumulating for months, AC needed but not life-critical. 6 subregions / 33 towns.\n- moderate: would score temperate-highland on temperature alone but is demoted by a non-temperature climate burden severe enough to change daily life - smoke burden (Truckee Meadows) or playa dust (Tooele Valley). 2 subregions / 3 towns.\n- harsh: BOTH arms of the regional exclusion. (a) extreme-heat low desert - Phoenix metro under 1,300ft with a 106.5F July normal and 54-70 days a year at 110F+, plus Tucson at 100F. (b) severe-winter high altitude - Bozeman at 4,820ft with 84-91in of snow, an 11-12F January normal low and ~8,000 heating degree days. 3 subregions / 14 towns. A screen that only excludes heat would silently pass Bozeman, which is why the tier is defined on both arms.\n\"harsh-interior\" was left unused: in this region the interior IS the whole region, so the label carries no information. All three used tiers are populated.\n\nCLIMATE VALUES\njan_low_f / jul_high_f / snow_in are NOAA NCEI 1991-2020 station normals at the primary metro station, rounded to whole degrees/inches, cross-checked against NWS forecast-office normals pages where published (NWS Pueblo for Colorado Springs: 86.5F / 18.5F / 32.5in; NWS PSR for Phoenix Sky Harbor: 106.5F July normal high; Boise Air Terminal 92.7F / 25.5F). Where the NCEI value is known to be biased, the note says so and gives both - Denver DIA's NCEI normal snowfall is 49.0in but NWS Boulder documents that single-daily-observation measurement under-counts and the true seasonal mean is nearer 56in, so 52 is carried with the discrepancy disclosed.\nelevation_ft is the subregion's population-weighted approximate centroid, not the airport station, with the internal spread stated in the note wherever it exceeds ~800ft (e.g. Brighton 4,981ft to Highlands Ranch 5,919ft in the Denver row).\nsmoke_days is a DIRECTIONAL 10-year mean (roughly 2015-2024) of days per year with measurable surface wildfire-smoke PM2.5 - not a regulatory \"unhealthy day\" count, which is a much smaller number. It is calibrated by ranking rather than by absolute precision, and the ranking is the load-bearing part: Truckee Meadows 42 (Reno recorded 188 smoke-affected days across 2013-2018 alone, and 6 of the 10 worst air days in northern Nevada history fall in the last 5 years) > Gallatin Valley 35 and Treasure Valley 32 (in MT/ID, wildfire smoke caused more than 3 of every 4 unhealthy air days 2020-2022) > Tooele 28 / Wasatch 26 / Northern Front Range 25 > Denver 22 / Middle Rio Grande 20 / Pikes Peak 18 >> Tucson 9 / Phoenix 6. Treat as ordinal.\nac_dependence is anchored to cooling degree days, not to peak temperature: low = AC optional (Colorado Springs, Bozeman); medium = needed on summer afternoons for 2-3 months, evaporative cooling still viable (Denver, Northern Front Range, Wasatch, Boise, ABQ, Reno, Tooele); high = continuous May-October and life-safety, refrigerated only (Phoenix, Tucson). This deliberately keeps Salt Lake at medium despite a 94F July normal - SLC cooling load is roughly a quarter of Phoenix's.\n\nSUBREGION PARTITIONS ARE DELIBERATELY DIFFERENT BETWEEN THE TWO LAYERS\n11 climate subregions, 14 hazard subregions. Climate splits on elevation and airshed; hazard splits on fault trace, WUI edge, and water provider - which do not follow the same lines. Examples: Dakota Ridge/Highlands Ranch/Pa",
+  "sources": [
+   "https://www.ncei.noaa.gov/access/us-climate-normals/ - NOAA NCEI U.S. Climate Normals 1991-2020 (primary source for all jan_low_f / jul_high_f / snow_in values)",
+   "https://weather.gov/pub/climateCosDailyNormalsRecords - NWS Pueblo, Colorado Springs 1991-2020 normals (July high 86.5F, Jan low 18.5F, snowfall 32.5in)",
+   "https://www.weather.gov/psr/19912020Normals - NWS Phoenix, 1991-2020 normals for Sky Harbor and Arizona stations (July normal high 106.5F)",
+   "https://www.weather.gov/bou/seasonalsnowfall - NWS Boulder, History of Snowfall Observations at Denver (NCEI 1991-2020 normal 49.0in; documented under-count, true seasonal mean nearer 56in)",
+   "https://www.weather.gov/twc/TucsonMonthlyNormalExtremes - NWS Tucson monthly normals and extremes",
+   "https://www.weather.gov/boi/Cliplot - NWS Boise climate graphs / normals (July high 92.7F, Jan low 25.5F)",
+   "https://www.weather.gov/bou/HighWinds12_30_2021 - NWS Boulder, High Winds and Marshall Fire, 30 December 2021 (70-100 mph foothills gusts)",
+   "https://www.climate.gov/news-features/event-tracker/wet-then-dry-extremes-contributed-devastating-marshall-fire-colorado - NOAA Climate.gov, wet-then-dry fuel conditions preceding the Marshall Fire",
+   "https://www.pbs.org/newshour/nation/phoenix-hit-110-degrees-on-54-days-in-2023-setting-another-heat-record - Phoenix 54 days at 110F+ in 2023 (prior record 53 in 2020)",
+   "https://www.bloomberg.com/news/articles/2024-09-05/phoenix-is-set-to-break-record-for-110f-days-weather-watch - Phoenix record 70 days at 110F+ in 2024",
+   "https://www.yourvalley.net/stories/phoenix-hits-record-118-degrees-but-there-is-good-news,598314 - Phoenix 118F record, July 2025; July normal high 107F",
+   "https://pubs.usgs.gov/fs/2016/3019/fs20163019.pdf - USGS Fact Sheet 2016-3019, Working Group on Utah Earthquake Probabilities: 43% chance of M6.75+ on the Wasatch Front in 50 years, 5.8% on the Salt Lake City segment, severe liquefaction projected in Salt Lake City and West Valley City",
+   "https://earthquakes.utah.gov/ - Utah Geological Survey / Utah Seismic Safety Commission, Wasatch Fault segments and 2020 M5.7 Magna earthquake",
+   "https://earthquake.usgs.gov/cfusion/external_grants/reports/G21AP10014.pdf - USGS external grant report, liquefaction susceptibility mapping in the Reno-Sparks urban area (Holocene Truckee floodplain deposits, high water table)",
+   "https://www.washoecounty.gov/em/Hazards/Earthquake.php - Washoe County Emergency Management, Reno-Sparks earthquake hazard",
+   "https://mbmg.mtech.edu/MontanaGeology/geohazards/earthquakes/seismicity.asp - Montana Bureau of Mines and Geology, Intermountain Seismic Belt seismicity",
+   "https://www.readygallatin.com/community-resources/preparedness-information/montana-is-earthquake-country/ - Gallatin County Emergency Management, earthquake and flood hazard in the Gallatin Valley",
+   "https://www.azwater.gov/phoenix-ama-groundwater-supply-updates - Arizona Department of Water Resources, Phoenix AMA groundwater supply updates and the June 2023 100-year assured-supply determination",
+   "https://morrisoninstitute.asu.edu/sites/default/files/kyl_center_phoenix_ama_groundwater_model_explainer_062023.pdf - ASU Kyl Center for Water Policy, Phoenix AMA groundwater model explainer (4.86 million acre-foot 100-year shortfall)",
+   "https://azcapitoltimes.com/news/2026/04/22/judge-rules-against-adwrs-water-based-restrictions-on-phoenix-housing-developments/ - Maricopa County Superior Court decision, 21 April 2026, vacating ADWR's 2023 groundwater subdivision restrictions",
+   "https://azmirror.com/briefs/judge-blocks-arizona-water-rule-that-halted-new-housing-developments-across-the-valley/ - Arizona Mirror, court blocks ADWR rule; Buckeye, Queen Creek and Goodyear impact",
+   "https://www.usbr.gov/ColoradoRiverBasin/post2026/index.html - US Bureau of Reclamation, Colorado River Post-2026 Operations (2007 Interim Guidelines and 2019 DCPs expiring end-2026; five alternatives)",
+   "https://www.cap-az.com/water/water-supply/colorado-river-operations-2/ - Central Arizona Project, Colorado River shortage tiers and Arizona's 320,000 AF reduction plus 192,000 AF DCP contribution",
+   "https://www.crc.nv.gov/more-information/drought-and-colorado-river-declared-shortage/ - Colorado River Commission of Nevada, declared shortage and Nevada's 13,000 AF / 8,000 AF reductions",
+   "https://www.western-water.com/2026/07/17/colorado-river-forecast-water-use-rising-in-2026/ - Colorado River forecast July 2026: Lake Mead ~1,041-1,042ft, ~27% of capacity; states missed the 14 Feb 2026 deadline",
+   "https://www.cpr.org/2026/02/11/hail-increase-homeowners-insurance-premiums-colorado/ - Colorado Public Radio on the 2026 Colorado Division of Insurance / Governor's office analysis: hail, not wildfire, is the number-one premium driver (26-54% of Front Range premium)",
+   "https://doi.colorado.gov/polis-primavera-administrations-landmark-reinsurance-program-to-save-coloradans-477-million-on - Colorado Division of Insurance, premium trends and state reinsurance program",
+   "https://governorsoffice.colorado.gov/governor/news/governor-polis-announces-roadmap-reduce-homeowners-insurance-saving-colorado-homeowners-money - Colorado Governor's office, roadmap to reduce homeowners insurance; premium increase figures",
+   "https://csuredi.org/redi_reports/homeowners-insurance-trends-in-colorado-implications-of-natural-hazard-dynamics/ - Colorado State University REDI, homeowners insurance trends and natural hazard dynamics in Colorado (57.9% premium increase 2018-2023)",
+   "https://www.accuweather.com/en/severe-weather/hail-causes-costliest-catastrophe-in-colorado-history/1166453 - 8 May 2017 Denver hailstorm: $2.3B insured, ~100,600 homeowner and ~167,000 auto claims",
+   "https://www.denver7.com/news/local-news/colorado-hail-season-what-you-need-to-know - Colorado hail season: 7-9 hail days/yr on the eastern plains, 3-4 catastrophic storms per season, CO second nationally in hail claims 2013-2015",
+   "https://bouldercounty.gov/disasters/wildfires/marshall/ - Boulder County, Marshall Fire recovery (1,091 structures destroyed, 97% residential)",
+   "https://www.cbsnews.com/colorado/news/marshall-fire-damage-estimate-2-billion/ - Marshall Fire damage estimate exceeding $2B, Colorado's most expensive wildfire",
+   "https://hazards.colorado.edu/quick-response-report/the-2021-marshall-fire - Natural Hazards Center, The 2021 Marshall Fire quick response report",
+   "https://geology.utah.gov/ - Utah Geological Survey, surface-fault-rupture special study zones and liquefaction mapping along the Wasatch Front",
+   "https://www.kpcw.org/state-regional/2025-12-18/state-releases-map-of-high-risk-wildfire-areas-assessed-new-fee - Utah releases official high-risk WUI maps under HB 48 (effective 1 Jan 2026), ~60,000 structures designated",
+   "https://beehiveinsurance.com/blog/2026/02/13/utahs-new-wildfire-maps-what-the-2026-changes-actually-mean-for-your-insurance/ - Utah HB 48 mechanics: mandatory state maps, 20% increase justification requirement, $20-100/yr mitigation fee 2026-27 shifting to triage-based in 2028",
+   "https://www.abc4.com/utah-weather/wildfire/wildfires-homeowners-insurance-costs-rising-utah/ - Utah wildfire-area premiums up ~38-40% 2018-2022; WUI non-renewals along the Wasatch Front",
+   "https://science.utah.edu/news/toxic-dust-hot-spots/ - University of Utah, toxic dust hot spots: arsenic, lead, cadmium in Great Salt Lake playa dust",
+   "https://www.usu.edu/today/story/new-research-toxins-from-great-salt-lake-dust-absorbed-by-plants-soils-human-bodies - Utah State University 2026 study: arsenic, uranium, lithium, antimony, beryllium uptake into leafy vegetables; not removed by washing",
+   "https://townlift.com/2026/07/whats-in-the-dust-great-salt-lake-plume-renews-concern-over-toxic-exposure-risks/ - 8 July 2026 dust plume, particulate ~4x the health limit; NASA study identifying Tooele and Salt Lake west side as highest exposure; ~800 sq mi exposed lakebed, ~15 large dust events/yr",
+   "https://www.healutah.org/gsl2026/ - HEAL Utah, Great Salt Lake 2026 level and exposed-lakebed update",
+   "https://www.kunr.org/2025-12-29/idaho-colorado-homeowners-insurance-wildfire-climate-change - Idaho homeowners insurance crisis: non-renewals 3,900 (2022) to 27,798 (2023)",
+   "https://valleylookout.com/2026/02/02/its-outrageous-thousands-of-idahoans-faced-with-canceled-homeowners-insurance-policies-spike-in-rates-over-wildfire-risk/ - Idaho statewide average premium $1,468 to $1,798 in one year; Boise Foothills and Garden Valley coverage loss",
+   "https://www.kivitv.com/news/local-news/in-your-neighborhood/boise-county/we-wont-insure-you-robie-creek-homeowners-struggle-to-get-home-insurance-due-to-wildfire-risks - Boise County ranked 87th nationally for non-renewal rate (US Senate Budget Committee); Robie Creek coverage refusals",
+   "https://sourcenm.com/2026/07/23/new-mexico-insurers-refused-to-renew-policies-for-record-number-of-homes-in-2025-official-says/ - New Mexico record 6,200+ non-renewals in 2025, nearly triple 2021; Rio Arriba, Taos, Sandoval, Santa Fe flagged",
+   "https://www.osi.state.nm.us/en/news/pr-2025-07-14/ - New Mexico Office of Superintendent of Insurance, NM FAIR Plan and wildfire mitigation program",
+   "https://sourcenm.com/2025/11/20/nm-insurance-superintendent-asks-for-extension-of-nations-largest-wildfire-mitigation-program/ - New Mexico $10M wildfire mitigation grant program",
+   "https://www.fema.gov/hermits-peak - FEMA Hermit's Peak/Calf Canyon Claims Office (2022 fire, 341,000+ acres, largest in New Mexico history)",
+   "https://extension.arizona.edu/sites/default/files/2025-10/az2170-2025-10-20-25-2.pdf - University of Arizona Cooperative Extension az2170 (Oct 2025): Maricopa County non-renewal 0.6-1.2%, Pima 0.6-1.3%, Navajo 4.8% in 2022",
+   "https://difi.az.gov/consumers/homeowners-insurance - Arizona Department of Insurance and Financial Institutions, homeowners insurance consumer information",
+   "https://climatecheck.com/nevada/reno - Reno wildfire exposure: ~74% of buildings at high wildfire risk",
+   "https://www.newtoreno.com/disaster-preparedness-reno-nevada.htm - Reno-Sparks flood history including the January 1997 Truckee River flood",
+   "https://iopscience.iop.org/article/10.1088/1748-9326/ac9a5d - Environmental Research Letters: wildfire activity driving summertime air quality degradation across the western US, model-based attribution to smoke source regions",
+   "https://pubs.acs.org/doi/abs/10.1021/acs.est.2c02934 - Childs et al., Environmental Science & Technology: daily local-level estimates of ambient wildfire smoke PM2.5 for the contiguous US (basis for smoke_days ranking)",
+   "https://news.agu.org/press-release/smokiest-cities-in-america/ - AGU, smokiest cities in America; smoke share of unhealthy air days by state (>3 of 4 unhealthy days in ID and MT, 2020-2022)",
+   "https://www.lung.org/getmedia/32f0646d-c5de-4501-b0ac-07cd63c974d4/State-of-the-Air-2026-Report.pdf - American Lung Association State of the Air 2026: Phoenix 4th, Denver 8th, Salt Lake City 13th, Fort Collins 18th, Albuquerque 19th, Boise 24th for ozone",
+   "https://www.upr.org/environment/2026-05-07/salt-lake-city-ozone-pollution-air-quality - Salt Lake City air quality: winter inversions, summer ozone, wildfire smoke",
+   "https://statesummaries.ncics.org/chapter/id/ - NOAA NCICS Idaho State Climate Summary 2022",
+   "https://www.weather.gov/pub/climate19912020upatedclimatenormals - NWS Pueblo, updated 1991-2020 climate normals for southern Colorado"
+  ]
+ },
+ "table": {
+  "denver-metro-hail-corridor": {
+   "primary_hazard": "Severe hail - the highest-frequency large-hail geography in North America",
+   "wildfire_risk": "moderate",
+   "flood_risk": "moderate",
+   "quake_risk": "low",
+   "tornado_hail_risk": "high",
+   "insurance_climate": "crisis",
+   "water_risk": "Moderate. Denver Water and Northern Water hold large, senior transmountain Colorado River diversions plus South Platte native supply; near-term municipal supply is secure and there is no building moratorium. The exposure is structural and long-dated: the 2007 Interim Guidelines and 2019 DCPs expire at end-2026, the seven basin states missed the 14 Feb 2026 deadline to replace them, and a Compact call on the Upper Basin would fall on exactly these transmountain rights.",
+   "note": "Hail is the buy/no-buy hazard here and it is under-appreciated by out-of-state buyers who screen for wildfire. Eastern Colorado logs 7-9 hail days a year, the highest frequency in North America, and the Front Range averages three to four catastrophic hailstorms in a typical mid-April-to-mid-August season. The 8 May 2017 Denver storm remains Colorado's costliest catastrophe of any type: $2.3B insured, ~100,600 homeowner and ~167,000 auto claims. Colorado had the second-most hail claims of any state 2013-2015. The 2026 Colorado Division of Insurance / Governor's office analysis is explicit that hail, NOT wildfire, is the number-one driver of premium, accounting for roughly 26-54% of premium along the Front Range and Eastern Plains versus 1-25% for wildfire. Market consequence: Colorado premiums rose 57.9% 2018-2023 and roughly doubled 2018-2024 to about $4,600/yr, among the most expensive in the country; the Colorado FAIR Plan began binding residential coverage on 10 April 2025. Underwrite for a Class 4 impact-resistant roof, a separate percentage wind/hail deductible (commonly 1-5% of dwelling value, not a flat $1,000), cosmetic-damage exclusions on metal roofs and siding, and actual-cash-value rather than replacement-cost roof schedules. Assume a 12-18 year roof replacement cycle. Wildfire is scored moderate rather than low because the Marshall Fire proved a wind-driven grass fire destroys ordinary subdivisions here.",
+   "towns": [
+    "Denver, CO",
+    "Aurora, CO",
+    "Thornton, CO",
+    "Brighton, CO",
+    "Broomfield, CO",
+    "Centennial, CO",
+    "Littleton, CO"
+   ]
+  },
+  "south-metro-foothills-grassland-wui": {
+   "primary_hazard": "Wind-driven wildfire at the grassland/foothills interface, compounded by hail",
+   "wildfire_risk": "high",
+   "flood_risk": "moderate",
+   "quake_risk": "low",
+   "tornado_hail_risk": "high",
+   "insurance_climate": "crisis",
+   "water_risk": "High and specific to Douglas County. These suburbs were built on the non-renewable Denver Basin bedrock aquifer, which is being mined rather than recharged; Parker Water & Sanitation, Castle Rock and neighbouring districts are mid-transition to renewable supply (the WISE project and Parker's Platte Valley Water Partnership). Ask the specific district what share of its current supply is still deep-aquifer groundwater and what the tap fee and rate trajectory look like - this is a live, priced-in-the-water-bill risk, unlike Denver's.",
+   "note": "Dakota Ridge sits directly against the Jefferson County hogback; Highlands Ranch and Parker are grassland and gambel-oak suburbs on the Palmer Divide flank. The controlling precedent is the Marshall Fire (30 Dec 2021), which destroyed 1,091 structures - 97% residential - and caused more than $2B in damage, making it Colorado's most destructive and most expensive wildfire ever. It burned in grass, in December, in an ordinary Boulder County subdivision, driven by 70-100mph downslope winds after a wet spring grew fuel and a rainless second half of the year cured it. That is the exact fuel/wind/drought signature of this subregion, and it means fire season here is twelve months, not four. Practical screen: pull the property-level Verisk FireLine and Zesty.ai Z-FIRE scores BEFORE going under contract because carrier appetite is decided by those scores, not by the county; require Class 4 roof, ember-resistant vents, and a 5ft noncombustible Zone 0; and confirm in writing that the current owner's policy is a standard-market policy and not FAIR Plan or E&S. This subregion carries both of Colorado's premium drivers - high wildfire scoring AND full hail-alley exposure - so it is the worst insurance geography in the Denver metro.",
+   "towns": [
+    "Dakota Ridge, CO",
+    "Highlands Ranch, CO",
+    "Parker, CO"
+   ]
+  },
+  "northern-front-range-hail-wui": {
+   "primary_hazard": "Hail and tornado, with canyon-mouth wildfire and post-fire debris flow on the western edge",
+   "wildfire_risk": "moderate",
+   "flood_risk": "high",
+   "quake_risk": "low",
+   "tornado_hail_risk": "high",
+   "insurance_climate": "crisis",
+   "water_risk": "Moderate. Northern Water's Colorado-Big Thompson project (a Colorado River transmountain diversion) plus native Poudre and Big Thompson supply. Municipal supply is adequate and has been kept ahead of growth by buying and drying irrigated agriculture, but the cost signal is severe: C-BT unit prices have risen roughly an order of magnitude since 2010 and raw-water dedication / tap fees in Greeley, Windsor and Fort Collins are among the highest in Colorado, frequently tens of thousands of dollars per single-family lot embedded in the price of new construction.",
+   "note": "Flood is scored HIGH here and this is the item most out-of-state buyers miss. The Big Thompson Canyon flood (31 Jul 1976) killed 144 people. The September 2013 Front Range flood devastated Loveland, Evans and Greeley along the Big Thompson and South Platte, destroying or damaging thousands of homes well outside then-mapped floodplains. Post-Cameron Peak burn-scar debris flows have since re-plumbed the Poudre drainage. Pull the current FEMA FIRM and, separately, the local floodplain administrator's post-2013 revised mapping - they differ. Tornado is also genuinely high: Weld County records more tornadoes than almost any county in the United States, and the 22 May 2008 Windsor EF3 killed one person and damaged 850+ structures inside the town. Wildfire is scored moderate for the subregion as a whole because most of the housing stock sits on irrigated plains, but the western fringe of Fort Collins and Loveland (Big Thompson and Poudre canyon mouths, Horsetooth, Masonville) scores HIGH individually - the 2020 Cameron Peak Fire burned 208,913 acres, the largest in Colorado history, in Larimer County's own watershed. Treat a west-of-Overland-Trail or Big-Thompson-corridor address as a foothills WUI property, not a plains property. Full hail-alley exposure applies identically to the Denver corridor row.",
+   "towns": [
+    "Fort Collins, CO",
+    "Loveland, CO",
+    "Greeley, CO",
+    "Windsor, CO"
+   ]
+  },
+  "pikes-peak-front-range-wui": {
+   "primary_hazard": "Wildfire inside city limits, plus hail",
+   "wildfire_risk": "high",
+   "flood_risk": "moderate",
+   "quake_risk": "low",
+   "tornado_hail_risk": "high",
+   "insurance_climate": "crisis",
+   "water_risk": "Moderate-high, and the most Colorado-River-dependent large city on the Front Range. Colorado Springs Utilities imports roughly 70% of its supply over the Continental Divide via the Homestake, Fryingpan-Arkansas, Twin Lakes and Blue River collection systems. Storage is deep and the utility is well run, but a post-2026 Compact curtailment would land harder here than on Denver or Northern Water.",
+   "note": "The best summer climate in the layer sits on the worst wildfire base rate on the Front Range, and the two facts are the same fact - ponderosa and gambel oak at 6,000-7,500ft. Two 300+ home losses occurred inside the city and county in thirteen months: the Waldo Canyon Fire (June 2012) destroyed 346 homes in Mountain Shadows, a fully developed neighbourhood inside Colorado Springs city limits, and the Black Forest Fire (June 2013) destroyed 489 homes in northern El Paso County the following summer, each in turn the most destructive fire in state history. West-side (Mountain Shadows, Cedar Heights, Broadmoor Bluffs, Skyway) and north-side (Black Forest) addresses carry severe WUI scoring; the eastern plains side of the city does not. Flood is moderate but burn-scar specific: post-Waldo debris flows repeatedly closed US-24 and flooded Manitou Springs, and Fountain Creek carries flash-flood risk downstream. Layered on top is full hail-alley exposure, so this subregion carries Colorado's two premium drivers simultaneously. Verify insurability at a named carrier before contract; assume Class 4 roof, defensible-space certification and a wildfire deductible.",
+   "towns": [
+    "Colorado Springs, CO"
+   ]
+  },
+  "salt-lake-valley-floor": {
+   "primary_hazard": "Wasatch Fault earthquake with severe liquefaction",
+   "wildfire_risk": "low",
+   "flood_risk": "moderate",
+   "quake_risk": "high",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "strained",
+   "water_risk": "High. The Wasatch Front runs on Wasatch and Uinta snowpack via the Bear, Weber, Provo and Jordan systems plus Central Utah Project (Colorado River) rights. Utah has among the highest per-capita municipal water use in the nation and the Great Salt Lake's decline has converted upstream depletion from an environmental issue into a binding state policy constraint - expect escalating rates, secondary-water metering mandates and turf restrictions rather than outright supply failure.",
+   "note": "This is the region's earthquake subregion and it is systematically under-insured. The 2016 Working Group on Utah Earthquake Probabilities puts a 43% chance on at least one M6.75+ earthquake affecting the Wasatch Front in 50 years (18% on the Wasatch Fault itself plus 25% on other regional faults), with a 5.8% chance specifically on the Salt Lake City segment and a maximum credible event around M7.6. The M5.7 Magna earthquake of 18 March 2020 occurred directly beneath this subregion. Critically, USGS and Utah Geological Survey scenario modelling projects SEVERE liquefaction in Salt Lake City and West Valley City - two of the state's densest cities - because the valley floor is young, saturated Lake Bonneville sediment over a shallow water table. Diligence, in priority order: (1) year built and structural system - unreinforced masonry, which is most pre-1975 brick housing stock here, is the single largest life-safety and total-loss red flag; (2) the UGS liquefaction-potential map for the parcel; (3) earthquake coverage, which in Utah is a separate policy or endorsement with a 10-25% deductible and statewide take-up of only roughly 13-15%, meaning most comparable sales are uninsured for the dominant hazard. Secondary and worsening: roughly 800 sq mi of exposed Great Salt Lake playa now produces about 15 large dust events a year carrying arsenic, lead, cadmium, antimony and lithium, and NASA / University of Utah mapping puts the Salt Lake Valley west side among the most exposed populations.",
+   "towns": [
+    "West Valley City, UT",
+    "Kearns, UT",
+    "West Jordan, UT",
+    "South Jordan, UT",
+    "Riverton, UT"
+   ]
+  },
+  "wasatch-bench-wui": {
+   "primary_hazard": "Wasatch Fault surface rupture and slope amplification, plus foothill WUI wildfire",
+   "wildfire_risk": "high",
+   "flood_risk": "moderate",
+   "quake_risk": "high",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "strained",
+   "water_risk": "High - the same Great Salt Lake basin constraint as the valley floor, with the added note that bench subdivisions are frequently on separate pressurised secondary irrigation systems whose rates and metering mandates are moving fastest.",
+   "note": "Bench communities trade the inversion for the fault. Bountiful, Layton and Kaysville sit on or immediately above the Weber segment; Cottonwood Heights sits at the Big and Little Cottonwood canyon mouths on the Salt Lake City segment; Herriman is Oquirrh-side. These are surface-fault-rupture special-study zones under UGS guidance and they add steep-slope ground-motion amplification plus alluvial-fan debris-flow paths at every canyon mouth - require a site-specific geotechnical and fault-trace study, not just a general seismic disclosure. The same 43%-in-50-years regional M6.75+ probability applies. Wildfire scoring changed materially on 1 January 2026 when Utah HB 48 took effect: the state published official WUI risk maps designating roughly 60,000 structures statewide as high-risk, insurers are now required to use those maps, must justify any premium increase above 20% on request, and a wildfire mitigation fee applies ($20-100/yr flat by structure square footage for 2026-27, converting in 2028 to a triage-based assessment scored on lot condition and structure size). Wildfire-area Utah premiums rose roughly 38-40% between 2018 and 2022 and WUI non-renewals along the bench and Wasatch Back are now routine. Herriman's 2020 Traverse Fire forced mass evacuations from ordinary subdivisions. Check the new state map for the specific parcel before contract - one street uphill can be a different insurance outcome.",
+   "towns": [
+    "Cottonwood Heights, UT",
+    "Herriman, UT",
+    "Bountiful, UT",
+    "Layton, UT",
+    "Kaysville, UT"
+   ]
+  },
+  "utah-valley": {
+   "primary_hazard": "Wasatch Fault (Provo segment) earthquake and Utah Lake-margin liquefaction",
+   "wildfire_risk": "moderate",
+   "flood_risk": "moderate",
+   "quake_risk": "high",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "strained",
+   "water_risk": "High. Provo River / Utah Lake basin supplemented by Central Utah Project (Colorado River) deliveries, carrying the fastest sustained population growth rate in the United States. Utah County's build-out is outrunning renewable supply faster than any other subregion in this layer; verify the specific district's water-rights position and impact-fee trajectory rather than assuming the metro-level picture.",
+   "note": "The Provo segment of the Wasatch Fault runs along the American Fork and Alpine bench and carries among the highest slip rates on the fault system; the same 43%-in-50-years regional M6.75+ probability applies. Lehi and American Fork are built substantially on Lake Bonneville deltaic and lacustrine sediment with a high water table toward the Jordan River outlet and Utah Lake, giving moderate-to-high liquefaction potential - pull the UGS map. Partially offsetting: this is the Silicon Slopes corridor and a very large share of the housing stock is 2010-2026 construction built to current seismic code, a genuine structural advantage over the older Salt Lake Valley stock. The real diligence items here are therefore not the building - they are the water certificate, the impact-fee schedule, and the infrastructure lag behind a growth rate no district in the region has matched. Earthquake insurance remains a separate policy with a 10-25% deductible and very low take-up. Wildfire is moderate: Lake Mountain and Traverse Ridge rangeland fires reach the western and northern subdivision edges, but Lehi and American Fork proper are valley-floor.",
+   "towns": [
+    "Lehi, UT",
+    "American Fork, UT"
+   ]
+  },
+  "tooele-valley-playa": {
+   "primary_hazard": "Great Salt Lake and Great Salt Lake Desert playa dust (arsenic-bearing particulate)",
+   "wildfire_risk": "moderate",
+   "flood_risk": "low",
+   "quake_risk": "moderate",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "normal",
+   "water_risk": "High. Tooele Valley groundwater is fully appropriated and the Utah State Engineer has restricted new appropriations; growth depends on transferring agricultural rights against limited recharge. Add the same Great Salt Lake basin depletion constraint as the rest of the Wasatch Front.",
+   "note": "This subregion carries the least-priced hazard in the entire screen. A 2026 NASA / University of Utah exposure study identifies Tooele and the Salt Lake Valley west side as the populations at highest risk from toxic dust off the exposed Great Salt Lake bed; roughly 800 sq mi of playa is now exposed, generating about 15 large dust events per year carrying arsenic, lead, cadmium, antimony, lithium, sulfate and chloride. The 8 July (2026) plume pushed valley particulate pollution to roughly four times the health limit. A 2026 Utah State University study found leafy vegetables grown in dust-exposed soils take up elevated arsenic, uranium, lithium, antimony and beryllium through the leaves, and that thorough washing does not remove it - a direct hit on the large-lot backyard-garden use case that draws buyers to Tooele in the first place. Tooele Valley is also downwind of the Kennecott smelter complex. Seismic is moderate rather than high: the Oquirrh and Stansbury fault zones are active and Tooele will experience strong shaking from a Wasatch Fault event, but the town does not sit on the main trace. Wildfire is moderate - Oquirrh and Stansbury cheatgrass rangeland fire reaches the valley edges. Insurance is scored normal because carriers have not priced the dust hazard at all, which is precisely why the buyer must.",
+   "towns": [
+    "Tooele, UT"
+   ]
+  },
+  "treasure-valley-rangeland-wui": {
+   "primary_hazard": "Cheatgrass rangeland and foothills wildfire driving an insurance-availability crisis",
+   "wildfire_risk": "high",
+   "flood_risk": "moderate",
+   "quake_risk": "moderate",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "strained",
+   "water_risk": "Moderate - and notably NOT a Colorado River basin, a real structural advantage over Utah, Colorado, New Mexico and Arizona. Supply is Boise and Payette river surface water stored behind Lucky Peak, Arrowrock, Anderson Ranch and Deadwood, plus the Treasure Valley aquifer. The binding constraint showed itself in 2024 when the Idaho Department of Water Resources issued a curtailment order against roughly 500,000 acres of Eastern Snake Plain groundwater irrigation over conjunctive-management obligations; locally the equivalent pressures are Treasure Valley aquifer decline and water-right adequacy review on new subdivisions.",
+   "note": "The hazard model that matters here is cheatgrass, not timber. Invasive annual grass carries fire across Snake River Plain rangeland and the Boise Foothills at extreme rates of spread, reaching subdivision edges in minutes, and it re-cures every single year regardless of forest condition. The insurance market has already repriced it: Idaho homeowner non-renewals went from 3,900 in 2022 to 27,798 in 2023, a roughly sevenfold jump in one year, and the statewide average premium moved from $1,468 to $1,798 in a single year. Boise County ranks 87th nationally for non-renewal rate per the US Senate Budget Committee. Foothills and Robie Creek owners report calling twenty-plus carriers to obtain a single quote, often at double the prior rate. Screen with the property-level Verisk FireLine score and confirm a bindable standard-market quote before removing contingencies; a north-Boise foothills address and a Meridian or Nampa valley-floor address are very different insurance outcomes inside this one subregion. Flood is moderate and reservoir-regulated but real - the 2017 high-water year forced sustained Boise River releases that flooded riverside neighbourhoods, and Indian Creek affects parts of Nampa and Caldwell. Seismic is moderate: the Boise Front and western Idaho faults are active and the March 2020 M6.5 Stanley earthquake was felt strongly across the valley.",
+   "towns": [
+    "Boise, ID",
+    "Meridian, ID",
+    "Nampa, ID",
+    "Caldwell, ID"
+   ]
+  },
+  "middle-rio-grande": {
+   "primary_hazard": "Wildfire-driven insurance withdrawal layered on Rio Grande / Colorado River water scarcity",
+   "wildfire_risk": "moderate",
+   "flood_risk": "moderate",
+   "quake_risk": "moderate",
+   "tornado_hail_risk": "moderate",
+   "insurance_climate": "strained",
+   "water_risk": "High and doubly exposed. Albuquerque's drinking water is San Juan-Chama Project water - a COLORADO RIVER transbasin diversion - blended with a Middle Rio Grande aquifer that was severely over-drafted through the 1990s, so the metro carries post-2026 Colorado River risk and Rio Grande risk simultaneously. New Mexico also carries a Rio Grande Compact delivery debt to Texas and Texas v. New Mexico remains live. The genuine good news: the aquifer has recovered on the order of 40ft since ABQ switched to surface water in 2008, per-capita use has fallen sharply, and the Water Authority holds real conservation headroom. Rio Rancho runs on Santa Fe Group aquifer groundwater under its own declining-levels management plan.",
+   "note": "Insurance availability, not price, is the binding constraint in New Mexico. Carriers non-renewed a record 6,200+ homeowner policies statewide in 2025, nearly triple the roughly 2,200 of 2021, and the state insurance superintendent flags Sandoval (Rio Rancho), Santa Fe, Taos and Rio Arriba as the four highest-risk counties. The reset event was the 2022 Hermits Peak / Calf Canyon Fire - 341,000+ acres, the largest in New Mexico history, caused by escaped federal prescribed burns - which changed carrier appetite statewide including far from the burn scar. New Mexico has stood up a FAIR Plan and the legislature funded a $10M wildfire mitigation grant program; average premium increases have moderated to under 5% in 2025-26 from 15% in 2023, which tells you carriers are managing exposure by withdrawing rather than by pricing. Local fire geography: the Rio Grande bosque is a continuous cottonwood and salt-cedar fire corridor running through the middle of the metro and has burned repeatedly. Flood is arroyo flash flooding plus post-fire debris flow, not riverine. Seismic is moderate - the Rio Grande Rift is an active extensional province with the Sandia and County Dump faults nearby; low historical rate, real USGS hazard. IMPORTANT boundary: this row covers the ABQ / Rio Rancho valley-and-mesa metro only. East Mountain addresses (Tijeras, Cedar Crest, Sandia Park) are a high-wildfire, crisis-insurance bucket and must not be screened through this row.",
+   "towns": [
+    "Albuquerque, NM",
+    "Rio Rancho, NM"
+   ]
+  },
+  "truckee-meadows": {
+   "primary_hazard": "Compound wildfire plus earthquake - the only subregion here scoring high on both",
+   "wildfire_risk": "high",
+   "flood_risk": "high",
+   "quake_risk": "high",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "strained",
+   "water_risk": "Moderate, and the best structural water position in this layer. Reno-Sparks draws on the Truckee River out of Lake Tahoe under the Truckee River Operating Agreement and is NOT a Colorado River user - unlike Las Vegas, Phoenix, Albuquerque or the Front Range, none of the post-2026 Colorado River risk touches it. TMWA holds drought reserves sized to a multi-year drought. The constraint is growth-driven allocation and Sierra snowpack variability, not interstate compact failure.",
+   "note": "This is the only address in the layer where a buyer needs three separate coverages - homeowners, a standalone earthquake policy, and NFIP flood - to actually be covered, and most local comparable sales carry only the first. Earthquake: the Reno-Carson corridor carries a 60-75% probability of an M6.0+ within 30 miles in 50 years; the Genoa fault to the south and the Pyramid Lake fault to the north are both M7+ capable and bracket the metro; the 2008 Mogul-Somersett swarm produced an M4.7 inside west Reno. USGS liquefaction mapping shows the Reno-Sparks urban area is underlain by latest-Pleistocene / Holocene Truckee floodplain and terrace deposits with a locally high water table - high liquefaction hazard across much of the built area. Flood: the January 1997 New Year's flood put downtown Reno and Sparks under water with hundreds of millions in damage, and the Sparks industrial and residential corridor has flooded repeatedly since, including 2017. Wildfire: roughly 74% of buildings in Reno carry high wildfire risk, and the two defining events burned INTO established neighbourhoods in November - the Caughlin Fire (Nov 2011, 28 homes) and the Pinehaven Fire (Nov 2020) - outside any conventional fire season, driven by downslope Washoe zephyr wind. Nevada has no FAIR plan comparable to California's, which makes availability, not price, the failure mode if a carrier exits.",
+   "towns": [
+    "Reno, NV",
+    "Sparks, NV"
+   ]
+  },
+  "phoenix-low-desert-water": {
+   "primary_hazard": "Water - simultaneous 100-year assured-supply failure and Colorado River shortage",
+   "wildfire_risk": "low",
+   "flood_risk": "moderate",
+   "quake_risk": "low",
+   "tornado_hail_risk": "moderate",
+   "insurance_climate": "normal",
+   "water_risk": "CRITICAL and structurally unresolved - the defining hazard of this subregion. (1) Colorado River: a Tier 1 Shortage Condition was declared for 2026; Arizona absorbs a 320,000 acre-foot cut to its basic allocation plus a 192,000 AF DCP contribution, by far the largest of any state. Lake Mead sat near 1,041-1,042ft, roughly 27% of capacity, in July 2026. (2) The 2007 Interim Guidelines and the 2019 Drought Contingency Plans BOTH expire at the end of 2026; the seven basin states missed Reclamation's 14 February 2026 deadline to agree on a replacement, and all five of Reclamation's alternatives place the heaviest cuts on Arizona, then Nevada, then California. (3) Groundwater: ADWR's June 2023 Phoenix AMA model projected a 4.86 million acre-foot shortfall over 100 years and halted approval of new groundwater-only subdivisions, hitting Buckeye, Queen Creek and Goodyear hardest. A Maricopa County Superior Court judge vacated that action on 21 April 2026 as improper rulemaking (Home Builders Association of Central Arizona / Goldwater Institute). That restores the permitting pipeline; it does not restore the water, and the framework is now in appellate and legislative flux. DILIGENCE: identify the actual provider, and determine whether the lot's Certificate of Assured Water Supply predates or postdates 2023 and whether the underlying supply is CAP, SRP surface water, reclaimed, or groundwater. A CAP-dependent fringe subdivision and an SRP-served central Phoenix lot are not the same asset.",
+   "note": "Insurance is the one thing that is still cheap here, and that is the trap - a buyer screening on fire scores will see green and miss the actual risk. University of Arizona Cooperative Extension (Oct 2025) puts Maricopa County homeowner non-renewal rates at 0.6-1.2%, essentially the national baseline, because the low desert has almost no fuel; compare Navajo County at 4.8% in 2022. The exclusion drivers in this subregion are CLIMATE and WATER, not insurability. Other underwriting items specific to the low desert: monsoon microbursts produce 70-100mph straight-line outflow and haboobs, and the 5 October 2010 Phoenix hailstorm caused roughly $2.7B in insured losses - the base rate is low but the tail is not zero, so do not accept a bare-minimum wind deductible. Flash flooding is sheet-flow and wash-driven rather than riverine (the Salt and Gila are dam-controlled) and many genuinely exposed parcels sit outside mapped NFIP zones, so read the Maricopa County Flood Control District maps, not just the FIRM. Finally, pull the Arizona Geological Survey earth-fissure map for the parcel: decades of groundwater overdraft have produced mapped land subsidence and earth fissures across the west valley - Goodyear, Avondale, Surprise, Buckeye - which crack slabs and foundations and are generally excluded from homeowners coverage.",
+   "towns": [
+    "Phoenix, AZ",
+    "Mesa, AZ",
+    "Chandler, AZ",
+    "Gilbert, AZ",
+    "Tempe, AZ",
+    "Scottsdale, AZ",
+    "Glendale, AZ",
+    "Peoria, AZ",
+    "Goodyear, AZ",
+    "Surprise, AZ",
+    "Avondale, AZ",
+    "Tolleson, AZ"
+   ]
+  },
+  "tucson-basin": {
+   "primary_hazard": "Extreme heat, with Santa Catalina WUI wildfire and monsoon flash flooding",
+   "wildfire_risk": "moderate",
+   "flood_risk": "moderate",
+   "quake_risk": "low",
+   "tornado_hail_risk": "moderate",
+   "insurance_climate": "normal",
+   "water_risk": "Moderate - materially the best-managed water position of any Arizona metro and a genuine differentiator from Phoenix. Rather than using its Central Arizona Project allocation directly, Tucson Water recharged it underground for decades through the Clearwater program and now holds very large long-term storage credits; per-capita use is among the lowest in the Southwest. Tucson is exposed to the same 2026 Tier 1 shortage and post-2026 guideline risk as Phoenix, but with a physical buffer Phoenix does not have, and no assured-water-supply moratorium was imposed on the Tucson AMA.",
+   "note": "Better than Phoenix on water and on heat, worse on wildfire. The Santa Catalina Mountains put a genuine timber and chaparral WUI directly against the north edge of the metro: the Aspen Fire (2003) destroyed roughly 340 structures and most of Summerhaven, and the Bighorn Fire (2020) burned about 119,000 acres down to the Catalina Foothills' edge. A Catalina Foothills or Tanque Verde address carries real WUI exposure that central and south Tucson does not - score the parcel, not the city. Insurance remains near-baseline: University of Arizona Extension puts Pima County non-renewal rates at 0.6-1.3%. Flood is monsoon-driven wash and arroyo flooding along the Rillito and Santa Cruz - fast, shallow, frequently outside mapped NFIP zones; check the Pima County Regional Flood Control District maps and confirm no wash-adjacent bank-erosion setback issue. Post-fire debris flow off the Catalinas is the compounding risk following any foothills burn. Seismic is low.",
+   "towns": [
+    "Tucson, AZ"
+   ]
+  },
+  "gallatin-valley": {
+   "primary_hazard": "Earthquake on the Intermountain Seismic Belt, plus timber WUI wildfire",
+   "wildfire_risk": "high",
+   "flood_risk": "moderate",
+   "quake_risk": "high",
+   "tornado_hail_risk": "low",
+   "insurance_climate": "strained",
+   "water_risk": "Moderate. Gallatin River basin supply plus heavy dependence on exempt domestic wells across unincorporated Gallatin County. Montana has closed the Upper Missouri basin to most new surface-water appropriations, so growth is running on groundwater whose hydraulic connection to the river is legally contested. Confirm whether a parcel is on City of Bozeman municipal water and sewer or on an exempt well and septic - that single fact drives cost and long-term regulatory risk more than anything else here.",
+   "note": "Seismic risk in Bozeman is high and almost universally under-insured. The Intermountain Seismic Belt crosses into Montana from Wyoming just east of Bozeman and arcs northwest, making Gallatin County one of the most seismically active counties in the Rocky Mountains; the Montana Bureau of Mines and Geology and Gallatin County Emergency Management both flag the valley for strong shaking and secondary effects, and enhanced seismic design is required. The 1959 M7.3 Hebgen Lake earthquake - 28 dead, the largest historic earthquake in the Rocky Mountain region - struck roughly 60 miles south. Earthquake coverage in Montana is a separate endorsement with a high deductible and take-up is very low. Wildfire: the Bridger Foothills Fire (Sept 2020) destroyed 30 homes in Bridger Canyon on the immediate northeast edge of Bozeman, and the Bridger, Gallatin and Hyalite foothills subdivisions are classic timber WUI with long single-access driveways - Montana carriers are re-underwriting these aggressively and premium increases have been among the steepest in the West. Flood is moderate: the Gallatin, East Gallatin and Hyalite drainages, with the June 2022 Yellowstone-region flood demonstrating the tail. Finally, underwrite the winter as a hazard rather than a climate footnote - at 86in/yr, engineered snow-load roof spec, ice-dam detailing and freeze-protected plumbing are cost items that do not appear in Front Range or Wasatch comparables.",
+   "towns": [
+    "Bozeman, MT"
+   ]
+  }
+ }
+}

@@ -1,0 +1,232 @@
+{
+ "_meta": {
+  "kind": "climate",
+  "market": "SE",
+  "as_of": "2026-07",
+  "status": "researched",
+  "methodology": "SOUTHEAST CLIMATE + HAZARD LAYER \u2014 METHODOLOGY\n\nSCOPE AND GRANULARITY\n10 subregions, keyed identically across both layers so they can be joined. All 50 towns appear exactly once in each layer (validated programmatically: 50 town slots, 0 duplicates, 0 missing, 0 string mismatches, all enums in range). Granularity is the metro/physiographic province, as requested \u2014 defensible and maintainable, and it avoids pretending a subregion table can resolve parcel-level flood or surge.\n\nCLIMATE AXIS (summer heat + humidity, moderated by elevation and coastal distance)\nPrimary discriminator is NOT July mean maximum \u2014 that single number is misleading in this region (Atlanta posts the LOWEST July max in the set at 89.0F purely from its ~1,000 ft plateau, while Chattanooga posts 89.9F yet runs a far longer hot season). The tier is set on a composite:\n  1. Annual days >= 90F (the length of the hot season) \u2014 primary\n  2. July mean minimum (overnight humidity retention / no-relief nights)\n  3. July mean dewpoint\n  4. Elevation and distance from coast as the moderating terms\n  5. Winter mildness (Jan mean low, annual snow) as a credit, and ice-storm exposure as a debit\n\nObserved regional distribution of days >= 90F across these 50 towns produced three clean breaks: 43\u201348 (Piedmont/upland band), 54\u201360 (interior valley/basin band), 78\u201380 (Lowcountry). Tiers follow those breaks:\n  temperate-upland = 1 subregion, moderate = 4, harsh-interior = 3, harsh = 2.\n\nTHREE CALLS THAT DEPART FROM THE BRIEF \u2014 STATED PLAINLY\n1. NO TOWN ON THIS LIST IS IN THE TRUE APPALACHIAN UPLAND BAND. Asheville (2,165 ft, July max 83.6F) is the regional benchmark and nothing here is close. Upstate SC (Simpsonville/Greer) receives temperate-upland because it is the only elevated, escarpment-adjacent band present \u2014 but GSP's normals (90.3F / 32.1F, ~48 days >= 90F) sit within ~1F of Charlotte and Raleigh, and its 90F-day count is mid-pack. The tier is awarded on elevation and terrain access, not on measured heat relief, and the note says so explicitly so the screen does not overclaim.\n2. CHATTANOOGA IS TIERED harsh-interior, NOT temperate-upland. The brief named \"Chattanooga ridges,\" and that phrasing is exactly right: the ridges (Signal Mtn 1,703 ft, Lookout Mtn ~1,900\u20132,100 ft) do earn the upland tier, but the string \"Chattanooga, TN\" resolves to the 686 ft valley floor, which posts ~55 days >= 90F \u2014 hotter than Charlotte, Raleigh, or Atlanta \u2014 plus documented inversion/stagnation. A strict screen must fail closed on the valley. The note carries an explicit manual-override instruction for confirmed brow addresses.\n3. NASHVILLE IS harsh-interior, a boundary call. Its July max (89.5F) reads benign, but ~54 days >= 90F and a 30.2F Jan low make it simultaneously hotter in summer and colder in winter than the Piedmont \u2014 textbook continentality, and the reason the \"mild winter as an advantage\" argument does not transfer there. Madison AL (~60 days >= 90F) anchors the hot end of that band.\n\nAlso encoded as non-obvious signal: the inland Charleston suburbs (Summerville, Goose Creek) run 2\u20134F HOTTER by day than downtown Charleston because they sit past the sea-breeze front \u2014 the opposite of what buyers assume. And Richmond is flagged as the weakest fit for anyone optimizing on mild winters (10.5in snow, 28.9F Jan low, ~2x any other subregion here).\n\nHAZARD AXIS\nEvery field is anchored to a documented event or a published rate action, not a generic risk adjective. Key encodings:\n  - Inland tropical flooding treated as a first-class hazard, per the brief. Helene's Upstate SC toll (49 deaths, 600k+ outages, >$370M public cost, 8\u201324in rain) is applied 200+ mi from landfall, and the note identifies TREE FALL, not inundation, as the dominant loss mode there \u2014 canopy screening, not floodplain screening.\n  - Atlanta is flood_risk=high on the strength of Sept 2009 (18 gauges above the 500-yr flood; Sweetwater Creek >6 ft above the 500-yr stage) and Sept 2024 (11.12in/48hr, first-ever flash fl",
+  "sources": [
+   "NOAA NCEI, U.S. Climate Normals 1991-2020 (station normals for ATL, CLT, RDU, RIC, BNA, CHA, GSP, HSV, CHS, SAV) \u2014 https://www.ncei.noaa.gov/products/land-based-station/us-climate-normals",
+   "NWS Greenville-Spartanburg, GSP/CLT daily climate normals 1991-2020 \u2014 https://www.weather.gov/gsp/gspcli and https://www.weather.gov/media/gsp/Climate/CLT/CLTJULNORM.pdf",
+   "NWS Raleigh, Climate Normals 1991-2020 \u2014 https://www.weather.gov/rah/ClimateNormals1991-2020",
+   "NWS Huntsville, Huntsville Climate Narrative \u2014 https://www.weather.gov/hun/huntsvilleclimatenarrative",
+   "North Carolina State Climate Office, Winter Weather Climatology (western Piedmont = iciest part of the SE, ~4 freezing-rain days/yr 1948-2000; cold-air damming) \u2014 https://products.climate.ncsu.edu/weather/winter/types/",
+   "North Carolina State Climate Office, Rapid Reaction: Historic Flooding Follows Helene in Western NC (Sept 2024; French Broad at Asheville 24.7 ft, record by >1 ft; 29.5 in max rainfall) \u2014 https://climate.ncsu.edu/blog/2024/09/rapid-reaction-historic-flooding-follows-helene-in-western-nc/",
+   "North Carolina State Climate Office, Helene's Damage Presents Fire Management and Monitoring Challenges (June 2025) \u2014 https://climate.ncsu.edu/blog/2025/06/helenes-damage-presents-fire-management-monitoring-challenges/",
+   "NWS Greenville-Spartanburg, Post-Storm Report / Impact Narratives, Hurricane Helene (AL092024) \u2014 https://www.weather.gov/media/gsp/TropicalEventSummary/PSHGSP_2024AL09_Helene_Summary.pdf",
+   "USGS, Epic Flooding in Georgia, 2009, Fact Sheet 2010-3107 (18 metro Atlanta gauges above the 0.2% AEP flood; Sweetwater Creek near Austell >6 ft above the 500-yr stage; 28 record crests) \u2014 https://pubs.usgs.gov/fs/2010/3107/pdf/fs2010-3107.pdf",
+   "NWS Peachtree City (FFC), Epic Floods of September 2009 \u2014 https://www.weather.gov/ffc/0909epicflood",
+   "NOAA/NWS Nashville (OHX), Record Floods of Greater Nashville, May 1-4 2010 (13.57 in in 2 days; Cumberland crest 51.86 ft vs 40 ft flood stage) \u2014 https://www.weather.gov/ohx/may2010flood",
+   "NOAA Central Library / NWS Service Assessment, Record Floods of Greater Nashville May 2010 \u2014 https://repository.library.noaa.gov/view/noaa/6978",
+   "NWS Charleston (CHS), Hurricane Hugo September 21-22 1989 (Cat 4 landfall Sullivan's Island, ~20 ft storm tide at Bulls Bay) \u2014 https://www.weather.gov/chs/Hurricanehugo-Sep1989",
+   "NWS Charleston, Coastal Flood Event Database \u2014 https://www.weather.gov/chs/coastalflood",
+   "NOAA Tides and Currents, 2024-2025 Annual High Tide Flooding Outlook (Charleston record 17 flood days 2023-24 met year; Fort Pulaski GA record 18 days) \u2014 https://tidesandcurrents.noaa.gov/cms/wp-content/uploads/2025/08/2024-2025-Annual-High-Tide-Flooding-Outlook.pdf",
+   "NOAA NCCOS, Past, Present, and Future High Tide Flooding in Charleston SC (~2 days/yr 1950, 25 by 2014, ~60 days / 103 hours projected by 2051) \u2014 https://coastalscience.noaa.gov/news/past-present-and-future-nuisance-tidal-flooding-in-charleston-sc/",
+   "NOAA NHC, Tropical Cyclone Report: Hurricane Matthew (AL142016) \u2014 3-5 ft inundation along the GA coast, 3-3.75 ft on Delegal Creek, Chatham County \u2014 https://www.nhc.noaa.gov/data/tcr/AL142016_Matthew.pdf",
+   "NOAA NHC, Tropical Cyclone Report: Hurricane Gaston (AL072004) \u2014 Richmond flash flood, ~1 ft rain, 8-9 deaths, $130M, 19 tornadoes \u2014 https://www.nhc.noaa.gov/data/tcr/AL072004_Gaston.pdf",
+   "NWS Wakefield (AKQ), The Hurricane History of Central and Eastern Virginia \u2014 https://www.weather.gov/media/akq/miscNEWS/hurricanehistory.pdf",
+   "USGS, The 1886 Charleston South Carolina Earthquake \u2014 A 1986 Perspective, Circular 985 (M6.9-7.3, ~60 deaths, 2,000 buildings) \u2014 https://pubs.usgs.gov/circ/1986/0985/report.pdf",
+   "USGS, Studies Related to the Charleston SC Earthquake of 1886 \u2014 Tectonics and Seismicity, Professional Paper 1313 \u2014 https://pubs.usgs.gov/publication/pp1313",
+   "USGS, Seismic Hazard in the South Carolina Coastal Plain \u2014 2002 update to the National Seismic Hazard Maps \u2014 https://www.usgs.gov/publications/seismic-hazard-south-carolina-coastal-plain-2002-update-usgs-national-seismic-hazard",
+   "Central US Earthquake Consortium, Our Earthquake Risk (Eastern Tennessee Seismic Zone = 2nd most active in the eastern US; Central Virginia Seismic Zone) \u2014 https://cusec.org/our-earthquake-risk/",
+   "NWS Huntsville, April 27 2011 Limestone/Madison County Tornado Tracks \u2014 https://www.weather.gov/hun/april27_maps_revised_madison_zoom",
+   "NOAA, 50 Years Later: Remembering the 1974 Super Outbreak \u2014 https://www.noaa.gov/news/50-years-later-remembering-1974-super-outbreak",
+   "Gagan, Gerard and Gordon, A Historical and Statistical Comparison of 'Tornado Alley' to 'Dixie Alley', National Weather Association Digest Vol 34 No 2 (2010) \u2014 https://nwafiles.nwas.org/file/nwafiles/digest/papers/2010/Vol34No2/Pg145-Gagan-etal.pdf",
+   "Ashley et al. (2008), Weather and Forecasting \u2014 nocturnal tornadoes ~2.5x deadlier than daytime; ~34% of Dixie Alley killer tornadoes 9pm-7am; TN highest share of nighttime tornado fatalities (>73%)",
+   "Southeast Regional Climate Center (SERCC), Tornado Climatology of the Southeast \u2014 https://sercc.com/tornado-climatology-of-the-southeast/",
+   "TVA, Flood Damage Reduction and Saving Chattanooga (32 upstream dams; ~$9.7B valley-wide and ~$8B at Chattanooga in averted flood damage) \u2014 https://www.tva.com/environment/managing-the-river/flood-management",
+   "USDA Forest Service, National Forests in North Carolina: After Helene, wildfire risk is increased for Western North Carolina families \u2014 https://www.fs.usda.gov/r08/northcarolina/newsroom/stories/after-helene-wildfire-risk-increased-western-north-carolina",
+   "Pickens County SC, Table Rock Fire Information (Table Rock 13,287 ac + Persimmon Ridge 2,078 ac = 15,365 ac, Mar-Apr 2025) \u2014 https://www.co.pickens.sc.us/news_detail_T8_R121.php",
+   "NC Department of Insurance, Commissioner Causey negotiates settlement on Rate Bureau's homeowners' insurance request (Jan 17 2025: 7.5% 6/1/2025 + 7.5% 6/1/2026; Mecklenburg 9.3% + 9.2%; coastal 31.9%; no refiling before 6/1/2027) \u2014 https://www.ncdoi.gov/news/press-releases/2025/01/17/commissioner-causey-negotiates-settlement-rate-bureaus-homeowners-insurance-request",
+   "South Carolina Department of Insurance, 2024 Status Report on the South Carolina Coastal Property Insurance Market (SCWHUA residual market) \u2014 https://doi.sc.gov/DocumentCenter/View/14909/2024-Status-Report-on-the-South-Carolina-Coastal-Property-Insurance-Market",
+   "South Carolina DNR State Climatology Office, 1991-2020 South Carolina Climate Normals contour maps \u2014 https://www.dnr.sc.gov/climate/sco/climatedata/cli_sc_climate.php",
+   "Inside Climate News, Hurricane Helene Killed 49 in South Carolina's Upstate Region as Costs of Damage and Response Exceed $370 Million (Dec 2024) \u2014 https://insideclimatenews.org/news/16122024/south-carolina-hurricane-helene-damage-costs/",
+   "Fox Weather, Atlanta sees first-ever Flash Flood Emergency as Helene's fury forces water rescues (11.12 in / 48 hr, record back to 1878; Peachtree Creek rescues) \u2014 https://www.foxweather.com/weather-news/helene-atlanta-georgia-southeast",
+   "Marsh McLennan Agency, Insurance Market Update: Southeastern states confront severe weather and increased rates in 2025 \u2014 https://www.marshmma.com/us/insights/details/insurance-market-update-southeast.html",
+   "City of Raleigh, Know Your Flood Risks (Crabtree Creek urban flood corridor) \u2014 https://raleighnc.gov/stormwater/services/know-your-flood-risks",
+   "NWS Wilmington (ILM), Hurricane Matthew in the Carolinas: October 8 2016 (12-18 in across interior SC/NC) \u2014 https://www.weather.gov/ilm/matthew"
+  ]
+ },
+ "table": {
+  "upstate_sc_blue_ridge_escarpment": {
+   "tier": "temperate-upland",
+   "elevation_ft": 950,
+   "jan_low_f": 32,
+   "jul_high_f": 90,
+   "snow_in": 4.5,
+   "humidity_note": "July mean dewpoint 69-70F; ~48 days/yr at or above 90F; July mean min 69.5F. Escarpment lift drives frequent late-day convection that clips afternoon peaks, and overnight lows run ~4F below the Lowcountry. Absolute humidity is meaningfully lower than Charleston/Savannah (dewpoint ~4F drier) but only ~1F drier than Charlotte.",
+   "smoke_days": 6,
+   "ac_dependence": "high",
+   "note": "BEST-IN-REGION TIER, EARNED ON THE MARGIN - READ THE CAVEAT. This is the only elevated, mountain-adjacent band in the town list, and it wins the tier on elevation (900-1,020 ft), escarpment position, and access to genuine upland relief. It does NOT win on raw heat: GSP 1991-2020 normals are July mean max 90.3F / Jan mean min 32.1F, within ~1F of both Charlotte and Raleigh, and ~48 days at or above 90F is mid-pack for this region. The true temperate-upland band starts 10-20 mi NORTH of Greer - Travelers Rest, Landrum, Saluda, and Asheville NC (2,165 ft, July mean max 83.6F, Jan mean min 27.6F) - and NO town on this list sits in it. Mild winter is real (32F Jan low, 4.5in snow) but is not a differentiator here; every inland subregion in this set has one. If the buyer's actual goal is escaping Southeast summer heat, this tier is the closest available compromise, not a solution. Smoke days elevated vs. the rest of the region by post-Helene fuel loading (see hazard layer).",
+   "towns": [
+    "Simpsonville, SC",
+    "Greer, SC"
+   ]
+  },
+  "atlanta_metro_piedmont_plateau": {
+   "tier": "moderate",
+   "elevation_ft": 1000,
+   "jan_low_f": 35,
+   "jul_high_f": 89,
+   "snow_in": 2.2,
+   "humidity_note": "July mean dewpoint 69-71F; ~44 days/yr at or above 90F and only ~4 days at or above 95F. July mean min 71.5F - the highest overnight minimum of any inland subregion here, a combined urban-heat-island and humidity-retention effect that partly cancels the daytime elevation dividend.",
+   "smoke_days": 4,
+   "ac_dependence": "high",
+   "note": "THE ELEVATION DIVIDEND IS REAL AND UNDERAPPRECIATED. At ~1,000 ft on the Piedmont plateau (ATL airport 1,026 ft; range across these towns roughly 800 ft at Hampton/Jonesboro to ~1,250 ft at Kennesaw/Douglasville), Atlanta posts the LOWEST July mean max in this entire 50-town set at 89.0F - cooler by day than Charlotte, Raleigh, Nashville, or Chattanooga, and 3.4F cooler than Savannah. Mild winter is the second genuine advantage: Jan mean min 34.5F and 2.2in annual snow, the mildest inland winter here. The offsetting costs: (1) nights do not cool off - 71.5F July mean min; (2) the metro has essentially no winter-weather fleet, so the 1-2 ice/snow events per decade are disproportionately disruptive (Jan 2014 'Snowjam', Feb 2014 Winter Storm Pax). South-metro towns (Stockbridge, McDonough, Jonesboro, Hampton) sit ~150-200 ft lower and run ~1F warmer with ~5 more 90F days than the north-metro plateau; that gap is real but too small to move the tier.",
+   "towns": [
+    "Lawrenceville, GA",
+    "Powder Springs, GA",
+    "Stockbridge, GA",
+    "Duluth, GA",
+    "Lilburn, GA",
+    "Douglasville, GA",
+    "Johns Creek, GA",
+    "Atlanta, GA",
+    "Lithonia, GA",
+    "Marietta, GA",
+    "Stone Mountain, GA",
+    "McDonough, GA",
+    "Kennesaw, GA",
+    "Roswell, GA",
+    "Smyrna, GA",
+    "Jonesboro, GA",
+    "Hampton, GA",
+    "Snellville, GA",
+    "Norcross, GA"
+   ]
+  },
+  "charlotte_metro_western_piedmont": {
+   "tier": "moderate",
+   "elevation_ft": 750,
+   "jan_low_f": 33,
+   "jul_high_f": 90,
+   "snow_in": 3.5,
+   "humidity_note": "July mean dewpoint ~70F; ~46 days/yr at or above 90F; July mean min 70.4F. Solidly humid but ~3F drier at the dewpoint than the Lowcountry and with meaningfully more diurnal range.",
+   "smoke_days": 3,
+   "ac_dependence": "high",
+   "note": "SUMMER IS UNREMARKABLE FOR THIS REGION; THE WINTER IS THE SLEEPER COST. CLT 1991-2020 normals: July mean max 90.4F, Jan mean min 33.2F, 3.5in snow, elevation 748 ft (Mooresville ~830 ft, Waxhaw ~620 ft). The differentiator is ICE, not heat: the western Piedmont of North Carolina is the iciest part of the southeastern US, with some areas averaging 4 freezing-rain days per year over 1948-2000, driven by cold-air damming - a wedge of cold surface air trapped against the east slope of the Blue Ridge while warm air overruns it. The Dec 2002 ice storm laid down nearly an inch of accretion in 12 hours across the NC Piedmont with multi-week outages. Budget annually for tree work and a generator; this is the most reliably recurring weather-driven homeowner cost in the subregion. Rock Hill SC sits in the same damming corridor. Mild winter is a genuine advantage on the temperature axis and a liability on the precipitation-type axis - do not score it as a pure positive here.",
+   "towns": [
+    "Concord, NC",
+    "Charlotte, NC",
+    "Huntersville, NC",
+    "Waxhaw, NC",
+    "Mint Hill, NC",
+    "Rock Hill, SC",
+    "Monroe, NC",
+    "Mooresville, NC"
+   ]
+  },
+  "nc_triangle_eastern_piedmont": {
+   "tier": "moderate",
+   "elevation_ft": 400,
+   "jan_low_f": 31,
+   "jul_high_f": 90,
+   "snow_in": 6.0,
+   "humidity_note": "~46 days/yr at or above 90F; July mean min 69.5F. Humidity is measurably trending up: July 2025 produced RDU's highest July mean dewpoint since records began in 1946, at 69.8F. Treat the historical normal as a floor, not a forecast.",
+   "smoke_days": 3,
+   "ac_dependence": "high",
+   "note": "RDU 1991-2020 normals: July mean max 90.0F, Jan mean min 31.4F, ~6.0in annual snow, elevation 435 ft (Raleigh 315 ft, Apex ~500 ft). Sits 300-500 ft lower and ~130 mi further east than Charlotte, which trades one problem for another: less cold-air-damming freezing rain than the western Piedmont, but more snow and sleet (6.0in vs 3.5in) because the Triangle sits closer to the coastal-low storm track. Summer heat is unremarkable for this region and modestly better than Charlotte on 90F-day count. Mild winter is a real advantage but the smallest one in the Carolinas portion of this set. The Triangle's climate case is 'no strong negatives' rather than any positive differentiator - which for a strict screen is a pass, not a preference.",
+   "towns": [
+    "Raleigh, NC",
+    "Wake Forest, NC",
+    "Cary, NC",
+    "Durham, NC",
+    "Fuquay Varina, NC",
+    "Garner, NC",
+    "Apex, NC"
+   ]
+  },
+  "richmond_va_fall_line": {
+   "tier": "moderate",
+   "elevation_ft": 165,
+   "jan_low_f": 29,
+   "jul_high_f": 90,
+   "snow_in": 10.5,
+   "humidity_note": "~43 days/yr at or above 90F - the FEWEST of any subregion in this set - but July mean min 69.5F and tidewater-sourced moisture with no reliable sea breeze at the fall line. Muggy without being extreme.",
+   "smoke_days": 5,
+   "ac_dependence": "high",
+   "note": "THE MILD-WINTER ADVANTAGE LARGELY DISAPPEARS HERE - PRICE THAT. RIC 1991-2020 normals: July mean max 89.6F, Jan mean min 28.9F, 10.5in annual snow, elevation 167 ft (Midlothian ~240 ft, Henrico ~200 ft). This is the northern edge of the Southeast and it behaves like it: the coldest January and roughly 2x the snow of any other subregion here, with a genuine four-season Piedmont pattern rather than a Deep South one. In exchange it has the lowest 90F-day count in the set (~43). If the buyer is explicitly optimizing for 'mild winter as a benefit', Richmond is the weakest fit on this list despite scoring well on summer. Smoke days are the highest of the non-mountain subregions - the June 2023 Canadian wildfire episode pushed Richmond into very unhealthy AQI, the worst readings anywhere in this 50-town set.",
+   "towns": [
+    "Midlothian, VA",
+    "Henrico, VA"
+   ]
+  },
+  "nashville_basin_middle_tn": {
+   "tier": "harsh-interior",
+   "elevation_ft": 550,
+   "jan_low_f": 30,
+   "jul_high_f": 90,
+   "snow_in": 4.7,
+   "humidity_note": "~54 days/yr at or above 90F - 8 to 11 more than any Piedmont subregion in this set. July mean dewpoint ~70F, July mean min 70.2F. The 90F season runs late May into mid-September; the Central Basin is a shallow bowl that traps both heat and low-level moisture.",
+   "smoke_days": 4,
+   "ac_dependence": "high",
+   "note": "TIERED HARSH-INTERIOR ON CONTINENTALITY, NOT ON PEAK TEMPERATURE. BNA 1991-2020 normals: July mean max 89.5F, Jan mean min 30.2F, 4.7in snow, elevation 599 ft (Murfreesboro 619 ft, Gallatin ~540 ft). The July mean max looks benign, but that single number is misleading: Nashville logs ~54 days at or above 90F versus ~44-46 across Atlanta, Charlotte and Raleigh, because the Central Basin sits low (440-620 ft), far from any maritime influence, and holds heat. It is simultaneously HOTTER in summer and COLDER in winter than the Piedmont - the signature of continentality, and the reason the region's 'mild winter as an advantage' argument does not apply cleanly here. Ice storms are an annual line item, not a decadal event. This is a boundary call against the Piedmont tier; the 90F-day count and the Jan-low gap are what push it over.",
+   "towns": [
+    "Nashville, TN",
+    "Hendersonville, TN",
+    "Mount Juliet, TN",
+    "Smyrna, TN",
+    "Murfreesboro, TN",
+    "Gallatin, TN"
+   ]
+  },
+  "chattanooga_tn_river_valley": {
+   "tier": "harsh-interior",
+   "elevation_ft": 680,
+   "jan_low_f": 32,
+   "jul_high_f": 90,
+   "snow_in": 3.5,
+   "humidity_note": "~55 days/yr at or above 90F despite a modest July mean max of 89.9F - the valley bowl between Walden Ridge and Missionary Ridge suppresses vertical mixing and traps humid air, so the 90F season is long and the air is stagnant. July mean min 69.8F.",
+   "smoke_days": 6,
+   "ac_dependence": "high",
+   "note": "THE RIDGE EXCEPTION - AND WHY THE VALLEY DOES NOT GET THE UPLAND TIER. The string 'Chattanooga, TN' resolves to the valley floor at ~686 ft, where nearly all of the metro's housing inventory sits, and the valley posts ~55 days at or above 90F - MORE than Charlotte, Raleigh or Atlanta, with a documented history of air stagnation and inversion. That is a harsh-interior profile, not an upland one, and a strict screen should fail it closed. The genuine temperate-upland terrain is the brow: Signal Mountain at 1,703 ft and Lookout Mountain at roughly 1,900-2,100 ft, which run 6-8F cooler on summer afternoons and would score temperate-upland on their own. Those are a small, expensive fraction of the inventory. OVERRIDE THIS SUBREGION MANUALLY for a confirmed Signal Mountain, Lookout Mountain, or Walden Ridge brow address; do not upgrade the metro as a whole. Winter is mild (Jan mean min 31.6F, 3.5in snow) and mountain access is excellent, which is why this is a near-miss rather than a reject.",
+   "towns": [
+    "Chattanooga, TN"
+   ]
+  },
+  "tennessee_valley_north_alabama": {
+   "tier": "harsh-interior",
+   "elevation_ft": 640,
+   "jan_low_f": 32,
+   "jul_high_f": 91,
+   "snow_in": 2.5,
+   "humidity_note": "~60 days/yr at or above 90F - the hottest non-coastal summer in this entire town set. July mean min 70.5F, July mean dewpoint ~71F. Deep Gulf moisture reaches the Tennessee Valley with no orographic or maritime interruption.",
+   "smoke_days": 4,
+   "ac_dependence": "high",
+   "note": "HOTTEST INTERIOR IN THE SET. HSV 1991-2020 normals: July mean max 90.6F, Jan mean min 31.9F, ~2.5in snow, elevation 643 ft (Madison ~725 ft). Roughly 60 days at or above 90F is ~14 more than the Carolina Piedmont and ~16 more than Atlanta - a full extra month of AC load. Winter is genuinely mild (2.5in snow, second-mildest here after Atlanta) and that is a real, bankable advantage on the heating side. But the climate case is not what decides this subregion: the tornado exposure in the hazard layer dominates the underwriting and should be read first. Do not let the mild winter and the strong Huntsville job market pull this above its tier.",
+   "towns": [
+    "Madison, AL"
+   ]
+  },
+  "charleston_inland_lowcountry": {
+   "tier": "harsh",
+   "elevation_ft": 60,
+   "jan_low_f": 38,
+   "jul_high_f": 93,
+   "snow_in": 0.5,
+   "humidity_note": "July mean dewpoint 73-74F; ~80 days/yr at or above 90F; heat index routinely 105-110F through July and August. Overnight lows rarely drop below 73F for roughly ten straight weeks - there is effectively NO nighttime relief, which is the part buyers from cooler regions consistently fail to price.",
+   "smoke_days": 3,
+   "ac_dependence": "high",
+   "note": "COUNTERINTUITIVE AND IMPORTANT: THE INLAND SUBURBS ARE HOTTER THAN DOWNTOWN CHARLESTON. Summerville (~75 ft) and Goose Creek (~20 ft) sit 20-25 mi inland, outside the reach of the afternoon sea breeze on most days, and run 2-4F above the CHS airport normal of 91.4F - call it 93F for the July mean max. Buyers assume 'near the coast' means moderated; it does not once you are past the sea-breeze front. Roughly 80 days at or above 90F is nearly double the Piedmont. The genuine payoff is winter: Jan mean min ~38F and effectively no snow (0.5in), the mildest cold season on this list alongside Savannah. That is a real advantage and it is why this is 'harsh', not 'harsh-interior' - the trade is a brutal summer for a near-absent winter. AC is a 5-month, not a 3-month, expense; size and budget the system accordingly.",
+   "towns": [
+    "Goose Creek, SC",
+    "Summerville, SC"
+   ]
+  },
+  "coastal_ga_beaufort_lowcountry": {
+   "tier": "harsh",
+   "elevation_ft": 45,
+   "jan_low_f": 39,
+   "jul_high_f": 92,
+   "snow_in": 0.2,
+   "humidity_note": "July mean dewpoint 72-74F; ~78 days/yr at or above 90F; July mean min 73.8F - the HIGHEST overnight minimum in this entire 50-town set. August is the punishing month: sustained dewpoints in the mid-70s with almost no diurnal recovery. Charleston's summertime dewpoint peaks around 73F and Savannah runs comparable or slightly higher.",
+   "smoke_days": 3,
+   "ac_dependence": "high",
+   "note": "THE REGION'S HARSHEST SUMMER, FULL STOP - THIS IS THE FLOOR OF THE DISTRIBUTION. SAV 1991-2020 normals: July mean max 92.4F, Jan mean min 38.6F, ~0.2in snow, elevation 46 ft (Savannah 49 ft, Bluffton ~16 ft). Every heat-and-humidity axis in this screen bottoms out here: highest July max, highest July min, highest dewpoint, most 90F days, no elevation, no interior night-cooling. The mild winter is genuine and substantial - Jan mean min 39F and functionally zero snow, the mildest on the list - but it does not offset roughly five months of continuous AC dependence and a heat index that sits above 100F for most of July and August. Score this subregion on the summer, not the winter. Note that the hazard layer, not the climate layer, is the binding constraint for these two towns.",
+   "towns": [
+    "Savannah, GA",
+    "Bluffton, SC"
+   ]
+  }
+ }
+}
