@@ -347,29 +347,45 @@ async def lynch(request: Request):
 
 
 @app.get("/norcal")
-async def norcal_page(request: Request, assets: float = 200_000,
-                      reserves: float = 40_000, down_pct: float = 20.0,
-                      region: str = "All CA",
-                      zip: str = "", price: float = 0, sqft: float = 0,
-                      income: float = 0):
-    """California Real Estate — statewide strict screen (5 quality gates
-    + budget gate) with region pills and a per-listing deal checker."""
-    from norcal import screen, deal_check, REGIONS
-    assets = max(0.0, min(50_000_000, assets))
-    reserves = max(0.0, min(assets, reserves))
-    down_pct = max(3.0, min(100.0, down_pct))
-    if region not in REGIONS:
-        region = "All CA"
-    res = await asyncio.to_thread(screen, assets, reserves, down_pct,
-                                  33.0, 45.0, 30.0, region)
+async def norcal_page(request: Request, assets: str = "200000",
+                      reserves: str = "40000", down_pct: str = "20",
+                      region: str = "", market: str = "CA",
+                      zip: str = "", price: str = "", sqft: str = "",
+                      income: str = "", safetier: str = "safe",
+                      unknown: str = "0", surge: str = "0",
+                      foodpct: str = "75", access: str = "30"):
+    """Home-buying strict screen across markets (California / New England).
+
+    The safety gate runs on REAL FBI city crime rates (safety.py), never
+    the income-derived crime_index — see norcal.screen for why that
+    matters. Dining is percentile-calibrated within the market, climate
+    and coastal hazards come from the market's own researched layer."""
+    from norcal import screen, deal_check
+    import regions as RG
+    market = market if market in RG.MARKETS else "CA"
+    mkt = RG.MARKETS[market]
+    assets_n = max(0.0, min(50_000_000, _qnum(assets, 200_000)))
+    reserves_n = max(0.0, min(assets_n, _qnum(reserves, 40_000)))
+    down_n = max(3.0, min(100.0, _qnum(down_pct, 20)))
+    if region not in mkt["regions"]:
+        region = mkt["default_region"]
+    res = await asyncio.to_thread(
+        screen, assets_n, reserves_n, down_n, 33.0, 45.0,
+        max(5.0, min(120.0, _qnum(access, 30))), region, market,
+        safetier, _qnum(unknown) > 0, _qnum(surge) > 0,
+        max(0.0, min(99.0, _qnum(foodpct, 75))))
     check = None
-    if zip and price > 0:
+    price_n = _qnum(price)
+    if zip and price_n > 0:
         check = await asyncio.to_thread(
-            deal_check, zip.strip(), price, sqft or None, income or None,
-            assets, reserves, down_pct)
+            deal_check, zip.strip(), price_n, _qnum(sqft) or None,
+            _qnum(income) or None, assets_n, reserves_n, down_n)
     return templates.TemplateResponse("norcal.html", {
         "request": request, "res": res, "power": res["power"], "check": check,
-        "regions": REGIONS,
+        "regions": mkt["regions"], "market": market, "markets": RG.MARKETS,
+        "safetier": safetier, "allow_unknown": _qnum(unknown) > 0,
+        "allow_surge": _qnum(surge) > 0, "foodpct": _qnum(foodpct, 75),
+        "access_max": _qnum(access, 30),
     })
 
 
