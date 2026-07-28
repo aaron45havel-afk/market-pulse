@@ -58,7 +58,15 @@
         <div class="field"><label>Strategy</label><select name="mode">
             <option value="brrrr" {% if mode == 'brrrr' %}selected{% endif %}>BRRRR (buy·reno·rent·refi, 5-yr)</option>
             <option value="flip" {% if mode == 'flip' %}selected{% endif %}>Flip (buy·reno·sell)</option>
+            <option value="hh" {% if mode == 'hh' %}selected{% endif %}>House-hack (FHA owner-occupant, by ZIP)</option>
         </select></div>
+        {% if mode == 'hh' %}
+        <div class="field"><label>State (opt)</label><input name="hstate" value="{{ hstate }}" placeholder="IN" style="width:3.5em" maxlength="2"></div>
+        <div class="field"><label>Units</label><select name="units">
+            {% for u in (2, 3, 4) %}<option value="{{ u }}" {% if units == u %}selected{% endif %}>{{ u }}-unit</option>{% endfor %}
+        </select></div>
+        <div class="field"><label>Max price $</label><input name="maxprice" type="number" step="10000" min="50000" value="{{ maxprice|int }}" style="width:7em"></div>
+        {% endif %}
         <div class="field"><label>Scope</label><select name="scope">
             {% for s in ('cosmetic','moderate','gut') %}<option value="{{ s }}" {% if scope == s %}selected{% endif %}>{{ s|capitalize }}</option>{% endfor %}
         </select></div>
@@ -83,6 +91,41 @@
         <button class="hr-apply" type="submit">Run</button>
     </form>
 
+    {% if mode == 'hh' and hh_board is defined %}
+    <div class="hr-sentence">
+        <b>Owner-occupant house-hack, by ZIP{% if hstate %} — {{ hstate }}{% endif %}:</b> FHA 203(k) at {{ '%.2f'|format(rate) }}%, 3.5% down on (price + {{ scope }} remodel), you live in one unit and rent {{ units - 1 }}.
+        <b>Max offer</b> = the price where the other units' rent covers your ENTIRE PITI (live-free){% if units >= 3 %} — which for {{ units }} units also satisfies FHA's self-sufficiency funding test (75% × all rents ≥ PITI); no DSCR anywhere, that's an investor-loan gate you don't face{% endif %}.
+        Rows at your ${{ '{:,.0f}'.format(maxprice) }} budget cap with a green surplus cash-flow ON TOP of free housing.
+    </div>
+    <div class="hr-card">
+        <div class="hr-scroll">
+        <table class="hr-table">
+            <thead><tr><th>#</th><th>ZIP</th><th>Place</th><th>Max offer</th><th>Surplus /mo</th><th>PITI @offer</th><th>{{ units - 1 }} rents</th><th>Rehab</th><th>Cash to close</th><th>Median</th><th>Rent/unit</th><th>RTV</th><th>Competition</th></tr></thead>
+            <tbody>
+            {% for z in hh_board %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td><b>{{ z.zip }}</b></td>
+                <td style="text-align:left">{{ z.place }}, {{ z.state }}</td>
+                <td class="hr-maxpsf">${{ '{:,.0f}'.format(z.max_offer) }}{% if z.capped_at_budget %}<span class="hr-note" title="still cash-flows at your full budget — the ZIP supports more">+</span>{% endif %}</td>
+                <td style="color:{{ 'var(--mint-ink, #16a34a)' if z.monthly_surplus >= 0 else '#dc2626' }}">{% if z.monthly_surplus >= 0 %}+{% endif %}${{ '{:,.0f}'.format(z.monthly_surplus) }}</td>
+                <td>${{ '{:,.0f}'.format(z.piti) }}</td>
+                <td>${{ '{:,.0f}'.format(z.rent_offset) }}</td>
+                <td>${{ '{:,.0f}'.format(z.rehab) }}</td>
+                <td>${{ '{:,.0f}'.format(z.cash_to_close) }}</td>
+                <td>${{ '{:,.0f}'.format(z.median_value) }}</td>
+                <td>${{ '{:,.0f}'.format(z.rent) }}</td>
+                <td>{{ '%.1f'|format(z.rtv_pct) }}%</td>
+                <td class="hr-note">{{ z.competition }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <div class="hr-note" style="margin-top:0.5rem">Rent/unit = ZIP median rent (same convention as /multifamily); 2–4 unit ask prices aren't in the data — the <b>max offer</b> is your ceiling regardless of ask. "+" = supports more than your budget cap. Rehab at {{ units }}×900 sqft, {{ scope }}/{{ level }}. Property tax at investor rates (homestead on your unit would only improve this). Verify FHA county loan limits for 2–4 units. <a href="/multifamily?state={{ hstate or 'IN' }}&max_price={{ maxprice|int }}&down_pct=3.5&units={{ units }}">Full FHA math on /multifamily →</a></div>
+    </div>
+    {% endif %}
+
     {% set feas = board | selectattr('feasible') | list %}
     {% if feas %}
     <div class="hr-heroes">
@@ -106,6 +149,7 @@
     </div>
     {% endif %}
 
+    {% if mode != 'hh' %}
     <div class="hr-card">
         <div class="hr-scroll">
         <table class="hr-table">
@@ -144,6 +188,7 @@
         <div class="hr-note" style="margin-top:0.5rem">Fixer ask = market median × {{ '%.2f'|format(calib.x) }} ({{ scope }} entry discount, verified calibration);
             ARV = median × {{ '%.2f'|format(calib.y) }} renovated premium. Rents: ZORI-observed ZIPs only. "NO PATH" = median rents can't support any refi loan (DSCR &lt; 1).</div>
     </div>
+    {% endif %}
 
     {% if metro and drill %}
     <div class="hr-card" id="drill">

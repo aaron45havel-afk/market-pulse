@@ -635,3 +635,107 @@ def zip_drilldown(metro_code: str, *, mode: str = "brrrr", scope: str = "moderat
                     "rtv_pct": round(r["median_rent_monthly"] * 12 / r["median_home_value"] * 100, 2),
                     "trajectory": (t["label"] if t else None)})
     return out
+
+
+# ── House-hack mode: owner-occupant FHA 203(k), ZIP-level ────────────
+
+def house_hack_max_offer(median_value: float, rent_unit: float, code: str,
+                         *, units: int = 4, scope: str = "cosmetic",
+                         level: str = "low", rate_pct: float = 6.55,
+                         max_price: float = 300_000.0) -> dict | None:
+    """The offer number for an owner-occupant house-hacker: the highest
+    purchase price at which, after a 203(k) remodel (rehab rolled into the
+    loan at 3.5% down, owner rate, MIP), the OTHER units' rent covers the
+    entire PITI (live-free) AND the FHA self-sufficiency gate passes
+    (3-4 units: 75% x ALL units' rent >= PITI — the funding rule that
+    replaces an investor loan's DSCR; owner-occupants don't have DSCR).
+
+    Both gates are linear in P -> closed form. rent_unit uses the ZIP
+    median rent per unit — same convention as /multifamily. Insurance
+    scales +25% per extra unit (estimate). Property tax at the investor
+    table (conservative: homestead would trim the owner's unit share)."""
+    if not rent_unit or rent_unit <= 0 or units < 2:
+        return None
+    sc = state_costs(code)
+    sqft = units * 900.0
+    from value_add import remodel_budget
+    R = remodel_budget(sqft, 3, max(2.0, units * 1.0), 1965, scope, level, state=code)["total"]
+    r = rate_pct / 100.0
+    # PITI(P) = pmt(0.965(P+R)) + MIP + tax + ins  — all linear in P.
+    k12 = (r / 12) * (1 + r / 12) ** 360 / ((1 + r / 12) ** 360 - 1)
+    pay_per_loan = k12 + 0.0055 / 12                     # P&I + annual MIP /12, per $ of loan
+    ins_mo = sc["ins_landlord"] * (1 + 0.25 * (units - 1)) / 12
+    # PITI(P) = pay_per_loan*0.965*(P+R) + tax_mo*P + ins_mo
+    a = pay_per_loan * 0.965 + sc["proptax"] / 12
+    b = pay_per_loan * 0.965 * R + ins_mo
+    caps = {"live_free": ((units - 1) * rent_unit - b) / a}
+    if units >= 3:
+        caps["fha_self_sufficiency"] = (0.75 * units * rent_unit - b) / a
+    binding = min(caps, key=caps.get)
+    offer = min(min(caps.values()), max_price)
+    if offer <= 0:
+        return None
+    piti = a * offer + b
+    cash = 0.035 * (offer + R) + 0.03 * offer            # down + ~3% closing
+    return {"max_offer": round(offer), "binding": binding, "rehab": round(R),
+            "piti": round(piti), "rent_offset": round((units - 1) * rent_unit),
+            "cash_to_close": round(cash), "capped_at_budget": offer >= max_price - 1,
+            "monthly_surplus": round((units - 1) * rent_unit - piti)}
+
+
+def zip_board_hh(*, state: str | None = None, units: int = 4, scope: str = "cosmetic",
+                 level: str = "low", rate_pct: float = 6.55,
+                 max_price: float = 300_000.0, min_pop: int = 5_000,
+                 top: int = 40) -> list[dict]:
+    """ZIP-level house-hack board: every real-rent ZIP (optionally one
+    state), solved for the max offer; ranked by rent-to-value with the
+    live-free ZIPs first."""
+    import sqlite3 as _sq
+    from value_add import METRO_GEO, STATE_COST_FACTORS, _haversine_mi
+    from structural import trajectory_from_history
+    db = Path(__file__).resolve().parent / "data" / "zips.db"
+    conn = _sq.connect(str(db))
+    conn.row_factory = _sq.Row
+    q = ("SELECT zip, name, state, lat, lng, population, median_home_value, "
+         "median_rent_monthly, history_zhvi FROM zips WHERE lat IS NOT NULL AND "
+         "median_home_value IS NOT NULL AND median_rent_monthly IS NOT NULL "
+         "AND population >= ?")
+    args: list = [min_pop]
+    if state:
+        q += " AND state = ?"
+        args.append(state.upper())
+    rows = conn.execute(q, args).fetchall()
+    conn.close()
+    anchors = [(c, la, ln, rd) for c, (la, ln, rd) in METRO_GEO.items()
+               if c in STATE_COST_FACTORS]
+    out = []
+    for rr in rows:
+        mv, rent = rr["median_home_value"], rr["median_rent_monthly"]
+        if abs(rent * 17 * 12 / mv - 1) <= 0.02:         # imputed rent
+            continue
+        best, bd = None, 1e12
+        for c, la, ln, rd in anchors:
+            d = _haversine_mi(rr["lat"], rr["lng"], la, ln)
+            if d <= rd and d < bd:
+                best, bd = c, d
+        code = best or (rr["state"] if rr["state"] in STATE_COST_FACTORS else None)
+        if code is None:
+            continue
+        h = house_hack_max_offer(mv, rent, code, units=units, scope=scope,
+                                 level=level, rate_pct=rate_pct, max_price=max_price)
+        if h is None:
+            continue
+        label = None
+        if rr["history_zhvi"]:
+            try:
+                t = trajectory_from_history(json.loads(rr["history_zhvi"]))
+                label = t["label"] if t else None
+            except (ValueError, TypeError):
+                label = None
+        out.append({**h, "zip": rr["zip"], "place": rr["name"], "state": rr["state"],
+                    "market": code, "population": rr["population"],
+                    "median_value": mv, "rent": rent,
+                    "rtv_pct": round(rent * 12 / mv * 100, 1), "trajectory": label,
+                    "competition": COMPETITION_LABEL.get(label or "steady", ("BALANCED", "="))[0]})
+    out.sort(key=lambda x: (-x["rtv_pct"], -x["max_offer"]))
+    return out[:top]
