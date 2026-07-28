@@ -123,16 +123,30 @@ def subregion_for(market: str, city: str, state: str, kind: str = "climate") -> 
     return _town_index(market, kind).get(f"{name}, {state}")
 
 
-def climate_of(market: str, city: str, state: str) -> tuple[bool, str, dict | None]:
-    """(passes, tier label, full record). Unclassified fails — the gate
-    never passes a town we have no climate opinion about."""
+CLIMATE_TIERS = ("temperate-coastal", "moderate", "harsh-interior")
+
+
+def climate_of(market: str, city: str, state: str,
+               winter_tolerance: str = "moderate") -> tuple[bool, str, dict | None]:
+    """(passes, tier label, full record). Unclassified always fails — the
+    gate never passes a town we have no climate opinion about.
+
+    winter_tolerance is the user's own dial, because "how much winter is
+    too much" is a preference, not a fact:
+      temperate-coastal  only the mildest band (CT/RI shore, Cape, South Coast)
+      moderate (default) + Boston metro, North Shore, Providence, Bay west
+      harsh-interior     everything classified — Maine and NH included
+    """
     sub = subregion_for(market, city, state, "climate")
     if not sub:
         return False, "unclassified — needs review", None
     rec = _layer(market, "climate").get(sub, {})
     tier = rec.get("tier", "unclassified")
-    # Best-in-region and solidly moderate pass; harsh interior fails.
-    return tier in ("temperate-coastal", "moderate"), tier, {**rec, "subregion": sub}
+    if tier not in CLIMATE_TIERS:
+        return False, tier, {**rec, "subregion": sub}
+    limit = winter_tolerance if winter_tolerance in CLIMATE_TIERS else "moderate"
+    ok = CLIMATE_TIERS.index(tier) <= CLIMATE_TIERS.index(limit)
+    return ok, tier, {**rec, "subregion": sub}
 
 
 def hazard_of(market: str, city: str, state: str) -> dict | None:
@@ -143,23 +157,31 @@ def hazard_of(market: str, city: str, state: str) -> dict | None:
     return {**rec, "subregion": sub} if rec else None
 
 
-def hazard_ok(hz: dict | None, *, allow_surge: bool = False,
+def hazard_ok(hz: dict | None, *, strict_surge: bool = False,
               allow_crisis_insurance: bool = False) -> tuple[bool, list[str]]:
-    """Coastal-hazard gate. New England's version of a disqualifying
-    local condition: storm surge / FEMA flood exposure and an insurance
-    market that has stopped functioning. Unknown hazard data does NOT
-    fail the gate (it is an add-on, unlike climate) but is reported."""
+    """Coastal-hazard gate — New England's disqualifying-local-condition
+    analogue to California's fog/heat exclusions.
+
+    RESOLUTION NOTE: surge risk is encoded per SUB-REGION, but flood
+    exposure is per PARCEL — most of Branford or Quincy sits well outside
+    the VE/AE zones that make the subregion "high". So surge is a visible
+    FLAG by default rather than a town-wide exclusion; strict_surge turns
+    it into a hard gate for someone who wants nothing near the water.
+    Insurance crisis IS market-wide (it prices every policy in the
+    subregion), so that one hard-fails unless explicitly allowed."""
     if not hz:
         return True, []
     flags = []
     if hz.get("surge_flood_risk") == "high":
-        flags.append("high storm-surge / FEMA flood exposure")
+        flags.append("high surge / FEMA VE-AE exposure on the waterfront strip")
     if hz.get("insurance_climate") == "crisis":
         flags.append("insurance market in crisis")
-    if hz.get("seasonality") == "heavy-tourist":
-        flags.append("heavy seasonal tourism")
+    elif hz.get("insurance_climate") == "strained":
+        flags.append("strained insurance market")
+    if hz.get("seasonality") in ("heavy-tourist", "summer-surge"):
+        flags.append(f"seasonality: {hz['seasonality']}")
     ok = True
-    if not allow_surge and hz.get("surge_flood_risk") == "high":
+    if strict_surge and hz.get("surge_flood_risk") == "high":
         ok = False
     if not allow_crisis_insurance and hz.get("insurance_climate") == "crisis":
         ok = False

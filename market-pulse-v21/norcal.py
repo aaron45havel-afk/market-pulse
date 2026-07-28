@@ -390,7 +390,8 @@ def screen(assets: float = ASSETS_DEFAULT, reserves: float = RESERVES_DEFAULT,
            access_max: float = ACCESS_MIN_MAX,
            region: str = "All CA", market: str = "CA",
            safety_tier: str = "safe", allow_unknown_safety: bool = False,
-           allow_surge: bool = False, food_pct: float = 75.0) -> dict:
+           strict_surge: bool = False, food_pct: float = 75.0,
+           winter: str = "moderate") -> dict:
     """Run the six gates over a market's universe (CA or NE).
 
     The safety gate uses REAL FBI city-agency crime rates via safety.py —
@@ -436,7 +437,7 @@ def screen(assets: float = ASSETS_DEFAULT, reserves: float = RESERVES_DEFAULT,
             clim_ok, clim_tier = _climate(z, r["name"], r["county"])
             clim_rec = None
         else:
-            clim_ok, clim_tier, clim_rec = RG.climate_of(market, r["name"], st)
+            clim_ok, clim_tier, clim_rec = RG.climate_of(market, r["name"], st, winter)
             reg = RG.region_tag(market, r["county"], st,
                                 (clim_rec or {}).get("subregion"))
         if region not in (mkt["default_region"], "All CA") and reg != region:
@@ -452,7 +453,7 @@ def screen(assets: float = ASSETS_DEFAULT, reserves: float = RESERVES_DEFAULT,
 
         # ── Coastal hazards (New England add-on gate) ──
         hz = RG.hazard_of(market, r["name"], st)
-        hz_ok, hz_flags = RG.hazard_ok(hz, allow_surge=allow_surge)
+        hz_ok, hz_flags = RG.hazard_ok(hz, strict_surge=strict_surge)
 
         c_entry = condo_series.get(z) if isinstance(condo_series.get(z), dict) else None
         if c_entry and isinstance(c_entry.get("price"), (int, float)):
@@ -516,6 +517,7 @@ def screen(assets: float = ASSETS_DEFAULT, reserves: float = RESERVES_DEFAULT,
         "market_regions": mkt["regions"], "climate_axis": mkt["climate_axis"],
         "food_bar": food_bar, "food_pct": food_pct,
         "safety_tier": safety_tier, "safety_coverage": SF.coverage(),
+        "winter": winter,
         "universe_n": len(scored), "power": power,
         "condo_as_of": condo.get("as_of"), "region": region,
         "thresholds": {"crime_max": crime_max, "food_min": food_min,

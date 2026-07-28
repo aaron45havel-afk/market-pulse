@@ -352,7 +352,7 @@ async def norcal_page(request: Request, assets: str = "200000",
                       region: str = "", market: str = "CA",
                       zip: str = "", price: str = "", sqft: str = "",
                       income: str = "", safetier: str = "safe",
-                      unknown: str = "0", surge: str = "0",
+                      unknown: str = "0", surge: str = "0", winter: str = "moderate",
                       foodpct: str = "75", access: str = "30"):
     """Home-buying strict screen across markets (California / New England).
 
@@ -373,7 +373,8 @@ async def norcal_page(request: Request, assets: str = "200000",
         screen, assets_n, reserves_n, down_n, 33.0, 45.0,
         max(5.0, min(120.0, _qnum(access, 30))), region, market,
         safetier, _qnum(unknown) > 0, _qnum(surge) > 0,
-        max(0.0, min(99.0, _qnum(foodpct, 75))))
+        max(0.0, min(99.0, _qnum(foodpct, 75))),
+        winter if winter in RG.CLIMATE_TIERS else "moderate")
     check = None
     price_n = _qnum(price)
     if zip and price_n > 0:
@@ -385,6 +386,7 @@ async def norcal_page(request: Request, assets: str = "200000",
         "regions": mkt["regions"], "market": market, "markets": RG.MARKETS,
         "safetier": safetier, "allow_unknown": _qnum(unknown) > 0,
         "allow_surge": _qnum(surge) > 0, "foodpct": _qnum(foodpct, 75),
+        "winter": winter if winter in RG.CLIMATE_TIERS else "moderate",
         "access_max": _qnum(access, 30),
     })
 

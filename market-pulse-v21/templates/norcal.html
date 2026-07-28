@@ -84,6 +84,16 @@
   {% endfor %}
   <span style="color:var(--ink-3);margin-left:0.3rem">real FBI rates · {{ res.safety_coverage.with_data }} cities verified · unverified towns are excluded, never assumed safe</span>
 </div>
+{% if market != 'CA' %}
+<div class="nc-pills" style="font-size:0.72rem;align-items:center">
+  <span style="color:var(--ink-3);font-weight:700;align-self:center">WINTER TOLERANCE</span>
+  {% for t, lbl in (('temperate-coastal','Mildest only (CT/RI shore, Cape)'), ('moderate','+ Boston, North Shore, Providence'), ('harsh-interior','+ Maine &amp; NH — all classified')) %}
+  <a class="nc-pill {{ 'active' if winter == t }}" href="/norcal?market={{ market }}&region={{ res.region|urlencode }}&assets={{ power.assets|int }}&reserves={{ power.reserves|int }}&down_pct={{ power.down_pct|int }}&safetier={{ safetier }}&unknown={{ 1 if allow_unknown else 0 }}&surge={{ 1 if allow_surge else 0 }}&foodpct={{ foodpct|int }}&access={{ access_max|int }}&winter={{ t }}">{{ lbl|safe }}</a>
+  {% endfor %}
+  <a class="nc-pill {{ 'active' if allow_surge }}" href="/norcal?market={{ market }}&region={{ res.region|urlencode }}&assets={{ power.assets|int }}&reserves={{ power.reserves|int }}&down_pct={{ power.down_pct|int }}&safetier={{ safetier }}&unknown={{ 1 if allow_unknown else 0 }}&surge={{ 0 if allow_surge else 1 }}&foodpct={{ foodpct|int }}&access={{ access_max|int }}&winter={{ winter }}">{{ 'Surge zones EXCLUDED' if allow_surge else 'Exclude surge subregions' }}</a>
+  <span style="color:var(--ink-3);margin-left:0.3rem">Maine &amp; the NH Seacoast classify as <b>harsh-interior</b> on New England's own scale — Portland takes 62&Prime; of snow and a 15&deg;F January low vs 25&Prime; on the CT shore. Surge risk is sub-regional, so it flags the waterfront strip rather than excluding a whole town unless you ask.</span>
+</div>
+{% endif %}
 
 <div class="nc-card">
   <h2>🔍 Deal checker</h2>

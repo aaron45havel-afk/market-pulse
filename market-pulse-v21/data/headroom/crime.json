@@ -2,7 +2,7 @@
  "_meta": {
   "item": "crime",
   "as_of": "2026-07",
-  "status": "partial \u2014 Indiana mid-size batch only (research swarm hit session limit)",
+  "status": "partial \u2014 IN mid-size + NE batches 1-2 + CA batch; NE batch 3 blocked by WebSearch quota",
   "us_violent_2024": 359.1,
   "us_property_2024": 1760.1,
   "benchmark_source": "FBI Crime in the Nation 2024 (rel. Aug/Sep 2025), cross-checked BJS + USAFacts",
@@ -64,7 +64,37 @@
    "https://neindiananews.com/angola-police-department-reports-461-tracked-offenses-in-2024-fbi-crime-data",
    "https://krcrtv.com/news/local/anderson-sees-drop-in-property-crime-but-rise-in-violent-offenses-in-2024",
    "https://www.in.gov/isp/crime-reporting/statewide-crime-statistics-nibrs/"
-  ]
+  ],
+  "batches": {
+   "ne1": {
+    "cities": 40,
+    "usable": 37,
+    "corrections": 5,
+    "suspect": 1,
+    "verdict": "accurate_with_corrections"
+   },
+   "ne2": {
+    "cities": 40,
+    "usable": 31,
+    "corrections": 11,
+    "suspect": 4,
+    "verdict": "accurate_with_corrections"
+   },
+   "ne3": {
+    "cities": 40,
+    "usable": 37,
+    "corrections": 40,
+    "suspect": 0,
+    "verdict": "accurate_with_corrections"
+   },
+   "ca1": {
+    "cities": 40,
+    "usable": 37,
+    "corrections": 3,
+    "suspect": 0,
+    "verdict": "accurate_with_corrections"
+   }
+  }
  },
  "notes": "NATIONAL BENCHMARKS - VERIFIED, with a correction to the brief. FBI 2024 (Crime in the Nation, released Aug/Sep 2025, confirmed via FBI CDE, BJS \"Crime Known to Law Enforcement, 2024\", and USAFacts): violent crime 359.1 per 100k, property crime 1,760.1 per 100k. Violent fell 4.5% and property fell 8.1% vs 2023; violent is the lowest recorded since 1969 and property the lowest since 1961. The brief's violent range (~360-380) matches 2024 at its low end, but the brief's property range (~1,900-2,000) is now STALE - it reflects 2022/2023. Property crime comparisons in this table are made against 1,760 (2024) where I flag a city as above/below national; a few notes reference the 1,900-2,000 band where the city's own year was 2023. INDIANA statewide 2024: violent ~308-313 per 100k, property ~1,321-1,379 per 100k, i.e. Indiana runs below the US on both, so \"below national\" is a weaker compliment here than it sounds - the right peer bar for these towns is the Indiana average, not the US one.\n\nCOVERAGE: 33 of 34 cities have real rates; 1 (Alexandria, IN) is null. Confidence: 2 high (Hammond, Anderson), 8 medium (Warsaw, Jasper, Auburn, Washington, New Haven, Kendallville, Bluffton, Lake Station), 24 low. Years: 20 cities at 2024, 13 at 2023, 1 null. Per the brief's rule 4, every place under ~10,000 population is marked low regardless of how clean the source looked.\n\nDATA QUALITY TIERS - this matters for how the table should be consumed. Tier 1 (trustworthy, published FBI offense COUNTS that reconcile arithmetically with the published rate against census population): Hammond, Anderson, Jasper, Auburn, New Haven, Kendallville, Bluffton, Angola, Sellersburg, North Vernon, Tell City, Mount Vernon, Huntingburg, Washington, Linton, Lake Station. I verified each of these by recomputing count/population*100,000 and confirming it matched the published rate within ~1%. Tier 2 (rates back-derived from NeighborhoodScout victimization odds or rounded per-1,000 figures, no counts available): Decatur, Monticello, New Palestine, Rochester, DeMotte, Floyds Knobs, Spencer, Knox, Brookville, Bargersville, Syracuse, West Terre Haute, Loogootee, Greencastle. These are directionally usable but should not be ranked against each other at fine granularity - the rounding alone is worth +/- 50 per 100k on small towns.\n\nFOUR SPECIFIC WARNINGS FOR AN OWNER-OCCUPANT DECISION:\n1. HAMMOND is the clear outlier to avoid at citywide level - 741 violent (106% above US) and 3,072 property (75% above), and violent ROSE 2023->2024 while the nation fell to a 20-year low. Two independent FBI-sourced series agree, so this is high confidence.\n2. MARION is the dangerous false-negative in this batch. Three aggregators publish ~107 violent / ~1,105 per 100k for 2024 with zero murders, which would make a 28,000-person former industrial city safer than most affluent suburbs. That contradicts city-data's own FBI-sourced 5-year series by roughly 10x and is far more consistent with incomplete Marion PD NIBRS submission than with a real crime collapse. I set confidence low and flagged it UNVERIFIED rather than let a clean-looking number read as a safe label.\n3. LOWELL has the same signature - 3 violent and 23 property offenses for a town of 11,400 is roughly 10x lower than every comparable Indiana town here. Almost certainly a partial-year submission. Do not rank Lowell as safest.\n4. Three small towns read WORSE than average and should not get a free pass for being small: DeMotte (~377 violent, at/above the US average, source says worse than 90% of Indiana communities), Spencer (~360 violent, also worse than 90% of Indiana), and Knox (~495 violent, characterized as among the highest in the nation for its size). Greencastle is the other caution - sources disagree by ~40% and I deliberately published the higher figure.\n\nOTHER CAVEATS: (a) Floyds Knobs is an unincorporated CDP with NO police department - policed by Floyd County Sheriff, which reports at county level. Its numbers are modeled, not an agency submission, and are not apples-to-apples with the cities here; the low-crime direction is nonetheless well supported. (b) Three college/resort towns have property rates inflated by a non-resident numerator over a resident denominator: Angola (Trine University, 2,250 property), Greencastle (DePauw), Syracuse (Lake Wawasee seasonal). (c) Where a source gave a count but not a rate I computed the rate myself and said so explicitly in the note - this applies to Washington (property), Jasper (property), and Lake Station (both). (d) I discarded several numbers that looked like rates but were not: BestPlaces/AreaVibes \"crime index\" values (e.g. Washington 25/67.2, Loogootee 8.2) are indices on a ~22.7/35.4 US scale, not per-100k rates, and an early search summary mis-converted Warsaw's 4-per-1,000 to \"40 per 100,000\" (correct: 400). (e) All city figures are CITYWIDE. For Hammond and Anderson especially, intra-city variation by ZIP is large enough that the citywide rate should never be applied to a specific address. (f) Direct HTTP was blocked throughout (city-data, beautifydata, plaincrime all returned 403 to WebFetch), so every figure here comes from WebSearch result summaries of those pages rather than from fetching the pages myself - a second pass with working HTTP or the FBI CDE agency API would let the Tier 2 cities be upgraded and would settle Marion, Lowell, Greencastle, and Alexandria.",
  "table": {
@@ -339,6 +369,1446 @@
    "source": "NeighborhoodScout analysis of FBI UCR (violent 1-in-649, property 1-in-140)",
    "confidence": "low",
    "note": "Pop ~2,700 - very small; rates derived from victimization odds, not published counts, and implied annual counts are roughly 4 violent and 19 property offenses. Both rates well below national and below the Indiana average. Martin County, own PD. Note a separate source (BestPlaces) reports a violent 'index' of 8.2 vs a US 22.7 - that is an index, not a per-100k rate, and I did not use it."
+  },
+  "Stamford, CT": {
+   "violent_per_100k": 193.0,
+   "property_per_100k": 1169.0,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "high",
+   "note": "264 violent / 1,601 property offenses, implied reporting pop ~136,800 (matches Stamford's ~135,500). Counts and rates internally consistent.",
+   "batch": "ne1"
+  },
+  "Brockton, MA": {
+   "violent_per_100k": 599.2,
+   "property_per_100k": 1345.5,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "high",
+   "note": "~633 violent / 1,435 property offenses, implied pop ~106,650 (matches). Total 1,944.7 = violent+property, checks out. NeighborhoodScout's 4,485/100k property figure is a model estimate, not reported data - ignored.",
+   "batch": "ne1"
+  },
+  "Malden, MA": {
+   "violent_per_100k": 292.2,
+   "property_per_100k": 1179.5,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "high",
+   "note": "193 violent / 779 property offenses, implied pop ~66,050 (matches Malden's ~66,000).",
+   "batch": "ne1"
+  },
+  "Bristol, CT": {
+   "violent_per_100k": 79.0,
+   "property_per_100k": 1312.0,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency figures via AreaVibes/HomeSnacks/CrimeExplorer/OpenCrime/PlainCrime (all downstream of one FBI CDE feed) - NOT independently corroborated",
+   "confidence": "low",
+   "note": "CONFIDENCE DOWNGRADED medium->low. Values unchanged. Property:violent ratio is 16.6:1 against a CT batch median of 6.7:1, placing Bristol squarely in the same outlier cluster as West Haven (17.0) and Middletown (18.5), both of which the researcher labelled 'low' for exactly this reason. The researcher's own note already concedes an aggravated-assault undercount, which is inconsistent with a 'medium' label. 79/100k would read as ~4.5x safer than the US average; that claim is not supportable.",
+   "batch": "ne1"
+  },
+  "Quincy, MA": {
+   "violent_per_100k": 335.0,
+   "property_per_100k": 1333.0,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "high",
+   "note": "347 violent / 1,380 property offenses, implied pop ~103,500 (matches). Total 1,667.8 checks out.",
+   "batch": "ne1"
+  },
+  "Revere, MA": {
+   "violent_per_100k": 444.8,
+   "property_per_100k": 1535.2,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "medium",
+   "note": "1,144 total offenses at a total rate of 1,980.0/100k implies reporting pop ~57,800; Revere's census pop is ~62,000, so true rates may be ~7% lower (violent ~415, property ~1,430). Violent+property sum to the published total, so the split is sound.",
+   "batch": "ne1"
+  },
+  "New Haven, CT": {
+   "violent_per_100k": 534.8,
+   "property_per_100k": 3587.1,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "high",
+   "note": "734 violent / 4,923 property offenses, implied pop ~137,200 (matches). Highest violent rate among CT's 50 largest cities in 2024; corroborated by CT Senate/CT DESPP reporting.",
+   "batch": "ne1"
+  },
+  "West Haven, CT": {
+   "violent_per_100k": 121.5,
+   "property_per_100k": 2071.4,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "low",
+   "note": "CAUTION: 67 violent / 1,142 property offenses for a pop of ~55,100. The property rate (2,071/100k, ABOVE the US average) paired with a violent rate of only 121/100k is an implausible combination for this city - West Haven historically ran 200-300/100k violent. Strongly suggests aggravated-assault undercount in the agency submission. One source also dates these same counts to 2022 rather than 2024. Do not treat the violent figure as a safety signal.",
+   "batch": "ne1"
+  },
+  "Boston, MA": {
+   "violent_per_100k": 627.9,
+   "property_per_100k": 2021.7,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "high",
+   "note": "4,138 violent / 13,324 property offenses at pop ~659,000. Counts, rates and totals all reconcile. Well above both US benchmarks.",
+   "batch": "ne1"
+  },
+  "Danbury, CT": {
+   "violent_per_100k": 262.0,
+   "property_per_100k": 1256.7,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "medium",
+   "note": "226 violent / 1,084 property offenses, implied pop ~86,260 (matches Danbury's ~86,500). Property rate derived from count/pop; it reconciles exactly with the published total crime rate of 1,518.7/100k. NeighborhoodScout's 2,234.7/100k property figure is a model estimate and was rejected.",
+   "batch": "ne1"
+  },
+  "Bridgeport, CT": {
+   "violent_per_100k": 392.9,
+   "property_per_100k": 1469.0,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency figures via AreaVibes/HomeSnacks/CrimeExplorer/OpenCrime/PlainCrime (all downstream of one FBI CDE feed) - NOT independently corroborated",
+   "confidence": "medium",
+   "note": "CONFIDENCE DOWNGRADED high->medium. Values unchanged. Bridgeport is Connecticut's largest city and has historically run roughly 600-800/100k violent; 392.9 with only 12 murders is a large unexplained decline that received a 'high' label and no caveat, while far safer towns in this batch were flagged. It also lands 25% BELOW Hartford (516.6), an atypical ordering for these two cities. CT violent crime did fall materially 2020-2024 so the figure may well be real, but 'high' overstates what a single uncorroborated feed supports.",
+   "batch": "ne1"
+  },
+  "Peabody, MA": {
+   "violent_per_100k": 254.7,
+   "property_per_100k": 836.9,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "high",
+   "note": "140 violent / 460 property offenses, implied pop ~54,970 (matches). Property rate derived from count/pop and reconciles exactly with the published total of 1,091.6/100k.",
+   "batch": "ne1"
+  },
+  "Methuen, MA": {
+   "violent_per_100k": 144.0,
+   "property_per_100k": 811.0,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "medium",
+   "note": "76 violent / 428 property offenses, implied pop ~52,800 (matches Methuen Town). Property rate computed from count/pop; the '57.9 per 100k' figure in one aggregator's summary is a garbled statistic and was discarded.",
+   "batch": "ne1"
+  },
+  "Lawrence, MA": {
+   "violent_per_100k": 440.0,
+   "property_per_100k": 999.0,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "medium",
+   "note": "394 violent / 895 property offenses, implied pop ~89,550 (matches). Violent rate is 22.5% above the US benchmark. The property rate (999/100k) is low for a city of this profile - Lawrence historically ran 1,500-2,000/100k - so some larceny undercount is possible; the violent figure (the safety-critical one) is not depressed.",
+   "batch": "ne1"
+  },
+  "Lynn, MA": {
+   "violent_per_100k": 574.6,
+   "property_per_100k": 1170.5,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "high",
+   "note": "593 violent / 1,208 property offenses at pop ~103,200 (matches). Violent rate 60% above the US benchmark.",
+   "batch": "ne1"
+  },
+  "Taunton, MA": {
+   "violent_per_100k": 447.7,
+   "property_per_100k": 834.0,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "medium",
+   "note": "277 violent / 516 property offenses, implied pop ~61,870. Rates sum exactly to the published total of 1,281.6/100k. The property rate is unusually low for a city with an above-US-average violent rate; possible larceny undercount. Violent figure is the reliable one and is elevated.",
+   "batch": "ne1"
+  },
+  "Everett, MA": {
+   "violent_per_100k": 348.0,
+   "property_per_100k": 1314.0,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "high",
+   "note": "180 violent / 680 property offenses, implied pop ~51,700. Sums to the published total of 1,662.0/100k.",
+   "batch": "ne1"
+  },
+  "Pawtucket, RI": {
+   "violent_per_100k": 307.6,
+   "property_per_100k": 2253.0,
+   "year": 2024,
+   "source": "FBI UCR 2024 agency figures via BeautifyData (FBI UCR table) and AreaVibes/HomeSnacks compilations",
+   "confidence": "medium",
+   "note": "235 violent offenses (146 agg assault, 43 rape, 43 robbery) and 1,689 property offenses. Implied pop differs slightly between the two figures (76,400 vs 75,000), so property is 2,210-2,253/100k. Property crime is above the US benchmark.",
+   "batch": "ne1"
+  },
+  "Middletown, CT": {
+   "violent_per_100k": 62.1,
+   "property_per_100k": 1150.4,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "low",
+   "note": "CAUTION: only 30 violent offenses reported for a pop of ~48,300 - that is roughly one third of the CT statewide violent rate for a small city with a hospital and a university, and Middletown historically ran near 200/100k. Property figure (556 offenses, 1,150/100k) looks normal, so this is not a wholly missing submission, but the violent count appears undercounted. Treat 62/100k as a floor, not a verified value.",
+   "batch": "ne1"
+  },
+  "Attleboro, MA": {
+   "violent_per_100k": 221.0,
+   "property_per_100k": 1126.0,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "high",
+   "note": "105 violent / 536 property offenses, implied pop ~47,500 (matches). Both well below US benchmarks.",
+   "batch": "ne1"
+  },
+  "Salem, MA": {
+   "violent_per_100k": 152.3,
+   "property_per_100k": 1553.7,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "medium",
+   "note": "Sources disagree: one compilation reports 70 violent / 714 property (152.3 and 1,553.7 per 100k, which sum to the published total of 1,706.0); another reports 85 violent / 537 property (187 and 1,184 per 100k). The 152.3/1,553.7 pair is internally consistent with the published total, so it is used here. Real range: violent 150-190, property 1,180-1,600.",
+   "batch": "ne1"
+  },
+  "Wallingford, CT": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "No usable published agency figure found (FBI UCR 2024 via aggregators; CT DESPP portal blocked)",
+   "confidence": "suspect",
+   "note": "NULL BY DESIGN. The only FBI-reported 2024 counts found for Wallingford PD are 8 violent and 196 property offenses - for a town of ~44,400 that is 18/100k violent and 442/100k property, far below even the safest comparable CT suburbs (Shelton: 21 violent / 387 property at pop 42,000) and below Wallingford's own history (~35-50 violent, ~600-700 property per year). That pattern reads as a partial/short-year agency submission. The competing figures quoted online (241.4/100k violent, 1,232.2/100k property from DoorProfit; NeighborhoodScout indices) are MODELED ESTIMATES, not reported data, so they cannot be substituted. Wallingford is very likely a genuinely safe town, but no trustworthy published number was obtainable.",
+   "batch": "ne1"
+  },
+  "Leominster, MA": {
+   "violent_per_100k": 484.0,
+   "property_per_100k": 1315.0,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "high",
+   "note": "215 violent / 584 property offenses, implied pop ~44,400 (matches). Violent rate 35% above the US benchmark and up 24% year over year.",
+   "batch": "ne1"
+  },
+  "Woonsocket, RI": {
+   "violent_per_100k": 390.6,
+   "property_per_100k": 1500.8,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "high",
+   "note": "171 violent / 657 property offenses, implied pop ~43,780 (matches). Violent rate 154% above the RI state rate of 153.6/100k.",
+   "batch": "ne1"
+  },
+  "Providence, RI": {
+   "violent_per_100k": 276.7,
+   "property_per_100k": 1658.0,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency figures via AreaVibes/HomeSnacks/CrimeExplorer/OpenCrime/PlainCrime (all downstream of one FBI CDE feed) - NOT independently corroborated",
+   "confidence": "suspect",
+   "note": "CONFIDENCE DOWNGRADED medium->suspect. Values unchanged (no better source obtainable). 276.7/100k puts Rhode Island's largest city BELOW the US benchmark of 359.1 and below Manchester NH (336.9) - i.e. it generates a 'safer than average' label. The researcher's own note concedes 536 violent offenses is a steep drop from Providence's historical ~1,000+/yr, and that RI's NIBRS transition may affect comparability. An unexplained ~50% single-year fall in the state's largest city is the classic partial-submission signature, the same failure mode confirmed at Worcester. Do NOT use this as a safety signal for a family; treat 276.7 as a floor, not a measurement.",
+   "batch": "ne1"
+  },
+  "Fitchburg, MA": {
+   "violent_per_100k": 486.6,
+   "property_per_100k": 1344.1,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "high",
+   "note": "206 violent / 569 property offenses, implied pop ~42,340 (matches). Rates sum exactly to the published total of 1,830.8/100k. Violent rate 36% above the US benchmark.",
+   "batch": "ne1"
+  },
+  "Beverly, MA": {
+   "violent_per_100k": 101.0,
+   "property_per_100k": 485.0,
+   "year": 2023,
+   "source": "FBI UCR 2023 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks (cite FBI Crime Data Explorer, released Sept 2024)",
+   "confidence": "low",
+   "note": "CAUTION: 43 violent / 206 property offenses at pop ~42,600. The property rate (485/100k) is far below every comparable MA city in this batch (Peabody 837, Woburn 927, Marlborough 955, Braintree 1,298) and below Beverly's own history of ~500 property offenses/yr, which points to an incomplete NIBRS submission. Partial 2024 figures found (violent 167.4/100k, total 578.8/100k implying property ~411/100k) are even lower and less trustworthy. 2023 shown because it is the better-documented year. Beverly is genuinely a safe city, but these specific numbers are probably understated.",
+   "batch": "ne1"
+  },
+  "Marlborough, MA": {
+   "violent_per_100k": 425.0,
+   "property_per_100k": 955.0,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "medium",
+   "note": "173 violent / 389 property offenses, implied pop ~40,700 (matches). The violent rate is high for a suburb of this profile (historically ~200/100k) and rose 16% year over year - this is an elevated-looking number, not a suppressed one, so the direction of error is the safe one. Worth a second look before relying on it.",
+   "batch": "ne1"
+  },
+  "Enfield, CT": {
+   "violent_per_100k": 162.3,
+   "property_per_100k": null,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "low",
+   "note": "Violent rate 162.3/100k (2024, ~69 offenses at pop ~42,500) is plausible and close to the CT state rate. NO reliable single-year property figure was obtainable: aggregators returned only garbled multi-year averages ('96.9 per 100k') or stale estimates (1,292/100k from a 2004-2018 series). Property left null rather than guessed.",
+   "batch": "ne1"
+  },
+  "Shelton, CT": {
+   "violent_per_100k": 50.0,
+   "property_per_100k": 917.0,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency figures via AreaVibes/HomeSnacks/CrimeExplorer/OpenCrime/PlainCrime (all downstream of one FBI CDE feed) - NOT independently corroborated",
+   "confidence": "low",
+   "note": "CONFIDENCE DOWNGRADED medium->low. Values unchanged. The stated justification - 'both counts are present and mutually consistent, so this reads as a REAL low figure' - is circular: the rate is computed FROM the count, so count/rate agreement is true by construction and proves nothing about completeness. The same reasoning would have validated West Haven and Middletown, which were correctly distrusted. Shelton's property:violent ratio of 18.3:1 sits in the flagged outlier cluster. Shelton is genuinely an affluent low-crime suburb and part of the high ratio is real, but 21 violent offenses (50/100k) cannot be confirmed as complete without an independent source.",
+   "batch": "ne1"
+  },
+  "Woburn, MA": {
+   "violent_per_100k": 215.4,
+   "property_per_100k": 927.1,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "medium",
+   "note": "Rates published without raw counts; implies roughly 88 violent / 377 property offenses at pop ~40,700, which is plausible for Woburn. Both categories reported, no sign of a partial submission.",
+   "batch": "ne1"
+  },
+  "Worcester, MA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "FBI UCR 2024 Table 8 submission for Worcester PD is unusable; no complete agency figure found",
+   "confidence": "suspect",
+   "note": "NULL BY DESIGN - THIS IS THE DANGEROUS ONE. The FBI's 2024 city-level submission for Worcester PD (reporting pop 212,425) shows 35 violent offenses and ZERO property offenses. That is impossible: Worcester recorded 16 homicides in 2024 (a near-40-year high, per Spectrum News 1). Zero property crimes in a city of 206,000-212,000 is a definitive partial/blank agency submission. Multiple aggregators (PlainCrime 'Safety Grade A+', CrimeByCity '#1 Safest City in Massachusetts', 16.5/100k violent, 0/100k property) are propagating this artifact - DO NOT USE THOSE LABELS. Worcester's true violent rate has historically run roughly 500-700 per 100k (NeighborhoodScout's model estimate is 566/100k), i.e. well ABOVE the US benchmark of 359.1. No verified published figure was obtainable.",
+   "batch": "ne1"
+  },
+  "Chelsea, MA": {
+   "violent_per_100k": 978.0,
+   "property_per_100k": 1436.0,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "high",
+   "note": "375 violent offenses (2 murder, 31 rape, 46 robbery, 296 agg assault) and 550 property offenses; both imply pop ~38,320, consistent. Violent rate is ~2.7x the US benchmark - third highest in MA. Corroborated by Chelsea PD's own 2024 end-of-year UCR summary.",
+   "batch": "ne1"
+  },
+  "Framingham, MA": {
+   "violent_per_100k": 284.2,
+   "property_per_100k": 1400.0,
+   "year": 2023,
+   "source": "FBI UCR 2023 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks (cite FBI Crime Data Explorer, released Sept 2024)",
+   "confidence": "medium",
+   "note": "201 violent / 990 property offenses, implied pop ~70,700 (matches). Rates sum exactly to the published total of 1,684.2/100k. Sources conflict on whether this covers 2023 or 2024; the HomeSnacks page is titled 'Crime Report, 2023', so 2023 is stated here. Both rates below US benchmarks.",
+   "batch": "ne1"
+  },
+  "Braintree, MA": {
+   "violent_per_100k": 242.0,
+   "property_per_100k": 1298.0,
+   "year": 2023,
+   "source": "FBI UCR 2023 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks (cite FBI Crime Data Explorer, released Sept 2024)",
+   "confidence": "medium",
+   "note": "94 violent / 504 property offenses, implied pop ~38,840 (matches Braintree Town). No 2024 per-capita breakdown was published in any source found - only a '2024 crime rate fell 13% vs 2023' summary - so the 2023 figures are reported honestly as 2023.",
+   "batch": "ne1"
+  },
+  "Shrewsbury, MA": {
+   "violent_per_100k": 30.1,
+   "property_per_100k": null,
+   "year": 2024,
+   "source": "FBI UCR 2024 agency figures via PlainCrime (cites FBI UCR)",
+   "confidence": "low",
+   "note": "30.1/100k violent implies only ~12 violent offenses at pop ~38,700. Shrewsbury is genuinely one of the safest towns in MA (historically ~20-30 violent offenses/yr, ~60-80/100k), so this is low even against its own baseline and may be a short submission. NO reliable single-year property figure found - aggregator summaries returned only inconsistent multi-year averages (46.8/100k) and index scores (7.2/1,000) - so property is left null rather than guessed.",
+   "batch": "ne1"
+  },
+  "Hartford, CT": {
+   "violent_per_100k": 516.6,
+   "property_per_100k": 2845.5,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "high",
+   "note": "617 violent (21 murder, 51 rape, 163 robbery, 382 agg assault) and 3,404 property offenses (267 burglary, 2,082 larceny, 1,055 MV theft, 28 arson) at FBI reporting pop 119,626. Fully itemized and internally consistent. Both rates well above US benchmarks.",
+   "batch": "ne1"
+  },
+  "Norwich, CT": {
+   "violent_per_100k": 205.9,
+   "property_per_100k": 1260.3,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks / CrimeExplorer / OpenCrime / PlainCrime (all cite FBI Crime Data Explorer, released Sept-Oct 2025)",
+   "confidence": "high",
+   "note": "82 violent / 502 property offenses, implied pop ~39,830 (matches). Below both US benchmarks but ~51% above the CT state violent rate.",
+   "batch": "ne1"
+  },
+  "Milford, CT": {
+   "violent_per_100k": 82.0,
+   "property_per_100k": 2342.0,
+   "year": 2023,
+   "source": "FBI UCR 2023 agency (municipal PD) figures as compiled by AreaVibes / HomeSnacks (cite FBI Crime Data Explorer, released Sept 2024)",
+   "confidence": "medium",
+   "note": "43 violent / 1,234 property offenses at pop ~52,700, for 'Milford city'. Sources say this is the 2023 calendar year (released Sept 2024); no 2024 breakout was found. The combination of a very low violent rate with a property rate 19.8% ABOVE the US average is odd and hints at some violent-offense undercount, though heavy retail (Connecticut Post Mall) genuinely inflates larceny here.",
+   "batch": "ne1"
+  },
+  "Manchester, NH": {
+   "violent_per_100k": 336.9,
+   "property_per_100k": 1648.1,
+   "year": 2024,
+   "source": "FBI UCR/NIBRS 2024 agency figures via AreaVibes/HomeSnacks/CrimeExplorer/OpenCrime/PlainCrime (all downstream of one FBI CDE feed) - NOT independently corroborated",
+   "confidence": "medium",
+   "note": "CONFIDENCE DOWNGRADED high->medium. Values unchanged. Manchester is NH's largest city and has historically run well above this (roughly 500-600/100k); 336.9 places it BELOW the US benchmark of 359.1 at 'high' confidence, which is a safer-than-average label on the one NH city where that is least likely to be true. The researcher's own note correctly warns NH's low state average does not carry over to Manchester - that warning argues against a high-confidence below-benchmark figure.",
+   "batch": "ne1"
+  },
+  "Trumbull, CT": {
+   "violent_per_100k": 104.0,
+   "property_per_100k": 2272.0,
+   "year": 2024,
+   "source": "FBI UCR 2024 agency data via areavibes/HomeSnacks compilation (39 violent, 852 property offenses)",
+   "confidence": "medium",
+   "note": "Counts and rates internally consistent against pop ~37,500. Property rate is high for an affluent suburb because Westfield Trumbull mall larceny lands on the town PD. Violent 39 offenses is genuinely low. Connecticut agencies' post-NIBRS violent counts are far below their 2017-2019 SRS levels (statewide CT violent rate ~136-150/100k vs national 359.1), so low CT numbers are partly real and partly a counting-definition change. Treat as a floor, not a ceiling.",
+   "batch": "ne2"
+  },
+  "Cranston, RI": {
+   "violent_per_100k": 119.2,
+   "property_per_100k": 1155.6,
+   "year": 2023,
+   "source": "UNCHANGED source (areavibes/Patch RI aggregator, downstream of one FBI CDE feed) - re-rated by fact-check, NOT re-sourced",
+   "confidence": "medium",
+   "note": "CONFIDENCE DOWNGRADED high->medium. Values unchanged. The researcher's stated basis for high - 'counts, rates and implied population all reconcile' - is circular: the rate is computed FROM the count, so their agreement is true by construction and proves nothing about completeness. A partial-year submission reconciles just as cleanly. 119.2/100k is 0.77x the RI state rate for a city of 82,934 whose historical level ran nearer 180-220/100k. Plausible given real RI declines, but not a high-confidence figure.",
+   "batch": "ne2"
+  },
+  "Manchester, CT": {
+   "violent_per_100k": 133.0,
+   "property_per_100k": 2115.3,
+   "year": 2024,
+   "source": "FBI UCR 2024 agency data via opencrime.us/crimeexplorer compilation",
+   "confidence": "medium",
+   "note": "Raw offense counts not independently confirmed. Property rate elevated by the Buckland Hills retail district. Violent rate ~CT state average. Connecticut agencies' post-NIBRS violent counts are far below their 2017-2019 SRS levels (statewide CT violent rate ~136-150/100k vs national 359.1), so low CT numbers are partly real and partly a counting-definition change. Treat as a floor, not a ceiling.",
+   "batch": "ne2"
+  },
+  "Lowell, MA": {
+   "violent_per_100k": 532.5,
+   "property_per_100k": 1662.9,
+   "year": 2024,
+   "source": "UNCHANGED source (crimeexplorer/opencrime aggregator, downstream of one FBI CDE feed) - re-rated by fact-check, NOT re-sourced",
+   "confidence": "medium",
+   "note": "CONFIDENCE DOWNGRADED high->medium. Values unchanged. Aggregator-only sourcing with no primary FBI or MA state UCR confirmation. The value is plausible and errs in the SAFE direction (well above the national benchmark), so this downgrade concerns provenance only - the direction of the finding is not in doubt.",
+   "batch": "ne2"
+  },
+  "Stratford, CT": {
+   "violent_per_100k": 112.2,
+   "property_per_100k": 1929.8,
+   "year": 2023,
+   "source": "FBI UCR 2023 (released Sept 2024), beautifydata FBI Table 8 reproduction + areavibes (59 violent, 1,015 property offenses)",
+   "confidence": "medium",
+   "note": "Counts reconcile to pop ~52,600. Caution: Stratford reported roughly twice this violent count in 2017-2019. Connecticut agencies' post-NIBRS violent counts are far below their 2017-2019 SRS levels (statewide CT violent rate ~136-150/100k vs national 359.1), so low CT numbers are partly real and partly a counting-definition change. Treat as a floor, not a ceiling.",
+   "batch": "ne2"
+  },
+  "Cumberland, RI": {
+   "violent_per_100k": 59.1,
+   "property_per_100k": 534.8,
+   "year": 2024,
+   "source": "FBI UCR 2024 agency data via city-data/crimebycity compilation",
+   "confidence": "medium",
+   "note": "Implies ~22 violent and ~196 property offenses for pop ~36,600. Low but plausible for an affluent RI suburb; RI agencies report completely. A separate source put 2023 property at ~460/100k, so the level is corroborated.",
+   "batch": "ne2"
+  },
+  "Meriden, CT": {
+   "violent_per_100k": 128.5,
+   "property_per_100k": 1691.2,
+   "year": 2024,
+   "source": "UNCHANGED source (opencrime.us/areavibes aggregator, downstream of one FBI CDE feed) - re-rated by fact-check, NOT re-sourced",
+   "confidence": "suspect",
+   "note": "CONFIDENCE DOWNGRADED medium->low. Values unchanged. 128.5/100k is 0.86x the CT state rate for a working-class city of 60,850 whose historical level ran roughly 350-400/100k. A ~65% decline against a statewide 25-34% decline is the same signature flagged at Norwalk. The researcher conceded the figure is 'lower than its history suggests' but still rated it medium; that concession is grounds for a downgrade, not merely a caveat. Treat as an unverified floor.",
+   "batch": "ne2"
+  },
+  "Torrington, CT": {
+   "violent_per_100k": 117.9,
+   "property_per_100k": null,
+   "year": 2023,
+   "source": "FBI UCR 2023 via beautifydata FBI Table 8 reproduction (42 violent offenses: 26 aggravated assault, 9 rape, 7 robbery)",
+   "confidence": "medium",
+   "note": "Violent figure is a verified FBI table value reconciling to pop ~35,600. PROPERTY LEFT NULL: only an imprecise NeighborhoodScout '10 per 1,000' (~1,000/100k) was found and I could not confirm it against a count. Connecticut agencies' post-NIBRS violent counts are far below their 2017-2019 SRS levels (statewide CT violent rate ~136-150/100k vs national 359.1), so low CT numbers are partly real and partly a counting-definition change. Treat as a floor, not a ceiling.",
+   "batch": "ne2"
+  },
+  "Randolph, MA": {
+   "violent_per_100k": 250.7,
+   "property_per_100k": 868.8,
+   "year": 2024,
+   "source": "FBI UCR 2024 agency counts via city-data FBI table (86 violent: 0 murder/9 robbery/70 assault/7 rape; 298 property: 48 burglary/196 larceny/54 MV theft), rated on pop ~34,300",
+   "confidence": "medium",
+   "note": "An independent compilation gave 258.6/100k violent for an adjacent year, corroborating the ~250/100k level. Property is the weaker of the two figures.",
+   "batch": "ne2"
+  },
+  "Derry, NH": {
+   "violent_per_100k": 108.2,
+   "property_per_100k": 719.1,
+   "year": 2024,
+   "source": "FBI UCR 2024 agency data via opencrime.us/HomeSnacks compilation (246 property offenses; total crime rate 827.3/100k)",
+   "confidence": "medium",
+   "note": "Property derived as total minus violent and cross-checks to 246 offenses on pop ~34,300. Violent rate sits essentially at the NH state rate (110.1/100k). Genuinely low-crime, not a reporting artifact.",
+   "batch": "ne2"
+  },
+  "New Britain, CT": {
+   "violent_per_100k": 421.3,
+   "property_per_100k": 1925.0,
+   "year": 2024,
+   "source": "FBI UCR 2024 (released Oct 2025) via crimeexplorer/opencrime compilation",
+   "confidence": "medium",
+   "note": "~312 violent and ~1,424 property offenses for pop ~74,000. Above the 359.1 national violent benchmark. Highest violent rate in this batch after Fall River and Lowell.",
+   "batch": "ne2"
+  },
+  "Concord, NH": {
+   "violent_per_100k": 180.7,
+   "property_per_100k": 1229.2,
+   "year": 2024,
+   "source": "FBI UCR 2024 agency data via opencrime.us/HomeSnacks compilation",
+   "confidence": "medium",
+   "note": "Implies ~80 violent and ~541 property offenses for pop ~44,000. Above the NH state rate as expected for the state capital; raw counts not independently confirmed.",
+   "batch": "ne2"
+  },
+  "Coventry, RI": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "No trustworthy figure found",
+   "confidence": "suspect",
+   "note": "NO DATA RETURNED, not a low-crime finding. The one retrievable figure (violent 60.9, property 94.2 per 100k) is internally impossible - a 94/100k property rate would be among the lowest in the US and the source's own comparison math contradicted it. Coventry is very likely a low-crime RI town but I will not publish an unverified number. Check the FBI Crime Data Explorer agency page for Coventry RI PD.",
+   "batch": "ne2"
+  },
+  "Dover, NH": {
+   "violent_per_100k": 38.8,
+   "property_per_100k": 1016.0,
+   "year": 2023,
+   "source": "FBI UCR 2023 (released Sept 2024) via areavibes compilation (13 violent, 340 property offenses)",
+   "confidence": "suspect",
+   "note": "FLAG: 13 violent offenses for a city of ~33,500 with a real downtown is implausibly low - Dover ran several times that in prior years, and the rate is a third of the NH state rate (110.1/100k). Likely a partial/incomplete NIBRS submission for the violent series. The property figure (340 offenses) looks normal; a 2024 source put property at 786.4/100k. Do not treat the violent number as a safety signal without checking the FBI CDE agency page.",
+   "batch": "ne2"
+  },
+  "Southington, CT": {
+   "violent_per_100k": 93.3,
+   "property_per_100k": 2148.0,
+   "year": 2016,
+   "source": "UNCHANGED source (beautifydata FBI Table 8 reproduction) - re-rated by fact-check, NOT re-sourced",
+   "confidence": "low",
+   "note": "CONFIDENCE UNCHANGED at low; NOTE CORRECTED and staleness caveat strengthened. Strike the researcher's closing inference that 'CT violent crime has fallen materially since, so the current violent rate is probably lower.' That is an unsourced extrapolation pushing the reading toward SAFER - the dangerous direction - and it is precisely the estimation-from-context that Rule 1 forbids. A 2016 figure is ten years stale as of 2026 and should not inform a 2026 housing decision; it belongs in the table only as a marker of a data gap. Recommend treating Southington as effectively unmeasured pending an FBI CDE pull.",
+   "batch": "ne2"
+  },
+  "Franklin, MA": {
+   "violent_per_100k": 87.6,
+   "property_per_100k": 456.0,
+   "year": 2024,
+   "source": "FBI UCR 2024 (released Sept 2025) via areavibes compilation (29 violent, 151 property offenses)",
+   "confidence": "medium",
+   "note": "Counts reconcile to pop ~33,100. Very low on both measures; plausible for an affluent MetroWest town and the counts are not so small as to suggest a partial submission.",
+   "batch": "ne2"
+  },
+  "Dracut, MA": {
+   "violent_per_100k": 149.3,
+   "property_per_100k": 642.7,
+   "year": 2024,
+   "source": "FBI UCR 2024 agency data via opencrime.us/crimebycity compilation",
+   "confidence": "medium",
+   "note": "Implies ~49 violent and ~210 property offenses for pop ~32,600. Well below MA state rates despite bordering Lowell. Raw counts not independently confirmed.",
+   "batch": "ne2"
+  },
+  "Norwalk, CT": {
+   "violent_per_100k": 85.0,
+   "property_per_100k": 1505.0,
+   "year": 2024,
+   "source": "UNCHANGED source (areavibes/opencrime aggregator, downstream of one FBI CDE feed) - re-rated by fact-check, NOT re-sourced",
+   "confidence": "suspect",
+   "note": "CONFIDENCE DOWNGRADED medium->suspect. Values unchanged (no better source obtainable). This is the most dangerous row in the batch. 85.0/100k on a 2020 census population of 91,184 implies only ~78 violent offenses for Connecticut's 6th-largest city, one containing South Norwalk. That is 0.57x the CT state rate. The researcher's own note documents 255 violent offenses in Norwalk in 2017; a fall to ~78 is roughly 70%, while CT statewide fell only 25-34% over the same window. Per Rule 4 that gap is the partial-submission signature and warranted a flag, not a medium label. Note also that the researcher's VERIFIED 2023 value (100 offenses = 109.1/100k) is 28% HIGHER than this unverified 2024 aggregator value - the published row is the weaker-sourced and lower of the two. Do not use 85.0 as a safety signal. Check the FBI CDE agency page for Norwalk CT PD and confirm months reported.",
+   "batch": "ne2"
+  },
+  "Portland, ME": {
+   "violent_per_100k": 266.9,
+   "property_per_100k": 2478.7,
+   "year": 2024,
+   "source": "UNCHANGED source (beautifydata/HomeSnacks aggregator, downstream of one FBI CDE feed) - re-rated by fact-check, NOT re-sourced",
+   "confidence": "medium",
+   "note": "CONFIDENCE DOWNGRADED high->medium. Values unchanged. Aggregator-only sourcing, no primary FBI or Maine SBI confirmation. Counts reconcile, but reconciliation cannot detect an incomplete submission. Portland's violent rate historically ran nearer 350-380/100k, so 266.9 represents a material decline that should be confirmed before it is relied on. Property (2,478.7, well above the national benchmark) is the safer-direction figure and is not in doubt.",
+   "batch": "ne2"
+  },
+  "Naugatuck, CT": {
+   "violent_per_100k": 94.4,
+   "property_per_100k": 1302.3,
+   "year": 2023,
+   "source": "FBI UCR 2023 via beautifydata FBI Table 8 reproduction (total violent and property crimes page for Naugatuck CT)",
+   "confidence": "medium",
+   "note": "~30 violent offenses for a borough of ~31,500. A 2024 aggregator put it lower still (50.1 violent / 1,021 property). Naugatuck is working-class and historically ran ~200/100k violent, so treat the current figure as a floor. Connecticut agencies' post-NIBRS violent counts are far below their 2017-2019 SRS levels (statewide CT violent rate ~136-150/100k vs national 359.1), so low CT numbers are partly real and partly a counting-definition change. Treat as a floor, not a ceiling.",
+   "batch": "ne2"
+  },
+  "Nashua, NH": {
+   "violent_per_100k": 160.5,
+   "property_per_100k": 1261.0,
+   "year": 2024,
+   "source": "UNCHANGED source (crimeexplorer/areavibes aggregator, downstream of one FBI CDE feed) - re-rated by fact-check, NOT re-sourced",
+   "confidence": "medium",
+   "note": "CONFIDENCE DOWNGRADED high->medium. Values unchanged. Aggregator-only sourcing, no primary FBI or NH DOS confirmation. Of the five rows originally rated high this is the most defensible - 146 violent offenses is a large enough count that a partial submission is unlikely, and the rate sits sensibly above the NH state rate for the state's second-largest city - but medium is the ceiling absent a primary source.",
+   "batch": "ne2"
+  },
+  "Norwood, MA": {
+   "violent_per_100k": 155.0,
+   "property_per_100k": 831.0,
+   "year": 2024,
+   "source": "FBI UCR 2024 agency data via areavibes compilation (49 violent, 262 property offenses)",
+   "confidence": "medium",
+   "note": "Counts reconcile to pop ~31,600. Source notes violent up 19% and property down 16% year over year, which is the kind of movement a complete submission shows.",
+   "batch": "ne2"
+  },
+  "West Warwick, RI": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "No trustworthy figure found",
+   "confidence": "low",
+   "note": "NO DATA RETURNED, not a low-crime finding. Three sources gave mutually incompatible values (14.6/22.2 per 100k; 198.9 violent with 757.7 total) and the site quoting them also published a fabricated 473/100k national violent benchmark. West Warwick is not indexed on the FBI-table mirror I used. Check the FBI Crime Data Explorer agency page for West Warwick RI PD.",
+   "batch": "ne2"
+  },
+  "Billerica, MA": {
+   "violent_per_100k": 60.7,
+   "property_per_100k": null,
+   "year": 2023,
+   "source": "FBI UCR 2023 via beautifydata FBI Table 8 reproduction (25 violent offenses: 21 aggravated assault, 2 rape, 2 robbery)",
+   "confidence": "medium",
+   "note": "Violent reconciles to pop ~41,200. PROPERTY LEFT NULL: the only property figures found were BestPlaces index numbers (11.0 / 16 on a 0-100 scale), not rates per 100k, and one site misread them as 745.6/100k. Billerica PD publishes its own NIBRS statistics if you need the property series.",
+   "batch": "ne2"
+  },
+  "Tewksbury, MA": {
+   "violent_per_100k": 257.7,
+   "property_per_100k": 1128.7,
+   "year": 2022,
+   "source": "FBI UCR 2022 via beautifydata FBI Table 8 reproduction (79 violent, 346 property offenses)",
+   "confidence": "medium",
+   "note": "YEAR IS 2022 - no reliable 2023-2024 figure was retrievable. Counts reconcile to pop ~30,650. Explicitly rejecting the widely-syndicated '52.0 per 100k violent' claim: that same source said Tewksbury recorded 1,286 violent crimes over five years, which works out to ~830/100k, so its own numbers contradict each other.",
+   "batch": "ne2"
+  },
+  "Fall River, MA": {
+   "violent_per_100k": 742.9,
+   "property_per_100k": 1391.6,
+   "year": 2024,
+   "source": "FBI UCR 2024 (released Sept 2025) via areavibes/opencrime compilation",
+   "confidence": "medium",
+   "note": "~698 violent and ~1,308 property offenses for pop ~94,000. Highest violent rate in this batch - roughly 2x the 359.1 national benchmark and 2.4x the MA state rate. Consistent with Fall River's long-run level, so the direction is not in doubt.",
+   "batch": "ne2"
+  },
+  "Warwick, RI": {
+   "violent_per_100k": 79.5,
+   "property_per_100k": 1147.0,
+   "year": 2024,
+   "source": "UNCHANGED source (areavibes/HomeSnacks aggregator, downstream of one FBI CDE feed) - re-rated by fact-check, NOT re-sourced",
+   "confidence": "low",
+   "note": "CONFIDENCE DOWNGRADED medium->low. Values unchanged. The researcher's stated basis for medium was that 'a separate RI compilation independently reported Warwick at 79 violent / 1,147 property per 100k, so both figures are corroborated across sources.' Two aggregators reproducing identical values to the decimal indicates a SHARED UPSTREAM FEED, not independent confirmation - that is the weakest form of corroboration, not the strongest, and it should lower confidence rather than raise it. On the merits, 79.5/100k is 0.52x the RI state rate and implies ~67 violent offenses for Rhode Island's third-largest city (82,823), which contains T.F. Green airport and a major mall.",
+   "batch": "ne2"
+  },
+  "Newington, CT": {
+   "violent_per_100k": 76.2,
+   "property_per_100k": 2136.2,
+   "year": 2024,
+   "source": "FBI UCR 2024 agency data via opencrime.us/crimebycity compilation",
+   "confidence": "medium",
+   "note": "Implies ~23 violent and ~656 property offenses for pop ~30,700. The high property rate is the Berlin Turnpike retail corridor, which is a credible pattern and argues the submission is complete. Connecticut agencies' post-NIBRS violent counts are far below their 2017-2019 SRS levels (statewide CT violent rate ~136-150/100k vs national 359.1), so low CT numbers are partly real and partly a counting-definition change. Treat as a floor, not a ceiling.",
+   "batch": "ne2"
+  },
+  "Milford, MA": {
+   "violent_per_100k": 148.0,
+   "property_per_100k": 669.0,
+   "year": 2023,
+   "source": "FBI UCR 2023 (released Sept 2024) via areavibes/city-data compilation (45 violent, 203 property offenses)",
+   "confidence": "medium",
+   "note": "Counts reconcile to pop ~30,340. YEAR CAVEAT: the source labelled this both '2023 calendar year, released Sept 2024' and '2024' in different places; I report 2023 as the defensible reading. This is Milford MA (Worcester County), not Milford CT.",
+   "batch": "ne2"
+  },
+  "Salem, NH": {
+   "violent_per_100k": 106.4,
+   "property_per_100k": 1967.9,
+   "year": 2024,
+   "source": "FBI UCR 2024 agency data via crimebycity/NeighborhoodScout compilation (total crime rate 2,074.3/100k)",
+   "confidence": "medium",
+   "note": "PROPERTY DERIVED by subtracting violent from the reported total crime rate - lower confidence than the violent figure. A ~1,970/100k property rate is credible for Salem given Tuscan Village and the Mall at Rockingham Park drawing cross-border retail traffic. Violent sits at the NH state rate.",
+   "batch": "ne2"
+  },
+  "Vernon Rockville, CT": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "No trustworthy figure found - previously published values withdrawn by fact-check",
+   "confidence": "low",
+   "note": "VALUES WITHDRAWN (were 117.5 violent / 1542.0 property, year null). Rule 2 requires the year covered to be reported, and an undated NeighborhoodScout per-1,000 conversion cannot satisfy it - those figures are modelled and typically two to three years stale rather than raw agency counts. The researcher also recorded a conflicting second source (11 per 1,000 = 1,100/100k property against the 1,542 published), so the two available property values disagree by 40% and neither can be dated. Publishing the pair anyway conveys a false impression of measurement. NO DATA is the correct answer here, not a number carrying a low flag - this is a data gap, not a low-crime finding. Check the FBI Crime Data Explorer agency page for Vernon CT PD.",
+   "batch": "ne2"
+  },
+  "Waterbury, CT": {
+   "violent_per_100k": 322.5,
+   "property_per_100k": 2918.6,
+   "year": 2024,
+   "source": "UNCHANGED source (plaincrime/opencrime aggregator, downstream of one FBI CDE feed) - re-rated by fact-check, NOT re-sourced",
+   "confidence": "medium",
+   "note": "CONFIDENCE DOWNGRADED high->medium. Values unchanged. No row in this batch is sourced to a primary FBI or state publication, so no row supports a high rating. The researcher rated this high for its full offense breakdown and stated reporting population - real strengths, but both are reproducible by a machine-generated page and neither speaks to submission COMPLETENESS. Substantively, 192 aggravated assaults for a city of 114,403 sits at the low edge of Waterbury's historical range (~500-600/100k violent). The researcher's framing that violent is 'just under the 359.1 national benchmark' invites a safer-than-average-America reading of one of CT's most violent cities; that is not supportable from an uncorroborated feed.",
+   "batch": "ne2"
+  },
+  "Groton, CT": {
+   "violent_per_100k": 193.9,
+   "property_per_100k": 678.7,
+   "year": 2024,
+   "source": "FBI UCR 2024 agency data via HomeSnacks/areavibes compilation (total crime rate 872.7/100k)",
+   "confidence": "low",
+   "note": "JURISDICTION AMBIGUITY: 'Groton' covers three separate reporting agencies - Groton Town PD, City of Groton PD and Groton Long Point PD - plus the Navy submarine base, and the source does not say which agency or population this is. A 678.7/100k property rate is also low relative to the 193.9 violent rate, an unusual shape. Resolve the agency before using.",
+   "batch": "ne2"
+  },
+  "East Haven, CT": {
+   "violent_per_100k": 173.0,
+   "property_per_100k": 2601.0,
+   "year": 2023,
+   "source": "FBI UCR 2023 (released Sept 2024) via areavibes compilation (48 violent, 721 property offenses)",
+   "confidence": "medium",
+   "note": "Counts reconcile to pop ~27,720. Property is 48% above the 1,760.1 national benchmark - the Frontage Road / Route 80 retail strip. Violent above the CT state average. Both figures look like a complete submission.",
+   "batch": "ne2"
+  },
+  "Johnston, RI": {
+   "violent_per_100k": 119.0,
+   "property_per_100k": 981.0,
+   "year": 2023,
+   "source": "Rhode Island statewide FBI-based compilation (Johnston ranked 9th highest violent, 10th highest property among RI municipalities)",
+   "confidence": "low",
+   "note": "Rates come from a state ranking article citing FBI data rather than from an agency table, and I could not confirm them against offense counts or a reporting population. The level is plausible for Johnston. Verify on the FBI Crime Data Explorer agency page.",
+   "batch": "ne2"
+  },
+  "Windsor, CT": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "No trustworthy figure found",
+   "confidence": "low",
+   "note": "NO DATA RETURNED, not a low-crime finding. Sources were flatly contradictory: one gave violent 30.5 / property 159.5 per 100k (a 159/100k property rate is not credible for any US town of 29k), while NeighborhoodScout described Windsor at ~22 crimes per 1,000 (~2,200/100k total) and flagged one of the nation's higher motor-vehicle-theft rates. Those cannot both be right and the low pair is the dangerous one, so I am publishing neither.",
+   "batch": "ne2"
+  },
+  "Glastonbury, CT": {
+   "violent_per_100k": 28.4,
+   "property_per_100k": 961.7,
+   "year": 2024,
+   "source": "UNCHANGED source (crimebycity/opencrime aggregator, downstream of one FBI CDE feed) - re-rated by fact-check, NOT re-sourced",
+   "confidence": "suspect",
+   "note": "CONFIDENCE UNCHANGED at low; NOTE CORRECTED. The researcher's justification rests on a circular calibration that should not be relied on: it blesses 28.4/100k by citing 'FBI 2023 had Greenwich CT at 23.5/100k'. But Greenwich at 23.5/100k means ~15 violent offenses for 63,518 residents - proportionally an even more extreme outlier than Glastonbury's ~10 offenses for 35,159. Using one unverified near-floor figure to validate another is not calibration. Also strike the conclusion that 'confidence is low on the exact number, not on the conclusion': at ~10 offenses, a single missing quarter is the difference between 28.4 and an ordinary suburban rate, so the conclusion is not independently secure either. Glastonbury is very likely genuinely safe, but that is prior knowledge, not something this data point established.",
+   "batch": "ne2"
+  },
+  "North Attleboro, MA": {
+   "violent_per_100k": 95.0,
+   "property_per_100k": null,
+   "year": 2024,
+   "source": "FBI UCR 2024 agency data via opencrime.us",
+   "confidence": "low",
+   "note": "PROPERTY LEFT NULL: no property rate was retrievable for North Attleboro; searches kept returning neighbouring Attleboro (2024: 105 violent = 221/100k, 536 property = 1,126/100k), which is a DIFFERENT municipality and must not be substituted. The violent figure is unconfirmed against a count.",
+   "batch": "ne2"
+  },
+  "Stoughton, MA": {
+   "violent_per_100k": 258.4,
+   "property_per_100k": 1128.9,
+   "year": 2024,
+   "source": "FBI UCR 2024 agency data via opencrime.us/crimebycity compilation (total crime rate 1,387.3/100k)",
+   "confidence": "medium",
+   "note": "Violent plus property reconcile exactly to the reported total; implies ~76 violent and ~334 property offenses for pop ~29,600. Violent is below the 359.1 national benchmark but is the third-highest among the MA suburbs in this batch.",
+   "batch": "ne2"
+  },
+  "Cheshire, CT": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "Figures found but rejected as an implausible/partial submission",
+   "confidence": "suspect",
+   "note": "FLAG: the only counts found were 4 violent and 113 property offenses for the year - for a town of ~28,700 that is implausibly low and reads like a partial-year NIBRS submission, not a real annual total. A second source on the same town simultaneously claimed 465 violent offenses over five years (~320/100k/yr), which is irreconcilable with 4 in a year. Cheshire is a genuinely low-crime affluent town, but I will not publish a rate this weak. Check the FBI CDE agency page for Cheshire CT PD and confirm months reported.",
+   "batch": "ne2"
+  },
+  "Saugus, MA": {
+   "violent_per_100k": 223.6,
+   "property_per_100k": 1257.9,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "64 violent and 360 property offenses on an FBI-listed population of 28,619. Cross-checked against an independent FBI Table 8 extract in a separate repository (72 violent/28,378 = 253.7; 360 property = 1,268.5) - close agreement. Violent is ~62% below the US benchmark, property ~29% below.",
+   "batch": "ne3"
+  },
+  "Branford, CT": {
+   "violent_per_100k": 106.6,
+   "property_per_100k": 1940.9,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "30 violent and 546 property offenses on an FBI-listed population of 28,132. Stable 3-yr series (violent 68.6/85.3/106.6; property 1,440/1,706/1,941 for 2021/22/23). Both trending up but violent stays far below the US benchmark.",
+   "batch": "ne3"
+  },
+  "Danvers, MA": {
+   "violent_per_100k": 133.3,
+   "property_per_100k": 1156.5,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "37 violent and 321 property offenses on an FBI-listed population of 27,757. 3-yr violent 172.0/193.6/133.3 - normal small-town variation, no reporting cliff. Property stable ~900-1,180.",
+   "batch": "ne3"
+  },
+  "New London, CT": {
+   "violent_per_100k": 190.7,
+   "property_per_100k": 1377.3,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "54 violent and 390 property offenses on an FBI-listed population of 28,317. Violent DECLINING: 276.2 (2021) -> 238.6 (2022) -> 190.7 (2023). Still the highest violent rate of the CT shoreline towns in this batch but roughly half the US benchmark - its rough reputation overstates the current data.",
+   "batch": "ne3"
+  },
+  "Wethersfield, CT": {
+   "violent_per_100k": 73.9,
+   "property_per_100k": 1462.5,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "20 violent and 396 property offenses on an FBI-listed population of 27,076. 3-yr violent 100.7/96.2/73.9, property 1,860/1,498/1,463 - consistently declining, no submission gaps.",
+   "batch": "ne3"
+  },
+  "Merrimack, NH": {
+   "violent_per_100k": 16.9,
+   "property_per_100k": 430.3,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "medium",
+   "note": "5 violent and 127 property offenses on an FBI-listed population of 29,515. VERY low (5 violent offenses) but REAL, not a partial-reporting artifact: counts are 6/6/5 across 2021/22/23 with no gap year, and it sits near the 10th percentile of the 63 NH towns >5k, whose statewide median is only 69/100k. Genuine low-crime NH suburb.",
+   "batch": "ne3"
+  },
+  "Haverhill, MA": {
+   "violent_per_100k": 510.9,
+   "property_per_100k": 829.7,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "343 violent and 557 property offenses on an FBI-listed population of 67,133. Corroborated by an independent FBI Table 8 extract (335 violent/63,935 = 524.1) - within 3% of the 2023 figure. CAUTION on composition: 324 of the 343 violent offenses are aggravated assault, reflecting Massachusetts' broad aggravated-assault classification; the violent rate is not comparable one-for-one with other states. Highest violent rate in this batch outside Springfield/Hamden/Central Falls.",
+   "batch": "ne3"
+  },
+  "South Portland, ME": {
+   "violent_per_100k": 106.4,
+   "property_per_100k": 1152.0,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "medium",
+   "note": "29 violent and 314 property offenses on an FBI-listed population of 27,256. Volatile violent series (215.0/156.7/106.4) though all three years were submitted. Property is inflated by the Maine Mall retail concentration relative to residential risk.",
+   "batch": "ne3"
+  },
+  "South Windsor, CT": {
+   "violent_per_100k": 59.8,
+   "property_per_100k": 1716.3,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "16 violent and 459 property offenses on an FBI-listed population of 26,743. 3-yr violent 38.3/56.2/59.8 - stable and very low; property 1,554-2,066.",
+   "batch": "ne3"
+  },
+  "East Hartford, CT": {
+   "violent_per_100k": 148.1,
+   "property_per_100k": 2259.8,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "75 violent and 1144 property offenses on an FBI-listed population of 50,625. REPUTATION CORRECTION: violent is 148.1/100k, well BELOW the US benchmark of 359.1, and falling (161.7/189.8/148.1). The real signal is PROPERTY crime at 2,259.8 (~28% above the US benchmark), driven by 271 motor-vehicle thefts. It is a property-crime town, not a violent-crime town.",
+   "batch": "ne3"
+  },
+  "Chelmsford, MA": {
+   "violent_per_100k": 114.5,
+   "property_per_100k": 971.9,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "41 violent and 348 property offenses on an FBI-listed population of 35,807. 3-yr violent 100.0/112.3/114.5, property 661/730/972 - tight, consistent series.",
+   "batch": "ne3"
+  },
+  "Springfield, MA": {
+   "violent_per_100k": 880.6,
+   "property_per_100k": 2986.0,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "1358 violent and 4605 property offenses on an FBI-listed population of 154,218. Corroborated by an independent FBI Table 8 extract (1,397 violent/154,306 = 905.3) - within 3%. Violent 880.6 is 2.45x the US benchmark and the highest in this batch; property 2,986.0 is 1.7x. Confirms it must never be defaulted to a safe value.",
+   "batch": "ne3"
+  },
+  "Bridgewater, MA": {
+   "violent_per_100k": 347.0,
+   "property_per_100k": 607.3,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "suspect",
+   "note": "32 violent and 56 property offenses on an FBI-listed population of 9,221. BROKEN DENOMINATOR - DO NOT USE THE RATE. FBI Table 8 lists Bridgewater's population as 9,221 (and 8,820 in 2022, 8,446 in 2021), but an independent FBI Table 8 extract lists the same town at 27,270 and the 2020 Census at ~27,500. The population column is roughly one third of the true town population, so the published 347.0/607.3 rates are inflated ~3x. Offense counts also look partial (32 violent/56 property vs 59/95 in the independent extract). On the true ~27.3k denominator the 2023 counts imply roughly 116 violent and 203 property per 100k, but the counts themselves are not trustworthy. Re-pull from the FBI CDE agency page for Bridgewater MA PD before using. Bridgewater State University PD reports separately.",
+   "batch": "ne3"
+  },
+  "Londonderry, NH": {
+   "violent_per_100k": 67.0,
+   "property_per_100k": 562.2,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "medium",
+   "note": "18 violent and 151 property offenses on an FBI-listed population of 26,857. 2023 submitted (18 violent, 151 property); 2022 also present (32/182). No 2021 row in the FBI table, so the series is 2 years not 3.",
+   "batch": "ne3"
+  },
+  "Hamden, CT": {
+   "violent_per_100k": 556.9,
+   "property_per_100k": 2957.6,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "338 violent and 1795 property offenses on an FBI-listed population of 60,691. HIGHEST violent rate in this batch after Springfield: 556.9/100k, 1.55x the US benchmark, and a sharp rise from 358.4 (2022) and 393.9 (2021). 292 of 338 violent offenses are aggravated assault. Property 2,957.6 is 1.68x the benchmark with 496 motor-vehicle thefts. The researcher's caution about the New Haven-adjacent southern end is well founded - the townwide average already reads high. Quinnipiac University PD reports separately.",
+   "batch": "ne3"
+  },
+  "Hudson, NH": {
+   "violent_per_100k": 74.0,
+   "property_per_100k": 810.3,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "19 violent and 208 property offenses on an FBI-listed population of 25,669. 3-yr violent 89.4/62.7/74.0, property 773/795/810 - very stable, complete submissions.",
+   "batch": "ne3"
+  },
+  "Dedham, MA": {
+   "violent_per_100k": 259.6,
+   "property_per_100k": 1182.2,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "medium",
+   "note": "65 violent and 296 property offenses on an FBI-listed population of 25,038. Violent series is UNSTABLE across reporting-practice changes: 7 (independent earlier extract) -> 17 (2021) -> 47 (2022) -> 65 (2023), with 62 of the 65 being aggravated assault. This is Massachusetts NIBRS assault reclassification, not a real 9x crime wave. Treat 259.6 as an upper bound. Legacy Place retail inflates property counts relative to residential risk.",
+   "batch": "ne3"
+  },
+  "Biddeford, ME": {
+   "violent_per_100k": 325.8,
+   "property_per_100k": 3070.9,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "73 violent and 688 property offenses on an FBI-listed population of 22,404. Confirms it runs above the Maine average: property 3,070.9 is 1.74x the US benchmark and ~3x the Maine town median (975); violent 325.8 is ~5x the Maine median (66). 3-yr series complete and consistent.",
+   "batch": "ne3"
+  },
+  "North Haven, CT": {
+   "violent_per_100k": 20.8,
+   "property_per_100k": 2720.3,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "suspect",
+   "note": "5 violent and 655 property offenses on an FBI-listed population of 24,078. VIOLENT FIGURE IS AN INCOMPLETE SUBMISSION - do not read 20.8/100k as safe. The 2023 row reports 0 murder, 0 rape, 0 aggravated assault and 5 robbery in a town of 24,078; a category-wide zero for both rape and aggravated assault is structurally implausible. Prior years reported 13 (2021) and 18 (2022) violent offenses, and an independent FBI extract shows 11. Use the 3-yr average of roughly 50/100k instead. The PROPERTY figure of 2,720.3 is reliable (2,093/2,940/2,720 across 3 years) and is 1.55x the US benchmark - the retail corridor is the real risk here.",
+   "batch": "ne3"
+  },
+  "Mansfield, MA": {
+   "violent_per_100k": 201.0,
+   "property_per_100k": 829.1,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "48 violent and 198 property offenses on an FBI-listed population of 23,880. 3-yr violent 152.7/121.2/201.0, property 607/669/829. Small-count variation only; all years submitted.",
+   "batch": "ne3"
+  },
+  "Bedford, NH": {
+   "violent_per_100k": 33.6,
+   "property_per_100k": 515.8,
+   "year": 2022,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2022, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "medium",
+   "note": "8 violent and 123 property offenses on an FBI-listed population of 23,845. 2023 FALLBACK NOT AVAILABLE: New Hampshire's Table 8 coverage dropped from 173 agencies (2022) to 129 (2023) and Bedford is one of the towns missing from 2023. The 2022 figures shown are complete (8 violent, 123 property on 23,845). The 2023 absence is a non-submission, NOT zero crime.",
+   "batch": "ne3"
+  },
+  "North Kingstown, RI": {
+   "violent_per_100k": 71.6,
+   "property_per_100k": 576.2,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "20 violent and 161 property offenses on an FBI-listed population of 27,943. 3-yr violent 44.1/114.3/71.6, property 566/600/576 - property extremely stable, violent varies on small counts (12/32/20 offenses).",
+   "batch": "ne3"
+  },
+  "Wilmington, MA": {
+   "violent_per_100k": 219.3,
+   "property_per_100k": 846.6,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "medium",
+   "note": "50 violent and 193 property offenses on an FBI-listed population of 22,797. Violent rising on reclassification (21/34/50 offenses over 2021/22/23) as in other MA towns; property flat at ~645-855. Treat 219.3 as an upper bound.",
+   "batch": "ne3"
+  },
+  "Exeter, NH": {
+   "violent_per_100k": 49.3,
+   "property_per_100k": 622.4,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "medium",
+   "note": "8 violent and 101 property offenses on an FBI-listed population of 16,227. Violent declining on small counts (23/13/8 offenses); property stable 545/582/622. All three years submitted.",
+   "batch": "ne3"
+  },
+  "Bristol, RI": {
+   "violent_per_100k": 18.2,
+   "property_per_100k": 249.7,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "medium",
+   "note": "4 violent and 55 property offenses on an FBI-listed population of 22,024. GENUINELY LOW, NOT AN ARTIFACT: property 249.7/100k sits inside a real cluster of low-property RI towns in the same 2023 table (Scituate 181.7, Burrillville 249.4, Glocester 254.7, Portsmouth 272.3), and the 3-yr series is consistent (257/302/250). Violent is only 4 offenses so the 18.2 rate is noisy - the 3-yr average is nearer 42. Roger Williams University PD reports separately, which removes campus offenses from the town total.",
+   "batch": "ne3"
+  },
+  "Central Falls, RI": {
+   "violent_per_100k": 426.0,
+   "property_per_100k": 954.1,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "96 violent and 215 property offenses on an FBI-listed population of 22,534. Corroborated by an independent FBI Table 8 extract (82 violent/19,423 = 422.2) - within 1% of the 2023 rate. Violent 426.0 is 1.19x the US benchmark and the second highest in RI in 2023 behind Woonsocket (432.8). Property 954.1 is below the benchmark. Confirms it must never be read as safe on the violent dimension.",
+   "batch": "ne3"
+  },
+  "Rochester, NH": {
+   "violent_per_100k": 190.3,
+   "property_per_100k": 1734.2,
+   "year": 2022,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2022, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "medium",
+   "note": "63 violent and 574 property offenses on an FBI-listed population of 33,098. 2023 FALLBACK: Rochester is absent from both the 2021 and 2023 NH tables (NH coverage fell from 173 to 129 agencies in 2023); only 2022 is usable. Confirms it runs well above the NH average - violent 190.3 vs an NH town median of 69, property 1,734.2 vs a median of 577. NH's very low statewide rates do not apply here. The missing 2023 row is a non-submission, NOT zero crime.",
+   "batch": "ne3"
+  },
+  "Scarborough, ME": {
+   "violent_per_100k": 54.8,
+   "property_per_100k": 1294.2,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "13 violent and 307 property offenses on an FBI-listed population of 23,722. 3-yr violent 32.1/65.5/54.8, property 1,568/1,589/1,294 - consistent, complete.",
+   "batch": "ne3"
+  },
+  "Guilford, CT": {
+   "violent_per_100k": 9.1,
+   "property_per_100k": 1153.4,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "suspect",
+   "note": "2 violent and 254 property offenses on an FBI-listed population of 22,022. VIOLENT FIGURE IS IMPLAUSIBLY LOW - do not read 9.1/100k as safe. Only 2 violent offenses reported for 22,022 residents in 2023, against 12 (2021), 10 (2022) and 10 in an independent FBI extract. A drop from 10 to 2 is far outside Poisson noise and indicates a partial violent-crime submission. Use the 3-yr average of roughly 36/100k. Guilford is a genuinely safe shoreline town, but 9.1 overstates that. The PROPERTY figure of 1,153.4 is reliable (1,059/1,276/1,153 across 3 years).",
+   "batch": "ne3"
+  },
+  "Westerly, RI": {
+   "violent_per_100k": 77.0,
+   "property_per_100k": 1074.3,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "medium",
+   "note": "18 violent and 251 property offenses on an FBI-listed population of 23,364. 3-yr series complete and rising modestly (violent 60.6/67.9/77.0; property 736/887/1,074). Seasonal summer population inflates offense counts against a year-round census denominator, so the true resident-risk rate is somewhat lower than shown.",
+   "batch": "ne3"
+  },
+  "East Providence, RI": {
+   "violent_per_100k": 94.3,
+   "property_per_100k": 887.2,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "44 violent and 414 property offenses on an FBI-listed population of 46,663. 3-yr violent 134.5/66.4/94.3, property 720/838/887. Both well below US benchmarks; complete submissions.",
+   "batch": "ne3"
+  },
+  "Brunswick, ME": {
+   "violent_per_100k": 118.9,
+   "property_per_100k": 1307.9,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "medium",
+   "note": "26 violent and 286 property offenses on an FBI-listed population of 21,867. Property volatile (755/1,526/1,308) which suggests a reporting-practice change between 2021 and 2022 rather than a real doubling; violent stable at 87/73/119. Bowdoin College PD reports separately.",
+   "batch": "ne3"
+  },
+  "Bloomfield, CT": {
+   "violent_per_100k": 78.7,
+   "property_per_100k": 2704.5,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "17 violent and 584 property offenses on an FBI-listed population of 21,594. Violent is low and stable (192.9/83.9/78.7) but PROPERTY 2,704.5 is 1.54x the US benchmark and consistently so (2,597/3,015/2,705). The property figure is the real signal for a family here.",
+   "batch": "ne3"
+  },
+  "Dartmouth, MA": {
+   "violent_per_100k": 231.1,
+   "property_per_100k": 1141.3,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "80 violent and 395 property offenses on an FBI-listed population of 34,610. 3-yr violent 166.9/263.2/231.1, property 1,194/1,193/1,141 - property remarkably stable. UMass Dartmouth PD reports separately.",
+   "batch": "ne3"
+  },
+  "Westborough, MA": {
+   "violent_per_100k": 185.5,
+   "property_per_100k": 797.6,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "40 violent and 172 property offenses on an FBI-listed population of 21,566. 3-yr violent 181.4/134.5/185.5, property 746/914/798 - tight, consistent series.",
+   "batch": "ne3"
+  },
+  "Gardner, MA": {
+   "violent_per_100k": 264.2,
+   "property_per_100k": 763.8,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "55 violent and 159 property offenses on an FBI-listed population of 20,816. Confirms it runs above the MA town median (violent median 151, property median 678) but violent 264.2 is still below the US benchmark and the 3-yr trend is down (307.8/202.5/264.2).",
+   "batch": "ne3"
+  },
+  "West Hartford, CT": {
+   "violent_per_100k": 52.8,
+   "property_per_100k": 3071.9,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "34 violent and 1979 property offenses on an FBI-listed population of 64,423. KEY CORRECTION TO THE 'AFFLUENT = SAFE' READING: violent is genuinely tiny at 52.8/100k (34 offenses, stable at 47/38/34 over 3 years), but PROPERTY is 3,071.9/100k - 1.75x the US benchmark and the highest in this batch - driven by 1,705 larcenies concentrated in the Blue Back Square / West Farms retail districts. Low personal-violence risk, high theft exposure.",
+   "batch": "ne3"
+  },
+  "Rocky Hill, CT": {
+   "violent_per_100k": 87.1,
+   "property_per_100k": 1901.0,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "18 violent and 393 property offenses on an FBI-listed population of 20,673. 3-yr violent 104.6/140.2/87.1, property 1,619/1,837/1,901 - complete series, property drifting up.",
+   "batch": "ne3"
+  },
+  "Fairfield, CT": {
+   "violent_per_100k": 28.3,
+   "property_per_100k": 1756.6,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "medium",
+   "note": "18 violent and 1117 property offenses on an FBI-listed population of 63,588. Violent 28.3/100k is very low but the 3-yr series declines smoothly (33/23/18 offenses) with no cliff, which argues for a real figure rather than a partial submission; property 1,756.6 is squarely at the US benchmark and flat across 3 years (1,633/1,760/1,757). Fairfield University and Sacred Heart University PDs report separately, so campus offenses are excluded from the town total.",
+   "batch": "ne3"
+  },
+  "Saco, ME": {
+   "violent_per_100k": 118.5,
+   "property_per_100k": 1426.3,
+   "year": 2023,
+   "source": "FBI UCR Crime in the United States Table 8 (Offenses Known to Law Enforcement by State by City), 2023, agency/municipal-PD counts; rate computed from the FBI population column in that table.",
+   "confidence": "high",
+   "note": "25 violent and 301 property offenses on an FBI-listed population of 21,103. 3-yr violent 157.7/143.3/118.5, property 1,099/1,514/1,426 - complete, consistent, declining violent.",
+   "batch": "ne3"
+  },
+  "Alameda, CA": {
+   "violent_per_100k": 341.1,
+   "property_per_100k": 5646.8,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 257 violent, 4255 property; population 75,353",
+   "confidence": "high",
+   "note": "Alameda PD. Violent near US average; property elevated by a vehicle-theft surge (601 in 2022 to 1,280 in 2023), a real Bay Area trend.",
+   "batch": "ca1"
+  },
+  "Newport Beach, CA": {
+   "violent_per_100k": 209.3,
+   "property_per_100k": 2025.7,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 173 violent, 1674 property; population 82,637",
+   "confidence": "high",
+   "note": "Newport Beach PD, Orange County. Well below both US benchmarks; steady 5-yr trend (violent 125-173).",
+   "batch": "ca1"
+  },
+  "Sunnyvale, CA": {
+   "violent_per_100k": 248.1,
+   "property_per_100k": 1921.5,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 377 violent, 2920 property; population 151,967",
+   "confidence": "high",
+   "note": "Sunnyvale DPS. Well below both US benchmarks; property fell 20% from 2022.",
+   "batch": "ca1"
+  },
+  "Los Gatos, CA": {
+   "violent_per_100k": 139.7,
+   "property_per_100k": 1688.6,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 45 violent, 544 property; population 32,216",
+   "confidence": "high",
+   "note": "Los Gatos-Monte Sereno PD; Monte Sereno reports separately so this is the town of Los Gatos only. Low and stable.",
+   "batch": "ca1"
+  },
+  "Palo Alto, CA": {
+   "violent_per_100k": 204.9,
+   "property_per_100k": 2762.5,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 135 violent, 1820 property; population 65,882",
+   "confidence": "high",
+   "note": "Palo Alto PD. Violent far below US average; property above average, driven by larceny (1,527 of 1,820).",
+   "batch": "ca1"
+  },
+  "Hillsborough, CA": {
+   "violent_per_100k": 155.2,
+   "property_per_100k": 739.3,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level); denominator: US Census Bureau SUB-IP-EST2022 California incorporated places (Jul 1 2022); 2023 counts: 17 violent, 81 property; population 10,956",
+   "confidence": "medium",
+   "note": "Hillsborough PD, pop ~11,000, so rates are volatile: violent count went 5 (2022) to 17 (2023), aggravated assault 4 to 13 - likely NIBRS reclassification, not a real surge. 5-yr violent count range 5-17. Property is burglary-heavy (50 of 81). Denominator is the Jul-2022 Census estimate (town is below the PEP v2023 publication cutoff). CA agencies converted to NIBRS in 2023, which reclassified many assaults upward; compare to prior years with care.",
+   "batch": "ca1"
+  },
+  "Menlo Park, CA": {
+   "violent_per_100k": 249.3,
+   "property_per_100k": 1757.7,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 79 violent, 557 property; population 31,690",
+   "confidence": "high",
+   "note": "Menlo Park PD. Both rates below US benchmarks; stable property counts (552-557 for three years).",
+   "batch": "ca1"
+  },
+  "San Mateo, CA": {
+   "violent_per_100k": 338.5,
+   "property_per_100k": 1873.1,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 343 violent, 1898 property; population 101,327",
+   "confidence": "high",
+   "note": "San Mateo PD. Violent just below US average, property well below.",
+   "batch": "ca1"
+  },
+  "Redwood City, CA": {
+   "violent_per_100k": 476.6,
+   "property_per_100k": 2144.6,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 386 violent, 1737 property; population 80,996",
+   "confidence": "high",
+   "note": "Redwood City PD. Violent above US average and rising (204 in 2021 to 386 in 2023); property near US average.",
+   "batch": "ca1"
+  },
+  "Belmont, CA": {
+   "violent_per_100k": 206.6,
+   "property_per_100k": 1258.4,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 55 violent, 335 property; population 26,622",
+   "confidence": "high",
+   "note": "Belmont PD. Both rates well below US benchmarks; 5-yr violent count range 38-55.",
+   "batch": "ca1"
+  },
+  "Burlingame, CA": {
+   "violent_per_100k": 214.0,
+   "property_per_100k": 2678.0,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 64 violent, 801 property; population 29,910",
+   "confidence": "high",
+   "note": "Burlingame PD. Violent well below US average; property elevated by retail/hotel corridor near SFO - resident risk is lower than the per-resident rate implies.",
+   "batch": "ca1"
+  },
+  "San Carlos, CA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (checked: no such reporting agency)",
+   "confidence": "low",
+   "note": "San Carlos has had no municipal police department since 2010; it contracts with the San Mateo County Sheriff's Office. Its offenses are reported inside the countywide 'San Mateo Co. Sheriff's Department' total (2023: 279 violent, 1,839 property across all unincorporated areas plus contract cities), which cannot be split out to the city. No real city-level published figure exists in the state UCR file; not estimated.",
+   "batch": "ca1"
+  },
+  "Mountain View, CA": {
+   "violent_per_100k": 249.4,
+   "property_per_100k": 2795.1,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 204 violent, 2286 property; population 81,785",
+   "confidence": "high",
+   "note": "Mountain View PD. Violent well below US average; property above, mostly larceny (1,755 of 2,286).",
+   "batch": "ca1"
+  },
+  "Santa Clara, CA": {
+   "violent_per_100k": 201.4,
+   "property_per_100k": 2823.9,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 264 violent, 3701 property; population 131,062",
+   "confidence": "high",
+   "note": "Santa Clara PD. Violent dropped from 395 (2022) to 264, back into its 2019-2021 range (206-288); 2022 looks like the outlier.",
+   "batch": "ca1"
+  },
+  "Campbell, CA": {
+   "violent_per_100k": 364.5,
+   "property_per_100k": 2738.6,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 152 violent, 1142 property; population 41,700",
+   "confidence": "high",
+   "note": "Campbell PD. Violent slightly above US average; property above average, partly regional retail draw.",
+   "batch": "ca1"
+  },
+  "Millbrae, CA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (checked: no such reporting agency)",
+   "confidence": "low",
+   "note": "Millbrae disbanded its police department in 2012 and contracts with the San Mateo County Sheriff's Office. Its offenses are folded into the countywide sheriff total and cannot be isolated. Census population is published (22,087 in 2023) but no city-level crime counts are; not estimated.",
+   "batch": "ca1"
+  },
+  "Foster City, CA": {
+   "violent_per_100k": 46.6,
+   "property_per_100k": 1037.9,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 15 violent, 334 property; population 32,180",
+   "confidence": "medium",
+   "note": "Foster City PD. Published 2023 violent count is 15, a 64% drop from 42 (2022) while property fell only 13% - the drop is out of line with its own 5-yr range (24-42) and may reflect NIBRS assault reclassification rather than a real change. Using the 2022 count as a conservative check still gives ~130/100k, i.e. very safe either way. Treat 46.6 as a floor, not a settled figure.",
+   "batch": "ca1"
+  },
+  "San Bruno, CA": {
+   "violent_per_100k": 413.8,
+   "property_per_100k": 2051.9,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 171 violent, 848 property; population 41,327",
+   "confidence": "medium",
+   "note": "San Bruno PD. Violent jumped 118 to 171 driven by aggravated assault doubling (63 to 130), consistent with NIBRS reclassification rather than a real doubling. CA agencies converted to NIBRS in 2023, which reclassified many assaults upward; compare to prior years with care.",
+   "batch": "ca1"
+  },
+  "Pacifica, CA": {
+   "violent_per_100k": 181.2,
+   "property_per_100k": 1249.1,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 66 violent, 455 property; population 36,426",
+   "confidence": "high",
+   "note": "Pacifica PD. Both rates well below US benchmarks; violent within its 62-88 5-yr range.",
+   "batch": "ca1"
+  },
+  "South San Francisco, CA": {
+   "violent_per_100k": 366.0,
+   "property_per_100k": 2197.3,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 231 violent, 1387 property; population 63,123",
+   "confidence": "high",
+   "note": "South San Francisco PD. Violent near US average; property below average and down 21% from 2022.",
+   "batch": "ca1"
+  },
+  "Daly City, CA": {
+   "violent_per_100k": 346.6,
+   "property_per_100k": 2067.5,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 346 violent, 2064 property; population 99,833",
+   "confidence": "high",
+   "note": "Daly City PD. Violent near US average; property above average but stable.",
+   "batch": "ca1"
+  },
+  "Fremont, CA": {
+   "violent_per_100k": 210.0,
+   "property_per_100k": 2792.1,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 475 violent, 6316 property; population 226,208",
+   "confidence": "high",
+   "note": "Fremont PD. Violent well below US average for a city of 226,000; property above average, mostly larceny and vehicle theft.",
+   "batch": "ca1"
+  },
+  "Union City, CA": {
+   "violent_per_100k": 489.2,
+   "property_per_100k": 3172.1,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 320 violent, 2075 property; population 65,414",
+   "confidence": "high",
+   "note": "Union City PD. Violent above US average; property well above.",
+   "batch": "ca1"
+  },
+  "Hayward, CA": {
+   "violent_per_100k": 477.1,
+   "property_per_100k": 3656.7,
+   "year": 2024,
+   "source": "FBI UCR Return A / Offenses Known agency-level file, Hayward Police Department ORI CA00107, 2024: 732 violent, 5,610 property, UCR population 153,419 (all 12 monthly returns present, 'normal return'). Retrieved from Jacob Kaplan's UCR compilation (github.com/jacobkap/crimedatatool_helper).",
+   "confidence": "high",
+   "note": "CORRECTS a 39% overstatement. The researcher's 2023 figure (657.1 violent) is genuine but inflated by the NIBRS assault reclassification they flagged (agg assault 257 in 2022 -> 626 in 2023 -> 381 in 2024). The complete 2024 federal year gives 477.1 violent / 3,656.7 property. Hayward is still above both US benchmarks, but by ~1.3x on violent rather than ~1.8x.",
+   "batch": "ca1"
+  },
+  "San Leandro, CA": {
+   "violent_per_100k": 666.8,
+   "property_per_100k": 5913.7,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 572 violent, 5073 property; population 85,784",
+   "confidence": "high",
+   "note": "San Leandro PD. Both rates well above US benchmarks; property driven by 1,980 vehicle thefts.",
+   "batch": "ca1"
+  },
+  "Castro Valley, CA": {
+   "violent_per_100k": null,
+   "property_per_100k": null,
+   "year": null,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (checked: no such reporting agency)",
+   "confidence": "low",
+   "note": "Castro Valley is an unincorporated CDP, not a city, and is policed by the Alameda County Sheriff's Office. It has no reporting agency of its own; its offenses sit inside the countywide sheriff total (2023: 859 violent, 2,941 property). No real CDP-level published figure exists; not estimated.",
+   "batch": "ca1"
+  },
+  "Concord, CA": {
+   "violent_per_100k": 506.9,
+   "property_per_100k": 3147.6,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 620 violent, 3850 property; population 122,315",
+   "confidence": "high",
+   "note": "Concord PD. Violent above US average but down from 784 (2022); property above average.",
+   "batch": "ca1"
+  },
+  "Walnut Creek, CA": {
+   "violent_per_100k": 290.7,
+   "property_per_100k": 2736.0,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 201 violent, 1892 property; population 69,152",
+   "confidence": "high",
+   "note": "Walnut Creek PD. Violent below US average; property above, inflated by the regional downtown retail district relative to its 69,000 residents.",
+   "batch": "ca1"
+  },
+  "Pleasant Hill, CA": {
+   "violent_per_100k": 307.7,
+   "property_per_100k": 5055.9,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 104 violent, 1709 property; population 33,802",
+   "confidence": "high",
+   "note": "Pleasant Hill PD. Violent below US average; property rate is high for its size because of regional retail (Sun Valley Mall) measured against 33,800 residents.",
+   "batch": "ca1"
+  },
+  "Martinez, CA": {
+   "violent_per_100k": 217.1,
+   "property_per_100k": 1420.5,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 79 violent, 517 property; population 36,395",
+   "confidence": "high",
+   "note": "Martinez PD. Both rates below US benchmarks; stable 5-yr trend.",
+   "batch": "ca1"
+  },
+  "Vallejo, CA": {
+   "violent_per_100k": 809.4,
+   "property_per_100k": 4153.7,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 994 violent, 5101 property; population 122,807",
+   "confidence": "high",
+   "note": "Vallejo PD. Violent more than 2x the US average, including 20 homicides; property well above average. Consistently high across all 5 years.",
+   "batch": "ca1"
+  },
+  "Benicia, CA": {
+   "violent_per_100k": 105.9,
+   "property_per_100k": 1157.8,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 28 violent, 306 property; population 26,429",
+   "confidence": "high",
+   "note": "Benicia PD. Both rates well below US benchmarks; small city so counts swing (violent 16-51 over 5 yrs).",
+   "batch": "ca1"
+  },
+  "Richmond, CA": {
+   "violent_per_100k": 1061.3,
+   "property_per_100k": 3143.6,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 1211 violent, 3587 property; population 114,106",
+   "confidence": "high",
+   "note": "Richmond PD. Violent ~3x the US average (8 homicides, 1,239 vehicle thefts); property well above average. Consistently high across all 5 years.",
+   "batch": "ca1"
+  },
+  "El Cerrito, CA": {
+   "violent_per_100k": 485.3,
+   "property_per_100k": 3921.4,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 124 violent, 1002 property; population 25,552",
+   "confidence": "high",
+   "note": "El Cerrito PD. Violent above US average; property well above for a city of 25,600, partly the Del Norte/San Pablo Ave retail corridor.",
+   "batch": "ca1"
+  },
+  "Albany, CA": {
+   "violent_per_100k": 193.7,
+   "property_per_100k": 2843.4,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 37 violent, 543 property; population 19,097",
+   "confidence": "high",
+   "note": "Albany PD. Violent well below US average and flat (37-40 for three years); property above average for a 19,000-person city adjacent to Berkeley.",
+   "batch": "ca1"
+  },
+  "Berkeley, CA": {
+   "violent_per_100k": 664.9,
+   "property_per_100k": 5899.4,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 791 violent, 7018 property; population 118,962",
+   "confidence": "high",
+   "note": "Berkeley PD. Both rates well above US benchmarks; property driven by 4,511 larcenies and 1,368 vehicle thefts. Large non-resident daytime/student population inflates per-resident rates somewhat.",
+   "batch": "ca1"
+  },
+  "Emeryville, CA": {
+   "violent_per_100k": 1510.1,
+   "property_per_100k": 17269.4,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level); denominator: US Census Bureau SUB-IP-EST2022 California incorporated places (Jul 1 2022); 2023 counts: 195 violent, 2230 property; population 12,913",
+   "confidence": "medium",
+   "note": "Emeryville PD. Rates are extreme per-resident (12,913 residents) because the city is a regional retail hub (Bay Street, IKEA, East Baybridge) - property crime is overwhelmingly committed against shoppers, not residents. Real published counts, but the per-resident denominator badly overstates household risk here. Denominator is the Jul-2022 Census estimate (city is below the PEP v2023 publication cutoff).",
+   "batch": "ca1"
+  },
+  "Oakland, CA": {
+   "violent_per_100k": 1925.3,
+   "property_per_100k": 7230.3,
+   "year": 2024,
+   "source": "FBI UCR Return A / Offenses Known agency-level file, Oakland Police Department ORI CA00102, 2024: 8,376 violent, 31,455 property, UCR population 435,042 (all 12 monthly returns present, 'normal return'). Retrieved from Jacob Kaplan's UCR compilation (github.com/jacobkap/crimedatatool_helper).",
+   "confidence": "high",
+   "note": "CORRECTS an 84% overstatement. The researcher's 2023 figure (3,548.9 violent) is a real published number but is inflated by the aggravated-assault reclassification they themselves flagged (agg assault 3,329 in 2022 -> 11,169 in 2023 -> 5,039 in 2024). Their own adjusted estimate of '~1,750/100k' was close to correct: the complete 2024 federal figure is 1,925.3. 2024 is both more recent and undistorted, so it is the figure to use. Oakland is still ~5.4x the US violent benchmark and ~4.1x the property benchmark - the safe/unsafe label does not change, only the magnitude.",
+   "batch": "ca1"
+  },
+  "San Jose, CA": {
+   "violent_per_100k": 606.9,
+   "property_per_100k": 2587.9,
+   "year": 2024,
+   "source": "FBI UCR Return A / Offenses Known agency-level file, San Jose Police Department ORI CA04310, 2024: 5,807 violent, 24,762 property, UCR population 956,840 (verified all 12 monthly returns present, card status 'normal return'). Retrieved from Jacob Kaplan's UCR compilation (github.com/jacobkap/crimedatatool_helper, data/offenses + data/offenses_monthly).",
+   "confidence": "high",
+   "note": "CORRECTS a dangerous-direction understatement. The researcher's 2023 entry (501.3 violent / 1,986.2 property, confidence 'high') is not supported federally: San Jose PD filed ZERO of 12 months to the FBI for 2023 - every 2023 monthly row is blank with no reporting card - so no FBI 2023 record exists. The state property total of 19,259 sits 24% below 2022 (25,363) and 22% below 2024 (24,762); a one-year 24% collapse followed by a 29% rebound is not a credible trend and is consistent with a partial-year submission of roughly 9 of 12 months. Corrected to the complete, more recent 2024 federal figures: property crime is ~30% HIGHER than reported. San Jose remains low-crime for a city of ~960,000, but the property figure the researcher gave was too low.",
+   "batch": "ca1"
+  },
+  "Milpitas, CA": {
+   "violent_per_100k": 318.2,
+   "property_per_100k": 3353.6,
+   "year": 2023,
+   "source": "CA DOJ OpenJustice 'Crimes and Clearances with Arson' 1985-2023 (agency-level UCR/NIBRS submissions that feed FBI UCR); denominator: US Census Bureau PEP Vintage 2023 city estimate; 2023 counts: 246 violent, 2593 property; population 77,321",
+   "confidence": "high",
+   "note": "Milpitas PD. Violent below US average; property well above, partly the Great Mall regional retail draw.",
+   "batch": "ca1"
   }
  }
 }
