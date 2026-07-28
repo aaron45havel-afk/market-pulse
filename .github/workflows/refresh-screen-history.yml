@@ -1,0 +1,35 @@
+name: Snapshot strict-screen history
+
+# Runs AFTER the monthly market data lands (Zillow 1st 12:00 UTC,
+# national-zips rebuild 1st 14:00 UTC) so the snapshot reflects the new
+# prices. Produces the "what changed this month" log on /norcal.
+on:
+  schedule:
+    - cron: '0 15 2 * *'   # 15:00 UTC on the 2nd
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Snapshot both markets
+        working-directory: market-pulse-v21
+        run: python scripts/snapshot_screens.py
+      - name: Commit the snapshot
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add market-pulse-v21/data/screen_history/
+          if git diff --staged --quiet; then
+            echo "No snapshot change."
+          else
+            git commit -m "Strict-screen snapshot $(date -u +%Y-%m)"
+            git push
+          fi

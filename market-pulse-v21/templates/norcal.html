@@ -95,6 +95,31 @@
 </div>
 {% endif %}
 
+{% if changes %}
+<div class="nc-card">
+  <h2>📈 What changed — {{ changes.older }} → {{ changes.newer }}</h2>
+  <p class="desc">Prices and rents refresh automatically on the 1st of each month (Zillow/Redfin → zips.db) and mortgage rates every Friday; this screen reads them live. This log is the monthly snapshot diff, so you can watch the board move. Buyable: <b>{{ changes.n_prev }} → {{ changes.n_now }}</b>.</p>
+  {% if changes.entered %}<p style="font-size:0.8rem;margin:0.2rem 0"><b style="color:var(--mint-ink)">↑ Entered ({{ changes.entered|length }}):</b>
+    {% for e in changes.entered %}<span title="{{ e.why }}">{{ e.name }} {{ e.zip }} (${{ '{:,.0f}'.format(e.entry) }}){% if not loop.last %} · {% endif %}</span>{% endfor %}</p>{% endif %}
+  {% if changes.left %}<p style="font-size:0.8rem;margin:0.2rem 0"><b style="color:var(--coral-ink)">↓ Left ({{ changes.left|length }}):</b>
+    {% for e in changes.left %}<span title="{{ e.why }}">{{ e.name }} {{ e.zip }} — {{ e.why }}{% if not loop.last %} · {% endif %}</span>{% endfor %}</p>{% endif %}
+  {% if changes.cheaper %}<p style="font-size:0.8rem;margin:0.2rem 0"><b style="color:var(--mint-ink)">Cheaper:</b>
+    {% for e in changes.cheaper[:8] %}{{ e.name }} {{ e.pct }}%{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+  {% if changes.pricier %}<p style="font-size:0.8rem;margin:0.2rem 0"><b style="color:var(--coral-ink)">Pricier:</b>
+    {% for e in changes.pricier[-8:] %}{{ e.name }} +{{ e.pct }}%{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+  {% if not changes.entered and not changes.left and not changes.cheaper and not changes.pricier %}<p class="desc">No material moves this month (price changes under 1.5% are treated as ZHVI revision noise, not news).</p>{% endif %}
+</div>
+{% endif %}
+
+<div class="nc-card" style="padding:0.55rem 1rem">
+  <p class="desc" style="margin:0">
+    <b>What updates itself:</b> home values &amp; rents monthly (1st), mortgage rates weekly (Fri), condo tier monthly (8th) — the screen reads these live.
+    <b>What is a research snapshot:</b>
+    {% for f in freshness %}{{ f.layer }} {{ f.as_of or '—' }}{% if f.stale %} <span style="color:var(--coral-ink);font-weight:700">STALE</span>{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}.
+    {% if stale_layers %}<span style="color:var(--coral-ink);font-weight:700">{{ stale_layers|length }} layer(s) past their refresh window — re-run the research before trusting those columns.</span>{% else %}All research layers are within their refresh window.{% endif %}
+  </p>
+</div>
+
 <div class="nc-card">
   <h2>🔍 Deal checker</h2>
   <p class="desc">Paste any listing. Verdict = the ZIP's gate report + this price vs the local benchmark + the financing math at today's rate.</p>
