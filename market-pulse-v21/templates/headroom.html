@@ -66,6 +66,17 @@
             {% for u in (2, 3, 4) %}<option value="{{ u }}" {% if units == u %}selected{% endif %}>{{ u }}-unit</option>{% endfor %}
         </select></div>
         <div class="field"><label>Max price $</label><input name="maxprice" type="number" step="10000" min="50000" value="{{ maxprice|int }}" style="width:7em"></div>
+        <div class="field"><label title="Real FBI city-level violent-crime rate per 100k. US average ≈ 364.">Safety (real FBI)</label><select name="safetier">
+            <option value="very_safe" {% if safetier == 'very_safe' %}selected{% endif %}>Very safe only (&lt;150)</option>
+            <option value="safe" {% if safetier == 'safe' %}selected{% endif %}>Safe or better (&lt;250)</option>
+            <option value="average" {% if safetier == 'average' %}selected{% endif %}>Average or better (&lt;450)</option>
+            <option value="elevated" {% if safetier == 'elevated' %}selected{% endif %}>Elevated ok (&lt;800)</option>
+            <option value="high" {% if safetier == 'high' %}selected{% endif %}>No safety filter</option>
+        </select></div>
+        <div class="field"><label title="Cities with no verified FBI figure. Off = they are excluded rather than assumed safe.">Unverified</label><select name="unknown">
+            <option value="0" {% if not allow_unknown %}selected{% endif %}>Hide unverified</option>
+            <option value="1" {% if allow_unknown %}selected{% endif %}>Show unverified</option>
+        </select></div>
         {% endif %}
         <div class="field"><label>Scope</label><select name="scope">
             {% for s in ('cosmetic','moderate','gut') %}<option value="{{ s }}" {% if scope == s %}selected{% endif %}>{{ s|capitalize }}</option>{% endfor %}
@@ -100,13 +111,21 @@
     <div class="hr-card">
         <div class="hr-scroll">
         <table class="hr-table">
-            <thead><tr><th>#</th><th>ZIP</th><th>Place</th><th>Max offer</th><th>Surplus /mo</th><th>PITI @offer</th><th>{{ units - 1 }} rents</th><th>Rehab</th><th>Cash to close</th><th>Median</th><th>Rent/unit</th><th>RTV</th><th>Competition</th></tr></thead>
+            <thead><tr><th>#</th><th>ZIP</th><th>Place</th><th>Safety (violent /100k)</th><th>Max offer</th><th>Surplus /mo</th><th>PITI @offer</th><th>{{ units - 1 }} rents</th><th>Rehab</th><th>Cash to close</th><th>Median</th><th>Rent/unit</th><th>RTV</th><th>Competition</th></tr></thead>
             <tbody>
             {% for z in hh_board %}
             <tr>
                 <td>{{ loop.index }}</td>
                 <td><b>{{ z.zip }}</b></td>
-                <td style="text-align:left">{{ z.place }}, {{ z.state }}</td>
+                <td style="text-align:left">{{ z.place }}{% if not z.place.endswith(', ' ~ z.state) %}, {{ z.state }}{% endif %}</td>
+                <td>{% set sf = z.safety %}
+                    {% if sf.tier == 'very_safe' %}<span class="hr-chip primed">VERY SAFE</span>
+                    {% elif sf.tier == 'safe' %}<span class="hr-chip primed" style="background:rgba(34,197,94,0.10)">SAFE</span>
+                    {% elif sf.tier == 'average' %}<span class="hr-chip dd">AVERAGE</span>
+                    {% elif sf.tier == 'elevated' %}<span class="hr-chip out" style="background:rgba(239,68,68,0.09)">ELEVATED</span>
+                    {% elif sf.tier == 'high' %}<span class="hr-chip out">HIGH</span>
+                    {% else %}<span class="hr-chip nopath" title="{{ sf.note }}">UNVERIFIED</span>{% endif %}
+                    {% if sf.violent %}<span class="hr-note" title="{{ sf.source }} ({{ sf.year }}){% if sf.confidence == 'low' %} — small-town sample, noisy{% endif %}">{{ sf.violent }}{% if sf.vs_us %} · {{ sf.vs_us }}×US{% endif %}{% if sf.confidence == 'low' %} ?{% endif %}</span>{% endif %}</td>
                 <td class="hr-maxpsf">${{ '{:,.0f}'.format(z.max_offer) }}{% if z.capped_at_budget %}<span class="hr-note" title="still cash-flows at your full budget — the ZIP supports more">+</span>{% endif %}</td>
                 <td style="color:{{ 'var(--mint-ink, #16a34a)' if z.monthly_surplus >= 0 else '#dc2626' }}">{% if z.monthly_surplus >= 0 %}+{% endif %}${{ '{:,.0f}'.format(z.monthly_surplus) }}</td>
                 <td>${{ '{:,.0f}'.format(z.piti) }}</td>
@@ -122,7 +141,10 @@
             </tbody>
         </table>
         </div>
-        <div class="hr-note" style="margin-top:0.5rem">Rent/unit = ZIP median rent (same convention as /multifamily); 2–4 unit ask prices aren't in the data — the <b>max offer</b> is your ceiling regardless of ask. "+" = supports more than your budget cap. Rehab at {{ units }}×900 sqft, {{ scope }}/{{ level }}. Property tax at investor rates (homestead on your unit would only improve this). Verify FHA county loan limits for 2–4 units. <a href="/multifamily?state={{ hstate or 'IN' }}&max_price={{ maxprice|int }}&down_pct=3.5&units={{ units }}">Full FHA math on /multifamily →</a></div>
+        <div class="hr-note" style="margin-top:0.5rem">
+            <b>Safety column = real FBI violent-crime rate per 100,000 residents for the city's police agency</b> (US average ≈ {{ '%.0f'|format(us_violent) }}), with the source year on hover. It is <b>city-wide</b>: a large city contains both very safe and very dangerous ZIPs and one agency rate cannot tell them apart — use it to screen cities out, then walk the specific block. Small-town figures marked "?" are low-confidence (one incident swings a small population). We deliberately do <b>not</b> use the database's <code>crime_index</code> column here: it is a socioeconomic heuristic that correlates −0.76 with income, so filtering on it would filter on income, not safety.
+            Verified cities in the table: {{ crime_cov.with_data }} of {{ crime_cov.cities }}. Cities we haven't verified are excluded rather than assumed safe{% if allow_unknown %} — currently overridden by "Show unverified"{% endif %}.<br>
+            Rent/unit = ZIP median rent (same convention as /multifamily); 2–4 unit ask prices aren't in the data — the <b>max offer</b> is your ceiling regardless of ask. "+" = supports more than your budget cap. Rehab at {{ units }}×900 sqft, {{ scope }}/{{ level }}. Property tax at investor rates (homestead on your unit would only improve this). Verify FHA county loan limits for 2–4 units. <a href="/multifamily?state={{ hstate or 'IN' }}&max_price={{ maxprice|int }}&down_pct=3.5&units={{ units }}">Full FHA math on /multifamily →</a></div>
     </div>
     {% endif %}
 

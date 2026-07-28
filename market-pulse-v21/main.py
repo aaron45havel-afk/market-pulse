@@ -487,7 +487,8 @@ async def headroom_page(request: Request, mode: str = "brrrr", scope: str = "mod
                         level: str = "low", target: str = "14", rate: str = "",
                         sqft: str = "1500", xadj: str = "0", metro: str = "",
                         universe: str = "all", hstate: str = "", units: str = "4",
-                        maxprice: str = "300000"):
+                        maxprice: str = "300000", safetier: str = "safe",
+                        unknown: str = "0"):
     """Headroom — the remodel deal engine. Ranks all ~107 markets by the
     max purchase $/sqft that clears the after-tax compounded-return target
     (BRRRR or flip) vs what fixers actually cost there. See headroom.py.
@@ -506,17 +507,24 @@ async def headroom_page(request: Request, mode: str = "brrrr", scope: str = "mod
     hstate = hstate.strip().upper()[:2]
     if mode == "hh":
         # Owner-occupant house-hack: ZIP-level, no DSCR (FHA self-sufficiency
-        # is the funding gate), solved for the max offer per ZIP.
+        # is the funding gate), solved for the max offer per ZIP, gated on
+        # REAL city-level crime data (safety.py) — unknown never passes as
+        # safe unless the user explicitly opts in.
+        import safety as SF
+        safetier = safetier if safetier in SF.TIER_ORDER else "safe"
+        allow_unknown = _qnum(unknown) > 0
         hh_board = await asyncio.to_thread(
             HR.zip_board_hh, state=(hstate or None), units=units_n, scope=scope,
-            level=level, rate_pct=rate_n, max_price=maxprice_n)
-        from value_add import STATE_NAMES as _SN
+            level=level, rate_pct=rate_n, max_price=maxprice_n,
+            max_tier=safetier, allow_unknown=allow_unknown)
         return templates.TemplateResponse("headroom.html", {
             "request": request, "board": [], "hh_board": hh_board, "n_primed": 0,
             "mode": mode, "scope": scope, "level": level, "target": target_n,
             "rate": rate_n, "sqft": sqft_n, "xadj": xadj_n, "universe": universe,
             "metro": "", "drill": None, "metro_name": "",
             "hstate": hstate, "units": units_n, "maxprice": maxprice_n,
+            "safetier": safetier, "allow_unknown": allow_unknown,
+            "crime_cov": SF.coverage(), "us_violent": SF.US_VIOLENT,
             "calib": HR.calibration(scope), "fin": HR.financing_terms(rate_n),
             "profit_floor": HR.PROFIT_FLOOR, "hold_years": HR.HOLD_YEARS,
         })

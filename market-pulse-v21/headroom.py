@@ -686,10 +686,16 @@ def house_hack_max_offer(median_value: float, rent_unit: float, code: str,
 def zip_board_hh(*, state: str | None = None, units: int = 4, scope: str = "cosmetic",
                  level: str = "low", rate_pct: float = 6.55,
                  max_price: float = 300_000.0, min_pop: int = 5_000,
-                 top: int = 40) -> list[dict]:
+                 top: int = 40, max_tier: str = "safe",
+                 allow_unknown: bool = False) -> list[dict]:
     """ZIP-level house-hack board: every real-rent ZIP (optionally one
     state), solved for the max offer; ranked by rent-to-value with the
-    live-free ZIPs first."""
+    live-free ZIPs first.
+
+    Safety gate (safety.py, real FBI city-level figures): rows above
+    `max_tier` are dropped, and cities we have no verified figure for are
+    dropped too unless allow_unknown — the yield leaders are exactly the
+    places most likely to be screened out, which is the point."""
     import sqlite3 as _sq
     from value_add import METRO_GEO, STATE_COST_FACTORS, _haversine_mi
     from structural import trajectory_from_history
@@ -732,10 +738,18 @@ def zip_board_hh(*, state: str | None = None, units: int = 4, scope: str = "cosm
                 label = t["label"] if t else None
             except (ValueError, TypeError):
                 label = None
+        from safety import zip_safety, passes
+        sf = zip_safety(rr["name"], rr["state"])
+        if not passes(sf, max_tier, allow_unknown):
+            continue
         out.append({**h, "zip": rr["zip"], "place": rr["name"], "state": rr["state"],
                     "market": code, "population": rr["population"],
                     "median_value": mv, "rent": rent,
                     "rtv_pct": round(rent * 12 / mv * 100, 1), "trajectory": label,
+                    "safety": sf,
                     "competition": COMPETITION_LABEL.get(label or "steady", ("BALANCED", "="))[0]})
-    out.sort(key=lambda x: (-x["rtv_pct"], -x["max_offer"]))
+    # Safest first, then yield — a house-hack is where the family lives, so
+    # safety outranks rent-to-value in the ordering.
+    from safety import TIER_ORDER as _TO
+    out.sort(key=lambda x: (_TO[x["safety"]["tier"]], -x["rtv_pct"], -x["max_offer"]))
     return out[:top]
