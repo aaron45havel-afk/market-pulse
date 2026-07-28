@@ -1,0 +1,67 @@
+name: Refresh crime layer (FBI CDE)
+
+# Pulls current FBI Crime Data Explorer figures for every city already in
+# data/headroom/crime.json. Runs on GitHub's runners because THEY have
+# unrestricted egress — the dev sandbox's proxy blocks every .gov host,
+# which is why this layer was hand-researched to begin with.
+#
+# SETUP (one time): create a free key at https://api.data.gov/signup/ and
+# save it as the CDE_API_KEY repository secret. Without it the job exits
+# 2 and reports what to do, rather than silently doing nothing.
+#
+# Cadence: the FBI publishes annually in the autumn, so this checks each
+# October and again in January in case the release slipped.
+on:
+  schedule:
+    - cron: '0 16 5 10 *'   # Oct 5
+    - cron: '0 16 5 1 *'    # Jan 5
+  workflow_dispatch:
+    inputs:
+      year:
+        description: 'FBI data year to pull'
+        required: false
+      dry_run:
+        description: 'Report only, do not write'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Pull FBI CDE figures
+        working-directory: market-pulse-v21
+        env:
+          CDE_API_KEY: ${{ secrets.CDE_API_KEY }}
+        run: |
+          if [ -z "$CDE_API_KEY" ]; then
+            echo "::error::CDE_API_KEY secret is not set. Get a free key at https://api.data.gov/signup/ and add it under Settings → Secrets and variables → Actions. Until then the crime layer stays on its hand-researched snapshot."
+            exit 2
+          fi
+          ARGS=""
+          [ -n "${{ inputs.year }}" ] && ARGS="--year ${{ inputs.year }}"
+          [ "${{ inputs.dry_run }}" = "true" ] && ARGS="$ARGS --dry-run"
+          python scripts/refresh_crime.py $ARGS
+      - name: Verify the screens still build
+        working-directory: market-pulse-v21
+        run: |
+          python tests/test_safety.py
+          python scripts/snapshot_screens.py
+      - name: Commit
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add market-pulse-v21/data/headroom/crime.json market-pulse-v21/data/screen_history/
+          if git diff --staged --quiet; then
+            echo "No change."
+          else
+            git commit -m "Crime layer: FBI CDE refresh $(date -u +%Y-%m-%d)"
+            git push
+          fi
