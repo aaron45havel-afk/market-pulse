@@ -375,6 +375,9 @@ async def norcal_page(request: Request, assets: str = "200000",
         safetier, _qnum(unknown) > 0, _qnum(surge) > 0,
         max(0.0, min(99.0, _qnum(foodpct, 75))),
         winter if winter in RG.CLIMATE_TIERS else "moderate")
+    import screen_history as SH
+    changes = await asyncio.to_thread(SH.diff, market)
+    freshness = SH.layer_freshness()
     check = None
     price_n = _qnum(price)
     if zip and price_n > 0:
@@ -386,6 +389,8 @@ async def norcal_page(request: Request, assets: str = "200000",
         "regions": mkt["regions"], "market": market, "markets": RG.MARKETS,
         "safetier": safetier, "allow_unknown": _qnum(unknown) > 0,
         "allow_surge": _qnum(surge) > 0, "foodpct": _qnum(foodpct, 75),
+        "changes": changes, "freshness": freshness,
+        "stale_layers": [f for f in freshness if f["stale"]],
         "winter": winter if winter in RG.CLIMATE_TIERS else "moderate",
         "access_max": _qnum(access, 30),
     })
