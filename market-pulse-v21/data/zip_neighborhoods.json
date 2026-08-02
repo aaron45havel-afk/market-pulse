@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "as_of": "2026-07-26",
-    "count": 6676,
+    "as_of": "2026-08-02",
+    "count": 6681,
     "source": "Photon (komoot.io OSM reverse-geocoder), neighbourhood/suburb/district tags"
   },
   "neighborhoods": {
@@ -2587,6 +2587,7 @@
     "21158": "Hidden Oaks",
     "21160": "Spring House Estates",
     "21161": "Walnut Springs",
+    "21162": "Vista Reserve",
     "21201": "Downtown",
     "21202": "Baltimore Gas & Electric Company Front Street Complex",
     "21204": "Four Winds",
@@ -4300,6 +4301,7 @@
     "43734": "Duncan Falls",
     "43735": "White Cottage",
     "43759": "Morristown Historic District",
+    "43766": "Straitsville",
     "43772": "Mount Zion",
     "43779": "Fredericksdale",
     "43812": "Roscoe",
@@ -6680,6 +6682,9 @@
     "95670": "Soudan",
     "95682": "Bullard",
     "95684": "Omo Ranch",
-    "95690": "Snug Harbor"
+    "95690": "Snug Harbor",
+    "95703": "Applegate",
+    "95713": "Iowa Hill",
+    "95714": "Dutch Flat"
   }
 }
