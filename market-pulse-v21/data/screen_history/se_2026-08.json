@@ -1,0 +1,75 @@
+{
+ "period": "2026-08",
+ "market": "SE",
+ "params": {
+  "assets": 200000,
+  "down_pct": 20.0,
+  "safety_tier": "safe",
+  "winter": "moderate"
+ },
+ "max_purchase": 800000,
+ "universe_n": 722,
+ "buyable": {
+  "27518": {
+   "name": "Cary",
+   "region": "Carolina Piedmont",
+   "entry": 747287,
+   "kind": "all-homes",
+   "minutes": 14.3,
+   "anchor": "RDU",
+   "safety": "very_safe",
+   "violent": 71
+  },
+  "27511": {
+   "name": "Cary",
+   "region": "Carolina Piedmont",
+   "entry": 503061,
+   "kind": "all-homes",
+   "minutes": 14.6,
+   "anchor": "RDU",
+   "safety": "very_safe",
+   "violent": 71
+  },
+  "27513": {
+   "name": "Cary",
+   "region": "Carolina Piedmont",
+   "entry": 567588,
+   "kind": "all-homes",
+   "minutes": 15.7,
+   "anchor": "RDU",
+   "safety": "very_safe",
+   "violent": 71
+  },
+  "27519": {
+   "name": "Cary",
+   "region": "Carolina Piedmont",
+   "entry": 709856,
+   "kind": "all-homes",
+   "minutes": 21.6,
+   "anchor": "RDU",
+   "safety": "very_safe",
+   "violent": 71
+  },
+  "30047": {
+   "name": "Lilburn",
+   "region": "Carolina Piedmont",
+   "entry": 402681,
+   "kind": "all-homes",
+   "minutes": 26.4,
+   "anchor": "ATL",
+   "safety": "safe",
+   "violent": 176
+  },
+  "30022": {
+   "name": "Johns Creek",
+   "region": "Carolina Piedmont",
+   "entry": 683644,
+   "kind": "all-homes",
+   "minutes": 30.0,
+   "anchor": "ATL",
+   "safety": "very_safe",
+   "violent": 41
+  }
+ },
+ "aspirational": {}
+}
