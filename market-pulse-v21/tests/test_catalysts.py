@@ -490,6 +490,81 @@ check(C.is_routine_repurchase("SC TO-T", "Ares Private Markets Fund") is False,
       "a THIRD-PARTY tender for a fund is a real event")
 check(C.is_routine_repurchase("SC TO-I", "") is False, "empty company name is not routine")
 
+
+# ── the arithmetic has to describe a trade a human could make ───────
+#
+# The first live board led with "Reborn Coffee, Inc. — $23,649,660,000":
+# 131,387 shares at exactly $180,000.00 each, in a stock trading near a
+# dollar. The filer had put the AGGREGATE value in the per-share field.
+# Nothing in the XML is malformed, so no amount of parser strictness
+# catches it — the only defence is checking the result, and the only
+# honest response is to mark it rather than delete it.
+real = C.implausible(131387, 23_649_660_000.0)
+check(real is not None, "the Reborn Coffee row is caught as implausible")
+check("180,000.00" in real, f"the reason quotes the implied price (got {real!r})")
+check("per-share" in real, "and names the likely cause, so the reader knows what to look for")
+
+# The rest of that same board must survive untouched. These are its real
+# extremes: the median was $15.25 and the highest sane row $370.79.
+for shares, dollars, label in ((3_855_275, 69_394_950.0, "Braveheart at $18.00"),
+                               (105_631, 4_999_959.0, "Aptiv at $47.33"),
+                               (400, 49_596.0, "Granite at $123.99"),
+                               (3_181, 251_170.0, "Navios at $78.96"),
+                               (60_000, 23_814.0, "AppTech at $0.40"),
+                               (1_000, 106_075.0, "Entergy at $106.08")):
+    check(C.implausible(shares, dollars) is None, f"{label} is a normal purchase")
+
+# BRK.A is the only US common above the bound, and being asked to check it
+# is the correct outcome — the check says "verify", not "discard".
+check(C.implausible(10, 7_000_000.0) is not None,
+      "a $700,000-a-share name is flagged for checking rather than trusted")
+check(C.implausible(100, 999_000.0) is None,
+      "$9,990 a share is under the bound and passes")
+
+# Absurd totals are caught even when the per-share price looks ordinary.
+check(C.implausible(500_000_000, 10_000_000_000.0) is not None,
+      "$10bn from one insider is flagged even at a plausible $20 a share")
+
+# Unknowns are handled elsewhere and must not be reported as implausible.
+for s, d in ((None, 100.0), (100, None), (0, 100.0), (100, 0.0), (None, None)):
+    check(C.implausible(s, d) is None,
+          f"implausible({s}, {d}) is None — missing is not the same as wrong")
+
+# ── the flag rides on the purchase itself ───────────────────────────
+absurd = C.parse_form4(_f4(_owner("Lim Jung Jae", officer=1, title="CEO"),
+                           _txn("P", 131387, 180000.0)))
+ab = C.insider_buy(absurd)
+check(ab["suspect"] is not None, "insider_buy carries the suspicion forward")
+check(ab["price_per_share"] == 180000.0,
+      f"and reports the per-share figure that gives it away (got {ab['price_per_share']})")
+check(ab["dollars"] == 23_649_660_000.0,
+      "the total is reproduced as filed, not silently corrected — we do not "
+      "know what the filer meant, only that it cannot be what it says")
+
+sane = C.insider_buy(C.parse_form4(_f4(_owner("Doe John A", director=1),
+                                       _txn("P", 1000, 25.50))))
+check(sane["suspect"] is None, "an ordinary purchase is not flagged")
+check(sane["price_per_share"] == 25.5, "and still reports its price per share")
+
+# Per-share is computed on the PRICED shares only. Mixing in unpriced ones
+# would understate the price and could mask a bad row.
+part = C.insider_buy(C.parse_form4(_f4(_owner("Roe Jane", director=1),
+                                       _txn("P", 100, 10.0) + "\n" + _txn("P", 900, None))))
+check(part["price_per_share"] == 10.0,
+      f"per-share divides by priced shares only (got {part['price_per_share']})")
+check(part["shares"] == 1000 and part["unpriced_shares"] == 900,
+      "while the share counts still report the whole purchase")
+
+# ── an issuer with no symbol has no symbol ──────────────────────────
+for placeholder in ("NONE", "N/A", "NA", "NULL", "-"):
+    d = C.parse_form4(_f4(_owner("Doe John A", director=1), _txn("P", 10, 1.0),
+                          sym=placeholder))
+    check(d["ticker"] == "",
+          f"issuerTradingSymbol {placeholder!r} becomes empty, not a ticker "
+          f"reading {placeholder!r} (got {d['ticker']!r})")
+d = C.parse_form4(_f4(_owner("Doe John A", director=1), _txn("P", 10, 1.0), sym="nvt"))
+check(d["ticker"] == "NVT", "a real symbol is kept and upper-cased")
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

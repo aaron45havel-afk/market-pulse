@@ -261,14 +261,31 @@ def merge_clusters(buys: list[dict]) -> list[dict]:
 
     rows = []
     for g in grouped.values():
-        g["buy"]["buyers"] = g["buyers"]
+        b = g["buy"]
+        b["buyers"] = g["buyers"]
         g["distinct_buyers"] = len(g["buyers"])
         g["cluster"] = g["distinct_buyers"] > 1
         g.pop("buyers", None)
+        # Recompute after merging: the per-share figure and the sanity
+        # check both describe the COMBINED position, and a merge of two
+        # sane filings can still land somewhere impossible.
+        priced = b["shares"] - b["unpriced_shares"]
+        b["price_per_share"] = (round(b["dollars"] / priced, 4)
+                                if b["dollars"] and priced > 0 else None)
+        b["suspect"] = CT.implausible(priced, b["dollars"])
         rows.append(g)
-    # Biggest commitment first. Unpriced buys cannot be ranked on dollars
-    # and must not sort as $0 — they go after the priced ones, flagged.
-    rows.sort(key=lambda r: (r["buy"]["dollars"] is not None,
+
+    # Biggest commitment first — but a row whose arithmetic does not
+    # describe a trade must never lead the board. The first live run put
+    # "$23,649,660,000" at the top on an implied $180,000 a share; sorting
+    # by size alone guarantees that the least trustworthy number gets the
+    # most prominent position. Suspect rows keep their place in the list
+    # and lose their claim on the top of it.
+    #
+    # Unpriced buys are ranked last among the clean rows rather than as $0:
+    # unknown is not small.
+    rows.sort(key=lambda r: (r["buy"]["suspect"] is None,
+                             r["buy"]["dollars"] is not None,
                              r["buy"]["dollars"] or 0), reverse=True)
     return rows
 
