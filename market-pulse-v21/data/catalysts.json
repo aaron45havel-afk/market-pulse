@@ -1,0 +1,24 @@
+{
+ "_meta": {
+  "as_of": "2026-08-09",
+  "days_scanned": 2,
+  "filings_scanned": 0,
+  "matched": 0,
+  "watched_forms": [
+   "SC 13E-3",
+   "NT 10-K",
+   "DEFM14A",
+   "SC TO-T",
+   "NT 10-Q",
+   "SC TO-I",
+   "DEF 14A",
+   "10-12B",
+   "SC 13D",
+   "8-K",
+   "15",
+   "4"
+  ],
+  "note": "A queue, not a feed. Deal terms \u2014 price, consideration, deadline \u2014 come from reading the filing; nothing here scrapes them, because a wrong tender price is worse than no tender price."
+ },
+ "rows": []
+}
