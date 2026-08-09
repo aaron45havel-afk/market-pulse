@@ -24,6 +24,7 @@ import argparse
 import json
 import logging
 import sys
+import re
 import time
 import urllib.error
 import urllib.request
@@ -68,54 +69,53 @@ def _get(url: str) -> str | None:
     return None
 
 
-def parse_index(text: str, day: str) -> list[dict]:
-    """Parse EDGAR's daily form.idx.
+def parse_index(text: str, day: str) -> tuple[list[dict], int]:
+    """Parse EDGAR's daily form.idx. Returns (catalyst rows, total data rows).
 
-    IT IS FIXED-WIDTH, AND THAT MATTERS. Splitting on whitespace looks
-    like it works and silently destroys every multi-token form type —
-    "SC 13D" becomes "SC", "NT 10-K" becomes "NT" — which is nearly the
-    entire catalyst list. Company names are multi-word too, so the tail
-    cannot be counted from the right either.
+    SPLIT ON RUNS OF TWO-OR-MORE SPACES, not on single whitespace and not
+    on column offsets read from the header.
 
-    So the column offsets are read off the header line EDGAR provides,
-    and every row is sliced at those positions.
+      * Single-whitespace splitting destroys every multi-token form type —
+        "SC 13D" becomes "SC", "NT 10-K" becomes "NT" — which is nearly
+        the entire catalyst list.
+      * Column offsets from the header work until the header is absent,
+        reworded, or the file is served as something else entirely. The
+        first live run fetched two index files and parsed ZERO rows from
+        them, and column parsing gave no way to tell whether the file was
+        malformed or simply had no catalysts in it.
+
+    Form types never contain two consecutive spaces, and neither do
+    company names in practice — but the columns are padded apart by many.
+    So a 2+ space split is both simpler and far harder to break, and it
+    needs no header at all.
+
+    The second return value is the count of rows that PARSED, whether or
+    not they were catalysts. Fetching a file and parsing nothing out of it
+    is a broken feed, not a quiet market — EDGAR carries hundreds of
+    Form 4s every weekday — and the caller has to be able to tell those
+    apart.
     """
     rows: list[dict] = []
-    lines = text.splitlines()
-    cols: dict[str, int] | None = None
-    started = False
-
-    for line in lines:
-        if cols is None and "Form Type" in line and "CIK" in line and "File Name" in line:
-            cols = {name: line.index(name)
-                    for name in ("Form Type", "Company Name", "CIK", "Date Filed", "File Name")
-                    if name in line}
-            if len(cols) < 5:
-                cols = None
+    parsed = 0
+    for line in text.splitlines():
+        line = line.rstrip()
+        # Every data row ends with the archive path. Header, preamble and
+        # separator lines do not, which makes this the cheapest possible
+        # "is this a row?" test and needs no header detection.
+        if "edgar/data/" not in line:
             continue
-        if line.startswith("---"):
-            started = True
+        parts = re.split(r"\s{2,}", line.strip())
+        if len(parts) < 5:
             continue
-        if not started or not cols or not line.strip():
+        form, fname, filed, cik = parts[0], parts[-1], parts[-2], parts[-3]
+        if not fname.startswith("edgar/"):
             continue
-
-        def col(name: str, nxt: str | None) -> str:
-            start = cols[name]
-            end = cols[nxt] if nxt else len(line)
-            return line[start:end].strip()
-
-        form = col("Form Type", "Company Name")
-        company = col("Company Name", "CIK")
-        cik = col("CIK", "Date Filed")
-        filed = col("Date Filed", "File Name")
-        fname = col("File Name", None)
-        if not form or not fname:
-            continue
+        parsed += 1
         hit = CT.classify(form)
         if not hit:
             continue
         rows.append({
-            "form": form, "company": company, "cik": cik,
+            "form": form, "company": " ".join(parts[1:-3]).strip(), "cik": cik,
             "filed": filed or day,
             "url": f"https://www.sec.gov/Archives/{fname}",
             "label": hit["label"], "note": hit["note"],
@@ -123,7 +123,7 @@ def parse_index(text: str, day: str) -> list[dict]:
             "actionable": hit.get("actionable", True),
             "warning": bool(hit.get("warning")),
         })
-    return rows
+    return rows, parsed
 
 
 def main() -> int:
@@ -134,6 +134,7 @@ def main() -> int:
 
     all_rows: list[dict] = []
     scanned = 0
+    total_parsed = 0
     for back in range(a.days):
         d = date.today() - timedelta(days=back)
         if d.weekday() >= 5:               # EDGAR does not publish weekends
@@ -144,8 +145,16 @@ def main() -> int:
             log.info("no index for %s (holiday, or not posted yet)", d)
             continue
         scanned += 1
-        found = parse_index(text, d.isoformat())
-        log.info("%s: %d catalyst filings", d, len(found))
+        found, parsed = parse_index(text, d.isoformat())
+        total_parsed += parsed
+        log.info("%s: %d rows parsed, %d catalysts", d, parsed, len(found))
+        if parsed == 0:
+            # Fetched something and understood none of it. Show what arrived
+            # so the next fix is made from evidence rather than a guess.
+            head = [ln for ln in text.splitlines() if ln.strip()][:6]
+            log.error("Parsed NOTHING from %s (%d bytes). First lines received:", d, len(text))
+            for ln in head:
+                log.error("    %r", ln[:160])
         all_rows.extend(found)
         time.sleep(0.3)                    # be polite to sec.gov
 
@@ -153,6 +162,15 @@ def main() -> int:
         log.error("Scanned no index files at all — refusing to overwrite the queue "
                   "with an empty one. An empty board must never read as 'nothing "
                   "is happening' when it means 'the fetch failed'.")
+        return 1
+    # Fetching files and parsing nothing out of them is a broken feed, not a
+    # quiet market: EDGAR carries hundreds of Form 4s every weekday. The first
+    # live run did exactly this and reported success, which is the failure
+    # this guard exists to make impossible.
+    if total_parsed == 0:
+        log.error("Fetched %d index file(s) but parsed 0 rows from them. That is a "
+                  "format or delivery problem, not an absence of filings — refusing "
+                  "to write. See the sample lines above.", scanned)
         return 1
 
     # De-duplicate: amendments to the same filing land repeatedly.
@@ -171,6 +189,7 @@ def main() -> int:
         "_meta": {
             "as_of": date.today().isoformat(),
             "days_scanned": scanned,
+            "rows_parsed": total_parsed,
             "filings_scanned": len(all_rows),
             "matched": len(rows),
             "watched_forms": list(WATCHED),
