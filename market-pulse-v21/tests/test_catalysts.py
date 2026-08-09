@@ -264,6 +264,232 @@ for kw in ({"price": 0, "consideration": 10, "days": 30},
         _FAILS.append(f"evaluate({kw}) raised {type(e).__name__}: {e}")
     _COUNT += 1
 
+# ── Form 4: reading the document, because the index cannot ──────────
+#
+# Every check below is a claim the queue makes on the page. If the parser
+# is wrong, the page says "insider bought" over a tax-withholding event,
+# which is worse than saying nothing.
+
+def _f4(owners_xml, txn_xml, issuer="Acme Industries, Inc.",
+        cik="0000012345", sym="ACME"):
+    """Wrap fragments in a realistic full .txt submission — SGML preamble
+    and all — because that is what sec.gov actually serves."""
+    return f"""-----BEGIN PRIVACY-ENHANCED MESSAGE-----
+<SEC-DOCUMENT>0001234567-26-000001.txt : 20260806
+<SEC-HEADER>ACCESSION NUMBER: 0001234567-26-000001
+</SEC-HEADER>
+<DOCUMENT>
+<TYPE>4
+<FILENAME>form4.xml
+<TEXT>
+<XML>
+<?xml version="1.0"?>
+<ownershipDocument>
+  <schemaVersion>X0508</schemaVersion>
+  <issuer>
+    <issuerCik>{cik}</issuerCik>
+    <issuerName>{issuer}</issuerName>
+    <issuerTradingSymbol>{sym}</issuerTradingSymbol>
+  </issuer>
+{owners_xml}
+  <nonDerivativeTable>
+{txn_xml}
+  </nonDerivativeTable>
+</ownershipDocument>
+</XML>
+</TEXT>
+</DOCUMENT>
+"""
+
+
+def _owner(name, cik="0000999888", officer=0, director=0, ten=0, title=""):
+    return f"""  <reportingOwner>
+    <reportingOwnerId>
+      <rptOwnerCik>{cik}</rptOwnerCik>
+      <rptOwnerName>{name}</rptOwnerName>
+    </reportingOwnerId>
+    <reportingOwnerRelationship>
+      <isDirector>{director}</isDirector>
+      <isOfficer>{officer}</isOfficer>
+      <isTenPercentOwner>{ten}</isTenPercentOwner>
+      <officerTitle>{title}</officerTitle>
+    </reportingOwnerRelationship>
+  </reportingOwner>"""
+
+
+def _txn(code, shares, price, ad="A", date="2026-08-05"):
+    price_xml = (f"<transactionPricePerShare><value>{price}</value></transactionPricePerShare>"
+                 if price is not None else "<transactionPricePerShare/>")
+    return f"""    <nonDerivativeTransaction>
+      <securityTitle><value>Common Stock</value></securityTitle>
+      <transactionDate><value>{date}</value></transactionDate>
+      <transactionCoding>
+        <transactionFormType>4</transactionFormType>
+        <transactionCode>{code}</transactionCode>
+        <equitySwapInvolved>0</equitySwapInvolved>
+      </transactionCoding>
+      <transactionAmounts>
+        <transactionShares><value>{shares}</value></transactionShares>
+        {price_xml}
+        <transactionAcquiredDisposedCode><value>{ad}</value></transactionAcquiredDisposedCode>
+      </transactionAmounts>
+    </nonDerivativeTransaction>"""
+
+
+# A real purchase: CEO buys 1,000 shares at $25.50.
+buy_doc = C.parse_form4(_f4(_owner("Doe John A", officer=1, title="Chief Executive Officer"),
+                            _txn("P", 1000, 25.50)))
+check(buy_doc is not None, "a Form 4 wrapped in the SGML submission parses")
+check(buy_doc["issuer"] == "Acme Industries, Inc.", "issuer name comes off the document")
+check(buy_doc["issuer_cik"] == "12345", "issuer CIK is unpadded")
+check(buy_doc["ticker"] == "ACME", "ticker is captured for cross-referencing")
+check(buy_doc["owners"][0]["name"] == "Doe John A", "reporting owner is captured")
+check("Chief Executive Officer" in buy_doc["owners"][0]["roles"],
+      "the officer TITLE is the role, not the word 'Officer'")
+
+buy = C.insider_buy(buy_doc)
+check(buy is not None, "code P acquisition is recognised as a purchase")
+check(buy["shares"] == 1000, f"purchase shares total 1000 (got {buy['shares']})")
+check(buy["dollars"] == 25500.0, f"dollars committed = 1000 x 25.50 (got {buy['dollars']})")
+check(buy["fully_priced"] is True, "a priced purchase reports as fully priced")
+
+# ── THE WHOLE POINT: everything that is not a code-P buy must vanish ──
+# These are what actually fills EDGAR every day. If any of them survives,
+# the queue is noise with a caption claiming it is a purchase.
+for code, label in (("A", "a grant"), ("M", "an option exercise"),
+                    ("F", "tax withholding"), ("S", "a sale"),
+                    ("G", "a gift"), ("C", "a conversion"),
+                    ("X", "an in-the-money option exercise"),
+                    ("D", "a disposition to the issuer")):
+    d = C.parse_form4(_f4(_owner("Doe John A", director=1), _txn(code, 5000, 30.0,
+                                                                 ad=("A" if code in "AMCX" else "D"))))
+    check(C.insider_buy(d) is None, f"{label} (code {code}) is NOT reported as a purchase")
+
+# A code-P line that DISPOSES shares is not a buy either.
+p_disposed = C.parse_form4(_f4(_owner("Doe John A", director=1), _txn("P", 900, 12.0, ad="D")))
+check(C.insider_buy(p_disposed) is None,
+      "code P with an acquired/disposed code of D is not a purchase")
+
+# Mixed filing: a grant AND a real purchase. Only the purchase counts, and
+# the grant's shares must not be added to the dollars committed.
+mixed = C.parse_form4(_f4(_owner("Roe Jane", officer=1, title="CFO"),
+                          _txn("A", 50000, 0.0) + "\n" + _txn("P", 400, 10.0)))
+mb = C.insider_buy(mixed)
+check(mb is not None and mb["shares"] == 400,
+      f"only the code-P shares count in a mixed filing (got {mb and mb['shares']})")
+check(mb["dollars"] == 4000.0, f"the 50,000-share grant adds nothing (got {mb['dollars']})")
+
+# ── a missing price is UNKNOWN, never zero ──────────────────────────
+# Sorting an unpriced real purchase to the bottom of a dollar ranking as
+# if it were a $0 trade hides it exactly as effectively as dropping it.
+unpriced = C.parse_form4(_f4(_owner("Poe Ann", director=1), _txn("P", 750, None)))
+ub = C.insider_buy(unpriced)
+check(ub is not None, "a purchase with no reported price is still a purchase")
+check(ub["dollars"] is None, "an unpriced purchase reports dollars as None, not 0")
+check(ub["unpriced_shares"] == 750, "the unpriced shares are reported separately")
+check(ub["fully_priced"] is False, "and the filing is flagged as not fully priced")
+
+# ── derivatives are not somebody buying stock ───────────────────────
+deriv = """<derivativeTable>
+    <derivativeTransaction>
+      <securityTitle><value>Employee Stock Option</value></securityTitle>
+      <transactionCoding><transactionCode>P</transactionCode></transactionCoding>
+      <transactionAmounts>
+        <transactionShares><value>10000</value></transactionShares>
+        <transactionPricePerShare><value>0.01</value></transactionPricePerShare>
+        <transactionAcquiredDisposedCode><value>A</value></transactionAcquiredDisposedCode>
+      </transactionAmounts>
+    </derivativeTransaction>
+  </derivativeTable>"""
+dd = C.parse_form4(_f4(_owner("Doe John A", officer=1, title="CEO"), "").replace(
+    "  </nonDerivativeTable>", "  </nonDerivativeTable>\n  " + deriv))
+check(C.insider_buy(dd) is None,
+      "a code-P DERIVATIVE line is not counted — an option at a nominal strike "
+      "is not a person buying stock")
+
+# ── roles: a 10% owner is not an insider in the useful sense ────────
+ten_pct = C.parse_form4(_f4(_owner("Big Capital LP", ten=1), _txn("P", 100000, 5.0)))
+tb = C.insider_buy(ten_pct)
+check(tb["roles"] == ["10% owner"], f"10% owner role captured (got {tb['roles']})")
+check(tb["by_insider"] is False,
+      "a 10%-owner purchase is not flagged as an officer/director buy")
+
+both = C.parse_form4(_f4(_owner("Doe John A", officer=1, director=1, title="President"),
+                         _txn("P", 100, 5.0)))
+check(set(C.insider_buy(both)["roles"]) == {"President", "Director"},
+      "officer and director roles are both captured")
+
+# ── malformed input must degrade, not explode ───────────────────────
+for bad in ("", "not xml at all", "<html>404</html>",
+            "<ownershipDocument><issuer>", _f4("", "")):
+    try:
+        d = C.parse_form4(bad)
+        C.insider_buy(d)
+    except Exception as e:                                   # noqa: BLE001
+        _FAILS.append(f"parse_form4 raised {type(e).__name__} on {bad[:30]!r}: {e}")
+    _COUNT += 1
+check(C.parse_form4("<html>Rate limit exceeded</html>") is None,
+      "an error page served as 200 parses to None, not to a fake filing")
+check(C.insider_buy(None) is None, "insider_buy(None) is None, not a crash")
+
+# ── Form 15 is three different events ───────────────────────────────
+# 12(b) is the exchange registration — withdrawing it is the delisting.
+# 12(g) and 15(d) frequently cover a secondary class, so calling them
+# "going dark" cries wolf on an NYSE company whose common is untouched.
+c12b = C.classify("15-12B")
+c12g = C.classify("15-12G")
+c15d = C.classify("15-15D")
+check(c12b["label"] != c12g["label"],
+      "15-12B and 15-12G do not share a label — they are different events")
+check("exchange" in c12b["label"].lower(),
+      f"15-12B names the exchange deregistration (got {c12b['label']!r})")
+check("secondary" in c12g["note"].lower(),
+      "15-12G warns that it is often a secondary class, not the listed common")
+check(c15d is not None and "15(d)" in c15d["label"],
+      "15-15D is classified on its own terms")
+check(C.classify("15-12B/A")["label"] == c12b["label"],
+      "an amended 15-12B keeps the specific classification")
+check(C.classify("15F-12B") is not None,
+      "a foreign private issuer's Form 15F is classified, not dropped")
+check(C.classify("15") is not None, "a bare Form 15 still classifies")
+
+# The generic key must not swallow the specific ones. This is the bug that
+# a shortest-match scan reintroduces silently.
+check(C.classify("15-12G")["label"] != C.classify("15")["label"],
+      "the generic '15' entry does not shadow the specific variants")
+check(C.classify("SC TO-I")["label"] != C.classify("SC TO-T")["label"],
+      "issuer and third-party tenders stay distinct")
+check(C.classify("10-12B")["label"].lower().startswith("spin"),
+      "10-12B is a spin-off, not a Form 15 variant")
+
+# ── scheduled fund repurchases are a calendar, not an event ─────────
+for name in ("Ares Private Markets Fund", "Apollo Debt Solutions BDC",
+             "AMG Pantheon Master Fund, LLC", "Stellus Private Credit BDC",
+             "Hedge Fund Guided Portfolio Solution",
+             "GCM GROSVENOR CORE ABSOLUTE RETURN FUND II, LLC"):
+    check(C.is_routine_repurchase("SC TO-I", name) is True,
+          f"{name!r} is a scheduled at-NAV repurchase, not a tender to read")
+    check(C.is_routine_repurchase("SC TO-I/A", name) is True,
+          f"{name!r} amendment is routine too")
+
+for name in ("AVANOS MEDICAL, INC.", "Presidio Property Trust, Inc.",
+             "Forte Biosciences, Inc.", "ARGENX SE", "Identiv, Inc.",
+             "Fundamental Industries Corp", "Refund Technologies Inc"):
+    check(C.is_routine_repurchase("SC TO-I", name) is False,
+          f"{name!r} is a real issuer tender — must NOT be set aside")
+
+# Word boundaries: "Fundamental" and "Refund" contain 'fund' as a substring
+# and are ordinary companies. A naive substring match buries them.
+check(C.is_routine_repurchase("SC TO-I", "Fundamental Global Inc") is False,
+      "'Fundamental' is not a fund — substring matching would hide it")
+
+# Scoped to SC TO-I on purpose: a fund in a MERGER vote is a real event.
+check(C.is_routine_repurchase("DEFM14A", "Ares Private Markets Fund") is False,
+      "a fund's merger vote is a real event, not a scheduled repurchase")
+check(C.is_routine_repurchase("SC TO-T", "Ares Private Markets Fund") is False,
+      "a THIRD-PARTY tender for a fund is a real event")
+check(C.is_routine_repurchase("SC TO-I", "") is False, "empty company name is not routine")
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

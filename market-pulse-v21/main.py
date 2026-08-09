@@ -368,10 +368,14 @@ async def catalysts_page(request: Request, price: str = "", offer: str = "",
     import catalysts as CT
 
     path = Path(__file__).resolve().parent / "data" / "catalysts.json"
-    queue, meta = [], None
+    queue, meta, insiders, routine = [], None, [], []
     if path.exists():
         blob = _json.loads(path.read_text())
         queue, meta = blob.get("rows", []), blob.get("_meta")
+        # Absent in payloads written before Form 4s were resolved per
+        # filing. An older file degrades to the deal queue alone rather
+        # than erroring, so a stale deploy still renders.
+        insiders, routine = blob.get("insiders", []), blob.get("routine", [])
 
     target_n = max(0.0, min(500.0, _qnum(target, 15.0)))
     mind_n = max(0.0, min(10_000_000.0, _qnum(mindollars, 2000.0)))
@@ -398,6 +402,7 @@ async def catalysts_page(request: Request, price: str = "", offer: str = "",
 
     return templates.TemplateResponse("catalysts.html", {
         "request": request, "queue": queue, "meta": meta,
+        "insiders": insiders, "routine": routine,
         "catalog": CT.CATALYSTS, "result": result, "verdict": verdict,
         "compare": compare, "price": price, "offer": offer, "days": days,
         "spread": spread, "shares": shares, "oddlot": _qnum(oddlot) > 0,

@@ -26,7 +26,10 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The index scan is a handful of requests. The Form 4 pass is ~1,200
+    # documents at 8/second — a few minutes, and the reason the queue can
+    # tell a purchase from a vesting event at all.
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: market-pulse-v21
@@ -46,7 +49,10 @@ jobs:
       - name: Verify classification + triage
         run: python tests/test_catalysts.py
 
-      - name: Scan the EDGAR daily index
+      # Two stages. The index says WHICH filings exist; the second pass
+      # opens every Form 4, because the index cannot tell a purchase from
+      # a grant and 97% of its Form 4 hits are not purchases.
+      - name: Scan the EDGAR daily index, then read the Form 4s
         run: python scripts/refresh_catalysts.py --days "${{ github.event.inputs.days || '4' }}"
 
       - name: Commit + push if changed

@@ -57,6 +57,15 @@
     .ct-note { font-size: 0.78rem; color: var(--ink-3); line-height: 1.65;
         border: 1px dashed var(--border); border-radius: 10px; padding: 0.7rem 0.9rem; margin: 1rem 0; }
     .ct-note b { color: var(--text); }
+
+    .cnt { font-size: 0.7rem; font-weight: 600; color: var(--ink-3); margin-left: 0.4rem; }
+    .pill-cluster { display: inline-block; font-size: 0.6rem; font-weight: 800; padding: 1px 7px;
+        border-radius: 999px; background: rgba(34,197,94,0.16); color: #15803d; margin-left: 0.35rem; }
+    .ct .dollars { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+    .ct .unk { font-weight: 500; color: var(--ink-3); border-bottom: 1px dashed var(--border); cursor: help; }
+    .ct .role { display: block; font-size: 0.72rem; color: var(--ink-3); opacity: 0.85; }
+    .ct-card summary { cursor: pointer; font-size: 0.9rem; }
+    .ct-card summary b { color: var(--text); }
 </style>
 {% endblock %}
 
@@ -147,6 +156,7 @@
       is flagged. For these situations hours matter and seconds don't, and a live feed would just produce the
       churn that eats your after-tax return.
     </p>
+    {% if queue or insiders %}
     {% if queue %}
     <table class="ct">
       <thead><tr><th>Filed</th><th>Form</th><th>Company</th><th>What it is</th></tr></thead>
@@ -161,12 +171,89 @@
         {% endfor %}
       </tbody>
     </table>
-    {% if meta %}<p class="ct-sub" style="margin-top:0.8rem">Scanned {{ meta.as_of }} · {{ meta.filings_scanned }} filings · {{ meta.matched }} matched.</p>{% endif %}
     {% else %}
-    <p class="ct-sub"><b>Nothing loaded yet.</b> The queue is built in CI from the EDGAR daily index —
-      run the <code>refresh-catalysts</code> workflow. The calculator above works without it.</p>
+    <p class="ct-sub"><b>No deal filings in the window.</b> Tender offers and merger votes are
+      genuinely intermittent — a few a week, not a few a day.</p>
+    {% endif %}
     {% endif %}
   </div>
+
+  {% if insiders %}
+  <div class="ct-card">
+    <h2>Insider buying <span class="cnt">{{ insiders|length }} companies</span></h2>
+    <p class="ct-sub">
+      Every Form 4 here was <b>opened and read</b>. The daily index only says a Form 4 exists, and most
+      Form 4s are restricted stock vesting, options being exercised, shares withheld to pay tax on a grant,
+      or a scheduled 10b5-1 sale. Only <b>transaction code P</b> — somebody buying at the market price with
+      their own money — survives, keyed to the <b>issuer</b> rather than the filer, and ranked by dollars
+      committed. A director topping up for $8k and a CEO buying $2m are not the same observation.
+    </p>
+    <table class="ct">
+      <thead><tr>
+        <th>Company</th><th>Ticker</th><th style="text-align:right">Committed</th>
+        <th style="text-align:right">Shares</th><th>Who bought</th><th>Filed</th>
+      </tr></thead>
+      <tbody>
+        {% for r in insiders[:40] %}
+        <tr>
+          <td>{{ r.company[:38] }}{% if r.cluster %}<span class="pill-cluster"
+            title="More than one insider buying the same company in this window">CLUSTER</span>{% endif %}</td>
+          <td class="form-code">{{ r.ticker or '—' }}</td>
+          <td style="text-align:right" class="dollars">
+            {% if r.buy.dollars is not none %}${{ '{:,.0f}'.format(r.buy.dollars) }}
+            {% else %}<span class="unk" title="The filing reported no price. Unknown is not zero — this is not a small buy, it is an unmeasured one.">not priced</span>{% endif %}</td>
+          <td style="text-align:right">{{ '{:,.0f}'.format(r.buy.shares) }}</td>
+          <td class="note">{{ r.buy.buyers|join(', ')|truncate(52) }}{% if r.buy.roles %}
+            <span class="role">{{ r.buy.roles|join(' · ') }}</span>{% endif %}</td>
+          <td>{{ r.filed }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="ct-sub" style="margin-top:0.7rem">
+      <b>What this does not tell you.</b> Insiders buy for reasons that have nothing to do with the next twelve
+      months, and a purchase is not a valuation. Cross-reference against
+      <a href="/quiet-value">quiet value</a> before acting — an insider buying something already cheap on the
+      balance sheet is a different case from an insider buying a story.
+      {% if meta and meta.form4 %}
+      <br>Read {{ meta.form4.filings }} Form 4 filings from {{ meta.form4.index_rows }} index rows;
+      {{ meta.form4.not_purchases }} were not purchases.
+      {% if meta.form4.fetch_failed %} <b>{{ meta.form4.fetch_failed }} could not be fetched</b> and are missing from this list.{% endif %}
+      {% if meta.form4.capped %} <b>{{ meta.form4.capped }} were skipped at the cap — this list is incomplete.</b>{% endif %}
+      {% endif %}
+    </p>
+  </div>
+  {% endif %}
+
+  {% if routine %}
+  <div class="ct-card">
+    <details>
+      <summary><b>{{ routine|length }} scheduled fund repurchases</b> — set aside, not deleted</summary>
+      <p class="ct-sub" style="margin-top:0.6rem">
+        Interval funds and non-traded BDCs run a standing offer to buy back a slice of their shares
+        <b>at net asset value</b>, quarter after quarter. They file SC TO-I like a real tender, and there are
+        enough of them to bury every genuine one. There is no premium to capture and usually no exchange to
+        buy them on — so they are moved here rather than dropped, because a filter you cannot see is
+        indistinguishable from a bug.
+      </p>
+      <table class="ct">
+        <thead><tr><th>Filed</th><th>Form</th><th>Fund</th></tr></thead>
+        <tbody>
+          {% for r in routine[:40] %}
+          <tr><td>{{ r.filed }}</td><td class="form-code">{{ r.form }}</td><td>{{ r.company[:52] }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+  </div>
+  {% endif %}
+
+  {% if not queue and not insiders %}
+  <div class="ct-card">
+    <p class="ct-sub"><b>Nothing loaded yet.</b> The queue is built in CI from the EDGAR daily index —
+      run the <code>refresh-catalysts</code> workflow. The calculator above works without it.</p>
+  </div>
+  {% endif %}
 
   <div class="ct-card">
     <h2>What's watched, and what each one means</h2>
