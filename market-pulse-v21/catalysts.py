@@ -214,6 +214,44 @@ TXN_CODES: dict[str, str] = {
 
 BUY_CODE = "P"          # the only code that is somebody buying stock
 
+# ── Sanity bounds on the arithmetic ─────────────────────────────────
+#
+# The first live run put "Reborn Coffee, Inc. — $23,649,660,000" at the
+# top of the board: 131,387 shares at exactly $180,000.00 each, in a stock
+# that trades near a dollar. The filer had put the AGGREGATE value in the
+# per-share field. Nothing in the filing is malformed, so no parser can
+# catch it by being stricter — the only defence is checking whether the
+# result describes a trade a human could have made.
+#
+# These bounds are deliberately far outside the real range (median implied
+# price on that same board was $15.25, second-highest $370.79). They are
+# not a view on what is expensive. Above them, the arithmetic has stopped
+# describing a purchase, and the row is marked for checking rather than
+# dropped — a filter you cannot see is indistinguishable from a bug.
+SUSPECT_PRICE_ABOVE = 10_000.0          # only BRK.A trades above this
+SUSPECT_DOLLARS_ABOVE = 5_000_000_000.0  # larger than any real insider buy
+
+# Form 4 uses these where an issuer has no trading symbol. Rendering them
+# verbatim puts the literal word NONE in a ticker column.
+PLACEHOLDER_TICKERS = frozenset({"NONE", "N/A", "NA", "N.A.", "-", "--", "NULL"})
+
+
+def implausible(shares: float | None, dollars: float | None) -> str | None:
+    """Why this doesn't look like a trade — or None if it does.
+
+    Returns a sentence meant to be shown to the reader, because the point
+    is to send them to the filing, not to make the row disappear.
+    """
+    if not shares or not dollars or shares <= 0 or dollars <= 0:
+        return None                     # unknown is handled elsewhere
+    pps = dollars / shares
+    if pps > SUSPECT_PRICE_ABOVE:
+        return (f"implied price of ${pps:,.2f} a share — almost certainly the "
+                f"aggregate value reported in the per-share field")
+    if dollars > SUSPECT_DOLLARS_ABOVE:
+        return f"${dollars:,.0f} is larger than any real insider purchase"
+    return None
+
 _OWNERSHIP_DOC = re.compile(r"<ownershipDocument>.*?</ownershipDocument>", re.S | re.I)
 
 # Issuer tender offers from interval funds, non-traded BDCs and similar
@@ -328,10 +366,13 @@ def parse_form4(raw: str) -> dict | None:
                 "derivative": derivative,
             })
 
+    ticker = _val(issuer.find("issuerTradingSymbol")).upper() if issuer is not None else ""
+    if ticker in PLACEHOLDER_TICKERS:
+        ticker = ""                     # an issuer with no symbol has no symbol
     return {
         "issuer": _val(issuer.find("issuerName")) if issuer is not None else "",
         "issuer_cik": (_val(issuer.find("issuerCik")) if issuer is not None else "").lstrip("0"),
-        "ticker": _val(issuer.find("issuerTradingSymbol")).upper() if issuer is not None else "",
+        "ticker": ticker,
         "owners": owners,
         "transactions": txns,
     }
@@ -371,11 +412,18 @@ def insider_buy(doc: dict | None) -> dict | None:
         return None
 
     roles = [r for o in doc.get("owners", []) for r in o["roles"]]
+    total = round(dollars, 2) if dollars > 0 else None
+    priced_shares = shares - unpriced
     return {
         "shares": round(shares, 2),
-        "dollars": round(dollars, 2) if dollars > 0 else None,
+        "dollars": total,
         "unpriced_shares": round(unpriced, 2),
         "fully_priced": unpriced == 0,
+        # Shown on the page beside the total, because the total alone hides
+        # the one error a reader could otherwise catch instantly.
+        "price_per_share": (round(dollars / priced_shares, 4)
+                            if total and priced_shares > 0 else None),
+        "suspect": implausible(priced_shares, total),
         "buyers": [o["name"] for o in doc.get("owners", []) if o["name"]],
         "roles": roles,
         "by_insider": any(r for r in roles if r not in ("10% owner",)),

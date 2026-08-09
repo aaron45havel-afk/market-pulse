@@ -66,6 +66,12 @@
     .ct .role { display: block; font-size: 0.72rem; color: var(--ink-3); opacity: 0.85; }
     .ct-card summary { cursor: pointer; font-size: 0.9rem; }
     .ct-card summary b { color: var(--text); }
+    .pill-check { display: inline-block; font-size: 0.6rem; font-weight: 800; padding: 1px 7px;
+        border-radius: 999px; background: rgba(217,119,6,0.18); color: #b45309; margin-left: 0.35rem; }
+    .ct tr.suspect-row td { background: rgba(217,119,6,0.06); }
+    .ct tr.suspect-row .dollars { color: #b45309; }
+    .ct tr.suspect-why td { background: rgba(217,119,6,0.06); font-size: 0.76rem;
+        color: var(--ink-3); padding-top: 0; border-bottom: 1px solid var(--border); }
 </style>
 {% endblock %}
 
@@ -191,22 +197,32 @@
     <table class="ct">
       <thead><tr>
         <th>Company</th><th>Ticker</th><th style="text-align:right">Committed</th>
+        <th style="text-align:right" title="Committed ÷ shares. Shown so a filing that reports its aggregate in the per-share field is obvious at a glance.">Per share</th>
         <th style="text-align:right">Shares</th><th>Who bought</th><th>Filed</th>
       </tr></thead>
       <tbody>
         {% for r in insiders[:40] %}
-        <tr>
+        <tr class="{{ 'suspect-row' if r.buy.get('suspect') }}">
           <td>{{ r.company[:38] }}{% if r.cluster %}<span class="pill-cluster"
-            title="More than one insider buying the same company in this window">CLUSTER</span>{% endif %}</td>
+            title="More than one insider buying the same company in this window">CLUSTER</span>{% endif %}
+            {%- if r.buy.get('suspect') %}<span class="pill-check" title="{{ r.buy.get('suspect') }}">CHECK THE FILING</span>{% endif %}</td>
           <td class="form-code">{{ r.ticker or '—' }}</td>
           <td style="text-align:right" class="dollars">
             {% if r.buy.dollars is not none %}${{ '{:,.0f}'.format(r.buy.dollars) }}
             {% else %}<span class="unk" title="The filing reported no price. Unknown is not zero — this is not a small buy, it is an unmeasured one.">not priced</span>{% endif %}</td>
+          <td style="text-align:right" class="dollars">
+            {% if r.buy.get('price_per_share') is not none %}${{ '%.2f'|format(r.buy.get('price_per_share')) }}
+            {% else %}—{% endif %}</td>
           <td style="text-align:right">{{ '{:,.0f}'.format(r.buy.shares) }}</td>
           <td class="note">{{ r.buy.buyers|join(', ')|truncate(52) }}{% if r.buy.roles %}
             <span class="role">{{ r.buy.roles|join(' · ') }}</span>{% endif %}</td>
           <td>{{ r.filed }}</td>
         </tr>
+        {% if r.buy.get('suspect') %}
+        <tr class="suspect-why"><td colspan="7">
+          <b>Not ranked:</b> {{ r.buy.get('suspect') }}. The figure is reproduced as filed — read the Form 4 before believing it.
+        </td></tr>
+        {% endif %}
         {% endfor %}
       </tbody>
     </table>

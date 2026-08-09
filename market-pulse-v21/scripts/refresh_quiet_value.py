@@ -172,7 +172,26 @@ def fetch_one(source: dict, ticker: str, retry: bool = True) -> dict | None:
         # success would keep the circuit breaker open through a total
         # outage.
         _bump("http_200_unparseable", False)
+        _sample(source["name"], raw)
     return parsed
+
+
+# What a 200 that we could not read actually contained. The first run with
+# the probe in place reported `{'http_200_unparseable': 3, 'ok': 3}` for
+# Stooq — it answers GitHub's runners, but not with what the parser
+# expects — and there was no way to tell an exhausted quota from a changed
+# format from a wrong URL. Guessing at that is how the EDGAR index parser
+# shipped broken twice. Keep the first bytes instead.
+SAMPLES: dict[str, str] = {}
+SAMPLE_CHARS = 300
+
+
+def _sample(name: str, raw) -> None:
+    with _STATUS_LOCK:
+        if name in SAMPLES:
+            return
+        text = raw if isinstance(raw, str) else json.dumps(raw)[:SAMPLE_CHARS]
+        SAMPLES[name] = " ".join((text or "")[:SAMPLE_CHARS].split())
 
 
 def probe(source: dict) -> tuple[bool, str]:
@@ -218,6 +237,12 @@ def choose_source(preferred: str = "") -> dict | None:
             reset_feed_state()
             return src
         log.warning("Source %s is unusable: %s (%s)", src["name"], why, src["note"])
+        if src["name"] in SAMPLES:
+            # It answered; we could not read it. Print what arrived, because
+            # "unparseable" alone cannot distinguish an exhausted quota from
+            # a changed format from a wrong URL.
+            log.warning("    %s replied with HTTP 200 and this body: %r",
+                        src["name"], SAMPLES[src["name"]])
     return None
 
 
