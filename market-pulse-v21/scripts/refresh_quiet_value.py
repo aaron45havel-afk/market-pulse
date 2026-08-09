@@ -40,7 +40,6 @@ sys.path.insert(0, str(ROOT))
 import liquidity as LQ                                    # noqa: E402
 import quality_value as QV                                # noqa: E402
 import sec_edgar as SE                                    # noqa: E402
-from lynch_screener import fetch_prices_bulk              # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 log = logging.getLogger("quiet-value")
@@ -90,9 +89,21 @@ def _extra_frames() -> dict[str, dict]:
     return out
 
 
-def fetch_volume_year(ticker: str) -> list[float | None] | None:
-    """A year of daily share volume. None on miss — never an empty list,
-    which downstream would read as 'no trades' rather than 'no data'."""
+def fetch_chart(ticker: str) -> dict | None:
+    """A year of daily volume AND the current price, from ONE call.
+
+    This is the whole performance story of the script. The first version
+    fetched prices for every candidate through one API and volume history
+    through another — two calls per name, two rate limits, and the price
+    stage ran UNBOUNDED over thousands of tickers before the capped stage
+    even began. It burned a 90-minute CI budget without ever reaching the
+    work it existed to do.
+
+    The chart response already carries both, so it is one call per name
+    and one rate limit to respect. Returns None on miss — never an empty
+    series, which downstream would read as "never traded" rather than
+    "no data".
+    """
     url = YAHOO_CHART.format(t=urllib.parse.quote(ticker.upper()))
     for attempt, backoff in enumerate((8.0, 24.0, 60.0, None)):
         try:
@@ -115,15 +126,28 @@ def fetch_volume_year(ticker: str) -> list[float | None] | None:
     results = ((data or {}).get("chart") or {}).get("result") or []
     if not results:
         return None
-    quote = ((results[0].get("indicators") or {}).get("quote") or [{}])[0]
+    res = results[0]
+    quote = ((res.get("indicators") or {}).get("quote") or [{}])[0]
     vols = quote.get("volume")
-    return vols if isinstance(vols, list) and vols else None
+    if not isinstance(vols, list) or not vols:
+        return None
+    price = (res.get("meta") or {}).get("regularMarketPrice")
+    if price is None:                       # fall back to the last real close
+        for c in reversed(quote.get("close") or []):
+            if c is not None:
+                price = c
+                break
+    try:
+        price = float(price) if price is not None else None
+    except (TypeError, ValueError):
+        price = None
+    return {"volumes": vols, "price": price}
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--limit", type=int, default=600,
-                    help="max candidates to pull volume history for")
+    ap.add_argument("--limit", type=int, default=400,
+                    help="max candidates to pull market data for (one call each)")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
@@ -163,48 +187,50 @@ def main() -> int:
         log.error("No candidates — refusing to write.")
         return 1
 
-    # ── price, then the REAL size cut ──
-    prices = fetch_prices_bulk([c["ticker"] for c in candidates])
-    log.info("Prices: %d of %d", len(prices), len(candidates))
-    sized = []
-    for c in candidates:
-        px = prices.get(c["ticker"])
-        sh = c.get("shares")
-        if not px or not sh or sh <= 0:
-            continue
-        mcap = px * sh
-        if not (MIN_MARKET_CAP <= mcap <= MAX_MARKET_CAP):
-            continue
-        c["price"] = px
-        c["market_cap"] = mcap
-        sized.append(c)
-    # Smallest first: the cohort the research is about.
-    sized.sort(key=lambda r: r["market_cap"])
-    if a.limit and len(sized) > a.limit:
-        log.info("Capping volume fetches at %d of %d candidates (smallest first).",
-                 a.limit, len(sized))
-        sized = sized[:a.limit]
-    log.info("In size band with a price: %d", len(sized))
+    # ── cap the work BEFORE spending anything ──
+    # Total assets is a crude size proxy, but it is free and it is the only
+    # ordering available before we have a price. Smallest first, because
+    # that is the cohort the research is about — and if the budget runs
+    # out, the large end is the right end to lose.
+    candidates.sort(key=lambda c: c.get("total_assets") or 0)
+    if a.limit and len(candidates) > a.limit:
+        log.info("Capping market-data fetches at %d of %d candidates "
+                 "(smallest by assets first).", a.limit, len(candidates))
+        candidates = candidates[:a.limit]
 
-    # ── the expensive call, on survivors only ──
+    # ── one call per name: price and a year of volume together ──
     def one(row: dict) -> dict:
-        vols = fetch_volume_year(row["ticker"])
-        row["_volumes_ok"] = vols is not None
-        t = LQ.annual_turnover(vols or [], row.get("shares"))
+        chart = fetch_chart(row["ticker"])
+        row["_chart_ok"] = chart is not None
+        px = (chart or {}).get("price")
+        sh = row.get("shares")
+        row["price"] = px
+        row["market_cap"] = (px * sh) if (px and sh and sh > 0) else None
+        t = LQ.annual_turnover((chart or {}).get("volumes") or [], sh)
         row["turnover"] = t["turnover"] if t else None
         row["liq"] = t
-        row["trade"] = LQ.tradeability(t, row.get("price"))
+        row["trade"] = LQ.tradeability(t, px)
         return row
 
-    done = []
-    with ThreadPoolExecutor(max_workers=4) as ex:
-        for fut in as_completed([ex.submit(one, r) for r in sized]):
+    fetched, done = 0, []
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        for fut in as_completed([ex.submit(one, r) for r in candidates]):
             try:
                 done.append(fut.result())
             except Exception as e:                          # noqa: BLE001
-                log.warning("volume fetch failed: %s", e)
-    got = sum(1 for r in done if r["_volumes_ok"])
-    log.info("Volume history: %d of %d", got, len(done))
+                log.warning("chart fetch failed: %s", e)
+            fetched += 1
+            if fetched % 50 == 0:
+                ok = sum(1 for r in done if r.get("_chart_ok"))
+                log.info("  %d/%d fetched, %d with data", fetched, len(candidates), ok)
+    got = sum(1 for r in done if r["_chart_ok"])
+    log.info("Market data: %d of %d", got, len(done))
+
+    # ── the REAL size cut, now that we have prices ──
+    sized = [r for r in done
+             if r.get("market_cap") and MIN_MARKET_CAP <= r["market_cap"] <= MAX_MARKET_CAP]
+    log.info("In the size band: %d of %d fetched", len(sized), len(done))
+    done = sized
 
     # ── classify + score ──
     classified = LQ.classify(done, within_size=True)
@@ -257,7 +283,7 @@ def main() -> int:
         "_meta": {
             "as_of": date.today().isoformat(),
             "universe_candidates": len(candidates),
-            "in_size_band": len(sized),
+            "in_size_band": len(done),
             "volume_coverage_pct": cov["pct"],
             "limits": QV.DEFAULTS,
             "note": ("Turnover is trailing-12m share volume / shares OUTSTANDING "
