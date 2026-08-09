@@ -25,7 +25,9 @@ import argparse
 import json
 import logging
 import os
+import random
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -38,6 +40,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 import liquidity as LQ                                    # noqa: E402
+import pricefeed as PF                                    # noqa: E402
 import quality_value as QV                                # noqa: E402
 import sec_edgar as SE                                    # noqa: E402
 
@@ -89,59 +92,133 @@ def _extra_frames() -> dict[str, dict]:
     return out
 
 
-def fetch_chart(ticker: str) -> dict | None:
-    """A year of daily volume AND the current price, from ONE call.
+class FeedDown(Exception):
+    """Raised when the chosen source stops answering mid-run."""
 
-    This is the whole performance story of the script. The first version
-    fetched prices for every candidate through one API and volume history
-    through another — two calls per name, two rate limits, and the price
-    stage ran UNBOUNDED over thousands of tickers before the capped stage
-    even began. It burned a 90-minute CI budget without ever reaching the
-    work it existed to do.
 
-    The chart response already carries both, so it is one call per name
-    and one rate limit to respect. Returns None on miss — never an empty
-    series, which downstream would read as "never traded" rather than
-    "no data".
+# Failure counters, so an hour of silence can never happen again. The
+# 2026-08-09 run fetched 100 tickers, got data for none, and logged
+# nothing at all — every rejection was swallowed by an except that
+# returned None.
+STATUS: dict[str, int] = {}
+
+
+# Once this many requests fail back to back, stop backing off and start
+# failing fast. Backing off is the right response to a transient rate
+# limit and the wrong one to a source that is refusing everything: the
+# 2026-08-09 run spent 92 seconds per ticker sleeping between rejections
+# that were never going to stop coming. Politeness that never notices is
+# not politeness.
+DEGRADE_AFTER = 12
+_CONSECUTIVE = 0
+_STATUS_LOCK = threading.Lock()
+
+
+def _bump(key: str, ok: bool) -> bool:
+    """Record an outcome. Returns True while the feed still looks healthy."""
+    global _CONSECUTIVE
+    with _STATUS_LOCK:
+        STATUS[key] = STATUS.get(key, 0) + 1
+        _CONSECUTIVE = 0 if ok else _CONSECUTIVE + 1
+        return _CONSECUTIVE < DEGRADE_AFTER
+
+
+def reset_feed_state() -> None:
+    global _CONSECUTIVE
+    with _STATUS_LOCK:
+        _CONSECUTIVE = 0
+        STATUS.clear()
+
+
+def fetch_one(source: dict, ticker: str, retry: bool = True) -> dict | None:
+    """One call per name: price and a year of volume together.
+
+    The ladder is short, and it is skipped entirely once DEGRADE_AFTER
+    consecutive failures say the source is not rate-limiting us but
+    refusing us. The old ladder slept 8s, 24s then 60s before giving up:
+    400 tickers x 92s across 3 workers is three and a half hours against a
+    sixty-minute budget, which is how an hour got spent writing nothing.
     """
-    url = YAHOO_CHART.format(t=urllib.parse.quote(ticker.upper()))
-    for attempt, backoff in enumerate((8.0, 24.0, 60.0, None)):
+    url = source["url"].format(s=urllib.parse.quote(source["symbol"](ticker), safe=".-"))
+    raw = None
+    for backoff in (3.0, 9.0, None):
         try:
             req = urllib.request.Request(
-                url, headers={"User-Agent": BROWSER_UA, "Accept": "application/json"})
+                url, headers={"User-Agent": BROWSER_UA,
+                              "Accept": "application/json, text/csv, */*"})
             with urllib.request.urlopen(req, timeout=20) as r:
-                data = json.loads(r.read())
+                body = r.read()
+            raw = json.loads(body) if source["json"] else body.decode("utf-8", "replace")
+            _bump("ok", True)
             break
         except urllib.error.HTTPError as e:
-            if e.code == 429 and backoff is not None:
-                import random
+            healthy = _bump(f"http_{e.code}", False)
+            if retry and healthy and e.code in (429, 503) and backoff is not None:
                 time.sleep(backoff * (0.8 + 0.4 * random.random()))
                 continue
             return None
-        except (urllib.error.URLError, TimeoutError, OSError, ValueError):
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            _bump(type(e).__name__, False)
+            return None
+        except ValueError:                  # malformed JSON
+            _bump("bad_payload", False)
             return None
     else:
         return None
+    parsed = source["parse"](raw)
+    if parsed is None:
+        # A 200 that parses to nothing is a failure too — Stooq answers an
+        # exhausted quota with plain text and HTTP 200. Counting it as a
+        # success would keep the circuit breaker open through a total
+        # outage.
+        _bump("http_200_unparseable", False)
+    return parsed
 
-    results = ((data or {}).get("chart") or {}).get("result") or []
-    if not results:
-        return None
-    res = results[0]
-    quote = ((res.get("indicators") or {}).get("quote") or [{}])[0]
-    vols = quote.get("volume")
-    if not isinstance(vols, list) or not vols:
-        return None
-    price = (res.get("meta") or {}).get("regularMarketPrice")
-    if price is None:                       # fall back to the last real close
-        for c in reversed(quote.get("close") or []):
-            if c is not None:
-                price = c
-                break
-    try:
-        price = float(price) if price is not None else None
-    except (TypeError, ValueError):
-        price = None
-    return {"volumes": vols, "price": price}
+
+def probe(source: dict) -> tuple[bool, str]:
+    """Does this source answer AT ALL? Settled before the budget is spent.
+
+    NO RETRIES HERE. A probe asks a question; a retry ladder only delays
+    the answer. Three known-liquid tickers, one attempt each — a dead
+    source is established in about a second rather than the hour it cost
+    last time.
+    """
+    hits, why = [], []
+    for t in PF.PROBE_TICKERS:
+        try:
+            got = fetch_one(source, t, retry=False)
+        except Exception as e:                              # noqa: BLE001
+            return False, f"{type(e).__name__}: {e}"
+        if got and got.get("volumes"):
+            hits.append(t)
+        else:
+            why.append(t)
+        time.sleep(0.3)
+    if hits:
+        return True, f"answered for {', '.join(hits)}"
+    return False, f"no data for any of {', '.join(why)}"
+
+
+def choose_source(preferred: str = "") -> dict | None:
+    """First source that proves it works. Order is a hint, not a decision."""
+    order = list(PF.SOURCES)
+    if preferred:
+        want = PF.source_by_name(preferred)
+        if not want:
+            log.error("Unknown --source %r; known: %s", preferred,
+                      ", ".join(s["name"] for s in PF.SOURCES))
+            return None
+        order = [want]
+    for src in order:
+        reset_feed_state()          # each source gets a clean verdict
+        ok, why = probe(src)
+        log.info("  probe %-6s → %s", src["name"], dict(sorted(STATUS.items())))
+        if ok:
+            log.info("Price source: %s — %s", src["name"], why)
+            reset_feed_state()
+            return src
+        log.warning("Source %s is unusable: %s (%s)", src["name"], why, src["note"])
+    return None
 
 
 def main() -> int:
@@ -149,7 +226,22 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=400,
                     help="max candidates to pull market data for (one call each)")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--source", default="", help="force a price source (stooq, yahoo)")
     a = ap.parse_args()
+
+    # PROVE THE PRICE SOURCE FIRST. Everything after this — the EDGAR
+    # fundamentals pull, the frames, the narrowing — is wasted if no source
+    # will answer, and the EDGAR half is the slow part of the setup. Ten
+    # seconds here replaces the sixty minutes the 2026-08-09 run spent
+    # discovering that Yahoo blocks GitHub's IPs.
+    source = choose_source(a.source)
+    if source is None:
+        log.error("No price source is reachable from this runner. Tried: %s. "
+                  "The screen needs a year of daily volume per name and the SEC "
+                  "does not publish it, so there is nothing to fall back on — "
+                  "refusing to write a board built on no market data.",
+                  ", ".join(s["name"] for s in PF.SOURCES))
+        return 1
 
     fin = SE.fetch_financials()
     if not fin:
@@ -200,7 +292,7 @@ def main() -> int:
 
     # ── one call per name: price and a year of volume together ──
     def one(row: dict) -> dict:
-        chart = fetch_chart(row["ticker"])
+        chart = fetch_one(source, row["ticker"])
         row["_chart_ok"] = chart is not None
         px = (chart or {}).get("price")
         sh = row.get("shares")
@@ -212,19 +304,40 @@ def main() -> int:
         row["trade"] = LQ.tradeability(t, px)
         return row
 
-    fetched, done = 0, []
+    # THE CIRCUIT BREAKER. A probed source can still start refusing partway
+    # through — a quota trips, an IP gets flagged. Zero successes in the
+    # first CHECK_AFTER names is proof, not bad luck, and grinding through
+    # the remaining 350 to confirm it is how sixty minutes got spent
+    # establishing something the first fifty already showed.
+    CHECK_AFTER, MIN_HIT_RATE = 40, 0.05
+    fetched, done, aborted = 0, [], False
     with ThreadPoolExecutor(max_workers=3) as ex:
-        for fut in as_completed([ex.submit(one, r) for r in candidates]):
+        futures = [ex.submit(one, r) for r in candidates]
+        for fut in as_completed(futures):
             try:
                 done.append(fut.result())
             except Exception as e:                          # noqa: BLE001
                 log.warning("chart fetch failed: %s", e)
             fetched += 1
+            ok = sum(1 for r in done if r.get("_chart_ok"))
             if fetched % 50 == 0:
-                ok = sum(1 for r in done if r.get("_chart_ok"))
                 log.info("  %d/%d fetched, %d with data", fetched, len(candidates), ok)
+            if fetched >= CHECK_AFTER and ok / fetched < MIN_HIT_RATE:
+                log.error("STOPPING: %d of %d fetches returned data (%.0f%%). The "
+                          "source went dark mid-run — continuing would spend the "
+                          "whole budget proving it. Status counts: %s",
+                          ok, fetched, 100.0 * ok / fetched, dict(sorted(STATUS.items())))
+                for f in futures:
+                    f.cancel()
+                aborted = True
+                break
     got = sum(1 for r in done if r["_chart_ok"])
-    log.info("Market data: %d of %d", got, len(done))
+    log.info("Market data via %s: %d of %d attempted. Status counts: %s",
+             source["name"], got, len(done), dict(sorted(STATUS.items())))
+    if aborted or not got:
+        log.error("Refusing to write: the price feed failed. A short board would "
+                  "read as a verdict on the market instead of a broken source.")
+        return 1
 
     # ── the REAL size cut, now that we have prices ──
     sized = [r for r in done
@@ -285,6 +398,8 @@ def main() -> int:
             "universe_candidates": len(candidates),
             "in_size_band": len(done),
             "volume_coverage_pct": cov["pct"],
+            "price_source": source["name"],
+            "fetch_status": dict(sorted(STATUS.items())),
             "limits": QV.DEFAULTS,
             "note": ("Turnover is trailing-12m share volume / shares OUTSTANDING "
                      "(not float), matching Ibbotson et al. so the quartiles mean "

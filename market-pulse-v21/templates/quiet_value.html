@@ -205,7 +205,15 @@
     {% if meta %}
     <br><br>
     <b>As of {{ meta.as_of }}</b> · {{ meta.universe_candidates }} candidates from EDGAR ·
-    {{ meta.in_size_band }} in the size band with a price · volume history on {{ meta.volume_coverage_pct }}%.
+    {{ meta.in_size_band }} in the size band with a price · volume history on {{ meta.volume_coverage_pct }}%
+    {%- if meta.price_source %} · market data from <b>{{ meta.price_source }}</b>{% endif %}.
+    {% if meta.price_source %}
+    <br><br>
+    <b>Where the numbers come from.</b> The fundamentals are SEC EDGAR — official, free, and authoritative.
+    The prices and volume are not: exchanges own the tape and sell it, so this half of the screen rests on a
+    free source nobody has promised us. The run proves the source answers before it spends anything, and
+    names it here, so the day it changes you can see that it changed.
+    {% endif %}
     {% endif %}
   </div>
   {% endif %}
