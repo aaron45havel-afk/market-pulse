@@ -33,6 +33,7 @@ THE FOUR THINGS IT GETS RIGHT THAT HAND ANALYSIS USUALLY GETS WRONG:
 from __future__ import annotations
 
 import math
+import re
 
 # ── What each filing means, how long it usually takes, and how often it
 #    completes.
@@ -89,6 +90,38 @@ CATALYSTS: dict[str, dict] = {
         "typical_days": 180, "completion": 0.50, "actionable": True,
     },
     # ── Warnings. Not opportunities; things you want to know FAST if held.
+    #
+    # Form 15 is THREE different events wearing one number, and collapsing
+    # them overstates the alarm on the two common ones. 12(b) is the
+    # exchange registration: withdrawing it is the delisting, the real
+    # going-dark event. 12(g) and 15(d) are reporting obligations that
+    # frequently attach to a secondary class — notes, warrants, a SPAC's
+    # units — so an NYSE-listed company can file a 15-12G with its common
+    # stock entirely unaffected. Labelling that "going dark" cries wolf.
+    "15-12B": {
+        "label": "Deregistering from the exchange — going dark",
+        "note": "Withdrawing the exchange registration. This is the real one: filing "
+                "stops, you lose disclosure and most of the liquidity. Exit alarm.",
+        "typical_days": 90, "completion": 1.0, "actionable": False, "warning": True,
+    },
+    "15-12G": {
+        "label": "Deregistering a 12(g) class",
+        "note": "Often a SECONDARY class — notes, warrants, SPAC units — not the listed "
+                "common. Check which security before reacting. Alarming only if it is the stock.",
+        "typical_days": 90, "completion": 1.0, "actionable": False, "warning": True,
+    },
+    "15-15D": {
+        "label": "Suspending 15(d) reporting",
+        "note": "Reporting duty from a registration statement lapses. Usually a class that "
+                "was never exchange-listed. Read which security it covers.",
+        "typical_days": 90, "completion": 1.0, "actionable": False, "warning": True,
+    },
+    "15F": {
+        "label": "Foreign issuer deregistering",
+        "note": "A foreign private issuer withdrawing from US reporting. ADR holders lose "
+                "disclosure and usually the listing with it.",
+        "typical_days": 90, "completion": 1.0, "actionable": False, "warning": True,
+    },
     "15": {
         "label": "Deregistering — going dark",
         "note": "Filing stops. Usually BAD if you hold it: you lose disclosure and "
@@ -131,17 +164,223 @@ def classify(form: str, text: str = "") -> dict | None:
         return {"form": f, **CATALYSTS["DEF 14A/LIQUIDATION"]}
     if f.startswith("8-K") and "4.01" in t:
         return {"form": f, **CATALYSTS["8-K/4.01"]}
-    for key, meta in CATALYSTS.items():
-        if "/" in key:
-            continue
-        # Suffixes matter: amendments are "SC TO-I/A", and Form 15 is filed
-        # as 15-12B / 15-12G / 15-15D and essentially NEVER as bare "15".
-        # Matching only the exact string meant the going-dark alarm — the
-        # most important warning for anyone holding micro-caps — could
-        # never fire.
+    # LONGEST KEY WINS. Suffixes matter: amendments are "SC TO-I/A", and
+    # Form 15 is filed as 15-12B / 15-12G / 15-15D and essentially NEVER as
+    # bare "15" — matching only the exact string meant the going-dark alarm
+    # could never fire at all. But once the specific variants exist, a
+    # shortest-first scan would let the generic "15" swallow every one of
+    # them and re-flatten the distinction. Specificity has to be ordered
+    # explicitly; dict order is not a safe proxy for it.
+    for key in sorted((k for k in CATALYSTS if "/" not in k), key=len, reverse=True):
         if f == key or f.startswith((key + "/", key + " ", key + "-")):
-            return {"form": f, **meta}
+            return {"form": f, **CATALYSTS[key]}
     return None
+
+
+# ── Form 4: the transaction code IS the signal ──────────────────────
+#
+# The daily index tells you a Form 4 exists. It does not tell you what
+# happened — and "an insider filed a Form 4" is not information. The large
+# majority of Form 4s are restricted stock vesting, options being
+# exercised, shares withheld to pay the tax on a grant, and scheduled
+# 10b5-1 sales. Exactly one code means a person chose to buy stock with
+# their own money at the prevailing price.
+#
+# So the queue has to OPEN the filing. Classifying Form 4s from the index
+# alone publishes noise under a caption claiming it is a purchase, which
+# is worse than publishing nothing: it looks like a filter ran.
+TXN_CODES: dict[str, str] = {
+    "P": "Open-market or private purchase",
+    "S": "Open-market or private sale",
+    "A": "Grant, award or other acquisition from the issuer",
+    "D": "Disposition back to the issuer",
+    "F": "Shares withheld to cover tax on a grant",
+    "M": "Exercise or conversion of a derivative held",
+    "X": "Exercise of an in- or at-the-money option",
+    "C": "Conversion of a derivative security",
+    "G": "Bona fide gift",
+    "V": "Transaction voluntarily reported early",
+    "J": "Other (explained in a footnote)",
+    "K": "Equity swap or similar",
+    "U": "Tendered into a merger or acquisition",
+    "W": "Acquired or disposed by will or inheritance",
+    "I": "Discretionary transaction",
+    "E": "Expiration of a short derivative position",
+    "H": "Expiration of a long derivative position",
+    "O": "Out-of-the-money option exercise",
+    "L": "Small acquisition",
+    "Z": "Deposit into or withdrawal from a voting trust",
+}
+
+BUY_CODE = "P"          # the only code that is somebody buying stock
+
+_OWNERSHIP_DOC = re.compile(r"<ownershipDocument>.*?</ownershipDocument>", re.S | re.I)
+
+# Issuer tender offers from interval funds, non-traded BDCs and similar
+# vehicles are SCHEDULED REPURCHASES, not events. They buy back a slice of
+# shares at net asset value on a calendar, quarter after quarter. There is
+# no premium to capture and usually no exchange to buy them on — and there
+# are enough of them to bury every real tender in the queue. Scoped to
+# SC TO-I on purpose: a fund appearing in a merger vote or a third-party
+# tender is a genuinely different event and stays.
+_FUND_VEHICLE = re.compile(r"\b(funds?|bdc|sicav|ucits)\b", re.I)
+
+
+def is_routine_repurchase(form: str, company: str) -> bool:
+    """True for the quarterly at-NAV repurchase offers that flood SC TO-I.
+
+    Word-boundary matching matters: "Fundamental Industries" is a company,
+    "Ares Private Markets Fund" is a calendar entry.
+    """
+    f = (form or "").strip().upper()
+    if not f.startswith("SC TO-I"):
+        return False
+    return bool(_FUND_VEHICLE.search(company or ""))
+
+
+def _val(el) -> str:
+    """Form 4 XML wraps most leaves in <value>, but not all of them —
+    transactionCode is bare inside transactionCoding. Handle both, and
+    ignore the <footnoteId> siblings that sit alongside real values."""
+    if el is None:
+        return ""
+    inner = el.find("value")
+    text = (inner.text if inner is not None else el.text) or ""
+    return text.strip()
+
+
+def _flag(el) -> bool:
+    v = _val(el).lower()
+    return v in ("1", "true", "y", "yes")
+
+
+def _num(el) -> float | None:
+    try:
+        return float(_val(el).replace(",", ""))
+    except (TypeError, ValueError):
+        return None
+
+
+def parse_form4(raw: str) -> dict | None:
+    """Pull issuer, owners and transactions out of a Form 4 submission.
+
+    Takes the full .txt submission (SGML wrapper and all) or a bare XML
+    document. Returns None if there is no ownership document in it.
+
+    THE ISSUER IS THE COMPANY. EDGAR's daily index emits one row per filer
+    CIK, and a Form 4 has the issuer plus every reporting owner as filers —
+    so a fund group reporting through ten entities appears as ten rows with
+    the LP names in the company column. Reading the document is the only
+    way to know that "ROSS SCOTT I" and nine Hill Path partnerships are one
+    purchase in one company.
+    """
+    import xml.etree.ElementTree as ET
+
+    m = _OWNERSHIP_DOC.search(raw or "")
+    if not m:
+        return None
+    try:
+        root = ET.fromstring(m.group(0))
+    except ET.ParseError:
+        return None
+
+    issuer = root.find("issuer")
+    owners = []
+    for o in root.findall("reportingOwner"):
+        ident, rel = o.find("reportingOwnerId"), o.find("reportingOwnerRelationship")
+        title = _val(rel.find("officerTitle")) if rel is not None else ""
+        roles = []
+        if rel is not None:
+            if _flag(rel.find("isOfficer")):
+                roles.append(title or "Officer")
+            if _flag(rel.find("isDirector")):
+                roles.append("Director")
+            if _flag(rel.find("isTenPercentOwner")):
+                roles.append("10% owner")
+            if _flag(rel.find("isOther")):
+                roles.append(_val(rel.find("otherText")) or "Other")
+        owners.append({
+            "name": _val(ident.find("rptOwnerName")) if ident is not None else "",
+            "cik": (_val(ident.find("rptOwnerCik")) if ident is not None else "").lstrip("0"),
+            "roles": roles,
+        })
+
+    txns = []
+    for table, derivative in (("nonDerivativeTable", False), ("derivativeTable", True)):
+        node = root.find(table)
+        if node is None:
+            continue
+        tag = "nonDerivativeTransaction" if not derivative else "derivativeTransaction"
+        for t in node.findall(tag):
+            coding, amounts = t.find("transactionCoding"), t.find("transactionAmounts")
+            if coding is None or amounts is None:
+                continue
+            code = _val(coding.find("transactionCode")).upper()
+            ad = _val(amounts.find("transactionAcquiredDisposedCode")).upper()
+            txns.append({
+                "code": code,
+                "meaning": TXN_CODES.get(code, "Unrecognized code"),
+                "shares": _num(amounts.find("transactionShares")),
+                "price": _num(amounts.find("transactionPricePerShare")),
+                "acquired": ad == "A",
+                "date": _val(t.find("transactionDate")),
+                "security": _val(t.find("securityTitle")),
+                "derivative": derivative,
+            })
+
+    return {
+        "issuer": _val(issuer.find("issuerName")) if issuer is not None else "",
+        "issuer_cik": (_val(issuer.find("issuerCik")) if issuer is not None else "").lstrip("0"),
+        "ticker": _val(issuer.find("issuerTradingSymbol")).upper() if issuer is not None else "",
+        "owners": owners,
+        "transactions": txns,
+    }
+
+
+def insider_buy(doc: dict | None) -> dict | None:
+    """Reduce a parsed Form 4 to a purchase, or None if it isn't one.
+
+    Two rules carry the weight:
+
+      * CODE P AND ACQUIRED. A code-P line disposing shares is not a buy,
+        and derivative-table entries are excluded — an option grant priced
+        at a nominal strike is not a person buying stock, however it codes.
+
+      * A MISSING PRICE IS UNKNOWN, NOT ZERO. Form 4 leaves the price blank
+        on some purchases, and treating that as $0 would silently sort a
+        real buy to the bottom of a dollar ranking. The shares are reported
+        separately as unpriced so the gap is visible rather than absorbed.
+    """
+    if not doc:
+        return None
+    buys = [t for t in doc.get("transactions", [])
+            if t["code"] == BUY_CODE and t["acquired"] and not t["derivative"]]
+    if not buys:
+        return None
+
+    dollars = 0.0
+    shares = unpriced = 0.0
+    for t in buys:
+        s = t["shares"] or 0.0
+        shares += s
+        if t["price"] and t["price"] > 0:
+            dollars += s * t["price"]
+        else:
+            unpriced += s
+    if shares <= 0:
+        return None
+
+    roles = [r for o in doc.get("owners", []) for r in o["roles"]]
+    return {
+        "shares": round(shares, 2),
+        "dollars": round(dollars, 2) if dollars > 0 else None,
+        "unpriced_shares": round(unpriced, 2),
+        "fully_priced": unpriced == 0,
+        "buyers": [o["name"] for o in doc.get("owners", []) if o["name"]],
+        "roles": roles,
+        "by_insider": any(r for r in roles if r not in ("10% owner",)),
+        "dates": sorted({t["date"] for t in buys if t["date"]}),
+    }
 
 
 def annualized(spread_pct: float, days: float) -> float | None:
