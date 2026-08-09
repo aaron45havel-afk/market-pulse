@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "as_of": "2026-08-02",
-    "count": 6681,
+    "as_of": "2026-08-09",
+    "count": 6685,
     "source": "Photon (komoot.io OSM reverse-geocoder), neighbourhood/suburb/district tags"
   },
   "neighborhoods": {
@@ -2172,6 +2172,7 @@
     "18201": "Birch Hill Estates",
     "18210": "Towamensing Trails",
     "18214": "Locust Valley",
+    "18218": "Seek",
     "18222": "Saint Johns",
     "18224": "Highland",
     "18232": "Andrewsville",
@@ -5124,6 +5125,7 @@
     "56726": "Leo",
     "57104": "North Side Gardens",
     "57110": "Pine Lakes Addition",
+    "57301": "Mitchell",
     "57759": "Greenwood",
     "57783": "The Timbers",
     "58005": "Richwood Estates",
@@ -5841,6 +5843,7 @@
     "77380": "Grogan's Mill",
     "77381": "Cochran's Crossing",
     "77382": "Sterling Ridge",
+    "77385": "Tamina",
     "77386": "Benders Landing",
     "77388": "Cypresswood Glen",
     "77389": "The Courts at Auburn Lakes",
@@ -5974,6 +5977,7 @@
     "79915": "Tigua",
     "79927": "Aldama Estates Colonia",
     "79928": "Dairyland Colonia",
+    "79936": "Sandy Creek",
     "79938": "Loma Linda Estates",
     "80002": "Clarabelle on Grandview",
     "80007": "Candelas",
