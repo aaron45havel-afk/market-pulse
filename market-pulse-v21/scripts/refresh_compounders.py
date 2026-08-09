@@ -15,9 +15,8 @@ expect network failures; the real run happens in CI):
      IFRS cannot be discovered this way at all — no matter how large.
      ADR_SEEDS force-adds a hand-kept list of majors to paper over that,
      which means international coverage is exactly as good as that list
-     and no better. Per-company facts DO resolve ifrs-full tags (stage B),
-     so a seeded ADR scores correctly once it is in; the gap is discovery,
-     not scoring.
+     and no better. Stage B does resolve ifrs-full TAGS, but resolving the
+     tag was never the whole job — see the currency note there.
 
   B. FUNDAMENTALS — per CIK: companyfacts (10y of annual XBRL) +
      submissions (SIC code, country). Tag maps cover us-gaap AND
@@ -25,6 +24,15 @@ expect network failures; the real run happens in CI):
      profit, operating income, OCF, capex, diluted shares, debt, cash,
      equity → computes CAGRs, consistency counts, margins + trend,
      ROIC series, FCF conversion, net-debt/EBIT, buyback rate.
+
+     CURRENCY. A 20-F filer reports in its own currency, and NOTHING here
+     converts. Every ratio — growth, margins, ROIC, FCF conversion,
+     capex/OCF, net debt/EBIT — is safe, because both sides are in the
+     same money. The valuation term is not: P/FCF divides a
+     native-currency FCF per share by a USD ADR price. The reporting
+     currency is therefore recorded per company and, when it is not USD,
+     the valuation term is WITHHELD rather than computed. Toyota's P/FCF
+     read 0.2 and Sony's 0.0 before this; those were yen over dollars.
 
   C. MARKET — Yahoo chart per ticker (7y monthly + dividends): current
      price, TTM dividend yield, dividend CAGR, FCF-multiple history
@@ -288,38 +296,82 @@ def fetch_profile(cik: int) -> dict:
 
 # ── Stage B: fundamentals ────────────────────────────────────────────
 
-def _annual_series(facts: dict, slots: list[tuple[str, str]]) -> dict[int, float]:
-    """{fiscal_year: value} from companyfacts for the first tag that
-    yields a usable annual series. Annual = FY frame from an annual
-    form. Dedupes amended filings by keeping the LAST value per fy."""
+def _rows_for(node: dict, unit: str) -> dict[int, float]:
+    """{fiscal_year: value} for ONE tag in ONE unit. Annual = FY frame
+    from an annual form; amended filings dedupe by keeping the last."""
+    series: dict[int, float] = {}
+    for v in (node.get("units") or {}).get(unit, []):
+        if v.get("form") not in ANNUAL_FORMS:
+            continue
+        if v.get("fp") not in ("FY", None):
+            continue
+        fy, val = v.get("fy"), v.get("val")
+        if fy is None or not isinstance(val, (int, float)):
+            continue
+        # Durational facts must span ~a year; instants have no start.
+        # Guard quarter-length values sneaking in as FY.
+        start, end = v.get("start"), v.get("end")
+        if start and end and (int(end[:4]) - int(start[:4])) == 0 \
+                and end[5:7] != "12" and (int(end[5:7]) - int(start[5:7])) < 9:
+            continue
+        series[int(fy)] = float(val)
+    return series
+
+
+def _annual_series(facts: dict, slots: list[tuple[str, str]],
+                   want_unit: str = "USD") -> tuple[dict[int, float], str]:
+    """{fiscal_year: value} merged across every tag reporting in ONE unit,
+    plus the unit used.
+
+    TWO BUGS THIS REPLACES, both caused by taking the first thing found.
+
+    1. FIRST TAG WINS — a decade frozen at 2017. The old version returned
+       the first tag with >=3 years and stopped there. ASC 606 moved
+       essentially every US company off `Revenues` and onto
+       `RevenueFromContractWithCustomer...` for fiscal years beginning
+       after Dec 2017, so any company with three pre-606 years locked onto
+       the dead tag and never advanced. That was 114 of 901 names — 13% of
+       the board — Broadridge and Maximus among them, both carrying a
+       headline growth figure computed from a series ending in 2017.
+
+       Merging fixes it. Earlier slots still win any year they cover, so
+       the existing preference order is unchanged where it applies; later
+       slots only ADD years the earlier ones lack. Pre- and post-606
+       revenue are not an identical basis, which is a real caveat and is
+       stated on the page — but a spliced series is vastly closer to the
+       truth than one that stops nine years ago.
+
+    2. FIRST UNIT WINS — yen divided by dollars. companyfacts keys values
+       by unit and the old version broke on whichever came first in the
+       JSON. Foreign filers arrived in TWD/JPY/CNY/INR and were then
+       divided by a USD ADR price: Toyota's P/FCF read 0.2, Sony's 0.0.
+       The unit is now chosen deliberately, preferring `want_unit`, and is
+       RETURNED so the caller can refuse to mix it with a dollar price.
+       Two units are never spliced into one series.
+    """
+    # Pass 1: choose the unit ONCE across all slots. Per-slot selection
+    # would let a stray non-USD tag set the currency for the whole series
+    # merely by appearing first.
+    available: set[str] = set()
+    for taxonomy, tag in slots:
+        node = (facts.get(taxonomy) or {}).get(tag)
+        if node:
+            available |= set((node.get("units") or {}).keys())
+    if not available:
+        return {}, ""
+    # Deterministic fallback, so a company's currency cannot change
+    # between runs just because the SEC reordered a JSON object.
+    unit = want_unit if want_unit in available else sorted(available)[0]
+
+    # Pass 2: merge every slot that speaks that unit.
+    merged: dict[int, float] = {}
     for taxonomy, tag in slots:
         node = (facts.get(taxonomy) or {}).get(tag)
         if not node:
             continue
-        units = node.get("units") or {}
-        # USD for money, shares for share counts — take the first unit.
-        series: dict[int, float] = {}
-        for unit_vals in units.values():
-            for v in unit_vals:
-                if v.get("form") not in ANNUAL_FORMS:
-                    continue
-                if v.get("fp") not in ("FY", None):
-                    continue
-                fy, val = v.get("fy"), v.get("val")
-                if fy is None or not isinstance(val, (int, float)):
-                    continue
-                # Durational facts must span ~a year; instants have no
-                # start. Guard quarter-length values sneaking in as FY.
-                start, end = v.get("start"), v.get("end")
-                if start and end and (int(end[:4]) - int(start[:4])) == 0 \
-                        and end[5:7] != "12" and (int(end[5:7]) - int(start[5:7])) < 9:
-                    continue
-                series[int(fy)] = float(val)
-            if series:
-                break
-        if len(series) >= 3:
-            return series
-    return {}
+        for fy, val in _rows_for(node, unit).items():
+            merged.setdefault(fy, val)      # earlier slots win the year
+    return (merged, unit) if len(merged) >= 3 else ({}, unit)
 
 
 def _cagr(series: dict[int, float], years: int) -> float | None:
@@ -351,8 +403,22 @@ def _up_years(series: dict[int, float], window: int = 10) -> tuple[int, int]:
     return ups, total
 
 
+# Share counts are reported in "shares", everything else in a currency.
+# Asking for USD on a share count would fall through to the deterministic
+# fallback and quietly pick something wrong.
+WANT_UNIT = {"shares_diluted": "shares"}
+
+
 def compute_metrics(facts: dict) -> dict | None:
-    s = {k: _annual_series(facts, slots) for k, slots in TAGS.items()}
+    pulled = {k: _annual_series(facts, slots, WANT_UNIT.get(k, "USD"))
+              for k, slots in TAGS.items()}
+    s = {k: v[0] for k, v in pulled.items()}
+
+    # The reporting currency of the MONEY series. Revenue is the anchor:
+    # if a company reports revenue in yen, every other money figure is in
+    # yen too, and none of them may be compared to a USD ADR price.
+    currency = pulled["revenue"][1] or "USD"
+
     rev, ni, ocf = s["revenue"], s["net_income"], s["ocf"]
     if len(rev) < MIN_YEARS or len(ni) < MIN_YEARS - 1 or len(ocf) < MIN_YEARS - 1:
         return None
@@ -432,6 +498,7 @@ def compute_metrics(facts: dict) -> dict | None:
     return {
         "fy_last": last,
         "years": len(years),
+        "currency": currency,
         "revenue_last": rev[last],
         "rev_cagr5": _cagr(rev, 5), "rev_cagr10": _cagr(rev, 10),
         "rev_up_years": rev_ups, "rev_up_total": rev_tot,
@@ -616,9 +683,23 @@ def main() -> int:
     print(f"[compounders] Stage C: market data for {len(scored)} names…")
     out: dict[str, dict] = {}
     with_market = 0
+    non_usd = 0
     for i, (cik, info, profile, metrics) in enumerate(scored, 1):
+        # THE VALUATION TERM IS THE ONLY CURRENCY-UNSAFE NUMBER HERE.
+        # Growth, margins, ROIC, FCF conversion, capex/OCF and net
+        # debt/EBIT are all ratios WITHIN one currency, so they are
+        # correct whatever the filer reports in. P/FCF is not: it divides
+        # a native-currency FCF per share by a USD ADR price. Withholding
+        # fcf_ps blanks P/FCF and its history, which makes compounders.py
+        # drop the valuation-drift term for that name — the row stays, its
+        # quality and growth stay, and the one figure we cannot compute
+        # honestly is absent rather than wrong.
+        usd = (metrics.get("currency") or "USD") == "USD"
+        if not usd:
+            non_usd += 1
         try:
-            market = fetch_market(info["ticker"], metrics.get("fcf_ps") or {})
+            market = fetch_market(info["ticker"],
+                                  (metrics.get("fcf_ps") or {}) if usd else {})
         except Exception:                                   # noqa: BLE001
             market = None
         time.sleep(YAHOO_SLEEP)
@@ -639,7 +720,8 @@ def main() -> int:
 
     coverage = with_market / len(scored) if scored else 0.0
     print(f"[compounders] Done: kept {len(out)}, market coverage "
-          f"{coverage:.0%}, skipped {skipped}")
+          f"{coverage:.0%}, {non_usd} reporting in a non-USD currency "
+          f"(valuation term withheld for those), skipped {skipped}")
 
     # A board with no valuation term is not a smaller board, it is a
     # different and much weaker screen wearing the same name.
@@ -660,6 +742,7 @@ def main() -> int:
         "count": len(out),
         "min_revenue": args.min_revenue,
         "market_coverage_pct": round(coverage * 100, 1),
+        "non_usd_reporters": non_usd,
         "skipped": skipped,
         "tickers": out,
     }
