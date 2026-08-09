@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Quiet value — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+    .qv-page { max-width: 1400px; margin: 0 auto; padding: 0 1.25rem; }
+    .qv-head { margin: 1rem 0 0.4rem; }
+    .qv-head h1 { font-size: clamp(1.5rem, 3vw, 2rem); margin: 0; }
+    .qv-lede { font-size: 0.85rem; color: var(--ink-3); line-height: 1.6; max-width: 68ch; margin: 0.35rem 0 0; }
+
+    .qv-controls { display: flex; gap: 0.8rem; align-items: end; flex-wrap: wrap;
+        background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+        padding: 0.85rem 1rem; margin: 0.9rem 0; }
+    .qv-controls .field { display: flex; flex-direction: column; gap: 0.2rem; }
+    .qv-controls label { font-size: 0.72rem; color: var(--ink-3); font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.05em; }
+    .qv-controls select, .qv-controls input[type="number"] {
+        background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+        padding: 0.4rem 0.55rem; color: var(--text); font-size: 0.9rem; }
+    .qv-controls .apply-btn { background: var(--accent); color: #fff; border: none;
+        padding: 0.45rem 1rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: 600; }
+
+    .qv-funnel { font-size: 0.75rem; color: var(--ink-3); background: var(--surface2);
+        border: 1px solid var(--border); border-radius: 10px; padding: 0.55rem 0.85rem;
+        margin-bottom: 0.9rem; line-height: 1.6; }
+    .qv-funnel b { color: var(--text); }
+
+    .qv-wrap { background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--r); overflow: hidden; }
+    .qv-scroll { overflow-x: auto; }
+    table.qv { width: 100%; border-collapse: collapse; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+    .qv th, .qv td { padding: 0.5rem 0.7rem; text-align: right; white-space: nowrap; }
+    .qv th:nth-child(1), .qv th:nth-child(2), .qv td:nth-child(1), .qv td:nth-child(2) { text-align: left; }
+    .qv thead th { background: var(--surface2); font-size: 0.7rem; text-transform: uppercase;
+        letter-spacing: 0.05em; color: var(--ink-3); font-weight: 700;
+        border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+    .qv tbody tr:not(:last-child) td { border-bottom: 1px solid var(--line, var(--border)); }
+    .qv tbody tr:hover { background: var(--surface2); }
+    .qv .tick { font-weight: 700; }
+    .qv .co { color: var(--ink-3); font-size: 0.8rem; }
+
+    .lq { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.65rem; font-weight: 700; }
+    .lq-low { background: rgba(34,197,94,0.15); color: #16a34a; }
+    .lq-mid_low { background: rgba(132,204,22,0.15); color: #4d7c0f; }
+    .lq-mid_high { background: rgba(217,119,6,0.15); color: #b45309; }
+    .lq-high { background: rgba(239,68,68,0.15); color: #dc2626; }
+
+    .tests { display: flex; gap: 2px; }
+    .t { width: 15px; height: 15px; border-radius: 3px; font-size: 9px; line-height: 15px;
+         text-align: center; font-weight: 800; cursor: help; }
+    .t-pass { background: rgba(34,197,94,0.2); color: #15803d; }
+    .t-fail { background: rgba(239,68,68,0.14); color: #b91c1c; }
+    .t-unk  { background: var(--surface2); color: var(--ink-3); border: 1px dashed var(--border); }
+
+    .why { color: var(--ink-3); font-size: 0.78rem; }
+    .warn-slow { color: #b45309; font-weight: 600; }
+    .qv-note { font-size: 0.78rem; color: var(--ink-3); line-height: 1.65;
+        border: 1px dashed var(--border); border-radius: 10px; padding: 0.7rem 0.9rem; margin: 1rem 0; }
+    .qv-note b { color: var(--text); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="qv-page">
+  <div class="qv-head">
+    <h1>Quiet value</h1>
+    <p class="qv-lede">
+      The low-turnover end of the small-cap market, crossed with a balance-sheet and valuation test.
+      Liquidity is <b>annual turnover</b> — trailing-12-month share volume divided by shares outstanding — cut into
+      quartiles <b>within each size band</b>, which is how the research this is based on does it.
+      Cut globally instead and the liquidity axis collapses into a second, noisier size axis.
+    </p>
+  </div>
+
+  {% if pending %}
+  <div class="qv-note">
+    <b>No data yet.</b> This screen is precomputed in CI, because it needs a year of daily volume for every
+    candidate — thousands of calls that a web request has no business making.
+    Run the <code>refresh-quiet-value</code> workflow to build it.
+  </div>
+  {% else %}
+
+  <form class="qv-controls" method="get" action="/quiet-value">
+    <div class="field">
+      <label for="liq">Turnover quartile</label>
+      <select name="liq" id="liq">
+        <option value="low" {% if liq == 'low' %}selected{% endif %}>Quietest only</option>
+        <option value="mid_low" {% if liq == 'mid_low' %}selected{% endif %}>Quiet + next</option>
+        <option value="mid_high" {% if liq == 'mid_high' %}selected{% endif %}>All but the churned</option>
+        <option value="high" {% if liq == 'high' %}selected{% endif %}>No liquidity filter</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="size">Size</label>
+      <select name="size" id="size">
+        <option value="" {% if not size %}selected{% endif %}>Any</option>
+        <option value="nano" {% if size == 'nano' %}selected{% endif %}>Nano &lt;$50M</option>
+        <option value="micro" {% if size == 'micro' %}selected{% endif %}>Micro $50–300M</option>
+        <option value="small" {% if size == 'small' %}selected{% endif %}>Small $300M–2B</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="minpass" title="Of the seven: cash, debt, capex, margin, dividend, P/E, P/B">Tests passed</label>
+      <input type="number" name="minpass" id="minpass" value="{{ minpass }}" min="0" max="7">
+    </div>
+    <div class="field">
+      <label for="require">Must pass</label>
+      <select name="require" id="require">
+        <option value="" {% if not require %}selected{% endif %}>Nothing specific</option>
+        <option value="dividend" {% if require == 'dividend' %}selected{% endif %}>Dividend</option>
+        <option value="net_cash" {% if require == 'net_cash' %}selected{% endif %}>Net cash</option>
+        <option value="dividend,net_cash" {% if require == 'dividend,net_cash' %}selected{% endif %}>Dividend + net cash</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="tradeable" title="Drops names you could not build a $25k position in inside a month">Tradeable</label>
+      <select name="tradeable" id="tradeable">
+        <option value="1" {% if tradeable %}selected{% endif %}>Only what I can buy</option>
+        <option value="0" {% if not tradeable %}selected{% endif %}>Show everything</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="exclude_high" title="The high-turnover micro-cap cell returned ~0.1%/yr">Churned names</label>
+      <select name="exclude_high" id="exclude_high">
+        <option value="1" {% if exclude_high %}selected{% endif %}>Exclude</option>
+        <option value="0" {% if not exclude_high %}selected{% endif %}>Include</option>
+      </select>
+    </div>
+    <button class="apply-btn" type="submit">Apply</button>
+  </form>
+
+  <div class="qv-funnel">
+    <b>{{ counts.all }}</b> screened →
+    <b>{{ counts.after_liquidity }}</b> cleared the turnover bar →
+    {% if size %}<b>{{ counts.after_size }}</b> in the {{ size }} band → {% endif %}
+    {% if tradeable %}<b>{{ counts.after_tradeable }}</b> you could actually build a position in → {% endif %}
+    <b>{{ counts.after_quality }}</b> passed {{ minpass }}+ of the seven quality tests.
+    {% if shown < 5 %}<b>A short list here is the screen being strict, not the market being empty</b> —
+    loosen the tests-passed number or widen the turnover quartile to see more.{% endif %}
+  </div>
+
+  {% if rows %}
+  <div class="qv-wrap"><div class="qv-scroll">
+    <table class="qv">
+      <thead>
+        <tr>
+          <th>Ticker</th><th>Company</th>
+          <th title="Trailing 12m volume ÷ shares outstanding">Turnover</th>
+          <th>Quartile</th>
+          <th title="Share of sessions with no trade at all">Dark days</th>
+          <th title="Sessions to build a $25k position at 20% of median volume">Days to build</th>
+          <th>Mkt cap</th><th>Price</th>
+          <th title="Cash · Debt · Capex · Margin · Dividend · P/E · P/B">Seven tests</th>
+          <th>Passed</th>
+          <th>Why</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td class="tick">{{ r.ticker }}</td>
+          <td class="co">{{ r.name[:38] }}</td>
+          <td>{{ '%.2f'|format(r.turnover) if r.turnover is not none else '—' }}x</td>
+          <td><span class="lq lq-{{ r.liq_bucket }}">{{ r.liq_bucket.replace('_',' ') }}</span></td>
+          <td>{{ r.zero_day_pct if r.zero_day_pct is not none else '—' }}%</td>
+          <td class="{{ 'warn-slow' if r.days_to_build and r.days_to_build > 5 else '' }}">
+            {{ r.days_to_build if r.days_to_build is not none else '—' }}</td>
+          <td>${{ '{:,.0f}'.format(r.market_cap / 1000000) }}M</td>
+          <td>${{ '%.2f'|format(r.price) }}</td>
+          <td>
+            <div class="tests">
+              {% for t in tests %}
+                {% set v = r.verdicts.get(t) %}
+                <span class="t {{ 't-pass' if v else ('t-unk' if v is none else 't-fail') }}"
+                      title="{{ labels[t] }}: {% if v is none %}not reported — counted as unknown, never as a pass{% else %}{{ r.metrics.get(t) }}{% endif %}">
+                  {{ labels[t][0] }}</span>
+              {% endfor %}
+            </div>
+          </td>
+          <td><b>{{ r.passed }}</b>/{{ r.known }}{% if r.unknown %}<span class="co"> +{{ r.unknown|length }}?</span>{% endif %}</td>
+          <td class="why">{{ r.why }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div></div>
+  {% else %}
+  <div class="qv-note"><b>Nothing clears these filters.</b> The funnel above shows where the names dropped out —
+    that tells you which dial to move.</div>
+  {% endif %}
+
+  <div class="qv-note">
+    <b>Read this before acting on it.</b>
+    The research return for this cohort is <b>gross of trading costs</b>, on an equal-weighted basket of a few hundred
+    names rebalanced annually. Round-trip spread on a low-turnover micro-cap is routinely 2–5%, and it is worst in exactly
+    the cell being selected for — so a meaningful slice of the premium is payment for a cost you would actually pay.
+    Illiquidity premia are also skewed: a minority of names carry the result, which a concentrated portfolio does not replicate.
+    <br><br>
+    <b>Turnover is on shares outstanding, not float</b>, to match the research. Micro-caps often carry 40–70% insider
+    ownership, so a closely-held company whose float trades briskly will still read as quiet here. The
+    <b>dark days</b> and <b>days to build</b> columns are the ones that answer whether <i>you</i> can trade it.
+    <br><br>
+    <b>An unreported metric is never a pass.</b> Sparse disclosure is not random in this universe — it correlates with
+    the companies you would least like a screen to wave through. Unknowns show as a dashed box and are excluded from
+    the denominator, which is why the column reads <i>passed / known</i> rather than a percentage.
+    {% if meta %}
+    <br><br>
+    <b>As of {{ meta.as_of }}</b> · {{ meta.universe_candidates }} candidates from EDGAR ·
+    {{ meta.in_size_band }} in the size band with a price · volume history on {{ meta.volume_coverage_pct }}%.
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

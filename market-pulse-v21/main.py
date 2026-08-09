@@ -346,6 +346,70 @@ async def lynch(request: Request):
     return templates.TemplateResponse("lynch.html", {"request": request})
 
 
+@app.get("/quiet-value")
+async def quiet_value_page(request: Request, liq: str = "low", size: str = "",
+                           minpass: str = "5", require: str = "",
+                           tradeable: str = "1", exclude_high: str = "1"):
+    """Quiet-value screen: the low-turnover end of the small-cap market,
+    paired with a balance-sheet and valuation test.
+
+    The liquidity axis is turnover (12m volume / shares outstanding),
+    cut into quartiles WITHIN each size band — see liquidity.py for why
+    cutting globally would collapse it into a second size axis. The
+    high-turnover quartile is excluded by default rather than merely
+    ranked last: in the research it is the cell that earned ~0.1%/yr.
+
+    Everything here is precomputed by scripts/refresh_quiet_value.py in
+    CI, because it needs a year of daily volume per ticker."""
+    import json as _json
+    import liquidity as LQ
+    import quality_value as QV
+
+    path = Path(__file__).resolve().parent / "data" / "quiet_value.json"
+    if not path.exists():
+        return templates.TemplateResponse("quiet_value.html", {
+            "request": request, "rows": [], "meta": None, "pending": True,
+            "liq": liq, "size": size, "minpass": 5, "require": require,
+            "tradeable": True, "exclude_high": True, "tests": QV.TESTS,
+            "labels": QV.LABELS, "counts": {}, "shown": 0,
+        })
+    blob = _json.loads(path.read_text())
+    rows = blob.get("rows", [])
+
+    liq = liq if liq in LQ.QUARTILE_NAMES else "low"
+    size = size if size in {b[0] for b in LQ.SIZE_BANDS} else ""
+    minpass_n = max(0, min(7, int(_qnum(minpass, 5))))
+    want_tradeable = _qnum(tradeable, 1) > 0
+    excl_high = _qnum(exclude_high, 1) > 0
+    require_t = tuple(t for t in require.split(",") if t in QV.TESTS)
+
+    # Count before filtering so a short board reads as a strict screen
+    # rather than an empty market.
+    counts = {"all": len(rows)}
+    out = [r for r in rows if LQ.passes(r, max_bucket=liq, exclude_high=excl_high)]
+    counts["after_liquidity"] = len(out)
+    if size:
+        out = [r for r in out if r.get("size_bucket") == size]
+    counts["after_size"] = len(out)
+    if want_tradeable:
+        out = [r for r in out if not r.get("impractical")]
+    counts["after_tradeable"] = len(out)
+    out = [r for r in out
+           if r.get("known", 0) >= 5
+           and r.get("passed", 0) >= minpass_n
+           and all(r.get("verdicts", {}).get(t) for t in require_t)]
+    counts["after_quality"] = len(out)
+
+    out.sort(key=lambda r: (-(r.get("passed") or 0),
+                            r.get("turnover") if r.get("turnover") is not None else 9e9))
+    return templates.TemplateResponse("quiet_value.html", {
+        "request": request, "rows": out[:200], "meta": blob.get("_meta"),
+        "pending": False, "liq": liq, "size": size, "minpass": minpass_n,
+        "require": require, "tradeable": want_tradeable, "exclude_high": excl_high,
+        "tests": QV.TESTS, "labels": QV.LABELS, "counts": counts, "shown": len(out),
+    })
+
+
 @app.get("/norcal")
 async def norcal_page(request: Request, assets: str = "200000",
                       reserves: str = "40000", down_pct: str = "20",
