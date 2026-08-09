@@ -19,9 +19,9 @@ on:
   workflow_dispatch:
     inputs:
       limit:
-        description: 'Max candidates to pull volume history for'
+        description: 'Max candidates to pull market data for (one call each)'
         required: false
-        default: '600'
+        default: '400'
 
 permissions:
   contents: write
@@ -29,7 +29,7 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: market-pulse-v21
@@ -47,9 +47,7 @@ jobs:
         run: python tests/test_liquidity.py
 
       - name: Build the quiet-value screen
-        env:
-          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
-        run: python scripts/refresh_quiet_value.py --limit "${{ github.event.inputs.limit || '600' }}"
+        run: python scripts/refresh_quiet_value.py --limit "${{ github.event.inputs.limit || '400' }}"
 
       - name: Commit + push if changed
         run: |
