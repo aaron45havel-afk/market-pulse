@@ -196,27 +196,59 @@ SC TO-I     TENDERCO LTD                                  0000022222  2026-08-08
 15-12B      GOINGDARK CORP                                0000033333  2026-08-08  edgar/data/33333/e.txt
 NT 10-K     LATEFILER INC                                 0000044444  2026-08-08  edgar/data/44444/f.txt
 8-K         ROUTINE CORP                                  0000055555  2026-08-08  edgar/data/55555/g.txt
+4           INSIDERCO INC                                 0000066666  2026-08-08  edgar/data/66666/h.txt
 """
-parsed = _rc.parse_index(IDX_FIXTURE, "2026-08-08")
+parsed, total = _rc.parse_index(IDX_FIXTURE, "2026-08-08")
 forms = {r["form"] for r in parsed}
+check(total == 8, f"every data row parses, catalyst or not (got {total})")
 check("SC 13D" in forms, "the activist filing is picked up")
 check("SC 13G" not in forms,
       "the PASSIVE 13G is not — the single easiest source of false alerts")
 check("SC TO-I" in forms, "the tender offer is picked up")
 check("15-12B" in forms, "the going-dark filing is picked up")
 check("NT 10-K" in forms, "the late filing is picked up")
+check("4" in forms, "insider buys are picked up")
 check("10-K" not in forms and "8-K" not in forms, "routine filings are ignored")
 by_form = {r["form"]: r for r in parsed}
 check(by_form["SC 13D"]["company"] == "SMALLCO HOLDINGS INC",
       f"multi-word company names survive parsing (got {by_form['SC 13D']['company']!r})")
 check(by_form["SC 13D"]["cik"] == "0000067890", "CIK parsed")
-check(by_form["SC 13D"]["url"].startswith("https://www.sec.gov/Archives/edgar/data/"),
+check(by_form["SC 13D"]["filed"] == "2026-08-08", "filing date parsed")
+check(by_form["SC 13D"]["url"] == "https://www.sec.gov/Archives/edgar/data/67890/b.txt",
       "the filing URL is absolute and points at EDGAR")
 check(by_form["15-12B"]["warning"] and not by_form["15-12B"]["actionable"],
       "going dark is flagged as a warning, not an opportunity")
-check(_rc.parse_index("", "2026-08-08") == [], "an empty index yields no rows, not a crash")
-check(_rc.parse_index("garbage\nlines\nwith no header", "2026-08-08") == [],
-      "malformed input yields no rows, not a crash")
+
+# Column WIDTHS vary between EDGAR files and over time. Splitting on runs of
+# 2+ spaces has to survive that; column offsets read off a header do not.
+WIDE = """Form Type        Company Name                                                         CIK              Date Filed   File Name
+----------------------------------------------------------------------------------------------------------------------------
+SC TO-I          A VERY LONG COMPANY NAME WITH MANY WORDS INC                         0000099999       2026-08-07   edgar/data/99999/z.txt
+"""
+wide, wtotal = _rc.parse_index(WIDE, "2026-08-07")
+check(wtotal == 1 and len(wide) == 1, "a differently-padded file still parses")
+check(wide[0]["form"] == "SC TO-I", "multi-token form survives wider padding")
+check(wide[0]["company"] == "A VERY LONG COMPANY NAME WITH MANY WORDS INC",
+      f"and so does a long multi-word name (got {wide[0]['company']!r})")
+
+# No header at all — the parser must not depend on finding one.
+HEADERLESS = "SC TO-I   NOHEADER CORP   0000088888  2026-08-07  edgar/data/88888/y.txt\n"
+hl, htotal = _rc.parse_index(HEADERLESS, "2026-08-07")
+check(htotal == 1 and hl and hl[0]["form"] == "SC TO-I",
+      "rows parse with no header present — anchoring on the archive path, not a header")
+
+# The distinction the first live run got wrong: fetched-and-unparseable is
+# NOT the same as no-catalysts-today, and only one of them is a real result.
+noise, ntotal = _rc.parse_index("<html><body>Request Rate Threshold Exceeded</body></html>", "2026-08-07")
+check(ntotal == 0 and noise == [],
+      "an HTML error page served with a 200 parses to nothing — and reports "
+      "ZERO ROWS PARSED so the caller can refuse to write")
+only_routine, rtotal = _rc.parse_index(
+    "10-K   QUIET CORP   0000012345  2026-08-07  edgar/data/12345/q.txt\n", "2026-08-07")
+check(rtotal == 1 and only_routine == [],
+      "a real file with no catalysts parses rows but yields none — which is a "
+      "genuine result, and must be distinguishable from the broken case above")
+check(_rc.parse_index("", "2026-08-08") == ([], 0), "an empty file yields nothing, not a crash")
 
 # ── degenerate inputs must not raise ────────────────────────────────
 for kw in ({"price": 0, "consideration": 10, "days": 30},
