@@ -60,6 +60,8 @@
     padding:0.6rem 1rem; margin:0.8rem 0; font-size:0.82rem; line-height:1.6; }
   details.cp-explain summary { cursor:pointer; font-weight:700; font-size:0.85rem; }
   details.cp-explain ul { margin:0.4rem 0 0.4rem 1.1rem; padding:0; }
+    .cp-fx { font-size: 0.68rem; font-weight: 700; padding: 1px 6px; border-radius: 999px;
+        background: rgba(217,119,6,0.15); color: #b45309; cursor: help; }
 </style>
 {% endblock %}
 
@@ -136,7 +138,7 @@
     <thead><tr>
       <th data-col="t">Ticker<span class="arrow"></span></th>
       <th data-col="n">Name<span class="arrow"></span></th>
-      <th data-col="c">Country<span class="arrow"></span></th>
+      <th data-col="c" title="SEC business-address state or country — a US state code for domestic filers, not a domicile field">Location<span class="arrow"></span></th>
       <th data-col="i">Industry<span class="arrow"></span></th>
       <th data-col="er" data-numeric="1" title="Expected 10-yr CAGR = G + B + D + M">E[r]<span class="arrow"></span></th>
       <th data-col="g" data-numeric="1" title="Growth term (haircut trailing revenue CAGR + margin trend)">G<span class="arrow"></span></th>
@@ -168,7 +170,7 @@
         <td data-sort="{{ r.fcf_conv if r.fcf_conv is not none else -99 }}">{% if r.fcf_conv is not none %}{{ r.fcf_conv|int }}%{% else %}—{% endif %}</td>
         <td data-sort="{{ r.nd_ebit if r.nd_ebit is not none else 99 }}">{% if r.nd_ebit is not none %}{{ r.nd_ebit }}×{% else %}—{% endif %}</td>
         <td data-sort="{{ r.capex_ocf if r.capex_ocf is not none else 99 }}">{% if r.capex_ocf is not none %}{{ r.capex_ocf|int }}%{% else %}—{% endif %}</td>
-        <td data-sort="{{ r.pfcf_now if r.pfcf_now else 999 }}">{% if r.pfcf_now %}{{ r.pfcf_now }}<span class="cp-dim">/{{ r.pfcf_med or '—' }}</span>{% else %}—{% endif %}</td>
+        <td data-sort="{{ r.pfcf_now if r.pfcf_now else 999 }}">{% if r.pfcf_now %}{{ r.pfcf_now }}<span class="cp-dim">/{{ r.pfcf_med or '—' }}</span>{% elif r.currency and r.currency != 'USD' %}<span class="cp-fx" title="This company files in {{ r.currency }}. P/FCF would divide {{ r.currency }} cash flow by a USD ADR price, so it is withheld rather than computed. Growth, margins, ROIC and conversion are ratios within one currency and remain valid.">{{ r.currency }}</span>{% else %}—{% endif %}</td>
         <td data-sort="{{ r.status }}"><span class="st-pill st-{{ r.status }}" title="{% if not r.gates_pass %}Failed gates: {% for k, ok in r.gates.items() %}{% if not ok %}{{ k }} {% endif %}{% endfor %}{% else %}All quality gates pass.{% endif %}">{{ r.status }}</span></td>
       </tr>
       {% endfor %}
