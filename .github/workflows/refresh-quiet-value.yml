@@ -43,9 +43,19 @@ jobs:
       - name: Install runtime deps
         run: pip install -r requirements.txt
 
+      # Both suites run before a single market-data call. The price-feed
+      # one earns its place because a source can fail while returning
+      # HTTP 200 — Stooq answers an exhausted quota with plain text — and
+      # a parser that accepts that turns a dead feed into a company which
+      # appears never to have traded.
       - name: Verify the screen's maths before spending any API calls
-        run: python tests/test_liquidity.py
+        run: |
+          python tests/test_liquidity.py
+          python tests/test_pricefeed.py
 
+      # The run now probes its price sources first and gives up in seconds
+      # if none will answer, so this budget covers real work rather than
+      # an hour of backing off from a source that is refusing us.
       - name: Build the quiet-value screen
         run: python scripts/refresh_quiet_value.py --limit "${{ github.event.inputs.limit || '400' }}"
 
