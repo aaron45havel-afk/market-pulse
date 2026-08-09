@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Catalysts — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+    .ct-page { max-width: 1200px; margin: 0 auto; padding: 0 1.25rem; }
+    .ct-head h1 { font-size: clamp(1.5rem, 3vw, 2rem); margin: 1rem 0 0.3rem; }
+    .ct-lede { font-size: 0.85rem; color: var(--ink-3); line-height: 1.6; max-width: 70ch; margin: 0; }
+    .ct-card { background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--r); padding: 1rem 1.1rem; margin: 1rem 0; }
+    .ct-card h2 { font-size: 1rem; margin: 0 0 0.2rem; }
+    .ct-sub { font-size: 0.78rem; color: var(--ink-3); margin: 0 0 0.9rem; line-height: 1.55; }
+
+    .ct-form { display: flex; flex-wrap: wrap; gap: 0.7rem; align-items: flex-end; }
+    .ct-form .field { display: flex; flex-direction: column; gap: 0.2rem; }
+    .ct-form label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em;
+        color: var(--ink-3); font-weight: 700; }
+    .ct-form input, .ct-form select { padding: 0.38rem 0.5rem; border-radius: 7px;
+        border: 1px solid var(--border); background: var(--surface2); color: var(--text);
+        font-size: 0.88rem; width: 8rem; }
+    .ct-form .go { background: var(--accent); color: #fff; border: none; padding: 0.45rem 1.1rem;
+        border-radius: 7px; font-weight: 600; cursor: pointer; font-size: 0.88rem; }
+
+    .vd { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 0.95rem;
+          border-radius: 10px; margin: 1rem 0 0.8rem; font-size: 0.92rem; }
+    .vd-read_first { background: rgba(34,197,94,0.10); border: 1px solid rgba(34,197,94,0.35); }
+    .vd-worth_a_look { background: rgba(132,204,22,0.10); border: 1px solid rgba(132,204,22,0.35); }
+    .vd-too_small { background: rgba(217,119,6,0.10); border: 1px solid rgba(217,119,6,0.35); }
+    .vd-skip { background: rgba(239,68,68,0.10); border: 1px solid rgba(239,68,68,0.35); }
+    .vd b.tag { font-size: 0.7rem; letter-spacing: 0.06em; padding: 3px 10px; border-radius: 999px; }
+    .vd-read_first .tag { background: rgba(34,197,94,0.2); color: #16a34a; }
+    .vd-worth_a_look .tag { background: rgba(132,204,22,0.2); color: #4d7c0f; }
+    .vd-too_small .tag { background: rgba(217,119,6,0.2); color: #b45309; }
+    .vd-skip .tag { background: rgba(239,68,68,0.2); color: #dc2626; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.7rem 1rem; }
+    .grid .item { display: flex; flex-direction: column; }
+    .grid .k { font-size: 0.68rem; color: var(--ink-3); }
+    .grid .v { font-weight: 700; font-size: 1rem; font-variant-numeric: tabular-nums; }
+    .grid .item.hero .v { color: var(--accent); font-size: 1.15rem; }
+    .step { font-size: 0.76rem; color: var(--ink-3); margin-top: 0.6rem; line-height: 1.7; }
+    .step b { color: var(--text); }
+
+    .acct { margin-top: 0.8rem; padding: 0.6rem 0.85rem; border-radius: 9px;
+            background: var(--surface2); border: 1px solid var(--border); font-size: 0.82rem; }
+    .acct b { color: var(--accent); }
+
+    table.ct { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    .ct th, .ct td { padding: 0.5rem 0.6rem; text-align: left; vertical-align: top; }
+    .ct thead th { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em;
+        color: var(--ink-3); border-bottom: 1px solid var(--border); }
+    .ct tbody tr:not(:last-child) td { border-bottom: 1px solid var(--line, var(--border)); }
+    .ct .form-code { font-family: ui-monospace, monospace; font-weight: 700; white-space: nowrap; }
+    .warn-row .form-code { color: #dc2626; }
+    .ct .note { color: var(--ink-3); font-size: 0.8rem; }
+    .pill-warn { display: inline-block; font-size: 0.6rem; font-weight: 800; padding: 1px 7px;
+        border-radius: 999px; background: rgba(239,68,68,0.15); color: #dc2626; margin-left: 0.3rem; }
+    .ct-note { font-size: 0.78rem; color: var(--ink-3); line-height: 1.65;
+        border: 1px dashed var(--border); border-radius: 10px; padding: 0.7rem 0.9rem; margin: 1rem 0; }
+    .ct-note b { color: var(--text); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ct-page">
+  <div class="ct-head">
+    <h1>Catalysts</h1>
+    <p class="ct-lede">
+      Which filing to read first. This is triage, <b>not a buy signal</b> — it ranks candidates and kills the ones
+      that can't pay for the evening they'd cost. There's no blended score on purpose: a composite built on a guessed
+      completion probability looks like a measurement, and isn't one.
+    </p>
+  </div>
+
+  <div class="ct-card">
+    <h2>Price a situation</h2>
+    <p class="ct-sub">
+      Deal terms come from reading the filing — no feed can supply them reliably, so nothing here pretends to.
+      Enter what you found and it computes the four numbers that decide it.
+    </p>
+    <form class="ct-form" method="get" action="/catalysts">
+      <div class="field"><label for="price">Price now</label><input id="price" name="price" value="{{ price }}" placeholder="30.00"></div>
+      <div class="field"><label for="offer">Offer / est. value</label><input id="offer" name="offer" value="{{ offer }}" placeholder="32.00"></div>
+      <div class="field"><label for="days" title="From the filing: expiration, vote date, or estimated distribution">Days to event</label><input id="days" name="days" value="{{ days }}" placeholder="30"></div>
+      <div class="field"><label for="spread" title="Round-trip bid-ask. In illiquid names this is what kills the trade.">Round trip %</label><input id="spread" name="spread" value="{{ spread }}" placeholder="3"></div>
+      <div class="field"><label for="shares">Shares</label><input id="shares" name="shares" value="{{ shares }}" placeholder="2000"></div>
+      <div class="field"><label for="oddlot">Odd lot?</label>
+        <select id="oddlot" name="oddlot">
+          <option value="0" {% if not oddlot %}selected{% endif %}>No</option>
+          <option value="1" {% if oddlot %}selected{% endif %}>Yes — capped at 99</option>
+        </select></div>
+      <div class="field"><label for="account">Account</label>
+        <select id="account" name="account">
+          <option value="taxable" {% if account == 'taxable' %}selected{% endif %}>Taxable</option>
+          <option value="ira" {% if account == 'ira' %}selected{% endif %}>IRA</option>
+          <option value="roth" {% if account == 'roth' %}selected{% endif %}>Roth</option>
+        </select></div>
+      <div class="field"><label for="completion" title="Leave blank to see the best case rather than an expected value">P(close) 0–1</label><input id="completion" name="completion" value="{{ completion }}" placeholder="0.95"></div>
+      <div class="field"><label for="downside" title="Where it trades if the deal breaks">Break price</label><input id="downside" name="downside" value="{{ downside }}" placeholder="26.00"></div>
+      <div class="field"><label for="target">Target after tax %</label><input id="target" name="target" value="{{ target }}"></div>
+      <div class="field"><label for="mindollars">Min $ at stake</label><input id="mindollars" name="mindollars" value="{{ mindollars|int }}"></div>
+      <button class="go" type="submit">Price it</button>
+    </form>
+
+    {% if result and verdict %}
+    <div class="vd vd-{{ verdict.verdict }}">
+      <b class="tag">{{ verdict.verdict.replace('_',' ')|upper }}</b>
+      <span>{{ verdict.reason }}</span>
+    </div>
+
+    <div class="grid">
+      <div class="item"><span class="k">Gross spread</span><span class="v">{{ result.gross_spread_pct }}%</span></div>
+      <div class="item"><span class="k">Less round trip</span><span class="v">−{{ result.trading_cost_pct }}%</span></div>
+      <div class="item"><span class="k">Net spread</span><span class="v">{{ result.net_spread_pct }}%</span></div>
+      <div class="item"><span class="k">Annualized (net)</span><span class="v">{{ result.annualized_net_pct }}%</span></div>
+      <div class="item hero"><span class="k">Annualized AFTER TAX</span><span class="v">{{ result.annualized_after_tax_pct }}%</span></div>
+      <div class="item"><span class="k">Dollars at stake</span>
+        <span class="v">{% if result.dollars_at_stake is not none %}${{ '{:,.0f}'.format(result.dollars_at_stake) }}{% else %}—{% endif %}</span></div>
+      {% if result.expected_value_pct is not none %}
+      <div class="item"><span class="k">Expected value</span><span class="v">{{ result.expected_value_pct }}%</span></div>
+      {% endif %}
+    </div>
+
+    <p class="step">
+      <b>{{ result.gross_spread_pct }}%</b> gross, less <b>{{ result.trading_cost_pct }}%</b> to get in and out,
+      is <b>{{ result.net_spread_pct }}%</b> over <b>{{ result.days|int }}</b> days →
+      <b>{{ result.annualized_net_pct }}%</b> annualized →
+      {% if result.after_tax.rate == 0 %}<b>{{ result.annualized_after_tax_pct }}%</b> kept in full — the account is tax-deferred.
+      {% else %}<b>{{ result.annualized_after_tax_pct }}%</b> after {{ result.after_tax.treatment }} tax.{% endif %}
+      {% if result.odd_lot_capped %}Odd-lot capped at 99 shares, so the whole play is worth
+      <b>${{ '{:,.0f}'.format(result.dollars_at_stake) }}</b> however good the rate looks.{% endif %}
+    </p>
+
+    {% if compare and compare.gap_pct and compare.gap_pct > 0.5 %}
+    <div class="acct">
+      Same play, different account: <b>{{ compare.taxable_pct }}%</b> taxable vs
+      <b>{{ compare.sheltered_pct }}%</b> sheltered — a <b>{{ compare.gap_pct }} point</b> gap, because this is
+      taxed as {{ compare.treatment }}. On short events this is frequently a bigger lever than finding a better deal.
+    </div>
+    {% endif %}
+    {% endif %}
+  </div>
+
+  <div class="ct-card">
+    <h2>The queue</h2>
+    <p class="ct-sub">
+      A queue, not a ticker tape. Alerts land, get classified and wait for review — anything clearing your bars
+      is flagged. For these situations hours matter and seconds don't, and a live feed would just produce the
+      churn that eats your after-tax return.
+    </p>
+    {% if queue %}
+    <table class="ct">
+      <thead><tr><th>Filed</th><th>Form</th><th>Company</th><th>What it is</th></tr></thead>
+      <tbody>
+        {% for r in queue[:60] %}
+        <tr class="{{ 'warn-row' if r.warning }}">
+          <td>{{ r.filed }}</td>
+          <td class="form-code">{{ r.form }}</td>
+          <td>{{ r.company }}{% if r.warning %}<span class="pill-warn">WARNING</span>{% endif %}</td>
+          <td class="note">{{ r.label }} — {{ r.note }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if meta %}<p class="ct-sub" style="margin-top:0.8rem">Scanned {{ meta.as_of }} · {{ meta.filings_scanned }} filings · {{ meta.matched }} matched.</p>{% endif %}
+    {% else %}
+    <p class="ct-sub"><b>Nothing loaded yet.</b> The queue is built in CI from the EDGAR daily index —
+      run the <code>refresh-catalysts</code> workflow. The calculator above works without it.</p>
+    {% endif %}
+  </div>
+
+  <div class="ct-card">
+    <h2>What's watched, and what each one means</h2>
+    <p class="ct-sub">
+      Completion rates are <b>priors, not measurements</b> — they encode structure (is the cash already there? is there
+      a financing condition? does the buyer control the vote?) and are meant to be overridden per deal.
+    </p>
+    <table class="ct">
+      <thead><tr><th>Form</th><th>Means</th><th>Typical</th><th>Completes</th><th>What to check</th></tr></thead>
+      <tbody>
+        {% for form, m in catalog.items() %}
+        <tr class="{{ 'warn-row' if m.warning }}">
+          <td class="form-code">{{ form }}</td>
+          <td>{{ m.label }}{% if m.warning %}<span class="pill-warn">WARNING</span>{% endif %}</td>
+          <td>{{ m.typical_days }}d</td>
+          <td>{{ (m.completion * 100)|int }}%</td>
+          <td class="note">{{ m.note }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="ct-note">
+    <b>Why the ranking is annualized and not the headline spread.</b> A 3% spread closing in 30 days is ~43%/yr.
+    A 20% spread resolving over three years is ~6%/yr. The second looks better and isn't close.
+    <br><br>
+    <b>Why the round trip comes off first.</b> A 6% spread in a name with a 4% bid-ask is a 2% trade. These situations
+    live in illiquid securities, which is exactly where that cost is worst — see the
+    <a href="/quiet-value">quiet-value</a> board for the dark-days and daily-volume figures on the same names.
+    <br><br>
+    <b>Why tax isn't a footnote.</b> A 60-day event is ordinary income. At 37%, a 25% gross return nets 15.75% —
+    barely at a 15% after-tax bar — while the same 25% held thirteen months nets 20%. The code is paying you to be slow.
+    <br><br>
+    <b>Why dollars sit beside the percentage.</b> An odd-lot tender is capped at 99 shares. At a $2 spread that's
+    $198, however well it annualizes. Ranking on percentage alone fills the queue with plays that are
+    mathematically beautiful and economically irrelevant.
+  </div>
+</div>
+{% endblock %}
