@@ -346,6 +346,67 @@ async def lynch(request: Request):
     return templates.TemplateResponse("lynch.html", {"request": request})
 
 
+@app.get("/catalysts")
+async def catalysts_page(request: Request, price: str = "", offer: str = "",
+                         days: str = "", spread: str = "", shares: str = "",
+                         oddlot: str = "0", account: str = "taxable",
+                         completion: str = "", downside: str = "",
+                         target: str = "15", mindollars: str = "2000",
+                         rate: str = "37", ltcg: str = "20"):
+    """Special-situation triage — which filing to read first.
+
+    Deliberately NOT a buy signal. It ranks candidates by annualized
+    return net of the round-trip spread and after tax at the holding
+    period, shows the dollars actually at stake beside the percentage,
+    and kills the ones that cannot pay for the evening they would cost.
+    See catalysts.py for why there is no blended score.
+
+    The queue comes from data/catalysts.json (CI-built from the EDGAR
+    daily index). The calculator below it works with nothing loaded —
+    deal terms come from reading the filing, which no feed can do."""
+    import json as _json
+    import catalysts as CT
+
+    path = Path(__file__).resolve().parent / "data" / "catalysts.json"
+    queue, meta = [], None
+    if path.exists():
+        blob = _json.loads(path.read_text())
+        queue, meta = blob.get("rows", []), blob.get("_meta")
+
+    target_n = max(0.0, min(500.0, _qnum(target, 15.0)))
+    mind_n = max(0.0, min(10_000_000.0, _qnum(mindollars, 2000.0)))
+    ord_rate = max(0.0, min(60.0, _qnum(rate, 37.0))) / 100.0
+    ltcg_rate = max(0.0, min(60.0, _qnum(ltcg, 20.0))) / 100.0
+    account = account if account in ("taxable", "ira", "roth") else "taxable"
+
+    price_n, offer_n = _qnum(price), _qnum(offer)
+    days_n = _qnum(days)
+    result = verdict = compare = None
+    if price_n > 0 and offer_n > 0 and days_n > 0:
+        comp = _qnum(completion)
+        down = _qnum(downside)
+        kw = dict(price=price_n, consideration=offer_n, days=days_n,
+                  roundtrip_spread_pct=max(0.0, _qnum(spread)),
+                  shares=(int(_qnum(shares)) or None),
+                  odd_lot=_qnum(oddlot) > 0, account=account,
+                  completion=(comp if 0 < comp <= 1 else None),
+                  downside=(down if down > 0 else None),
+                  ordinary_rate=ord_rate, ltcg_rate=ltcg_rate)
+        result = CT.evaluate(**kw)
+        verdict = CT.triage(result, target_after_tax_pct=target_n, min_dollars=mind_n)
+        compare = CT.account_comparison(**kw)
+
+    return templates.TemplateResponse("catalysts.html", {
+        "request": request, "queue": queue, "meta": meta,
+        "catalog": CT.CATALYSTS, "result": result, "verdict": verdict,
+        "compare": compare, "price": price, "offer": offer, "days": days,
+        "spread": spread, "shares": shares, "oddlot": _qnum(oddlot) > 0,
+        "account": account, "completion": completion, "downside": downside,
+        "target": target_n, "mindollars": mind_n,
+        "rate": _qnum(rate, 37.0), "ltcg": _qnum(ltcg, 20.0),
+    })
+
+
 @app.get("/quiet-value")
 async def quiet_value_page(request: Request, liq: str = "low", size: str = "",
                            minpass: str = "5", require: str = "",
