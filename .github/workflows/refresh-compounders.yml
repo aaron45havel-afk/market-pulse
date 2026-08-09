@@ -1,10 +1,12 @@
 name: Refresh Compounders screen (monthly)
 
 # Rebuilds data/compounders.json for /compounders — the 14%/yr screen.
-# Universe self-discovers from SEC EDGAR frames (every filer ≥ $1B
-# revenue, ~2000 names incl. US-listed ADRs), then 10 years of XBRL
-# fundamentals per company + Yahoo prices/dividends. Full run takes
-# ~45-70 minutes at SEC-polite request rates — well inside the 6h limit.
+# Universe self-discovers from SEC EDGAR revenue frames, then 10 years of
+# XBRL fundamentals per company + Yahoo prices/dividends.
+#
+# THE REVENUE FLOOR IS THE UNIVERSE SIZE DIAL. At $1B it admitted 1,582
+# names and scored 901. It is exposed as an input here so the universe can
+# be widened or narrowed without a commit.
 #
 # Cadence: 5th of each month at 09:00 UTC (after most 10-K/Q waves
 # settle, before the other monthly jobs' window).
@@ -16,6 +18,14 @@ on:
     inputs:
       limit:
         description: 'Process only the N largest companies (testing)'
+        required: false
+        default: ''
+      min_revenue:
+        description: 'Revenue floor in dollars (default 250000000 = $250M)'
+        required: false
+        default: ''
+      max_universe:
+        description: 'Hard cap on CIKs processed (default 6000)'
         required: false
         default: ''
 
@@ -38,11 +48,21 @@ jobs:
 
       - name: Run compounders refresh
         run: |
+          set -euo pipefail
+          # Plain `[ -n "$x" ] && ARGS=...` returns 1 when the input is
+          # empty, and under `set -e` that ends the job before it starts.
+          ARGS=""
           if [ -n "${{ inputs.limit }}" ]; then
-            python scripts/refresh_compounders.py --limit "${{ inputs.limit }}"
-          else
-            python scripts/refresh_compounders.py
+            ARGS="$ARGS --limit ${{ inputs.limit }}"
           fi
+          if [ -n "${{ inputs.min_revenue }}" ]; then
+            ARGS="$ARGS --min-revenue ${{ inputs.min_revenue }}"
+          fi
+          if [ -n "${{ inputs.max_universe }}" ]; then
+            ARGS="$ARGS --max-universe ${{ inputs.max_universe }}"
+          fi
+          echo "Running with:${ARGS:- built-in defaults}"
+          python scripts/refresh_compounders.py $ARGS
 
       - name: Commit + push if changed
         run: |

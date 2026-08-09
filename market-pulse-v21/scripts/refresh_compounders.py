@@ -4,14 +4,20 @@ Three stages, all free sources, designed for the GitHub Actions runner
 (the dev sandbox can't reach EDGAR/Yahoo — test with --limit there and
 expect network failures; the real run happens in CI):
 
-  A. UNIVERSE — self-discovering, no hand-curated list to maintain.
-     SEC XBRL "frames" API returns one concept for EVERY filer in a
-     couple of calls. We take annual revenue frames (us-gaap Revenues +
-     RevenueFromContractWithCustomer… + ifrs-full Revenue, union of the
-     last two calendar years) and keep every company ≥ $1B revenue —
-     roughly the top ~2000 operating companies incl. US-listed ADRs
-     (which file 10-K/20-F and appear in frames). Exchange-listed only
-     (company_tickers_exchange.json), financials excluded by SIC.
+  A. UNIVERSE — self-discovering for US filers, seeded for the rest.
+     SEC XBRL "frames" returns one concept for EVERY filer in a couple of
+     calls. We union annual revenue frames across the last two calendar
+     years and keep every company above the revenue floor, exchange-listed
+     only (company_tickers_exchange.json), financials excluded by SIC.
+
+     THE FRAMES ARE us-gaap ONLY. EDGAR's frames endpoint 404s for
+     ifrs-full concepts, so a foreign private issuer that reports under
+     IFRS cannot be discovered this way at all — no matter how large.
+     ADR_SEEDS force-adds a hand-kept list of majors to paper over that,
+     which means international coverage is exactly as good as that list
+     and no better. Per-company facts DO resolve ifrs-full tags (stage B),
+     so a seeded ADR scores correctly once it is in; the gap is discovery,
+     not scoring.
 
   B. FUNDAMENTALS — per CIK: companyfacts (10y of annual XBRL) +
      submissions (SIC code, country). Tag maps cover us-gaap AND
@@ -28,9 +34,10 @@ Output: data/compounders.json — compact per-ticker METRICS only (a few
 KB per name). All scoring/thresholds live in compounders.py so tuning
 the screen never requires a refetch.
 
-SEC fair-access: ≤10 req/s allowed; we run ~3/s with a descriptive UA.
-Full run ≈ 2000 CIKs × (companyfacts + submissions) + ~1800 Yahoo calls
-≈ 45-70 min — fine for a monthly job (limit 6h).
+SEC fair-access: ≤10 req/s allowed. Stage B runs concurrently against a
+shared token bucket at 8/s; stage C stays serial because Yahoo is an
+undocumented endpoint that rate-blocks these runners and concurrency is
+what took the quiet-value screen down.
 """
 from __future__ import annotations
 
@@ -38,23 +45,71 @@ import argparse
 import json
 import statistics
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
+
+
+class _Throttle:
+    """Token bucket shared across worker threads. SEC bans on rate, and a
+    per-thread sleep does not bound the aggregate — six threads sleeping
+    0.34s each is 18 req/s, not 3."""
+
+    def __init__(self, per_second: float):
+        self._gap = 1.0 / per_second
+        self._lock = threading.Lock()
+        self._next = 0.0
+
+    def wait(self) -> None:
+        with self._lock:
+            now = time.monotonic()
+            due = max(now, self._next)
+            self._next = due + self._gap
+        if due > now:
+            time.sleep(due - now)
 
 SEC_UA = "market-pulse-research admin@focusedops.io"
 HEADERS_SEC = {"User-Agent": SEC_UA, "Accept-Encoding": "gzip, deflate"}
 HEADERS_YAHOO = {"User-Agent": "Mozilla/5.0 (market-pulse-refresh/1.0)",
                  "Accept": "application/json"}
 
-SEC_SLEEP = 0.34          # ~3 req/s, well under SEC's 10/s policy
+SEC_SLEEP = 0.34          # used only by the single-threaded frames stage
 YAHOO_SLEEP = 0.3
-MIN_REVENUE = 1_000_000_000     # $1B floor → ≈ top 2000 operating cos
+
+# SEC permits 10 req/s. The old run made every call on one thread behind a
+# 0.34s sleep — about 3/s — which was tolerable at a $1B floor and is
+# precisely why lowering that floor would otherwise turn a 70-minute job
+# into a three-hour one. The fundamentals stage now runs concurrently
+# against a shared token bucket, so throughput is governed by a stated
+# rate limit instead of a sleep multiplied by however many names qualify.
+SEC_RATE = 8.0            # requests/second, shared across all workers
+SEC_WORKERS = 6
+
+# THE FLOOR IS THE UNIVERSE. Nothing else here is remotely as
+# load-bearing: at $1B it admitted 1,582 names and the screen scored 901.
+# Revenue is used ONLY to bound the work — every quality judgement happens
+# later, against the filings — so a lower floor widens what gets
+# considered without loosening a single gate.
+#
+# $250M keeps the whole mid-cap tier and still stops short of the
+# micro-cap universe, where a clean decade of XBRL usually does not exist
+# and the 14%/yr question is a different question anyway.
+MIN_REVENUE = 250_000_000
 MIN_YEARS = 7                    # need ≥7 fiscal years to score
-MAX_UNIVERSE = 2600              # hard cap on CIKs processed
+MAX_UNIVERSE = 6000              # hard cap on CIKs processed
+
+# Yahoo supplies price, dividend yield and the P/FCF history behind the
+# valuation term. If it stops answering, every row STILL computes from
+# EDGAR and the screen quietly becomes a growth-and-quality board with no
+# valuation in it — worse than failing, because it looks like it worked.
+# Below this share of scored names carrying market data, refuse to
+# publish. Yahoo already blocks these runners intermittently.
+MIN_MARKET_COVERAGE = 0.60
 
 # Financials excluded: banks/brokers/insurers have no meaningful
 # capex/gross-margin/FCF in this framework (SIC 6000-6499 + 6700s
@@ -165,8 +220,8 @@ ADR_SEEDS = [
 ]
 
 
-def discover_universe(years: list[int]) -> dict[int, float]:
-    """{cik: best annual revenue} for every filer ≥ MIN_REVENUE, via
+def discover_universe(years: list[int], min_revenue: float = MIN_REVENUE) -> dict[int, float]:
+    """{cik: best annual revenue} for every filer >= min_revenue, via
     frames. Union across tags and years (max wins) so non-calendar
     fiscal years and tag fragmentation don't drop real companies."""
     best: dict[int, float] = {}
@@ -188,7 +243,7 @@ def discover_universe(years: list[int]) -> dict[int, float]:
                 n += 1
             print(f"[universe] frame {taxonomy}/{tag}/CY{year}: {n} filers")
             time.sleep(SEC_SLEEP)
-    return {c: v for c, v in best.items() if v >= MIN_REVENUE}
+    return {c: v for c, v in best.items() if v >= min_revenue}
 
 
 def ticker_map() -> dict[int, dict]:
@@ -464,16 +519,21 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=0,
                     help="Process only the N largest (testing).")
+    ap.add_argument("--min-revenue", type=float, default=MIN_REVENUE,
+                    help="Revenue floor in dollars. This IS the universe size dial.")
+    ap.add_argument("--max-universe", type=int, default=MAX_UNIVERSE,
+                    help="Hard cap on CIKs processed after the ticker join.")
     args = ap.parse_args()
 
     this_year = datetime.now(timezone.utc).year
     print("[compounders] Stage A: universe discovery via EDGAR frames…")
-    revenue_by_cik = discover_universe([this_year - 2, this_year - 1])
-    print(f"[compounders] {len(revenue_by_cik)} filers ≥ ${MIN_REVENUE/1e9:.0f}B revenue")
+    revenue_by_cik = discover_universe([this_year - 2, this_year - 1],
+                                       min_revenue=args.min_revenue)
+    print(f"[compounders] {len(revenue_by_cik)} filers ≥ ${args.min_revenue/1e6:,.0f}M revenue")
     tickers = ticker_map()
     universe = [(cik, rev) for cik, rev in revenue_by_cik.items() if cik in tickers]
     universe.sort(key=lambda x: -x[1])
-    universe = universe[:MAX_UNIVERSE]
+    universe = universe[:args.max_universe]
     # Force-add the IFRS-only ADR seeds (frames can't discover them).
     have = {cik for cik, _ in universe}
     by_ticker = {info["ticker"]: cik for cik, info in tickers.items()}
@@ -481,7 +541,7 @@ def main() -> int:
     for t in ADR_SEEDS:
         cik = by_ticker.get(t)
         if cik and cik not in have:
-            universe.append((cik, MIN_REVENUE))   # revenue verified from facts later
+            universe.append((cik, args.min_revenue))  # verified from facts later
             have.add(cik)
             seeded += 1
     if args.limit:
@@ -489,46 +549,106 @@ def main() -> int:
     print(f"[compounders] {len(universe)} exchange-listed after ticker join "
           f"(+{seeded} ADR seeds)")
 
-    out: dict[str, dict] = {}
-    skipped = {"financial": 0, "no_facts": 0, "thin": 0, "market": 0}
+    # ── Stage B: fundamentals, concurrently ──────────────────────────
+    # Two SEC calls per name (submissions + companyfacts) against one
+    # shared rate limiter. This is the stage that scales with the floor,
+    # so it is the stage that had to stop being serial.
+    skipped = {"financial": 0, "no_facts": 0, "market": 0, "error": 0}
+    lock = threading.Lock()
+    throttle = _Throttle(SEC_RATE)
+    # (cik, info, profile, metrics) — cik is carried explicitly because the
+    # ticker map keys ON it and does not repeat it inside the value.
+    scored: list[tuple[int, dict, dict, dict]] = []
     t0 = time.time()
-    skipped["error"] = 0
-    for i, (cik, rev) in enumerate(universe, 1):
+    done_n = 0
+
+    def fundamentals(entry: tuple[int, float]) -> None:
+        nonlocal done_n
+        cik, _rev = entry
         info = tickers[cik]
-        # One malformed company must never kill a 70-minute run — catch
+        # One malformed company must never kill a long run — catch
         # everything per-company, log it, move on.
         try:
+            throttle.wait()
             profile = fetch_profile(cik)
-            time.sleep(SEC_SLEEP)
             if _is_financial_sic(profile.get("sic")):
-                skipped["financial"] += 1
-                continue
+                with lock:
+                    skipped["financial"] += 1
+                return
+            throttle.wait()
             metrics = fetch_fundamentals(cik)
-            time.sleep(SEC_SLEEP)
             if metrics is None:
-                skipped["no_facts"] += 1
-                continue
-            market = fetch_market(info["ticker"], metrics.get("fcf_ps") or {})
-            time.sleep(YAHOO_SLEEP)
-            if market is None:
-                skipped["market"] += 1
-                market = {}
-            row = {**metrics, **market,
-                   "name": info["name"], "cik": cik, "exchange": info["exchange"],
-                   "sic": profile.get("sic"), "industry": profile.get("sic_desc"),
-                   "country": profile.get("country_desc") or "United States"}
-            row.pop("fcf_ps", None)   # working data — not needed in output
-            out[info["ticker"]] = row
-        except Exception as e:
-            skipped["error"] += 1
+                with lock:
+                    skipped["no_facts"] += 1
+                return
+            with lock:
+                scored.append((cik, info, profile, metrics))
+        except Exception as e:                              # noqa: BLE001
+            with lock:
+                skipped["error"] += 1
             print(f"[compounders] {info['ticker']} (CIK {cik}): "
                   f"{type(e).__name__}: {e} — skipped")
-        if i % 50 == 0:
-            rate = i / (time.time() - t0)
-            eta = (len(universe) - i) / rate / 60
-            print(f"[compounders] {i}/{len(universe)} · kept {len(out)} · ~{eta:.0f} min left")
+        finally:
+            with lock:
+                done_n += 1
+                n = done_n
+            if n % 250 == 0:
+                rate = n / max(1e-9, time.time() - t0)
+                print(f"[compounders] fundamentals {n}/{len(universe)} · "
+                      f"kept {len(scored)} · ~{(len(universe)-n)/rate/60:.0f} min left")
 
-    print(f"[compounders] Done: kept {len(out)}, skipped {skipped}")
+    print(f"[compounders] Stage B: fundamentals for {len(universe)} CIKs "
+          f"at {SEC_RATE:.0f} req/s across {SEC_WORKERS} workers…")
+    with ThreadPoolExecutor(max_workers=SEC_WORKERS) as ex:
+        list(ex.map(fundamentals, universe))
+    print(f"[compounders] Stage B done in {(time.time()-t0)/60:.0f} min: "
+          f"{len(scored)} scored, skipped {skipped}")
+    if not scored:
+        print("[compounders] Nothing survived the fundamentals stage — "
+              "refusing to overwrite a good dataset.")
+        return 2
+
+    # ── Stage C: market data, gently and serially ────────────────────
+    # Deliberately NOT parallelised. Yahoo is an undocumented endpoint
+    # that rate-blocks these runners, and the quiet-value screen was
+    # taken down by exactly the concurrency that would speed this up.
+    # It only runs on names that already scored, so it is the short stage.
+    print(f"[compounders] Stage C: market data for {len(scored)} names…")
+    out: dict[str, dict] = {}
+    with_market = 0
+    for i, (cik, info, profile, metrics) in enumerate(scored, 1):
+        try:
+            market = fetch_market(info["ticker"], metrics.get("fcf_ps") or {})
+        except Exception:                                   # noqa: BLE001
+            market = None
+        time.sleep(YAHOO_SLEEP)
+        if market is None:
+            skipped["market"] += 1
+            market = {}
+        else:
+            with_market += 1
+        row = {**metrics, **market,
+               "name": info["name"], "cik": cik,
+               "exchange": info["exchange"],
+               "sic": profile.get("sic"), "industry": profile.get("sic_desc"),
+               "country": profile.get("country_desc") or "United States"}
+        row.pop("fcf_ps", None)   # working data — not needed in output
+        out[info["ticker"]] = row
+        if i % 250 == 0:
+            print(f"[compounders] market {i}/{len(scored)} · {with_market} with prices")
+
+    coverage = with_market / len(scored) if scored else 0.0
+    print(f"[compounders] Done: kept {len(out)}, market coverage "
+          f"{coverage:.0%}, skipped {skipped}")
+
+    # A board with no valuation term is not a smaller board, it is a
+    # different and much weaker screen wearing the same name.
+    if coverage < MIN_MARKET_COVERAGE and not args.limit:
+        print(f"[compounders] Only {coverage:.0%} of names carry market data "
+              f"(floor {MIN_MARKET_COVERAGE:.0%}). Without prices there is no "
+              f"valuation term and no P/FCF — the screen would silently become "
+              f"growth-and-quality only. Refusing to publish.")
+        return 2
     if len(out) < 200 and not args.limit:
         print("[compounders] Far fewer names than expected — refusing to "
               "overwrite a good dataset with a bad run.")
@@ -538,6 +658,9 @@ def main() -> int:
         "as_of": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         "universe_input": len(universe),
         "count": len(out),
+        "min_revenue": args.min_revenue,
+        "market_coverage_pct": round(coverage * 100, 1),
+        "skipped": skipped,
         "tickers": out,
     }
     out_path = Path(__file__).resolve().parent.parent / "data" / "compounders.json"
