@@ -33,6 +33,9 @@
   .cp-table-card h2 { margin:0 0 0.25rem; font-size:1rem; }
   .cp-table-card .desc { font-size:0.78rem; color:var(--ink-3); margin:0 0 0.6rem; }
   .cp-scroll { overflow-x:auto; }
+  .cp-table td.yrs-short { color: var(--ink-3); }
+  .cp-badge.short { background: var(--surface-2); color: var(--ink-3); }
+  .cp-badge.pfcfodd { background: rgba(217,119,6,0.15); color: #b45309; }
   .cp-table td.nm-cell, .cp-table td.ind-cell {
     max-width: 15rem; overflow: hidden; text-overflow: ellipsis; }
   .cp-table td.ind-cell { max-width: 11rem; }
@@ -157,7 +160,8 @@
       <th data-col="d" data-numeric="1" title="Dividend yield">D<span class="arrow"></span></th>
       <th data-col="m" data-numeric="1" title="Valuation drift to own 10-yr median P/FCF">M<span class="arrow"></span></th>
       <th data-col="roic" data-numeric="1" title="10-yr median return on invested capital">ROIC<span class="arrow"></span></th>
-      <th data-col="rev" data-numeric="1">Rev 10y<span class="arrow"></span></th>
+      <th data-col="yrs" data-numeric="1" title="Fiscal years of XBRL on file. COMPOUNDER requires 15; anything shorter is scored identically and labelled QUALITY.">Yrs<span class="arrow"></span></th>
+      <th data-col="rev" data-numeric="1" title="Fitted 15-year trend where available, else the endpoint CAGR">Growth<span class="arrow"></span></th>
       <th data-col="conv" data-numeric="1" title="ΣFCF ÷ Σnet income, 10 yrs — cash-is-real check">Conv<span class="arrow"></span></th>
       <th data-col="nd" data-numeric="1">ND/EBIT<span class="arrow"></span></th>
       <th data-col="cap" data-numeric="1">Capex<span class="arrow"></span></th>
@@ -177,7 +181,9 @@
         <td data-sort="{{ r.er_div }}">{{ r.er_div }}</td>
         <td data-sort="{{ r.er_mult }}">{{ '%+.1f'|format(r.er_mult) }}</td>
         <td data-sort="{{ r.roic_med if r.roic_med is not none else -99 }}">{% if r.roic_med is not none %}{{ r.roic_med }}%{% else %}—{% endif %}</td>
-        <td data-sort="{{ r.rev_cagr10 if r.rev_cagr10 is not none else -99 }}">{% if r.rev_cagr10 is not none %}{{ r.rev_cagr10 }}%{% else %}—{% endif %}</td>
+        <td data-sort="{{ r.years or 0 }}" class="{{ '' if r.proven else 'yrs-short' }}">{{ r.years or '—' }}</td>
+        <td data-sort="{{ r.rev_trend if r.rev_trend is not none else (r.rev_cagr10 if r.rev_cagr10 is not none else -99) }}"
+            title="15y fit {{ r.rev_trend if r.rev_trend is not none else '—' }} · 10y {{ r.rev_cagr10 if r.rev_cagr10 is not none else '—' }} · 5y {{ r.rev_cagr5 if r.rev_cagr5 is not none else '—' }}">{% if r.rev_trend is not none %}{{ r.rev_trend }}%{% elif r.rev_cagr10 is not none %}{{ r.rev_cagr10 }}%{% else %}—{% endif %}</td>
         <td data-sort="{{ r.fcf_conv if r.fcf_conv is not none else -99 }}">{% if r.fcf_conv is not none %}{{ r.fcf_conv|int }}%{% else %}—{% endif %}</td>
         <td data-sort="{{ r.nd_ebit if r.nd_ebit is not none else 99 }}">{% if r.nd_ebit is not none %}{{ r.nd_ebit }}×{% else %}—{% endif %}</td>
         <td data-sort="{{ r.capex_ocf if r.capex_ocf is not none else 99 }}">{% if r.capex_ocf is not none %}{{ r.capex_ocf|int }}%{% else %}—{% endif %}</td>
