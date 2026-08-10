@@ -482,13 +482,32 @@ def _annual_series(facts: dict, slots: list[tuple[str, str]],
     # otherwise take whichever unit actually holds the history.
     by_unit: dict[str, dict[int, float]] = {}
     for unit in available:
-        merged: dict[int, float] = {}
+        # PRIMARY TAG FIRST, not slot order. Slot-order-wins mixes two
+        # accounting bases inside one series: a company tagging `Revenues`
+        # for a few scattered years and `RevenueFromContractWithCustomer`
+        # for the rest gets whichever happens to be listed first for each
+        # year, so one substituted year rewrites its history. Xerox's
+        # five-year revenue CAGR went 0.0% -> 126.8% between runs without
+        # its fiscal year moving at all; only one base year's value did.
+        #
+        # The tag with the most coverage IS the company's reporting basis.
+        # Take it whole and let the others fill only the years it lacks.
+        per_tag: list[dict[int, float]] = []
         for taxonomy, tag in slots:
             node = (facts.get(taxonomy) or {}).get(tag)
-            if not node:
-                continue
-            for fy, val in _rows_for(node, unit).items():
-                merged.setdefault(fy, val)      # earlier slots win the year
+            if node:
+                got = _rows_for(node, unit)
+                if got:
+                    per_tag.append(got)
+        if not per_tag:
+            continue
+        # Stable: most years wins, and slot order still breaks ties, so
+        # the existing preference survives wherever coverage is equal.
+        per_tag.sort(key=lambda d: -len(d))
+        merged: dict[int, float] = {}
+        for got in per_tag:
+            for fy, val in got.items():
+                merged.setdefault(fy, val)
         if merged:
             by_unit[unit] = merged
     if not by_unit:
@@ -506,6 +525,30 @@ def _annual_series(facts: dict, slots: list[tuple[str, str]],
     return (series, unit) if len(series) >= 3 else ({}, unit)
 
 
+# 2020 is not an economic base year, and 2021 is only half of one. A
+# trailing CAGR measured from the bottom of a global shutdown reports a
+# RECOVERY as if it were growth, and this screen exists to find durable
+# compounding — the opposite thing.
+#
+# Before #217 the damage was hidden: 114 companies were frozen at 2017-18,
+# so their five-year window sat in normal years. Fixing that pushed the
+# window forward, and 1,540 of 1,833 rows landed on a 2020 base at once:
+#
+#     LUV  Southwest      -16.6  ->  69.4    RCL  Royal Caribbean  ->  250.0
+#     CTAS Cintas         -16.6  ->  41.7    SHW  Sherwin-Williams ->   39.3
+#     COLM Columbia Sportswear     30.0      AOS  A.O. Smith            35.6
+#
+# Cintas and Sherwin-Williams are steady high-single-digit growers. None
+# of those numbers describe the businesses; they describe 2020.
+#
+# So the window is anchored before the shutdown. Where that is impossible
+# — a company without pre-2020 filings — the answer is UNKNOWN rather than
+# a recovery rate, because a company whose entire record is the rebound
+# has no measurable durable growth yet, and admitting one to the board on
+# the strength of the rebound is exactly the error being fixed.
+NO_BASE_YEARS = (2020, 2021)
+
+
 def _cagr(series: dict[int, float], years: int) -> float | None:
     if not series:
         return None
@@ -518,6 +561,13 @@ def _cagr(series: dict[int, float], years: int) -> float | None:
         if not candidates:
             return None
         first = candidates[-1]
+    # Walk the base back out of the shutdown, lengthening the span rather
+    # than measuring from the hole.
+    while first in NO_BASE_YEARS:
+        earlier = [y for y in ys if y < first]
+        if not earlier:
+            return None
+        first = earlier[-1]
     a, b = series[first], series[last]
     span = last - first
     if a <= 0 or b <= 0 or span < 3:
