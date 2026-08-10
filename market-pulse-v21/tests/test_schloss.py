@@ -183,6 +183,42 @@ check(S.self_dealing(sbc=5e6, revenue=0)["sbc_pct_revenue"] is None,
 check(S.self_dealing(sbc=5e6)["checks"]["pay"] is None,
       "SBC without revenue cannot be scored")
 
+# A PERCENTAGE IS ONLY AS GOOD AS ITS DENOMINATOR. Banks report fee
+# income under `Revenues` and leave net interest income — most of the
+# business — outside it, so East West Bancorp's $2.6bn came through as
+# $55m and its stock compensation read 137.7% of revenue.
+bank = S.self_dealing(sbc=76e6, revenue=55.3e6, total_assets=76e9)
+check(bank["sbc_pct_revenue"] is None,
+      "revenue at 0.07% of total assets is not the company's revenue, so the "
+      "ratio built on it is withheld rather than published as 137%")
+check(bank["revenue_unrepresentative"] is True, "and the row says why")
+check(bank["checks"]["pay"] is None,
+      "the pay check goes unknown — it must not read as a FAILURE either, "
+      "since nothing about the company was measured")
+check(bank["sbc_pct_assets"] == 0.1,
+      f"SBC against the balance sheet is still reported as context "
+      f"(got {bank['sbc_pct_assets']})")
+
+fixed = S.self_dealing(sbc=76e6, revenue=2.6e9, total_assets=76e9)
+check(fixed["sbc_pct_revenue"] == 2.92,
+      f"with net interest income included the same bank reads 2.9% "
+      f"(got {fixed['sbc_pct_revenue']})")
+check(fixed["checks"]["pay"] is True, "and passes on the merits")
+
+# A genuinely tiny-revenue company is NOT the same case. Applied
+# Energetics really does pay ten times its revenue in stock, and that is
+# the signal, not an artefact.
+real = S.self_dealing(sbc=4.8e6, revenue=461_727, total_assets=5e6)
+check(real["revenue_unrepresentative"] is False,
+      "revenue at 9% of assets is small but representative")
+check(real["sbc_pct_revenue"] > 1000 and real["checks"]["pay"] is False,
+      "so the ratio stands and the company fails the check — a small "
+      "denominator is not a wrong one")
+
+check(S.self_dealing(sbc=1e6, revenue=1e8)["sbc_pct_revenue"] == 1.0,
+      "with no total assets there is nothing to judge the denominator "
+      "against, so the old behaviour stands rather than a guess")
+
 # Read the other way round from most screens, deliberately: Schloss took
 # Potlatch's 40% insider stake as alignment, not entrenchment.
 check(S.self_dealing(insider_pct=40.0)["checks"]["aligned"] is True,

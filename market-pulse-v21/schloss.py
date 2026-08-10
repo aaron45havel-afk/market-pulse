@@ -61,6 +61,14 @@ SURVIVAL_YEARS_MIN = 20        # "long histories of operations (20+ years)"
 # is the modern version of the self-dealing he watched for. These are
 # generous — the aim is to catch the egregious, not to police normal pay.
 SBC_TO_REVENUE_MAX = 0.10      # 10% of revenue paid in stock
+
+# Revenue below this share of total assets is not the company's revenue.
+# Two populations hit it: banks, whose `Revenues` tag captures fee income
+# only and leaves net interest income — most of the business — outside it;
+# and pre-revenue shells, where the denominator is near zero and the ratio
+# explodes. 254 rows read SBC above 10% of "revenue" on that basis, topping
+# out at 917,651%.
+REVENUE_REPRESENTATIVE_MIN = 0.02
 DILUTION_MAX = 2.0             # share count growing >2%/yr
 INSIDER_ALIGNED_MIN = 0.10     # "managements that own a lot of stock"
 
@@ -269,7 +277,7 @@ def dividend_history(per_share_by_year: dict) -> dict:
 
 
 def self_dealing(sbc=None, revenue=None, shares_cagr=None,
-                 insider_pct=None) -> dict:
+                 insider_pct=None, total_assets=None) -> dict:
     """"Honest management that does not overpay itself."
 
     Executive pay tables are prose; stock compensation is a number. It is
@@ -287,8 +295,23 @@ def self_dealing(sbc=None, revenue=None, shares_cagr=None,
     never scored as a pass; a company that does not disclose is a company
     we cannot clear.
     """
-    s, r = _num(sbc), _num(revenue)
-    sbc_pct = round(s / r * 100, 2) if (s is not None and r and r > 0) else None
+    s, r, ta = _num(sbc), _num(revenue), _num(total_assets)
+
+    # A PERCENTAGE IS ONLY AS GOOD AS ITS DENOMINATOR. East West Bancorp
+    # came through at 137.7% of revenue because the revenue tag caught
+    # $55m of fee income out of a $2.6bn business; Applied Energetics at
+    # 1,051% because it has almost no revenue at all. Neither figure says
+    # anything about whether management is overpaying itself, which is the
+    # only question this measure exists to answer.
+    unrepresentative = bool(ta and ta > 0 and r is not None
+                            and r < ta * REVENUE_REPRESENTATIVE_MIN)
+    sbc_pct = (round(s / r * 100, 2)
+               if (s is not None and r and r > 0 and not unrepresentative)
+               else None)
+    # Reported as context, never gated on: SBC against the balance sheet
+    # is defined for a pre-revenue company where SBC against revenue is
+    # not, but the threshold Schloss would have used is not one we have.
+    sbc_assets = round(s / ta * 100, 2) if (s is not None and ta and ta > 0) else None
     dil = _num(shares_cagr)
     ins = _num(insider_pct)
 
@@ -298,8 +321,9 @@ def self_dealing(sbc=None, revenue=None, shares_cagr=None,
         "aligned": None if ins is None else ins >= INSIDER_ALIGNED_MIN * 100,
     }
     known = [v for v in checks.values() if v is not None]
-    return {"sbc_pct_revenue": sbc_pct, "shares_cagr": dil,
-            "insider_pct": ins, "checks": checks,
+    return {"sbc_pct_revenue": sbc_pct, "sbc_pct_assets": sbc_assets,
+            "revenue_unrepresentative": unrepresentative,
+            "shares_cagr": dil, "insider_pct": ins, "checks": checks,
             "passed": sum(1 for v in known if v), "known": len(known)}
 
 
@@ -355,7 +379,7 @@ def evaluate(f: dict, this_year: int) -> dict:
     if raw_divs is not None and divs["pays"] is None:
         divs = {**divs, "pays": False}
     mgmt = self_dealing(f.get("sbc"), f.get("revenue"), f.get("shares_cagr"),
-                        f.get("insider_pct"))
+                        f.get("insider_pct"), f.get("total_assets"))
     surv_pass, surv_yrs = survival(f.get("first_filing_year"), this_year)
     # Total assets is the right anchor. Where it was not filed, tangible
     # book stands in as a lower bound — assets are never less than equity

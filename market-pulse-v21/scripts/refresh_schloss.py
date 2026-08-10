@@ -146,6 +146,14 @@ ANNUAL: dict[str, list[str]] = {
         "Revenues",
     ],
     "sbc": ["ShareBasedCompensation", "AllocatedShareBasedCompensationExpense"],
+    # BANKS DO NOT REPORT THEIR REVENUE UNDER "Revenues". The tag catches
+    # fee income; net interest income — most of the business — sits under
+    # its own element and was being left out, so East West Bancorp's
+    # $2.6bn of revenue came through as $55m and its stock compensation
+    # read 137.7% of it. Added to revenue rather than replacing it, since
+    # a bank has both.
+    "interest_net": ["InterestIncomeExpenseNet",
+                     "InterestIncomeExpenseAfterProvisionForLoanLoss"],
 }
 
 # Dividends per share, in USD-per-share. Kept separate because the unit is
@@ -568,8 +576,14 @@ def build(limit: int = 0) -> dict:
         meta = tick[cik]
         rev = ann.get("revenue", {}).get(cik, {})
         sbc = ann.get("sbc", {}).get(cik, {})
+        nii = ann.get("interest_net", {}).get(cik, {})
         latest_rev = rev.get(max(rev)) if rev else None
         latest_sbc = sbc.get(max(sbc)) if sbc else None
+        # Fee income plus net interest income is what a bank earns. For a
+        # company with no interest business this adds nothing.
+        latest_nii = nii.get(max(nii)) if nii else None
+        if latest_nii is not None:
+            latest_rev = (latest_rev or 0.0) + latest_nii
 
         filings = {k: v.get(cik) for k, v in inst.items()}
         filings.update({
