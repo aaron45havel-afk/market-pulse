@@ -4,19 +4,32 @@ Three stages, all free sources, designed for the GitHub Actions runner
 (the dev sandbox can't reach EDGAR/Yahoo — test with --limit there and
 expect network failures; the real run happens in CI):
 
-  A. UNIVERSE — self-discovering for US filers, seeded for the rest.
+  A. UNIVERSE — self-discovering, in three passes, no hand-kept list.
      SEC XBRL "frames" returns one concept for EVERY filer in a couple of
-     calls. We union annual revenue frames across the last two calendar
-     years and keep every company above the revenue floor, exchange-listed
-     only (company_tickers_exchange.json), financials excluded by SIC.
+     calls. Exchange-listed only (company_tickers_exchange.json),
+     financials excluded by SIC.
 
-     THE FRAMES ARE us-gaap ONLY. EDGAR's frames endpoint 404s for
-     ifrs-full concepts, so a foreign private issuer that reports under
-     IFRS cannot be discovered this way at all — no matter how large.
-     ADR_SEEDS force-adds a hand-kept list of majors to paper over that,
-     which means international coverage is exactly as good as that list
-     and no better. Stage B does resolve ifrs-full TAGS, but resolving the
-     tag was never the whole job — see the currency note there.
+     1. us-gaap revenue frames, above the revenue floor. Covers domestic
+        filers, and until recently was the ONLY pass — which is why
+        international coverage used to be a 37-ticker list typed into
+        this file.
+
+     2. ifrs-full revenue frames, asked ONE REPORTING CURRENCY AT A TIME.
+        The frames URL contains the unit, so asking for ifrs-full revenue
+        in USD returns almost nothing and looks like an unsupported
+        taxonomy. Asking in yen is a different question. No revenue floor
+        applies here: a yen figure cannot be compared to a dollar floor
+        without an FX rate, and one will not be invented to size a
+        universe. Bounded by count instead.
+
+     3. Fallback, only if (2) comes back near-empty: exchange-listed CIKs
+        that frames never measured AT ALL. Distinct from "measured and
+        below the floor" — that distinction is the whole point, because
+        an unmeasured company may simply be reporting in a taxonomy the
+        sweep cannot read.
+
+     ADR_SEEDS survives as a backstop only, so that a discovery failure
+     degrades to the coverage we already had rather than to none.
 
   B. FUNDAMENTALS — per CIK: companyfacts (10y of annual XBRL) +
      submissions (SIC code, country). Tag maps cover us-gaap AND
@@ -210,16 +223,49 @@ def _get(url: str, timeout: int = 60, headers: dict | None = None) -> dict:
 FRAME_TAGS = [
     ("us-gaap", "Revenues"),
     ("us-gaap", "RevenueFromContractWithCustomerExcludingAssessedTax"),
-    # NOTE: EDGAR's frames API 404s for ifrs-full concepts (confirmed in
-    # run logs) — IFRS-only 20-F ADRs can't self-discover through frames.
-    # ADR_SEEDS below patches the gap for the majors.
 ]
 
-# Large ADRs whose fundamentals live under IFRS tags only. They're in
-# company_tickers_exchange.json (SEC registrants), so we resolve their
-# CIKs from the ticker map and force-add them to the universe; their
-# actual revenue check happens naturally in compute_metrics. Financials
-# and China names still get filtered/badged downstream as usual.
+# ── Finding the foreign filers ───────────────────────────────────────
+#
+# The old code carried a note saying EDGAR's frames API "404s for
+# ifrs-full concepts", and concluded that IFRS filers could never
+# self-discover. That conclusion was right about the symptom and probably
+# wrong about the cause, because the frames URL contains the UNIT:
+#
+#     /api/xbrl/frames/{taxonomy}/{tag}/{UNIT}/CY{year}.json
+#
+# An IFRS filer reports in its own currency. Asking for ifrs-full/Revenue
+# in USD is asking for the handful of IFRS filers who happen to report in
+# dollars — so a 404 or a near-empty answer is exactly what you would
+# expect, whether or not the taxonomy is supported. Nobody had tried
+# asking in yen.
+#
+# So we ask per currency. It is cheap — a few dozen calls against ~8,000
+# companyfacts fetches for the alternative — and the per-call counts are
+# logged, so one run settles what a code comment had been asserting
+# without evidence. If it turns out the taxonomy really is unsupported,
+# every call simply returns nothing and the exhaustive fallback below
+# takes over.
+IFRS_TAGS = ["Revenue", "RevenueFromContractsWithCustomers"]
+IFRS_UNITS = [
+    "USD", "EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "CNY", "HKD", "TWD",
+    "INR", "KRW", "BRL", "MXN", "SEK", "DKK", "NOK", "ILS", "SGD", "ZAR",
+]
+
+# Foreign candidates carry no comparable revenue figure — a floor in
+# dollars cannot be applied to a number in yen without an FX rate we do
+# not have and will not invent. They are admitted unfiltered and bounded
+# by count instead. There are roughly 900 foreign private issuers filing
+# 20-F with the SEC, so this is a generous ceiling, not a tight one.
+MAX_FOREIGN = 1500
+
+# A BACKSTOP, no longer the mechanism. This list used to BE the entire
+# international universe; discovery now finds foreign filers on its own.
+# It is kept, and always force-added, so that a discovery failure degrades
+# to the coverage we already had rather than to none — an empty foreign
+# cohort must never be publishable as though the market had no foreign
+# companies in it. If discovery is working, everything here is already
+# found and the list adds nothing.
 ADR_SEEDS = [
     "TSM", "ASML", "NVO", "SAP", "AZN", "NVS", "SNY", "GSK", "UL", "DEO",
     "BUD", "SHEL", "TTE", "BP", "RIO", "BHP", "TM", "HMC", "SONY", "MUFG",
@@ -228,30 +274,83 @@ ADR_SEEDS = [
 ]
 
 
-def discover_universe(years: list[int], min_revenue: float = MIN_REVENUE) -> dict[int, float]:
-    """{cik: best annual revenue} for every filer >= min_revenue, via
-    frames. Union across tags and years (max wins) so non-calendar
-    fiscal years and tag fragmentation don't drop real companies."""
+def _frame(taxonomy: str, tag: str, unit: str, year: int) -> list[dict]:
+    """One frames call. A 404 means the combination does not exist, which
+    for the per-currency IFRS sweep is the common and expected answer."""
+    url = f"https://data.sec.gov/api/xbrl/frames/{taxonomy}/{tag}/{unit}/CY{year}.json"
+    try:
+        payload = _get(url)
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            print(f"[universe] frame {taxonomy}/{tag}/{unit}/CY{year}: HTTP {e.code}")
+        return []
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError) as e:
+        print(f"[universe] frame {taxonomy}/{tag}/{unit}/CY{year}: {e}")
+        return []
+    finally:
+        time.sleep(SEC_SLEEP)
+    return payload.get("data") or []
+
+
+def discover_universe(years: list[int],
+                      min_revenue: float = MIN_REVENUE) -> tuple[dict[int, float], set[int]]:
+    """({cik: best annual revenue} for filers >= min_revenue, every cik seen).
+
+    The second value matters as much as the first. A CIK that frames
+    reported BELOW the floor was measured and excluded on purpose; a CIK
+    frames never mentioned at all was not measured, and might be a foreign
+    filer whose revenue lives in a taxonomy this sweep does not read.
+    Collapsing those two cases is what made foreign companies invisible.
+    """
     best: dict[int, float] = {}
+    seen: set[int] = set()
     for year in years:
         for taxonomy, tag in FRAME_TAGS:
-            url = (f"https://data.sec.gov/api/xbrl/frames/{taxonomy}/{tag}/USD/CY{year}.json")
-            try:
-                payload = _get(url)
-            except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, ValueError) as e:
-                print(f"[universe] frame {taxonomy}/{tag}/CY{year}: {e}")
-                continue
+            rows = _frame(taxonomy, tag, "USD", year)
             n = 0
-            for row in payload.get("data", []):
+            for row in rows:
                 cik, val = row.get("cik"), row.get("val")
                 if cik is None or not isinstance(val, (int, float)):
                     continue
+                seen.add(int(cik))
                 if val > best.get(cik, 0):
                     best[cik] = float(val)
                 n += 1
-            print(f"[universe] frame {taxonomy}/{tag}/CY{year}: {n} filers")
-            time.sleep(SEC_SLEEP)
-    return {c: v for c, v in best.items() if v >= min_revenue}
+            print(f"[universe] frame {taxonomy}/{tag}/USD/CY{year}: {n} filers")
+    return {c: v for c, v in best.items() if v >= min_revenue}, seen
+
+
+def discover_ifrs(years: list[int]) -> set[int]:
+    """CIKs of IFRS filers, asked for one reporting currency at a time.
+
+    No revenue floor: a yen figure cannot be compared to a dollar floor
+    without an FX rate, and inventing one to size a universe would put a
+    fabricated number in the middle of the pipeline. The cohort is bounded
+    by count instead.
+    """
+    found: set[int] = set()
+    hits: dict[str, int] = {}
+    for year in years:
+        for tag in IFRS_TAGS:
+            for unit in IFRS_UNITS:
+                rows = _frame("ifrs-full", tag, unit, year)
+                n = 0
+                for row in rows:
+                    cik = row.get("cik")
+                    if cik is not None:
+                        found.add(int(cik))
+                        n += 1
+                if n:
+                    hits[f"{tag}/{unit}"] = hits.get(f"{tag}/{unit}", 0) + n
+    if hits:
+        top = sorted(hits.items(), key=lambda kv: -kv[1])[:8]
+        print(f"[universe] IFRS frames answered: {len(found)} distinct CIKs. "
+              f"Best: {', '.join(f'{k}={v}' for k, v in top)}")
+    else:
+        print("[universe] IFRS frames returned NOTHING for any currency — the "
+              "taxonomy really is unsupported by the frames endpoint. Falling "
+              "back to the exhaustive scan.")
+    return found
 
 
 def ticker_map() -> dict[int, dict]:
@@ -282,16 +381,24 @@ def fetch_profile(cik: int) -> dict:
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, ValueError):
         return {}
     addr = (s.get("addresses") or {}).get("business") or {}
-    # US filers report a state name here; foreign filers a country name.
-    # A US state description still means "United States" for our tiers,
-    # and _country_assess treats anything unrecognized as US-tier anyway.
+    # NOTE: this is a business ADDRESS, so US filers report a state name
+    # here, not a country. The page labels the column "Location" for that
+    # reason — 804 of 901 rows read "TX"/"CA"/"NY" when it said "Country".
     country = (addr.get("stateOrCountryDescription") or "").strip()
     try:
         sic = int(s.get("sic") or 0) or None
     except (TypeError, ValueError):
         sic = None
+    # Foreign private issuers file 20-F; Canadian MJDS filers file 40-F.
+    # The form type is the fact — incorporation and address are both
+    # unreliable proxies (AerCap and Allegion are Irish and show a US
+    # business address).
+    forms = ((s.get("filings") or {}).get("recent") or {}).get("form") or []
+    foreign = any(f.split("/")[0] in ("20-F", "40-F", "6-K", "40-FR") for f in forms)
     return {"sic": sic, "sic_desc": s.get("sicDescription") or "",
-            "country_desc": country or "United States"}
+            "country_desc": country or "United States",
+            "incorporation": (s.get("stateOfIncorporationDescription") or "").strip(),
+            "foreign_filer": foreign}
 
 
 # ── Stage B: fundamentals ────────────────────────────────────────────
@@ -585,7 +692,9 @@ def fetch_market(ticker: str, fcf_ps: dict[str, float]) -> dict | None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=0,
-                    help="Process only the N largest (testing).")
+                    help="Process only the N largest (testing). NOTE: this also "
+                         "skips foreign discovery, so a --limit run has no "
+                         "international names in it.")
     ap.add_argument("--min-revenue", type=float, default=MIN_REVENUE,
                     help="Revenue floor in dollars. This IS the universe size dial.")
     ap.add_argument("--max-universe", type=int, default=MAX_UNIVERSE,
@@ -593,28 +702,66 @@ def main() -> int:
     args = ap.parse_args()
 
     this_year = datetime.now(timezone.utc).year
+    years = [this_year - 2, this_year - 1]
     print("[compounders] Stage A: universe discovery via EDGAR frames…")
-    revenue_by_cik = discover_universe([this_year - 2, this_year - 1],
-                                       min_revenue=args.min_revenue)
-    print(f"[compounders] {len(revenue_by_cik)} filers ≥ ${args.min_revenue/1e6:,.0f}M revenue")
+    revenue_by_cik, seen_in_frames = discover_universe(years, min_revenue=args.min_revenue)
+    print(f"[compounders] {len(revenue_by_cik)} filers ≥ ${args.min_revenue/1e6:,.0f}M "
+          f"revenue ({len(seen_in_frames)} measured in total)")
     tickers = ticker_map()
+
     universe = [(cik, rev) for cik, rev in revenue_by_cik.items() if cik in tickers]
     universe.sort(key=lambda x: -x[1])
     universe = universe[:args.max_universe]
-    # Force-add the IFRS-only ADR seeds (frames can't discover them).
     have = {cik for cik, _ in universe}
+    origin = {"us_gaap": len(universe), "ifrs": 0, "unmeasured": 0, "seeds": 0}
+
+    def admit(cik: int, bucket: str) -> None:
+        if cik in have or cik not in tickers:
+            return
+        # No revenue figure exists for these in any comparable unit. They
+        # are admitted to be MEASURED, not because they qualify; the
+        # 7-year history rule and the SIC filter still apply downstream.
+        universe.append((cik, 0.0))
+        have.add(cik)
+        origin[bucket] += 1
+
+    # ── the foreign cohort ───────────────────────────────────────────
+    if not args.limit:
+        for cik in sorted(discover_ifrs(years)):
+            if origin["ifrs"] >= MAX_FOREIGN:
+                break
+            admit(cik, "ifrs")
+        print(f"[compounders] +{origin['ifrs']} IFRS filers from per-currency frames")
+
+        # Fallback: exchange-listed companies frames never measured AT ALL.
+        # Not "below the floor" — absent. That set is where a foreign filer
+        # hides when its taxonomy is unreadable, and it is the only way to
+        # reach one without knowing its name in advance.
+        if origin["ifrs"] < 50:
+            budget = MAX_FOREIGN - origin["ifrs"]
+            unmeasured = sorted(c for c in tickers if c not in seen_in_frames and c not in have)
+            print(f"[compounders] IFRS frames yielded little; scanning "
+                  f"{min(len(unmeasured), budget)} of {len(unmeasured)} "
+                  f"never-measured exchange-listed CIKs")
+            if len(unmeasured) > budget:
+                print(f"[compounders] NOTE: {len(unmeasured) - budget} unmeasured CIKs "
+                      f"skipped at the {MAX_FOREIGN} cap — foreign coverage is "
+                      f"incomplete this run.")
+            for cik in unmeasured[:budget]:
+                admit(cik, "unmeasured")
+
+    # Backstop, not mechanism: if discovery found them, this adds nothing.
     by_ticker = {info["ticker"]: cik for cik, info in tickers.items()}
-    seeded = 0
     for t in ADR_SEEDS:
         cik = by_ticker.get(t)
-        if cik and cik not in have:
-            universe.append((cik, args.min_revenue))  # verified from facts later
-            have.add(cik)
-            seeded += 1
+        if cik:
+            admit(cik, "seeds")
+
     if args.limit:
         universe = universe[:args.limit]
-    print(f"[compounders] {len(universe)} exchange-listed after ticker join "
-          f"(+{seeded} ADR seeds)")
+    print(f"[compounders] {len(universe)} to process — {origin['us_gaap']} us-gaap, "
+          f"{origin['ifrs']} IFRS, {origin['unmeasured']} unmeasured, "
+          f"{origin['seeds']} seed backstop")
 
     # ── Stage B: fundamentals, concurrently ──────────────────────────
     # Two SEC calls per name (submissions + companyfacts) against one
@@ -712,7 +859,9 @@ def main() -> int:
                "name": info["name"], "cik": cik,
                "exchange": info["exchange"],
                "sic": profile.get("sic"), "industry": profile.get("sic_desc"),
-               "country": profile.get("country_desc") or "United States"}
+               "country": profile.get("country_desc") or "United States",
+               "incorporation": profile.get("incorporation") or "",
+               "foreign": bool(profile.get("foreign_filer"))}
         row.pop("fcf_ps", None)   # working data — not needed in output
         out[info["ticker"]] = row
         if i % 250 == 0:
@@ -743,6 +892,8 @@ def main() -> int:
         "min_revenue": args.min_revenue,
         "market_coverage_pct": round(coverage * 100, 1),
         "non_usd_reporters": non_usd,
+        "foreign_filers": sum(1 for r in out.values() if r.get("foreign")),
+        "discovery": origin,
         "skipped": skipped,
         "tickers": out,
     }
