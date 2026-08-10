@@ -50,6 +50,19 @@ NI_POS_MIN = 8
 FCF_CONV_MIN = 70.0
 ND_EBIT_MAX = 3.0
 CAPEX_OCF_MAX = 40.0
+
+# Cash conversion is FCF over net income, and net income is the one term
+# in it that can approach zero. News Corp came through at 27,815%, Helix
+# at 16,355%, Koss at 7,659% — 21 rows above 1,000%. None of those is a
+# company converting profits to cash three hundred times over; each is a
+# company whose cumulative earnings were close to nothing, so the ratio
+# is dividing by noise and swings wildly on a rounding error.
+#
+# Above this level the number stops discriminating: 300% and 27,815% both
+# say the same thing — cash comfortably exceeds accounting profit — and
+# the gate only asks for FCF_CONV_MIN. The raw figure is kept and the row
+# is badged, exactly as the dividend cap works.
+FCF_CONV_CAP = 300.0
 TARGET = 14.0
 QUALITY_FLOOR = 10.0
 CYCLE_PEAK = 75
@@ -297,6 +310,13 @@ def score(data: dict | None = None) -> list[dict]:
         # boards built before this landed, so capex/OCF remains the
         # fallback — the gate then measures less, and says so in a badge
         # rather than pretending the two are the same number.
+        # Bounded before anything reads it. The cap sits far above
+        # FCF_CONV_MIN, so no company's gate result changes — this makes
+        # the number honest, not the screen stricter.
+        conv_raw = m.get("fcf_conv")
+        conv = min(conv_raw, FCF_CONV_CAP) if conv_raw is not None else None
+        conv_capped = conv_raw is not None and conv_raw > FCF_CONV_CAP
+
         reinvest = m.get("reinvest_ocf")
         if reinvest is None:
             reinvest = m.get("capex_ocf")
@@ -316,7 +336,7 @@ def score(data: dict | None = None) -> list[dict]:
             "growth": growth is not None and growth >= GROWTH_MIN
                       and tot >= 6 and up / max(tot, 1) >= UP_YEARS_FRAC,
             "profit": (m.get("ni_pos_years") or 0) >= NI_POS_MIN,
-            "cash":   m.get("fcf_conv") is not None and m["fcf_conv"] >= FCF_CONV_MIN,
+            "cash":   conv is not None and conv >= FCF_CONV_MIN,
             "debt":   m.get("nd_ebit") is not None and m["nd_ebit"] <= ND_EBIT_MAX,
             "capex":  reinvest is not None and reinvest <= CAPEX_OCF_MAX,
             "country": investable,
@@ -400,6 +420,15 @@ def score(data: dict | None = None) -> list[dict]:
         # fail this gate, which is the honest answer, but a row that says
         # nothing about why looks identical to a company that genuinely
         # flunked on heavy spending. This badge is the difference.
+        if conv_capped:
+            badges.append({"key": "convcap", "label": "conv capped", "title":
+                           f"Cash conversion computes to {conv_raw:,.0f}% of net income and is "
+                           f"shown at {FCF_CONV_CAP:.0f}%. That is not three hundred times better "
+                           f"conversion — it is a company whose cumulative earnings were near "
+                           f"zero, so the ratio divides by noise and moves wildly on a rounding "
+                           f"error. The gate only asks for {FCF_CONV_MIN:.0f}%, so nothing about "
+                           f"this company's result changed."})
+
         if reinvest is None:
             badges.append({"key": "nocapex", "label": "capex unfiled", "title":
                            "No capital-expenditure figure could be found in at least three "
@@ -453,6 +482,9 @@ def score(data: dict | None = None) -> list[dict]:
                 "currency", "foreign")},
             # `country` above is the RAW build value, kept so a regression
             # is still diagnosable. `location` is what the page prints.
+            "fcf_conv": conv,
+            "fcf_conv_raw": conv_raw,
+            "fcf_conv_capped": conv_capped,
             "location": loc["label"],
             "location_known": loc["known"],
             "location_basis": loc["basis"],

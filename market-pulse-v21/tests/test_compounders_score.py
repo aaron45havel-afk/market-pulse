@@ -292,6 +292,45 @@ check(not any(b["key"] in ("nocapex", "capexppe") for b in light["badges"]),
       "and carries neither caveat")
 
 
+# ── cash conversion is bounded like every other term ────────────────
+# News Corp read 27,815%, Helix 16,355%, Koss 7,659% — 21 rows above
+# 1,000%. None is a company converting profits to cash three hundred
+# times over; each has cumulative earnings near zero, so the ratio
+# divides by noise.
+wild = one(fcf_conv=27815.4)
+check(wild["fcf_conv"] == C.FCF_CONV_CAP,
+      f"an absurd conversion is shown at the cap (got {wild['fcf_conv']})")
+check(wild["fcf_conv_raw"] == 27815.4, "the raw figure is still reported")
+check(wild["fcf_conv_capped"] is True, "and the row says it was capped")
+check(any(b["key"] == "convcap" for b in wild["badges"]),
+      "with a badge, so the number does not change silently")
+check("27,815" in next(b["title"] for b in wild["badges"] if b["key"] == "convcap"),
+      "and the badge carries the actual value")
+
+# THE CAP MUST NOT CHANGE ANY VERDICT. It sits far above the gate, so a
+# company that passed on 27,815% still passes on 300 — this makes the
+# number honest, not the screen stricter.
+check(wild["gates"]["cash"] is True,
+      "a capped row still clears the cash gate, exactly as before")
+check(one(fcf_conv=27815.4)["status"] == one(fcf_conv=300.0)["status"],
+      "and lands on the same status as one already at the cap")
+check(C.FCF_CONV_CAP > C.FCF_CONV_MIN,
+      "which is only true because the cap sits above the minimum")
+
+ordinary = one(fcf_conv=141.9)
+check(ordinary["fcf_conv"] == 141.9, "an ordinary conversion passes through")
+check(ordinary["fcf_conv_capped"] is False, "and is not flagged")
+check(not any(b["key"] == "convcap" for b in ordinary["badges"]), "or badged")
+
+weak = one(fcf_conv=40.0)
+check(weak["gates"]["cash"] is False,
+      "and a genuinely poor conversion still fails — the cap is an upper "
+      "bound, it does nothing at the bottom")
+check(one(fcf_conv=None)["gates"]["cash"] is False,
+      "no conversion figure is not a pass")
+check(one(fcf_conv=None)["fcf_conv_raw"] is None, "and nothing is invented")
+
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

@@ -36,7 +36,7 @@
   .cp-table td.yrs-short { color: var(--ink-3); }
   .cp-badge.short { background: var(--surface-2); color: var(--ink-3); }
   .cp-badge.pfcfodd { background: rgba(217,119,6,0.15); color: #b45309; }
-  .cp-badge.nocapex, .cp-badge.origin, .cp-badge.domicile, .cp-badge.capexppe {
+  .cp-badge.nocapex, .cp-badge.origin, .cp-badge.domicile, .cp-badge.capexppe, .cp-badge.convcap {
     background: var(--surface-2); color: var(--ink-3); border-color: var(--line); }
   .cp-table td.loc-unknown { color: var(--ink-3); font-style: italic; }
   .cp-table td.nm-cell, .cp-table td.ind-cell {
@@ -188,7 +188,8 @@
         <td data-sort="{{ r.years or 0 }}" class="{{ '' if r.proven else 'yrs-short' }}">{{ r.years or '—' }}</td>
         <td data-sort="{{ r.rev_trend if r.rev_trend is not none else (r.rev_cagr10 if r.rev_cagr10 is not none else -99) }}"
             title="15y fit {{ r.rev_trend if r.rev_trend is not none else '—' }} · 10y {{ r.rev_cagr10 if r.rev_cagr10 is not none else '—' }} · 5y {{ r.rev_cagr5 if r.rev_cagr5 is not none else '—' }}">{% if r.rev_trend is not none %}{{ r.rev_trend }}%{% elif r.rev_cagr10 is not none %}{{ r.rev_cagr10 }}%{% else %}—{% endif %}</td>
-        <td data-sort="{{ r.fcf_conv if r.fcf_conv is not none else -99 }}">{% if r.fcf_conv is not none %}{{ r.fcf_conv|int }}%{% else %}—{% endif %}</td>
+        <td data-sort="{{ r.fcf_conv if r.fcf_conv is not none else -99 }}"
+            title="{% if r.fcf_conv_capped %}Computes to {{ '{:,.0f}'.format(r.fcf_conv_raw) }}% — cumulative net income is near zero, so the ratio divides by noise. Shown at the {{ C_CAP|int }}% cap; the gate result is unchanged.{% endif %}">{% if r.fcf_conv is not none %}{{ r.fcf_conv|int }}%{% if r.fcf_conv_capped %}<span class="cp-dim">+</span>{% endif %}{% else %}—{% endif %}</td>
         <td data-sort="{{ r.nd_ebit if r.nd_ebit is not none else 99 }}">{% if r.nd_ebit is not none %}{{ r.nd_ebit }}×{% else %}—{% endif %}</td>
         <td data-sort="{{ r.reinvest if r.reinvest is not none else 999 }}"
             title="{% if r.reinvest is none %}No capex figure filed in at least three of the last five years — reinvestment could not be measured.{% elif r.reinvest_ocf is not none %}Total reinvestment: PP&amp;E plus capitalised software, content and spectrum.{% else %}PP&amp;E only — capitalised intangibles are not in this figure.{% endif %}">{% if r.reinvest is not none %}{{ r.reinvest|int }}%{% else %}<span class="cp-dim">unfiled</span>{% endif %}</td>
