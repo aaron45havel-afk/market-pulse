@@ -165,6 +165,133 @@ no_trend = one(rev_cagr5=10.0, rev_cagr10=8.0, rev_trend=None)
 check(abs(no_trend["growth_blend"] - 9.0) < 0.01,
       "without a trend it falls back to blending the endpoint CAGRs")
 
+# ── location: a foreign filer is never "United States" ──────────────
+# The build wrote that literal whenever EDGAR's business-address country
+# came back blank, which it does for about half of foreign private
+# issuers. 160 of 339 20-F/40-F filers on the last board — Alibaba,
+# Baidu, NetEase, Weibo, PDD, TSMC, Sony, Infosys — printed as US
+# companies, and the China badge fired on 15 rows instead of forty-odd.
+L = C.resolve_location
+
+check(L("Netherlands", "Netherlands", True)["label"] == "Netherlands",
+      "a real address country is used as-is")
+check(L("TX", "DE", False)["label"] == "TX",
+      "and a US state is left alone — the column is Location, not Country")
+
+sony = L("United States", "Japan", True)
+check(sony["label"] == "Japan",
+      f"a 20-F filer labelled 'United States' falls back to incorporation "
+      f"(got {sony['label']})")
+check(sony["basis"] == "incorporation", "and says which source it used")
+check(sony["known"] is True, "Japan is a real place a company operates in")
+
+tsm = L("United States", "", True)
+check(tsm["label"] == "Foreign filer",
+      f"with no incorporation either, it says so (got {tsm['label']})")
+check(tsm["known"] is False, "and is marked unknown")
+check(tsm["label"] != "United States",
+      "the one thing it must never do is assert the contradiction — a "
+      "company filing 20-F is BY DEFINITION not a US domestic issuer")
+
+# A genuine US company must be unaffected.
+us = L("United States", "DE", False)
+check(us["label"] == "United States" and us["known"] is True,
+      "a domestic filer reading 'United States' keeps it")
+
+ntes = L("United States", "Cayman Islands", True)
+check(ntes["label"] == "Cayman Islands", "an offshore domicile is reported")
+check(ntes["domicile_only"] is True and ntes["known"] is False,
+      "but flagged as a domicile — nobody operates in the Cayman Islands, "
+      "so the operating country is still unknown")
+
+# ── the badges the mislabelling was suppressing ─────────────────────
+inv, bd = C._country_assess("China", True, False)
+check(any(b["key"] == "cn" for b in bd), "China still raises the China badge")
+inv, bd = C._country_assess("Russia", True, False)
+check(inv is False, "and a sanctioned jurisdiction is still excluded")
+
+inv, bd = C._country_assess("", False, False)
+check(inv is True, "an unplaceable company is not rejected for it")
+check(any(b["key"] == "origin" for b in bd),
+      "but it is badged — the old default silently CLEARED the sanctions, "
+      "China and Taiwan checks for every row whose country we failed to read")
+
+inv, bd = C._country_assess("Cayman Islands", False, True)
+check(any(b["key"] == "domicile" for b in bd),
+      "an offshore domicile says the jurisdiction screen did not run")
+check(not any(b["key"] == "origin" for b in bd),
+      "and does not also claim the origin is merely unverified — it names "
+      "the specific reason")
+
+full = one(country="United States", incorporation="Japan", foreign=True)
+check(full["location"] == "Japan", "score() surfaces the resolved location")
+check(full["country"] == "United States",
+      "while keeping the raw build value, so a regression stays diagnosable")
+
+
+# ── reinvestment: missing capex is not zero capex ───────────────────
+# 162 rows read exactly 0.0% capex/OCF — Shell, BP, TotalEnergies,
+# Verizon, Rio Tinto, Petrobras, ArcelorMittal, Toyota. The most
+# capital-hungry businesses on earth scoring as the most capital-light,
+# and clearing the capex gate on it. BP's FCF conversion read 1,322%.
+blind = one(capex_ocf=None)
+check(blind["gates"]["capex"] is False,
+      "no capex figure FAILS the gate — it cannot be waved through")
+check(any(b["key"] == "nocapex" for b in blind["badges"]),
+      "and a badge says the company was gated for being unmeasurable, not "
+      "for spending heavily — those look identical without it")
+check(blind["status"] == "GATED", "so it lands in GATED")
+check(blind["expected"] is not None,
+      "but it is still scored and shown — not deleted from the board")
+
+# Total reinvestment, not just PP&E.
+ppe_only = one(capex_ocf=38.5)                       # Comcast's real figure
+check(ppe_only["gates"]["capex"] is True,
+      "38.5% of OCF on PP&E alone clears the 40% bar")
+check(any(b["key"] == "capexppe" for b in ppe_only["badges"]),
+      "but the row says the figure counts PP&E only — capitalised software, "
+      "content and spectrum never touch that line, so for a cable company "
+      "it is a floor rather than the number")
+
+both_kinds = one(capex_ocf=38.5, reinvest_ocf=47.0)  # + intangible capex
+check(both_kinds["gates"]["capex"] is False,
+      f"once capitalised intangibles are counted the same company fails "
+      f"(got reinvest {both_kinds['reinvest']})")
+check(both_kinds["reinvest"] == 47.0, "and the total is what the gate used")
+check(not any(b["key"] == "capexppe" for b in both_kinds["badges"]),
+      "with no PP&E-only caveat, because it is no longer PP&E only")
+check(both_kinds["capex_ocf"] == 38.5,
+      "the PP&E figure is still reported alongside it")
+
+# Exactly zero across five years is the fingerprint of the build bug,
+# not a capital-light company. Boards written before the fix carry it.
+zero = one(capex_ocf=0.0)
+check(zero["reinvest"] is None,
+      "a flat 0.0% reinvestment is refused as a measurement — no operating "
+      "company spends literally nothing on plant for five straight years")
+check(zero["gates"]["capex"] is False, "so it does not clear the gate at 0%")
+check(any(b["key"] == "nocapex" for b in zero["badges"]), "and is badged as unfiled")
+
+# Shell's real EDGAR business address is Washington DC — its US agent.
+shel = L("DC", "United Kingdom", True)
+check(shel["label"] == "United Kingdom",
+      f"a US STATE on a 20-F filer is the agent's office, not the company "
+      f"(got {shel['label']})")
+dom = L("DC", "DE", False)
+check(dom["label"] == "DC", "while a domestic filer in DC stays in DC")
+# Shell's actual record: address "United States", incorporation "DC".
+shel2 = L("United States", "DC", True)
+check(shel2["label"] == "Foreign filer",
+      f"both fields carrying a US agent's office leaves nothing to report, "
+      f"and saying so beats printing Shell as an American company "
+      f"(got {shel2['label']})")
+
+light = one(capex_ocf=8.0, reinvest_ocf=9.5)
+check(light["gates"]["capex"] is True, "a genuinely capital-light company passes")
+check(not any(b["key"] in ("nocapex", "capexppe") for b in light["badges"]),
+      "and carries neither caveat")
+
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")
