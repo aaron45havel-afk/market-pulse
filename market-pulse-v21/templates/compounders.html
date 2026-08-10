@@ -2,7 +2,10 @@
 {% block title %}Compounders — Market Pulse{% endblock %}
 {% block extra_css %}
 <style>
-  main .container { max-width: 1500px; }
+  /* The shell already reserves the sidebar; the container just fills what
+     is left. Prose keeps its own measure via .cp-sub, so widening here
+     only helps the 16-column table. */
+  main .container { max-width: 1900px; }
 
   .cp-hero { display:flex; justify-content:space-between; align-items:baseline; gap:1rem; flex-wrap:wrap; margin-bottom:0.3rem; }
   .cp-hero h1 { margin:0; font-size:1.35rem; letter-spacing:-0.01em; }
@@ -26,16 +29,13 @@
   .cp-empty { color:var(--ink-3); font-size:0.85rem; font-style:italic; padding:0.4rem 0; line-height:1.55; }
 
   .cp-table-card { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:0.85rem 1rem; margin:1rem 0; }
-  /* A 16-column table has no business inside a measure sized for prose.
-     Break it out to the viewport so the columns fit without scrolling on
-     a wide screen, and fall back to scrolling on a narrow one. */
-  @media (min-width: 1560px) {
-    .cp-table-card { width: calc(100vw - 2rem); max-width: calc(100vw - 2rem);
-                     margin-left: calc(50% - 50vw + 1rem); }
-  }
+
   .cp-table-card h2 { margin:0 0 0.25rem; font-size:1rem; }
   .cp-table-card .desc { font-size:0.78rem; color:var(--ink-3); margin:0 0 0.6rem; }
   .cp-scroll { overflow-x:auto; }
+  .cp-table td.nm-cell, .cp-table td.ind-cell {
+    max-width: 15rem; overflow: hidden; text-overflow: ellipsis; }
+  .cp-table td.ind-cell { max-width: 11rem; }
   .cp-table th:first-child, .cp-table td:first-child {
     position:sticky; left:0; z-index:2; background:var(--surface); }
   .cp-table tbody tr:hover td:first-child { background:var(--surface-2); }
@@ -168,9 +168,9 @@
       {% for r in rows %}
       <tr>
         <td class="tick" data-sort="{{ r.ticker }}">{{ r.ticker }}</td>
-        <td data-sort="{{ r.name }}">{{ r.name }}{% for b in r.badges %}<span class="cp-badge {{ b.key }}" title="{{ b.title }}">{{ b.label }}</span>{% endfor %}</td>
+        <td class="nm-cell" data-sort="{{ r.name }}" title="{{ r.name }}">{{ r.name }}{% for b in r.badges %}<span class="cp-badge {{ b.key }}" title="{{ b.title }}">{{ b.label }}</span>{% endfor %}</td>
         <td data-sort="{{ r.country }}">{{ r.country }}</td>
-        <td data-sort="{{ r.industry or '' }}" title="{{ r.industry or '' }}">{{ (r.industry or '—')[:26] }}</td>
+        <td class="ind-cell" data-sort="{{ r.industry or '' }}" title="{{ r.industry or '' }}">{{ (r.industry or '—')[:26] }}</td>
         <td data-sort="{{ r.expected if r.expected is not none else -99 }}"><span class="cp-er {% if r.expected is not none and r.expected >= target %}hot{% endif %}">{{ r.expected if r.expected is not none else '—' }}</span></td>
         <td data-sort="{{ r.er_growth if r.er_growth is not none else -99 }}">{{ r.er_growth if r.er_growth is not none else '—' }}</td>
         <td data-sort="{{ r.er_buyback }}">{{ r.er_buyback }}</td>
