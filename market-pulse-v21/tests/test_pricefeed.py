@@ -138,6 +138,73 @@ check(P.source_by_name("nope") is None, "an unknown source name yields None, not
 check(len(P.PROBE_TICKERS) >= 3,
       "the probe uses several tickers — one delisting must not condemn a good source")
 
+# ══════════════════════════════════════════════════════════════════
+# BULK QUOTES — the whole market in one request
+# ══════════════════════════════════════════════════════════════════
+#
+# The conclusion that free market data was gone came from asking one
+# endpoint per company: ~2,000 Yahoo chart calls for compounders, 5,673
+# for Schloss. Rate limits count REQUESTS, not rows, and the actual
+# requirement is 5,673 numbers once a month. Every source below returns
+# the market in one response (Yahoo in ~30 batches of 200).
+
+NASDAQ = {"data": {"table": {"rows": [
+    {"symbol": "AAPL", "lastsale": "$213.25", "marketCap": "3186971000000.00"},
+    {"symbol": "kss", "lastsale": "$12.40", "marketCap": "1380000000"},
+    {"symbol": "NOCAP", "lastsale": "$4.00", "marketCap": ""},
+    {"symbol": "DEAD", "lastsale": "N/A", "marketCap": "N/A"},
+    {"symbol": "", "lastsale": "$1.00", "marketCap": "100"},
+    {"symbol": "ZERO", "lastsale": "$0.00", "marketCap": "0"},
+]}}}
+n = P.parse_nasdaq_screener(NASDAQ)
+check(n["AAPL"] == {"price": 213.25, "market_cap": 3186971000000.0},
+      "a dollar-formatted price and a bare market cap both parse")
+check("KSS" in n, "tickers are upper-cased so they join the EDGAR map")
+check(n["NOCAP"] == {"price": 4.0, "market_cap": None},
+      "a price with no market cap is still usable — price/share is the fallback")
+check("DEAD" not in n, "a row with neither is dropped, not stored as zero")
+check("" not in n and len(n) == 3, f"and an empty ticker is dropped (got {sorted(n)})")
+check("ZERO" not in n,
+      "a zero price and zero cap is not a company trading at nothing, it is "
+      "a row with no data — dropping it beats publishing a 0.0 valuation")
+
+y = P.parse_yahoo_quotes({"quoteResponse": {"result": [
+    {"symbol": "MSFT", "regularMarketPrice": 412.1, "marketCap": 3.06e12},
+    {"symbol": "BROKE"},
+]}})
+check(y["MSFT"]["market_cap"] == 3.06e12, "Yahoo's batched quote endpoint parses")
+check("BROKE" not in y, "a symbol with no numbers is dropped")
+
+sa = P.parse_stockanalysis({"data": {"data": [
+    {"s": "BRK.B", "price": 470.2, "marketCap": 1.01e12}]}})
+check(sa["BRK.B"]["price"] == 470.2, "stockanalysis parses")
+
+for fn in (P.parse_nasdaq_screener, P.parse_stockanalysis, P.parse_yahoo_quotes):
+    check(fn(None) == {}, f"{fn.__name__} survives a failed request")
+    check(fn({}) == {}, f"{fn.__name__} survives a malformed payload")
+    check(fn({"data": None}) == {}, f"{fn.__name__} survives a null body")
+
+# The formats these feeds actually use.
+check(P._money("$1,234.56") == 1234.56, "dollar signs and commas")
+check(P._money("1.23B") == 1.23e9, "suffixed magnitudes")
+check(P._money("2.5M") == 2.5e6, "and millions")
+check(P._money(213.25) == 213.25, "a bare float passes through")
+check(P._money("N/A") is None and P._money("--") is None and P._money("") is None,
+      "the several spellings of nothing are all None")
+check(P._money(True) is None,
+      "and a boolean is not a number — bool subclasses int in Python and "
+      "would otherwise land as 1.0")
+check(P._money("abc") is None, "as is anything unparseable")
+
+check(len(P.BULK_SOURCES) >= 2,
+      "more than one source, because the failure mode here is a host "
+      "deciding it does not like CI runners")
+check(P.BULK_COVERAGE_MIN >= 0.5,
+      "and a source covering less than half the board counts as a failure: "
+      "half a price column reads as 'these are not cheap' rather than "
+      "'we could not look at these'")
+
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

@@ -76,6 +76,11 @@ INSIDER_ALIGNED_MIN = 0.10     # "managements that own a lot of stock"
 # dividend, and its absence the year after is arithmetic, not a cut.
 SPECIAL_DIVIDEND_MULTIPLE = 2.5
 
+# A market cap this far below tangible book is not a bargain, it is two
+# numbers denominated in different currencies. Schloss's deepest
+# discounts were around a third of book; a hundredth is an artefact.
+FX_MISMATCH_BELOW = 0.01
+
 
 def _num(v) -> float | None:
     try:
@@ -399,16 +404,44 @@ def evaluate(f: dict, this_year: int) -> dict:
     # resolve to False — not unknown — when the denominator is known and
     # non-positive, because a company with no tangible assets left has
     # definitively failed the discount test rather than dodged it.
+    # MARKET CAP IS THE PREFERRED INPUT, NOT PRICE. Price/tangible book is
+    # market cap over tangible book, and computing it that way never
+    # touches a share count — a figure this build lacks for 962 of 5,673
+    # companies and had catastrophically wrong for Universe
+    # Pharmaceuticals. Price per share stays as the fallback for anything
+    # that arrives with a quote but no cap.
+    cap = _num(f.get("market_cap"))
     price = _num(f.get("price"))
-    priced = price is not None and price > 0
-    p_tb = round(price / tb_ps, 3) if (priced and tb_ps and tb_ps > 0) else None
-    p_ncav = round(price / ncav_ps, 3) if (priced and ncav_ps and ncav_ps > 0) else None
+    if cap is not None and cap <= 0:
+        cap = None
+    priced = cap is not None or (price is not None and price > 0)
+
+    def _ratio(whole, per_share):
+        if cap is not None and whole is not None and whole > 0:
+            return round(cap / whole, 3)
+        if price and price > 0 and per_share and per_share > 0:
+            return round(price / per_share, 3)
+        return None
+
+    p_tb, p_ncav = _ratio(tb, tb_ps), _ratio(n, ncav_ps)
 
     below = net_net = None
-    if priced and tb_ps is not None:
-        below = (p_tb <= 1 - BOOK_DISCOUNT_MIN) if tb_ps > 0 else False
-    if priced and ncav_ps is not None:
-        net_net = (p_ncav <= NCAV_MAX_PRICE) if ncav_ps > 0 else False
+    if priced and tb is not None:
+        below = (p_tb <= 1 - BOOK_DISCOUNT_MIN) if (tb > 0 and p_tb is not None) else False
+    if priced and n is not None:
+        net_net = (p_ncav <= NCAV_MAX_PRICE) if (n > 0 and p_ncav is not None) else False
+
+    # THE BALANCE SHEET AND THE MARKET MUST BE IN THE SAME CURRENCY.
+    # Universe Pharmaceuticals reported $55.8bn of equity against $69.3bn
+    # of assets — internally consistent, and entirely in a currency the
+    # frame labelled USD. Nothing in the filings could catch that. A market
+    # cap can: no company the market prices in the tens of millions owns
+    # tens of billions, and a ratio this far below 1 means the two sides
+    # are not denominated in the same money. Schloss's deepest discounts
+    # were around a third of book; a thousandth is an artefact.
+    fx_suspect = bool(cap and tb and tb > 0 and cap / tb < FX_MISMATCH_BELOW)
+    if fx_suspect:
+        p_tb = p_ncav = below = net_net = None
 
     gates = {
         "assets": None if tb is None else tb > 0,
@@ -453,7 +486,9 @@ def evaluate(f: dict, this_year: int) -> dict:
         "gates_passed": sum(1 for v in known_gates if v),
         "gates_known": len(known_gates),
         "gates_pass": all(v is True for v in gates.values()),
-        # ── the price half, honestly absent ──
+        # ── the cheapness half ──
+        "market_cap": cap,
+        "fx_suspect": fx_suspect,
         "price_ready": priced,
         "p_tangible_book": p_tb,
         "p_ncav": p_ncav,
