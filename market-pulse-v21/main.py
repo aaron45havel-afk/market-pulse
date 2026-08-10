@@ -2170,7 +2170,7 @@ async def compounders_page(request: Request):
     decomposition (growth + buybacks + dividends ± valuation drift).
     Universe self-discovers from SEC EDGAR (≥ $1B revenue, incl. ADRs);
     data built monthly by refresh_compounders.yml."""
-    from compounders import score, summary, data_source_label, ROIC_MIN, TARGET
+    from compounders import score, summary, data_source_label, ROIC_MIN, TARGET, FCF_CONV_CAP
     rows = score()
     return templates.TemplateResponse("compounders.html", {
         "request":          request,
@@ -2180,6 +2180,7 @@ async def compounders_page(request: Request):
         "data_source":      data_source_label(),
         "roic_min":         ROIC_MIN,
         "target":           TARGET,
+        "C_CAP":            FCF_CONV_CAP,
     })
 
 
