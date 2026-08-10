@@ -11,9 +11,17 @@ name: Refresh Schloss screen (monthly)
 # requests for roughly 7,000 companies, including the small end of the
 # market where Schloss actually worked.
 #
-# Everything here is free. No market data feed is involved: the cheapness
-# half of the method (price/tangible book, price/NCAV, the 20% discount)
-# reports UNKNOWN rather than guessing, and lights up the day a feed lands.
+# EVERYTHING HERE IS FREE, INCLUDING THE VALUATION. The cheapness half
+# used to report UNKNOWN because free quotes looked impossible — but that
+# conclusion came from asking one endpoint PER COMPANY (~2,000 Yahoo calls
+# for compounders, 5,673 here) and getting rate-limited. Rate limits count
+# requests, not rows, and the real requirement is 5,673 numbers once a
+# month. A bulk market file answers all of it in ONE request.
+#
+# Market cap is taken in preference to price, because market cap over
+# tangible book needs no share count — a figure missing for 962 of 5,673
+# companies here — and because it catches the balance sheets denominated
+# in a currency the SEC frame mislabelled as dollars.
 #
 # Cadence: 7th of each month at 08:00 UTC — after 10-K/Q waves settle and
 # clear of the other monthly jobs' windows.
@@ -52,6 +60,7 @@ jobs:
         run: |
           python tests/test_schloss.py
           python tests/test_schloss_build.py
+          python tests/test_pricefeed.py
 
       - name: Run Schloss refresh
         run: |

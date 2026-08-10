@@ -380,6 +380,50 @@ check(cutter["gates_pass"] is True,
       "the entry, not the exit")
 
 
+# ── market cap is the preferred cheapness input, not price ──────────
+# Price/tangible book is market cap over tangible book, and computing it
+# that way never touches a share count — missing for 962 of 5,673
+# companies and catastrophically wrong for Universe Pharmaceuticals.
+CAPPED = {**FILINGS, "market_cap": 600.0}
+mc = S.evaluate(CAPPED, 2026)
+check(mc["p_tangible_book"] == 0.706,
+      f"price/tangible book comes straight off the market cap "
+      f"(got {mc['p_tangible_book']})")
+check(mc["below_book"] is True, "a 29% discount clears his 20% bar")
+check(mc["price_ready"] is True and mc["market_cap"] == 600.0,
+      "and the row records the cap it used")
+
+noshares = {k: v for k, v in CAPPED.items() if k != "shares"}
+check(S.evaluate(noshares, 2026)["p_tangible_book"] == 0.706,
+      "with NO share count at all the ratio is unchanged — which is the "
+      "whole reason to prefer market cap")
+check(S.evaluate(noshares, 2026)["below_book"] is True, "and still resolves")
+
+# Price per share remains the fallback for anything quoted without a cap.
+ps = S.evaluate({**FILINGS, "price": 5.0}, 2026)
+check(ps["p_tangible_book"] == 0.588,
+      f"a price and a share count still work (got {ps['p_tangible_book']})")
+check(ps["market_cap"] is None, "with no cap recorded")
+
+# THE CURRENCY CHECK THE FILINGS COULD NOT DO. Universe Pharmaceuticals
+# reported $55.8bn of equity against $69.3bn of assets — internally
+# consistent, so the impossibility guard passed it. A market cap settles
+# it: nothing the market prices at $20m owns $55bn.
+upc = S.evaluate({"stockholders_equity": 55.8e9, "total_assets": 69.3e9,
+                  "market_cap": 20e6}, 2026)
+check(upc["fx_suspect"] is True,
+      "a market cap a thousandth of tangible book is not a bargain, it is "
+      "two numbers in different currencies")
+check(upc["p_tangible_book"] is None and upc["below_book"] is None,
+      "so the cheapness verdict is withheld rather than published as the "
+      "greatest bargain on the board")
+check(S.evaluate({**CAPPED, "market_cap": 150.0}, 2026)["fx_suspect"] is False,
+      "while a genuine deep discount — 0.18x tangible book — is NOT "
+      "flagged: his best ideas lived down there")
+check(S.evaluate({**CAPPED, "market_cap": 150.0}, 2026)["below_book"] is True,
+      "and reports as the bargain it is")
+
+
 # ── census: the market temperature, honestly ────────────────────────
 c = S.census([r, priced, broke, dark])
 check(c["screened"] == 4, "every row is counted")

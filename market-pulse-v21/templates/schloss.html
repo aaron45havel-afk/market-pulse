@@ -44,6 +44,7 @@
   .sc-table td.nm-cell { max-width:17rem; overflow:hidden; text-overflow:ellipsis; }
   .sc-table .arrow { font-size:0.6rem; margin-left:2px; }
   .sc-dim { color:var(--ink-3); }
+  .sc-table td.sc-cheap { background:var(--mint-soft); color:var(--mint-ink); font-weight:700; }
 
   /* Three states, three looks. Unknown must never resemble a fail. */
   .g { display:inline-block; width:1.15rem; text-align:center; font-weight:800; cursor:help; }
@@ -96,8 +97,8 @@
     <th title="Cut versus the prior year. He bought AFTER the cut, when the overreaction had already happened.">Cut</th>
     <th title="Stock compensation as a share of revenue — 'honest management that does not overpay itself', in the one form that is machine-readable. Blank where revenue is too small a fraction of the balance sheet to be the company's revenue: banks file fee income under that tag and leave net interest income out of it.">SBC %</th>
     <th title="Share count CAGR over 5 years. Negative is buying back.">Dilution</th>
-    <th title="Price / tangible book. Needs a market feed.">P/TB</th>
-    <th title="Price / NCAV. A net-net is under 0.67. Needs a market feed.">P/NCAV</th>
+    <th title="Market cap / tangible book. Under 0.80 is the 20% discount Schloss required. Computed from market cap, not price x shares, so it needs no share count.">P/TB</th>
+    <th title="Market cap / net current asset value. Under 0.67 is a Graham net-net.">P/NCAV</th>
   </tr></thead>
   <tbody>
   {% for r in rows[:cap] %}
@@ -129,8 +130,9 @@
     </td>
     <td title="{% if r.management.revenue_unrepresentative %}Revenue is under 2% of total assets, so it is not what this company earns — the ratio would be arithmetic, not description.{% elif r.management.sbc_pct_assets is not none %}{{ r.management.sbc_pct_assets }}% of total assets.{% endif %}">{% if r.management.sbc_pct_revenue is none %}<span class="sc-dim">—</span>{% elif r.management.sbc_pct_revenue > 999 %}&gt;999%{% else %}{{ r.management.sbc_pct_revenue }}%{% endif %}</td>
     <td>{% if r.management.shares_cagr is not none %}{{ '%+.1f'|format(r.management.shares_cagr) }}%{% else %}<span class="sc-dim">—</span>{% endif %}</td>
-    <td>{% if r.p_tangible_book is not none %}{{ r.p_tangible_book }}{% else %}<span class="sc-dim">no feed</span>{% endif %}</td>
-    <td>{% if r.p_ncav is not none %}{{ r.p_ncav }}{% else %}<span class="sc-dim">no feed</span>{% endif %}</td>
+    <td class="{% if r.below_book %}sc-cheap{% endif %}"
+        title="{% if r.fx_suspect %}Market cap is under 1% of tangible book — the balance sheet and the quote are not in the same currency, so no discount can be computed.{% elif r.market_cap %}Market cap {{ '%.0f'|format(r.market_cap / 1000000) }}M.{% endif %}">{% if r.p_tangible_book is not none %}{{ r.p_tangible_book }}{% elif r.fx_suspect %}<span class="sc-dim">currency?</span>{% elif not r.price_ready %}<span class="sc-dim">no quote</span>{% else %}<span class="sc-dim">&mdash;</span>{% endif %}</td>
+    <td class="{% if r.is_net_net %}sc-cheap{% endif %}">{% if r.p_ncav is not none %}{{ r.p_ncav }}{% elif not r.price_ready %}<span class="sc-dim">no quote</span>{% else %}<span class="sc-dim">&mdash;</span>{% endif %}</td>
   </tr>
   {% endfor %}
   </tbody>
@@ -192,12 +194,13 @@
 
 {% if census.net_nets is none %}
 <div class="sc-noprice">
-  <strong>The cheapness half is not running.</strong> Price / tangible book, price / NCAV, the 20% discount and the
-  52-week low all need a market data feed, and free ones no longer answer automated requests — Yahoo rate-limits
-  CI runners, Stooq serves a bot challenge. Rather than substitute an assumption, those columns read
-  <em>no feed</em> and the net-net count reads <em>not checked</em>.
+  <strong>No quote source answered this build.</strong> The valuation half — market cap / tangible book, market cap
+  / NCAV, the 20% discount — is fetched free, in <em>one request</em>, from a bulk market file rather than a quote
+  per company. That is what makes it free at all: rate limits count requests, not rows, and this screen needs 5,673
+  numbers once a month, not a ticker feed. When every source declines, those columns read <em>no quote</em> and the
+  net-net count reads <em>not checked</em>.
   <br><br>
-  That distinction is the point: an empty net-net list would mean the market is expensive, which is real
+  That wording is the point: an empty net-net list would mean the market is expensive, which is real
   information. “Not checked” means we could not look. The board must never let you confuse the two.
 </div>
 {% endif %}

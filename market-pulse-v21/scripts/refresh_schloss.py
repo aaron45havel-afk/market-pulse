@@ -49,6 +49,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import schloss as S  # noqa: E402
+import pricefeed as PF  # noqa: E402
 
 SEC_UA = "market-pulse-research admin@focusedops.io"
 HEADERS = {"User-Agent": SEC_UA, "Accept-Encoding": "gzip, deflate"}
@@ -368,6 +369,70 @@ def history(first_filing_year: int | None, this_year: int,
 
 
 # ═══════════════════════════════════════════════════════════════════
+# BULK QUOTES — free, and one request instead of 5,673
+# ═══════════════════════════════════════════════════════════════════
+
+BROWSER_UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/120.0 Safari/537.36")
+QUOTE_HEADERS = {"User-Agent": BROWSER_UA, "Accept-Encoding": "gzip, deflate",
+                 "Accept": "application/json, text/plain, */*",
+                 "Accept-Language": "en-US,en;q=0.9"}
+
+
+def _quote_json(url: str, timeout: int = 90) -> dict | None:
+    """No SEC throttle here — these are different hosts entirely, and there
+    is at most one request per source."""
+    try:
+        req = urllib.request.Request(url, headers=QUOTE_HEADERS)
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            raw = r.read()
+            if r.headers.get("Content-Encoding") == "gzip":
+                raw = gzip.decompress(raw)
+        return json.loads(raw)
+    except Exception as e:                      # noqa: BLE001 — any failure
+        print(f"  ! {url.split('/')[2]}: {type(e).__name__}: {e}")
+        return None
+
+
+def fetch_quotes(tickers: list[str]) -> tuple[dict, str]:
+    """({TICKER: {price, market_cap}}, source name). Empty dict if none answer.
+
+    Sources are tried in order and the FIRST one to cover enough of the
+    board wins. A source that answers with a fraction of the market is a
+    failure, not a partial success: half a price column reads as "these
+    ones are not cheap" rather than "we could not look at these".
+    """
+    want = set(tickers)
+    for src in PF.BULK_SOURCES:
+        print(f"  trying {src['name']}...")
+        quotes: dict = {}
+        if src.get("batched"):
+            size = src.get("batch_size", 200)
+            ordered = sorted(want)
+            for i in range(0, len(ordered), size):
+                batch = ordered[i:i + size]
+                payload = _quote_json(src["url"].format(
+                    syms=urllib.parse.quote(",".join(batch))))
+                if payload is None:
+                    break
+                quotes.update(src["parse"](payload))
+                time.sleep(0.4)          # ~2.5 req/s against one host
+        else:
+            payload = _quote_json(src["url"])
+            if payload is not None:
+                quotes = src["parse"](payload)
+
+        hit = quotes.keys() & want
+        cover = len(hit) / len(want) if want else 0.0
+        print(f"    {len(quotes):,} quotes, {len(hit):,} matched "
+              f"({cover:.0%} of the board)")
+        if cover >= PF.BULK_COVERAGE_MIN:
+            return {k: quotes[k] for k in hit}, src["name"]
+        print(f"    below the {PF.BULK_COVERAGE_MIN:.0%} floor — trying the next source")
+    return {}, ""
+
+
+# ═══════════════════════════════════════════════════════════════════
 # STAGES
 # ═══════════════════════════════════════════════════════════════════
 
@@ -561,6 +626,11 @@ def build(limit: int = 0) -> dict:
     first_year = fetch_survival()
     tick = fetch_tickers()
     print(f"  {'tickers':22s} {len(tick):>6,} companies")
+    print("Bulk quotes (free, one request per source):")
+    quotes, quote_src = fetch_quotes([v["ticker"] for v in tick.values()])
+    if not quotes:
+        print("  no source answered — the cheapness half stays UNKNOWN, "
+              "which is the honest outcome and not a failure")
 
     if not tick:
         raise SystemExit("Ticker map empty — refusing to publish a nameless board.")
@@ -601,6 +671,9 @@ def build(limit: int = 0) -> dict:
             "first_filing_year": bounded_first_year(first_year.get(cik),
                                                     PROBE_YEARS[-1]),
         })
+        q = quotes.get(meta["ticker"]) or {}
+        filings["market_cap"] = q.get("market_cap")
+        filings["price"] = q.get("price")
 
         row = S.evaluate(filings, this_year)
         row.update({
@@ -616,6 +689,7 @@ def build(limit: int = 0) -> dict:
             "revenue": latest_rev,
             "shares": sh_now.get(cik),
             "history": history(first_year.get(cik), this_year, PROBE_YEARS[-1]),
+            "price": q.get("price"),
         })
         rows.append(row)
 
@@ -630,6 +704,7 @@ def build(limit: int = 0) -> dict:
         "census": S.census(rows),
         "rows": rows,
         "params": {
+            "quote_source": quote_src,
             "balance_sheet_periods": periods,
             "dividend_years": [years[0], years[-1]],
             "probe_years": PROBE_YEARS,
@@ -666,7 +741,7 @@ def main() -> int:
     print(f"  positive net current     {c['positive_ncav']:>6,}")
     print(f"  recent dividend cuts     {c['recent_dividend_cuts']:>6,}")
     print(f"  priced                   {c['priced']:>6,} "
-          f"({c['price_coverage_pct']}%)")
+          f"({c['price_coverage_pct']}%) via {payload['params']['quote_source'] or 'no source'}")
     if c["below_book"] is None:
         print("  below book / net-nets    UNKNOWN — no price feed attached")
     else:
