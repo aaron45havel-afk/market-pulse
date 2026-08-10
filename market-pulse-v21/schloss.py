@@ -64,6 +64,10 @@ SBC_TO_REVENUE_MAX = 0.10      # 10% of revenue paid in stock
 DILUTION_MAX = 2.0             # share count growing >2%/yr
 INSIDER_ALIGNED_MIN = 0.10     # "managements that own a lot of stock"
 
+# A prior-year payout this many times the typical one was a special
+# dividend, and its absence the year after is arithmetic, not a cut.
+SPECIAL_DIVIDEND_MULTIPLE = 2.5
+
 
 def _num(v) -> float | None:
     try:
@@ -94,15 +98,34 @@ def tangible_book(equity, goodwill=None, intangibles=None) -> float | None:
     return e - (_num(goodwill) or 0.0) - (_num(intangibles) or 0.0)
 
 
+# The named asset lines must account for at least this much of the balance
+# sheet before their MIX describes the company. Below it the percentages
+# are arithmetic on a fragment.
+BACKING_COVERAGE_MIN = 0.50
+
+
 def asset_backing(cash=None, receivables=None, inventory=None, ppe=None,
-                  goodwill=None, intangibles=None) -> dict:
-    """What the book value actually consists of.
+                  goodwill=None, intangibles=None, anchor=None) -> dict:
+    """What the book value consists of — when we can see enough of it.
 
     He wanted to know what he was buying, not merely that it was cheap.
     Cash realises at 100%, receivables mostly, inventory sometimes, plant
     rarely at carrying value, goodwill never. Reported as shares of the
     named total so a reader can apply their own haircuts rather than
     inherit ours — no liquidation discounts are assumed here.
+
+    A PERCENTAGE OF A FRAGMENT IS NOT A PERCENTAGE OF THE COMPANY, and
+    this is where that bit hardest. Banks, REITs and insurers file none of
+    these lines except cash, so the mix came out {cash: 100%} and the
+    hard-asset share read 100%. For NNN REIT that was $4.2m of named
+    assets against a $4.46bn balance sheet — one tenth of one percent of
+    the company, presented as all of it. The flagship list is RANKED on
+    this number, so the companies we could see least sat at the top.
+
+    `anchor` is the size the mix has to explain: total assets, or tangible
+    book as a lower bound for it. Below BACKING_COVERAGE_MIN the mix is
+    still reported — knowing a REIT tagged only its cash is itself worth
+    seeing — but hard_pct is withheld.
     """
     parts = {"cash": _num(cash) or 0.0, "receivables": _num(receivables) or 0.0,
              "inventory": _num(inventory) or 0.0, "ppe": _num(ppe) or 0.0,
@@ -110,12 +133,18 @@ def asset_backing(cash=None, receivables=None, inventory=None, ppe=None,
              "intangibles": _num(intangibles) or 0.0}
     total = sum(parts.values())
     if total <= 0:
-        return {"total": None, "mix": {}, "hard_pct": None}
+        return {"total": None, "mix": {}, "hard_pct": None, "coverage": None}
     mix = {k: round(v / total * 100, 1) for k, v in parts.items()}
+
+    a = _num(anchor)
+    coverage = round(total / a, 3) if (a is not None and a > 0) else None
     # "Hard" = cash and receivables: the part that becomes money without
     # finding a buyer for a factory.
     hard = (parts["cash"] + parts["receivables"]) / total * 100
-    return {"total": round(total, 2), "mix": mix, "hard_pct": round(hard, 1)}
+    if coverage is not None and coverage < BACKING_COVERAGE_MIN:
+        hard = None
+    return {"total": round(total, 2), "mix": mix, "coverage": coverage,
+            "hard_pct": None if hard is None else round(hard, 1)}
 
 
 def ncav(current_assets, total_liabilities, preferred=None) -> float | None:
@@ -193,7 +222,8 @@ def dividend_history(per_share_by_year: dict) -> dict:
             series[yr] = val
     if not series:
         return {"pays": None, "cut": None, "latest": None, "cut_pct": None,
-                "years": 0, "from_year": None, "to_year": None}
+                "years": 0, "from_year": None, "to_year": None,
+                "special_prior": False}
 
     years = sorted(series)
     latest = series[years[-1]]
@@ -207,12 +237,33 @@ def dividend_history(per_share_by_year: dict) -> dict:
     if prior is not None:
         cut = latest < prior
         cut_pct = round((prior - latest) / prior * 100, 1) if cut else 0.0
+
+    # A SPECIAL DIVIDEND NOT REPEATING IS NOT A CUT. Costco paid $15 a
+    # share on top of its regular $4.16 in fiscal 2024, so the next year
+    # read as a 74.6% reduction and landed second on a list captioned "the
+    # overreaction has already happened". Nothing was reduced and nobody
+    # overreacted. A prior year several times the size of every other year
+    # in the series is a one-off, and the ordinary payout continuing is not
+    # an entry signal.
+    # The baseline is the history BEFORE the suspect year, never the year
+    # after it: including the post-cut figure drags the median down and
+    # makes every large cut look like a special. And two data points are
+    # not a baseline — with nothing before the prior year, no claim is
+    # made either way, because "unusual" is meaningless without a usual.
+    special = False
+    if cut:
+        base = sorted(v for y, v in series.items() if y < years[-2] and v > 0)
+        if len(base) >= 2:
+            mid = (base[len(base) // 2] if len(base) % 2
+                   else (base[len(base) // 2 - 1] + base[len(base) // 2]) / 2)
+            if mid > 0 and prior > mid * SPECIAL_DIVIDEND_MULTIPLE:
+                special, cut, cut_pct = True, False, 0.0
     # The two years compared are reported so the caller can judge
     # recency itself. A 2019-to-2025 pair is a real decline but not the
     # fresh overreaction he was buying into, and only the dates say which
     # of the two this is.
     return {"pays": latest > 0, "cut": cut, "latest": latest,
-            "cut_pct": cut_pct, "years": len(series),
+            "cut_pct": cut_pct, "years": len(series), "special_prior": special,
             "from_year": years[-2] if len(years) > 1 else None,
             "to_year": years[-1]}
 
@@ -306,9 +357,17 @@ def evaluate(f: dict, this_year: int) -> dict:
     mgmt = self_dealing(f.get("sbc"), f.get("revenue"), f.get("shares_cagr"),
                         f.get("insider_pct"))
     surv_pass, surv_yrs = survival(f.get("first_filing_year"), this_year)
+    # Total assets is the right anchor. Where it was not filed, tangible
+    # book stands in as a lower bound — assets are never less than equity
+    # unless liabilities are negative — which is enough to catch the
+    # {cash: 100%} REITs on boards built before total_assets was emitted.
+    anchor = _num(f.get("total_assets"))
+    if anchor is None and tb is not None and tb > 0:
+        anchor = tb
     backing = asset_backing(f.get("cash"), f.get("receivables"),
                             f.get("inventory"), f.get("ppe"),
-                            f.get("goodwill"), f.get("intangibles"))
+                            f.get("goodwill"), f.get("intangibles"),
+                            anchor=anchor)
 
     # A price we have and a book value we do not are different failures,
     # and so are a book value that is negative and one that is missing.
@@ -341,7 +400,22 @@ def evaluate(f: dict, this_year: int) -> dict:
     # behind a rejection was.
     known_gates = [v for v in gates.values() if v is not None]
 
+    # A COMPANY CANNOT BE WORTH MORE THAN IT OWNS. Tangible book above
+    # total assets is arithmetically impossible and means one of the two
+    # figures is not what we think it is — Universe Pharmaceuticals came
+    # through with $55.8bn of equity and $17.9bn of revenue on 563,338
+    # shares, which is a nano-cap reporting in something other than the
+    # dollars the frame claimed. Both figures are withheld rather than
+    # published as a $99,110-per-share book value.
+    ta = _num(f.get("total_assets"))
+    impossible = ta is not None and ta > 0 and tb is not None and tb > ta * 1.02
+    if impossible:
+        tb = tb_ps = None
+        n = ncav_ps = None
+
     return {
+        "total_assets": ta,
+        "implausible": impossible,
         "tangible_book": None if tb is None else round(tb, 2),
         "tangible_book_ps": tb_ps,
         "ncav": None if n is None else round(n, 2),
@@ -435,9 +509,17 @@ def data_source_label(data: dict | None = None) -> str:
 # The lists the page is built from. Each is a different question, and the
 # ordering inside each is what makes it useful, so they are defined here
 # rather than assembled in a template where nobody can test them.
-def board(data: dict | None = None) -> dict:
+# A cut is an entry signal while the overreaction is still on the tape.
+# Six years later it is a fact about history.
+CUT_RECENT_YEARS = 2
+
+
+def board(data: dict | None = None, this_year: int | None = None) -> dict:
     """Four lists, in the order Schloss would have worked through them."""
-    rows = load(data).get("rows") or []
+    payload = load(data)
+    rows = payload.get("rows") or []
+    if this_year is None:
+        this_year = int((payload.get("generated") or "0")[:4] or 0)
 
     def _f(x):
         return x if isinstance(x, (int, float)) else float("-inf")
@@ -445,24 +527,64 @@ def board(data: dict | None = None) -> dict:
     qualify = [r for r in rows if r.get("gates_pass")]
 
     # THE ENTRY SIGNAL, and the one thing here that is genuinely
-    # actionable without a price. He bought after the cut, when the
-    # forced selling was done and the reason was public. Biggest cut
-    # first, but only among companies whose balance sheet already clears.
+    # actionable without a price. He bought after the cut, when the forced
+    # selling was done and the reason was public.
+    #
+    # RECENCY IS PART OF THE SIGNAL, and sorting on size alone lost it.
+    # The first three rows of this list were cuts from 2020, 2022 and 2020
+    # — AstroNova's COVID suspension leading a list captioned "the
+    # overreaction has already happened". `from_year`/`to_year` were added
+    # precisely so recency could be judged, and then were not used.
     cuts = sorted(
-        [r for r in qualify if (r.get("dividend") or {}).get("cut")],
+        [r for r in qualify
+         if (r.get("dividend") or {}).get("cut")
+         and (not this_year
+              or ((r["dividend"].get("to_year") or 0)
+                  >= this_year - CUT_RECENT_YEARS))],
         key=lambda r: -_f((r.get("dividend") or {}).get("cut_pct")))
 
     # Net current assets above zero is what he meant by working-capital
     # stocks. Without a price we cannot say they are CHEAP, only that the
-    # asset base exists — so this is sorted by how much of it there is
-    # relative to what is owed, not by any discount.
+    # asset base exists.
+    #
+    # RANKED RELATIVE TO THE BALANCE SHEET, not in dollars. Sorting by the
+    # absolute figure produced Nvidia, Alphabet, Micron and Tesla — a list
+    # of the largest companies, which is what "most current assets in
+    # dollars" measures. The share of the balance sheet that survives every
+    # liability is the size-independent version, and it is the one that
+    # surfaces the small unloved names this screen exists to reach.
+    def _ncav_share(r):
+        n = _f(r.get("ncav"))
+        base = _num(r.get("total_assets")) or _num(r.get("tangible_book"))
+        if n == float("-inf") or not base or base <= 0:
+            return float("-inf")
+        return n / base
+
     working = sorted([r for r in rows if _f(r.get("ncav")) > 0],
-                     key=lambda r: -_f(r.get("ncav")))
+                     key=lambda r: (-_ncav_share(r), -_f(r.get("ncav"))))
 
     # The long-lived, low-debt, dividend-paying, asset-backed core. Most
     # hard assets first: he wanted to know what he was buying.
-    core = sorted(qualify,
-                  key=lambda r: -_f((r.get("backing") or {}).get("hard_pct")))
+    #
+    # The ranking recomputes coverage rather than trusting a stored
+    # hard_pct. asset_backing now withholds that figure when the lines we
+    # could read explain less than half the balance sheet, but boards
+    # written before that guard carry the old 100%-cash-only values — and
+    # this is the list those values were sorting to the top of. A mix that
+    # explains a fraction of the company does not get to lead it.
+    def _hard(r):
+        b = r.get("backing") or {}
+        cov = b.get("coverage")
+        if cov is None:
+            base = (_num(r.get("total_assets"))
+                    or _num(r.get("tangible_book")))
+            tot = _num(b.get("total"))
+            cov = tot / base if (tot and base and base > 0) else None
+        if cov is not None and cov < BACKING_COVERAGE_MIN:
+            return float("-inf")
+        return _f(b.get("hard_pct"))
+
+    core = sorted(qualify, key=lambda r: -_hard(r))
 
     # COULD NOT READ, AS OPPOSED TO REJECTED. Nothing here failed a gate;
     # something simply was not filed. Without this list they appear on no

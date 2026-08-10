@@ -591,6 +591,11 @@ def build(limit: int = 0) -> dict:
         row = S.evaluate(filings, this_year)
         row.update({
             "cik": cik,
+            # The anchor every "share of the balance sheet" figure needs.
+            # Without it the asset mix is percentages of whatever lines
+            # happened to be tagged, and a REIT that files only its cash
+            # reads as 100% hard assets.
+            "total_assets": filings.get("total_assets"),
             "ticker": meta["ticker"],
             "name": meta["name"],
             "exchange": meta["exchange"],
