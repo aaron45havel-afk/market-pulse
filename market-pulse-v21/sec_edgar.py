@@ -304,7 +304,12 @@ def fetch_financials():
         for n, concept in IS_CONCEPTS.items():
             futs.append(ex.submit(f, n, concept, cis))
         # Dividends per share (declared)
-        futs.append(ex.submit(f, "div_per_share", "CommonStockDividendsPerShareDeclared", cis, "USD/shares"))
+        # The unit goes in the URL PATH, so a slash splits it into an extra
+        # segment and every one of these 404s. It has been failing silently
+        # since it was written: the fallback below divides total dividends
+        # paid by the share count, which is close enough that nothing ever
+        # looked wrong. SEC spells per-share units with hyphens.
+        futs.append(ex.submit(f, "div_per_share", "CommonStockDividendsPerShareDeclared", cis, "USD-per-shares"))
         # Prior quarter cash for burn rate
         futs.append(ex.submit(f, "cash_prior", "CashAndCashEquivalentsAtCarryingValue", pbs))
 
