@@ -323,6 +323,48 @@ s_g, _ = R._annual_series(gapfill, REV)
 check(len(s_g) == 11, f"primary + gap fill spans 2015-2025 (got {len(s_g)})")
 check(s_g[2015] == 50.0 and s_g[2025] == 100.0, "both bases contribute their own years")
 
+
+# ── fitted growth: every year counts, no year decides ───────────────
+#
+# A fifteen-year endpoint CAGR still rests on two of the fifteen numbers.
+# One restated year, one 53-week year, one acquisition or one pandemic
+# sets the whole answer. The fit uses all of them.
+steady15 = {y: 100.0 * (1.07 ** (y - 2011)) for y in range(2011, 2026)}
+t = R._trend_growth(steady15)
+check(abs(t - 7.0) < 0.05, f"a clean 7% compounder fits at 7% (got {t})")
+
+# Same company, with 2020 collapsing 60% and recovering to trend.
+covid15 = dict(steady15)
+covid15[2020] = steady15[2020] * 0.40
+t_c = R._trend_growth(covid15)
+check(abs(t_c - 7.0) < 1.5,
+      f"one pandemic year moves a fifteen-year fit by約 a point, not by ten "
+      f"(got {t_c} vs clean {t})")
+endpoint = R._cagr(covid15, 15)
+check(t_c is not None and endpoint is not None, "both measures return something")
+
+# The endpoint measure is the fragile one: put the shock at the START and
+# it swings hard, while the fit barely notices.
+shock_base = dict(steady15)
+shock_base[2011] = steady15[2011] * 0.40
+check(abs(R._trend_growth(shock_base) - 7.0) < 3.0,
+      f"a wrecked FIRST year still fits near trend (got {R._trend_growth(shock_base)})")
+naive_base = ((shock_base[2025] / shock_base[2011]) ** (1 / 14) - 1) * 100
+check(naive_base > 12,
+      f"...where the endpoint measure would read {naive_base:.1f}% off the same data")
+
+# Guardrails.
+check(R._trend_growth({2023: 1.0, 2024: 2.0, 2025: 3.0}) is None,
+      "a slope through three points is a guess, not a trend")
+check(R._trend_growth({}) is None, "empty series is None")
+check(R._trend_growth({y: 100.0 for y in range(2015, 2026)}) == 0.0,
+      "a flat series fits at 0%")
+neg = {y: -5.0 for y in range(2015, 2026)}
+check(R._trend_growth(neg) is None, "all-negative revenue cannot be fitted in logs")
+decl = {y: 100.0 * (0.95 ** (y - 2011)) for y in range(2011, 2026)}
+check(abs(R._trend_growth(decl) + 5.0) < 0.05,
+      f"a shrinking business fits negative (got {R._trend_growth(decl)})")
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

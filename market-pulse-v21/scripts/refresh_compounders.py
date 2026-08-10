@@ -64,6 +64,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import statistics
 import sys
 import threading
@@ -121,7 +122,19 @@ SEC_WORKERS = 6
 # micro-cap universe, where a clean decade of XBRL usually does not exist
 # and the 14%/yr question is a different question anyway.
 MIN_REVENUE = 250_000_000
-MIN_YEARS = 7                    # need ≥7 fiscal years to score
+MIN_YEARS = 7                    # need ≥7 fiscal years to score at all
+
+# THE LOOKBACK. Fifteen years is not a preference, it is the ceiling: XBRL
+# begins around 2010-11, so 44% of companies have 15 years, 22% have 16,
+# and essentially none have 18. Going longer buys nothing that exists.
+#
+# It matters because a ten-year window is one expansion plus a pandemic.
+# Fifteen spans the 2015-16 industrial recession, the 2018 tightening,
+# 2020, and the 2022 rate shock — an actual cycle, which is the only thing
+# that can distinguish a durable compounder from a company that has never
+# been tested. And it demotes 2020 from a fifth of the window to a
+# fifteenth.
+LOOKBACK = 15
 MAX_UNIVERSE = 6000              # hard cap on CIKs processed
 
 # Yahoo supplies price, dividend yield and the P/FCF history behind the
@@ -575,7 +588,43 @@ def _cagr(series: dict[int, float], years: int) -> float | None:
     return round(((b / a) ** (1 / span) - 1) * 100, 2)
 
 
-def _up_years(series: dict[int, float], window: int = 10) -> tuple[int, int]:
+def _trend_growth(series: dict[int, float], window: int = LOOKBACK) -> float | None:
+    """Annualized growth FITTED across the window, not measured corner to
+    corner.
+
+    An endpoint CAGR over fifteen years still rests on exactly two of the
+    fifteen numbers, so one restated year, one 53-week year, one
+    acquisition or one pandemic sets the entire answer. A least-squares
+    fit on log revenue uses every observation: 2020 becomes one point in
+    fifteen and moves the slope slightly instead of defining it.
+
+    This is also why the fitted measure needs no COVID guard while the
+    endpoint CAGRs do — robustness beats exclusion, and dropping real
+    observations to protect a fragile estimator is treating the symptom.
+    """
+    if not series:
+        return None
+    ys = sorted(series)
+    last = ys[-1]
+    pts = [(y, series[y]) for y in ys if y > last - window and series[y] > 0]
+    if len(pts) < 5:
+        return None            # a slope through four points is a guess
+    x0 = pts[0][0]
+    xs = [y - x0 for y, _ in pts]
+    lg = [math.log(v) for _, v in pts]
+    n = len(pts)
+    mx, my = sum(xs) / n, sum(lg) / n
+    sxx = sum((x - mx) ** 2 for x in xs)
+    if sxx == 0:
+        return None
+    slope = sum((xs[i] - mx) * (lg[i] - my) for i in range(n)) / sxx
+    try:
+        return round((math.exp(slope) - 1) * 100, 2)
+    except (OverflowError, ValueError):
+        return None
+
+
+def _up_years(series: dict[int, float], window: int = LOOKBACK) -> tuple[int, int]:
     ys = sorted(series)[-(window + 1):]
     ups = total = 0
     for i in range(1, len(ys)):
@@ -629,9 +678,9 @@ def compute_metrics(facts: dict) -> dict | None:
 
     # FCF series + conversion vs net income (the cash-is-real gate).
     fcf = {y: ocf[y] - capex.get(y, 0.0) for y in ocf}
-    yrs10 = [y for y in sorted(fcf) if y > last - 10]
-    sum_fcf = sum(fcf[y] for y in yrs10)
-    sum_ni = sum(ni[y] for y in yrs10 if y in ni)
+    yrs_win = [y for y in sorted(fcf) if y > last - LOOKBACK]
+    sum_fcf = sum(fcf[y] for y in yrs_win)
+    sum_ni = sum(ni[y] for y in yrs_win if y in ni)
     fcf_conv = round(sum_fcf / sum_ni * 100, 1) if sum_ni > 0 else None
 
     capex_ratio = None
@@ -648,7 +697,7 @@ def compute_metrics(facts: dict) -> dict | None:
     # Buybacks: 5-yr share-count CAGR (negative = shrinking count).
     shares_cagr5 = _cagr(shares, 5)
 
-    op_m_vals = [op_m[y] for y in sorted(op_m)][-10:]
+    op_m_vals = [op_m[y] for y in sorted(op_m)][-LOOKBACK:]
     op_m_now = op_m_vals[-1] if op_m_vals else None
     op_m_med = statistics.median(op_m_vals) if len(op_m_vals) >= 5 else None
     # Cycle position: current margin's percentile within own history.
@@ -672,7 +721,8 @@ def compute_metrics(facts: dict) -> dict | None:
         cv = statistics.pstdev(op_m_vals) / abs(statistics.fmean(op_m_vals))
         cyclical = cv > 0.35 or (rev_tot >= 8 and rev_ups <= rev_tot - 4)
 
-    ni_pos_years = sum(1 for y in sorted(ni)[-10:] if ni[y] > 0)
+    ni_pos_years = sum(1 for y in sorted(ni)[-LOOKBACK:] if ni[y] > 0)
+    ni_years_seen = len(sorted(ni)[-LOOKBACK:])
 
     fcf_ps_by_year = {y: fcf[y] / shares[y] for y in fcf
                       if y in shares and shares[y] > 0}
@@ -683,6 +733,11 @@ def compute_metrics(facts: dict) -> dict | None:
         "currency": currency,
         "revenue_last": rev[last],
         "rev_cagr5": _cagr(rev, 5), "rev_cagr10": _cagr(rev, 10),
+        "rev_cagr15": _cagr(rev, LOOKBACK),
+        "rev_trend": _trend_growth(rev),
+        "fcf_trend": _trend_growth({y: v for y, v in fcf.items() if v > 0}),
+        "ni_years_seen": ni_years_seen,
+        "lookback": LOOKBACK,
         "rev_up_years": rev_ups, "rev_up_total": rev_tot,
         "fcf_cagr5": _cagr({y: v for y, v in fcf.items() if v > 0}, 5),
         "ni_pos_years": ni_pos_years,

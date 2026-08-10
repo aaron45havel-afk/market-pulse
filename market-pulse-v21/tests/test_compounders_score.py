@@ -108,8 +108,62 @@ check(no_price["div_payout_fcf"] is None, "and payout stays unknown")
 check(one(rev_cagr5=40.0, rev_cagr10=40.0)["er_growth"] <= 14.0 * C.GROWTH_HAIRCUT + 1.5,
       "growth stays clamped")
 check(one(shares_cagr5=-20.0)["er_buyback"] == 4.0, "buyback stays clamped at +4")
-check(one(pfcf_now=1.0, pfcf_med=100.0)["er_mult"] == C.MULT_DRIFT_CAP,
-      "valuation drift stays clamped at +3")
+check(one(pfcf_now=5.0, pfcf_med=500.0)["er_mult"] == C.MULT_DRIFT_CAP,
+      "valuation drift stays clamped at +3 (P/FCF inside the sane band, so "
+      "the clamp is what binds — not the plausibility guard)")
+
+
+# ── evidence length: shown, never hidden ────────────────────────────
+# Input that genuinely clears the 14% bar: g 9.8 + b 1.0 + d 2.0 + m 3.0.
+STRONG = dict(rev_cagr5=15.0, rev_cagr10=15.0, div_yield=2.0,
+              pfcf_now=15.0, pfcf_med=25.0)
+
+proven = one(years=16, **STRONG)
+check(proven["expected"] >= C.TARGET,
+      f"the fixture really does clear the bar (got {proven['expected']})")
+check(proven["status"] == "COMPOUNDER",
+      f"a 16-year record can be a COMPOUNDER (got {proven['status']})")
+check(proven["proven"] is True, "and is marked proven")
+
+young = one(years=8, **STRONG)
+check(young["status"] == "QUALITY",
+      f"the same numbers on 8 years is QUALITY, not COMPOUNDER (got {young['status']})")
+check(young["proven"] is False, "and is marked unproven")
+check(young["expected"] == proven["expected"],
+      "the EXPECTED RETURN is identical — the record changes the label, not the maths")
+check(any(b["key"] == "short" for b in young["badges"]),
+      "a badge states how many years there are, so 8 and 14 are distinguishable")
+check("8" in next(b["label"] for b in young["badges"] if b["key"] == "short"),
+      "and the badge carries the actual count")
+check(young["status"] != "WATCH",
+      "a short record demotes one tier at most — it does not bury the company")
+
+# 14 years is a data-availability fact, not a business one. It still
+# cannot carry a 15-year label, but the badge shows 14 rather than 8 so
+# the difference is legible.
+fourteen = one(years=14, **STRONG)
+check(fourteen["status"] == "QUALITY", "14 years is short of the claim")
+check("14" in next(b["label"] for b in fourteen["badges"] if b["key"] == "short"),
+      "and the row says 14, not merely 'short'")
+
+# ── the valuation term is withheld when P/FCF cannot be right ───────
+odd = one(pfcf_now=0.1, pfcf_med=23.9)          # NVMI's real figures
+check(odd["er_mult"] == 0.0,
+      f"a P/FCF of 0.1 contributes no valuation drift (got {odd['er_mult']})")
+check(any(b["key"] == "pfcfodd" for b in odd["badges"]), "and says so on the row")
+sane = one(pfcf_now=15.0, pfcf_med=25.0)
+check(sane["er_mult"] > 0, "an ordinary P/FCF still drives the term normally")
+check(not any(b["key"] == "pfcfodd" for b in sane["badges"]), "and is not flagged")
+huge = one(pfcf_now=34400.0, pfcf_med=25.0)
+check(huge["er_mult"] == 0.0, "the top of the range is guarded too")
+
+# ── the fitted trend is what the gate and the term use ──────────────
+by_trend = one(rev_cagr5=40.0, rev_cagr10=None, rev_trend=7.0)
+check(abs(by_trend["growth_blend"] - 7.0) < 0.01,
+      f"the fitted trend wins over a distorted endpoint CAGR (got {by_trend['growth_blend']})")
+no_trend = one(rev_cagr5=10.0, rev_cagr10=8.0, rev_trend=None)
+check(abs(no_trend["growth_blend"] - 9.0) < 0.01,
+      "without a trend it falls back to blending the endpoint CAGRs")
 
 # ── report ──
 if _FAILS:

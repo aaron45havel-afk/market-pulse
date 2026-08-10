@@ -93,6 +93,30 @@ MULT_DRIFT_CAP = 3.0           # valuation drift capped at ±3%/yr over 10y
 DIV_YIELD_CAP = 8.0
 DIV_PAYOUT_MAX = 100.0         # % of free cash flow
 
+# ── Evidence, not exclusion ──────────────────────────────────────────
+#
+# COMPOUNDER is a claim about fifteen years. A company with eight years of
+# filings has not earned or failed that claim — it has not been asked the
+# question. So the label requires the record, and everything shorter is
+# still shown, still scored, and marked SHORT HISTORY.
+#
+# A young company is not a fraud, and hiding it means never seeing it. But
+# a decade-and-a-half claim resting on eight years is the screen agreeing
+# with itself, and the three names it currently affects — SSTK, COLM, AOS
+# at 8, 8 and 7 years — are the same three whose growth rested entirely on
+# a COVID-distorted five-year number with no ten-year figure to check it
+# against. That convergence is not a coincidence.
+LONG_HISTORY_YEARS = 15
+
+# ── Plausibility, same treatment as the dividend ─────────────────────
+# Every one of these produced a real number from real filings and stopped
+# describing the business at the extreme. P/FCF ranges from 0.1 to 34,400
+# on the live board; ROIC reaches 179.7% when invested capital rounds to
+# nothing. Outside these bands the input is not measuring what its name
+# says, so the term it feeds is withheld rather than trusted.
+PFCF_SANE = (2.0, 200.0)
+ROIC_SANE_MAX = 100.0
+
 
 def _load() -> dict:
     """data/compounders.json if present and well-formed, else {}."""
@@ -145,7 +169,16 @@ def _country_assess(desc: str | None) -> tuple[bool, list[dict]]:
 
 # ── Scoring ──────────────────────────────────────────────────────────
 
-def _blend_growth(r5, r10):
+def _blend_growth(r5, r10, trend=None):
+    """The growth figure the gate and the E[r] term both use.
+
+    The FITTED fifteen-year trend wins when it exists, because it rests on
+    every year rather than on two endpoints. The endpoint CAGRs remain the
+    fallback for companies too young to fit, and both are still displayed
+    so a divergence between them is visible rather than averaged away.
+    """
+    if trend is not None:
+        return trend
     vals = [v for v in (r5, r10) if v is not None]
     if not vals:
         return None
@@ -163,7 +196,8 @@ def score(data: dict | None = None) -> list[dict]:
         investable, badges = _country_assess(m.get("country"))
 
         # ── Gates ──
-        growth = _blend_growth(m.get("rev_cagr5"), m.get("rev_cagr10"))
+        growth = _blend_growth(m.get("rev_cagr5"), m.get("rev_cagr10"),
+                               m.get("rev_trend"))
         up, tot = m.get("rev_up_years") or 0, m.get("rev_up_total") or 0
         gates = {
             "roic":   m.get("roic_med") is not None and m["roic_med"] >= ROIC_MIN,
@@ -190,6 +224,16 @@ def score(data: dict | None = None) -> list[dict]:
         mult = None
         rich = False
         pf_now, pf_med = m.get("pfcf_now"), m.get("pfcf_med")
+        lo, hi = PFCF_SANE
+        if pf_now is not None and not (lo <= pf_now <= hi):
+            # NVMI reads 0.1 against a $393 share price, which implies a
+            # share count two orders of magnitude out. Rewarding that with
+            # a full +3.0 re-rating term is the model paying for a bug.
+            badges.append({"key": "pfcfodd", "label": "P/FCF suspect", "title":
+                           f"P/FCF of {pf_now} is outside {lo:g}-{hi:g}x. The per-share "
+                           f"arithmetic behind it cannot be right, so the valuation term "
+                           f"is withheld rather than computed from it."})
+            pf_now = None
         if pf_now and pf_med and pf_now > 0:
             mult = ((pf_med / pf_now) ** 0.1 - 1) * 100
             mult = max(-MULT_DRIFT_CAP, min(MULT_DRIFT_CAP, mult))
@@ -237,14 +281,28 @@ def score(data: dict | None = None) -> list[dict]:
             badges.append({"key": "rich", "label": "rich", "title":
                            "Trading well above its own 10-yr median P/FCF — the valuation-drift term is eating your return."})
 
+        # ── Evidence length ──
+        yrs = m.get("years") or 0
+        proven = yrs >= LONG_HISTORY_YEARS
+        if not proven and gates_pass:
+            badges.append({"key": "short", "label": f"{yrs}y history", "title":
+                           f"Only {yrs} fiscal years on file — COMPOUNDER is a claim about "
+                           f"{LONG_HISTORY_YEARS} years, and this company has not been asked "
+                           f"that question yet. It is scored and shown in full; it just "
+                           f"cannot carry a label its record does not support."})
+
         # ── Status ──
         if not gates_pass:
             status = "GATED"
         elif cycle_wait:
             status = "CYCLE-WAIT"
-        elif expected is not None and expected >= TARGET:
+        elif expected is not None and expected >= TARGET and proven:
             status = "COMPOUNDER"
         elif expected is not None and expected >= QUALITY_FLOOR:
+            status = "QUALITY"
+        elif expected is not None and expected >= TARGET:
+            # Clears the bar on numbers but not on record: still QUALITY,
+            # never silently demoted to WATCH.
             status = "QUALITY"
         else:
             status = "WATCH"
@@ -256,7 +314,8 @@ def score(data: dict | None = None) -> list[dict]:
                 "fcf_conv", "nd_ebit", "capex_ocf", "shares_cagr5",
                 "gross_margin", "op_margin_now", "op_margin_med",
                 "cycle_pos", "cyclical", "div_yield", "div_cagr5",
-                "pfcf_now", "pfcf_med", "price")},
+                "pfcf_now", "pfcf_med", "price", "rev_cagr15", "rev_trend",
+                "currency", "foreign")},
             "growth_blend": round(growth, 1) if growth is not None else None,
             "er_growth": round(g, 1) if g is not None else None,
             "er_buyback": round(b, 1),
@@ -264,6 +323,7 @@ def score(data: dict | None = None) -> list[dict]:
             "div_yield_raw": round(d_raw, 2),
             "div_payout_fcf": payout,
             "div_capped": d_note is not None,
+            "proven": proven,
             "er_mult": round(mult, 1) if mult is not None else 0.0,
             "expected": expected,
             "gates": gates,
