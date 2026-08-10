@@ -20,6 +20,7 @@
   .sc-stat { background:var(--surface); border:1px solid var(--line); border-radius:9px; padding:0.6rem 0.75rem; }
   .sc-stat .n { font-size:1.35rem; font-weight:800; line-height:1.15; font-variant-numeric:tabular-nums; }
   .sc-stat .n.unknown { color:var(--ink-3); font-size:0.95rem; font-weight:700; font-style:italic; }
+  .sc-stat .n .of { font-size:0.78rem; font-weight:600; color:var(--ink-3); margin-left:0.3rem; }
   .sc-stat .k { font-size:0.66rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-3); margin-top:0.15rem; }
 
   .sc-card { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:0.85rem 1rem; margin:1rem 0; }
@@ -125,6 +126,8 @@
     <td>
       {%- if r.dividend.cut -%}
         <span class="sc-pill cut" title="Cut {{ r.dividend.cut_pct }}% from {{ r.dividend.from_year }} to {{ r.dividend.to_year }}">−{{ r.dividend.cut_pct }}%</span>
+      {%- elif r.dividend.stale -%}<span class="sc-dim" title="Last dividend on file was {{ r.dividend.to_year }}. Paying is a present-tense governance check, so a record that stopped does not make this a payer.">stopped {{ r.dividend.to_year }}</span>
+      {%- elif r.dividend.special_prior -%}<span class="sc-dim" title="The prior year carried a special dividend several times the ordinary payout. Its absence the year after is arithmetic, not a cut.">special {{ r.dividend.from_year }}</span>
       {%- elif r.dividend.cut is none -%}<span class="sc-dim">?</span>
       {%- else -%}<span class="sc-dim">—</span>{%- endif -%}
     </td>
@@ -180,10 +183,12 @@
   <div class="sc-stat">
     {% if census.net_nets is none %}
       <div class="n unknown">not checked</div>
+      <div class="k">Net-nets</div>
     {% else %}
-      <div class="n">{{ '{:,}'.format(census.net_nets) }}</div>
+      <div class="n">{{ '{:,}'.format(census.net_nets_qualifying or 0) }}<span
+        class="of">of {{ '{:,}'.format(census.net_nets) }}</span></div>
+      <div class="k" title="Left: net-nets that also clear all four balance-sheet gates — the ones Schloss would have looked at. Right: the raw Graham count. On the first priced board those were 1 and 131; the other 130 were sub-$100m shells trading at a fiftieth of stated book because the market does not believe the assets are there.">Net-nets clearing every gate</div>
     {% endif %}
-    <div class="k">Net-nets</div>
   </div>
 </div>
 <p class="sc-quote">
