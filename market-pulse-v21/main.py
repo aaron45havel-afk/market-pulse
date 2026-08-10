@@ -2183,6 +2183,33 @@ async def compounders_page(request: Request):
     })
 
 
+@app.get("/schloss")
+async def schloss_page(request: Request):
+    """Walter Schloss's method, run off SEC filings alone.
+
+    Tangible book, net current assets, debt, filing longevity, dividends
+    (paying is a governance check; a CUT is the entry signal) and the
+    stock-comp/dilution read on whether management overpays itself.
+
+    Deliberately price-free. The cheapness half — 20% discount to book,
+    two-thirds of NCAV, the 52-week low he started from — needs a market
+    feed and reports UNKNOWN without one rather than guessing. Data built
+    monthly by refresh-schloss.yml from the EDGAR frames API, which covers
+    every filer in one call per concept, so this screen reaches the small
+    and unloved end of the market that a revenue floor would delete."""
+    import schloss as SC
+    payload = SC.load()
+    return templates.TemplateResponse("schloss.html", {
+        "request":     request,
+        "payload":     payload,
+        "rows":        payload.get("rows") or [],
+        "census":      payload.get("census") or {},
+        "lists":       SC.board(payload),
+        "data_source": SC.data_source_label(payload),
+        "S":           SC,
+    })
+
+
 @app.get("/aristocrats")
 async def aristocrats_page(request: Request):
     """Dividend-aristocrat value screen: 25+ year raisers (US champions

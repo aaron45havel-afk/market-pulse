@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+{% block title %}Schloss — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+  main .container { max-width: 1900px; }
+
+  .sc-hero { display:flex; justify-content:space-between; align-items:baseline; gap:1rem; flex-wrap:wrap; margin-bottom:0.3rem; }
+  .sc-hero h1 { margin:0; font-size:1.35rem; letter-spacing:-0.01em; }
+  .sc-sub { color:var(--ink-3); font-size:0.9rem; margin:0 0 0.55rem; line-height:1.55; max-width:900px; }
+  .sc-refresh { font-size:0.72rem; color:var(--ink-3); background:var(--surface-2);
+    border:1px solid var(--line); padding:0.25rem 0.55rem; border-radius:99px; white-space:nowrap; }
+  .sc-quote { border-left:3px solid var(--line); padding:0.1rem 0 0.1rem 0.8rem; margin:0.7rem 0;
+    color:var(--ink-2); font-size:0.82rem; line-height:1.6; font-style:italic; max-width:820px; }
+
+  .sc-banner { background:rgba(217,119,6,0.07); border:1px solid rgba(217,119,6,0.35);
+    border-radius:10px; padding:0.65rem 0.9rem; margin:0.8rem 0; font-size:0.8rem; line-height:1.5; }
+
+  /* The census — his one permitted market call. */
+  .sc-census { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:0.55rem; margin:1rem 0; }
+  .sc-stat { background:var(--surface); border:1px solid var(--line); border-radius:9px; padding:0.6rem 0.75rem; }
+  .sc-stat .n { font-size:1.35rem; font-weight:800; line-height:1.15; font-variant-numeric:tabular-nums; }
+  .sc-stat .n.unknown { color:var(--ink-3); font-size:0.95rem; font-weight:700; font-style:italic; }
+  .sc-stat .k { font-size:0.66rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-3); margin-top:0.15rem; }
+
+  .sc-card { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:0.85rem 1rem; margin:1rem 0; }
+  .sc-card h2 { margin:0 0 0.25rem; font-size:1rem; }
+  .sc-card .desc { font-size:0.78rem; color:var(--ink-3); margin:0 0 0.6rem; line-height:1.55; }
+  .sc-empty { color:var(--ink-3); font-size:0.85rem; font-style:italic; padding:0.4rem 0; line-height:1.55; }
+  .sc-scroll { overflow-x:auto; }
+
+  table.sc-table { width:100%; border-collapse:collapse; font-size:0.74rem; white-space:nowrap; }
+  .sc-table th { text-align:right; padding:0.45rem 0.35rem; border-bottom:2px solid var(--line);
+    font-size:0.64rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-3);
+    cursor:pointer; user-select:none; position:sticky; top:0; background:var(--surface); }
+  .sc-table th:nth-child(-n+3) { text-align:left; }
+  .sc-table td { padding:0.38rem 0.35rem; border-bottom:1px solid var(--line); text-align:right; font-variant-numeric:tabular-nums; }
+  .sc-table td:nth-child(-n+3) { text-align:left; }
+  .sc-table tr:hover td { background:var(--surface-2); }
+  .sc-table th:first-child, .sc-table td:first-child {
+    position:sticky; left:0; z-index:2; background:var(--surface); }
+  .sc-table tbody tr:hover td:first-child { background:var(--surface-2); }
+  .sc-table thead th:first-child { z-index:3; }
+  .sc-table .tick { font-family:var(--font-mono); font-weight:700; }
+  .sc-table td.nm-cell { max-width:17rem; overflow:hidden; text-overflow:ellipsis; }
+  .sc-table .arrow { font-size:0.6rem; margin-left:2px; }
+  .sc-dim { color:var(--ink-3); }
+
+  /* Three states, three looks. Unknown must never resemble a fail. */
+  .g { display:inline-block; width:1.15rem; text-align:center; font-weight:800; cursor:help; }
+  .g.yes { color:var(--mint-ink); }
+  .g.no  { color:var(--coral-ink); }
+  .g.unk { color:var(--ink-3); font-weight:600; }
+
+  .sc-pill { display:inline-block; padding:1px 8px; border-radius:999px; font-size:0.62rem; font-weight:700; cursor:help; }
+  .sc-pill.pass { background:var(--mint-soft); color:var(--mint-ink); }
+  .sc-pill.part { background:var(--surface-2); color:var(--ink-3); border:1px solid var(--line); }
+  .sc-pill.cut  { background:rgba(217,119,6,0.15); color:#b45309; }
+
+  .sc-noprice { background:var(--surface-2); border:1px dashed var(--line); border-radius:10px;
+    padding:0.7rem 0.9rem; margin:1rem 0; font-size:0.8rem; line-height:1.6; color:var(--ink-2); }
+  .sc-noprice strong { color:var(--ink-1); }
+
+  details.sc-explain { background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding:0.6rem 1rem; margin:0.8rem 0; font-size:0.82rem; line-height:1.6; }
+  details.sc-explain summary { cursor:pointer; font-weight:700; font-size:0.85rem; }
+  details.sc-explain ul { margin:0.4rem 0 0.4rem 1.1rem; padding:0; }
+</style>
+{% endblock %}
+
+{% macro gate(v, yes_t, no_t, unk_t) -%}
+  {%- if v is none -%}<span class="g unk" title="{{ unk_t }}">?</span>
+  {%- elif v -%}<span class="g yes" title="{{ yes_t }}">✓</span>
+  {%- else -%}<span class="g no" title="{{ no_t }}">✗</span>{%- endif -%}
+{%- endmacro %}
+
+{% macro money(v) -%}
+  {%- if v is none -%}<span class="sc-dim">—</span>
+  {%- elif v|abs >= 1000000000 -%}{{ '%.1f'|format(v / 1000000000) }}B
+  {%- elif v|abs >= 1000000 -%}{{ '%.0f'|format(v / 1000000) }}M
+  {%- else -%}{{ '%.2f'|format(v) }}{%- endif -%}
+{%- endmacro %}
+
+{% macro rows_table(rows, cap) %}
+<div class="sc-scroll">
+<table class="sc-table sortable">
+  <thead><tr>
+    <th>Ticker</th><th>Name</th><th>Exch</th>
+    <th title="Assets · Debt · 20+ yrs · Dividend. ✓ pass, ✗ fail, ? not measured.">Gates</th>
+    <th title="Equity less goodwill and other intangibles — what Schloss meant by book: cash, fixed assets and other tangibles.">Tang. book</th>
+    <th title="Tangible book per share.">TB/sh</th>
+    <th title="Current assets less ALL liabilities. Graham's liquidation floor; gives no credit for plant.">NCAV</th>
+    <th title="Cash + receivables as a share of the named assets — the part that becomes money without finding a buyer for a factory.">Hard %</th>
+    <th title="Short-term plus long-term debt over equity. Blank means neither debt tag was filed and the liability total could not prove it either way.">Debt/eq</th>
+    <th title="Years of EDGAR filings. '30+' means at least that; '&lt;10' means fewer.">History</th>
+    <th title="Latest dividend per share.">Div/sh</th>
+    <th title="Cut versus the prior year. He bought AFTER the cut, when the overreaction had already happened.">Cut</th>
+    <th title="Stock compensation as a share of revenue — 'honest management that does not overpay itself', in the one form that is machine-readable.">SBC %</th>
+    <th title="Share count CAGR over 5 years. Negative is buying back.">Dilution</th>
+    <th title="Price / tangible book. Needs a market feed.">P/TB</th>
+    <th title="Price / NCAV. A net-net is under 0.67. Needs a market feed.">P/NCAV</th>
+  </tr></thead>
+  <tbody>
+  {% for r in rows[:cap] %}
+  <tr>
+    <td class="tick">{{ r.ticker }}</td>
+    <td class="nm-cell" title="{{ r.name }}">{{ r.name }}</td>
+    <td class="sc-dim">{{ r.exchange or '—' }}</td>
+    <td>
+      {{ gate(r.gates.assets, 'Positive tangible book', 'No tangible assets left', 'Equity not reported') }}
+      {{ gate(r.gates.debt, 'Debt within half of equity', 'Carries more debt than he would touch', 'Debt not filed and total liabilities could not prove it') }}
+      {{ gate(r.gates.survival, '20+ years of filings', 'Too young for a 20-year record', 'Filing history not established') }}
+      {{ gate(r.gates.pays_dividend, 'Pays a dividend', 'Pays nothing', 'Dividend not established') }}
+    </td>
+    <td>{{ money(r.tangible_book) }}</td>
+    <td>{% if r.tangible_book_ps is not none %}{{ '%.2f'|format(r.tangible_book_ps) }}{% else %}<span class="sc-dim">—</span>{% endif %}</td>
+    <td>{{ money(r.ncav) }}</td>
+    <td>{% if r.backing and r.backing.hard_pct is not none %}{{ r.backing.hard_pct }}%{% else %}<span class="sc-dim">—</span>{% endif %}</td>
+    <td>{% if r.debt_ratio is not none %}{{ '%.2f'|format(r.debt_ratio) }}x{% else %}<span class="sc-dim">—</span>{% endif %}</td>
+    <td class="sc-dim">
+      {%- if r.history.bound == 'min' -%}{{ r.history.years }}+ yrs
+      {%- else -%}&lt;{{ r.history.years }} yrs{%- endif -%}
+    </td>
+    <td>{% if r.dividend.latest is not none %}{{ '%.2f'|format(r.dividend.latest) }}{% else %}<span class="sc-dim">—</span>{% endif %}</td>
+    <td>
+      {%- if r.dividend.cut -%}
+        <span class="sc-pill cut" title="Cut {{ r.dividend.cut_pct }}% from {{ r.dividend.from_year }} to {{ r.dividend.to_year }}">−{{ r.dividend.cut_pct }}%</span>
+      {%- elif r.dividend.cut is none -%}<span class="sc-dim">?</span>
+      {%- else -%}<span class="sc-dim">—</span>{%- endif -%}
+    </td>
+    <td>{% if r.management.sbc_pct_revenue is not none %}{{ r.management.sbc_pct_revenue }}%{% else %}<span class="sc-dim">—</span>{% endif %}</td>
+    <td>{% if r.management.shares_cagr is not none %}{{ '%+.1f'|format(r.management.shares_cagr) }}%{% else %}<span class="sc-dim">—</span>{% endif %}</td>
+    <td>{% if r.p_tangible_book is not none %}{{ r.p_tangible_book }}{% else %}<span class="sc-dim">no feed</span>{% endif %}</td>
+    <td>{% if r.p_ncav is not none %}{{ r.p_ncav }}{% else %}<span class="sc-dim">no feed</span>{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if rows|length > cap %}
+<p class="sc-empty">Showing {{ cap }} of {{ '{:,}'.format(rows|length) }}.</p>
+{% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="sc-hero">
+  <h1>🗄️ Schloss — what the balance sheet says</h1>
+  <span class="sc-refresh">Data: {{ data_source }}</span>
+</div>
+<p class="sc-sub">
+  Walter Schloss ran 1955–2002 at roughly <strong>21% gross, about 15.3% net</strong> to his partners, against ~10%
+  for the index. He did it with no research staff, no company visits and no forecasts — just the annual report.
+  This screen runs the half of his method that filings alone can answer: <strong>tangible book, net current assets,
+  debt, how long it has survived, whether it pays a dividend, and whether management is quietly paying itself in
+  stock.</strong>
+</p>
+<p class="sc-quote">
+  “I like the idea of company-paid dividends, because I think it makes management a little more aware of
+  stockholders… I don't like debt. I've seen too many companies get into trouble with it.”
+</p>
+
+{% if not rows %}
+<div class="sc-banner">
+  <strong>No data yet.</strong> The universe comes from the SEC EDGAR <em>frames</em> API, which returns one concept
+  for every filer in a single call — roughly 7,000 companies, including the small end of the market where Schloss
+  actually worked.
+  <a href="https://github.com/aaron45havel-afk/market-pulse/actions/workflows/refresh-schloss.yml"
+     target="_blank" rel="noopener">Run the workflow</a> to populate (~15–25 min), then reload after Railway
+  redeploys.
+</div>
+{% else %}
+
+<div class="sc-census">
+  <div class="sc-stat"><div class="n">{{ '{:,}'.format(census.screened or 0) }}</div><div class="k">Screened</div></div>
+  <div class="sc-stat"><div class="n">{{ '{:,}'.format(census.balance_sheet_qualifying or 0) }}</div><div class="k">Clear every gate</div></div>
+  <div class="sc-stat"><div class="n">{{ '{:,}'.format(census.positive_ncav or 0) }}</div><div class="k">Positive net current assets</div></div>
+  <div class="sc-stat"><div class="n">{{ '{:,}'.format(census.recent_dividend_cuts or 0) }}</div><div class="k" title="Every cut on the board. The list below is narrower — it shows only cuts at companies whose balance sheet already clears every gate.">Recent dividend cuts</div></div>
+  <div class="sc-stat"><div class="n">{{ '{:,}'.format(census.unreadable or 0) }}</div><div class="k" title="Failed nothing — a concept a gate needs was never filed. Counted apart from the rejected so the board is never mistaken for a complete judgement.">Could not read</div></div>
+  <div class="sc-stat">
+    {% if census.net_nets is none %}
+      <div class="n unknown">not checked</div>
+    {% else %}
+      <div class="n">{{ '{:,}'.format(census.net_nets) }}</div>
+    {% endif %}
+    <div class="k">Net-nets</div>
+  </div>
+</div>
+<p class="sc-quote">
+  “You used to be able to tell when the market was too high by the fact that the working capital stocks
+  disappeared.” — the one piece of market timing he allowed himself, and a measurement rather than a forecast.
+  The net-net count is the reading that matters, and it is the one that needs a price.
+</p>
+
+{% if census.net_nets is none %}
+<div class="sc-noprice">
+  <strong>The cheapness half is not running.</strong> Price / tangible book, price / NCAV, the 20% discount and the
+  52-week low all need a market data feed, and free ones no longer answer automated requests — Yahoo rate-limits
+  CI runners, Stooq serves a bot challenge. Rather than substitute an assumption, those columns read
+  <em>no feed</em> and the net-net count reads <em>not checked</em>.
+  <br><br>
+  That distinction is the point: an empty net-net list would mean the market is expensive, which is real
+  information. “Not checked” means we could not look. The board must never let you confuse the two.
+</div>
+{% endif %}
+
+<div class="sc-card">
+  <h2>💧 After the dividend cut — {{ '{:,}'.format(lists.cuts|length) }} name{{ '' if lists.cuts|length == 1 else 's' }}</h2>
+  <p class="desc">
+    “Investors usually overreact to dividend cuts, which provides a golden opportunity.” This is the one list here
+    that is actionable without a price, because the signal <em>is</em> the filing. Only companies whose balance
+    sheet already clears every gate appear — a cut on a broken balance sheet is not an opportunity, it is the
+    beginning of the story. Note this reads the opposite way from
+    <a href="/compounders">Compounders</a>, which <em>caps</em> a swollen yield as the market forecasting a cut.
+    Same data, opposite conclusion; the discriminator is whether the cut has already happened.
+  </p>
+  {% if lists.cuts %}{{ rows_table(lists.cuts, 60) }}
+  {% else %}<p class="sc-empty">Nothing. Either dividends are being raised across the board, or the cutters that exist are failing the balance-sheet gates.</p>{% endif %}
+</div>
+
+<div class="sc-card">
+  <h2>🧱 Clears every gate — {{ '{:,}'.format(lists.core|length) }} name{{ '' if lists.core|length == 1 else 's' }}</h2>
+  <p class="desc">
+    Positive tangible book, debt inside half of equity, twenty-plus years of filings, and a dividend. Ranked by
+    <strong>hard asset percentage</strong> — cash and receivables as a share of the named assets — because he
+    wanted to know what he was buying before he cared what it cost. All four gates must be <em>measured</em>, not
+    merely un-failed: a company we could barely read is not a company that passed.
+  </p>
+  {% if lists.core %}{{ rows_table(lists.core, 150) }}
+  {% else %}<p class="sc-empty">Nothing clears all four.</p>{% endif %}
+</div>
+
+<div class="sc-card">
+  <h2>⚙️ Working-capital stocks — {{ '{:,}'.format(lists.working|length) }} name{{ '' if lists.working|length == 1 else 's' }}</h2>
+  <p class="desc">
+    Current assets exceed <em>all</em> liabilities, so there is a Graham liquidation floor under the shares. Ranked
+    by the size of that cushion. Without a price this says the asset base exists — <strong>not</strong> that the
+    stock is cheap; the two-thirds-of-NCAV test is what makes it a net-net and that needs a feed. Banks and
+    insurers appear thinly here by construction: they file unclassified balance sheets, so NCAV is unmeasurable
+    rather than bad, and they are not excluded — Schloss bought them.
+  </p>
+  {% if lists.working %}{{ rows_table(lists.working, 150) }}
+  {% else %}<p class="sc-empty">None. In a market where the working-capital stocks have disappeared, that is the finding.</p>{% endif %}
+</div>
+
+<div class="sc-card">
+  <h2>❔ Could not read — {{ '{:,}'.format(lists.unread|length) }} name{{ '' if lists.unread|length == 1 else 's' }}</h2>
+  <p class="desc">
+    These failed nothing. A concept the gate needs was simply never filed, so they were not rejected — they were
+    not judged. They are listed because the alternative is that they appear on no list at all, and a board that
+    silently drops what it could not measure looks identical to a board that measured everything and found little.
+    Ordered by how close to readable they are.
+  </p>
+  {% if lists.unread %}
+  <div class="sc-scroll">
+  <table class="sc-table">
+    <thead><tr><th>Ticker</th><th>Name</th><th>Exch</th><th>Gates known</th><th>Not filed</th></tr></thead>
+    <tbody>
+    {% for r in lists.unread[:100] %}
+    <tr>
+      <td class="tick">{{ r.ticker }}</td>
+      <td class="nm-cell" title="{{ r.name }}">{{ r.name }}</td>
+      <td class="sc-dim">{{ r.exchange or '—' }}</td>
+      <td>{{ r.gates_known }} of 4</td>
+      <td style="text-align:left">{{ S.missing_gates(r)|join(', ') }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if lists.unread|length > 100 %}
+  <p class="sc-empty">Showing 100 of {{ '{:,}'.format(lists.unread|length) }}.</p>
+  {% endif %}
+  {% else %}<p class="sc-empty">Every company on the board was fully measured.</p>{% endif %}
+</div>
+
+<details class="sc-explain">
+  <summary>How this differs from the other screens, and what it deliberately does not do</summary>
+  <ul>
+    <li><strong>No quality gates.</strong> Compounders requires ROIC, revenue consistency and cash conversion.
+        Schloss ignored all three — he was buying the assets, not the engine, and many of his holdings would fail
+        every quality test here. <em>The two screens must never be blended</em>; the average of them is a portfolio
+        neither approach would hold.</li>
+    <li><strong>Financials are kept.</strong> Compounders drops SIC 6000–6799 because ROIC and free cash flow are
+        meaningless for a bank. Book value is exactly the right lens for one, so they stay.</li>
+    <li><strong>Survival is measured from the filing index, not the financials.</strong> XBRL starts around 2010,
+        so no company can show more than ~16 years of machine-readable data — measuring history from it would put
+        every company below his 20-year bar. EDGAR's quarterly indexes reach back to 1994 and answer the question
+        directly.</li>
+    <li><strong>Missing is never a pass, and never a fail either.</strong> A “?” means the filing did not carry the
+        concept. Neither debt tag filed does not mean no debt — the build only clears that gate when the entire
+        liability stack is small enough to <em>prove</em> it.</li>
+    <li><strong>What is still missing:</strong> insider ownership percentage (it lives in DEF 14A proxies as prose,
+        not XBRL), and the whole price half. Insider alignment — “managements that own a lot of stock” — is scored
+        as unknown for every row today rather than assumed.</li>
+  </ul>
+</details>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Click a header to sort. Numbers sort numerically, "—" and "no feed" sink
+// to the bottom in both directions — an unmeasured row must never win a
+// ranking by looking like a zero.
+document.querySelectorAll('table.sortable').forEach(function (table) {
+  var dir = {};
+  table.querySelectorAll('th').forEach(function (th, i) {
+    th.addEventListener('click', function () {
+      var body = table.tBodies[0];
+      var rows = Array.prototype.slice.call(body.rows);
+      var asc = dir[i] = !dir[i];
+      rows.sort(function (a, b) {
+        var x = a.cells[i], y = b.cells[i];
+        var xt = (x ? x.innerText : '').trim(), yt = (y ? y.innerText : '').trim();
+        var xn = parseFloat(xt.replace(/[^0-9.+-]/g, ''));
+        var yn = parseFloat(yt.replace(/[^0-9.+-]/g, ''));
+        var xb = isNaN(xn), yb = isNaN(yn);
+        if (xb && yb) return 0;
+        if (xb) return 1;              // blanks last, whichever way we sort
+        if (yb) return -1;
+        if (/B$/.test(xt)) xn *= 1e9; else if (/M$/.test(xt)) xn *= 1e6;
+        if (/B$/.test(yt)) yn *= 1e9; else if (/M$/.test(yt)) yn *= 1e6;
+        return asc ? xn - yn : yn - xn;
+      });
+      rows.forEach(function (r) { body.appendChild(r); });
+      table.querySelectorAll('th .arrow').forEach(function (s) { s.remove(); });
+      var arrow = document.createElement('span');
+      arrow.className = 'arrow';
+      arrow.textContent = asc ? '▲' : '▼';
+      th.appendChild(arrow);
+    });
+  });
+});
+</script>
+{% endblock %}
