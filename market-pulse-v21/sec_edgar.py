@@ -530,10 +530,16 @@ def build_net_net_screener():
     # filter); misses are rare and leave price=None so the UI can
     # still take a manual entry. Lazy import to avoid the
     # lynch_screener → sec_edgar circular dependency.
+    # ONE BULK REQUEST, not one per ticker. The per-symbol path this
+    # replaced returns zero rows from GitHub Actions IP ranges, and the
+    # bulk file carries market capitalisation alongside the price — so the
+    # cap below is the market's own figure rather than price x a share
+    # count that is missing or wrong for a meaningful slice of filers.
     try:
-        from lynch_screener import fetch_prices_bulk
+        from lynch_screener import fetch_quotes_bulk
         tickers_to_price = [r["ticker"] for r in filtered]
-        prices = fetch_prices_bulk(tickers_to_price)
+        quotes, _src = fetch_quotes_bulk(tickers_to_price)
+        prices = {t: q["price"] for t, q in quotes.items() if q.get("price")}
         priced = 0
         net_nets_auto = 0
         graham_auto = 0
@@ -545,7 +551,9 @@ def build_net_net_screener():
             shares = r.get("shares") or 0
             r["price"] = round(p, 4)
             r["has_price"] = True
-            r["market_cap"] = int(p * shares) if shares else None
+            fed_cap = (quotes.get(r["ticker"]) or {}).get("market_cap")
+            r["market_cap"] = int(fed_cap) if fed_cap else (
+                int(p * shares) if shares else None)
             r["market_cap_fmt"] = _fmt(r["market_cap"]) if r["market_cap"] else None
             if ncav and ncav > 0:
                 pncav = p / ncav
