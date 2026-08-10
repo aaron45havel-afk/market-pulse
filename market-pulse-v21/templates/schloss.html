@@ -185,8 +185,19 @@
       <div class="n unknown">not checked</div>
       <div class="k">Net-nets</div>
     {% else %}
-      <div class="n">{{ '{:,}'.format(census.net_nets_qualifying or 0) }}<span
+      {# ZERO AND ABSENT ARE NOT THE SAME READING. `or 0` printed a
+         confident "0 of 131" on a board built before this count existed,
+         and zero net-nets clearing every gate is Schloss's own
+         top-of-market signal — the working capital stocks having
+         disappeared. Announcing that because a key was missing is exactly
+         the confusion the rest of this census exists to prevent. #}
+      {% set nnq = census.get('net_nets_qualifying') %}
+      {% if nnq is none %}
+      <div class="n unknown">not checked<span class="of">of {{ '{:,}'.format(census.net_nets) }}</span></div>
+      {% else %}
+      <div class="n">{{ '{:,}'.format(nnq) }}<span
         class="of">of {{ '{:,}'.format(census.net_nets) }}</span></div>
+      {% endif %}
       <div class="k" title="Left: net-nets that also clear all four balance-sheet gates — the ones Schloss would have looked at. Right: the raw Graham count. On the first priced board those were 1 and 131; the other 130 were sub-$100m shells trading at a fiftieth of stated book because the market does not believe the assets are there.">Net-nets clearing every gate</div>
     {% endif %}
   </div>
