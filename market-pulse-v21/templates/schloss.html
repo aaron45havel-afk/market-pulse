@@ -94,7 +94,7 @@
     <th title="Years of EDGAR filings. '30+' means at least that; '&lt;10' means fewer.">History</th>
     <th title="Latest dividend per share.">Div/sh</th>
     <th title="Cut versus the prior year. He bought AFTER the cut, when the overreaction had already happened.">Cut</th>
-    <th title="Stock compensation as a share of revenue — 'honest management that does not overpay itself', in the one form that is machine-readable.">SBC %</th>
+    <th title="Stock compensation as a share of revenue — 'honest management that does not overpay itself', in the one form that is machine-readable. Blank where revenue is too small a fraction of the balance sheet to be the company's revenue: banks file fee income under that tag and leave net interest income out of it.">SBC %</th>
     <th title="Share count CAGR over 5 years. Negative is buying back.">Dilution</th>
     <th title="Price / tangible book. Needs a market feed.">P/TB</th>
     <th title="Price / NCAV. A net-net is under 0.67. Needs a market feed.">P/NCAV</th>
@@ -127,7 +127,7 @@
       {%- elif r.dividend.cut is none -%}<span class="sc-dim">?</span>
       {%- else -%}<span class="sc-dim">—</span>{%- endif -%}
     </td>
-    <td>{% if r.management.sbc_pct_revenue is not none %}{{ r.management.sbc_pct_revenue }}%{% else %}<span class="sc-dim">—</span>{% endif %}</td>
+    <td title="{% if r.management.revenue_unrepresentative %}Revenue is under 2% of total assets, so it is not what this company earns — the ratio would be arithmetic, not description.{% elif r.management.sbc_pct_assets is not none %}{{ r.management.sbc_pct_assets }}% of total assets.{% endif %}">{% if r.management.sbc_pct_revenue is none %}<span class="sc-dim">—</span>{% elif r.management.sbc_pct_revenue > 999 %}&gt;999%{% else %}{{ r.management.sbc_pct_revenue }}%{% endif %}</td>
     <td>{% if r.management.shares_cagr is not none %}{{ '%+.1f'|format(r.management.shares_cagr) }}%{% else %}<span class="sc-dim">—</span>{% endif %}</td>
     <td>{% if r.p_tangible_book is not none %}{{ r.p_tangible_book }}{% else %}<span class="sc-dim">no feed</span>{% endif %}</td>
     <td>{% if r.p_ncav is not none %}{{ r.p_ncav }}{% else %}<span class="sc-dim">no feed</span>{% endif %}</td>
