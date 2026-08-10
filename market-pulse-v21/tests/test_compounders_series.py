@@ -187,6 +187,69 @@ for bad, label in (({}, "empty facts"),
 thin = facts(us_gaap__Revenues={"USD": [fy(2024, 100), fy(2025, 110)]})
 check(R._annual_series(thin, REV)[0] == {}, "two years is too thin to use")
 
+
+# ── a thin stray unit must not evict the real history ───────────────
+#
+# Run #6 regression: preferring USD outright lost Toyota, Novo Nordisk and
+# SAP outright, and gave Taiwan Semi a P/FCF of 410. A 20-F filer whose
+# history is in its own currency can also carry a couple of years tagged
+# in dollars; taking those either drops the company under the 3-year
+# minimum or keeps a truncated series and divides it by a dollar price.
+thin_usd = facts(us_gaap__Revenues={
+    "JPY": [fy(y, 29e12) for y in range(2015, 2026)],   # 11 real years
+    "USD": [fy(y, 250e9) for y in (2024, 2025)],        # 2 stray years
+})
+s_thin, u_thin = R._annual_series(thin_usd, REV)
+check(u_thin == "JPY",
+      f"an 11-year JPY history beats a 2-year USD stray (got {u_thin!r})")
+check(len(s_thin) == 11, f"and all 11 years survive (got {len(s_thin)})")
+
+# But a genuine USD reporter still gets USD, even when another unit is
+# present with the same depth. The preference is not abandoned, only
+# subordinated to actually having the history.
+real_usd = facts(us_gaap__Revenues={
+    "USD": [fy(y, 250e9) for y in range(2015, 2026)],
+    "EUR": [fy(y, 230e9) for y in range(2015, 2026)],
+})
+check(R._annual_series(real_usd, REV)[1] == "USD",
+      "with equal coverage the wanted unit still wins")
+
+# Within one year counts as equal — a filer who tagged one extra year in
+# a secondary currency is still a USD reporter.
+off_by_one = facts(us_gaap__Revenues={
+    "USD": [fy(y, 250e9) for y in range(2016, 2026)],   # 10
+    "CAD": [fy(y, 330e9) for y in range(2015, 2026)],   # 11
+})
+check(R._annual_series(off_by_one, REV)[1] == "USD",
+      "a one-year shortfall does not flip the reporting currency")
+
+# Two years behind does flip it.
+off_by_two = facts(us_gaap__Revenues={
+    "USD": [fy(y, 250e9) for y in range(2017, 2026)],   # 9
+    "CAD": [fy(y, 330e9) for y in range(2015, 2026)],   # 11
+})
+check(R._annual_series(off_by_two, REV)[1] == "CAD",
+      "a two-year shortfall means USD was not the reporting currency")
+
+# The merge still spans tags within the chosen unit.
+thin_usd_606 = facts(
+    us_gaap__Revenues={"JPY": [fy(y, 29e12) for y in range(2013, 2018)],
+                       "USD": [fy(y, 250e9) for y in (2024, 2025)]},
+    us_gaap__RevenueFromContractWithCustomerExcludingAssessedTax={
+        "JPY": [fy(y, 30e12) for y in range(2018, 2026)]},
+)
+s_both, u_both = R._annual_series(thin_usd_606, REV)
+check(u_both == "JPY" and len(s_both) == 13,
+      f"unit choice and tag merging compose (got {u_both}, {len(s_both)} years)")
+
+# Ties break deterministically when neither unit is the wanted one.
+tie_a = facts(us_gaap__Revenues={"TWD": [fy(y, 1) for y in range(2020, 2026)],
+                                 "CNY": [fy(y, 2) for y in range(2020, 2026)]})
+tie_b = facts(us_gaap__Revenues={"CNY": [fy(y, 2) for y in range(2020, 2026)],
+                                 "TWD": [fy(y, 1) for y in range(2020, 2026)]})
+check(R._annual_series(tie_a, REV)[1] == R._annual_series(tie_b, REV)[1],
+      "equal-length non-preferred units still resolve deterministically")
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

@@ -227,10 +227,15 @@ FRAME_TAGS = [
 
 # ── Finding the foreign filers ───────────────────────────────────────
 #
-# The old code carried a note saying EDGAR's frames API "404s for
-# ifrs-full concepts", and concluded that IFRS filers could never
-# self-discover. That conclusion was right about the symptom and probably
-# wrong about the cause, because the frames URL contains the UNIT:
+# TESTED, AND THE ORIGINAL NOTE WAS RIGHT. The old code said EDGAR's
+# frames API "404s for ifrs-full concepts". The theory below — that this
+# was really a UNIT problem, since the frames URL contains one — was
+# plausible and is WRONG: run #6 swept all 20 currencies and matched zero
+# CIKs. The sweep is kept because it costs ~80 calls, logs what it finds,
+# and will start working the day the SEC indexes the taxonomy. The
+# never-measured fallback below is what actually finds foreign filers.
+#
+# The reasoning, preserved so nobody re-derives it as a new idea:
 #
 #     /api/xbrl/frames/{taxonomy}/{tag}/{UNIT}/CY{year}.json
 #
@@ -240,12 +245,8 @@ FRAME_TAGS = [
 # expect, whether or not the taxonomy is supported. Nobody had tried
 # asking in yen.
 #
-# So we ask per currency. It is cheap — a few dozen calls against ~8,000
-# companyfacts fetches for the alternative — and the per-call counts are
-# logged, so one run settles what a code comment had been asserting
-# without evidence. If it turns out the taxonomy really is unsupported,
-# every call simply returns nothing and the exhaustive fallback below
-# takes over.
+# One run settled it. Every call returned nothing, and the exhaustive
+# fallback took over — which is the branch that now does all the work.
 IFRS_TAGS = ["Revenue", "RevenueFromContractsWithCustomers"]
 IFRS_UNITS = [
     "USD", "EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "CNY", "HKD", "TWD",
@@ -257,7 +258,11 @@ IFRS_UNITS = [
 # not have and will not invent. They are admitted unfiltered and bounded
 # by count instead. There are roughly 900 foreign private issuers filing
 # 20-F with the SEC, so this is a generous ceiling, not a tight one.
-MAX_FOREIGN = 1500
+# Run #6 hit this cap exactly, which means foreign coverage was truncated
+# and the board silently under-represented international names — the thing
+# this whole exercise set out to fix. That run took 27 minutes of a
+# 150-minute budget, so the ceiling was costing coverage for no reason.
+MAX_FOREIGN = 4000
 
 # A BACKSTOP, no longer the mechanism. This list used to BE the entire
 # international universe; discovery now finds foreign filers on its own.
@@ -456,9 +461,6 @@ def _annual_series(facts: dict, slots: list[tuple[str, str]],
        RETURNED so the caller can refuse to mix it with a dollar price.
        Two units are never spliced into one series.
     """
-    # Pass 1: choose the unit ONCE across all slots. Per-slot selection
-    # would let a stray non-USD tag set the currency for the whole series
-    # merely by appearing first.
     available: set[str] = set()
     for taxonomy, tag in slots:
         node = (facts.get(taxonomy) or {}).get(tag)
@@ -466,19 +468,42 @@ def _annual_series(facts: dict, slots: list[tuple[str, str]],
             available |= set((node.get("units") or {}).keys())
     if not available:
         return {}, ""
-    # Deterministic fallback, so a company's currency cannot change
-    # between runs just because the SEC reordered a JSON object.
-    unit = want_unit if want_unit in available else sorted(available)[0]
 
-    # Pass 2: merge every slot that speaks that unit.
-    merged: dict[int, float] = {}
-    for taxonomy, tag in slots:
-        node = (facts.get(taxonomy) or {}).get(tag)
-        if not node:
-            continue
-        for fy, val in _rows_for(node, unit).items():
-            merged.setdefault(fy, val)      # earlier slots win the year
-    return (merged, unit) if len(merged) >= 3 else ({}, unit)
+    # Build the merged series for EVERY unit, then choose. Preferring the
+    # wanted unit outright is not safe: a company whose real history is in
+    # yen can also carry a two-year stray USD tagging, and taking the USD
+    # one loses the company entirely (it falls under the 3-year minimum)
+    # or, worse, keeps a truncated series and divides it by a dollar price.
+    # Run #6 lost Toyota, Novo Nordisk and SAP that way, and gave Taiwan
+    # Semi a P/FCF of 410.
+    #
+    # So: take the wanted unit when it is genuinely the company's
+    # reporting unit — within a year of the best coverage available — and
+    # otherwise take whichever unit actually holds the history.
+    by_unit: dict[str, dict[int, float]] = {}
+    for unit in available:
+        merged: dict[int, float] = {}
+        for taxonomy, tag in slots:
+            node = (facts.get(taxonomy) or {}).get(tag)
+            if not node:
+                continue
+            for fy, val in _rows_for(node, unit).items():
+                merged.setdefault(fy, val)      # earlier slots win the year
+        if merged:
+            by_unit[unit] = merged
+    if not by_unit:
+        return {}, ""
+
+    best = max(len(s) for s in by_unit.values())
+    if want_unit in by_unit and len(by_unit[want_unit]) >= best - 1:
+        unit = want_unit
+    else:
+        # Most history wins; ties break toward the wanted unit and then
+        # alphabetically, so the answer cannot change between runs because
+        # the SEC reordered a JSON object.
+        unit = sorted(by_unit, key=lambda u: (-len(by_unit[u]), u != want_unit, u))[0]
+    series = by_unit[unit]
+    return (series, unit) if len(series) >= 3 else ({}, unit)
 
 
 def _cagr(series: dict[int, float], years: int) -> float | None:
@@ -740,6 +765,7 @@ def main() -> int:
         if origin["ifrs"] < 50:
             budget = MAX_FOREIGN - origin["ifrs"]
             unmeasured = sorted(c for c in tickers if c not in seen_in_frames and c not in have)
+            origin["unmeasured_pool"] = len(unmeasured)
             print(f"[compounders] IFRS frames yielded little; scanning "
                   f"{min(len(unmeasured), budget)} of {len(unmeasured)} "
                   f"never-measured exchange-listed CIKs")
