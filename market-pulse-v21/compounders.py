@@ -57,6 +57,42 @@ CYCLE_LOW = 35
 GROWTH_HAIRCUT = 0.70          # trailing growth fades; don't pay full freight
 MULT_DRIFT_CAP = 3.0           # valuation drift capped at ±3%/yr over 10y
 
+# ── The dividend term ────────────────────────────────────────────────
+#
+# Every other term here is bounded, because a trailing figure is not a
+# forecast: growth is haircut and clamped to 14, buybacks to ±4, drift to
+# ±3. The dividend went in RAW — and it is the one input that grows as the
+# market loses confidence, because it divides last year's payout by a
+# collapsed price. It was also the only term with no upper bound at all.
+#
+# What that produced, on the live board:
+#
+#     SDEV  Stablecoin Development   E[r] 400.2   D = 388.4
+#     AD    Array Digital Infra      E[r] 121.1   D = 125.6
+#     VISN  Vistance Networks        E[r]  84.0   D =  91.4
+#     SSTK  Shutterstock             E[r]  35.4   D =  23.1
+#
+# A 388% dividend yield is a special distribution, a data error, or a
+# company liquidating itself. It is not a forecast of a 388% annual
+# return, and the model read it as one.
+#
+# TWO INDEPENDENT TESTS, because they fail for different reasons.
+#
+#   COVERAGE — is the cash there? Payout against free cash flow falls out
+#   of what is already stored: yield x P/FCF. Above 100%, the dividend is
+#   being funded from the balance sheet, and the most it can be worth is
+#   the cash the business actually generates — so it is capped at the FCF
+#   yield.
+#
+#   LEVEL — even a covered yield this high is the market pricing a cut.
+#   The base rate of a double-digit yield surviving is poor, and a model
+#   should not silently out-forecast the market on the strength of one
+#   trailing number. This is a PRIOR, not a measurement, which is why it
+#   sits here with the other tunables and is shown on every row it
+#   touches rather than applied quietly.
+DIV_YIELD_CAP = 8.0
+DIV_PAYOUT_MAX = 100.0         # % of free cash flow
+
 
 def _load() -> dict:
     """data/compounders.json if present and well-formed, else {}."""
@@ -116,8 +152,10 @@ def _blend_growth(r5, r10):
     return sum(vals) / len(vals)
 
 
-def score() -> list[dict]:
-    data = _load()
+def score(data: dict | None = None) -> list[dict]:
+    """Score every company. `data` is injectable so the maths can be
+    tested without a 2MB fixture on disk."""
+    data = _load() if data is None else data
     rows = []
     for ticker, m in (data.get("tickers") or {}).items():
         if not isinstance(m, dict):
@@ -149,7 +187,6 @@ def score() -> list[dict]:
         b = 0.0
         if m.get("shares_cagr5") is not None:
             b = max(-3.0, min(4.0, -m["shares_cagr5"]))
-        d_yield = m.get("div_yield") or 0.0
         mult = None
         rich = False
         pf_now, pf_med = m.get("pfcf_now"), m.get("pfcf_med")
@@ -159,6 +196,27 @@ def score() -> list[dict]:
             rich = mult <= -2.0
         elif m.get("fcf_last") is not None and m["fcf_last"] <= 0:
             mult = -2.0    # negative FCF today: pay a drift penalty + flag
+
+        # ── Dividend: bounded like every other term ──
+        d_raw = m.get("div_yield") or 0.0
+        d_yield, payout, d_note = d_raw, None, None
+        if d_raw > 0 and pf_now and pf_now > 0:
+            # yield% x P/FCF = dividends as a percentage of free cash flow.
+            payout = round(d_raw * pf_now, 1)
+            if payout > DIV_PAYOUT_MAX:
+                funded = 100.0 / pf_now          # the FCF yield
+                if funded < d_yield:
+                    d_yield = funded
+                    d_note = (f"pays {payout:.0f}% of free cash flow — the part "
+                              f"beyond {funded:.1f}% comes off the balance sheet, "
+                              f"not out of the business")
+        if d_yield > DIV_YIELD_CAP:
+            d_note = (f"{d_raw:.1f}% trailing yield counted as {DIV_YIELD_CAP:.0f}% — "
+                      f"at that level the market is pricing a cut, and a trailing "
+                      f"payout over a fallen price is not a forecast")
+            d_yield = DIV_YIELD_CAP
+        if d_note:
+            badges.append({"key": "divcap", "label": "div capped", "title": d_note})
 
         expected = None
         if g is not None:
@@ -203,6 +261,9 @@ def score() -> list[dict]:
             "er_growth": round(g, 1) if g is not None else None,
             "er_buyback": round(b, 1),
             "er_div": round(d_yield, 1),
+            "div_yield_raw": round(d_raw, 2),
+            "div_payout_fcf": payout,
+            "div_capped": d_note is not None,
             "er_mult": round(mult, 1) if mult is not None else 0.0,
             "expected": expected,
             "gates": gates,
