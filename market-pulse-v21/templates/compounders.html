@@ -36,6 +36,9 @@
   .cp-table td.yrs-short { color: var(--ink-3); }
   .cp-badge.short { background: var(--surface-2); color: var(--ink-3); }
   .cp-badge.pfcfodd { background: rgba(217,119,6,0.15); color: #b45309; }
+  .cp-badge.nocapex, .cp-badge.origin, .cp-badge.domicile, .cp-badge.capexppe {
+    background: var(--surface-2); color: var(--ink-3); border-color: var(--line); }
+  .cp-table td.loc-unknown { color: var(--ink-3); font-style: italic; }
   .cp-table td.nm-cell, .cp-table td.ind-cell {
     max-width: 15rem; overflow: hidden; text-overflow: ellipsis; }
   .cp-table td.ind-cell { max-width: 11rem; }
@@ -133,7 +136,7 @@
         + net buyback yield + dividend yield + valuation drift (P/FCF reverting to its own 10-yr median over 10 yrs, capped ±3%/yr).</li>
     <li><strong>Gates:</strong> 10-yr median ROIC ≥ {{ roic_min|int }}% · revenue up ≥ 60% of years and CAGR ≥ 4% ·
         profits positive ≥ 8/10 yrs · ΣFCF/Σnet-income ≥ 70% (cash-is-real fraud guard) · net debt/EBIT ≤ 3× ·
-        capex/OCF ≤ 40% · investable jurisdiction. Financials excluded (different math). Moat isn't a column —
+        reinvestment (capex + capitalised intangibles) ≤ 40% of operating cash flow · investable jurisdiction. Financials excluded (different math). Moat isn't a column —
         a decade of high ROIC + stable margins <em>is</em> the measurable fingerprint of one.</li>
     <li><strong>Cyclicals</strong> are marked by margin volatility; status uses their own margin percentile — peak = wait, trough + gates = opportunity.</li>
     <li><strong>What it can't see:</strong> management quality, insider ownership (no clean free feed), disruption risk,
@@ -152,7 +155,7 @@
     <thead><tr>
       <th data-col="t">Ticker<span class="arrow"></span></th>
       <th data-col="n">Name<span class="arrow"></span></th>
-      <th data-col="c" title="SEC business-address state or country — a US state code for domestic filers, not a domicile field">Location<span class="arrow"></span></th>
+      <th data-col="c" title="Where the filer is. A US state code for domestic filers. For a 20-F/40-F foreign private issuer EDGAR often leaves the country blank — that used to print as &quot;United States&quot;; it now falls back to incorporation, or says &quot;Foreign filer&quot; rather than assert a contradiction.">Location<span class="arrow"></span></th>
       <th data-col="i">Industry<span class="arrow"></span></th>
       <th data-col="er" data-numeric="1" title="Expected 10-yr CAGR = G + B + D + M">E[r]<span class="arrow"></span></th>
       <th data-col="g" data-numeric="1" title="Growth term (haircut trailing revenue CAGR + margin trend)">G<span class="arrow"></span></th>
@@ -173,7 +176,8 @@
       <tr>
         <td class="tick" data-sort="{{ r.ticker }}">{{ r.ticker }}</td>
         <td class="nm-cell" data-sort="{{ r.name }}" title="{{ r.name }}">{{ r.name }}{% for b in r.badges %}<span class="cp-badge {{ b.key }}" title="{{ b.title }}">{{ b.label }}</span>{% endfor %}</td>
-        <td data-sort="{{ r.country }}">{{ r.country }}</td>
+        <td data-sort="{{ r.location }}" class="{% if not r.location_known %}loc-unknown{% endif %}"
+            title="{% if r.location_basis == 'incorporation' %}From state of incorporation — EDGAR gave no business-address country.{% elif r.location_basis == 'form' %}Files 20-F/40-F, so not a US domestic issuer, but EDGAR gave neither a country nor an incorporation.{% endif %}">{{ r.location or '—' }}</td>
         <td class="ind-cell" data-sort="{{ r.industry or '' }}" title="{{ r.industry or '' }}">{{ (r.industry or '—')[:26] }}</td>
         <td data-sort="{{ r.expected if r.expected is not none else -99 }}"><span class="cp-er {% if r.expected is not none and r.expected >= target %}hot{% endif %}">{{ r.expected if r.expected is not none else '—' }}</span></td>
         <td data-sort="{{ r.er_growth if r.er_growth is not none else -99 }}">{{ r.er_growth if r.er_growth is not none else '—' }}</td>
@@ -186,7 +190,8 @@
             title="15y fit {{ r.rev_trend if r.rev_trend is not none else '—' }} · 10y {{ r.rev_cagr10 if r.rev_cagr10 is not none else '—' }} · 5y {{ r.rev_cagr5 if r.rev_cagr5 is not none else '—' }}">{% if r.rev_trend is not none %}{{ r.rev_trend }}%{% elif r.rev_cagr10 is not none %}{{ r.rev_cagr10 }}%{% else %}—{% endif %}</td>
         <td data-sort="{{ r.fcf_conv if r.fcf_conv is not none else -99 }}">{% if r.fcf_conv is not none %}{{ r.fcf_conv|int }}%{% else %}—{% endif %}</td>
         <td data-sort="{{ r.nd_ebit if r.nd_ebit is not none else 99 }}">{% if r.nd_ebit is not none %}{{ r.nd_ebit }}×{% else %}—{% endif %}</td>
-        <td data-sort="{{ r.capex_ocf if r.capex_ocf is not none else 99 }}">{% if r.capex_ocf is not none %}{{ r.capex_ocf|int }}%{% else %}—{% endif %}</td>
+        <td data-sort="{{ r.reinvest if r.reinvest is not none else 999 }}"
+            title="{% if r.reinvest is none %}No capex figure filed in at least three of the last five years — reinvestment could not be measured.{% elif r.reinvest_ocf is not none %}Total reinvestment: PP&amp;E plus capitalised software, content and spectrum.{% else %}PP&amp;E only — capitalised intangibles are not in this figure.{% endif %}">{% if r.reinvest is not none %}{{ r.reinvest|int }}%{% else %}<span class="cp-dim">unfiled</span>{% endif %}</td>
         <td data-sort="{{ r.pfcf_now if r.pfcf_now else 999 }}">{% if r.pfcf_now %}{{ r.pfcf_now }}<span class="cp-dim">/{{ r.pfcf_med or '—' }}</span>{% elif r.currency and r.currency != 'USD' %}<span class="cp-fx" title="This company files in {{ r.currency }}. P/FCF would divide {{ r.currency }} cash flow by a USD ADR price, so it is withheld rather than computed. Growth, margins, ROIC and conversion are ratios within one currency and remain valid.">{{ r.currency }}</span>{% else %}—{% endif %}</td>
         <td data-sort="{{ r.status }}"><span class="st-pill st-{{ r.status }}" title="{% if not r.gates_pass %}Failed gates: {% for k, ok in r.gates.items() %}{% if not ok %}{{ k }} {% endif %}{% endfor %}{% else %}All quality gates pass.{% endif %}">{{ r.status }}</span></td>
       </tr>

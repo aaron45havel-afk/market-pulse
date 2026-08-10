@@ -182,10 +182,32 @@ TAGS: dict[str, list[tuple[str, str]]] = {
         ("us-gaap", "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations"),
         ("ifrs-full", "CashFlowsFromUsedInOperatingActivities"),
     ],
+    # WIDENED after 162 rows came out at exactly 0.0% capex/OCF. The
+    # generic PP&E tag is not what oil, mining, telecom and utility filers
+    # use, and IFRS filers use a different element again. Missing capex is
+    # now an honest None rather than a zero (see compute_metrics), so a tag
+    # this list still fails to catch produces a GATED row and a badge
+    # instead of a company that looks capital-light.
     "capex": [
         ("us-gaap", "PaymentsToAcquirePropertyPlantAndEquipment"),
         ("us-gaap", "PaymentsToAcquireProductiveAssets"),
+        ("us-gaap", "PaymentsForCapitalImprovements"),
+        ("us-gaap", "PaymentsToAcquireOilAndGasProperty"),
+        ("us-gaap", "PaymentsToExploreAndDevelopOilAndGasProperties"),
+        ("us-gaap", "PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets"),
         ("ifrs-full", "PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities"),
+        ("ifrs-full", "PaymentsToAcquirePropertyPlantAndEquipment"),
+        ("ifrs-full", "AcquisitionOfPropertyPlantAndEquipment"),
+    ],
+    # Capitalised software, content and spectrum. Real reinvestment that
+    # never touches the PP&E line — Comcast pays ~$2.8bn a year here on top
+    # of $12.5bn of capex, so PP&E alone understates what it costs that
+    # business to stand still. Added to capex, never substituted for it.
+    "capex_intangible": [
+        ("us-gaap", "PaymentsToAcquireIntangibleAssets"),
+        ("us-gaap", "PaymentsToDevelopSoftware"),
+        ("us-gaap", "PaymentsToAcquireSoftware"),
+        ("ifrs-full", "PurchaseOfIntangibleAssetsClassifiedAsInvestingActivities"),
     ],
     "shares_diluted": [
         ("us-gaap", "WeightedAverageNumberOfDilutedSharesOutstanding"),
@@ -396,18 +418,70 @@ def ticker_map() -> dict[int, dict]:
     return out
 
 
+# EDGAR's stateOrCountry CODES for non-US locations. The DESCRIPTION field
+# alongside them is blank for about half of foreign private issuers, which
+# is what produced 160 Chinese, Japanese, Taiwanese and Indian companies
+# printed as "United States". The code is populated far more reliably, so
+# it is read as the fallback. US state codes are deliberately absent: a
+# two-letter state is already what the description carries for domestic
+# filers, and the Location column shows it as-is.
+EDGAR_COUNTRY_CODES = {
+    "B0": "Canada", "A0": "Alberta, Canada", "A1": "British Columbia, Canada",
+    "A2": "Manitoba, Canada", "A3": "New Brunswick, Canada",
+    "A4": "Newfoundland, Canada", "A5": "Nova Scotia, Canada",
+    "A6": "Ontario, Canada", "A7": "Prince Edward Island, Canada",
+    "A8": "Quebec, Canada", "A9": "Saskatchewan, Canada",
+    "C3": "Australia", "C5": "Bahamas", "D0": "Belgium", "D5": "British Virgin Islands",
+    "D8": "Bermuda", "D6": "Brazil", "F4": "China", "G0": "Cyprus",
+    "G7": "Denmark", "H6": "Finland", "I0": "France", "2M": "Germany",
+    "L2": "Hong Kong", "K7": "India", "L6": "Indonesia", "L8": "Ireland",
+    "L3": "Israel", "L6I": "Italy", "M0": "Japan", "M5": "Jersey",
+    "M4": "Kazakhstan", "M8": "Korea, Republic of", "N0": "Luxembourg",
+    "N5": "Malaysia", "O5": "Mexico", "P7": "Netherlands", "Q2": "New Zealand",
+    "Q8": "Norway", "R0": "Panama", "R6": "Philippines", "R8": "Poland",
+    "S1": "Singapore", "T3": "South Africa", "U3": "Spain", "V7": "Sweden",
+    "V8": "Switzerland", "F5": "Taiwan", "W1": "Thailand", "X0": "United Kingdom",
+    "X2": "Cayman Islands", "Y6": "Bermuda", "Y7": "Marshall Islands",
+    "1C": "Greece", "1E": "Guernsey", "1F": "Isle of Man", "K3": "Iceland",
+}
+
+
 def fetch_profile(cik: int) -> dict:
-    """SIC code + HQ country from the submissions API."""
+    """SIC code + HQ location from the submissions API.
+
+    NEVER MANUFACTURES A COUNTRY. The previous version ended in
+    `country or "United States"`, and EDGAR leaves the business-address
+    country description blank for roughly half of foreign private issuers
+    — so that fallback printed Alibaba, Baidu, NetEase, Weibo, PDD, TSMC,
+    Sony and Infosys as US companies. 160 of 339 20-F/40-F filers on the
+    last board. It also suppressed the China, Taiwan and sanctions badges
+    for exactly those rows, because the badge logic reads the country
+    field that had just been overwritten.
+
+    Four sources, best first, and an empty string when none of them
+    answers. Downstream decides what to show for unknown; this function's
+    only job is to avoid inventing a fact.
+    """
     url = f"https://data.sec.gov/submissions/CIK{cik:010d}.json"
     try:
         s = _get(url)
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, ValueError):
         return {}
-    addr = (s.get("addresses") or {}).get("business") or {}
+    addrs = s.get("addresses") or {}
+    biz = addrs.get("business") or {}
+    mail = addrs.get("mailing") or {}
     # NOTE: this is a business ADDRESS, so US filers report a state name
     # here, not a country. The page labels the column "Location" for that
     # reason — 804 of 901 rows read "TX"/"CA"/"NY" when it said "Country".
-    country = (addr.get("stateOrCountryDescription") or "").strip()
+    country = (biz.get("stateOrCountryDescription") or "").strip()
+    if not country:
+        country = (mail.get("stateOrCountryDescription") or "").strip()
+    if not country:
+        for src in (biz, mail):
+            code = (src.get("stateOrCountry") or "").strip().upper()
+            if code in EDGAR_COUNTRY_CODES:
+                country = EDGAR_COUNTRY_CODES[code]
+                break
     try:
         sic = int(s.get("sic") or 0) or None
     except (TypeError, ValueError):
@@ -419,7 +493,7 @@ def fetch_profile(cik: int) -> dict:
     forms = ((s.get("filings") or {}).get("recent") or {}).get("form") or []
     foreign = any(f.split("/")[0] in ("20-F", "40-F", "6-K", "40-FR") for f in forms)
     return {"sic": sic, "sic_desc": s.get("sicDescription") or "",
-            "country_desc": country or "United States",
+            "country_desc": country,
             "incorporation": (s.get("stateOfIncorporationDescription") or "").strip(),
             "foreign_filer": foreign}
 
@@ -684,6 +758,7 @@ def compute_metrics(facts: dict) -> dict | None:
     last = years[-1]
 
     op, gp, capex = s["op_income"], s["gross_profit"], s["capex"]
+    capex_int = s["capex_intangible"]
     shares, cash, equity = s["shares_diluted"], s["cash"], s["equity"]
     lt, st = s["lt_debt"], s["st_debt"]
 
@@ -703,17 +778,44 @@ def compute_metrics(facts: dict) -> dict | None:
             roics.append(op[y] * 0.77 / invested * 100)
     roic_med = round(statistics.median(roics), 1) if len(roics) >= 5 else None
 
-    # FCF series + conversion vs net income (the cash-is-real gate).
-    fcf = {y: ocf[y] - capex.get(y, 0.0) for y in ocf}
-    yrs_win = [y for y in sorted(fcf) if y > last - LOOKBACK]
-    sum_fcf = sum(fcf[y] for y in yrs_win)
-    sum_ni = sum(ni[y] for y in yrs_win if y in ni)
+    # ── Reinvestment: a year with no capex tag is NOT a year with no capex
+    #
+    # `capex.get(y, 0.0)` read an untagged year as a zero-capex year, and
+    # 162 of 1,958 rows came out at exactly 0.0% capex/OCF — Shell, BP,
+    # TotalEnergies, Verizon, Rio Tinto, Petrobras, ArcelorMittal and
+    # Toyota among them. The most capital-hungry businesses on earth
+    # scoring as the most capital-light, and passing the capex gate on it.
+    #
+    # It corrupted the cash gate too, because FCF was OCF minus that zero:
+    # BP's free-cash-flow conversion read 1,322%, KT's 553%, Shell's 294%.
+    # Two of the six quality gates were not merely wrong but inverted.
+    #
+    # Both now require the year to carry BOTH figures. A company whose
+    # capex we cannot find scores None and is GATED with a badge saying
+    # why — it is not deleted, and it is not waved through either.
+    #
+    # Intangible capex is additive and treated as zero when absent, which
+    # is the opposite convention on purpose: most companies genuinely
+    # capitalise nothing, and the asymmetry is safe because it can only
+    # ever make the ratio LARGER and the gate stricter.
+    both = [y for y in sorted(ocf) if y in capex]
+    reinvest = {y: capex[y] + capex_int.get(y, 0.0) for y in both}
+
+    yrs_win = [y for y in both if y > last - LOOKBACK]
+    fcf = {y: ocf[y] - reinvest[y] for y in both}
+    ni_win = [y for y in yrs_win if y in ni]
+    sum_fcf = sum(fcf[y] for y in ni_win)
+    sum_ni = sum(ni[y] for y in ni_win)
     fcf_conv = round(sum_fcf / sum_ni * 100, 1) if sum_ni > 0 else None
 
-    capex_ratio = None
-    cap5 = [(capex.get(y, 0.0), ocf[y]) for y in sorted(ocf)[-5:] if ocf[y] > 0]
-    if cap5:
-        capex_ratio = round(sum(c for c, _ in cap5) / sum(o for _, o in cap5) * 100, 1)
+    # Three of the last five years must actually report capex. One gap is
+    # a filing quirk; four gaps means we are not measuring the company.
+    capex_ratio = reinvest_ratio = None
+    win5 = [y for y in both[-5:] if ocf[y] > 0]
+    if len(win5) >= 3:
+        o = sum(ocf[y] for y in win5)
+        capex_ratio = round(sum(capex[y] for y in win5) / o * 100, 1)
+        reinvest_ratio = round(sum(reinvest[y] for y in win5) / o * 100, 1)
 
     # Net debt / EBIT (proxy for leverage capacity).
     nd_ebit = None
@@ -771,6 +873,7 @@ def compute_metrics(facts: dict) -> dict | None:
         "roic_med": roic_med,
         "fcf_conv": fcf_conv,
         "capex_ocf": capex_ratio,
+        "reinvest_ocf": reinvest_ratio,
         "nd_ebit": nd_ebit,
         "shares_cagr5": shares_cagr5,
         "gross_margin": round(statistics.median([gp_m[y] for y in sorted(gp_m)[-5:]]), 1) if len(gp_m) >= 3 else None,

@@ -138,22 +138,113 @@ def data_source_label() -> str:
 
 
 # ── Country handling ─────────────────────────────────────────────────
-# EDGAR gives a free-text HQ country description. Everything not listed
-# is treated as investable with no badge (the US default).
+# EDGAR gives a free-text HQ country description, and for roughly half of
+# foreign private issuers it gives nothing at all.
 
 _CN = {"china", "hong kong"}
 _TW = {"taiwan"}
 _EXCLUDED = {"russia", "russian federation", "belarus"}
 _FX_WARN = {"turkey", "türkiye", "argentina", "egypt", "nigeria", "pakistan"}
 
+# Places companies are registered but do not operate. Reading one of these
+# as the country would put Alibaba in the Caribbean. They are reported as
+# what they are — a domicile — and the operating country stays unknown.
+_OFFSHORE = {
+    "cayman islands", "british virgin islands", "virgin islands, british",
+    "bermuda", "marshall islands", "jersey", "guernsey", "isle of man",
+    "bahamas", "panama", "curacao", "netherlands antilles", "gibraltar",
+}
 
-def _country_assess(desc: str | None) -> tuple[bool, list[dict]]:
-    """(investable, badges) from the EDGAR country description."""
-    d = (desc or "united states").strip().lower()
+_US_LITERAL = "united states"
+
+# EDGAR gives domestic filers a two-letter state. A 20-F/40-F filer that
+# shows one is showing its US agent's office, not where it is: Shell came
+# through as "DC". Canadian provinces arrive as "Ontario, Canada" and are
+# longer than two characters, so they never collide with this.
+_US_STATES = frozenset(
+    "AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI "
+    "MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT "
+    "VA WA WV WI WY PR VI GU AS MP".split())
+
+
+def resolve_location(country: str | None = None, incorporation: str | None = None,
+                     foreign: bool = False) -> dict:
+    """What the Location column should say, and whether we actually know it.
+
+    THE BUG THIS REPLACES. The build wrote the literal "United States"
+    whenever EDGAR's business-address country description came back empty,
+    which it does for about half of foreign private issuers. On the last
+    board that was 160 of 339 20-F/40-F filers — Alibaba, Baidu, NetEase,
+    Weibo, PDD, TSMC, Sony and Infosys among them — printed as US
+    companies. The screen looked like it had no international coverage
+    when 17% of it was international, and worse, the China badge fired on
+    15 rows instead of the forty-odd that warrant one, because the badge
+    reads the country field that had just been overwritten.
+
+    A company filing 20-F or 40-F is BY DEFINITION not a US domestic
+    issuer. "Foreign filer, United States" is self-contradictory, so it is
+    treated here as the absence of an answer rather than as an answer —
+    the same rule the rest of the app runs on.
+
+    Returns {label, known, basis, domicile_only}.
+    """
+    c = (country or "").strip()
+    inc = (incorporation or "").strip()
+
+    # Self-contradictory: discard rather than trust. Covers both the
+    # manufactured "United States" and the US agent's office that Shell,
+    # AerCap and Allegion all show — Shell arrives with the address
+    # "United States" AND the incorporation "DC", so both fields need it.
+    if foreign:
+        if c.lower() == _US_LITERAL or c.upper() in _US_STATES:
+            c = ""
+        if inc.lower() == _US_LITERAL or inc.upper() in _US_STATES:
+            inc = ""
+    if c:
+        return {"label": c, "known": True, "basis": "address",
+                "domicile_only": False}
+    if inc:
+        off = inc.lower() in _OFFSHORE
+        return {"label": inc, "known": not off, "basis": "incorporation",
+                "domicile_only": off}
+    if foreign:
+        return {"label": "Foreign filer", "known": False, "basis": "form",
+                "domicile_only": False}
+    return {"label": "", "known": False, "basis": None, "domicile_only": False}
+
+
+def _country_assess(desc: str | None, known: bool = True,
+                    domicile_only: bool = False) -> tuple[bool, list[dict]]:
+    """(investable, badges) from the resolved location.
+
+    An unknown origin no longer defaults to the United States. That
+    default did not merely mislabel a column — it silently cleared the
+    sanctions check and suppressed the China and Taiwan warnings for every
+    company whose country we failed to read, which is precisely the
+    population those warnings exist for.
+
+    Unknown stays investable, because a company we could not place is not
+    a company we have grounds to reject, but it is badged so the reader
+    knows the jurisdiction screen did not run rather than assuming it
+    passed.
+    """
+    d = (desc or "").strip().lower()
     badges = []
     if any(k in d for k in _EXCLUDED):
         return False, [{"key": "excluded", "label": "uninvestable",
                         "title": "Sanctioned / expropriation-tier jurisdiction — excluded regardless of quality."}]
+    if domicile_only:
+        badges.append({"key": "domicile", "label": "domicile only", "title":
+                       f"Registered in {desc}, which is a domicile and not an operating "
+                       "location. The country the business actually runs in is not "
+                       "established, so the China/Taiwan/FX checks could not be applied. "
+                       "Offshore registration is itself the signature of a VIE or "
+                       "similar structure — read the 20-F before sizing."})
+    elif not known:
+        badges.append({"key": "origin", "label": "origin unverified", "title":
+                       "EDGAR gave no usable country for this filer, so the jurisdiction "
+                       "screen (sanctions, China/HK, Taiwan, FX) did not run. Not a "
+                       "finding against the company — a gap in what we could read."})
     if any(k in d for k in _CN):
         badges.append({"key": "cn", "label": "⚠ China", "title":
                        "China/HK risk: VIE structures, audit-verification limits, delisting and policy risk. "
@@ -193,9 +284,30 @@ def score(data: dict | None = None) -> list[dict]:
     for ticker, m in (data.get("tickers") or {}).items():
         if not isinstance(m, dict):
             continue
-        investable, badges = _country_assess(m.get("country"))
+        loc = resolve_location(m.get("country"), m.get("incorporation"),
+                               bool(m.get("foreign")))
+        investable, badges = _country_assess(loc["label"], loc["known"],
+                                             loc["domicile_only"])
 
         # ── Gates ──
+        # TOTAL reinvestment, not just PP&E. Comcast spends ~$2.8bn a year
+        # on capitalised intangibles on top of $12.5bn of capex; reading
+        # the PP&E line alone understates what a cable, media or software
+        # business must spend to stand still. `reinvest_ocf` is absent from
+        # boards built before this landed, so capex/OCF remains the
+        # fallback — the gate then measures less, and says so in a badge
+        # rather than pretending the two are the same number.
+        reinvest = m.get("reinvest_ocf")
+        if reinvest is None:
+            reinvest = m.get("capex_ocf")
+        # EXACTLY ZERO IS NOT A MEASUREMENT. No operating company spends
+        # literally nothing on plant across five consecutive years, and
+        # 162 rows on the last board did — the signature of the build
+        # reading an untagged capex year as a zero-capex year. The build is
+        # fixed, but boards written before that carry the zeros, so they
+        # are refused here too rather than clearing the gate at 0%.
+        if reinvest is not None and reinvest <= 0.0:
+            reinvest = None
         growth = _blend_growth(m.get("rev_cagr5"), m.get("rev_cagr10"),
                                m.get("rev_trend"))
         up, tot = m.get("rev_up_years") or 0, m.get("rev_up_total") or 0
@@ -206,7 +318,7 @@ def score(data: dict | None = None) -> list[dict]:
             "profit": (m.get("ni_pos_years") or 0) >= NI_POS_MIN,
             "cash":   m.get("fcf_conv") is not None and m["fcf_conv"] >= FCF_CONV_MIN,
             "debt":   m.get("nd_ebit") is not None and m["nd_ebit"] <= ND_EBIT_MAX,
-            "capex":  m.get("capex_ocf") is not None and m["capex_ocf"] <= CAPEX_OCF_MAX,
+            "capex":  reinvest is not None and reinvest <= CAPEX_OCF_MAX,
             "country": investable,
         }
         gates_pass = all(gates.values())
@@ -281,6 +393,29 @@ def score(data: dict | None = None) -> list[dict]:
             badges.append({"key": "rich", "label": "rich", "title":
                            "Trading well above its own 10-yr median P/FCF — the valuation-drift term is eating your return."})
 
+        # ── Reinvestment we could not measure ──
+        # 162 rows on the last board reported capex/OCF as exactly 0.0% —
+        # Shell, BP, Verizon, Rio Tinto, Toyota — because an untagged capex
+        # year was being read as a zero-capex year. They now score None and
+        # fail this gate, which is the honest answer, but a row that says
+        # nothing about why looks identical to a company that genuinely
+        # flunked on heavy spending. This badge is the difference.
+        if reinvest is None:
+            badges.append({"key": "nocapex", "label": "capex unfiled", "title":
+                           "No capital-expenditure figure could be found in at least three "
+                           "of the last five years, so reinvestment — and therefore free "
+                           "cash flow — could not be measured. The company is GATED "
+                           "because we could not verify it, not because it failed. "
+                           "Common for IFRS filers and extractive industries, whose cash "
+                           "flow statements use tags this build may not yet read."})
+        elif m.get("reinvest_ocf") is None:
+            badges.append({"key": "capexppe", "label": "PP&E only", "title":
+                           "Reinvestment here counts property, plant and equipment only. "
+                           "Capitalised software, content and spectrum are real spending "
+                           "that never touches that line, so for media, cable and software "
+                           "businesses this figure is a floor. Rebuild the board to include "
+                           "it."})
+
         # ── Evidence length ──
         yrs = m.get("years") or 0
         proven = yrs >= LONG_HISTORY_YEARS
@@ -311,11 +446,17 @@ def score(data: dict | None = None) -> list[dict]:
             "ticker": ticker, **{k: m.get(k) for k in (
                 "name", "country", "industry", "exchange", "fy_last", "years",
                 "revenue_last", "rev_cagr5", "rev_cagr10", "roic_med",
-                "fcf_conv", "nd_ebit", "capex_ocf", "shares_cagr5",
+                "fcf_conv", "nd_ebit", "capex_ocf", "reinvest_ocf", "shares_cagr5",
                 "gross_margin", "op_margin_now", "op_margin_med",
                 "cycle_pos", "cyclical", "div_yield", "div_cagr5",
                 "pfcf_now", "pfcf_med", "price", "rev_cagr15", "rev_trend",
                 "currency", "foreign")},
+            # `country` above is the RAW build value, kept so a regression
+            # is still diagnosable. `location` is what the page prints.
+            "location": loc["label"],
+            "location_known": loc["known"],
+            "location_basis": loc["basis"],
+            "reinvest": reinvest,
             "growth_blend": round(growth, 1) if growth is not None else None,
             "er_growth": round(g, 1) if g is not None else None,
             "er_buyback": round(b, 1),
