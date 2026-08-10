@@ -73,7 +73,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 
@@ -219,6 +219,11 @@ TAGS: dict[str, list[tuple[str, str]]] = {
 }
 
 ANNUAL_FORMS = {"10-K", "10-K/A", "20-F", "20-F/A", "40-F", "40-F/A"}
+
+# A real annual period, in days. 52/53-week retail years run 357-371;
+# transition periods and the odd long year stretch further. Anything
+# outside this is a quarter, a half, or a stub — not a year.
+ANNUAL_DAYS = (330, 400)
 
 
 def _get(url: str, timeout: int = 60, headers: dict | None = None) -> dict:
@@ -433,12 +438,34 @@ def _rows_for(node: dict, unit: str) -> dict[int, float]:
         fy, val = v.get("fy"), v.get("val")
         if fy is None or not isinstance(val, (int, float)):
             continue
-        # Durational facts must span ~a year; instants have no start.
-        # Guard quarter-length values sneaking in as FY.
+        # MEASURE THE PERIOD, DO NOT PATTERN-MATCH THE DATES.
+        #
+        # The previous guard read: same calendar year AND does not end in
+        # December AND spans under nine months. The middle clause was
+        # meant to protect calendar-year annuals and instead whitelisted
+        # every period ENDING in December — so Q4 (Oct-Dec) and H2
+        # (Jul-Dec) walked straight in, and `series[fy] = val` let
+        # whichever appeared last in the JSON overwrite the real figure.
+        #
+        # It survived because it only bites the OLDEST year in a window,
+        # which is exactly the year a CAGR divides by. Mastercard's
+        # ten-year revenue CAGR read 31.67% against a true ~11%: the 2015
+        # base was $2.09bn, a quarter, not the $9.7bn year. IDEXX, Pool
+        # and Group 1 were the same shape — implied bases of 37%, 31% and
+        # 47% of a year.
+        #
+        # `fp` cannot help: companyfacts reports the fiscal period of the
+        # FILING, so every fact in a 10-K carries FY whatever span it
+        # actually covers. The duration is the only real signal, so
+        # measure it.
         start, end = v.get("start"), v.get("end")
-        if start and end and (int(end[:4]) - int(start[:4])) == 0 \
-                and end[5:7] != "12" and (int(end[5:7]) - int(start[5:7])) < 9:
-            continue
+        if start and end:
+            try:
+                span = (date.fromisoformat(end) - date.fromisoformat(start)).days
+            except ValueError:
+                continue                    # unparseable dates are not evidence
+            if not (ANNUAL_DAYS[0] <= span <= ANNUAL_DAYS[1]):
+                continue
         series[int(fy)] = float(val)
     return series
 

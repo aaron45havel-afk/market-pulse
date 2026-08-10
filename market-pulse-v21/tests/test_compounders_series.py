@@ -365,6 +365,74 @@ decl = {y: 100.0 * (0.95 ** (y - 2011)) for y in range(2011, 2026)}
 check(abs(R._trend_growth(decl) + 5.0) < 0.05,
       f"a shrinking business fits negative (got {R._trend_growth(decl)})")
 
+
+# ── a quarter is not a year, even when it ends in December ──────────
+#
+# The old guard read: same calendar year AND does not end in December AND
+# spans under nine months. That middle clause whitelisted every period
+# ENDING in December, so Q4 and H2 walked in and overwrote the real annual
+# figure. It only bit the OLDEST year in a window — which is exactly the
+# year a CAGR divides by — so it hid for as long as the screen existed:
+#
+#     MA    ten-year revenue CAGR 31.67% against a true ~11%
+#           implied 2015 base $2.09bn = one quarter, not the $9.7bn year
+#     IDXX  implied base 37% of a year · POOL 31% · GPI 47%
+#
+# `fp` cannot catch it: companyfacts reports the fiscal period of the
+# FILING, so every fact in a 10-K carries FY whatever it actually spans.
+def dur(start, end, val, fy, form="10-K"):
+    return {"fy": fy, "val": val, "form": form, "fp": "FY",
+            "start": start, "end": end}
+
+leaky = {"units": {"USD": [
+    dur("2015-01-01", "2015-12-31", 9_667_000_000, 2015),   # the real year
+    dur("2015-10-01", "2015-12-31", 2_093_000_000, 2015),   # Q4, ends in December
+    dur("2015-07-01", "2015-12-31", 4_900_000_000, 2015),   # H2, ends in December
+]}}
+got = R._rows_for(leaky, "USD")
+check(got.get(2015) == 9_667_000_000,
+      f"the ANNUAL figure survives a Q4 and an H2 tagged to the same year "
+      f"(got {got.get(2015)})")
+
+# Order must not matter: the annual value can appear first or last.
+reordered = {"units": {"USD": [
+    dur("2015-10-01", "2015-12-31", 2_093_000_000, 2015),
+    dur("2015-01-01", "2015-12-31", 9_667_000_000, 2015),
+]}}
+check(R._rows_for(reordered, "USD").get(2015) == 9_667_000_000,
+      "and the quarter loses regardless of JSON order")
+
+# Quarters at every position are rejected, December or not.
+for a, b, label in (("2015-01-01", "2015-03-31", "Q1"),
+                    ("2015-04-01", "2015-06-30", "Q2"),
+                    ("2015-07-01", "2015-09-30", "Q3"),
+                    ("2015-10-01", "2015-12-31", "Q4"),
+                    ("2015-01-01", "2015-06-30", "H1"),
+                    ("2015-07-01", "2015-12-31", "H2")):
+    only = {"units": {"USD": [dur(a, b, 1.0, 2015)]}}
+    check(R._rows_for(only, "USD") == {},
+          f"{label} ({a}..{b}) is not an annual period")
+
+# Real annual shapes must all survive.
+for a, b, label in (("2015-01-01", "2015-12-31", "calendar year"),
+                    ("2016-01-03", "2016-12-31", "52-week retail year"),
+                    ("2017-01-01", "2018-01-02", "53-week year crossing Dec 31"),
+                    ("2014-07-01", "2015-06-30", "June fiscal year end"),
+                    ("2015-02-01", "2016-01-31", "January fiscal year end")):
+    only = {"units": {"USD": [dur(a, b, 5.0, 2015)]}}
+    check(R._rows_for(only, "USD") == {2015: 5.0},
+          f"a {label} ({a}..{b}) IS an annual period")
+
+# Instants (balance-sheet items) carry no start and must pass untouched.
+inst = {"units": {"USD": [{"fy": 2015, "val": 42.0, "form": "10-K",
+                           "fp": "FY", "end": "2015-12-31"}]}}
+check(R._rows_for(inst, "USD") == {2015: 42.0},
+      "an instant has no duration to check and is kept")
+
+# Unparseable dates are not evidence of anything.
+bad = {"units": {"USD": [dur("not-a-date", "2015-12-31", 7.0, 2015)]}}
+check(R._rows_for(bad, "USD") == {}, "a malformed date is dropped, not guessed at")
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")
