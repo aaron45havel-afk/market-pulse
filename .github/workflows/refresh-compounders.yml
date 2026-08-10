@@ -50,7 +50,9 @@ jobs:
       # invisible in the output — they produced numbers, just wrong ones —
       # and survived because nothing here was tested.
       - name: Verify XBRL series extraction before spending any API calls
-        run: python tests/test_compounders_series.py
+        run: |
+          python tests/test_compounders_series.py
+          python tests/test_compounders_score.py
 
       - name: Run compounders refresh
         run: |
