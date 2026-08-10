@@ -1,41 +1,42 @@
-"""Peter Lynch GARP screener — value-tilted growth.
+"""Peter Lynch GARP screener — the network half.
 
-Criteria (stricter than Lynch's PEG<1.0 classic — user's spec):
-  • Market cap > $1B (large-cap only)
-  • P/E < 10 (deep value floor)
-  • 3-year EPS CAGR > 10% (real growth, not a one-quarter blip)
-  • Debt/Equity < 0.5 (low leverage)
-  • CapEx / Operating Cash Flow < 0.5 (asset-light / shareholder-friendly)
-  • Listed on NYSE/NASDAQ/AMEX (includes ADRs — buyable on Schwab/Fidelity)
-  • Positive trailing earnings (P/E must be defined + positive)
-  • Excludes SPACs, warrants, and a few junk patterns
+Everything that can be wrong about a NUMBER lives in lynch.py, which is
+pure and tested offline. This file only fetches and assembles: universe,
+one bulk market file, companyfacts per survivor, then hand the record to
+`lynch.evaluate`.
 
-Two-stage pipeline to keep API calls manageable across ~10K tickers:
-  Stage 1 — bulk XBRL frames + Finnhub/Yahoo prices → cheap filter on cap + P/E
-  Stage 2 — for survivors, pull companyfacts (full XBRL history) →
-            compute growth, debt, capex/OCF
+WHY THE PRICES COME FROM A BULK FILE NOW. The old path asked one endpoint
+per ticker — Finnhub at 1.2s each (~90 minutes) or a Yahoo retry ladder
+that pricefeed.py documents returning ZERO of 100 tickers from GitHub
+Actions IP ranges. The workflow set no timeout, so that path died at
+GitHub's six-hour ceiling with no snapshot and no signal.
+
+Rate limits count REQUESTS, not rows. One bulk market file carries price
+AND market capitalisation for the entire US market in a single request,
+needs no API key, and lets the Finnhub secret be deleted.
+
+MARKET CAP COMES FROM THE FEED, NOT FROM price x shares. The old
+computation disagreed with the Schloss board on the same companies in the
+same week — PDD $504.2B against $130.6B, Vipshop $1.71B against $7.53B —
+and the errors ran in BOTH directions, so no constant correction existed.
+105 companies were overstated by more than 2x and 106 understated. Taking
+the cap directly also removes the share count from the critical path,
+which is the figure most often missing or wrong.
 """
 from __future__ import annotations
 
 import json
 import logging
-import os
 import time
 import urllib.error
-import urllib.parse
 import urllib.request
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+from datetime import date
 from pathlib import Path
-from statistics import median
 
-# Reuse the SEC HTTP + cache helpers from the existing screener module
-# so behavior, rate-limit, and caching are consistent across screeners.
+import lynch as L
+import pricefeed as PF
 from sec_edgar import (
     SEC_UA,
-    CACHE,
-    EXCLUDED_KEYWORDS,
-    EXCLUDED_SIC_RANGES,
     _get,
     _rc,
     _wc,
@@ -49,645 +50,313 @@ from sec_edgar import (
 
 log = logging.getLogger(__name__)
 
-# Lynch screener thresholds. Centralized so we can iterate / surface
-# in the UI / freeze into snapshot metadata.
+# Thresholds live in lynch.py beside the logic that applies them, and are
+# re-exported here so the snapshot's _meta can carry them and the page can
+# template its own copy from the payload instead of hard-coding prose that
+# drifts out of step with the board it describes.
 LYNCH_RULES = {
-    "market_cap_min": 1_000_000_000,          # $1B
-    "pe_max": 10.0,
-    "eps_growth_3yr_min_pct": 10.0,
-    "debt_to_equity_max": 0.5,
-    "capex_to_ocf_max": 0.5,
+    "market_cap_min": L.MARKET_CAP_MIN,
+    "pe_max": L.PE_MAX,
+    "pe_min": L.PE_SANE[0],
+    "eps_growth_3yr_min_pct": L.EPS_GROWTH_MIN,
+    "eps_growth_cap_pct": L.EPS_GROWTH_CAP,
+    "debt_to_equity_max": L.DEBT_TO_EQUITY_MAX,
+    "capex_to_ocf_max": L.CAPEX_TO_OCF_MAX,
     "exchanges": ("NYSE", "Nasdaq", "NASDAQ", "AMEX", "NYSE American"),
-    "min_eps_years": 3,                       # need at least 3 fiscal years of EPS
-    # Buffett moat (toggle-able client-side; not a hard filter for the
-    # snapshot, so users can flip between "10+ yr holds" and "all Lynch
-    # picks" without a re-run).
-    "moat_roe_min_pct": 15.0,
-    "moat_consecutive_positive_eps_years": 5,
+    "min_eps_years": L.MIN_EPS_YEARS,
+    "min_revenue": L.MIN_REVENUE,
+    "min_price": L.MIN_PRICE,
+    "moat_roe_min_pct": L.MOAT_ROE_MIN,
+    "moat_consecutive_positive_eps_years": L.MOAT_POS_EPS_YEARS,
 }
 
 MAJOR_EXCHANGES = {e.upper() for e in LYNCH_RULES["exchanges"]}
 
-# Yahoo Finance v8 chart endpoint — same one stock_lookup.py uses.
-# No API key, ~stable since 2018, returns most-recent regularMarketPrice
-# in meta + the daily series. Replaced Stooq when Stooq put their free
-# CSV behind a captcha-gated API key in mid-2026.
-YAHOO_CHART_URL = (
-    "https://query1.finance.yahoo.com/v8/finance/chart/{t}"
-    "?range=5d&interval=1d&includePrePost=false"
-)
-
-BROWSER_UA = (
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-)
-
-# Log the first 2 misses per process so we can spot a Yahoo policy
-# change quickly without spamming production.
-_price_diag_logged = 0
+BROWSER_UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/120.0 Safari/537.36")
+QUOTE_HEADERS = {"User-Agent": BROWSER_UA, "Accept-Encoding": "gzip, deflate",
+                 "Accept": "application/json, text/plain, */*",
+                 "Accept-Language": "en-US,en;q=0.9"}
 
 
-# ─── Yahoo Finance price feed ────────────────────────────────────────
-def _fetch_yahoo_last_close(ticker: str) -> float | None:
-    """Return Yahoo's most-recent regularMarketPrice for the ticker,
-    or None on miss. Stooq used to do this but switched to a captcha
-    API-key flow in mid-2026 — Yahoo's v8 chart endpoint is the
-    natural drop-in (same one stock_lookup.py uses).
+# ═══════════════════════════════════════════════════════════════════
+# BULK QUOTES
+# ═══════════════════════════════════════════════════════════════════
 
-    Retries 429s with exponential backoff + jitter — Yahoo throttles
-    cloud IPs aggressively and even with low concurrency a burst can
-    trigger a temporary block."""
-    global _price_diag_logged
-    url = YAHOO_CHART_URL.format(t=urllib.parse.quote(ticker.upper()))
-
-    backoffs = (8.0, 24.0, 60.0)
-    last_err: str | None = None
-    for attempt in range(len(backoffs) + 1):
-        try:
-            req = urllib.request.Request(
-                url, headers={"User-Agent": BROWSER_UA, "Accept": "application/json"}
-            )
-            with urllib.request.urlopen(req, timeout=15) as r:
-                data = json.loads(r.read())
-            break  # success
-        except urllib.error.HTTPError as e:
-            last_err = f"HTTP {e.code}"
-            if e.code == 429 and attempt < len(backoffs):
-                # Jittered sleep so parallel workers don't synchronize on retry.
-                import random
-                time.sleep(backoffs[attempt] * (0.8 + 0.4 * random.random()))
-                continue
-            if _price_diag_logged < 2:
-                log.warning("Yahoo diag (%s): %s → %s", ticker, type(e).__name__, e)
-                _price_diag_logged += 1
-            return None
-        except (urllib.error.URLError, TimeoutError, OSError, ValueError) as e:
-            last_err = str(e)
-            if _price_diag_logged < 2:
-                log.warning("Yahoo diag (%s): %s → %s", ticker, type(e).__name__, e)
-                _price_diag_logged += 1
-            return None
-    else:
-        # Exhausted retries.
-        if _price_diag_logged < 2:
-            log.warning("Yahoo diag (%s): exhausted retries (%s)", ticker, last_err)
-            _price_diag_logged += 1
-        return None
-
-    chart = (data or {}).get("chart") or {}
-    if chart.get("error"):
-        return None
-    results = chart.get("result") or []
-    if not results:
-        return None
-    meta = results[0].get("meta") or {}
-    price = meta.get("regularMarketPrice")
-    if price is None:
-        # Fall back to the last non-null close in the daily series.
-        quotes = ((results[0].get("indicators") or {}).get("quote") or [{}])[0]
-        closes = quotes.get("close") or []
-        for c in reversed(closes):
-            if c is not None:
-                price = c
-                break
-    if price is None:
-        return None
+def _quote_json(url: str, timeout: int = 90) -> dict | None:
     try:
-        return float(price)
-    except (TypeError, ValueError):
+        req = urllib.request.Request(url, headers=QUOTE_HEADERS)
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            raw = r.read()
+            if r.headers.get("Content-Encoding") == "gzip":
+                import gzip
+                raw = gzip.decompress(raw)
+        return json.loads(raw)
+    except Exception as e:                      # noqa: BLE001 — any failure
+        log.warning("  ! %s: %s: %s", url.split("/")[2], type(e).__name__, e)
         return None
 
 
-# ─── Finnhub price feed (preferred — Yahoo 429s cloud IPs hard) ─────
-FINNHUB_QUOTE_URL = "https://finnhub.io/api/v1/quote?symbol={t}&token={k}"
-_finnhub_diag_logged = 0
+def fetch_quotes_bulk(tickers: list[str]) -> tuple[dict, str]:
+    """({TICKER: {price, market_cap}}, source). One request per source.
+
+    Sources are tried in order and the first to cover enough of the board
+    wins. A source that answers with a fraction of the market is a
+    FAILURE, not a partial success: half a board priced reads as "these
+    ones did not qualify" rather than "we could not look at these".
+    """
+    want = set(tickers)
+    for src in PF.BULK_SOURCES:
+        log.info("  trying %s …", src["name"])
+        quotes: dict = {}
+        if src.get("batched"):
+            size = src.get("batch_size", 200)
+            ordered = sorted(want)
+            for i in range(0, len(ordered), size):
+                import urllib.parse
+                payload = _quote_json(src["url"].format(
+                    syms=urllib.parse.quote(",".join(ordered[i:i + size]))))
+                if payload is None:
+                    break
+                quotes.update(src["parse"](payload))
+                time.sleep(0.4)
+        else:
+            payload = _quote_json(src["url"])
+            if payload is not None:
+                quotes = src["parse"](payload)
+
+        hit = quotes.keys() & want
+        cover = len(hit) / len(want) if want else 0.0
+        log.info("    %d quotes, %d matched (%.0f%% of the universe)",
+                 len(quotes), len(hit), cover * 100)
+        if cover >= PF.BULK_COVERAGE_MIN:
+            return {k: quotes[k] for k in hit}, src["name"]
+        log.warning("    below the %.0f%% floor — trying the next source",
+                    PF.BULK_COVERAGE_MIN * 100)
+    return {}, ""
 
 
-def _fetch_finnhub_price(ticker: str, api_key: str) -> float | None:
-    """Single-ticker quote from Finnhub. Free tier: 60 req/min, no IP
-    block. Returns the current price (`c` field); falls back to prev
-    close (`pc`) if current is 0 (Finnhub's way of saying 'no data')."""
-    global _finnhub_diag_logged
-    url = FINNHUB_QUOTE_URL.format(t=urllib.parse.quote(ticker.upper()), k=api_key)
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": BROWSER_UA})
-        with urllib.request.urlopen(req, timeout=12) as r:
-            data = json.loads(r.read())
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, ValueError) as e:
-        if _finnhub_diag_logged < 2:
-            log.warning("Finnhub diag (%s): %s → %s", ticker, type(e).__name__, e)
-            _finnhub_diag_logged += 1
-        return None
-    price = data.get("c")
-    if not price or price <= 0:
-        price = data.get("pc")
-    if not price or price <= 0:
-        return None
-    try:
-        return float(price)
-    except (TypeError, ValueError):
-        return None
+# ═══════════════════════════════════════════════════════════════════
+# UNIVERSE
+# ═══════════════════════════════════════════════════════════════════
 
+def build_universe() -> list[dict]:
+    """Major-exchange filers minus financials, biotech, warrants and SPACs.
 
-def fetch_prices_bulk(tickers: list[str], max_workers: int = 3) -> dict[str, float]:
-    """Parallel price fetches with a 24h cache. Returns {ticker: close}.
-
-    Source selection:
-      1. Finnhub if FINNHUB_API_KEY env var is set (preferred — works
-         from cloud IPs, free 60 req/min tier). Throttled to ~50/min
-         with a brief sleep so we stay under the limit.
-      2. Yahoo Finance v8 chart endpoint as fallback when no key is
-         set. Works locally; tends to 429 from Railway/GH Actions.
-
-    Cache key bumped v3 → v4 so the all-misses Yahoo entries from the
-    interregnum don't persist."""
-    cached = _rc("lynch_prices_v4", 24) or {}
-    missing = [t for t in tickers if t not in cached]
-    if not missing:
-        return cached
-
-    api_key = os.environ.get("FINNHUB_API_KEY", "").strip()
-    source = "Finnhub" if api_key else "Yahoo"
-    log.info("%s prices: %d cached, fetching %d new …", source, len(cached), len(missing))
-
-    fresh: dict[str, float] = {}
-    if api_key:
-        # Finnhub: 60 req/min free tier. With 2 workers and 1.2s
-        # inter-request sleep, we ride ~50 req/min — well under the
-        # ceiling. Sequential is fine for typical /finance loads (20
-        # tickers ~ 25s).
-        for i, t in enumerate(missing, 1):
-            price = _fetch_finnhub_price(t, api_key)
-            if price is not None:
-                fresh[t] = price
-            time.sleep(1.2)
-            if i % 200 == 0:
-                log.info("  Finnhub: %d/%d done (%d hits)", i, len(missing), len(fresh))
-    else:
-        # Fallback: Yahoo with low concurrency + per-request backoff.
-        # Tends to fail on Railway/GH Actions IPs — set FINNHUB_API_KEY
-        # to fix.
-        with ThreadPoolExecutor(max_workers=max_workers) as ex:
-            futs = {ex.submit(_fetch_yahoo_last_close, t): t for t in missing}
-            done = 0
-            for fut in as_completed(futs):
-                t = futs[fut]
-                try:
-                    price = fut.result()
-                except Exception:
-                    price = None
-                if price is not None:
-                    fresh[t] = price
-                done += 1
-                if done % 200 == 0:
-                    log.info("  Yahoo: %d/%d done (%d hits)", done, len(missing), len(fresh))
-
-    cached.update(fresh)
-    _wc("lynch_prices_v4", cached)
-    log.info("%s prices: %d total (%d new, %d misses)",
-             source, len(cached), len(fresh), len(missing) - len(fresh))
-    return cached
-
-
-# ─── SEC companyfacts (per-company XBRL history) ─────────────────────
-def _fetch_companyfacts(cik: str) -> dict | None:
-    """Pull full XBRL history for one company. SEC publishes this as
-    a single JSON per CIK; one request gives us every concept across
-    every period the company has reported."""
-    padded = str(cik).zfill(10)
-    url = f"https://data.sec.gov/api/xbrl/companyfacts/CIK{padded}.json"
-    return _get(url)
-
-
-def _annual_eps_history(facts: dict) -> list[tuple[str, float]]:
-    """Extract annual diluted EPS for the last 4-5 fiscal years.
-
-    Tries EarningsPerShareDiluted first (most common), falls back to
-    EarningsPerShareBasic if the diluted figure isn't reported.
-    Returns [(fy_end_date, eps), …] sorted oldest → newest."""
-    if not facts:
-        return []
-    us_gaap = (facts.get("facts") or {}).get("us-gaap") or {}
-    for concept in ("EarningsPerShareDiluted", "EarningsPerShareBasic"):
-        units = (us_gaap.get(concept) or {}).get("units") or {}
-        # The unit key for EPS is typically "USD/shares".
-        for unit_key, entries in units.items():
-            if "shares" not in unit_key.lower():
-                continue
-            annuals = [
-                (e["end"], float(e["val"]))
-                for e in entries
-                if e.get("fp") == "FY"
-                and e.get("form", "").startswith(("10-K", "20-F"))
-                and e.get("val") is not None
-            ]
-            if not annuals:
-                continue
-            # Latest entry per fiscal-year-end wins (handles amendments).
-            best: dict[str, float] = {}
-            for end, val in annuals:
-                best[end] = val
-            ordered = sorted(best.items())  # by date string
-            if ordered:
-                return ordered
-    return []
-
-
-def _latest_balance_sheet(facts: dict) -> dict:
-    """Latest period values for the balance-sheet concepts we need:
-    total debt = short_term + long_term, plus stockholders equity."""
-    out = {"short_term_debt": 0.0, "long_term_debt": 0.0, "equity": None}
-    if not facts:
-        return out
-    us_gaap = (facts.get("facts") or {}).get("us-gaap") or {}
-
-    def latest_val(concept: str) -> float | None:
-        units = (us_gaap.get(concept) or {}).get("units") or {}
-        usd = units.get("USD") or []
-        if not usd:
-            return None
-        # Most recent end-date wins, regardless of form.
-        latest = max(usd, key=lambda e: e.get("end", ""))
-        v = latest.get("val")
-        try:
-            return float(v) if v is not None else None
-        except (TypeError, ValueError):
-            return None
-
-    st = latest_val("ShortTermBorrowings") or latest_val("DebtCurrent") or 0.0
-    lt = latest_val("LongTermDebt") or latest_val("LongTermDebtNoncurrent") or 0.0
-    eq = latest_val("StockholdersEquity")
-    out["short_term_debt"] = st or 0.0
-    out["long_term_debt"] = lt or 0.0
-    out["equity"] = eq
-    return out
-
-
-def _ttm_capex_and_ocf(facts: dict) -> tuple[float | None, float | None]:
-    """Trailing-twelve-month CapEx and Operating Cash Flow.
-
-    Cash-flow line items report cumulative-to-date YTD in 10-Qs and
-    full-year in 10-Ks, so TTM = latest full FY value (simplest, no
-    quarterly stitching). Good enough for a screening filter; not
-    bench-grade financial analysis."""
-    if not facts:
-        return None, None
-    us_gaap = (facts.get("facts") or {}).get("us-gaap") or {}
-
-    def latest_fy(concept: str) -> float | None:
-        units = (us_gaap.get(concept) or {}).get("units") or {}
-        usd = units.get("USD") or []
-        # Annual FY frame from 10-K (US issuers) or 20-F (foreign ADRs).
-        annuals = [
-            e for e in usd
-            if e.get("fp") == "FY"
-            and e.get("form", "").startswith(("10-K", "20-F"))
-            and e.get("val") is not None
-        ]
-        if not annuals:
-            return None
-        latest = max(annuals, key=lambda e: e.get("end", ""))
-        try:
-            return float(latest["val"])
-        except (TypeError, ValueError):
-            return None
-
-    capex = latest_fy("PaymentsToAcquirePropertyPlantAndEquipment")
-    ocf = latest_fy("NetCashProvidedByUsedInOperatingActivities")
-    return capex, ocf
-
-
-def _latest_shares_outstanding(facts: dict) -> float | None:
-    """Latest CommonStockSharesOutstanding (or EntityCommonStockSharesOutstanding
-    fallback). Many filers report both; we just want the most recent
-    reasonable value."""
-    if not facts:
-        return None
-    us_gaap = (facts.get("facts") or {}).get("us-gaap") or {}
-    dei = (facts.get("facts") or {}).get("dei") or {}
-    candidates = [
-        us_gaap.get("CommonStockSharesOutstanding"),
-        dei.get("EntityCommonStockSharesOutstanding"),
-        us_gaap.get("WeightedAverageNumberOfDilutedSharesOutstanding"),
-    ]
-    for c in candidates:
-        if not c:
-            continue
-        units = c.get("units") or {}
-        shares = units.get("shares") or []
-        if not shares:
-            continue
-        latest = max(shares, key=lambda e: e.get("end", ""))
-        v = latest.get("val")
-        try:
-            return float(v) if v is not None else None
-        except (TypeError, ValueError):
-            continue
-    return None
-
-
-# ─── Universe + screening ────────────────────────────────────────────
-def _build_universe() -> list[dict]:
-    """All major-exchange-listed US filers minus financials/biotech/
-    warrants/SPACs. Returns [{cik, ticker, name, exchange, sic}, …].
-
-    Includes ADRs (foreign companies listed on US exchanges) since
-    those are buyable on Schwab/Fidelity/Chase like any other ticker."""
+    ADRs stay in — they are buyable on any US broker — but the old page
+    split them into a table headed "International ADRs" on the basis of
+    `has 20-F and no 10-K`, which is a filing fact wearing a geography
+    label. A Canadian 40-F filer, an Israeli issuer and a Chinese VIE all
+    landed in one bucket. The split is gone; location is a column.
+    """
     tickers = get_tickers()
     exchanges = get_exchanges()
-    log.info("Universe candidates: %d tickers, %d with exchange data",
+    log.info("Universe: %d tickers, %d with exchange data",
              len(tickers), len(exchanges))
 
-    # First pass — exchange + name + warrant filter (cheap, no SEC calls).
     pre: list[dict] = []
     for cik, t in tickers.items():
         ticker = (t.get("ticker") or "").upper()
         name = t.get("name") or ""
-        if not ticker or not name:
-            continue
-        if _is_warrant(ticker):
-            continue
-        if _excluded_keyword(name):
+        if not ticker or not name or _is_warrant(ticker) or _excluded_keyword(name):
             continue
         exch = (exchanges.get(cik) or {}).get("exchange", "")
-        if exch and exch.upper() not in MAJOR_EXCHANGES:
+        # FAIL CLOSED. The old test was `if exch and exch.upper() not in
+        # MAJOR_EXCHANGES` — a blank exchange string passed straight
+        # through into a table headed "United States".
+        if exch.upper() not in MAJOR_EXCHANGES:
             continue
         pre.append({"cik": cik, "ticker": ticker, "name": name, "exchange": exch})
 
-    log.info("After exchange/name/warrant pre-filter: %d", len(pre))
+    log.info("  after exchange/name/warrant filter: %d", len(pre))
 
-    # Second pass — SIC filter. Bulk-fetch (cached 1 week in
-    # get_company_details_bulk) so this is cheap on subsequent runs.
-    ciks = [r["cik"] for r in pre]
-    details = get_company_details_bulk(ciks)
+    details = get_company_details_bulk([r["cik"] for r in pre])
     out: list[dict] = []
+    dropped_sic = 0
     for row in pre:
         d = details.get(row["cik"]) or {}
         sic = d.get("sic")
         if _is_excluded_sic(sic):
+            dropped_sic += 1
             continue
         row["sic"] = sic
+        row["state"] = d.get("state_desc") or d.get("state") or ""
         out.append(row)
-    log.info("After SIC filter: %d universe", len(out))
+    log.info("  after SIC filter: %d (%d excluded)", len(out), dropped_sic)
     return out
 
 
-def _cagr(start: float, end: float, years: float) -> float | None:
-    """CAGR % = (end/start)^(1/years) - 1, ×100.
-
-    Requires both endpoints positive. Lynch's screen is about *growing*
-    earnings, so a swing through zero (negative → positive or vice
-    versa) doesn't fit — we return None and the row is filtered out."""
-    if start is None or end is None or years <= 0:
-        return None
-    if start <= 0 or end <= 0:
-        return None
-    return ((end / start) ** (1.0 / years) - 1.0) * 100.0
+def _fetch_companyfacts(cik: str) -> dict | None:
+    padded = str(cik).zfill(10)
+    return _get(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{padded}.json")
 
 
-def _annual_values(facts: dict, concept: str, unit: str = "USD") -> list[tuple[str, float]]:
-    """Annual FY values for a single XBRL concept, sorted oldest →
-    newest. Accepts 10-K (US) or 20-F (foreign ADR) annual filings.
-    Used by the moat calc to walk multiple years of NI / equity /
-    margins."""
-    if not facts:
-        return []
-    us_gaap = (facts.get("facts") or {}).get("us-gaap") or {}
-    entries = ((us_gaap.get(concept) or {}).get("units") or {}).get(unit) or []
-    annuals = []
-    for e in entries:
-        if (e.get("fp") == "FY"
-                and e.get("form", "").startswith(("10-K", "20-F"))
-                and e.get("val") is not None):
-            try:
-                annuals.append((e["end"], float(e["val"])))
-            except (TypeError, ValueError):
-                pass
-    if not annuals:
-        return []
-    best: dict[str, float] = {}
-    for end, val in annuals:
-        best[end] = val  # latest amendment wins for each FY end-date
-    return sorted(best.items())
+# ═══════════════════════════════════════════════════════════════════
+# FACTS → RECORD
+# ═══════════════════════════════════════════════════════════════════
+
+# Most-coverage-wins across each list, rather than first-tag-wins. A filer
+# reporting capex under PaymentsToAcquireProductiveAssets was deleted with
+# no trace because only the generic PP&E tag was ever consulted.
+REVENUE_TAGS = ["RevenueFromContractWithCustomerExcludingAssessedTax",
+                "Revenues", "RevenueFromContractWithCustomerIncludingAssessedTax",
+                "SalesRevenueNet"]
+CAPEX_TAGS = ["PaymentsToAcquirePropertyPlantAndEquipment",
+              "PaymentsToAcquireProductiveAssets",
+              "PaymentsForCapitalImprovements",
+              "PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets"]
+OCF_TAGS = ["NetCashProvidedByUsedInOperatingActivities",
+            "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations"]
+ST_DEBT_TAGS = ["ShortTermBorrowings", "OtherShortTermBorrowings",
+                "LongTermDebtCurrent", "DebtCurrent"]
+LT_DEBT_TAGS = ["LongTermDebt", "LongTermDebtNoncurrent",
+                "LongTermDebtAndCapitalLeaseObligations"]
 
 
-def _compute_moat(facts: dict, eps_history: list[tuple[str, float]]) -> dict:
-    """Buffett-style moat indicators from SEC EDGAR data:
+def _last(series: dict):
+    return series[max(series)] if series else None
 
-      • avg_roe_3yr_pct — average ROE over last 3 fiscal years.
-        Buffett's most-quoted single number; he wants > 15% sustained.
-      • years_positive_eps — how many consecutive years (back from
-        most recent FY) had positive EPS. 5+ = durable earnings.
-      • op_margin_ttm_pct — latest FY operating margin. > 15%
-        signals pricing power. Informational only; some industries
-        legitimately run lower (retailers, distributors).
 
-    has_moat is the AND of the two hard checks: avg ROE ≥ 15% AND
-    5+ consecutive positive EPS years. Operating margin is shown
-    but not gated on (data is too sparse across XBRL filers to make
-    it a hard filter without dropping otherwise-qualifying names)."""
-    ni_history = _annual_values(facts, "NetIncomeLoss")
-    eq_history = _annual_values(facts, "StockholdersEquity")
-    ni_map = dict(ni_history)
-    eq_map = dict(eq_history)
-    common_years = sorted(set(ni_map) & set(eq_map))
-    last_3 = common_years[-3:]
-    roes: list[float] = []
-    for y in last_3:
-        eq = eq_map[y]
-        if eq and eq > 0:
-            roes.append(ni_map[y] / eq * 100)
-    avg_roe = sum(roes) / len(roes) if roes else None
+def facts_to_record(row: dict, quote: dict, facts: dict, as_of: str) -> dict:
+    """Assemble everything lynch.evaluate needs. No judgement here."""
+    eps_by_year, _c, eps_unit = L.eps_series(facts)
+    revenue, _rc = L.annual_series(facts, REVENUE_TAGS)
+    ni_by_year, _nc = L.annual_series(facts, "NetIncomeLoss")
+    op_by_year, _oc = L.annual_series(facts, "OperatingIncomeLoss")
+    capex, _cc = L.annual_series(facts, CAPEX_TAGS)
+    ocf, _oc2 = L.annual_series(facts, OCF_TAGS)
 
-    # Years of consecutive positive EPS, walking from most recent back.
-    pos_yrs = 0
-    for _d, v in reversed(eps_history):
-        if v is not None and v > 0:
-            pos_yrs += 1
-        else:
-            break
+    equity, _ = L.instant_value(facts, ["StockholdersEquity",
+                                        "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"])
+    assets, _ = L.instant_value(facts, "Assets")
+    liabilities, _ = L.instant_value(facts, "Liabilities")
+    ppe, _ = L.instant_value(facts, "PropertyPlantAndEquipmentNet")
+    st_debt, _ = L.instant_value(facts, ST_DEBT_TAGS)
+    lt_debt, _ = L.instant_value(facts, LT_DEBT_TAGS)
 
-    # Operating margin — both numerator + denominator must be reported.
-    op_income_h = _annual_values(facts, "OperatingIncomeLoss")
-    # Revenues sometimes lives under RevenueFromContractWithCustomer*
-    # (post-ASC 606 filers). Try both.
-    rev_h = (_annual_values(facts, "Revenues")
-             or _annual_values(facts, "RevenueFromContractWithCustomerExcludingAssessedTax"))
-    op_margin = None
-    if op_income_h and rev_h:
-        latest_op = op_income_h[-1][1]
-        latest_rev = rev_h[-1][1]
-        if latest_rev and latest_rev > 0:
-            op_margin = latest_op / latest_rev * 100
+    shares = None
+    for tax, concept in (("us-gaap", "CommonStockSharesOutstanding"),
+                         ("dei", "EntityCommonStockSharesOutstanding")):
+        node = ((facts or {}).get("facts") or {}).get(tax) or {}
+        entries = ((node.get(concept) or {}).get("units") or {}).get("shares")
+        if entries:
+            pts = L._instant(entries) or L._spans(entries)
+            if pts:
+                shares = pts[-1][1]
+                break
 
-    has_moat = (
-        avg_roe is not None
-        and avg_roe >= 15.0
-        and pos_yrs >= 5
-    )
+    # Equity by year for the ROE series — instantaneous, so year-keyed on
+    # the period end.
+    eq_entries = ((((facts or {}).get("facts") or {}).get("us-gaap") or {})
+                  .get("StockholdersEquity") or {}).get("units", {}).get("USD")
+    equity_by_year = dict(L._instant(eq_entries)) if eq_entries else {}
+
     return {
-        "avg_roe_3yr_pct": round(avg_roe, 1) if avg_roe is not None else None,
-        "years_positive_eps": pos_yrs,
-        "op_margin_ttm_pct": round(op_margin, 1) if op_margin is not None else None,
-        "has_moat": has_moat,
+        "ticker": row["ticker"], "name": row["name"], "cik": row.get("cik"),
+        "exchange": row.get("exchange") or "", "sic": row.get("sic"),
+        "state": row.get("state") or "",
+        "as_of": as_of,
+        "price": quote.get("price"),
+        "market_cap": quote.get("market_cap"),
+        "shares": shares,
+        "equity": equity,
+        "total_assets": assets,
+        "total_liabilities": liabilities,
+        "ppe": ppe,
+        "short_term_debt": st_debt,
+        "long_term_debt": lt_debt,
+        "revenue": _last(revenue),
+        "net_income": _last(ni_by_year),
+        "op_income": _last(op_by_year),
+        "capex": _last(capex),
+        "ocf": _last(ocf),
+        "eps_by_year": eps_by_year,
+        "eps_unit": eps_unit,
+        "net_income_by_year": ni_by_year,
+        "equity_by_year": equity_by_year,
+        "last_filing": L.first_filing_end(facts),
+        "is_international": _is_foreign_issuer(facts),
     }
 
 
 def _is_foreign_issuer(facts: dict) -> bool:
-    """True if the company files 20-F (foreign private issuer / ADR)
-    but no 10-K. Dual-filers with 10-K count as US since 10-K is the
-    primary US-domiciled filing."""
+    """Files 20-F but no 10-K. Reported as a FILING fact, never as a
+    geography — the old page used it as one."""
     if not facts:
         return False
     us_gaap = (facts.get("facts") or {}).get("us-gaap") or {}
-    has_10k = False
     has_20f = False
-    # Scan a few high-coverage concepts so we don't miss the signal
-    # because of a single sparse concept.
     for concept in ("NetIncomeLoss", "Revenues", "Assets",
                     "EarningsPerShareDiluted", "EarningsPerShareBasic"):
-        cdata = us_gaap.get(concept) or {}
-        for entries in (cdata.get("units") or {}).values():
+        for entries in ((us_gaap.get(concept) or {}).get("units") or {}).values():
             for e in entries:
                 form = e.get("form", "")
-                if not has_10k and form.startswith("10-K"):
-                    has_10k = True
-                elif not has_20f and form.startswith("20-F"):
+                if form.startswith("10-K"):
+                    return False
+                if form.startswith("20-F"):
                     has_20f = True
-                if has_10k and has_20f:
-                    return False  # dual-filer → treat as US
-        if has_10k:
-            return False
     return has_20f
 
 
-def _screen_one(row: dict, price: float, facts: dict) -> dict | None:
-    """Apply Lynch criteria to one company. Returns a result dict if
-    it passes every filter; None otherwise. Returned dict is what
-    ends up in the snapshot JSON."""
-    shares = _latest_shares_outstanding(facts)
-    if not shares or shares <= 0:
-        return None
-    market_cap = price * shares
-    if market_cap < LYNCH_RULES["market_cap_min"]:
-        return None
+# ═══════════════════════════════════════════════════════════════════
+# BUILD
+# ═══════════════════════════════════════════════════════════════════
 
-    eps_history = _annual_eps_history(facts)
-    if len(eps_history) < LYNCH_RULES["min_eps_years"] + 1:
-        return None  # need start + end => at least 4 years
+def build_lynch_screener(max_companyfacts: int | None = None) -> dict:
+    """{"rows": [...], "census": {...}, "quote_source": str}.
 
-    # TTM EPS = most recent full FY (good enough for a screening filter;
-    # using stitched quarterly would be more accurate but adds complexity).
-    ttm_eps = eps_history[-1][1]
-    if ttm_eps is None or ttm_eps <= 0:
-        return None  # Lynch wants positive earnings
-
-    pe = price / ttm_eps
-    if pe <= 0 or pe > LYNCH_RULES["pe_max"]:
-        return None
-
-    # 3-year EPS CAGR — endpoints are 4 fiscal years apart.
-    start_eps = eps_history[-4][1] if len(eps_history) >= 4 else eps_history[0][1]
-    eps_growth = _cagr(start_eps, ttm_eps, 3.0)
-    if eps_growth is None or eps_growth < LYNCH_RULES["eps_growth_3yr_min_pct"]:
-        return None
-
-    bs = _latest_balance_sheet(facts)
-    equity = bs["equity"]
-    if equity is None or equity <= 0:
-        return None
-    total_debt = (bs["short_term_debt"] or 0.0) + (bs["long_term_debt"] or 0.0)
-    debt_to_equity = total_debt / equity
-    if debt_to_equity > LYNCH_RULES["debt_to_equity_max"]:
-        return None
-
-    capex, ocf = _ttm_capex_and_ocf(facts)
-    capex_to_ocf = None
-    if capex is not None and ocf is not None and ocf > 0:
-        capex_to_ocf = capex / ocf
-        if capex_to_ocf > LYNCH_RULES["capex_to_ocf_max"]:
-            return None
-    elif capex is None or ocf is None:
-        # Missing cash-flow data → can't verify low-capex criterion.
-        # Skip rather than admit a row we can't validate.
-        return None
-
-    peg = pe / eps_growth if eps_growth > 0 else None
-    moat = _compute_moat(facts, eps_history)
-
-    return {
-        "ticker": row["ticker"],
-        "name": row["name"],
-        "exchange": row.get("exchange") or "",
-        "sic": row.get("sic"),
-        "is_international": _is_foreign_issuer(facts),
-        "has_moat": moat["has_moat"],
-        "avg_roe_3yr_pct": moat["avg_roe_3yr_pct"],
-        "years_positive_eps": moat["years_positive_eps"],
-        "op_margin_ttm_pct": moat["op_margin_ttm_pct"],
-        "price": round(price, 2),
-        "shares_outstanding": int(shares),
-        "market_cap": int(market_cap),
-        "ttm_eps": round(ttm_eps, 2),
-        "pe_ratio": round(pe, 2),
-        "eps_3yr_cagr_pct": round(eps_growth, 1),
-        "peg": round(peg, 2) if peg is not None else None,
-        "debt_to_equity": round(debt_to_equity, 2),
-        "total_debt": int(total_debt),
-        "equity": int(equity),
-        "ttm_capex": int(capex) if capex is not None else None,
-        "ttm_ocf": int(ocf) if ocf is not None else None,
-        "capex_to_ocf": round(capex_to_ocf, 2) if capex_to_ocf is not None else None,
-        "eps_history": [{"fy_end": d, "eps": round(v, 2)} for d, v in eps_history[-5:]],
-    }
-
-
-def build_lynch_screener(max_companyfacts: int | None = None) -> list[dict]:
-    """Full pipeline. Returns list of passing companies sorted by PEG asc.
-
-    ``max_companyfacts`` caps how many companies we deep-pull from
-    SEC after the price/shares prescreen — useful for testing or for
-    a fast dry-run; None = no cap.
+    RETURNS EVERY ROW, passing or not, each carrying a verdict and a
+    reason code. The old version returned only survivors, so a file with
+    nine rows was produced identically by a strict screen in a rich market
+    and by a parser rejecting everything — there was no way to tell which
+    one you were looking at.
     """
-    universe = _build_universe()
+    as_of = date.today().isoformat()
+    universe = build_universe()
     tickers = [u["ticker"] for u in universe]
-    prices = fetch_prices_bulk(tickers)
-    log.info("Prices: %d/%d tickers priced", len(prices), len(tickers))
 
-    # Companyfacts is the expensive call (one HTTP per CIK). Trim
-    # universe to companies with a price first; that drops delisteds,
-    # OTC-only, etc.
-    priced = [u for u in universe if u["ticker"] in prices]
+    log.info("Bulk quotes (one request per source):")
+    quotes, source = fetch_quotes_bulk(tickers)
+    if not quotes:
+        raise SystemExit(
+            "No quote source answered. Refusing to publish a board with no "
+            "prices — a snapshot of nothing overwrites a good one.")
+
+    priced = [u for u in universe if u["ticker"] in quotes]
+    log.info("Priced: %d/%d (source: %s)", len(priced), len(tickers), source)
     if max_companyfacts:
         priced = priced[:max_companyfacts]
-    log.info("Deep-pulling companyfacts for %d companies …", len(priced))
 
-    results: list[dict] = []
+    log.info("Pulling companyfacts for %d companies …", len(priced))
+    rows: list[dict] = []
     last_log = time.time()
     for i, row in enumerate(priced, 1):
-        # Rate-limit: SEC allows 10 req/sec.
         if i % 10 == 0:
-            time.sleep(1.1)
-        # Per-CIK cache so re-running the script during testing doesn't
-        # re-hit SEC for facts we just pulled.
-        cache_key = f"lynch_facts_{row['cik']}"
-        facts = _rc(cache_key, 168)  # 1 week — fundamentals change slowly
+            time.sleep(1.1)                     # SEC fair access: 10 req/s
+        key = f"lynch_facts_{row['cik']}"
+        facts = _rc(key, 168)
         if facts is None:
             facts = _fetch_companyfacts(row["cik"]) or {}
-            _wc(cache_key, facts)
+            _wc(key, facts)
         try:
-            hit = _screen_one(row, prices[row["ticker"]], facts)
-        except Exception as e:  # pragma: no cover — defensive
-            log.warning("Lynch screen error for %s: %s", row["ticker"], e)
-            hit = None
-        if hit:
-            results.append(hit)
+            rec = facts_to_record(row, quotes[row["ticker"]], facts, as_of)
+            rows.append(L.evaluate(rec))
+        except Exception as e:                  # pragma: no cover — defensive
+            log.warning("  screen error for %s: %s", row["ticker"], e)
         if time.time() - last_log > 30:
-            log.info("  facts: %d/%d done (%d passing)", i, len(priced), len(results))
+            passing = sum(1 for r in rows if r["verdict"] == "pass")
+            log.info("  %d/%d done (%d passing)", i, len(priced), passing)
             last_log = time.time()
 
-    # Sort by PEG ascending (best Lynch values first); fall back to
-    # P/E if PEG is missing.
-    results.sort(key=lambda r: (r.get("peg") if r.get("peg") is not None else r["pe_ratio"]))
-    log.info("Lynch screener: %d companies passing all filters", len(results))
-    return results
+    # Sort passers by PEG, but ONLY after every input to PEG is bounded —
+    # unbounded growth made the old ranking monotone in the estimator's
+    # own error, and DEEP fired on 100% of rows.
+    rows.sort(key=lambda r: (
+        r["verdict"] != "pass",
+        r.get("peg") if r.get("peg") is not None else 99.0,
+        r.get("ticker") or "",
+    ))
+    c = L.census(rows)
+    log.info("Lynch: %d of %d pass; %d unmeasurable",
+             c["passing"], c["screened"], c["unmeasured"])
+    return {"rows": rows, "census": c, "quote_source": source}

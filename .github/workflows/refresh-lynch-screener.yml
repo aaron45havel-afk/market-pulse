@@ -1,7 +1,14 @@
 name: Refresh Lynch GARP screener snapshot
 
-# Monthly snapshot of the Peter Lynch GARP screener (large-cap value
-# growth: P/E<10, EPS growth>10%, mkt cap>$1B, D/E<0.5, CapEx/OCF<0.5).
+# Monthly snapshot of the Peter Lynch GARP screener. Thresholds live in
+# lynch.py, are re-exported into the snapshot's _meta.rules, and the page
+# templates its own copy from that payload — so this comment is the only
+# place a stale number can hide, and it deliberately names none.
+#
+# PRICES COME FROM ONE BULK MARKET FILE, not a request per ticker. The old
+# path was ~90 minutes of Finnhub calls or a Yahoo retry ladder that
+# returns zero rows from Actions IP ranges, with no timeout set — it died
+# at GitHub's six-hour ceiling with no snapshot and no signal.
 # Commits to data/lynch_snapshots/YYYY-MM.json; the /lynch UI loads the
 # latest and lets you browse history via a month dropdown.
 #
@@ -19,6 +26,8 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    # The old job set none, so a hung fetch burned six hours.
+    timeout-minutes: 90
     defaults:
       run:
         working-directory: market-pulse-v21
@@ -32,9 +41,18 @@ jobs:
       - name: Install runtime deps
         run: pip install -r requirements.txt
 
+      # Before any network call. Every defect this screen shipped for three
+      # months was a pure function over a facts dict, reachable by a
+      # fixture in under a second — and the committed snapshot WAS the
+      # fixture. A parser regression now fails here in seconds instead of
+      # after an hour of downloads and a published board.
+      - name: Verify the arithmetic before spending any API calls
+        run: |
+          python tests/test_lynch.py
+          python tests/test_pricefeed.py
+          python tests/test_schloss.py
+
       - name: Snapshot the Lynch screener
-        env:
-          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
         run: python scripts/refresh_lynch_screener.py
 
       - name: Commit + push if changed
