@@ -211,6 +211,9 @@
     beginning of the story. Note this reads the opposite way from
     <a href="/compounders">Compounders</a>, which <em>caps</em> a swollen yield as the market forecasting a cut.
     Same data, opposite conclusion; the discriminator is whether the cut has already happened.
+    Limited to cuts in the last {{ S.CUT_RECENT_YEARS + 1 }} reporting years — a 2020 suspension is a fact about
+    history, not an overreaction still on the tape — and a year following a <em>special</em> dividend is excluded,
+    because nothing was reduced.
   </p>
   {% if lists.cuts %}{{ rows_table(lists.cuts, 60) }}
   {% else %}<p class="sc-empty">Nothing. Either dividends are being raised across the board, or the cutters that exist are failing the balance-sheet gates.</p>{% endif %}
@@ -232,7 +235,9 @@
   <h2>⚙️ Working-capital stocks — {{ '{:,}'.format(lists.working|length) }} name{{ '' if lists.working|length == 1 else 's' }}</h2>
   <p class="desc">
     Current assets exceed <em>all</em> liabilities, so there is a Graham liquidation floor under the shares. Ranked
-    by the size of that cushion. Without a price this says the asset base exists — <strong>not</strong> that the
+    by that cushion as a <strong>share of the balance sheet</strong>, not in dollars — sorting on the absolute
+    figure just returns the largest companies, which is what &ldquo;most current assets in dollars&rdquo; measures.
+    Without a price this says the asset base exists — <strong>not</strong> that the
     stock is cheap; the two-thirds-of-NCAV test is what makes it a net-net and that needs a feed. Banks and
     insurers appear thinly here by construction: they file unclassified balance sheets, so NCAV is unmeasurable
     rather than bad, and they are not excluded — Schloss bought them.

@@ -114,6 +114,31 @@ check(gone["pays"] is False,
       "but a company that eliminated its dividend does not pay one — the "
       "governance check and the entry signal disagree here, and both are right")
 
+# A SPECIAL DIVIDEND NOT REPEATING IS NOT A CUT. Costco's real series:
+# $15/share special on top of the regular $4.16 in fiscal 2024, which read
+# as a 74.6% reduction and landed second on the entry list.
+cost = S.dividend_history({2021: 3.16, 2022: 3.48, 2023: 3.86,
+                           2024: 19.16, 2025: 4.92})
+check(cost["cut"] is False,
+      "the year after a special dividend is not a cut — nothing was reduced")
+check(cost["special_prior"] is True, "and the row records why it was excluded")
+check(cost["pays"] is True and cost["latest"] == 4.92,
+      "while the ordinary dividend still reports normally")
+
+# A real cut from a sustained level must survive the same test. Kohl's
+# went $2.00 -> $0.50 with no special anywhere in the series.
+kss = S.dividend_history({2021: 0.60, 2022: 2.00, 2023: 2.00,
+                          2024: 2.00, 2025: 0.50})
+check(kss["cut"] is True and kss["cut_pct"] == 75.0,
+      f"a genuine 75% cut is untouched (got {kss['cut']}, {kss['cut_pct']})")
+check(kss["special_prior"] is False, "and is not mistaken for a special")
+
+# A company that has always paid a lot has a high median too, so the
+# multiple never fires on it.
+rich = S.dividend_history({2022: 10.0, 2023: 10.0, 2024: 10.0, 2025: 3.0})
+check(rich["cut"] is True and rich["special_prior"] is False,
+      "a consistently large payout being cut is a cut")
+
 check(S.dividend_history({})["pays"] is None,
       "no series at all is unknown, not 'does not pay'")
 check(S.dividend_history({})["cut"] is None, "and the cut is unknown too")
@@ -186,16 +211,38 @@ check(ok is False,
 
 # ── asset backing: what the book actually consists of ───────────────
 b = S.asset_backing(cash=200, receivables=100, inventory=100, ppe=600,
-                    goodwill=0, intangibles=0)
+                    goodwill=0, intangibles=0, anchor=1100)
 check(b["total"] == 1000.0, "the named components total")
 check(b["hard_pct"] == 30.0, f"cash + receivables is the hard part (got {b['hard_pct']})")
 check(b["mix"]["ppe"] == 60.0, "and the mix is reported so a reader can haircut it")
 check(S.asset_backing()["total"] is None,
       "nothing reported is unknown, not a zero-asset company")
-soft = S.asset_backing(cash=10, goodwill=990)
+soft = S.asset_backing(cash=10, goodwill=990, anchor=1000)
 check(soft["hard_pct"] == 1.0,
       "a company that is 99% goodwill reads as 1% hard — the number Schloss "
       "would have wanted before anything else")
+
+# A PERCENTAGE OF A FRAGMENT IS NOT A PERCENTAGE OF THE COMPANY.
+# NNN REIT's real figures: $4.2m of named asset lines against a $4.46bn
+# balance sheet, reported as "100% hard assets" — and the flagship list
+# was RANKED on that number, so the least-readable companies led it.
+reit = S.asset_backing(cash=4_223_000, anchor=4_460_736_000)
+check(reit["mix"]["cash"] == 100.0,
+      "the mix still says cash was the only line filed — that is worth seeing")
+check(reit["coverage"] == 0.001,
+      f"but coverage records that it explains 0.1% of the company "
+      f"(got {reit['coverage']})")
+check(reit["hard_pct"] is None,
+      "so the hard-asset share is WITHHELD rather than published as 100%")
+
+edge = S.asset_backing(cash=500, ppe=100, anchor=1000)
+check(edge["hard_pct"] == 83.3,
+      f"60% coverage is enough to describe the balance sheet (got {edge['hard_pct']})")
+check(S.asset_backing(cash=400, anchor=1000)["hard_pct"] is None,
+      "40% is not")
+check(S.asset_backing(cash=200, receivables=100, inventory=100, ppe=600)["hard_pct"] == 30.0,
+      "and with no anchor at all the old behaviour stands — coverage cannot "
+      "be judged, so nothing is withheld on a guess")
 
 
 # ── evaluate: the price half is honestly absent ─────────────────────
@@ -355,6 +402,68 @@ check(b["core"][-1]["ticker"] == "EEE",
       "guard is what stops None from winning a descending sort")
 
 EMPTY = {"qualify": [], "cuts": [], "working": [], "core": [], "unread": []}
+# ── the balance sheet must be arithmetically possible ───────────────
+# Universe Pharmaceuticals arrived with $55.8bn of equity, $17.9bn of
+# revenue and 563,338 shares — a nano-cap reporting in something other
+# than the dollars its frame claimed, published as $99,110 of book per
+# share at the top of a list.
+imposs = S.evaluate({"stockholders_equity": 55_832_725_000,
+                     "total_assets": 1_000_000_000, "shares": 563_338,
+                     "current_assets": 900_000_000,
+                     "total_liabilities": 100_000_000}, 2026)
+check(imposs["implausible"] is True,
+      "book value above total assets is impossible and is flagged")
+check(imposs["tangible_book"] is None and imposs["tangible_book_ps"] is None,
+      "and both figures are withheld rather than printed")
+check(imposs["ncav"] is None,
+      "along with NCAV, which came off the same suspect balance sheet")
+
+fine = S.evaluate({"stockholders_equity": 400.0, "total_assets": 1000.0,
+                   "shares": 10.0}, 2026)
+check(fine["implausible"] is False, "an ordinary balance sheet is not flagged")
+check(fine["tangible_book"] == 400.0, "and reports normally")
+check(S.evaluate({"stockholders_equity": 400.0, "shares": 10.0}, 2026)["implausible"] is False,
+      "with no total assets there is nothing to contradict, so nothing is claimed")
+
+
+# ── recency is part of the cut signal ───────────────────────────────
+# The first three rows of the live board were cuts from 2020, 2022 and
+# 2020 — AstroNova's COVID suspension leading a list captioned "the
+# overreaction has already happened".
+CUTS = {"generated": "2026-08-10", "rows": [
+    {"ticker": "OLD", "gates_pass": True, "ncav": 10.0, "total_assets": 100.0,
+     "dividend": {"cut": True, "cut_pct": 75.0, "to_year": 2020},
+     "backing": {"hard_pct": 50.0}},
+    {"ticker": "NEW", "gates_pass": True, "ncav": 10.0, "total_assets": 100.0,
+     "dividend": {"cut": True, "cut_pct": 30.0, "to_year": 2025},
+     "backing": {"hard_pct": 50.0}},
+]}
+cb = S.board(CUTS)
+check([r["ticker"] for r in cb["cuts"]] == ["NEW"],
+      f"a six-year-old cut is history, not an entry — only the recent one "
+      f"survives (got {[r['ticker'] for r in cb['cuts']]})")
+check("OLD" in [r["ticker"] for r in S.board(CUTS, this_year=2021)["cuts"]],
+      "the same 2020 cut read from 2021 IS recent — the window moves with "
+      "the board, it is not a hard-coded year")
+
+
+# ── working capital is ranked relative to the balance sheet ─────────
+# Sorting by absolute NCAV returned Nvidia, Alphabet, Micron and Tesla —
+# a list of the largest companies, which is what "most current assets in
+# dollars" measures.
+WC = {"generated": "2026-08-10", "rows": [
+    {"ticker": "MEGA", "ncav": 87_000_000_000.0, "total_assets": 300_000_000_000.0,
+     "gates_pass": False, "dividend": {}, "backing": {}},
+    {"ticker": "SMALL", "ncav": 40_000_000.0, "total_assets": 50_000_000.0,
+     "gates_pass": False, "dividend": {}, "backing": {}},
+]}
+wc = S.board(WC)
+check([r["ticker"] for r in wc["working"]] == ["SMALL", "MEGA"],
+      f"80% of the balance sheet in net current assets beats 29% of a much "
+      f"bigger one (got {[r['ticker'] for r in wc['working']]})")
+check(wc["working"][0]["ncav"] < wc["working"][1]["ncav"],
+      "which is the opposite of the dollar ranking, and the point")
+
 check(S.board({"rows": []}) == EMPTY,
       "an empty payload yields empty lists, not a crash")
 check(S.board({}) == EMPTY, "and so does a malformed one")
