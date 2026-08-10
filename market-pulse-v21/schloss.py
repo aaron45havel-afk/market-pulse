@@ -76,6 +76,13 @@ INSIDER_ALIGNED_MIN = 0.10     # "managements that own a lot of stock"
 # dividend, and its absence the year after is arithmetic, not a cut.
 SPECIAL_DIVIDEND_MULTIPLE = 2.5
 
+# "Pays a dividend" is a PRESENT-TENSE governance check — a cheque that
+# leaves the building every quarter is a constraint on management. A
+# record ending several years ago establishes that it used to. Valaris
+# came through as a payer on a 2019 figure, and 29 of the 373 rows
+# clearing every gate rested on a dividend that had already stopped.
+DIVIDEND_STALE_YEARS = 2
+
 # A market cap this far below tangible book is not a bargain, it is two
 # numbers denominated in different currencies. Schloss's deepest
 # discounts were around a third of book; a hundredth is an artefact.
@@ -209,7 +216,7 @@ def debt_ok(short_term_debt, long_term_debt, equity,
     return ratio <= DEBT_TO_EQUITY_MAX, ratio
 
 
-def dividend_history(per_share_by_year: dict) -> dict:
+def dividend_history(per_share_by_year: dict, this_year: int | None = None) -> dict:
     """Does it pay, and has it just cut?
 
     Two different signals from one series, and the screen wants both.
@@ -236,7 +243,7 @@ def dividend_history(per_share_by_year: dict) -> dict:
     if not series:
         return {"pays": None, "cut": None, "latest": None, "cut_pct": None,
                 "years": 0, "from_year": None, "to_year": None,
-                "special_prior": False}
+                "special_prior": False, "stale": False}
 
     years = sorted(series)
     latest = series[years[-1]]
@@ -275,8 +282,14 @@ def dividend_history(per_share_by_year: dict) -> dict:
     # recency itself. A 2019-to-2025 pair is a real decline but not the
     # fresh overreaction he was buying into, and only the dates say which
     # of the two this is.
-    return {"pays": latest > 0, "cut": cut, "latest": latest,
+    # The sweep covers every year up to now, so a series that stops in
+    # 2019 is a company that stopped paying, not a year we failed to
+    # fetch. That is a measurement, so it rejects rather than going
+    # unknown — but the reason travels with it.
+    stale = bool(this_year and years[-1] < this_year - DIVIDEND_STALE_YEARS)
+    return {"pays": (latest > 0) and not stale, "cut": cut, "latest": latest,
             "cut_pct": cut_pct, "years": len(series), "special_prior": special,
+            "stale": stale,
             "from_year": years[-2] if len(years) > 1 else None,
             "to_year": years[-1]}
 
@@ -380,7 +393,7 @@ def evaluate(f: dict, this_year: int) -> dict:
     # which. So the refresh script sets the key to {} when it searched and
     # found nothing, and that is read as a definite no.
     raw_divs = f.get("div_per_share_by_year")
-    divs = dividend_history(raw_divs)
+    divs = dividend_history(raw_divs, this_year)
     if raw_divs is not None and divs["pays"] is None:
         divs = {**divs, "pays": False}
     mgmt = self_dealing(f.get("sbc"), f.get("revenue"), f.get("shares_cagr"),
@@ -522,6 +535,15 @@ def census(rows: list[dict]) -> dict:
                      and not any(v is False
                                  for v in (r.get("gates") or {}).values()))
     priced = sum(1 for r in rows if r.get("price_ready"))
+    # GRAHAM'S SCREEN AND SCHLOSS'S ARE NOT THE SAME COUNT. The raw
+    # net-net tally came to 131, of which 103 failed both the 20-year and
+    # the dividend gate: sub-$100m shells trading at a fiftieth of stated
+    # book because the market does not believe the assets are there. One
+    # cleared everything. Reporting only the raw figure reads as 131
+    # opportunities, and his market-temperature call — "you could tell the
+    # market was too high when the working capital stocks disappeared" —
+    # is about the ones he would actually have bought.
+    netnets_q = sum(1 for r in rows if r.get("is_net_net") and r.get("gates_pass"))
     below = sum(1 for r in rows if r.get("below_book"))
     netnets = sum(1 for r in rows if r.get("is_net_net"))
     cuts = sum(1 for r in rows if (r.get("dividend") or {}).get("cut"))
@@ -535,6 +557,7 @@ def census(rows: list[dict]) -> dict:
         "priced": priced,
         "below_book": below if priced else None,
         "net_nets": netnets if priced else None,
+        "net_nets_qualifying": netnets_q if priced else None,
         "price_coverage_pct": round(priced / total * 100, 1) if total else 0.0,
     }
 

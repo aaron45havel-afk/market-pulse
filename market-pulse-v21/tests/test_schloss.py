@@ -139,6 +139,25 @@ rich = S.dividend_history({2022: 10.0, 2023: 10.0, 2024: 10.0, 2025: 3.0})
 check(rich["cut"] is True and rich["special_prior"] is False,
       "a consistently large payout being cut is a cut")
 
+# "PAYS A DIVIDEND" IS PRESENT TENSE. The sweep covers every year up to
+# now, so a series ending in 2019 is a company that stopped, not a year we
+# failed to fetch. Valaris came through as a payer on a 2019 figure of
+# $40,000 a share, and 29 of the 373 rows clearing every gate rested on a
+# dividend that had already stopped.
+old = S.dividend_history({2018: 0.50, 2019: 0.55}, 2026)
+check(old["pays"] is False,
+      "a dividend last seen seven years ago does not make a company a payer")
+check(old["stale"] is True, "and the row records that this is why")
+check(old["latest"] == 0.55, "while still reporting what it last paid")
+live = S.dividend_history({2024: 1.0, 2025: 1.1}, 2026)
+check(live["pays"] is True and live["stale"] is False, "a current payer is unaffected")
+check(S.dividend_history({2024: 1.0}, 2026)["stale"] is False,
+      "and last year counts as current — the newest annual frame is not "
+      "complete for every filer yet, so a one-year lag is normal")
+check(S.dividend_history({2018: 0.5})["pays"] is True,
+      "with no reference year there is nothing to be stale against, and "
+      "nothing is claimed")
+
 check(S.dividend_history({})["pays"] is None,
       "no series at all is unknown, not 'does not pay'")
 check(S.dividend_history({})["cut"] is None, "and the cut is unknown too")
@@ -430,6 +449,20 @@ check(c["screened"] == 4, "every row is counted")
 check(c["priced"] == 2, "two of four had a price")
 check(c["price_coverage_pct"] == 50.0, "and coverage says so plainly")
 check(c["below_book"] == 1, "one of the priced rows is below tangible book")
+
+# Graham's screen and Schloss's are not the same count.
+NN = {"generated": "2026-08-10", "rows": [
+    {"ticker": "SHELL", "is_net_net": True, "gates_pass": False, "price_ready": True,
+     "gates": {"a": True, "b": False}, "ncav": 10.0, "dividend": {}, "backing": {}},
+    {"ticker": "REAL", "is_net_net": True, "gates_pass": True, "price_ready": True,
+     "gates": {"a": True, "b": True}, "ncav": 10.0, "dividend": {}, "backing": {}},
+]}
+cn = S.census(NN["rows"])
+check(cn["net_nets"] == 2, "the raw Graham count is still reported")
+check(cn["net_nets_qualifying"] == 1,
+      "alongside the count that also clears the balance-sheet gates — the "
+      "live board read 131 and 1, and only the second is the market "
+      "temperature he was describing")
 check(c["positive_ncav"] == 3, "three have positive net current assets")
 check(c["ncav_unknown"] == 1, "and one could not be measured at all")
 
