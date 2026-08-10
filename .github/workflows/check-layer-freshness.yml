@@ -6,7 +6,7 @@ name: Check research-layer freshness
 # actually drifts — so a stale number is loud rather than silent.
 on:
   schedule:
-    - cron: '0 17 3 * *'   # 3rd of each month
+    - cron: '0 17 * * 0'   # Sundays 17:00 UTC
   workflow_dispatch: {}
 
 permissions:
