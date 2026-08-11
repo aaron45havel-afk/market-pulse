@@ -71,6 +71,13 @@
   details.ly-explain summary { cursor:pointer; font-weight:700; font-size:0.85rem; }
   details.ly-explain ul { margin:0.4rem 0 0.4rem 1.1rem; padding:0; }
   .empty { padding:2rem 1rem; text-align:center; color:var(--text-dim); font-size:0.9rem; }
+
+  /* A snapshot built before the current rules is not wrong — it is answering
+     a different question. Saying so is cheaper than letting a reader assume
+     the guards on this page were applied to the numbers below. */
+  .ly-stale { background:rgba(217,119,6,0.10); border:1px solid rgba(217,119,6,0.38);
+    border-radius:10px; padding:0.7rem 1rem; margin:1rem 0; font-size:0.8rem; line-height:1.6; }
+  .ly-stale strong { color:#b45309; }
 </style>
 {% endblock %}
 {% block content %}
@@ -96,6 +103,8 @@
     </label>
   </div>
 </div>
+
+<div class="ly-stale" id="lyStale" style="display:none;"></div>
 
 <!-- THE FUNNEL -->
 <div class="ly-funnel" id="lyFunnel" style="display:none;">
@@ -261,23 +270,69 @@ function render() {
   document.getElementById('lyShowing').textContent =
     sorted.length > ROW_CAP ? `Showing ${ROW_CAP} of ${sorted.length}.` : '';
 
+  // "of 0 screened" is the same bug as an unfiled debt tag reading as zero
+  // debt: a number nobody measured, printed with the authority of one. An
+  // old snapshot carries no census, so the tile has to say that.
+  const passSub = moatOn ? 'with the moat overlay on'
+    : CENSUS.screened ? `of ${CENSUS.screened.toLocaleString()} screened`
+    : 'universe size not recorded';
+
+  const fall = fallingTile(rows);
+
   const tiles = [
-    ['Passing every filter', rows.length, moatOn ? 'with the moat overlay on' : 'of ' + (CENSUS.screened || 0) + ' screened'],
+    ['Passing every filter', rows.length, passSub],
     ['Median P/E', fmt(median(rows.map(r => r.pe_ratio)), 2), n(rows, r => r.pe_ratio)],
     ['Median EPS growth', fmt(median(rows.map(r => r.eps_3yr_cagr_pct)), 1, '%'), n(rows, r => r.eps_3yr_cagr_pct)],
     ['Median PEG', fmt(median(rows.map(r => r.peg)), 2), n(rows, r => r.peg)],
-    ['Falling last year', rows.filter(r => ((r.growth || {}).latest_yoy ?? 0) < 0).length,
-     'an endpoint CAGR cannot see this'],
+    ['Falling last year', fall.value, fall.sub],
   ];
   document.getElementById('lyTiles').innerHTML = tiles.map(
     ([k, v, sub]) => `<div class="ly-tile"><div class="v">${v}</div><div class="k">${k}</div><div class="n">${sub}</div></div>`
   ).join('');
 }
 
+// `?? 0` counted an unmeasured year as flat and reported it as "not falling",
+// which is a verdict. Rows with no year-over-year figure are excluded from
+// both the numerator and the denominator, and the caption says how many.
+function fallingTile(rows) {
+  const known = rows.filter(r => (r.growth || {}).latest_yoy != null);
+  if (!known.length) {
+    return { value: '—', sub: rows.length ? 'no last-year figure on this snapshot' : 'nothing to measure' };
+  }
+  const falling = known.filter(r => r.growth.latest_yoy < 0).length;
+  const sub = known.length === rows.length
+    ? 'an endpoint CAGR cannot see this'
+    : `of ${known.length} with a last-year figure`;
+  return { value: falling, sub };
+}
+
 function fmt(v, d, suffix = '') { return v == null ? '—' : v.toFixed(d) + suffix; }
 function n(rows, pick) {
   const c = rows.filter(r => pick(r) != null).length;
   return c === rows.length ? `n = ${c}` : `n = ${c} of ${rows.length}`;
+}
+
+// A snapshot written before the current screener has no census and no
+// per-row growth block. Both are load-bearing here: without them the page
+// silently renders numbers the guards on this page never touched — a 493.6%
+// CAGR off a trough base, a 0.22 P/E — with nothing marking them as
+// pre-fix. The absence of those keys IS the signal; no version field needed.
+function renderStale() {
+  const el = document.getElementById('lyStale');
+  const noCensus = !CENSUS || CENSUS.screened == null;
+  const noGrowth = ROWS.length > 0 && !ROWS.some(r => r.growth);
+  if (!noCensus && !noGrowth) { el.style.display = 'none'; return; }
+
+  const missing = [];
+  if (noCensus) missing.push('what the screen rejected and why');
+  if (noGrowth) missing.push('the trough-base and step-change guards on growth');
+
+  el.style.display = '';
+  el.innerHTML =
+    `<strong>This snapshot predates the current screen.</strong> It was written by an earlier build, ` +
+    `so it does not carry ${missing.join(', or ')}. The rows below are shown as they were filed — ` +
+    `a growth rate here may be measured off a near-zero base, and a P/E may be built on a share ` +
+    `count in a different currency. The next monthly run replaces it.`;
 }
 
 function renderFunnel() {
@@ -298,23 +353,50 @@ function renderFunnel() {
     .join('');
 }
 
+function money(v) {
+  if (v == null) return null;
+  return v >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : `$${(v / 1e6).toFixed(0)}M`;
+}
+
+// Every number here comes from the payload. The old page hard-coded "$1B",
+// "P/E < 10" and "D/E < 0.5" as prose, so a threshold change meant the page
+// argued against the board it was displaying. The fix for that introduced
+// the opposite failure: `?? '—'` on a rules block that predates a key
+// printed "a revenue floor of $0M and a $— share-price floor" — a rule
+// nobody set, stated as if it were in force. A clause with no number behind
+// it is dropped, not filled in.
 function renderSubtitle() {
   const r = META.rules || {};
-  const cap = r.market_cap_min != null
-    ? (r.market_cap_min >= 1e9 ? `$${(r.market_cap_min / 1e9).toFixed(1)}B` : `$${(r.market_cap_min / 1e6).toFixed(0)}M`)
-    : '—';
-  // Every number here comes from the payload. The old page hard-coded
-  // "$1B", "P/E < 10" and "D/E < 0.5" as prose, so a threshold change
-  // meant the page argued against the board it was displaying.
-  document.getElementById('lySubtitle').innerHTML =
-    `Growth the market has not repriced. Market cap over <strong>${cap}</strong>, ` +
-    `P/E between <strong>${r.pe_min ?? '—'}</strong> and <strong>${r.pe_max ?? '—'}</strong>, ` +
-    `${r.min_eps_years ?? '—'}-yr EPS growth over <strong>${r.eps_growth_3yr_min_pct ?? '—'}%</strong> ` +
-    `(capped at ${r.eps_growth_cap_pct ?? '—'}%), debt/equity under <strong>${r.debt_to_equity_max ?? '—'}</strong>, ` +
-    `capex under <strong>${((r.capex_to_ocf_max ?? 0) * 100).toFixed(0)}%</strong> of operating cash flow. ` +
-    `Micro-caps admitted with a revenue floor of $${((r.min_revenue ?? 0) / 1e6).toFixed(0)}M and a ` +
-    `$${r.min_price ?? '—'} share-price floor, because market cap alone cannot tell a small business ` +
-    `from a registrant with a filing agent.`;
+  const clauses = [];
+  const cap = money(r.market_cap_min);
+  if (cap) clauses.push(`market cap over <strong>${cap}</strong>`);
+  if (r.pe_min != null && r.pe_max != null)
+    clauses.push(`P/E between <strong>${r.pe_min}</strong> and <strong>${r.pe_max}</strong>`);
+  else if (r.pe_max != null) clauses.push(`P/E under <strong>${r.pe_max}</strong>`);
+  if (r.eps_growth_3yr_min_pct != null) {
+    const yrs = r.min_eps_years != null ? `${r.min_eps_years}-yr ` : '';
+    const cappedAt = r.eps_growth_cap_pct != null ? ` (capped at ${r.eps_growth_cap_pct}%)` : '';
+    clauses.push(`${yrs}EPS growth over <strong>${r.eps_growth_3yr_min_pct}%</strong>${cappedAt}`);
+  }
+  if (r.debt_to_equity_max != null)
+    clauses.push(`debt/equity under <strong>${r.debt_to_equity_max}</strong>`);
+  if (r.capex_to_ocf_max != null)
+    clauses.push(`capex under <strong>${(r.capex_to_ocf_max * 100).toFixed(0)}%</strong> of operating cash flow`);
+
+  const joined = clauses.join(', ');
+  let text = clauses.length
+    ? `Growth the market has not repriced. ${joined.charAt(0).toUpperCase()}${joined.slice(1)}.`
+    : 'Growth the market has not repriced. The snapshot did not record the thresholds it used.';
+
+  const rev = money(r.min_revenue);
+  const floors = [];
+  if (rev) floors.push(`a revenue floor of ${rev}`);
+  if (r.min_price != null) floors.push(`a $${r.min_price} share-price floor`);
+  if (floors.length)
+    text += ` Micro-caps admitted with ${floors.join(' and ')}, because market cap alone cannot tell` +
+            ` a small business from a registrant with a filing agent.`;
+
+  document.getElementById('lySubtitle').innerHTML = text;
 }
 
 async function loadSnapshot(month) {
@@ -334,6 +416,7 @@ async function loadSnapshot(month) {
       `as of ${META.as_of || month} · ${passing} pass every filter · ${withMoat} also clear the moat overlay` +
       (META.quote_source ? ` · quotes: ${META.quote_source}` : '');
     renderSubtitle();
+    renderStale();
     renderFunnel();
     render();
   } catch (e) {
