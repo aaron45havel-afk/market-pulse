@@ -60,19 +60,32 @@ def prune_old_snapshots(directory: Path, keep: int) -> int:
     return removed
 
 
-def previous_passing(directory: Path, exclude: str) -> int | None:
-    files = [p for p in sorted(directory.glob("*.json")) if p.stem != exclude]
+def previous_passing(directory: Path) -> tuple[int | None, str]:
+    """(passing count, filename) of the most recently PUBLISHED board.
+
+    THE CURRENT MONTH IS NOT EXCLUDED. It used to be, on the reasoning
+    that you should compare a rebuild against last month rather than
+    against the file you are overwriting — but the file you are
+    overwriting IS the board on the page, and last month's is one nobody
+    is looking at.
+
+    That is not academic. Run #9 built 4 passing names, compared them
+    against JULY's 11 instead of the live August 8, and stopped: 4 vs 11
+    is a 64% drop and trips the guard, while 4 vs 8 is 50% and does not.
+    Forty-eight minutes of fetching were discarded over a comparison to a
+    board that had already been replaced.
+    """
+    files = sorted(directory.glob("*.json"))
     if not files:
-        return None
+        return None, ""
     try:
         with open(files[-1], encoding="utf-8") as fh:
             d = json.load(fh)
     except (OSError, ValueError):
-        return None
+        return None, files[-1].name
     meta = d.get("_meta") or {}
-    if isinstance(meta.get("passing_count"), int):
-        return meta["passing_count"]
-    return None
+    n = meta.get("passing_count")
+    return (n if isinstance(n, int) else None), files[-1].name
 
 
 def write_atomic(path: Path, payload: dict) -> None:
@@ -114,15 +127,32 @@ def main(argv: list[str] | None = None) -> int:
     today = date.today()
     key = today.strftime("%Y-%m")
 
-    prev = previous_passing(SNAPSHOT_DIR, key)
+    # WHO SURVIVED, always — before any decision about publishing. The
+    # guard discards the whole run on the way out, and a run that took 48
+    # minutes of SEC fetching should not also take the only evidence about
+    # why it produced the count it did. Four tickers in the log are enough
+    # to tell a broken parser from a strict screen in a thin market.
+    survivors = [r for r in rows if r.get("verdict") == "pass"]
+    log.info("")
+    log.info("  passing names:")
+    for r in survivors[:25]:
+        g = r.get("growth") or {}
+        log.info("    %-6s %-28s P/E %-6s CAGR %-6s yoy %-8s PEG %-5s RoC %s",
+                 r.get("ticker"), (r.get("name") or "")[:28],
+                 r.get("pe_ratio"), r.get("eps_3yr_cagr_pct"),
+                 g.get("latest_yoy"), r.get("peg"), r.get("roc_pct"))
+    if len(survivors) > 25:
+        log.info("    … and %d more", len(survivors) - 25)
+
+    prev, prev_file = previous_passing(SNAPSHOT_DIR)
     if prev and passing < prev * (1 - PASSING_DROP_MAX) and not args.force:
         log.error("")
-        log.error("STOPPING: passing count fell from %d to %d (%.0f%%).",
-                  prev, passing, (1 - passing / prev) * 100)
+        log.error("STOPPING: passing count fell from %d (%s) to %d (%.0f%%).",
+                  prev, prev_file, passing, (1 - passing / prev) * 100)
         log.error("That is more likely a broken parser than a repriced "
                   "market. The previous snapshot is untouched.")
-        log.error("Re-run with --force if the drop is expected — it is, on "
-                  "the first run after a parser fix.")
+        log.error("Re-run with force checked if the drop is expected — it is, "
+                  "on the first run after a parser fix.")
         return 1
 
     payload = {
