@@ -275,16 +275,36 @@ def get_tickers():
     _wc("tickers_v5", r)
     return r
 
-def get_exchanges():
-    c = _rc("exc_v3", 168)
-    if c: return c
-    d = _get("https://www.sec.gov/files/company_tickers_exchange.json")
+def parse_exchanges(d):
+    """company_tickers_exchange.json -> {cik: {"exchange": str}}.
+
+    The exchange cell is JSON null for OTC, delisted and not-yet-listed
+    filers — the key is PRESENT and the value is None, so a downstream
+    `.get("exchange", "")` never reaches its default and hands a None to
+    whatever calls .upper() next. Normalised to "" here so no consumer has
+    to know that. "" means "SEC did not name an exchange", which every
+    caller must treat as a rejection, never as a pass.
+    """
     if not d or "data" not in d: return {}
     f = d.get("fields", [])
     ci = f.index("cik") if "cik" in f else 0
     ei = f.index("exchange") if "exchange" in f else 3
-    r = {str(row[ci]): {"exchange": row[ei] if len(row) > ei else ""} for row in d.get("data", [])}
-    _wc("exc_v3", r)
+    out = {}
+    for row in d.get("data", []):
+        if not row or len(row) <= ci: continue
+        raw = row[ei] if len(row) > ei else ""
+        out[str(row[ci])] = {"exchange": (raw or "").strip()}
+    return out
+
+
+def get_exchanges():
+    # Cache key bumped to v4: v3 entries were written before the None
+    # normalisation and a warm cache would reintroduce the crash.
+    c = _rc("exc_v4", 168)
+    if c: return c
+    r = parse_exchanges(_get("https://www.sec.gov/files/company_tickers_exchange.json"))
+    if not r: return {}
+    _wc("exc_v4", r)
     return r
 
 def fetch_financials():
