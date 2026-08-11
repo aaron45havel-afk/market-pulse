@@ -403,6 +403,58 @@ check(abs(L.median([8.87, 8.96, 9.52, 1.61, 0.22, 5.37]) - 7.12) < 1e-9,
 check(L.median([]) is None, "and nothing is not zero")
 
 
+# ── the universe filter ──
+# This function was unreachable from any test until its three fetches were
+# made injectable, which is precisely why a null exchange took down a
+# production run: `.get("exchange", "")` returns the default only when the
+# key is ABSENT, and SEC ships it present-and-null for OTC filers.
+import sec_edgar as SE
+from lynch_screener import build_universe
+
+_TICK = {
+    "1": {"ticker": "AAA", "name": "Alpha Corp"},
+    "2": {"ticker": "BBB", "name": "Beta Inc"},
+    "3": {"ticker": "CCC", "name": "Gamma Ltd"},
+    "4": {"ticker": "DDD", "name": "Delta Co"},
+}
+_EXCH = {
+    "1": {"exchange": "Nasdaq"},
+    "2": {"exchange": None},       # the crash: key present, value null
+    "3": {"exchange": ""},         # SEC named no exchange
+    "4": {"exchange": "OTC"},      # named, but not a major exchange
+}
+_DET = {c: {"sic": "7372", "state_desc": "California"} for c in ("1", "2", "3", "4")}
+
+_got = {r["ticker"] for r in build_universe(_TICK, _EXCH, _DET)}
+check(_got == {"AAA"},
+      "a null exchange is rejected rather than raising AttributeError on "
+      ".upper() — the crash that killed run #7")
+check("CCC" not in _got, "an unnamed exchange is not a pass — fail closed")
+check("DDD" not in _got, "OTC is named but is not a major exchange")
+
+_named = sum(1 for v in _EXCH.values() if (v or {}).get("exchange"))
+check(_named == 2,
+      "2 of 4 exchanges are usable — the old log line printed len(exchanges) "
+      "and claimed '7998 of 7998' one line before crashing on a null")
+
+# Same defect one layer down: normalise at the parser so no consumer has
+# to know the cell can be null.
+_parsed = SE.parse_exchanges({
+    "fields": ["cik", "name", "ticker", "exchange"],
+    "data": [[1, "Alpha", "AAA", "Nasdaq"],
+             [2, "Beta", "BBB", None],
+             [3, "Gamma", "CCC", "  NYSE  "],
+             [4, "Delta", "DDD"]],          # row short of the exchange cell
+})
+check(_parsed["2"]["exchange"] == "", "a null cell parses to empty, never None")
+check(_parsed["3"]["exchange"] == "NYSE", "and is stripped")
+check(_parsed["4"]["exchange"] == "", "a short row does not raise IndexError")
+check(all(isinstance(v["exchange"], str) for v in _parsed.values()),
+      "every parsed exchange is a string, so .upper() is always safe")
+check(SE.parse_exchanges({}) == {} and SE.parse_exchanges(None) == {},
+      "a failed fetch yields an empty map, not a crash")
+
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

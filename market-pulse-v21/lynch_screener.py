@@ -140,8 +140,14 @@ def fetch_quotes_bulk(tickers: list[str]) -> tuple[dict, str]:
 # UNIVERSE
 # ═══════════════════════════════════════════════════════════════════
 
-def build_universe() -> list[dict]:
+def build_universe(tickers: dict | None = None,
+                   exchanges: dict | None = None,
+                   details: dict | None = None) -> list[dict]:
     """Major-exchange filers minus financials, biotech, warrants and SPACs.
+
+    The three fetches are injectable so this function can be exercised
+    offline. It could not be before, which is why a None exchange reached
+    production: every guard in here was unreachable from a test.
 
     ADRs stay in — they are buyable on any US broker — but the old page
     split them into a table headed "International ADRs" on the basis of
@@ -149,10 +155,16 @@ def build_universe() -> list[dict]:
     label. A Canadian 40-F filer, an Israeli issuer and a Chinese VIE all
     landed in one bucket. The split is gone; location is a column.
     """
-    tickers = get_tickers()
-    exchanges = get_exchanges()
-    log.info("Universe: %d tickers, %d with exchange data",
-             len(tickers), len(exchanges))
+    tickers = tickers if tickers is not None else get_tickers()
+    exchanges = exchanges if exchanges is not None else get_exchanges()
+
+    # Count what is USABLE, not how many rows came back. The old line read
+    # `len(exchanges)` and printed "7998 tickers, 7998 with exchange data"
+    # one line before crashing on an exchange that was None — the counter
+    # and the guard were describing different things.
+    named = sum(1 for v in exchanges.values() if (v or {}).get("exchange"))
+    log.info("Universe: %d tickers, %d of %d with an exchange named",
+             len(tickers), named, len(exchanges))
 
     pre: list[dict] = []
     for cik, t in tickers.items():
@@ -160,7 +172,10 @@ def build_universe() -> list[dict]:
         name = t.get("name") or ""
         if not ticker or not name or _is_warrant(ticker) or _excluded_keyword(name):
             continue
-        exch = (exchanges.get(cik) or {}).get("exchange", "")
+        # `or ""` not `.get(k, "")` — the second only fires when the key is
+        # ABSENT, and SEC ships the key present with a null value for OTC
+        # and delisted filers. That distinction cost a production run.
+        exch = ((exchanges.get(cik) or {}).get("exchange") or "")
         # FAIL CLOSED. The old test was `if exch and exch.upper() not in
         # MAJOR_EXCHANGES` — a blank exchange string passed straight
         # through into a table headed "United States".
@@ -170,7 +185,8 @@ def build_universe() -> list[dict]:
 
     log.info("  after exchange/name/warrant filter: %d", len(pre))
 
-    details = get_company_details_bulk([r["cik"] for r in pre])
+    if details is None:
+        details = get_company_details_bulk([r["cik"] for r in pre])
     out: list[dict] = []
     dropped_sic = 0
     for row in pre:
