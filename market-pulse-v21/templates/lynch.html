@@ -24,6 +24,10 @@
   .ly-step.pass .n { color:var(--mint-ink); }
   .ly-step.unmeasured { border-style:dashed; }
   .ly-step.unmeasured .n { color:var(--text-dim); }
+  .ly-step.suspect { border-color:rgba(217,119,6,0.55); }
+  .ly-step.suspect .n { color:#b45309; }
+  .desc.warn { color:#b45309; }
+  .desc.warn strong { color:#b45309; }
 
   .ly-reasons { margin-top:0.7rem; font-size:0.74rem; color:var(--text-dim);
     display:flex; flex-wrap:wrap; gap:0.3rem 1.1rem; }
@@ -112,11 +116,9 @@
   <p class="desc">
     A board of nine names out of an unstated universe cannot be argued with — the same file is produced
     by a strict screen in a rich market and by a parser that rejects everything. Every rejection below
-    names the concept or the gate that caused it. The four counts <strong>partition</strong> the
-    universe: screened = rejected + could-not-measure + passing, with <em>rejected</em> meaning the
-    company was measured and failed a gate, and <em>could not measure</em> meaning the screen could not
-    see. Companies with no quote are counted here rather than dropped before the screen ran.
+    names the concept or the gate that caused it.
   </p>
+  <p class="desc" id="lyPartition"></p>
   <div class="ly-steps" id="lySteps"></div>
   <div class="ly-reasons" id="lyReasons"></div>
 </div>
@@ -174,6 +176,14 @@
         best-covered one sets the basis and the others fill only the years it lacks. Pre- and post-606
         revenue are not an identical basis, which is a real caveat, but a spliced series beats one that
         stopped nine years ago.</li>
+    <li><strong>One year is not a trend, but an explosive grower is still worth seeing.</strong> Sonoco ran
+        −0.86 → 4.72 → 4.80 → 1.65 → 10.07 and published 28.7%/yr at a 0.20 PEG; the last year is a
+        divestiture gain and the CAGR runs straight through it. The step guard could not see it — that
+        compares a level to its window, and 10.07 against a median of 4.76 is unremarkable. So a year more
+        than 200% above the one before it is treated as a discontinuity, and the trend is re-measured
+        <em>without</em> it. The company is not dropped for having a spike: it is judged on the years that
+        are not the anomaly. Sonoco's underlying path is 4.72 → 4.80 → 1.65, falling, and it leaves;
+        a company still compounding without its best year stays, badged, at the conservative rate.</li>
     <li><strong>A turnaround is not a growth rate.</strong> Both guards above used to switch off when the
         window's median was negative, so EPS of 0.12, −0.80, −0.45, 3.10 fell through to the endpoint
         formula and printed a capped 35%/yr with a PEG near 0.2 — the top row. A loss year inside the
@@ -218,6 +228,7 @@ function row(r) {
   const path = (r.eps_path || []).map(v => v == null ? '·' : v.toFixed(2)).join(' ');
 
   const flags = [];
+  if (g.spike) flags.push(`<span class="flag" title="The latest year is ${yoy == null ? 'far' : (yoy > 0 ? '+' : '') + yoy.toFixed(0) + '%'} against the one before it — a jump that size is usually a one-time gain, not a continuation. Through that year the rate computes to ${g.cagr_through_spike == null ? 'nothing' : g.cagr_through_spike + '%'}; the figure shown EXCLUDES it, so the company is judged on the years that are not the anomaly. A genuine fast grower still clears the floor without its best year.">spike year</span>`);
   if (g.capped) flags.push(`<span class="flag" title="Computes to ${g.cagr_raw}%/yr. Sustaining that for three years is rare enough that a GARP buyer should not underwrite it, so it is shown at the cap.">capped</span>`);
   if (r.pe_suspect) flags.push(`<span class="flag" title="Raw multiple ${r.pe_raw} — below the plausible floor.">P/E odd</span>`);
   if (m.roe_capped) flags.push(`<span class="flag quiet" title="ROE bounded at 100% — equity is small enough that the ratio stops describing the business.">ROE capped</span>`);
@@ -351,16 +362,49 @@ function renderStale() {
     `count in a different currency. The next monthly run replaces it.`;
 }
 
+// The page asserted "the four counts partition the universe" over a
+// snapshot where 3,216 + 975 + 8 came to 4,199 against 3,224 screened —
+// the writer still had `rejected = len(rows) - passing`, which already
+// contained every unmeasured row. Claiming a property of data you did not
+// produce is the same defect as printing a number nobody measured, so the
+// page checks the arithmetic instead of asserting it. This also catches
+// any FUTURE inconsistency, which a version stamp could not.
+function partitions(c) {
+  if (!c || c.screened == null) return null;
+  const parts = (c.rejected || 0) + (c.unmeasured || 0) + (c.passing || 0);
+  return { ok: parts === c.screened, parts, screened: c.screened };
+}
+
 function renderFunnel() {
   const c = CENSUS;
   if (!c || !c.screened) { document.getElementById('lyFunnel').style.display = 'none'; return; }
   document.getElementById('lyFunnel').style.display = '';
+
+  const p = partitions(c);
+  const claim = document.getElementById('lyPartition');
+  if (p && p.ok) {
+    claim.className = 'desc';
+    claim.innerHTML =
+      'The four counts <strong>partition</strong> the universe: screened = rejected + ' +
+      'could-not-measure + passing, with <em>rejected</em> meaning the company was measured and ' +
+      'failed a gate, and <em>could not measure</em> meaning the screen could not see. Companies ' +
+      'with no quote are counted here rather than dropped before the screen ran.';
+  } else if (p) {
+    claim.className = 'desc warn';
+    claim.innerHTML =
+      `<strong>These four counts do not add up.</strong> Rejected + could-not-measure + passing ` +
+      `is ${p.parts.toLocaleString()} against ${p.screened.toLocaleString()} screened, so a company ` +
+      `the screen could not measure is being counted twice — it appears under both. This snapshot ` +
+      `predates the fix; the next monthly run partitions correctly. Read the per-reason counts below, ` +
+      `which do sum to the universe.`;
+  }
+
   document.getElementById('lySteps').innerHTML = [
     ['Screened', c.screened, ''],
-    ['Rejected', c.rejected, ''],
+    ['Rejected', c.rejected, p && !p.ok ? 'suspect' : ''],
     ['Could not measure', c.unmeasured, 'unmeasured'],
     ['Passing', c.passing, 'pass'],
-  ].map(([k, v, cls]) => `<div class="ly-step ${cls}"><div class="n">${v.toLocaleString()}</div><div class="k">${k}</div></div>`).join('');
+  ].map(([k, v, cls]) => `<div class="ly-step ${cls}"><div class="n">${(v || 0).toLocaleString()}</div><div class="k">${k}</div></div>`).join('');
 
   const labels = c.labels || {};
   document.getElementById('lyReasons').innerHTML = Object.entries(c.by_reason || {})

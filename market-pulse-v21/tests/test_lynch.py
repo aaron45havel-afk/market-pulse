@@ -518,6 +518,61 @@ check(_buried["cagr"] is None and _buried["loss_window"],
       "would otherwise have printed a tidy 44%/yr")
 check("loss_window" in L.REASONS, "and the reason code has a human label")
 
+# ── one year doing all the growing ──
+# Sonoco, from the live board. The step guard cannot see it: the window
+# median is 4.76, so its threshold is 23.80 and 10.07 clears nothing —
+# but 1.65 -> 10.07 is six-fold in a single year, a divestiture gain.
+_son = L.growth({"2020-12-31": -0.86, "2021-12-31": 4.72, "2022-12-31": 4.80,
+                 "2023-12-31": 1.65, "2024-12-31": 10.07})
+check(_son["latest_yoy"] == 510.3 and _son["spike"],
+      "a year more than 200% above the one before it is a discontinuity, "
+      "which is a different test from the step guard's level-vs-window")
+check(_son["cagr_through_spike"] == 28.7,
+      "the rate THROUGH the spike is kept, because hiding it hides why the "
+      "row was judged the way it was")
+check(_son["cagr"] is None,
+      "but the reported rate excludes the spike year, and Sonoco's remaining "
+      "path 4.72 -> 4.80 -> 1.65 does not qualify")
+
+# THE POINT OF DOING IT THIS WAY: an explosive grower is not thrown out for
+# being explosive. It is asked whether it still qualifies on the years that
+# are not the anomaly.
+_rocket = L.growth({"2020-12-31": 0.80, "2021-12-31": 1.10, "2022-12-31": 1.50,
+                    "2023-12-31": 2.00, "2024-12-31": 6.50})
+check(_rocket["spike"] and _rocket["cagr"] == 35.0,
+      "a company still compounding without its best year KEEPS its rate and "
+      "stays on the board — rejecting every spike would cut the category "
+      "Lynch actually hunted. 0.80 -> 1.10 -> 1.50 -> 2.00 is 35.7%/yr "
+      "before the 6.50 year is counted at all")
+check(_rocket["cagr_through_spike"] == 35.0 and _rocket["capped"],
+      "both figures are capped here, so the badge is what tells the reader "
+      "the +225% year was set aside")
+
+# THE PRECEDENCE MATTERS. A verdict already reached is not overwritten by
+# "could not tell": the turnaround's +788.9% would trip the spike test, and
+# re-measuring without its last year leaves three points, too few to rate.
+check(_turn["loss_window"] and not _turn["spike"],
+      "a company the screen already understood keeps its specific verdict — "
+      "the spike test is an extra filter on things that would otherwise "
+      "PASS, not a replacement for a rejection already made")
+check(not L.growth({"2020-12-31": 0.23, "2021-12-31": 0.34,
+                    "2022-12-31": 0.39, "2023-12-31": 0.57})["spike"],
+      "an ordinary +46% year is not a spike")
+
+_base = dict(price=57.87, market_cap=5.7e9, total_assets=8e9, equity=2e9,
+             revenue=5e9, last_filing="2025-12-31", as_of="2026-08-11",
+             eps_unit="USD/shares", shares=9.8e7, net_income=1e9,
+             short_term_debt=1e8, long_term_debt=7e8, capex=2e8, ocf=4e8)
+check(L.evaluate({**_base, "ticker": "SON", "eps_by_year":
+                  {"2020-12-31": -0.86, "2021-12-31": 4.72, "2022-12-31": 4.80,
+                   "2023-12-31": 1.65, "2024-12-31": 10.07}})["reason"]
+      == "spike_year",
+      "and the reason names the 510% year, not the trough in the re-measured "
+      "window — a base year the reader cannot see in the CAGR column")
+check("spike_year" in L.REASONS and "spike_year" not in L.UNMEASURED_CODES,
+      "spike_year is a measured rejection, not an unmeasured one — the "
+      "screen saw the company perfectly well")
+
 # ── the penny floor was skipped when the price was missing ──
 _nop = L.evaluate({"ticker": "X", "market_cap": 5e8, "price": None,
                    "as_of": "2026-08-01"})
