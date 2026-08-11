@@ -403,13 +403,157 @@ check(abs(L.median([8.87, 8.96, 9.52, 1.61, 0.22, 5.37]) - 7.12) < 1e-9,
 check(L.median([]) is None, "and nothing is not zero")
 
 
-# ── the universe filter ──
-# This function was unreachable from any test until its three fetches were
-# made injectable, which is precisely why a null exchange took down a
-# production run: `.get("exchange", "")` returns the default only when the
-# key is ABSENT, and SEC ships it present-and-null for OTC filers.
+# ══════════════════════════════════════════════════════════════════
+# THE ADVERSARIAL REVIEW — six defects, each reproduced before it was
+# fixed. Every check below fails against the code that shipped.
+# ══════════════════════════════════════════════════════════════════
+
 import sec_edgar as SE
-from lynch_screener import build_universe
+import schloss as S
+from lynch_screener import (build_universe, ST_DEBT_TAGS, LT_DEBT_TAGS,
+                            REVENUE_TAGS, CAPEX_TAGS, OCF_TAGS)
+
+
+def _f(d):
+    """companyfacts with every concept under us-gaap/USD."""
+    return {"facts": {"us-gaap": {k: {"units": {"USD": v}} for k, v in d.items()}}}
+
+
+def _inst(pts):
+    return [{"end": e, "val": v} for e, v in pts]
+
+
+def _ann(pts):
+    return [{"start": f"{int(e[:4]) - 1}{e[4:]}", "end": e, "val": v} for e, v in pts]
+
+
+def _last_of(s):
+    return s[max(s)] if s else None
+
+
+# ── 1. instant_value took the first tag with ANY history ──
+# ShortTermBorrowings stopped in 2017 at 0.0; DebtCurrent has carried the
+# figure since. 0.0 is not None, so schloss's "neither tag present is not
+# zero debt" fallback never fired — a decade-old zero made neither absent.
+_migrated = _f({
+    "ShortTermBorrowings": _inst([("2015-12-31", 0.0), ("2016-12-31", 0.0),
+                                  ("2017-12-31", 0.0)]),
+    "DebtCurrent": _inst([("2018-12-31", 400e6), ("2025-12-31", 450e6)]),
+    "LongTermDebtNoncurrent": _inst([("2025-12-31", 900e6)]),
+})
+_st, _stc, _stdate = L.instant_value(_migrated, ST_DEBT_TAGS)
+check(_st == 450e6 and _stc == "DebtCurrent",
+      "the most recent debt tag wins, not the first one with any history")
+check(_stdate == "2025-12-31", "and the date comes back so staleness is checkable")
+_lt, _, _ = L.instant_value(_migrated, LT_DEBT_TAGS)
+check(S.debt_ok(_st, _lt, 3e9, 2e9) == (True, 0.45),
+      "D/E is 0.45 off the 2025 balance sheet, not the 0.30 the 2017 tag gave")
+check(L.instant_value(_migrated, "NotFiledAnywhere") == (None, "", ""),
+      "nothing filed is still (None, '', '') — never a zero")
+
+# ── 2 & 5. annual_series took one tag WHOLE and then its last year ──
+_capex_split = _f({
+    "PaymentsToAcquireProductiveAssets":
+        _ann([(f"{y}-12-31", 90e6) for y in range(2015, 2021)]),      # 6 pts, retired
+    "PaymentsToAcquirePropertyPlantAndEquipment":
+        _ann([(f"{y}-12-31", 400e6) for y in range(2021, 2025)]),     # 4 pts, current
+    "NetCashProvidedByUsedInOperatingActivities":
+        _ann([(f"{y}-12-31", 800e6) for y in range(2015, 2025)]),
+})
+_cx, _cxname = L.annual_series(_capex_split, CAPEX_TAGS)
+_ocf, _ = L.annual_series(_capex_split, OCF_TAGS)
+check(max(_cx) == "2024-12-31" and _last_of(_cx) == 400e6,
+      "the merged capex series reaches 2024 — the retired tag's 6 points made "
+      "it primary, but it no longer truncates the series at 2020")
+check(_cxname == "PaymentsToAcquireProductiveAssets",
+      "most coverage still names the basis, so the preference order is intact")
+check(abs(_last_of(_cx) / _last_of(_ocf) - 0.50) < 1e-9,
+      "capex/OCF is 0.50, not the 0.11 that a retired tag's last year gave")
+check(len(_cx) == 10, "and every year from both tags is present, none overwritten")
+
+_asc606 = _f({
+    "SalesRevenueNet": _ann([(f"{y}-12-31", 5e6) for y in range(2009, 2018)]),
+    "RevenueFromContractWithCustomerExcludingAssessedTax":
+        _ann([(f"{y}-12-31", 900e6) for y in range(2018, 2026)]),
+})
+_rev, _ = L.annual_series(_asc606, REVENUE_TAGS)
+check(_last_of(_rev) == 900e6 and max(_rev) == "2025-12-31",
+      "ASC 606: a $900m company is not published at the $5m its pre-606 tag "
+      "last reported in 2017 — which then failed the tiny_revenue gate")
+check(_rev["2012-12-31"] == 5e6,
+      "and the pre-606 years keep their own values — the merge fills gaps, "
+      "it does not overwrite")
+
+# ── 3. the growth guards measured against the WHOLE history ──
+# A steady compounder's verdict must not depend on how long it has been
+# public. This one tripped step_change at 16 years and passed at 15.
+for _n in (8, 15, 16, 17, 25):
+    _steady = {f"{2000 + i}-12-31": round(0.20 * 1.25 ** i, 4) for i in range(_n)}
+    _g = L.growth(_steady)
+    check(_g["cagr"] == 25.0 and not _g["step"] and not _g["trough"],
+          f"a steady 25%/yr compounder reports 25% at {_n} years of history, "
+          f"not step_change (got cagr={_g['cagr']} step={_g['step']})")
+
+# The two real guards still fire — measured against the window now.
+check(L.growth({"2020-12-31": 4.20, "2021-12-31": 0.05, "2022-12-31": 6.22,
+                "2023-12-31": 10.69, "2024-12-31": 10.46})["trough"],
+      "Abercrombie's 0.05 base is still a trough, not a 493.6% rate — note "
+      "the 0.05 has to BE the base year, four points back from the latest, "
+      "which is why the real five-point path is used and not a truncation")
+check(L.growth({"2021-12-31": 0.06, "2022-12-31": 0.04,
+                "2023-12-31": 0.00, "2024-12-31": 3.31})["step"],
+      "Xunlei is still a step change — and is NOT relabelled loss_window, "
+      "which is true but tells the reader less")
+
+# ── 4. both guards were gated on `median > 0` ──
+_turn = L.growth({"2021-12-31": 0.12, "2022-12-31": -0.80,
+                  "2023-12-31": -0.45, "2024-12-31": 3.10})
+check(_turn["cagr"] is None and _turn["loss_window"],
+      "a window with median -0.165 switched BOTH guards off and fell through "
+      "to the endpoint formula: raw 195.5%, capped to 35.0%, PEG 0.2, top row")
+_buried = L.growth({"2021-12-31": 1.0, "2022-12-31": -0.5,
+                    "2023-12-31": 2.0, "2024-12-31": 3.0})
+check(_buried["cagr"] is None and _buried["loss_window"],
+      "a healthy median with a loss buried inside it clears both guards and "
+      "would otherwise have printed a tidy 44%/yr")
+check("loss_window" in L.REASONS, "and the reason code has a human label")
+
+# ── the penny floor was skipped when the price was missing ──
+_nop = L.evaluate({"ticker": "X", "market_cap": 5e8, "price": None,
+                   "as_of": "2026-08-01"})
+check(_nop["reason"] == "no_price",
+      "a missing price rejects — `price is not None and price < MIN_PRICE` "
+      "read an absent quote as 'not a penny stock', and an absent quote is "
+      "likeliest exactly where the floor matters")
+
+# ── the census double-counted every unmeasured row ──
+_rows = ([{"reason": "pass", "verdict": "pass"}] * 3
+         + [{"reason": "pe_high", "verdict": "reject"}] * 5
+         + [{"reason": "debt_unknown", "verdict": "reject"}] * 4
+         + [{"reason": "no_price", "verdict": "reject"}] * 8)
+_c = L.census(_rows)
+check(_c["screened"] == _c["rejected"] + _c["unmeasured"] + _c["passing"],
+      "the four tiles PARTITION the universe — `rejected` was len(rows) - "
+      "passing, which already contained every unmeasured row, so a company "
+      "the screen could not measure was counted twice in a funnel")
+check(_c["rejected"] == 5 and _c["unmeasured"] == 12 and _c["passing"] == 3,
+      "rejected means measured-and-failed; unmeasured means the screen could "
+      "not see")
+check(all(k in L.REASONS for k in L.UNMEASURED_CODES),
+      "every unmeasured code has a label, so none renders as a raw slug")
+
+# ── a stale balance sheet is not a measured one ──
+_stale_bs = L.evaluate({"ticker": "X", "price": 40.0, "market_cap": 2e9,
+                        "total_assets": 1e9, "equity": 5e8, "revenue": 8e8,
+                        "last_filing": "2025-12-31", "as_of": "2026-08-01",
+                        "eps_by_year": {f"{y}-12-31": 1.0 + y - 2021
+                                        for y in range(2021, 2025)},
+                        "eps_unit": "USD/shares", "shares": 5e7,
+                        "net_income": 2.5e8, "short_term_debt": 0.0,
+                        "long_term_debt": 1e8, "debt_as_of": "2017-12-31"})
+check(_stale_bs["reason"] == "stale_balance_sheet",
+      "a debt tag that stopped eight years before the company did is not a "
+      "measured leverage ratio, and leverage decides membership")
 
 _TICK = {
     "1": {"ticker": "AAA", "name": "Alpha Corp"},
