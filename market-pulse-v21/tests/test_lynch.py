@@ -634,6 +634,33 @@ check(_row["roc_pct"] == 6.0 and _row["verdict"] == "pass",
       "a 6% return on capital does NOT reject — this is a growth-at-a-price "
       "screen, not a quality screen, and the figure is there to be read")
 
+# ── the publish guard compares against the LIVE board ──
+# Run #9 built 4 passing names, compared them against July's 11 instead of
+# the August 8 actually on the page, and discarded 48 minutes of fetching.
+# 4 vs 11 is 64% and trips the guard; 4 vs 8 is 50% and does not.
+import json as _json
+import pathlib
+import tempfile as _tmp
+sys.path.insert(0, os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
+from refresh_lynch_screener import previous_passing, PASSING_DROP_MAX
+
+_dir = pathlib.Path(_tmp.mkdtemp())
+for _m, _n in (("2026-06", 10), ("2026-07", 11), ("2026-08", 8)):
+    (_dir / f"{_m}.json").write_text(_json.dumps({"_meta": {"passing_count": _n}}))
+
+_prev, _file = previous_passing(_dir)
+check(_prev == 8 and _file == "2026-08.json",
+      "the guard compares against the most recently PUBLISHED board, not "
+      "the month before it — the current month's file IS what is on the page")
+check(not (4 < _prev * (1 - PASSING_DROP_MAX)),
+      "so a board of 4 against a live 8 is a 50% drop and publishes")
+check(3 < _prev * (1 - PASSING_DROP_MAX),
+      "while a board of 3 is 62% and still stops — the guard is not disabled")
+check(previous_passing(pathlib.Path(_tmp.mkdtemp())) == (None, ""),
+      "an empty directory yields no comparison rather than raising, so a "
+      "first-ever run publishes")
+
 # ── the penny floor was skipped when the price was missing ──
 _nop = L.evaluate({"ticker": "X", "market_cap": 5e8, "price": None,
                    "as_of": "2026-08-01"})
