@@ -110,6 +110,41 @@ check(ok is True and ratio is None,
 ok, ratio = S.debt_ok(100, 200, 1000)
 check(ok is True and ratio == 0.3,
       "with BOTH sides filed the ratio is genuinely measured and reported")
+# ── the bound measures the wrong thing without this ─────────────────
+# "Debt cannot exceed total liabilities" is true and, for anyone with a
+# store fleet, useless. ASC 842 put operating leases on the balance sheet
+# in 2019; lululemon carries $3.70bn of liabilities against $4.83bn of
+# equity, a ratio of 0.77, and almost none of it is borrowing.
+E, TL = 4.826e9, 3.704e9
+check(S.debt_ok(0.0, None, E, TL) == (None, None),
+      "the raw stack is 0.77x equity, so it proves nothing — for a company "
+      "whose actual borrowings are nil")
+nd = S.non_debt_liabilities(operating_lease_current=0.28e9,
+                            operating_lease_noncurrent=1.12e9,
+                            accounts_payable=0.4e9, deferred_revenue=0.1e9)
+ok, ratio = S.debt_ok(0.0, None, E, TL, nd)
+check(ok is True and ratio is None,
+      "with the leases, payables and deferred revenue taken out, what is "
+      "left cannot exceed the ceiling — no-debt is PROVED, and the ratio "
+      "stays blank because it was bounded rather than measured")
+
+# Every term optional, and a missing one leaves the bound LOOSER — so an
+# unfiled tag can only ever produce an honest unknown, never a wrong pass.
+check(S.non_debt_liabilities() == 0.0, "nothing filed subtracts nothing")
+check(S.non_debt_liabilities(None, 1.12e9, None, None) == 1.12e9,
+      "a partial set subtracts only what it can see")
+check(S.debt_ok(0.0, None, E, TL, S.non_debt_liabilities(None, 0.5e9)) == (None, None),
+      "and subtracting too little keeps the answer unknown, which is the "
+      "safe direction to be wrong in")
+
+# The gate is NOT weakened: a genuinely leveraged filer still cannot pass.
+check(S.debt_ok(None, None, 2e9, 8e9, S.non_debt_liabilities(None, 3e9)) == (None, None),
+      "a company with $5bn of non-lease liabilities against $2bn of equity "
+      "is still unknown — the subtraction tightens a bound, it does not "
+      "lower the ceiling")
+check(S.debt_ok(5e9, 1e9, 2e9, 8e9, S.non_debt_liabilities(None, 3e9))[0] is False,
+      "and when both tags ARE filed the measured ratio decides, bound or no bound")
+
 ok, ratio = S.debt_ok(0.0, None, 1000, total_liabilities=None)
 check(ok is None and ratio is None,
       "the lululemon shape exactly: one tag filed at zero, the other "

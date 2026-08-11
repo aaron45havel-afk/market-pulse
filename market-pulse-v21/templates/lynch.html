@@ -145,7 +145,7 @@
         <th data-sort="roe" title="Average ROE over the last three fiscal years, bounded at 100%. Flattered by leverage — read it beside RoC.">ROE<span class="arrow">↕</span></th>
         <th data-sort="roc" title="Greenblatt&#39;s return on capital: operating income over net working capital plus net PP&amp;E. The one column that answers whether the growth is EARNED or BOUGHT — a company can compound EPS for years by ploughing capital into projects returning less than they cost, and every other column here applauds it. Pre-tax on purpose: an effective tax rate needs two more tags that go missing, and a statutory 21% would be a fabricated number. Reported, never gated. Blank means an input was not filed.">RoC<span class="arrow">↕</span></th>
         <th data-sort="op_margin" title="Latest operating margin. Computed and discarded for three builds — which is why a 1.4% margin sat beside a 27% ROE unnoticed.">Op mgn<span class="arrow">↕</span></th>
-        <th data-sort="debt_to_equity" title="Short plus long-term debt over equity. Blank means neither tag was filed and the liability total could not settle it — never assumed to be zero.">D/E<span class="arrow">↕</span></th>
+        <th data-sort="debt_to_equity" title="Short plus long-term debt over equity, when both were filed. Blank with a row present means it was BOUNDED rather than measured: no debt tag was readable, but the liability stack minus what is provably not borrowing — operating leases, payables, deferred revenue — fits inside the ceiling, so debt cannot exceed it. Never assumed to be zero.">D/E<span class="arrow">↕</span></th>
         <th data-sort="capex_to_ocf">Capex/OCF<span class="arrow">↕</span></th>
         <th data-sort="ttm_eps" title="Latest annual EPS, with the unit it was filed in.">EPS<span class="arrow">↕</span></th>
         <th data-sort="pos_years" title="Consecutive profitable years on file.">Profit yrs<span class="arrow">↕</span></th>
@@ -251,7 +251,11 @@ function row(r) {
     <td>${f.pct(m.avg_roe_3yr_pct)}</td>
     <td title="${roc.reason || (roc.roc_raw_pct != null ? 'raw ' + roc.roc_raw_pct + '% on $' + (roc.capital / 1e6).toFixed(0) + 'M of capital employed' : '')}" class="${roc.roc_pct == null ? 'dim' : ''}">${f.pct(roc.roc_pct)}</td>
     <td class="${m.op_margin_pct != null && m.op_margin_pct < 5 ? 'neg' : ''}">${f.pct(m.op_margin_pct)}</td>
-    <td>${r.debt_to_equity == null ? '<span class="dim">—</span>' : f.n(r.debt_to_equity)}</td>
+    <td>${r.debt_to_equity == null
+            ? (r.debt_bounded
+                ? '<span class="dim" title="No debt tag was readable, but the liability stack minus operating leases, payables and deferred revenue fits inside the ceiling — so borrowings cannot exceed it. Bounded, not measured, which is why no number is shown.">≤ bound</span>'
+                : '<span class="dim">—</span>')
+            : f.n(r.debt_to_equity)}</td>
     <td>${f.n(r.capex_to_ocf)}</td>
     <td title="${r.eps_unit || ''}">${f.n(r.ttm_eps)}<span class="dim" style="font-size:0.6rem"> ${(r.eps_unit || '').replace('/shares', '')}</span></td>
     <td class="dim">${m.years_positive_eps == null ? '—' : m.years_positive_eps}</td>

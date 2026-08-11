@@ -34,6 +34,7 @@ from datetime import date
 from pathlib import Path
 
 import lynch as L
+import schloss as S
 import pricefeed as PF
 from sec_edgar import (
     SEC_UA,
@@ -248,6 +249,25 @@ def facts_to_record(row: dict, quote: dict, facts: dict, as_of: str) -> dict:
                                            "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"])
     assets, _, _ = L.instant_value(facts, "Assets")
     liabilities, _, _ = L.instant_value(facts, "Liabilities")
+    # DERIVED WHEN UNFILED. Plenty of filers tag
+    # LiabilitiesAndStockholdersEquity (which is total assets) and never
+    # tag `Liabilities` on its own — lululemon among them, which is why the
+    # liability bound had nothing to work with. Assets minus equity is the
+    # same number by construction.
+    if liabilities is None and assets is not None and equity is not None:
+        liabilities = assets - equity
+
+    # Liabilities that are certainly not borrowings. ASC 842 put operating
+    # leases on the balance sheet in 2019, and for any company with a store
+    # fleet they dominate the stack — which made the "debt <= total
+    # liabilities" bound useless exactly where it was most needed.
+    ol_cur, _, _ = L.instant_value(facts, "OperatingLeaseLiabilityCurrent")
+    ol_non, _, _ = L.instant_value(facts, "OperatingLeaseLiabilityNoncurrent")
+    payables, _, _ = L.instant_value(facts, ["AccountsPayableCurrent",
+                                             "AccountsPayableAndAccruedLiabilitiesCurrent"])
+    deferred, _, _ = L.instant_value(facts, ["ContractWithCustomerLiabilityCurrent",
+                                             "DeferredRevenueCurrent"])
+    non_debt = S.non_debt_liabilities(ol_cur, ol_non, payables, deferred)
     ppe, _, _ = L.instant_value(facts, "PropertyPlantAndEquipmentNet")
     # Greenblatt's denominator. Both are standard instants; if either is
     # unfiled the return is withheld rather than computed off a smaller
@@ -288,6 +308,7 @@ def facts_to_record(row: dict, quote: dict, facts: dict, as_of: str) -> dict:
         "equity": equity,
         "total_assets": assets,
         "total_liabilities": liabilities,
+        "non_debt_liabilities": non_debt,
         "ppe": ppe,
         "current_assets": cur_assets,
         "current_liabilities": cur_liabs,
