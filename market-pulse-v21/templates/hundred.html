@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+{% block title %}100-Bagger Checklist — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+  main .container { max-width: 1700px; }
+  .hb-sub { color:var(--text-dim); font-size:0.9rem; line-height:1.55; max-width:920px; margin:0 0 0.6rem; }
+
+  .hb-note { background:rgba(217,119,6,0.09); border:1px solid rgba(217,119,6,0.34);
+    border-radius:10px; padding:0.7rem 1rem; margin:1rem 0; font-size:0.79rem; line-height:1.6; }
+  .hb-note strong { color:#b45309; }
+
+  .hb-card { background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:0.85rem 1rem; margin:1rem 0; }
+  .hb-card h2 { margin:0 0 0.25rem; font-size:1rem; }
+  .hb-card .desc { font-size:0.78rem; color:var(--text-dim); margin:0 0 0.7rem; line-height:1.55; }
+
+  .hb-steps { display:flex; flex-wrap:wrap; gap:0.4rem; }
+  .hb-step { background:var(--surface2); border:1px solid var(--border); border-radius:7px;
+    padding:0.45rem 0.7rem; min-width:8rem; }
+  .hb-step .n { font-size:1.1rem; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.2; }
+  .hb-step .k { font-size:0.62rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dim); }
+  .hb-step.list { border-color:var(--mint); } .hb-step.list .n { color:var(--mint-ink); }
+  .hb-step.thin { border-style:dashed; } .hb-step.thin .n { color:var(--text-dim); }
+
+  /* Coverage — the question this page is built around */
+  .hb-cov { display:grid; grid-template-columns:auto 1fr auto; gap:0.25rem 0.6rem;
+    align-items:center; font-size:0.74rem; margin-top:0.6rem; }
+  .hb-cov .lbl { color:var(--text-dim); white-space:nowrap; }
+  .hb-cov .bar { background:var(--surface2); border-radius:3px; height:0.6rem; overflow:hidden; }
+  .hb-cov .bar span { display:block; height:100%; background:var(--accent2); }
+  .hb-cov .pct { font-variant-numeric:tabular-nums; color:var(--text-dim); white-space:nowrap; }
+  .hb-cov .never .bar span { background:var(--border); }
+  .hb-cov .never .lbl, .hb-cov .never .pct { color:var(--text-dim); font-style:italic; }
+
+  .hb-scroll { overflow-x:auto; }
+  table.hb-table { width:100%; border-collapse:collapse; font-size:0.76rem; white-space:nowrap; }
+  .hb-table th { text-align:left; padding:0.45rem 0.4rem; border-bottom:2px solid var(--border);
+    font-size:0.63rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dim);
+    position:sticky; top:0; background:var(--surface); }
+  .hb-table td { padding:0.4rem; border-bottom:1px solid var(--border); font-variant-numeric:tabular-nums; }
+  .hb-table tbody tr:hover td { background:var(--surface2); }
+  .hb-table .tick { font-family:var(--font-mono); font-weight:700; }
+
+  /* The 13 cells. Colour is the checklist's own four bands; grey is
+     "never scoreable" and is visually distinct from an empty band. */
+  .grid13 { display:inline-flex; gap:2px; }
+  .c13 { width:1.15rem; height:1.15rem; border-radius:3px; font-size:0.55rem; font-weight:800;
+    display:flex; align-items:center; justify-content:center; cursor:help;
+    border:1px solid var(--border); color:#0b3d2c; }
+  .c13.Great { background:#34d399; border-color:#10b981; }
+  .c13.Good  { background:#a7f3d0; border-color:#6ee7b7; }
+  .c13.Meh   { background:#fde68a; border-color:#fcd34d; color:#78350f; }
+  .c13.Yikes { background:#fca5a5; border-color:#f87171; color:#7f1d1d; }
+  .c13.unmeasured { background:var(--surface2); color:var(--text-dim); border-style:dashed; }
+  .c13.never { background:repeating-linear-gradient(45deg, var(--surface2), var(--surface2) 3px,
+    var(--border) 3px, var(--border) 4px); color:var(--text-dim); }
+
+  .hb-head { font-weight:700; font-variant-numeric:tabular-nums; }
+  .dim { color:var(--text-dim); }
+  details.hb-explain { background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:0.6rem 1rem; margin:0.8rem 0; font-size:0.82rem; line-height:1.6; }
+  details.hb-explain summary { cursor:pointer; font-weight:700; font-size:0.85rem; }
+  details.hb-explain ul { margin:0.4rem 0 0.4rem 1.1rem; padding:0; }
+  .empty { padding:2rem 1rem; text-align:center; color:var(--text-dim); font-size:0.9rem; }
+</style>
+{% endblock %}
+{% block content %}
+
+<h1>💯 100-bagger checklist</h1>
+<p class="hb-sub" id="hbSubtitle">Loading…</p>
+
+<div class="card" style="margin-bottom:1rem; padding:0.7rem 1rem;">
+  <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+    <label for="hbSnap" style="font-size:0.8rem; color:var(--text-dim); font-weight:600;">Snapshot</label>
+    <select id="hbSnap" style="background:var(--surface2); border:1px solid var(--border);
+      border-radius:6px; padding:0.35rem 0.55rem; color:var(--text); font-size:0.85rem;">
+      <option value="">Loading…</option>
+    </select>
+    <span id="hbMeta" style="font-size:0.75rem; color:var(--text-dim);"></span>
+    <input id="hbSearch" placeholder="Filter by ticker or name…" style="background:var(--surface2);
+      border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.6rem;
+      color:var(--text); font-size:0.85rem; min-width:200px;">
+  </div>
+</div>
+
+<div class="hb-note" id="hbSurvivorship"></div>
+
+<!-- CHURN: shipped in version one, because the thesis is a 15-year hold -->
+<div class="hb-card" id="hbChurnCard" style="display:none;">
+  <h2>How long this page has actually held anything</h2>
+  <p class="desc">
+    Both source books say <em>buy right, hold on</em> — Mayer's dataset needed 15 to 45 years. A screen
+    that rewrites itself every month is not implementing that, and the honest way to find out is to
+    count. The sister Lynch board passed 10 names in June, 11 in July and 4 in August, and exactly one
+    survived July into August; most of that turnover was a rules change rather than a market.
+  </p>
+  <div class="hb-steps" id="hbChurn"></div>
+  <p class="desc" id="hbChurnNames" style="margin:0.7rem 0 0;"></p>
+</div>
+
+<div class="hb-card">
+  <h2>What the screen actually looked at</h2>
+  <p class="desc" id="hbFunnelDesc"></p>
+  <div class="hb-steps" id="hbSteps"></div>
+  <p class="desc" style="margin:0.9rem 0 0.2rem;"><strong>Coverage — how often each criterion could be
+    measured at all.</strong> This is the number the page is built around: six of the thirteen can never
+    be scored, so the best any company reaches is seven.</p>
+  <div class="hb-cov" id="hbCoverage"></div>
+</div>
+
+<div class="hb-card">
+  <h2>The reading list — <span id="hbCount">—</span></h2>
+  <p class="desc">
+    Ordered by how many of the seven scoreable criteria came out Good or Great. <strong>That is a count,
+    not a ranking</strong>: six criteria are missing for every company, so no order here can be a
+    judgement of quality. Use it as a list of filings worth opening.
+  </p>
+  <div class="hb-scroll">
+    <table class="hb-table" id="hbTable">
+      <thead><tr>
+        <th>Ticker</th><th>Company</th><th>Location</th><th>Size</th>
+        <th>Mkt cap</th><th>The thirteen</th><th>Measured</th>
+        <th>Sales</th><th>GM</th><th>EPS</th><th>ROE</th><th>RoC</th><th>Peer disc</th>
+      </tr></thead>
+      <tbody id="hbBody"><tr><td colspan="13" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+  <p class="desc" id="hbShowing" style="margin-top:0.6rem;"></p>
+</div>
+
+<details class="hb-explain">
+  <summary>What this screen deliberately does not do</summary>
+  <ul>
+    <li><strong>It does not score six of the thirteen, ever.</strong> Not for any company, not in any
+        month. Those cells are hatched, not blank — a hatched cell means the data does not exist, which
+        is a different fact from a company that did not file a tag.</li>
+    <li><strong>Every proxy for them was tested and broke.</strong> Capital allocation proxies put Intel
+        FY2015–19 in the top band. Moat proxies scored Tupperware "Great" unanimously until it filed
+        Chapter 11. Pay-based incentive proxies read Super Micro's $1 CEO salary as perfect alignment.
+        A proxy that needs a paragraph of caveats will be read without the paragraph.</li>
+    <li><strong>There is no composite score, and no percentage.</strong> A score divided by "the criteria
+        we happened to measure" ranks companies by how little is known about them. The headline is a
+        fraction with both numbers showing — <em>4 of the 6 measured, of 13</em> — because "67%" is the
+        same figure for a company seen clearly and one barely seen at all.</li>
+    <li><strong>Criterion 9 is the one that hurts most.</strong> Analyst coverage is <em>inverted</em> —
+        zero analysts is the best score — and it is licensed terminal data. Losing it removes the
+        thesis's own explanation of why a quality company would ever be cheap.</li>
+    <li><strong>It cannot see what delisted.</strong> The universe is current SEC registrants; a company
+        that failed has no ticker and is not in the source file at all. Both source books have the same
+        bias — they read traits backwards off companies that already returned 100x — and neither this
+        page nor those books can tell you the base rate.</li>
+    <li><strong>It is not a buy list.</strong> Six criteria are yours to answer by reading a proxy
+        statement and an annual report. The page's job is to make that list short.</li>
+  </ul>
+</details>
+
+{% endblock %}
+{% block scripts %}
+<script>
+let ROWS = [], META = {}, RULES = {}, CENSUS = {};
+const ROW_CAP = 200;
+
+const f = {
+  cap: v => v == null ? '—' : v >= 1e12 ? `$${(v/1e12).toFixed(1)}T`
+        : v >= 1e9 ? `$${(v/1e9).toFixed(1)}B`
+        : v >= 1e6 ? `$${(v/1e6).toFixed(0)}M` : `$${(v||0).toFixed(0)}`,
+  pct: v => v == null ? '—' : `${v.toFixed(1)}%`,
+};
+
+// A cell is one of four bands, or unmeasured, or NEVER measurable — and
+// the last two must not look alike. One is a gap in a filing; the other is
+// a gap in what free data can see at all.
+function cells(r) {
+  const led = r.ledger || {}, ms = r.measures || {};
+  const never = new Set(RULES.never_scored_ids || []);
+  const names = RULES.criterion_names || {};
+  const why = RULES.not_scored_because || {};
+  let out = '';
+  for (let c = 1; c <= (RULES.criteria_total || 13); c++) {
+    const nm = names[c] || ('criterion ' + c);
+    if (never.has(c)) {
+      out += `<span class="c13 never" title="${c}. ${nm} — NEVER SCORED: ${why[c] || 'no free source'}">${c}</span>`;
+      continue;
+    }
+    const m = ms[c];
+    if (m && m.measured && m.band) {
+      const val = c === 13 ? f.cap(m.value) : f.pct(m.value);
+      out += `<span class="c13 ${m.band}" title="${c}. ${nm} — ${m.band}, ${val}${m.basis ? ' · ' + m.basis : ''}">${c}</span>`;
+    } else {
+      out += `<span class="c13 unmeasured" title="${c}. ${nm} — not measured: ${(m && m.reason) || 'no data'}">${c}</span>`;
+    }
+  }
+  return `<span class="grid13">${out}</span>`;
+}
+
+function val(r, c) {
+  const m = (r.measures || {})[c];
+  if (!m || !m.measured) return `<span class="dim" title="${(m && m.reason) || 'not measured'}">—</span>`;
+  return c === 13 ? f.cap(m.value) : f.pct(m.value);
+}
+
+function row(r) {
+  const led = r.ledger || {};
+  return `<tr>
+    <td class="tick">${r.ticker}</td>
+    <td title="${(r.name || '').replace(/"/g,'&quot;')}">${(r.name || '').slice(0,30)}</td>
+    <td class="dim">${r.location || '—'}</td>
+    <td class="dim">${r.size_band || ''}</td>
+    <td>${f.cap(r.market_cap)}</td>
+    <td>${cells(r)}</td>
+    <td class="hb-head" title="Six criteria can never be scored, so seven is the ceiling.">${led.headline || '—'}</td>
+    <td>${val(r,1)}</td><td>${val(r,2)}</td><td>${val(r,3)}</td>
+    <td>${val(r,4)}</td><td>${val(r,5)}</td><td>${val(r,11)}</td>
+  </tr>`;
+}
+
+function renderSubtitle() {
+  const r = RULES;
+  const parts = [];
+  if (r.scoreable_ids) parts.push(`<strong>${r.scoreable_ids.length} of ${r.criteria_total}</strong> criteria are scoreable from free filings`);
+  if (r.never_scored_ids) parts.push(`<strong>${r.never_scored_ids.length}</strong> can never be scored`);
+  if (r.min_passing != null) parts.push(`a company is listed on <strong>${r.min_passing}</strong> Good-or-Great from at least <strong>${r.min_measured}</strong> measured`);
+  document.getElementById('hbSubtitle').innerHTML =
+    `Mayer's <em>100 Baggers</em> and Phelps's <em>100 to 1</em> reduce to two instructions — buy right, `
+    + `hold on — and a thirteen-point checklist for the first half. ${parts.join(', ')}. `
+    + `This page is a reading list, not a ranking.`;
+  document.getElementById('hbSurvivorship').innerHTML =
+    `<strong>Survivorship, stated rather than fixed.</strong> ${META.survivorship || ''}`;
+}
+
+function renderChurn() {
+  const c = META.churn;
+  const card = document.getElementById('hbChurnCard');
+  if (!c) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  if (!c.comparable) {
+    document.getElementById('hbChurn').innerHTML =
+      `<div class="hb-step thin"><div class="n">—</div><div class="k">first run</div></div>`;
+    document.getElementById('hbChurnNames').textContent =
+      'No previous snapshot to compare against. This is not zero churn — it is no measurement yet.';
+    return;
+  }
+  document.getElementById('hbChurn').innerHTML = [
+    ['Held from last month', c.held_n, 'list'],
+    ['Entered', c.entered_n, ''],
+    ['Left', c.left_n, 'thin'],
+    ['On the previous board', c.previous_n, ''],
+  ].map(([k,v,cls]) => `<div class="hb-step ${cls}"><div class="n">${v == null ? '—' : v.toLocaleString()}</div><div class="k">${k}</div></div>`).join('');
+  const bits = [];
+  if (c.held && c.held.length) bits.push(`<strong>Held:</strong> ${c.held.join(', ')}`);
+  if (c.left && c.left.length) bits.push(`<strong>Left:</strong> ${c.left.join(', ')}`);
+  document.getElementById('hbChurnNames').innerHTML = bits.join(' &nbsp;·&nbsp; ');
+}
+
+function renderFunnel() {
+  const c = CENSUS;
+  const parts = (c.listed||0) + (c.thin||0) + (c.rejected||0);
+  const ok = parts === c.screened;
+  document.getElementById('hbFunnelDesc').innerHTML = ok
+    ? `The three counts <strong>partition</strong> the universe: screened = listed + too-thin-to-judge + `
+      + `rejected. <em>Thin</em> is its own bucket rather than part of <em>rejected</em>, because a `
+      + `company we could not measure enough of is a different fact from one that failed a gate.`
+    : `<strong>These counts do not add up.</strong> ${parts.toLocaleString()} against `
+      + `${(c.screened||0).toLocaleString()} screened — read the per-reason counts, not the tiles.`;
+  document.getElementById('hbSteps').innerHTML = [
+    ['Screened', c.screened, ''],
+    ['On the reading list', c.listed, 'list'],
+    ['Too thin to judge', c.thin, 'thin'],
+    ['Rejected', c.rejected, ''],
+  ].map(([k,v,cls]) => `<div class="hb-step ${cls}"><div class="n">${(v||0).toLocaleString()}</div><div class="k">${k}</div></div>`).join('');
+
+  const names = RULES.criterion_names || {}, why = RULES.not_scored_because || {};
+  const total = c.screened || 1;
+  let html = '';
+  for (const cid of (RULES.scoreable_ids || [])) {
+    const n = (c.coverage || {})[cid] || 0, p = n / total * 100;
+    html += `<div class="lbl">${cid}. ${names[cid] || ''}</div>`
+          + `<div class="bar"><span style="width:${p.toFixed(1)}%"></span></div>`
+          + `<div class="pct">${n.toLocaleString()} · ${p.toFixed(0)}%</div>`;
+  }
+  for (const cid of (RULES.never_scored_ids || [])) {
+    html += `<div class="lbl never" title="${why[cid]||''}">${cid}. ${names[cid] || ''}</div>`
+          + `<div class="bar never"><span style="width:100%"></span></div>`
+          + `<div class="pct never" title="${why[cid]||''}">never scoreable</div>`;
+  }
+  document.getElementById('hbCoverage').innerHTML = html;
+}
+
+function render() {
+  const q = document.getElementById('hbSearch').value.trim().toLowerCase();
+  let rows = ROWS.filter(r => r.verdict === 'list');
+  if (q) rows = rows.filter(r => (r.ticker||'').toLowerCase().includes(q)
+                              || (r.name||'').toLowerCase().includes(q));
+  const shown = rows.slice(0, ROW_CAP);
+  document.getElementById('hbBody').innerHTML = shown.length
+    ? shown.map(row).join('')
+    : '<tr><td colspan="13" class="empty">Nothing on the list.</td></tr>';
+  document.getElementById('hbCount').textContent =
+    `${rows.length} name${rows.length === 1 ? '' : 's'}`;
+  document.getElementById('hbShowing').textContent =
+    rows.length > ROW_CAP ? `Showing ${ROW_CAP} of ${rows.length}.` : '';
+}
+
+async function loadSnapshot(month) {
+  document.getElementById('hbBody').innerHTML = '<tr><td colspan="13" class="empty">Loading…</td></tr>';
+  try {
+    const r = await fetch(`/api/hundred/snapshot/${month}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+    ROWS = d.companies || []; META = d._meta || {};
+    RULES = META.rules || {}; CENSUS = META.census || {};
+    document.getElementById('hbMeta').textContent =
+      `as of ${META.as_of || month} · ${META.listed_count ?? '—'} on the list of `
+      + `${(META.screened_count ?? 0).toLocaleString()} screened`
+      + (META.source ? ` · ${META.source}` : '');
+    renderSubtitle(); renderChurn(); renderFunnel(); render();
+  } catch (e) {
+    document.getElementById('hbBody').innerHTML =
+      `<tr><td colspan="13" class="empty">Failed to load: ${e.message}</td></tr>`;
+  }
+}
+
+async function init() {
+  try {
+    const r = await fetch('/api/hundred/snapshots');
+    const d = await r.json();
+    const p = document.getElementById('hbSnap');
+    if (!d.months || !d.months.length) {
+      p.innerHTML = '<option>No snapshots yet</option>';
+      document.getElementById('hbBody').innerHTML =
+        '<tr><td colspan="13" class="empty">No snapshot yet — the monthly run has not completed.</td></tr>';
+      return;
+    }
+    p.innerHTML = d.months.map(m => `<option value="${m}">${m}</option>`).join('');
+    p.value = d.latest;
+    p.addEventListener('change', () => loadSnapshot(p.value));
+    loadSnapshot(d.latest);
+  } catch (e) {
+    document.getElementById('hbBody').innerHTML =
+      `<tr><td colspan="13" class="empty">Failed to load the snapshot list: ${e.message}</td></tr>`;
+  }
+}
+document.getElementById('hbSearch').addEventListener('input', render);
+init();
+</script>
+{% endblock %}
