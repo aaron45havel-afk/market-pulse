@@ -2,38 +2,44 @@
   "_meta": {
     "as_of": "2026-08-11",
     "snapshot_month": "2026-08",
-    "passing_count": 8,
-    "screened_count": 3224,
+    "passing_count": 4,
+    "screened_count": 3319,
     "census": {
-      "screened": 3224,
-      "passing": 8,
-      "rejected": 3216,
-      "unmeasured": 975,
+      "screened": 3319,
+      "passing": 4,
+      "rejected": 2229,
+      "unmeasured": 1086,
       "by_reason": {
         "pe_high": 999,
-        "unprofitable": 415,
-        "no_equity": 399,
-        "too_small": 271,
-        "units_unverified": 249,
-        "no_cap": 222,
-        "penny": 194,
-        "negative_equity": 172,
-        "tiny_revenue": 82,
+        "unprofitable": 418,
+        "no_equity": 349,
+        "too_small": 270,
+        "units_unverified": 252,
+        "penny": 190,
+        "negative_equity": 167,
+        "facts_unavailable": 142,
+        "no_cap": 136,
+        "no_price": 95,
+        "tiny_revenue": 81,
         "no_revenue": 80,
-        "no_growth": 39,
+        "no_growth": 30,
         "no_earnings": 18,
+        "trough_base": 15,
         "pe_suspect": 15,
-        "trough_base": 12,
         "dormant": 12,
         "debt_high": 11,
-        "pass": 8,
-        "step_change": 8,
+        "loss_window": 9,
         "short_history": 8,
+        "stale_balance_sheet": 7,
         "cap_implausible": 6,
-        "capex_high": 3,
-        "capex_unknown": 1
+        "pass": 4,
+        "spike_year": 2,
+        "capex_high": 1,
+        "capex_unknown": 1,
+        "step_change": 1
       },
       "labels": {
+        "no_price": "no quote in the bulk market file",
         "no_cap": "no market capitalisation",
         "too_small": "below the market-cap floor",
         "penny": "share price under the delisting-risk floor",
@@ -51,10 +57,14 @@
         "short_history": "fewer than four annual EPS periods",
         "trough_base": "base year is a trough \u2014 recovery, not growth",
         "step_change": "latest year has no history behind it \u2014 a step, not a rate",
+        "loss_window": "a loss year inside the growth window \u2014 a turnaround, not a rate",
+        "spike_year": "one year does all the growing \u2014 the trend without it does not qualify",
         "no_growth": "earnings growth below the floor",
         "debt_high": "debt above the leverage ceiling",
+        "stale_balance_sheet": "the debt tags stopped years before the company did",
         "capex_unknown": "capex or operating cash flow not filed",
         "capex_high": "capex above the reinvestment ceiling",
+        "facts_unavailable": "SEC did not return filings \u2014 a network fact, not a company one",
         "pass": "passes every filter"
       }
     },
@@ -83,150 +93,6 @@
     }
   },
   "companies": [
-    {
-      "ticker": "ODD",
-      "name": "Oddity Tech Ltd",
-      "exchange": "Nasdaq",
-      "sic": "2844",
-      "cik": "1907085",
-      "price": 12.68,
-      "market_cap": 718406766.0,
-      "size_band": "SMALL",
-      "cap_to_assets": 0.631,
-      "equity": 396495000.0,
-      "revenue": 809844000.0,
-      "last_filing": "2025-12-31",
-      "ttm_eps": 1.8,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": null,
-      "net_income": 110745000.0,
-      "ads": {
-        "ratio": null,
-        "clean": null,
-        "implied_shares": null
-      },
-      "units": {
-        "ok": null,
-        "ratio": null,
-        "implied": null
-      },
-      "pe_ratio": 6.49,
-      "pe_raw": 6.49,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 35.0,
-        "cagr_raw": 66.5,
-        "capped": true,
-        "trough": false,
-        "step": false,
-        "years": 5,
-        "span": 3.0,
-        "latest_yoy": 9.8,
-        "up_years": 4,
-        "of_years": 4,
-        "from_year": "2022-12-31",
-        "to_year": "2025-12-31"
-      },
-      "eps_3yr_cagr_pct": 35.0,
-      "eps_cagr_raw_pct": 66.5,
-      "peg": 0.19,
-      "debt_to_equity": 0.01,
-      "debt_known": true,
-      "ttm_capex": 3936000.0,
-      "ttm_ocf": 87581000.0,
-      "capex_to_ocf": 0.04,
-      "moat": {
-        "avg_roe_3yr_pct": 28.2,
-        "roe_capped": false,
-        "years_positive_eps": 5,
-        "op_margin_pct": 14.7,
-        "has_moat": true
-      },
-      "has_moat": true,
-      "eps_path": [
-        0.26,
-        0.39,
-        1.0,
-        1.64,
-        1.8
-      ],
-      "location": "Israel",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
-    {
-      "ticker": "SON",
-      "name": "SONOCO PRODUCTS CO",
-      "exchange": "NYSE",
-      "sic": "2650",
-      "cik": "91767",
-      "price": 57.87,
-      "market_cap": 5721896424.0,
-      "size_band": "MID",
-      "cap_to_assets": 0.517,
-      "equity": 3568674000.0,
-      "revenue": 7518753000.0,
-      "last_filing": "2026-03-29",
-      "ttm_eps": 10.07,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": 98869000.0,
-      "net_income": 1003011000.0,
-      "ads": {
-        "ratio": 1,
-        "clean": true,
-        "implied_shares": 98875003.00673924
-      },
-      "units": {
-        "ok": true,
-        "ratio": 0.01,
-        "implied": 995610830.0
-      },
-      "pe_ratio": 5.7,
-      "pe_raw": 5.7,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 28.7,
-        "cagr_raw": 28.7,
-        "capped": false,
-        "trough": false,
-        "step": false,
-        "years": 18,
-        "span": 3.0,
-        "latest_yoy": 510.3,
-        "up_years": 10,
-        "of_years": 17,
-        "from_year": "2022-12-31",
-        "to_year": "2025-12-31"
-      },
-      "eps_3yr_cagr_pct": 28.7,
-      "eps_cagr_raw_pct": 28.7,
-      "peg": 0.2,
-      "debt_to_equity": 0.443,
-      "debt_known": true,
-      "ttm_capex": 344023000.0,
-      "ttm_ocf": 689782000.0,
-      "capex_to_ocf": 0.5,
-      "moat": {
-        "avg_roe_3yr_pct": 18.2,
-        "roe_capped": false,
-        "years_positive_eps": 4,
-        "op_margin_pct": 13.5,
-        "has_moat": false
-      },
-      "has_moat": false,
-      "eps_path": [
-        -0.86,
-        4.72,
-        4.8,
-        1.65,
-        10.07
-      ],
-      "location": "SC",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
     {
       "ticker": "BOSC",
       "name": "BOS BETTER ONLINE SOLUTIONS LTD",
@@ -263,6 +129,9 @@
         "capped": true,
         "trough": false,
         "step": false,
+        "loss_window": false,
+        "spike": false,
+        "cagr_through_spike": null,
         "years": 8,
         "span": 3.0,
         "latest_yoy": 46.2,
@@ -274,6 +143,7 @@
       "eps_3yr_cagr_pct": 35.0,
       "eps_cagr_raw_pct": 35.3,
       "peg": 0.25,
+      "debt_as_of": "2025-12-31",
       "debt_to_equity": 0.049,
       "debt_known": true,
       "ttm_capex": 452000.0,
@@ -287,6 +157,14 @@
         "has_moat": false
       },
       "has_moat": false,
+      "roc": {
+        "roc_pct": 11.3,
+        "roc_raw_pct": 11.3,
+        "capped": false,
+        "capital": 25809000.0,
+        "reason": null
+      },
+      "roc_pct": 11.3,
       "eps_path": [
         0.08,
         0.23,
@@ -300,143 +178,83 @@
       "reasons": []
     },
     {
-      "ticker": "PSIX",
-      "name": "POWER SOLUTIONS INTERNATIONAL, INC.",
-      "exchange": "Nasdaq",
-      "sic": "3510",
-      "cik": "1137091",
-      "price": 43.0,
-      "market_cap": 991814350.0,
-      "size_band": "SMALL",
-      "cap_to_assets": 2.188,
-      "equity": 203068000.0,
-      "revenue": 722405000.0,
-      "last_filing": "2026-06-30",
-      "ttm_eps": 4.94,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": 23050000.0,
-      "net_income": 113987000.0,
-      "ads": {
-        "ratio": 1,
-        "clean": true,
-        "implied_shares": 23065450.0
-      },
-      "units": {
-        "ok": true,
-        "ratio": 0.0,
-        "implied": 113867000.00000001
-      },
-      "pe_ratio": 8.7,
-      "pe_raw": 8.7,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 35.0,
-        "cagr_raw": 116.0,
-        "capped": true,
-        "trough": false,
-        "step": false,
-        "years": 12,
-        "span": 3.0,
-        "latest_yoy": 64.1,
-        "up_years": 6,
-        "of_years": 11,
-        "from_year": "2022-12-31",
-        "to_year": "2025-12-31"
-      },
-      "eps_3yr_cagr_pct": 35.0,
-      "eps_cagr_raw_pct": 116.0,
-      "peg": 0.25,
-      "debt_to_equity": 0.001,
-      "debt_known": true,
-      "ttm_capex": 9973000.0,
-      "ttm_ocf": 24113000.0,
-      "capex_to_ocf": 0.41,
-      "moat": {
-        "avg_roe_3yr_pct": 85.0,
-        "roe_capped": false,
-        "years_positive_eps": 4,
-        "op_margin_pct": 15.2,
-        "has_moat": false
-      },
-      "has_moat": false,
-      "eps_path": [
-        -2.12,
-        0.49,
-        1.15,
-        3.01,
-        4.94
-      ],
-      "location": "IL",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
-    {
-      "ticker": "YELP",
-      "name": "YELP INC",
+      "ticker": "LRN",
+      "name": "Stride, Inc.",
       "exchange": "NYSE",
-      "sic": "7200",
-      "cik": "1345016",
-      "price": 24.55,
-      "market_cap": 1350021783.0,
-      "size_band": "SMALL",
-      "cap_to_assets": 1.363,
-      "equity": 644527000.0,
-      "revenue": 1464955000.0,
+      "sic": "8200",
+      "cik": "1157408",
+      "price": 80.23,
+      "market_cap": 3334346364.0,
+      "size_band": "MID",
+      "cap_to_assets": 1.369,
+      "equity": 1632329000.0,
+      "revenue": 2518081000.0,
       "last_filing": "2026-06-30",
-      "ttm_eps": 2.24,
+      "ttm_eps": 7.14,
       "eps_unit": "USD/shares",
-      "shares_outstanding": 54980000.0,
-      "net_income": 145600000.0,
+      "shares_outstanding": 41477230.0,
+      "net_income": 338192000.0,
       "ads": {
         "ratio": 1,
         "clean": true,
-        "implied_shares": 54990703.99185336
+        "implied_shares": 41559844.99563754
       },
       "units": {
         "ok": true,
-        "ratio": 0.15,
-        "implied": 123155200.00000001
+        "ratio": 0.12,
+        "implied": 296147422.2
       },
-      "pe_ratio": 9.27,
-      "pe_raw": 9.27,
+      "pe_ratio": 9.86,
+      "pe_raw": 9.86,
       "pe_suspect": false,
       "growth": {
-        "cagr": 35.0,
-        "cagr_raw": 64.8,
-        "capped": true,
+        "cagr": 34.0,
+        "cagr_raw": 34.0,
+        "capped": false,
         "trough": false,
         "step": false,
-        "years": 16,
+        "loss_window": false,
+        "spike": false,
+        "cagr_through_spike": null,
+        "years": 17,
         "span": 3.0,
-        "latest_yoy": 19.1,
-        "up_years": 9,
-        "of_years": 15,
-        "from_year": "2022-12-31",
-        "to_year": "2025-12-31"
+        "latest_yoy": 20.0,
+        "up_years": 10,
+        "of_years": 16,
+        "from_year": "2023-06-30",
+        "to_year": "2026-06-30"
       },
-      "eps_3yr_cagr_pct": 35.0,
-      "eps_cagr_raw_pct": 64.8,
-      "peg": 0.26,
-      "debt_to_equity": 0.027,
+      "eps_3yr_cagr_pct": 34.0,
+      "eps_cagr_raw_pct": 34.0,
+      "peg": 0.29,
+      "debt_as_of": "2026-06-30",
+      "debt_to_equity": 0.256,
       "debt_known": true,
-      "ttm_capex": 48353000.0,
-      "ttm_ocf": 372029000.0,
-      "capex_to_ocf": 0.13,
+      "ttm_capex": 587000.0,
+      "ttm_ocf": 433814000.0,
+      "capex_to_ocf": 0.0,
       "moat": {
-        "avg_roe_3yr_pct": 17.2,
+        "avg_roe_3yr_pct": 19.2,
         "roe_capped": false,
-        "years_positive_eps": 5,
-        "op_margin_pct": 12.6,
+        "years_positive_eps": 17,
+        "op_margin_pct": 17.9,
         "has_moat": true
       },
       "has_moat": true,
+      "roc": {
+        "roc_pct": 29.5,
+        "roc_raw_pct": 29.5,
+        "capped": false,
+        "capital": 1529314000.0,
+        "reason": null
+      },
+      "roc_pct": 29.5,
       "eps_path": [
-        0.5,
-        0.5,
-        1.35,
-        1.88,
-        2.24
+        2.52,
+        2.97,
+        4.69,
+        5.95,
+        7.14
       ],
       "location": "DE",
       "verdict": "pass",
@@ -444,145 +262,85 @@
       "reasons": []
     },
     {
-      "ticker": "PDD",
-      "name": "PDD Holdings Inc.",
+      "ticker": "LULU",
+      "name": "lululemon athletica inc.",
       "exchange": "Nasdaq",
-      "sic": "7389",
-      "cik": "1737806",
-      "price": 93.0,
-      "market_cap": 132375870966.0,
+      "sic": "2300",
+      "cik": "1397187",
+      "price": 127.8,
+      "market_cap": 13858370905.0,
       "size_band": "LARGE",
-      "cap_to_assets": 1.469,
-      "equity": 59113291000.0,
-      "revenue": 61753116000.0,
-      "last_filing": "2025-12-31",
-      "ttm_eps": 2.36,
+      "cap_to_assets": 1.624,
+      "equity": 4825601000.0,
+      "revenue": 11102600000.0,
+      "last_filing": "2026-05-03",
+      "ttm_eps": 13.26,
       "eps_unit": "USD/shares",
-      "shares_outstanding": 5693585848.0,
-      "net_income": 13991297000.0,
+      "shares_outstanding": 109308000.0,
+      "net_income": 1579183000.0,
       "ads": {
-        "ratio": 4,
+        "ratio": 1,
         "clean": true,
-        "implied_shares": 1423396462.0
+        "implied_shares": 108437957.0031299
       },
       "units": {
         "ok": true,
-        "ratio": 0.04,
-        "implied": 13436862601.279999
+        "ratio": 0.08,
+        "implied": 1449424080.0
       },
-      "pe_ratio": 9.46,
-      "pe_raw": 9.46,
+      "pe_ratio": 8.78,
+      "pe_raw": 8.78,
       "pe_suspect": false,
       "growth": {
-        "cagr": 35.0,
-        "cagr_raw": 44.0,
-        "capped": true,
-        "trough": false,
-        "step": false,
-        "years": 8,
-        "span": 3.0,
-        "latest_yoy": -9.2,
-        "up_years": 5,
-        "of_years": 7,
-        "from_year": "2022-12-31",
-        "to_year": "2025-12-31"
-      },
-      "eps_3yr_cagr_pct": 35.0,
-      "eps_cagr_raw_pct": 44.0,
-      "peg": 0.27,
-      "debt_to_equity": 0.005,
-      "debt_known": true,
-      "ttm_capex": 6597000.0,
-      "ttm_ocf": 15292029000.0,
-      "capex_to_ocf": 0.0,
-      "moat": {
-        "avg_roe_3yr_pct": 30.5,
-        "roe_capped": false,
-        "years_positive_eps": 5,
-        "op_margin_pct": 21.6,
-        "has_moat": true
-      },
-      "has_moat": true,
-      "eps_path": [
-        0.21,
-        0.79,
-        1.45,
-        2.6,
-        2.36
-      ],
-      "location": "Cayman Islands",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
-    {
-      "ticker": "VIPS",
-      "name": "Vipshop Holdings Ltd",
-      "exchange": "NYSE",
-      "sic": "5961",
-      "cik": "1529192",
-      "price": 15.41,
-      "market_cap": 7400969021.0,
-      "size_band": "MID",
-      "cap_to_assets": 0.656,
-      "equity": 5863599000.0,
-      "revenue": 11206418000.0,
-      "last_filing": "2025-12-31",
-      "ttm_eps": 10.12,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": 111665972.0,
-      "net_income": 1035664000.0,
-      "ads": {
-        "ratio": 0.23,
-        "clean": false,
-        "implied_shares": 480270539.97404283
-      },
-      "units": {
-        "ok": true,
-        "ratio": 0.09,
-        "implied": 1130059636.6399999
-      },
-      "pe_ratio": 7.15,
-      "pe_raw": 7.15,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 12.4,
-        "cagr_raw": 12.4,
+        "cagr": 25.6,
+        "cagr_raw": 25.6,
         "capped": false,
         "trough": false,
         "step": false,
-        "years": 14,
-        "span": 3.0,
-        "latest_yoy": 3.0,
-        "up_years": 9,
-        "of_years": 13,
-        "from_year": "2022-12-31",
-        "to_year": "2025-12-31"
+        "loss_window": false,
+        "spike": false,
+        "cagr_through_spike": null,
+        "years": 18,
+        "span": 3.01,
+        "latest_yoy": -9.4,
+        "up_years": 11,
+        "of_years": 17,
+        "from_year": "2023-01-29",
+        "to_year": "2026-02-01"
       },
-      "eps_3yr_cagr_pct": 12.4,
-      "eps_cagr_raw_pct": 12.4,
-      "peg": 0.58,
-      "debt_to_equity": 0.144,
+      "eps_3yr_cagr_pct": 25.6,
+      "eps_cagr_raw_pct": 25.6,
+      "peg": 0.34,
+      "debt_as_of": "2026-05-03",
+      "debt_to_equity": 0.0,
       "debt_known": true,
-      "ttm_capex": 283961000.0,
-      "ttm_ocf": 1065943000.0,
-      "capex_to_ocf": 0.27,
+      "ttm_capex": 680802000.0,
+      "ttm_ocf": 1602477000.0,
+      "capex_to_ocf": 0.42,
       "moat": {
-        "avg_roe_3yr_pct": 30.1,
+        "avg_roe_3yr_pct": 36.8,
         "roe_capped": false,
-        "years_positive_eps": 11,
-        "op_margin_pct": 10.4,
+        "years_positive_eps": 18,
+        "op_margin_pct": 19.9,
         "has_moat": true
       },
       "has_moat": true,
+      "roc": {
+        "roc_pct": 52.1,
+        "roc_raw_pct": 52.1,
+        "capped": false,
+        "capital": 4245978000.0,
+        "reason": null
+      },
+      "roc_pct": 52.1,
       "eps_path": [
-        5.29,
-        7.13,
-        10.16,
-        9.83,
-        10.12
+        7.49,
+        6.68,
+        12.2,
+        14.64,
+        13.26
       ],
-      "location": "Foreign filer",
+      "location": "DE",
       "verdict": "pass",
       "reason": "pass",
       "reasons": []
@@ -623,6 +381,9 @@
         "capped": false,
         "trough": false,
         "step": false,
+        "loss_window": false,
+        "spike": false,
+        "cagr_through_spike": null,
         "years": 18,
         "span": 3.0,
         "latest_yoy": 15.1,
@@ -634,7 +395,8 @@
       "eps_3yr_cagr_pct": 15.1,
       "eps_cagr_raw_pct": 15.1,
       "peg": 0.59,
-      "debt_to_equity": 0.429,
+      "debt_as_of": "2026-06-30",
+      "debt_to_equity": 0.394,
       "debt_known": true,
       "ttm_capex": 433000000.0,
       "ttm_ocf": 944000000.0,
@@ -647,6 +409,14 @@
         "has_moat": true
       },
       "has_moat": true,
+      "roc": {
+        "roc_pct": 21.2,
+        "roc_raw_pct": 21.2,
+        "capped": false,
+        "capital": 4785000000.0,
+        "reason": null
+      },
+      "roc_pct": 21.2,
       "eps_path": [
         1.73,
         7.34,
@@ -669,17 +439,17 @@
       "size_band": "LARGE"
     },
     {
-      "ticker": "EIX",
-      "name": "EDISON INTERNATIONAL",
-      "reason": "debt_high",
-      "market_cap": 26101932196.0,
-      "size_band": "LARGE"
-    },
-    {
       "ticker": "TASK",
       "name": "TaskUs, Inc.",
       "reason": "debt_high",
       "market_cap": 650977849.0,
+      "size_band": "SMALL"
+    },
+    {
+      "ticker": "ODD",
+      "name": "Oddity Tech Ltd",
+      "reason": "stale_balance_sheet",
+      "market_cap": 718406766.0,
       "size_band": "SMALL"
     },
     {
@@ -697,11 +467,32 @@
       "size_band": "LARGE"
     },
     {
-      "ticker": "VRRM",
-      "name": "VERRA MOBILITY Corp",
+      "ticker": "BYD",
+      "name": "BOYD GAMING CORP",
       "reason": "debt_high",
-      "market_cap": 720398491.0,
+      "market_cap": 5918510024.0,
+      "size_band": "MID"
+    },
+    {
+      "ticker": "LNG",
+      "name": "Cheniere Energy, Inc.",
+      "reason": "debt_high",
+      "market_cap": 54871995097.0,
+      "size_band": "LARGE"
+    },
+    {
+      "ticker": "YELP",
+      "name": "YELP INC",
+      "reason": "stale_balance_sheet",
+      "market_cap": 1350021783.0,
       "size_band": "SMALL"
+    },
+    {
+      "ticker": "PDD",
+      "name": "PDD Holdings Inc.",
+      "reason": "stale_balance_sheet",
+      "market_cap": 132375870966.0,
+      "size_band": "LARGE"
     },
     {
       "ticker": "OTEX",
@@ -713,15 +504,22 @@
     {
       "ticker": "PYPL",
       "name": "PayPal Holdings, Inc.",
-      "reason": "debt_high",
+      "reason": "stale_balance_sheet",
       "market_cap": 50532073827.0,
       "size_band": "LARGE"
     },
     {
-      "ticker": "GTM",
-      "name": "ZoomInfo Technologies Inc.",
+      "ticker": "EIX",
+      "name": "EDISON INTERNATIONAL",
       "reason": "debt_high",
-      "market_cap": 1231395495.0,
+      "market_cap": 26101932196.0,
+      "size_band": "LARGE"
+    },
+    {
+      "ticker": "DJCO",
+      "name": "DAILY JOURNAL CORP",
+      "reason": "stale_balance_sheet",
+      "market_cap": 773318420.0,
       "size_band": "SMALL"
     },
     {
@@ -741,7 +539,7 @@
     {
       "ticker": "FISV",
       "name": "FISERV INC",
-      "reason": "capex_high",
+      "reason": "debt_high",
       "market_cap": 27846523149.0,
       "size_band": "LARGE"
     },
@@ -760,9 +558,16 @@
       "size_band": "SMALL"
     },
     {
+      "ticker": "VIPS",
+      "name": "Vipshop Holdings Ltd",
+      "reason": "stale_balance_sheet",
+      "market_cap": 7400969021.0,
+      "size_band": "MID"
+    },
+    {
       "ticker": "TK",
       "name": "TEEKAY CORP LTD",
-      "reason": "capex_high",
+      "reason": "stale_balance_sheet",
       "market_cap": 970183988.0,
       "size_band": "SMALL"
     },
@@ -881,7 +686,7 @@
     {
       "ticker": "ACCO",
       "name": "ACCO BRANDS Corp",
-      "reason": "trough_base",
+      "reason": "loss_window",
       "market_cap": 401537921.0,
       "size_band": "SMALL"
     },
@@ -970,6 +775,13 @@
       "size_band": "MICRO"
     },
     {
+      "ticker": "ACP-PA",
+      "name": "abrdn Income Credit Strategies Fund",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "ACU",
       "name": "ACME UNITED CORP",
       "reason": "pe_high",
@@ -979,9 +791,9 @@
     {
       "ticker": "ACV",
       "name": "Virtus Diversified Income & Convertible Fund",
-      "reason": "no_equity",
-      "market_cap": 284255828.0,
-      "size_band": "MICRO"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "ACVA",
@@ -1119,9 +931,9 @@
     {
       "ticker": "AEF",
       "name": "abrdn Emerging Markets ex-China Fund, Inc.",
-      "reason": "no_equity",
-      "market_cap": 963041625.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "AEHL",
@@ -1203,9 +1015,9 @@
     {
       "ticker": "AFB",
       "name": "ALLIANCEBERNSTEIN NATIONAL MUNICIPAL INCOME FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "AFCG",
@@ -1238,7 +1050,7 @@
     {
       "ticker": "AGCO",
       "name": "AGCO CORP /DE",
-      "reason": "no_growth",
+      "reason": "loss_window",
       "market_cap": 7064100504.0,
       "size_band": "MID"
     },
@@ -1378,9 +1190,9 @@
     {
       "ticker": "AIO",
       "name": "Virtus Artificial Intelligence & Technology Opportunities Fund",
-      "reason": "no_equity",
-      "market_cap": 904541202.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "AIOS",
@@ -1474,6 +1286,13 @@
       "size_band": "LARGE"
     },
     {
+      "ticker": "AKO-B",
+      "name": "ANDINA BOTTLING CO INC",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "ALAB",
       "name": "Astera Labs, Inc.",
       "reason": "pe_high",
@@ -1486,6 +1305,13 @@
       "reason": "too_small",
       "market_cap": 13485876.0,
       "size_band": "NANO"
+    },
+    {
+      "ticker": "ALB-PA",
+      "name": "ALBEMARLE CORP",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "ALC",
@@ -1628,6 +1454,13 @@
       "size_band": "LARGE"
     },
     {
+      "ticker": "ALTG-PA",
+      "name": "ALTA EQUIPMENT GROUP INC.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "ALV",
       "name": "AUTOLIV INC",
       "reason": "pe_high",
@@ -1735,7 +1568,7 @@
     {
       "ticker": "AMPY",
       "name": "Amplify Energy Corp.",
-      "reason": "no_growth",
+      "reason": "spike_year",
       "market_cap": 171755738.0,
       "size_band": "MICRO"
     },
@@ -1854,7 +1687,7 @@
     {
       "ticker": "ANGI",
       "name": "Angi Inc.",
-      "reason": "no_growth",
+      "reason": "trough_base",
       "market_cap": 186153192.0,
       "size_band": "MICRO"
     },
@@ -2610,9 +2443,9 @@
     {
       "ticker": "AWF",
       "name": "ALLIANCEBERNSTEIN GLOBAL HIGH INCOME FUND INC",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "AWI",
@@ -2664,6 +2497,13 @@
       "size_band": "MID"
     },
     {
+      "ticker": "AXIAY",
+      "name": "AXIA Energia S.A.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "AXIL",
       "name": "Axil Brands, Inc.",
       "reason": "pe_high",
@@ -2694,9 +2534,9 @@
     {
       "ticker": "AYA",
       "name": "Aya Gold & Silver Inc.",
-      "reason": "no_equity",
-      "market_cap": 4002324992.0,
-      "size_band": "MID"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "AYI",
@@ -2753,6 +2593,13 @@
       "reason": "no_revenue",
       "market_cap": 68494781757.0,
       "size_band": "LARGE"
+    },
+    {
+      "ticker": "BA-PA",
+      "name": "BOEING CO",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "BAH",
@@ -2881,6 +2728,13 @@
       "size_band": "LARGE"
     },
     {
+      "ticker": "BC-PC",
+      "name": "BRUNSWICK CORP",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "BCARU",
       "name": "D. Boral ARC Acquisition I Corp.",
       "reason": "no_cap",
@@ -2939,9 +2793,9 @@
     {
       "ticker": "BCX",
       "name": "BlackRock Resources & Commodities Strategy Trust",
-      "reason": "no_equity",
-      "market_cap": 1070908086.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "BDC",
@@ -2953,9 +2807,9 @@
     {
       "ticker": "BDJ",
       "name": "BlackRock Enhanced Equity Dividend Trust",
-      "reason": "no_equity",
-      "market_cap": 1748733077.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "BDL",
@@ -3014,6 +2868,13 @@
       "size_band": "MID"
     },
     {
+      "ticker": "BF-B",
+      "name": "BROWN FORMAN CORP",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "BFAM",
       "name": "BRIGHT HORIZONS FAMILY SOLUTIONS INC.",
       "reason": "pe_high",
@@ -3037,9 +2898,9 @@
     {
       "ticker": "BGB",
       "name": "Blackstone Strategic Credit 2027 Term Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "BGH",
@@ -3065,9 +2926,9 @@
     {
       "ticker": "BGR",
       "name": "BlackRock Energy & Resources Trust",
-      "reason": "no_equity",
-      "market_cap": 2248019097.0,
-      "size_band": "MID"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "BGS",
@@ -3107,9 +2968,9 @@
     {
       "ticker": "BGY",
       "name": "BlackRock Enhanced International Dividend Trust",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "BH",
@@ -3128,9 +2989,9 @@
     {
       "ticker": "BHK",
       "name": "BLACKROCK CORE BOND TRUST",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "BHV",
@@ -3145,6 +3006,13 @@
       "reason": "units_unverified",
       "market_cap": 4906134772.0,
       "size_band": "MID"
+    },
+    {
+      "ticker": "BIO-B",
+      "name": "BIO-RAD LABORATORIES, INC.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "BIOX",
@@ -3401,9 +3269,9 @@
     {
       "ticker": "BMM",
       "name": "Blue Moon Metals Inc.",
-      "reason": "no_equity",
-      "market_cap": 581989656.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "BMN",
@@ -3457,9 +3325,9 @@
     {
       "ticker": "BOE",
       "name": "BlackRock Enhanced Global Dividend Trust",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "BOF",
@@ -3534,9 +3402,9 @@
     {
       "ticker": "BRAI",
       "name": "Braiin Ltd",
-      "reason": "no_equity",
-      "market_cap": 1152033195.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "BRBR",
@@ -3653,9 +3521,9 @@
     {
       "ticker": "BSL",
       "name": "Blackstone Senior Floating Rate 2027 Term Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "BSM",
@@ -3681,9 +3549,9 @@
     {
       "ticker": "BSTZ",
       "name": "BlackRock Science & Technology Term Trust",
-      "reason": "no_equity",
-      "market_cap": 671825406.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "BSY",
@@ -3709,9 +3577,9 @@
     {
       "ticker": "BTO",
       "name": "JOHN HANCOCK FINANCIAL OPPORTUNITIES FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "BTOC",
@@ -3723,9 +3591,9 @@
     {
       "ticker": "BTQ",
       "name": "BTQ Technologies Corp.",
-      "reason": "no_equity",
-      "market_cap": 558616864.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "BTSGU",
@@ -3758,16 +3626,16 @@
     {
       "ticker": "BTX",
       "name": "BlackRock Technology & Private Equity Term Trust",
-      "reason": "no_equity",
-      "market_cap": 2023131173.0,
-      "size_band": "MID"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "BTZ",
       "name": "BLACKROCK CREDIT ALLOCATION INCOME TRUST",
-      "reason": "no_equity",
-      "market_cap": 1109465100.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "BUDA",
@@ -3812,6 +3680,13 @@
       "size_band": "MID"
     },
     {
+      "ticker": "BW-PA",
+      "name": "Babcock & Wilcox Enterprises, Inc.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "BWA",
       "name": "BORGWARNER INC",
       "reason": "pe_high",
@@ -3828,9 +3703,9 @@
     {
       "ticker": "BWG",
       "name": "BrandywineGLOBAL-Global Income Opportunities Fund Inc",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "BWLP",
@@ -3887,13 +3762,6 @@
       "reason": "too_small",
       "market_cap": 8092068.0,
       "size_band": "NANO"
-    },
-    {
-      "ticker": "BYD",
-      "name": "BOYD GAMING CORP",
-      "reason": "step_change",
-      "market_cap": 5918510024.0,
-      "size_band": "MID"
     },
     {
       "ticker": "BYND",
@@ -3975,9 +3843,9 @@
     {
       "ticker": "CAF",
       "name": "Morgan Stanley China A Share Fund, Inc.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "CAG",
@@ -4136,9 +4004,9 @@
     {
       "ticker": "CBAT",
       "name": "CBAK Energy Technology Ltd",
-      "reason": "penny",
-      "market_cap": 68514367.0,
-      "size_band": "MICRO"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "CBLL",
@@ -4479,9 +4347,9 @@
     {
       "ticker": "CET",
       "name": "CENTRAL SECURITIES CORP",
-      "reason": "no_equity",
-      "market_cap": 13391254316.0,
-      "size_band": "LARGE"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "CETY",
@@ -4727,6 +4595,13 @@
       "reason": "pe_high",
       "market_cap": 54880067859.0,
       "size_band": "LARGE"
+    },
+    {
+      "ticker": "CIG-C",
+      "name": "ENERGY CO OF MINAS GERAIS",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "CIGL",
@@ -5002,6 +4877,27 @@
       "size_band": "MICRO"
     },
     {
+      "ticker": "CMRE-PB",
+      "name": "Costamare Inc.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
+      "ticker": "CMS-PB",
+      "name": "CONSUMERS ENERGY CO",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
+      "ticker": "CMS-PC",
+      "name": "CMS ENERGY CORP",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "CMT",
       "name": "CORE MOLDING TECHNOLOGIES INC",
       "reason": "pe_high",
@@ -5154,6 +5050,13 @@
       "reason": "pe_high",
       "market_cap": 117319842.0,
       "size_band": "MICRO"
+    },
+    {
+      "ticker": "CODI-PA",
+      "name": "Compass Diversified Holdings",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "COE",
@@ -5625,6 +5528,13 @@
       "size_band": "LARGE"
     },
     {
+      "ticker": "CTA-PA",
+      "name": "EIDP, Inc.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "CTAS",
       "name": "CINTAS CORP",
       "reason": "pe_high",
@@ -6033,7 +5943,7 @@
     {
       "ticker": "DBI",
       "name": "Designer Brands Inc.",
-      "reason": "negative_equity",
+      "reason": "units_unverified",
       "market_cap": 333605409.0,
       "size_band": "SMALL"
     },
@@ -6201,9 +6111,9 @@
     {
       "ticker": "DFP",
       "name": "Flaherty & Crumrine Dynamic Preferred & Income Fund Inc",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "DG",
@@ -6325,13 +6235,6 @@
       "size_band": "MICRO"
     },
     {
-      "ticker": "DJCO",
-      "name": "DAILY JOURNAL CORP",
-      "reason": "trough_base",
-      "market_cap": 773318420.0,
-      "size_band": "SMALL"
-    },
-    {
       "ticker": "DK",
       "name": "Delek US Holdings, Inc.",
       "reason": "units_unverified",
@@ -6372,6 +6275,13 @@
       "reason": "no_earnings",
       "market_cap": 70218755.0,
       "size_band": "MICRO"
+    },
+    {
+      "ticker": "DLNG-PA",
+      "name": "Dynagas LNG Partners LP",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "DLO",
@@ -6432,9 +6342,9 @@
     {
       "ticker": "DMB",
       "name": "BNY Mellon Municipal Bond Infrastructure Fund, Inc.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "DMC",
@@ -6656,9 +6566,9 @@
     {
       "ticker": "DSM",
       "name": "BNY MELLON STRATEGIC MUNICIPAL BOND FUND, INC.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "DSP",
@@ -6684,7 +6594,7 @@
     {
       "ticker": "DSWL",
       "name": "DESWELL INDUSTRIES INC",
-      "reason": "step_change",
+      "reason": "trough_base",
       "market_cap": 51309322.0,
       "size_band": "MICRO"
     },
@@ -6733,9 +6643,9 @@
     {
       "ticker": "DTSS",
       "name": "Datasea Intelligent Technology Ltd.",
-      "reason": "penny",
-      "market_cap": 8366924.0,
-      "size_band": "NANO"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "DTST",
@@ -6743,6 +6653,13 @@
       "reason": "too_small",
       "market_cap": 7480762.0,
       "size_band": "NANO"
+    },
+    {
+      "ticker": "DUK-PA",
+      "name": "Duke Energy CORP",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "DUOL",
@@ -6843,11 +6760,18 @@
       "size_band": "LARGE"
     },
     {
-      "ticker": "EAD",
-      "name": "ALLSPRING INCOME OPPORTUNITIES FUND",
-      "reason": "no_cap",
+      "ticker": "EA",
+      "name": "ELECTRONIC ARTS INC.",
+      "reason": "no_price",
       "market_cap": null,
       "size_band": ""
+    },
+    {
+      "ticker": "EAD",
+      "name": "ALLSPRING INCOME OPPORTUNITIES FUND",
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "EAF",
@@ -6906,6 +6830,13 @@
       "size_band": "SMALL"
     },
     {
+      "ticker": "ECF-PA",
+      "name": "ELLSWORTH GROWTH & INCOME FUND LTD",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "ECG",
       "name": "Everus Construction Group, Inc.",
       "reason": "pe_high",
@@ -6957,9 +6888,9 @@
     {
       "ticker": "EDD",
       "name": "Morgan Stanley Emerging Markets Domestic Debt Fund, Inc.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "EDF",
@@ -7013,9 +6944,9 @@
     {
       "ticker": "EEA",
       "name": "EUROPEAN EQUITY FUND, INC / MD",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "EEIQ",
@@ -7051,6 +6982,13 @@
       "reason": "no_equity",
       "market_cap": 315631003.0,
       "size_band": "SMALL"
+    },
+    {
+      "ticker": "EFTY",
+      "name": "ETOILES CAPITAL GROUP CO., LTD",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "EFX",
@@ -7242,6 +7180,13 @@
       "size_band": "MID"
     },
     {
+      "ticker": "ELSE",
+      "name": "ELECTRO SENSORS INC",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "ELTK",
       "name": "ELTEK LTD",
       "reason": "pe_high",
@@ -7286,9 +7231,9 @@
     {
       "ticker": "EMF",
       "name": "TEMPLETON EMERGING MARKETS FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "EML",
@@ -7307,9 +7252,9 @@
     {
       "ticker": "EMO",
       "name": "ClearBridge Energy Midstream Opportunity Fund Inc.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "EMP",
@@ -7356,9 +7301,9 @@
     {
       "ticker": "ENO",
       "name": "ENTERGY NEW ORLEANS, LLC",
-      "reason": "no_equity",
-      "market_cap": 4501139308.0,
-      "size_band": "MID"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "ENOV",
@@ -7412,9 +7357,9 @@
     {
       "ticker": "EOD",
       "name": "ALLSPRING GLOBAL DIVIDEND OPPORTUNITY FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "EOG",
@@ -7450,6 +7395,13 @@
       "reason": "unprofitable",
       "market_cap": 109826483.0,
       "size_band": "MICRO"
+    },
+    {
+      "ticker": "EP-PC",
+      "name": "KINDER MORGAN, INC.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "EPAC",
@@ -7524,16 +7476,16 @@
     {
       "ticker": "ERC",
       "name": "ALLSPRING MULTI-SECTOR INCOME FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "ERH",
       "name": "ALLSPRING UTILITIES & HIGH INCOME FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "ERII",
@@ -7627,11 +7579,18 @@
       "size_band": "MID"
     },
     {
+      "ticker": "ET-PI",
+      "name": "Energy Transfer LP",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "ETB",
       "name": "Eaton Vance Tax-Managed Buy-Write Income Fund",
-      "reason": "no_equity",
-      "market_cap": 459368665.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "ETD",
@@ -7644,6 +7603,13 @@
       "ticker": "ETG",
       "name": "Eaton Vance Tax-Advantaged Global Dividend Income Fund",
       "reason": "no_cap",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
+      "ticker": "ETI-P",
+      "name": "ENTERGY TEXAS, INC.",
+      "reason": "no_price",
       "market_cap": null,
       "size_band": ""
     },
@@ -7734,7 +7700,7 @@
     {
       "ticker": "EVER",
       "name": "EverQuote, Inc.",
-      "reason": "no_growth",
+      "reason": "trough_base",
       "market_cap": 900375638.0,
       "size_band": "SMALL"
     },
@@ -7921,6 +7887,13 @@
       "size_band": "NANO"
     },
     {
+      "ticker": "F-PD",
+      "name": "FORD MOTOR CO",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "FA",
       "name": "FIRST ADVANTAGE CORP",
       "reason": "unprofitable",
@@ -8003,6 +7976,13 @@
       "reason": "pe_high",
       "market_cap": 4165758320.0,
       "size_band": "MID"
+    },
+    {
+      "ticker": "FCT",
+      "name": "FIRST TRUST SENIOR FLOATING RATE INCOME FUND II",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "FCUV",
@@ -8133,9 +8113,9 @@
     {
       "ticker": "FFC",
       "name": "Flaherty & Crumrine PREFERRED & INCOME SECURITIES FUND INC",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "FFIV",
@@ -8364,7 +8344,7 @@
     {
       "ticker": "FLZH",
       "name": "Flash Sports & Media Holdings, Inc.",
-      "reason": "negative_equity",
+      "reason": "units_unverified",
       "market_cap": 72184141.0,
       "size_band": "MICRO"
     },
@@ -8385,9 +8365,9 @@
     {
       "ticker": "FMN",
       "name": "Federated Hermes Premier Municipal Income Fund",
-      "reason": "no_equity",
-      "market_cap": 961741578.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "FMX",
@@ -8448,9 +8428,9 @@
     {
       "ticker": "FOF",
       "name": "Cohen & Steers Closed-End Opportunity Fund, Inc.",
-      "reason": "no_equity",
-      "market_cap": 676147521.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "FOFO",
@@ -8488,6 +8468,13 @@
       "size_band": "SMALL"
     },
     {
+      "ticker": "FOUR-PA",
+      "name": "Shift4 Payments, Inc.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "FOX",
       "name": "Fox Corp",
       "reason": "no_earnings",
@@ -8518,9 +8505,9 @@
     {
       "ticker": "FRA",
       "name": "BLACKROCK FLOATING RATE INCOME STRATEGIES FUND, INC.",
-      "reason": "no_equity",
-      "market_cap": 1627461433.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "FRD",
@@ -8581,9 +8568,9 @@
     {
       "ticker": "FRTT",
       "name": "Fort Technology Inc",
-      "reason": "penny",
-      "market_cap": 14567049.0,
-      "size_band": "NANO"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "FRVO",
@@ -8658,9 +8645,9 @@
     {
       "ticker": "FT",
       "name": "FRANKLIN UNIVERSAL TRUST",
-      "reason": "no_equity",
-      "market_cap": 196782730.0,
-      "size_band": "MICRO"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "FTAIM",
@@ -8756,7 +8743,7 @@
     {
       "ticker": "FUBO",
       "name": "FuboTV Inc.",
-      "reason": "tiny_revenue",
+      "reason": "unprofitable",
       "market_cap": 1022082001.0,
       "size_band": "SMALL"
     },
@@ -8777,9 +8764,9 @@
     {
       "ticker": "FUND",
       "name": "SPROTT FOCUS TRUST INC.",
-      "reason": "no_equity",
-      "market_cap": 308781664.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "FURY",
@@ -8824,6 +8811,13 @@
       "size_band": "MID"
     },
     {
+      "ticker": "GAB-PK",
+      "name": "GABELLI EQUITY TRUST INC",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "GAIA",
       "name": "GAIA, INC",
       "reason": "tiny_revenue",
@@ -8834,6 +8828,13 @@
       "ticker": "GAING",
       "name": "GLADSTONE INVESTMENT CORPORATIONDE",
       "reason": "no_cap",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
+      "ticker": "GAM-PB",
+      "name": "GENERAL AMERICAN INVESTORS CO INC",
+      "reason": "no_price",
       "market_cap": null,
       "size_band": ""
     },
@@ -8985,6 +8986,13 @@
       "size_band": "SMALL"
     },
     {
+      "ticker": "GDV-PK",
+      "name": "GABELLI DIVIDEND & INCOME TRUST",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "GDYN",
       "name": "GRID DYNAMICS HOLDINGS, INC.",
       "reason": "pe_high",
@@ -9002,6 +9010,13 @@
       "ticker": "GECCI",
       "name": "Great Elm Capital Corp.",
       "reason": "no_cap",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
+      "ticker": "GEF-B",
+      "name": "GREIF, INC",
+      "reason": "no_price",
       "market_cap": null,
       "size_band": ""
     },
@@ -9078,9 +9093,9 @@
     {
       "ticker": "GF",
       "name": "NEW GERMANY FUND INC",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "GFF",
@@ -9118,11 +9133,25 @@
       "size_band": "LARGE"
     },
     {
+      "ticker": "GGN-PB",
+      "name": "GAMCO Global Gold, Natural Resources & Income Trust",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "GGRP",
       "name": "Glimpse Group, Inc.",
       "reason": "penny",
       "market_cap": 20001604.0,
       "size_band": "NANO"
+    },
+    {
+      "ticker": "GGT-PG",
+      "name": "GABELLI MULTIMEDIA TRUST INC.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "GGZ",
@@ -9162,9 +9191,9 @@
     {
       "ticker": "GHY",
       "name": "PGIM Global High Yield Fund, Inc.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "GIB",
@@ -9300,6 +9329,13 @@
       "size_band": "MICRO"
     },
     {
+      "ticker": "GLOP-PC",
+      "name": "GasLog Partners LP",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "GLP",
       "name": "GLOBAL PARTNERS LP",
       "reason": "no_equity",
@@ -9309,7 +9345,14 @@
     {
       "ticker": "GLQ",
       "name": "Clough Global Equity Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
+    },
+    {
+      "ticker": "GLU-PA",
+      "name": "GABELLI GLOBAL UTILITY & INCOME TRUST",
+      "reason": "no_price",
       "market_cap": null,
       "size_band": ""
     },
@@ -9410,6 +9453,13 @@
       "reason": "unprofitable",
       "market_cap": 74688895.0,
       "size_band": "MICRO"
+    },
+    {
+      "ticker": "GNT-PA",
+      "name": "GAMCO Natural Resources, Gold & Income Trust",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "GNTX",
@@ -9526,7 +9576,7 @@
     {
       "ticker": "GPOR",
       "name": "GULFPORT ENERGY CORP",
-      "reason": "step_change",
+      "reason": "loss_window",
       "market_cap": 2971066327.0,
       "size_band": "MID"
     },
@@ -9545,11 +9595,25 @@
       "size_band": "MICRO"
     },
     {
+      "ticker": "GPUS-PD",
+      "name": "Hyperscale Data, Inc.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "GRAL",
       "name": "GRAIL, Inc.",
       "reason": "unprofitable",
       "market_cap": 3342820953.0,
       "size_band": "MID"
+    },
+    {
+      "ticker": "GRBK-PA",
+      "name": "Green Brick Partners, Inc.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "GRC",
@@ -9568,9 +9632,9 @@
     {
       "ticker": "GRF",
       "name": "EAGLE CAPITAL GROWTH FUND, INC.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "GRMN",
@@ -9664,6 +9728,13 @@
       "size_band": "MICRO"
     },
     {
+      "ticker": "GSL-PB",
+      "name": "Global Ship Lease, Inc.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "GSM",
       "name": "Ferroglobe PLC",
       "reason": "no_equity",
@@ -9720,6 +9791,20 @@
       "size_band": "MID"
     },
     {
+      "ticker": "GTM",
+      "name": "ZoomInfo Technologies Inc.",
+      "reason": "no_growth",
+      "market_cap": 1231395495.0,
+      "size_band": "SMALL"
+    },
+    {
+      "ticker": "GTN-A",
+      "name": "GRAY MEDIA, INC",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "GTX",
       "name": "Garrett Motion Inc.",
       "reason": "negative_equity",
@@ -9739,6 +9824,13 @@
       "reason": "too_small",
       "market_cap": 4710965.0,
       "size_band": "NANO"
+    },
+    {
+      "ticker": "GUT-PC",
+      "name": "GABELLI UTILITY TRUST",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "GVA",
@@ -9902,6 +9994,13 @@
       "size_band": "MID"
     },
     {
+      "ticker": "HCHL",
+      "name": "Happy City Holdings Ltd",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "HCKT",
       "name": "HACKETT GROUP, INC.",
       "reason": "units_unverified",
@@ -9958,6 +10057,13 @@
       "size_band": "MID"
     },
     {
+      "ticker": "HEI-A",
+      "name": "HEICO CORP",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "HELE",
       "name": "HELEN OF TROY LTD",
       "reason": "unprofitable",
@@ -9974,9 +10080,9 @@
     {
       "ticker": "HEQ",
       "name": "John Hancock Diversified Income Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "HERE",
@@ -10005,6 +10111,13 @@
       "reason": "unprofitable",
       "market_cap": 83421651.0,
       "size_band": "MICRO"
+    },
+    {
+      "ticker": "HFRO-PA",
+      "name": "HIGHLAND OPPORTUNITIES & INCOME FUND",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "HGBL",
@@ -10065,9 +10178,9 @@
     {
       "ticker": "HIO",
       "name": "WESTERN ASSET HIGH INCOME OPPORTUNITY FUND INC.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "HITI",
@@ -10089,6 +10202,13 @@
       "reason": "too_small",
       "market_cap": 29403382.0,
       "size_band": "NANO"
+    },
+    {
+      "ticker": "HL-PB",
+      "name": "HECLA MINING CO/DE/",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "HLF",
@@ -10231,18 +10351,25 @@
       "size_band": "MID"
     },
     {
-      "ticker": "HPF",
-      "name": "JOHN HANCOCK PREFERRED INCOME FUND II",
-      "reason": "no_cap",
+      "ticker": "HPE-PC",
+      "name": "Hewlett Packard Enterprise Co",
+      "reason": "no_price",
       "market_cap": null,
       "size_band": ""
     },
     {
+      "ticker": "HPF",
+      "name": "JOHN HANCOCK PREFERRED INCOME FUND II",
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
+    },
+    {
       "ticker": "HPI",
       "name": "JOHN HANCOCK PREFERRED INCOME FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "HPK",
@@ -10261,16 +10388,16 @@
     {
       "ticker": "HPS",
       "name": "JOHN HANCOCK PREFERRED INCOME FUND III",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "HQH",
       "name": "abrdn Healthcare Investors",
-      "reason": "no_equity",
-      "market_cap": 1102161941.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "HQI",
@@ -10282,9 +10409,9 @@
     {
       "ticker": "HQL",
       "name": "abrdn Life Sciences Investors",
-      "reason": "no_equity",
-      "market_cap": 534650022.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "HQY",
@@ -10366,9 +10493,9 @@
     {
       "ticker": "HTD",
       "name": "JOHN HANCOCK TAX-ADVANTAGED DIVIDEND INCOME FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "HTFC",
@@ -10483,6 +10610,13 @@
       "size_band": ""
     },
     {
+      "ticker": "HVT-A",
+      "name": "HAVERTY FURNITURE COMPANIES INC",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "HWH",
       "name": "HWH International Inc.",
       "reason": "too_small",
@@ -10548,9 +10682,9 @@
     {
       "ticker": "HYT",
       "name": "BLACKROCK CORPORATE HIGH YIELD FUND, INC.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "HZO",
@@ -10562,16 +10696,16 @@
     {
       "ticker": "IAE",
       "name": "Voya Asia Pacific High Dividend Equity Income Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "IAF",
       "name": "ABRDN AUSTRALIA EQUITY FUND, INC.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "IAG",
@@ -10674,9 +10808,9 @@
     {
       "ticker": "IDE",
       "name": "Voya Infrastructure, Industrials & Materials Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "IDN",
@@ -10744,16 +10878,16 @@
     {
       "ticker": "IGA",
       "name": "Voya Global Advantage & Premium Opportunity Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "IGD",
       "name": "Voya GLOBAL EQUITY DIVIDEND & PREMIUM OPPORTUNITY FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "IGI",
@@ -10765,9 +10899,9 @@
     {
       "ticker": "IGR",
       "name": "CBRE GLOBAL REAL ESTATE INCOME FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "IH",
@@ -10779,9 +10913,9 @@
     {
       "ticker": "IHD",
       "name": "Voya Emerging Markets High Dividend Equity Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "IHS",
@@ -11190,6 +11324,13 @@
       "size_band": "MID"
     },
     {
+      "ticker": "IRHOU",
+      "name": "Iron Horse Acquisition II Corp.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "IRIX",
       "name": "IRIDEX CORP",
       "reason": "penny",
@@ -11199,9 +11340,9 @@
     {
       "ticker": "ISD",
       "name": "PGIM High Yield Bond Fund, Inc.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "ISOU",
@@ -11458,9 +11599,9 @@
     {
       "ticker": "JFR",
       "name": "NUVEEN FLOATING RATE INCOME FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "JG",
@@ -11472,9 +11613,9 @@
     {
       "ticker": "JGH",
       "name": "Nuveen Global High Income Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "JHI",
@@ -11486,9 +11627,9 @@
     {
       "ticker": "JHS",
       "name": "JOHN HANCOCK INCOME SECURITIES TRUST",
-      "reason": "no_equity",
-      "market_cap": 127297174.0,
-      "size_band": "MICRO"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "JILL",
@@ -11549,9 +11690,9 @@
     {
       "ticker": "JMM",
       "name": "Nuveen Multi-Market Income Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "JOB",
@@ -11591,23 +11732,23 @@
     {
       "ticker": "JQC",
       "name": "Nuveen Credit Strategies Income Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "JRI",
       "name": "Nuveen Real Asset Income & Growth Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "JRS",
       "name": "NUVEEN REAL ESTATE INCOME FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "JRSH",
@@ -11780,9 +11921,9 @@
     {
       "ticker": "KF",
       "name": "KOREA FUND INC",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "KFRC",
@@ -11920,9 +12061,9 @@
     {
       "ticker": "KNRX",
       "name": "KNOREX LTD.",
-      "reason": "penny",
-      "market_cap": 11074013.0,
-      "size_band": "NANO"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "KNTK",
@@ -12088,9 +12229,9 @@
     {
       "ticker": "KTF",
       "name": "DWS MUNICIPAL INCOME TRUST",
-      "reason": "no_equity",
-      "market_cap": 355113433.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "KTOS",
@@ -12212,6 +12353,13 @@
       "size_band": "MID"
     },
     {
+      "ticker": "LAWR",
+      "name": "Robot Consulting Co., Ltd.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "LBGJ",
       "name": "Li Bang International Corp Inc.",
       "reason": "too_small",
@@ -12270,9 +12418,9 @@
     {
       "ticker": "LDP",
       "name": "Cohen & Steers Ltd Duration Preferred & Income Fund, Inc.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "LE",
@@ -12312,7 +12460,7 @@
     {
       "ticker": "LEG",
       "name": "LEGGETT & PLATT INC",
-      "reason": "no_growth",
+      "reason": "loss_window",
       "market_cap": 1292131893.0,
       "size_band": "SMALL"
     },
@@ -12324,11 +12472,18 @@
       "size_band": "SMALL"
     },
     {
+      "ticker": "LEN-B",
+      "name": "LENNAR CORP /NEW/",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "LEO",
       "name": "BNY MELLON STRATEGIC MUNICIPALS, INC.",
-      "reason": "no_equity",
-      "market_cap": 387449112.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "LESL",
@@ -12410,9 +12565,9 @@
     {
       "ticker": "LGI",
       "name": "LAZARD GLOBAL TOTAL RETURN & INCOME FUND INC",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "LGIH",
@@ -12543,7 +12698,7 @@
     {
       "ticker": "LITB",
       "name": "LightInTheBox Holding Co., Ltd.",
-      "reason": "no_growth",
+      "reason": "negative_equity",
       "market_cap": 55981816.0,
       "size_band": "MICRO"
     },
@@ -12616,13 +12771,6 @@
       "reason": "no_equity",
       "market_cap": 364526226.0,
       "size_band": "SMALL"
-    },
-    {
-      "ticker": "LNG",
-      "name": "Cheniere Energy, Inc.",
-      "reason": "step_change",
-      "market_cap": 54871995097.0,
-      "size_band": "LARGE"
     },
     {
       "ticker": "LNKS",
@@ -12758,13 +12906,6 @@
       "size_band": "NANO"
     },
     {
-      "ticker": "LRN",
-      "name": "Stride, Inc.",
-      "reason": "step_change",
-      "market_cap": 3334346364.0,
-      "size_band": "MID"
-    },
-    {
       "ticker": "LSCC",
       "name": "LATTICE SEMICONDUCTOR CORP",
       "reason": "pe_high",
@@ -12840,13 +12981,6 @@
       "reason": "pe_high",
       "market_cap": 98701500.0,
       "size_band": "MICRO"
-    },
-    {
-      "ticker": "LULU",
-      "name": "lululemon athletica inc.",
-      "reason": "step_change",
-      "market_cap": 13858370905.0,
-      "size_band": "LARGE"
     },
     {
       "ticker": "LUMN",
@@ -12989,6 +13123,13 @@
       "size_band": "LARGE"
     },
     {
+      "ticker": "MAGH",
+      "name": "Magnitude International Ltd",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "MAGN",
       "name": "Magnera Corp",
       "reason": "unprofitable",
@@ -13012,9 +13153,9 @@
     {
       "ticker": "MAKO",
       "name": "Mako Mining Corp.",
-      "reason": "no_equity",
-      "market_cap": 844998844.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "MAMA",
@@ -13022,6 +13163,13 @@
       "reason": "pe_high",
       "market_cap": 723440457.0,
       "size_band": "SMALL"
+    },
+    {
+      "ticker": "MAMK",
+      "name": "MaxsMaking Inc.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "MAMO",
@@ -13180,9 +13328,9 @@
     {
       "ticker": "MCI",
       "name": "BARINGS CORPORATE INVESTORS",
-      "reason": "no_equity",
-      "market_cap": 336547153.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "MCK",
@@ -13225,6 +13373,13 @@
       "reason": "pe_high",
       "market_cap": 920956589.0,
       "size_band": "SMALL"
+    },
+    {
+      "ticker": "MCTA",
+      "name": "Charming Medical Ltd",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "MD",
@@ -13362,9 +13517,9 @@
     {
       "ticker": "MFM",
       "name": "ABERDEEN MUNICIPAL INCOME FUND",
-      "reason": "no_equity",
-      "market_cap": 222001331.0,
-      "size_band": "MICRO"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "MFP",
@@ -13397,9 +13552,9 @@
     {
       "ticker": "MGF",
       "name": "ABERDEEN GOVERNMENT MARKETS INCOME FUND",
-      "reason": "no_equity",
-      "market_cap": 92250622.0,
-      "size_band": "MICRO"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "MGIH",
@@ -13474,16 +13629,16 @@
     {
       "ticker": "MHD",
       "name": "BLACKROCK MUNIHOLDINGS FUND, INC.",
-      "reason": "no_equity",
-      "market_cap": 1722669414.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "MHF",
       "name": "WESTERN ASSET MUNICIPAL HIGH INCOME FUND INC.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "MHH",
@@ -13530,9 +13685,9 @@
     {
       "ticker": "MIN",
       "name": "ABERDEEN INTERMEDIATE INCOME FUND",
-      "reason": "no_equity",
-      "market_cap": 280350561.0,
-      "size_band": "MICRO"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "MIND",
@@ -13575,6 +13730,13 @@
       "reason": "no_equity",
       "market_cap": 1841679391.0,
       "size_band": "SMALL"
+    },
+    {
+      "ticker": "MKC-V",
+      "name": "MCCORMICK & CO INC",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "MKSI",
@@ -13642,9 +13804,9 @@
     {
       "ticker": "MMD",
       "name": "NYLI MacKay DefinedTerm Muni Opportunities Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "MMLP",
@@ -13656,9 +13818,9 @@
     {
       "ticker": "MMT",
       "name": "ABERDEEN MULTI-MARKET INCOME FUND",
-      "reason": "no_equity",
-      "market_cap": 263798991.0,
-      "size_band": "MICRO"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "MMU",
@@ -13745,6 +13907,13 @@
       "size_band": "LARGE"
     },
     {
+      "ticker": "MOG-B",
+      "name": "MOOG INC.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "MOGU",
       "name": "MOGU Inc.",
       "reason": "too_small",
@@ -13817,9 +13986,9 @@
     {
       "ticker": "MPV",
       "name": "BARINGS PARTICIPATION INVESTORS",
-      "reason": "no_equity",
-      "market_cap": 173443812.0,
-      "size_band": "MICRO"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "MPWR",
@@ -13915,9 +14084,9 @@
     {
       "ticker": "MSD",
       "name": "MORGAN STANLEY EMERGING MARKETS DEBT FUND INC",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "MSDL",
@@ -14109,6 +14278,13 @@
       "size_band": "LARGE"
     },
     {
+      "ticker": "MUA-RI",
+      "name": "BLACKROCK MUNIASSETS FUND, INC.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "MUC",
       "name": "BLACKROCK MUNIHOLDINGS CALIFORNIA QUALITY FUND, INC.",
       "reason": "no_equity",
@@ -14244,9 +14420,9 @@
     {
       "ticker": "MYN",
       "name": "BLACKROCK MUNIYIELD NEW YORK QUALITY FUND, INC.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "MYND",
@@ -14321,9 +14497,9 @@
     {
       "ticker": "NAD",
       "name": "Nuveen Quality Municipal Income Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "NAK",
@@ -14405,7 +14581,7 @@
     {
       "ticker": "NBR",
       "name": "NABORS INDUSTRIES LTD",
-      "reason": "no_growth",
+      "reason": "loss_window",
       "market_cap": 1433327165.0,
       "size_band": "SMALL"
     },
@@ -14445,6 +14621,13 @@
       "size_band": "NANO"
     },
     {
+      "ticker": "NCL",
+      "name": "Northann Corp.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "NCLH",
       "name": "Norwegian Cruise Line Holdings Ltd.",
       "reason": "pe_high",
@@ -14475,7 +14658,7 @@
     {
       "ticker": "NCSM",
       "name": "NCS Multistage Holdings, Inc.",
-      "reason": "no_growth",
+      "reason": "trough_base",
       "market_cap": 132459676.0,
       "size_band": "MICRO"
     },
@@ -14485,6 +14668,20 @@
       "reason": "pe_high",
       "market_cap": 34140957.0,
       "size_band": "NANO"
+    },
+    {
+      "ticker": "NCV-PA",
+      "name": "Virtus Convertible & Income Fund",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
+      "ticker": "NCZ-PA",
+      "name": "Virtus Convertible & Income Fund II",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "NDLS",
@@ -14518,6 +14715,13 @@
       "ticker": "NEA",
       "name": "Nuveen AMT-Free Quality Municipal Income Fund",
       "reason": "no_cap",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
+      "ticker": "NEE-PS",
+      "name": "NEXTERA ENERGY INC",
+      "reason": "no_price",
       "market_cap": null,
       "size_band": ""
     },
@@ -14594,7 +14798,7 @@
     {
       "ticker": "NFG",
       "name": "NATIONAL FUEL GAS CO",
-      "reason": "negative_equity",
+      "reason": "pe_high",
       "market_cap": 7776590000.0,
       "size_band": "MID"
     },
@@ -14611,6 +14815,13 @@
       "reason": "tiny_revenue",
       "market_cap": 3352283891.0,
       "size_band": "MID"
+    },
+    {
+      "ticker": "NGL-PB",
+      "name": "NGL Energy Partners LP",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "NGS",
@@ -14643,9 +14854,9 @@
     {
       "ticker": "NHS",
       "name": "Neuberger High Yield Strategies Fund Inc.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "NHTC",
@@ -14664,9 +14875,9 @@
     {
       "ticker": "NIE",
       "name": "Virtus Equity & Convertible Income Fund",
-      "reason": "no_equity",
-      "market_cap": 736227200.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "NIKI",
@@ -14678,9 +14889,9 @@
     {
       "ticker": "NIM",
       "name": "NUVEEN SELECT MATURITIES MUNICIPAL FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "NINE",
@@ -14741,9 +14952,9 @@
     {
       "ticker": "NKX",
       "name": "NUVEEN CALIFORNIA AMT-FREE QUALITY MUNICIPAL INCOME FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "NL",
@@ -14755,9 +14966,9 @@
     {
       "ticker": "NMAI",
       "name": "Nuveen Multi-Asset Income Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "NMAX",
@@ -14797,9 +15008,9 @@
     {
       "ticker": "NML",
       "name": "Neuberger Energy Infrastructure & Income Fund Inc.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "NMM",
@@ -14825,9 +15036,9 @@
     {
       "ticker": "NMZ",
       "name": "NUVEEN MUNICIPAL HIGH INCOME OPPORTUNITY FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "NNBR",
@@ -14860,9 +15071,9 @@
     {
       "ticker": "NNY",
       "name": "NUVEEN NEW YORK MUNICIPAL VALUE FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "NOA",
@@ -14916,9 +15127,9 @@
     {
       "ticker": "NPCT",
       "name": "Nuveen Core Plus Impact Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "NPFD",
@@ -15147,9 +15358,9 @@
     {
       "ticker": "NUE",
       "name": "NUCOR CORP",
-      "reason": "pe_high",
-      "market_cap": 62539942280.0,
-      "size_band": "LARGE"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "NUS",
@@ -15157,6 +15368,13 @@
       "reason": "pe_suspect",
       "market_cap": 250035296.0,
       "size_band": "MICRO"
+    },
+    {
+      "ticker": "NUTR",
+      "name": "NUSATRIP Inc",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "NUTX",
@@ -15168,9 +15386,9 @@
     {
       "ticker": "NUV",
       "name": "NUVEEN MUNICIPAL VALUE FUND INC",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "NUWE",
@@ -15196,9 +15414,9 @@
     {
       "ticker": "NVG",
       "name": "Nuveen AMT-Free Municipal Credit Income Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "NVGS",
@@ -15740,6 +15958,13 @@
       "size_band": "MID"
     },
     {
+      "ticker": "OPP-PB",
+      "name": "RiverNorth/DoubleLine Strategic Opportunity Fund, Inc.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "OPRA",
       "name": "Opera Ltd",
       "reason": "no_equity",
@@ -15789,11 +16014,25 @@
       "size_band": "MID"
     },
     {
+      "ticker": "ORCL-PD",
+      "name": "ORACLE CORP",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "ORKT",
       "name": "ORANGEKLOUD TECHNOLOGY INC.",
       "reason": "too_small",
       "market_cap": 5898168.0,
       "size_band": "NANO"
+    },
+    {
+      "ticker": "ORLA",
+      "name": "Orla Mining Ltd.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "ORLY",
@@ -15836,6 +16075,13 @@
       "reason": "pe_high",
       "market_cap": 315492645.0,
       "size_band": "SMALL"
+    },
+    {
+      "ticker": "OST",
+      "name": "Ostin Technology Group Co., Ltd.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "OTF",
@@ -15966,9 +16212,9 @@
     {
       "ticker": "PAI",
       "name": "Western Asset Investment Grade Income Fund Inc.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "PAL",
@@ -16008,7 +16254,7 @@
     {
       "ticker": "PARR",
       "name": "PAR PACIFIC HOLDINGS, INC.",
-      "reason": "no_growth",
+      "reason": "loss_window",
       "market_cap": 3590640267.0,
       "size_band": "MID"
     },
@@ -16090,6 +16336,27 @@
       "size_band": "MID"
     },
     {
+      "ticker": "PBI-PB",
+      "name": "PITNEY BOWES INC /DE/",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
+      "ticker": "PBR-A",
+      "name": "PETROBRAS - PETROLEO BRASILEIRO SA",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
+      "ticker": "PC",
+      "name": "Premium Catering (Holdings) Ltd",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "PCAR",
       "name": "PACCAR INC",
       "reason": "pe_high",
@@ -16104,6 +16371,13 @@
       "size_band": ""
     },
     {
+      "ticker": "PCG-PX",
+      "name": "PG&E Corp",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "PCLA",
       "name": "PicoCELA Inc.",
       "reason": "no_equity",
@@ -16113,9 +16387,9 @@
     {
       "ticker": "PCM",
       "name": "PCM FUND, INC.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "PCN",
@@ -16134,9 +16408,9 @@
     {
       "ticker": "PCQ",
       "name": "PIMCO CALIFORNIA MUNICIPAL INCOME FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "PCTY",
@@ -16155,7 +16429,7 @@
     {
       "ticker": "PD",
       "name": "PagerDuty, Inc.",
-      "reason": "no_growth",
+      "reason": "loss_window",
       "market_cap": 916216072.0,
       "size_band": "SMALL"
     },
@@ -16183,9 +16457,9 @@
     {
       "ticker": "PDO",
       "name": "PIMCO Dynamic Income Opportunities Fund",
-      "reason": "no_equity",
-      "market_cap": 1903676342.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "PDPA",
@@ -16211,9 +16485,9 @@
     {
       "ticker": "PDX",
       "name": "PIMCO Dynamic Income Strategy Fund",
-      "reason": "no_equity",
-      "market_cap": 960753430.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "PED",
@@ -16253,9 +16527,9 @@
     {
       "ticker": "PEO",
       "name": "ADAMS NATURAL RESOURCES FUND, INC.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "PEP",
@@ -16330,9 +16604,9 @@
     {
       "ticker": "PFO",
       "name": "Flaherty & Crumrine PREFERRED & INCOME OPPORTUNITY FUND INC",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "PFXNZ",
@@ -16358,16 +16632,16 @@
     {
       "ticker": "PGP",
       "name": "PIMCO Global StocksPLUS & Income Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "PGZ",
       "name": "Principal Real Estate Income Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "PH",
@@ -16386,9 +16660,9 @@
     {
       "ticker": "PHK",
       "name": "PIMCO HIGH INCOME FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "PHM",
@@ -16419,6 +16693,13 @@
       "size_band": "NANO"
     },
     {
+      "ticker": "PHXE-P",
+      "name": "Phoenix Energy One, LLC",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "PI",
       "name": "IMPINJ INC",
       "reason": "unprofitable",
@@ -16435,9 +16716,9 @@
     {
       "ticker": "PIM",
       "name": "PUTNAM MASTER INTERMEDIATE INCOME TRUST",
-      "reason": "no_equity",
-      "market_cap": 159303259.0,
-      "size_band": "MICRO"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "PINS",
@@ -16559,6 +16840,13 @@
       "size_band": "LARGE"
     },
     {
+      "ticker": "PLTS",
+      "name": "Platinum Analytics Cayman Ltd",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "PLUG",
       "name": "PLUG POWER INC",
       "reason": "units_unverified",
@@ -16610,9 +16898,9 @@
     {
       "ticker": "PML",
       "name": "PIMCO MUNICIPAL INCOME FUND II",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "PMM",
@@ -16645,9 +16933,9 @@
     {
       "ticker": "PNI",
       "name": "PIMCO NEW YORK MUNICIPAL INCOME FUND II",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "PNNT",
@@ -16806,9 +17094,9 @@
     {
       "ticker": "PPT",
       "name": "FRANKLIN PREMIER INCOME TRUST",
-      "reason": "no_equity",
-      "market_cap": 343372507.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "PPTA",
@@ -16851,6 +17139,13 @@
       "reason": "pe_high",
       "market_cap": 1775450259.0,
       "size_band": "SMALL"
+    },
+    {
+      "ticker": "PRIF-PL",
+      "name": "Priority Income Fund, Inc.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "PRIM",
@@ -16925,9 +17220,9 @@
     {
       "ticker": "PRT",
       "name": "PermRock Royalty Trust",
-      "reason": "too_small",
-      "market_cap": 27129582.0,
-      "size_band": "NANO"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "PRTS",
@@ -16958,11 +17253,18 @@
       "size_band": ""
     },
     {
+      "ticker": "PSEC-PA",
+      "name": "PROSPECT CAPITAL CORP",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "PSF",
       "name": "Cohen & Steers Select Preferred & Income Fund, Inc.",
-      "reason": "no_equity",
-      "market_cap": 967048199.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "PSFE",
@@ -16984,6 +17286,13 @@
       "reason": "too_small",
       "market_cap": 17841754.0,
       "size_band": "NANO"
+    },
+    {
+      "ticker": "PSIX",
+      "name": "POWER SOLUTIONS INTERNATIONAL, INC.",
+      "reason": "trough_base",
+      "market_cap": 991814350.0,
+      "size_band": "SMALL"
     },
     {
       "ticker": "PSKY",
@@ -17030,9 +17339,9 @@
     {
       "ticker": "PTA",
       "name": "Cohen & Steers Tax-Advantaged Preferred Securities & Income Fund",
-      "reason": "no_equity",
-      "market_cap": 1054617560.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "PTC",
@@ -17114,9 +17423,9 @@
     {
       "ticker": "PVL",
       "name": "Permianville Royalty Trust",
-      "reason": "no_equity",
-      "market_cap": 57750000.0,
-      "size_band": "MICRO"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "PWR",
@@ -17210,6 +17519,13 @@
       "size_band": "MICRO"
     },
     {
+      "ticker": "QMMM",
+      "name": "QMMM Holdings Ltd",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "QNC",
       "name": "Quantum eMotion Corp",
       "reason": "no_equity",
@@ -17238,11 +17554,18 @@
       "size_band": "LARGE"
     },
     {
-      "ticker": "QQQX",
-      "name": "Nuveen NASDAQ 100 Dynamic Overwrite Fund",
-      "reason": "no_cap",
+      "ticker": "QQQ",
+      "name": "INVESCO QQQ TRUST, SERIES 1",
+      "reason": "no_price",
       "market_cap": null,
       "size_band": ""
+    },
+    {
+      "ticker": "QQQX",
+      "name": "Nuveen NASDAQ 100 Dynamic Overwrite Fund",
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "QRHC",
@@ -17322,6 +17645,13 @@
       "size_band": "MICRO"
     },
     {
+      "ticker": "QXO-PB",
+      "name": "QXO, Inc.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "R",
       "name": "RYDER SYSTEM INC",
       "reason": "pe_high",
@@ -17345,7 +17675,7 @@
     {
       "ticker": "RAIL",
       "name": "FreightCar America, Inc.",
-      "reason": "negative_equity",
+      "reason": "units_unverified",
       "market_cap": 259379025.0,
       "size_band": "MICRO"
     },
@@ -17478,9 +17808,9 @@
     {
       "ticker": "RCS",
       "name": "PIMCO STRATEGIC INCOME FUND, INC.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "RCT",
@@ -17667,9 +17997,9 @@
     {
       "ticker": "RFI",
       "name": "COHEN & STEERS TOTAL RETURN REALTY FUND INC",
-      "reason": "no_equity",
-      "market_cap": 570008085.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "RFIL",
@@ -17730,9 +18060,9 @@
     {
       "ticker": "RGT",
       "name": "ROYCE GLOBAL TRUST, INC.",
-      "reason": "no_equity",
-      "market_cap": 97012278.0,
-      "size_band": "MICRO"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "RH",
@@ -17768,6 +18098,13 @@
       "reason": "penny",
       "market_cap": 6528265.0,
       "size_band": "NANO"
+    },
+    {
+      "ticker": "RIV-PA",
+      "name": "RIVERNORTH OPPORTUNITIES FUND, INC.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "RIVN",
@@ -17884,9 +18221,9 @@
     {
       "ticker": "RMT",
       "name": "ROYCE MICRO-CAP TRUST, INC.",
-      "reason": "no_equity",
-      "market_cap": 657021319.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "RNG",
@@ -18157,9 +18494,9 @@
     {
       "ticker": "RVT",
       "name": "ROYCE SMALL-CAP TRUST, INC.",
-      "reason": "no_equity",
-      "market_cap": 2022029272.0,
-      "size_band": "MID"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "RVTY",
@@ -18330,6 +18667,13 @@
       "size_band": "MID"
     },
     {
+      "ticker": "SB-PD",
+      "name": "SAFE BULKERS, INC.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "SBEV",
       "name": "SPLASH BEVERAGE GROUP, INC.",
       "reason": "penny",
@@ -18353,9 +18697,9 @@
     {
       "ticker": "SBI",
       "name": "WESTERN ASSET INTERMEDIATE MUNI FUND INC.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "SBLK",
@@ -18395,7 +18739,14 @@
     {
       "ticker": "SCD",
       "name": "LMP CAPITAL & INCOME FUND INC.",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
+    },
+    {
+      "ticker": "SCE-PL",
+      "name": "SOUTHERN CALIFORNIA EDISON Co",
+      "reason": "no_price",
       "market_cap": null,
       "size_band": ""
     },
@@ -18435,6 +18786,13 @@
       "size_band": "MICRO"
     },
     {
+      "ticker": "SCOP",
+      "name": "Sprott Physical Copper Trust",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "SCOR",
       "name": "COMSCORE, INC.",
       "reason": "units_unverified",
@@ -18458,14 +18816,14 @@
     {
       "ticker": "SCZM",
       "name": "Santacruz Silver Mining Ltd.",
-      "reason": "no_equity",
-      "market_cap": 830566477.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "SD",
       "name": "SANDRIDGE ENERGY INC",
-      "reason": "step_change",
+      "reason": "no_growth",
       "market_cap": 532772004.0,
       "size_band": "SMALL"
     },
@@ -18479,9 +18837,9 @@
     {
       "ticker": "SDHY",
       "name": "PGIM Short Duration High Yield Opportunities Fund",
-      "reason": "no_equity",
-      "market_cap": 401924082.0,
-      "size_band": "SMALL"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "SDOT",
@@ -18503,6 +18861,13 @@
       "reason": "pe_high",
       "market_cap": 70313223126.0,
       "size_band": "LARGE"
+    },
+    {
+      "ticker": "SEAL-PB",
+      "name": "Seapeak LLC",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "SEB",
@@ -18729,6 +19094,13 @@
       "size_band": "SMALL"
     },
     {
+      "ticker": "SHO-PI",
+      "name": "Sunstone Hotel Investors, Inc.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "SHOE",
       "name": "SHOE STATION GROUP INC",
       "reason": "no_growth",
@@ -18881,6 +19253,13 @@
       "reason": "no_revenue",
       "market_cap": 48177254.0,
       "size_band": "NANO"
+    },
+    {
+      "ticker": "SKYT",
+      "name": "SkyWater Technology, LLC",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "SKYX",
@@ -19226,6 +19605,13 @@
       "size_band": "LARGE"
     },
     {
+      "ticker": "SON",
+      "name": "SONOCO PRODUCTS CO",
+      "reason": "spike_year",
+      "market_cap": 5721896424.0,
+      "size_band": "MID"
+    },
+    {
       "ticker": "SONM",
       "name": "DNA X, Inc.",
       "reason": "too_small",
@@ -19301,6 +19687,13 @@
       "reason": "tiny_revenue",
       "market_cap": 432900324.0,
       "size_band": "SMALL"
+    },
+    {
+      "ticker": "SPE-PC",
+      "name": "SPECIAL OPPORTUNITIES FUND, INC.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "SPGI",
@@ -19851,9 +20244,9 @@
     {
       "ticker": "SWZ",
       "name": "Total Return Securities Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "SXC",
@@ -19910,6 +20303,13 @@
       "reason": "pe_high",
       "market_cap": 40105175333.0,
       "size_band": "LARGE"
+    },
+    {
+      "ticker": "T-PA",
+      "name": "AT&T INC.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "TACT",
@@ -20040,9 +20440,9 @@
     {
       "ticker": "TDF",
       "name": "TEMPLETON DRAGON FUND INC",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "TDG",
@@ -20064,6 +20464,13 @@
       "reason": "unprofitable",
       "market_cap": 1286322869.0,
       "size_band": "SMALL"
+    },
+    {
+      "ticker": "TDS-PV",
+      "name": "TELEPHONE & DATA SYSTEMS INC /DE/",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "TDTH",
@@ -20122,6 +20529,13 @@
       "size_band": "MID"
     },
     {
+      "ticker": "TEN-PF",
+      "name": "TSAKOS ENERGY NAVIGATION LTD",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "TENB",
       "name": "Tenable Holdings, Inc.",
       "reason": "unprofitable",
@@ -20152,7 +20566,7 @@
     {
       "ticker": "TG",
       "name": "TREDEGAR CORP",
-      "reason": "no_growth",
+      "reason": "loss_window",
       "market_cap": 293440943.0,
       "size_band": "MICRO"
     },
@@ -20229,9 +20643,9 @@
     {
       "ticker": "THH",
       "name": "TryHard Holdings Ltd",
-      "reason": "no_equity",
-      "market_cap": 155643838.0,
-      "size_band": "MICRO"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "THM",
@@ -20250,9 +20664,9 @@
     {
       "ticker": "THQ",
       "name": "abrdn Healthcare Opportunities Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "THRM",
@@ -20647,6 +21061,13 @@
       "size_band": "MICRO"
     },
     {
+      "ticker": "TRTN-PB",
+      "name": "Triton International Ltd",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "TRU",
       "name": "TransUnion",
       "reason": "pe_high",
@@ -20782,7 +21203,7 @@
     {
       "ticker": "TTEC",
       "name": "TTEC Holdings, Inc.",
-      "reason": "negative_equity",
+      "reason": "unprofitable",
       "market_cap": 113374028.0,
       "size_band": "MICRO"
     },
@@ -20955,6 +21376,13 @@
       "size_band": "LARGE"
     },
     {
+      "ticker": "TY-P",
+      "name": "TRI-CONTINENTAL Corp",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
+    },
+    {
       "ticker": "TYG",
       "name": "TORTOISE ENERGY INFRASTRUCTURE CORP",
       "reason": "no_equity",
@@ -21055,7 +21483,7 @@
     {
       "ticker": "UEC",
       "name": "URANIUM ENERGY CORP",
-      "reason": "tiny_revenue",
+      "reason": "unprofitable",
       "market_cap": 5631647525.0,
       "size_band": "MID"
     },
@@ -21107,6 +21535,13 @@
       "reason": "no_equity",
       "market_cap": 6687989254.0,
       "size_band": "MID"
+    },
+    {
+      "ticker": "UHAL-B",
+      "name": "U-Haul Holding Co /NV/",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "UI",
@@ -21279,7 +21714,7 @@
     {
       "ticker": "USAR",
       "name": "USA Rare Earth, Inc.",
-      "reason": "negative_equity",
+      "reason": "tiny_revenue",
       "market_cap": 4351087097.0,
       "size_band": "MID"
     },
@@ -21552,7 +21987,7 @@
     {
       "ticker": "VFF",
       "name": "Village Farms International, Inc.",
-      "reason": "no_growth",
+      "reason": "loss_window",
       "market_cap": 270864186.0,
       "size_band": "MICRO"
     },
@@ -21566,9 +22001,9 @@
     {
       "ticker": "VGI",
       "name": "Virtus Global Multi-Sector Income Fund",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "VGM",
@@ -21804,9 +22239,9 @@
     {
       "ticker": "VOC",
       "name": "VOC Energy Trust",
-      "reason": "no_equity",
-      "market_cap": 54060000.0,
-      "size_band": "MICRO"
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "VOXR",
@@ -21856,6 +22291,13 @@
       "reason": "unprofitable",
       "market_cap": 4874678983.0,
       "size_band": "MID"
+    },
+    {
+      "ticker": "VRRM",
+      "name": "VERRA MOBILITY Corp",
+      "reason": "no_growth",
+      "market_cap": 720398491.0,
+      "size_band": "SMALL"
     },
     {
       "ticker": "VRSK",
@@ -21933,6 +22375,13 @@
       "reason": "pe_high",
       "market_cap": 48173259203.0,
       "size_band": "LARGE"
+    },
+    {
+      "ticker": "VSTD",
+      "name": "Vestand Inc.",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "VSTS",
@@ -22147,16 +22596,16 @@
     {
       "ticker": "WDI",
       "name": "Western Asset Diversified Income Fund (WDI)",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "WEA",
       "name": "WESTERN ASSET PREMIER BOND FUND",
-      "reason": "no_cap",
+      "reason": "facts_unavailable",
       "market_cap": null,
-      "size_band": ""
+      "size_band": null
     },
     {
       "ticker": "WEAV",
@@ -22299,11 +22748,18 @@
       "size_band": "SMALL"
     },
     {
-      "ticker": "WIA",
-      "name": "WESTERN ASSET INFLATION-LINKED INCOME FUND",
-      "reason": "no_cap",
+      "ticker": "WHR-PA",
+      "name": "WHIRLPOOL CORP /DE/",
+      "reason": "no_price",
       "market_cap": null,
       "size_band": ""
+    },
+    {
+      "ticker": "WIA",
+      "name": "WESTERN ASSET INFLATION-LINKED INCOME FUND",
+      "reason": "facts_unavailable",
+      "market_cap": null,
+      "size_band": null
     },
     {
       "ticker": "WILC",
@@ -22528,6 +22984,13 @@
       "reason": "pe_high",
       "market_cap": 29533204971.0,
       "size_band": "LARGE"
+    },
+    {
+      "ticker": "WSO-B",
+      "name": "WATSCO INC",
+      "reason": "no_price",
+      "market_cap": null,
+      "size_band": ""
     },
     {
       "ticker": "WTI",
