@@ -63,6 +63,8 @@ RULES = {
     "sic_prefix": SIC_PREFIX,
     "min_measured": MIN_MEASURED,
     "min_passing": MIN_PASSING,
+    "market_cap_ceiling": C.MARKET_CAP_CEILING,
+    "pe_plausible_max": C.PE_PLAUSIBLE_MAX,
 }
 
 
@@ -119,7 +121,13 @@ def _pe(rec: dict) -> float | None:
     reporting a 0.2 multiple would otherwise drag its whole SIC group.
     """
     info = L.price_earnings(rec.get("market_cap"), rec.get("net_income"))
-    return info["pe"]
+    pe = info["pe"]
+    # BOUNDED AT BOTH ENDS BEFORE IT REACHES THE MEDIAN. Withholding it in
+    # peer_discount alone would keep an implausible multiple out of that
+    # company's own row while still letting it into its SIC group's median,
+    # where it would move every peer's discount by a little instead of one
+    # company's by a lot.
+    return None if (pe is not None and pe > C.PE_PLAUSIBLE_MAX) else pe
 
 
 def peer_medians(records: list[dict]) -> dict:
@@ -153,6 +161,13 @@ def evaluate(rec: dict, medians: dict) -> dict:
         return {**out, "verdict": "reject", "reason": "no_quote", "ledger": C.ledger({})}
     if L._stale(rec.get("last_filing"), rec.get("as_of")):
         return {**out, "verdict": "reject", "reason": "dormant", "ledger": C.ledger({})}
+    # THE SIZE PRECONDITION, before anything is scored. Not a criterion
+    # among thirteen here — the arithmetic of a hundred-bagger simply is
+    # not available above it, whatever the other twelve say.
+    cap = rec.get("market_cap")
+    if cap is not None and cap > C.MARKET_CAP_CEILING:
+        return {**out, "verdict": "reject", "reason": "too_big_to_100x",
+                "ledger": C.ledger({})}
 
     pe = rec.get("pe_ratio")
     out["pe_ratio"] = pe
