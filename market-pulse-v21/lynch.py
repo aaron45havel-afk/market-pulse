@@ -82,6 +82,20 @@ TROUGH_BASE_FRAC = 0.25
 # printed before — a fabricated number that looks reasonable.
 STEP_MULTIPLE = 5.0
 
+# A THIRD SHAPE, which neither guard above can see. Sonoco ran
+# -0.86, 4.72, 4.80, 1.65, 10.07 and published 28.7%/yr at a 0.20 PEG. The
+# window's median is 4.76, so the step threshold is 23.80 and 10.07 clears
+# nothing — but 1.65 -> 10.07 is a six-fold jump in ONE year, a
+# divestiture gain, and the endpoint CAGR runs straight through it. The
+# step guard compares a level to its window; this compares one year to the
+# year before it.
+#
+# It does NOT remove the company. A real explosive grower has spike years
+# too, and rejecting all of them cuts the category Lynch actually hunted.
+# The trend is re-measured without the spike year instead, and that rate
+# is the one reported and gated on.
+SPIKE_YOY_PCT = 200.0
+
 # XBRL annual durations wander either side of 365 — 52/53-week retail
 # calendars, leap years, stub periods. This band admits every real annual
 # period and excludes every quarter.
@@ -401,7 +415,8 @@ def growth(series: dict) -> dict:
     """
     pts = sorted((y, v) for y, v in (series or {}).items() if _num(v) is not None)
     out = {"cagr": None, "cagr_raw": None, "capped": False, "trough": False,
-           "step": False, "loss_window": False, "years": len(pts),
+           "step": False, "loss_window": False, "spike": False,
+           "cagr_through_spike": None, "years": len(pts),
            "span": None, "latest_yoy": None, "up_years": None,
            "of_years": None, "from_year": None, "to_year": None}
     if len(pts) < 2:
@@ -413,9 +428,61 @@ def growth(series: dict) -> dict:
     ups = sum(1 for i in range(1, len(vals)) if vals[i] > vals[i - 1])
     out["up_years"], out["of_years"] = ups, len(vals) - 1
 
+    out.update(_rate(pts))
+
+    # ── ONE YEAR THAT IS NOT A CONTINUATION OF THE OTHERS ──
+    #
+    # Sonoco ran -0.86, 4.72, 4.80, 1.65, 10.07 and published a 28.7% CAGR
+    # with a 0.20 PEG. The step guard could not see it: the window's median
+    # is 4.76, so the threshold is 23.80 and 10.07 clears nothing. But
+    # 1.65 -> 10.07 is a SIX-FOLD jump in a single year — a divestiture
+    # gain — and the endpoint CAGR runs straight through it.
+    #
+    # The step guard tests a level against its window. This tests one year
+    # against the year before it, which is the only place a discontinuity
+    # of that shape shows up.
+    #
+    # THE COMPANY IS NOT REMOVED FOR IT. A genuine explosive grower has
+    # spike years too, and dropping every one of them would cut the
+    # category Lynch actually hunted. Instead the trend is re-measured
+    # WITHOUT the spike year and that rate is the one reported, so the
+    # question becomes "does this company still qualify on the years that
+    # are not the anomaly". Sonoco's underlying path is 4.72 -> 4.80 ->
+    # 1.65, which is falling, and it leaves. A company at 0.05 -> 0.10 ->
+    # 0.30 -> 0.90 -> 3.00 is still compounding without its 3.00 and it
+    # stays, badged, at the conservative rate.
+    # ONLY WHEN A RATE WAS ACTUALLY PRODUCED. This is an extra filter on
+    # companies that would otherwise pass, not a replacement for a verdict
+    # already reached. The turnaround 0.12, -0.80, -0.45, 3.10 has a
+    # latest_yoy of +788.9% and would trip this, and re-measuring without
+    # its last year leaves three points — too few to rate. Overwriting a
+    # definite `loss_window` with "could not tell" loses information about
+    # a company the screen understood perfectly well.
+    yoy = out["latest_yoy"]
+    if out["cagr"] is not None and yoy is not None and yoy > SPIKE_YOY_PCT:
+        out["spike"] = True
+        out["cagr_through_spike"] = out["cagr"]
+        prior = _rate(pts[:-1])
+        for k in ("cagr", "cagr_raw", "capped", "trough", "step",
+                  "loss_window", "span", "from_year", "to_year"):
+            out[k] = prior[k]
+    return out
+
+
+def _rate(pts: list) -> dict:
+    """The endpoint CAGR over the last MIN_EPS_YEARS+1 points, guarded.
+
+    Split out of growth() so it can be run twice on the same company —
+    once through the latest year and once without it. See the spike
+    handling above.
+    """
+    out = {"cagr": None, "cagr_raw": None, "capped": False, "trough": False,
+           "step": False, "loss_window": False, "span": None,
+           "from_year": None, "to_year": None}
     if len(pts) < MIN_EPS_YEARS + 1:
         return out
 
+    vals = [v for _y, v in pts]
     (y0, start), (y1, end) = pts[-(MIN_EPS_YEARS + 1)], pts[-1]
     out["from_year"], out["to_year"] = y0, y1
     try:
@@ -541,6 +608,7 @@ REASONS = {
     "trough_base": "base year is a trough — recovery, not growth",
     "step_change": "latest year has no history behind it — a step, not a rate",
     "loss_window": "a loss year inside the growth window — a turnaround, not a rate",
+    "spike_year": "one year does all the growing — the trend without it does not qualify",
     "no_growth": "earnings growth below the floor",
     "debt_unknown": "debt not filed and the liability total could not settle it",
     "debt_high": "debt above the leverage ceiling",
@@ -675,6 +743,12 @@ def evaluate(f: dict) -> dict:
     r["eps_cagr_raw_pct"] = g["cagr_raw"]
     if g["years"] < MIN_EPS_YEARS + 1:
         return done("short_history")
+    # BEFORE the specific guards. When a spike is present the flags on the
+    # row describe the RE-MEASURED window, so reporting "trough_base" for
+    # Sonoco would name a base year the reader cannot see in the CAGR
+    # column and would hide the 510% year that actually caused it.
+    if g.get("spike") and g["cagr"] is None:
+        return done("spike_year")
     if g.get("loss_window"):
         return done("loss_window")
     if g["trough"]:
