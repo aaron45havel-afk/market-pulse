@@ -346,6 +346,13 @@ async def lynch(request: Request):
     return templates.TemplateResponse("lynch.html", {"request": request})
 
 
+@app.get("/hundred")
+async def hundred(request: Request):
+    """The 100-bagger checklist — a reading list, not a ranking.
+    Reads from data/hundred_snapshots/ (monthly cron-built)."""
+    return templates.TemplateResponse("hundred.html", {"request": request})
+
+
 @app.get("/catalysts")
 async def catalysts_page(request: Request, price: str = "", offer: str = "",
                          days: str = "", spread: str = "", shares: str = "",
@@ -5191,6 +5198,30 @@ async def api_snapshot(month: str):
 # Sibling endpoints to /api/finance/snapshot* — same shape, different
 # folder. Powers the /lynch page's month dropdown.
 _LYNCH_SNAPSHOT_DIR = Path(__file__).resolve().parent / "data" / "lynch_snapshots"
+
+
+_HUNDRED_SNAPSHOT_DIR = Path(__file__).resolve().parent / "data" / "hundred_snapshots"
+
+
+@app.get("/api/hundred/snapshots")
+async def api_hundred_snapshot_list():
+    if not _HUNDRED_SNAPSHOT_DIR.exists():
+        return JSONResponse({"months": [], "latest": None})
+    months = sorted((p.stem for p in _HUNDRED_SNAPSHOT_DIR.glob("*.json")), reverse=True)
+    return JSONResponse({"months": months, "latest": months[0] if months else None})
+
+
+@app.get("/api/hundred/snapshot/{month}")
+async def api_hundred_snapshot(month: str):
+    if len(month) != 7 or month[4] != "-" or not (month[:4].isdigit() and month[5:].isdigit()):
+        return JSONResponse({"error": "month must be YYYY-MM"}, status_code=400)
+    path = _HUNDRED_SNAPSHOT_DIR / f"{month}.json"
+    if not path.exists():
+        return JSONResponse({"error": f"no snapshot for {month}"}, status_code=404)
+    try:
+        return JSONResponse(json.loads(path.read_text()))
+    except Exception as e:
+        return JSONResponse({"error": f"failed to read snapshot: {e}"}, status_code=500)
 
 
 @app.get("/api/lynch/snapshots")

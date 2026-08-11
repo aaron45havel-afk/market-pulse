@@ -91,6 +91,23 @@ BASE_JUMP_MULTIPLE = 5.0
 # printed before — a fabricated number that looks reasonable.
 STEP_MULTIPLE = 5.0
 
+# A base this far below the PRE-WINDOW peak is a drawdown, not a start.
+# Used by the revenue window only — see _rate's drawdown_base.
+PRE_WINDOW_PEAK_FRAC = 0.75
+
+# ...and the same question when there IS no pre-window history to ask it
+# of. Carnival truncated to six points is 5.6, 1.9, 12.2, 21.6, 25.0, 26.5:
+# the whole V fits inside the window, so there is no earlier peak, and every
+# other guard is silent because they all interrogate the base against the
+# window MEDIAN — which the recovered years have already dragged up.
+#
+# The tell is that the window OPENS with a collapse. A base sitting on the
+# shoulder of a fall this steep is not a starting level. Note the test is
+# emphatically NOT "the window contains a hole": over the full ten points
+# Carnival runs 16.4 -> 26.5, the collapse and the recovery net out, and
+# 5.5%/yr is the honest answer that must survive.
+WINDOW_OPEN_DROP = 0.75
+
 # A THIRD SHAPE, which neither guard above can see. Sonoco ran
 # -0.86, 4.72, 4.80, 1.65, 10.07 and published 28.7%/yr at a 0.20 PEG. The
 # window's median is 4.76, so the step threshold is 23.80 and 10.07 clears
@@ -419,7 +436,8 @@ def ads_ratio(market_cap: float | None, price: float | None,
 # GROWTH
 # ═══════════════════════════════════════════════════════════════════
 
-def growth(series: dict) -> dict:
+def growth(series: dict, spans: int | None = None,
+           cap: float | None = None, drawdown_base: bool = False) -> dict:
     """Earnings growth, with the two things an endpoint CAGR cannot see.
 
     A TROUGH BASE IS NOT A GROWTH RATE. Abercrombie went
@@ -450,7 +468,8 @@ def growth(series: dict) -> dict:
     ups = sum(1 for i in range(1, len(vals)) if vals[i] > vals[i - 1])
     out["up_years"], out["of_years"] = ups, len(vals) - 1
 
-    out.update(_rate(pts))
+    out["spans"] = spans if spans is not None else MIN_EPS_YEARS
+    out.update(_rate(pts, spans, cap, drawdown_base))
 
     # ── ONE YEAR THAT IS NOT A CONTINUATION OF THE OTHERS ──
     #
@@ -484,7 +503,7 @@ def growth(series: dict) -> dict:
     if out["cagr"] is not None and yoy is not None and yoy > SPIKE_YOY_PCT:
         out["spike"] = True
         out["cagr_through_spike"] = out["cagr"]
-        prior = _rate(pts[:-1])
+        prior = _rate(pts[:-1], spans, cap, drawdown_base)
         for k in ("cagr", "cagr_raw", "capped", "trough", "step",
                   "loss_window", "span", "from_year", "to_year"):
             out[k] = prior[k]
@@ -510,7 +529,8 @@ def _base_jump(window: list) -> bool:
     return bool(rest and rest > 0 and ratios[0] > rest * BASE_JUMP_MULTIPLE)
 
 
-def _rate(pts: list) -> dict:
+def _rate(pts: list, spans: int | None = None, cap: float | None = None,
+          drawdown_base: bool = False) -> dict:
     """The endpoint CAGR over the last MIN_EPS_YEARS+1 points, guarded.
 
     Split out of growth() so it can be run twice on the same company —
@@ -518,18 +538,25 @@ def _rate(pts: list) -> dict:
     handling above.
     """
     out = {"cagr": None, "cagr_raw": None, "capped": False, "trough": False,
-           "step": False, "loss_window": False, "span": None,
-           "from_year": None, "to_year": None}
-    if len(pts) < MIN_EPS_YEARS + 1:
+           "step": False, "loss_window": False, "drawdown_base": False,
+           "span": None, "from_year": None, "to_year": None}
+    # WINDOW LENGTH IS A PARAMETER, defaulting to the value every existing
+    # caller already gets. A 100-bagger thesis needs a decade; a GARP screen
+    # reads three years. Same guards, different window, one implementation —
+    # a second copy would drift out of step with the first, which this
+    # codebase has already paid for once.
+    n = MIN_EPS_YEARS if spans is None else int(spans)
+    ceiling = EPS_GROWTH_CAP if cap is None else float(cap)
+    if n < 1 or len(pts) < n + 1:
         return out
 
     vals = [v for _y, v in pts]
-    (y0, start), (y1, end) = pts[-(MIN_EPS_YEARS + 1)], pts[-1]
+    (y0, start), (y1, end) = pts[-(n + 1)], pts[-1]
     out["from_year"], out["to_year"] = y0, y1
     try:
         span = (date.fromisoformat(y1) - date.fromisoformat(y0)).days / 365.25
     except (ValueError, TypeError):
-        span = float(MIN_EPS_YEARS)
+        span = float(n)
     # The old code hardcoded 3.0 regardless of the actual endpoint dates.
     out["span"] = round(span, 2)
     if span <= 0:
@@ -546,7 +573,7 @@ def _rate(pts: list) -> dict:
     # rejection is invisible and the reason code is a lie — the company
     # never had a step change, it just has a long record. That is exactly
     # the company this screen exists to find.
-    window = vals[-(MIN_EPS_YEARS + 1):]
+    window = vals[-(n + 1):]
     med = median(window)
     if med is None:
         return out
@@ -582,11 +609,36 @@ def _rate(pts: list) -> dict:
     # the window, and 0.02 -> 3.00 -> 3.50 -> 4.00 is one step of 150x
     # followed by two of about 15%. That is the spike guard's question
     # asked at the front of the window instead of the back.
-    earlier = vals[:-(MIN_EPS_YEARS + 1)]
+    earlier = vals[:-(n + 1)]
     was_higher = any(v > start for v in earlier)
     if start < med * TROUGH_BASE_FRAC and (was_higher or _base_jump(window)):
         out["trough"] = True
         return out
+    # A BASE THAT IS A DRAWDOWN FROM A PRIOR PEAK. The test above compares
+    # the base to its own window's MEDIAN, and on a recovery the median has
+    # already been dragged up by the recovered years — so it cannot see the
+    # hole. Carnival's revenue ran 16.4, 17.5, 18.9, 20.8, 5.6, 1.9, 12.2,
+    # 21.6, 25.0, 26.5: measured over 3 spans it compounds at 29.5%, over 5
+    # at a capped 35.0%, over 9 at 5.5%. Great, Great, Yikes — one company,
+    # one filing history, and no existing guard fires at any window.
+    #
+    # Opt-in because it is a REVENUE test. Earnings collapse to near zero
+    # in ordinary years and the pre-window peak would reject honest
+    # compounders on the EPS board.
+    if drawdown_base:
+        if earlier:
+            peak = max(earlier)
+            if peak > 0 and start < peak * PRE_WINDOW_PEAK_FRAC:
+                out["trough"] = True
+                out["drawdown_base"] = True
+                return out
+        # No pre-window history, so ask whether the window opens with the
+        # fall itself — the base being the last normal year rather than a
+        # starting level. A compounder never does this.
+        elif len(window) >= 2 and start > 0 and window[1] < start * WINDOW_OPEN_DROP:
+            out["trough"] = True
+            out["drawdown_base"] = True
+            return out
     if end > med * STEP_MULTIPLE:
         out["step"] = True
         return out
@@ -605,8 +657,8 @@ def _rate(pts: list) -> dict:
 
     raw = ((end / start) ** (1.0 / span) - 1.0) * 100.0
     out["cagr_raw"] = round(raw, 1)
-    out["capped"] = raw > EPS_GROWTH_CAP
-    out["cagr"] = round(min(raw, EPS_GROWTH_CAP), 1)
+    out["capped"] = raw > ceiling
+    out["cagr"] = round(min(raw, ceiling), 1)
     return out
 
 
