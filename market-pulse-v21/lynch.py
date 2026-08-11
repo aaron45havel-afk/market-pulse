@@ -835,9 +835,15 @@ def evaluate(f: dict) -> dict:
         return done("stale_balance_sheet")
 
     ok, ratio = S.debt_ok(f.get("short_term_debt"), f.get("long_term_debt"),
-                          equity, f.get("total_liabilities"))
+                          equity, f.get("total_liabilities"),
+                          f.get("non_debt_liabilities") or 0.0)
     r["debt_to_equity"] = ratio
     r["debt_known"] = ok is not None
+    # Measured vs BOUNDED. Both come back with debt_known True and a
+    # blank ratio is not the same fact in each case: one means "we
+    # added two filed numbers", the other "we proved the whole stack
+    # fits inside the ceiling without ever seeing a debt tag".
+    r["debt_bounded"] = ok is not None and ratio is None
     # THE INPUTS, ON THE ROW. A published D/E could not be checked against
     # anything: the snapshot carried the ratio and not the two numbers it
     # came from, so "0.000, measured" and "0.000, half of it unfiled" were
@@ -845,6 +851,7 @@ def evaluate(f: dict) -> dict:
     r["short_term_debt"] = _num(f.get("short_term_debt"))
     r["long_term_debt"] = _num(f.get("long_term_debt"))
     r["total_liabilities"] = _num(f.get("total_liabilities"))
+    r["non_debt_liabilities"] = _num(f.get("non_debt_liabilities"))
     if ok is None:
         return done("debt_unknown")
     if ratio is not None and ratio > DEBT_TO_EQUITY_MAX:

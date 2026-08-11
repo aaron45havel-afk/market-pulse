@@ -181,8 +181,40 @@ def ncav(current_assets, total_liabilities, preferred=None) -> float | None:
     return ca - tl - (_num(preferred) or 0.0)
 
 
+def non_debt_liabilities(operating_lease_current=None,
+                         operating_lease_noncurrent=None,
+                         accounts_payable=None,
+                         deferred_revenue=None) -> float:
+    """Liabilities that are certainly NOT borrowings, summed.
+
+    The "debt cannot exceed total liabilities" bound is true and, for any
+    company with a store fleet, useless. lululemon carries $3.71bn of
+    liabilities against $4.83bn of equity — a ratio of 0.77, over the 0.5
+    ceiling — so the bound refuses to prove no-debt for a company whose
+    borrowings are essentially nil. Most of that stack is operating LEASES,
+    which ASC 842 put on the balance sheet in 2019 and which are not debt,
+    are not tagged as debt, and were never what "avoid debt like the
+    plague" meant.
+
+    Subtracting the identifiable non-debt lines tightens a bound we already
+    trust. Every term is optional and a missing one is simply not
+    subtracted, which leaves the bound LOOSER — so an unfiled tag can only
+    ever cause an honest "unknown", never a wrongful pass. That is the safe
+    direction, and it is why this can be a sum of whatever happens to be
+    filed rather than requiring the full set.
+
+    Payables and deferred revenue are included on the same logic: money
+    owed to suppliers and services owed to customers are operating
+    obligations, not leverage.
+    """
+    return sum(_num(v) or 0.0 for v in (
+        operating_lease_current, operating_lease_noncurrent,
+        accounts_payable, deferred_revenue))
+
+
 def debt_ok(short_term_debt, long_term_debt, equity,
-            total_liabilities=None) -> tuple[bool | None, float | None]:
+            total_liabilities=None,
+            non_debt=0.0) -> tuple[bool | None, float | None]:
     """(passes, ratio). "Avoid debt like the plague."
 
     Negative equity returns (False, None): the ratio is undefined but the
@@ -223,10 +255,12 @@ def debt_ok(short_term_debt, long_term_debt, equity,
         if tl is None:
             return None, None
         # The bound that always holds: debt cannot exceed total
-        # liabilities. If the ENTIRE stack sits inside the ceiling then
-        # no-debt is proved rather than presumed — and the ratio still
-        # comes back None, because it was not measured.
-        return (True, None) if tl / e <= DEBT_TO_EQUITY_MAX else (None, None)
+        # liabilities, LESS whatever we can positively identify as not
+        # being debt. If what remains sits inside the ceiling then no-debt
+        # is proved rather than presumed — and the ratio still comes back
+        # None, because it was bounded, not measured.
+        bound = max(0.0, tl - (_num(non_debt) or 0.0))
+        return (True, None) if bound / e <= DEBT_TO_EQUITY_MAX else (None, None)
 
     ratio = round((st + lt) / e, 3)
     return ratio <= DEBT_TO_EQUITY_MAX, ratio
