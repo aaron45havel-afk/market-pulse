@@ -573,6 +573,67 @@ check("spike_year" in L.REASONS and "spike_year" not in L.UNMEASURED_CODES,
       "spike_year is a measured rejection, not an unmeasured one — the "
       "screen saw the company perfectly well")
 
+# ── a low base is only a trough if the company was ever higher ──
+# The test was `start < median x 0.25` alone, which cannot tell a DEPRESSED
+# base from an EARLY one. With four points at rate r the base falls under a
+# quarter of the median whenever r(1+r) > 8 — so anything compounding
+# faster than ~137%/yr was rejected as a recovery.
+check(L.growth({"2020-12-31": 4.20, "2021-12-31": 0.05, "2022-12-31": 6.22,
+                "2023-12-31": 10.69, "2024-12-31": 10.46})["trough"],
+      "Abercrombie still rejects: 4.20 sits behind its 0.05, so those are "
+      "earnings that existed and went away — which is what recovery means")
+_early = L.growth({"2020-12-31": 0.05, "2021-12-31": 0.10, "2022-12-31": 0.30,
+                   "2023-12-31": 0.90, "2024-12-31": 3.00})
+check(not _early["trough"],
+      "but a company whose base is the highest it has ever been has not "
+      "recovered from anything — it is early, and that is the ten-bagger "
+      "this screen exists to find")
+_psix = L.growth({"2020-12-31": -2.12, "2021-12-31": 0.49, "2022-12-31": 1.15,
+                  "2023-12-31": 3.01, "2024-12-31": 4.94})
+check(not _psix["trough"] and _psix["cagr"] == 35.0,
+      "recovery INTO growth qualifies: nothing behind PSIX's 0.49 base was "
+      "higher, and the last-year column still shows the reader +64%")
+check(L.growth({"2021-12-31": 0.10, "2022-12-31": 0.30, "2023-12-31": 0.90,
+                "2024-12-31": 2.70})["cagr"] == 35.0,
+      "a company with exactly four points has no history behind the window "
+      "at all, so it can never be a trough")
+
+# ── return on capital: reported, never gated ──
+_light = L.return_on_capital(300e6, 500e6, 400e6, 120e6)
+_heavy = L.return_on_capital(300e6, 900e6, 400e6, 4.5e9)
+check(_heavy["roc_pct"] == 6.0 and _light["roc_pct"] == 100.0,
+      "identical operating income, opposite capital efficiency — 6.0% "
+      "against a capped 100%. Nothing else on the board separates these")
+check(_light["roc_raw_pct"] == 136.4 and _light["capped"],
+      "bounded like ROE, with the raw figure kept")
+check(L.return_on_capital(300e6, 500e6, None, 120e6)["roc_pct"] is None,
+      "an unfiled current-liabilities tag would SHRINK the denominator and "
+      "print a better score — every input must be filed or the cell is blank")
+_negcap = L.return_on_capital(300e6, 400e6, 900e6, 200e6)
+check(_negcap["roc_pct"] is None and "not positive" in _negcap["reason"],
+      "a negative denominator would flip the sign and rank a struggling "
+      "company at the top, so nothing is reported")
+_float = L.return_on_capital(300e6, 400e6, 900e6, 800e6)
+check(_float["roc_pct"] == 100.0 and _float["capital"] == 300e6,
+      "negative working capital is NOT floored at zero — a retailer paid "
+      "before it pays suppliers is financing itself, and Greenblatt's floor "
+      "would hide that by pretending it employs no capital")
+# Internally consistent: 1e8 shares x 2.60 EPS = the 2.6e8 net income, so
+# the units invariant is satisfied and the row reaches the RoC line.
+_row = L.evaluate({"ticker": "Q", "price": 15.0, "market_cap": 1.5e9,
+                   "total_assets": 8e9, "equity": 2e9, "revenue": 5e9,
+                   "last_filing": "2025-12-31", "as_of": "2026-08-11",
+                   "eps_unit": "USD/shares", "shares": 1e8,
+                   "net_income": 2.6e8, "short_term_debt": 1e8,
+                   "long_term_debt": 7e8, "capex": 1.5e8, "ocf": 4e8,
+                   "op_income": 3e8, "current_assets": 9e8,
+                   "current_liabilities": 4e8, "ppe": 4.5e9,
+                   "eps_by_year": {f"{2021 + i}-12-31": v for i, v in
+                                   enumerate([1.0, 1.4, 1.9, 2.6])}})
+check(_row["roc_pct"] == 6.0 and _row["verdict"] == "pass",
+      "a 6% return on capital does NOT reject — this is a growth-at-a-price "
+      "screen, not a quality screen, and the figure is there to be read")
+
 # ── the penny floor was skipped when the price was missing ──
 _nop = L.evaluate({"ticker": "X", "market_cap": 5e8, "price": None,
                    "as_of": "2026-08-01"})

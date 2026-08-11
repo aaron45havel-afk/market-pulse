@@ -72,6 +72,15 @@ EPS_GROWTH_CAP = 35.0
 # median of 6.22 is 0.8%.
 TROUGH_BASE_FRAC = 0.25
 
+# ...but a low base is only DEPRESSED if the company was ever higher, or
+# if the step out of it dwarfs every other step in the window. The test
+# used to be the ratio alone, which cannot tell a depressed base from an
+# early one — and with four points at rate r the base falls under a
+# quarter of the median whenever r(1+r) > 8, so anything compounding
+# faster than about 137%/yr was rejected as a recovery. That is the
+# ten-bagger this screen exists to find, thrown out for growing.
+BASE_JUMP_MULTIPLE = 5.0
+
 # THE OTHER HALF OF THE SAME PROBLEM, and the trough test structurally
 # cannot catch it. Xunlei's EPS ran 0.00, 0.06, 0.04, 0.00, 3.31 — the
 # base of 0.06 sits ABOVE the median of 0.04, because the entire history
@@ -124,6 +133,19 @@ ADS_TOLERANCE = 0.08
 # Schloss and Compounders for the same reason.
 MOAT_ROE_MIN = 15.0
 MOAT_POS_EPS_YEARS = 5
+
+# Return on capital is REPORTED, NOT GATED. It is the best single answer
+# to "is this growth earned or bought", and it is also the noisiest figure
+# on the board at the bottom of the size range, where one lease
+# reclassification moves the denominator by a third. Gating on it would
+# cut the board hardest exactly where the data is weakest — and Lynch's
+# screen is a growth-at-a-price screen, not a quality screen; that is what
+# /compounders is for. Sort by it, read it beside the capex ratio, and
+# draw your own conclusion.
+#
+# Bounded like ROE and for the same reason: as capital employed
+# approaches zero the ratio stops describing a business.
+ROC_CAP = 100.0
 
 # ── Microcap guards ──────────────────────────────────────────────────
 #
@@ -469,6 +491,25 @@ def growth(series: dict) -> dict:
     return out
 
 
+def _base_jump(window: list) -> bool:
+    """True when the step OUT of the base year dwarfs every other step.
+
+    Evidence of a depressed base for a company with no history behind the
+    window. Compounding spreads its increase across the window — 0.05,
+    0.10, 0.30, 0.90 steps by 2x, 3x, 3x — while a collapse-and-recover
+    puts nearly all of it in one place: 0.02, 3.00, 3.50, 4.00 steps by
+    150x, 1.17x, 1.14x.
+
+    Compared against the MEDIAN of the other steps rather than their mean,
+    so a second unusual year cannot mask the first.
+    """
+    if len(window) < 3 or any(v <= 0 for v in window):
+        return False
+    ratios = [window[i] / window[i - 1] for i in range(1, len(window))]
+    rest = median(ratios[1:])
+    return bool(rest and rest > 0 and ratios[0] > rest * BASE_JUMP_MULTIPLE)
+
+
 def _rate(pts: list) -> dict:
     """The endpoint CAGR over the last MIN_EPS_YEARS+1 points, guarded.
 
@@ -521,7 +562,29 @@ def _rate(pts: list) -> dict:
     if med <= 0:
         out["loss_window"] = True
         return out
-    if start < med * TROUGH_BASE_FRAC:
+    # A LOW BASE IS ONLY A TROUGH IF THE COMPANY WAS EVER HIGHER. The test
+    # was `start < median x 0.25` alone, which cannot tell a DEPRESSED base
+    # from an EARLY one — and for a fast compounder the base is always low
+    # relative to its own window. With four points at rate r the base falls
+    # under a quarter of the median whenever r(1+r) > 8, so anything
+    # growing faster than about 137%/yr was rejected as a recovery. That is
+    # the ten-bagger this screen exists to find, thrown out for growing.
+    #
+    # The history before the window settles it, and it is already on hand.
+    # Abercrombie has 4.20 sitting behind its 0.05 — earnings that existed
+    # and went away, which is what "recovery" means. A company whose base
+    # is the highest it has ever been has not recovered from anything.
+    #
+    # TWO KINDS OF EVIDENCE, because the history is not always there. When
+    # the company has years behind the window, a higher one settles it.
+    # When it does not — a filer with exactly four annual periods — the
+    # SHAPE still does: in real early growth the increase is spread across
+    # the window, and 0.02 -> 3.00 -> 3.50 -> 4.00 is one step of 150x
+    # followed by two of about 15%. That is the spike guard's question
+    # asked at the front of the window instead of the back.
+    earlier = vals[:-(MIN_EPS_YEARS + 1)]
+    was_higher = any(v > start for v in earlier)
+    if start < med * TROUGH_BASE_FRAC and (was_higher or _base_jump(window)):
         out["trough"] = True
         return out
     if end > med * STEP_MULTIPLE:
@@ -798,6 +861,12 @@ def evaluate(f: dict) -> dict:
 
     r["moat"] = moat(f)
     r["has_moat"] = r["moat"]["has_moat"]
+
+    # Reported, never gated — see ROC_CAP. Attached last so a company that
+    # fails an earlier gate does not carry a half-built quality figure.
+    r["roc"] = return_on_capital(f.get("op_income"), f.get("current_assets"),
+                                 f.get("current_liabilities"), f.get("ppe"))
+    r["roc_pct"] = r["roc"]["roc_pct"]
     # The last five annual EPS figures, rendered on the row. Every field
     # the page needed to expose its own broken rows was already in the
     # snapshot and none was displayed — which is how a 48-year profit
@@ -867,6 +936,64 @@ def size_band(cap: float | None) -> str:
     if c < 10e9:
         return "MID"
     return "LARGE"
+
+
+def return_on_capital(op_income, current_assets, current_liabilities,
+                      ppe) -> dict:
+    """Greenblatt's return on capital: EBIT / (net working capital + net PP&E).
+
+    THE ONE QUESTION NOTHING ELSE ON THIS BOARD ANSWERS: is the growth
+    being earned or bought? A company can compound EPS for years by
+    ploughing capital into projects that return less than they cost, and
+    every column here would applaud it — the P/E, the CAGR, the PEG and
+    the capex ratio are all silent on what the capital came back as.
+
+    PRE-TAX, AND DELIBERATELY. The textbook ROIC is NOPAT / invested
+    capital, which needs an effective tax rate, and an effective tax rate
+    is a ratio of two more tags that go missing. Substituting a statutory
+    21% would be a fabricated number wearing a precise-looking decimal —
+    the exact failure this module exists to prevent. Greenblatt's own
+    formulation drops the tax term for that reason: it compares operating
+    businesses without letting a tax-domicile difference or a one-off
+    valuation allowance decide the ranking.
+
+    NET WORKING CAPITAL IS NOT FLOORED AT ZERO. Greenblatt floors it;
+    that inflates the ratio for exactly the businesses whose negative
+    working capital is a strength — a retailer collecting cash before it
+    pays suppliers is financing itself with float, and hiding that makes
+    it look like a company with no capital employed. If the total lands at
+    or below zero, no figure is reported at all.
+
+    EVERY INPUT MUST BE FILED. A missing current-liabilities tag would
+    make the denominator smaller and the return larger, which is the
+    familiar shape: an unmeasured value rendered as an unusually good
+    score. Nothing is defaulted; the cell goes blank.
+    """
+    out = {"roc_pct": None, "roc_raw_pct": None, "capped": False,
+           "capital": None, "reason": None}
+    ebit = _num(op_income)
+    ca, cl, fixed = _num(current_assets), _num(current_liabilities), _num(ppe)
+    missing = [n for n, v in (("op_income", ebit), ("current_assets", ca),
+                              ("current_liabilities", cl), ("ppe", fixed))
+               if v is None]
+    if missing:
+        out["reason"] = "not filed: " + ", ".join(missing)
+        return out
+
+    capital = (ca - cl) + fixed
+    out["capital"] = round(capital, 2)
+    if capital <= 0:
+        # Liabilities exceed the assets they are financing. The ratio is
+        # not large here, it is undefined — and a negative denominator
+        # would flip the sign and rank a struggling company at the top.
+        out["reason"] = "capital employed is not positive"
+        return out
+
+    raw = ebit / capital * 100.0
+    out["roc_raw_pct"] = round(raw, 1)
+    out["capped"] = raw > ROC_CAP
+    out["roc_pct"] = round(min(raw, ROC_CAP), 1)
+    return out
 
 
 def moat(f: dict) -> dict:
