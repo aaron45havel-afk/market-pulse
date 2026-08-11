@@ -194,37 +194,92 @@ def _units(facts: dict, concept: str, taxonomy: str = "us-gaap") -> dict:
 
 
 def annual_series(facts: dict, concepts, unit: str = "USD") -> tuple[dict, str]:
-    """({end_date: value}, concept used) for the best-covered concept.
+    """({end_date: value}, primary concept) MERGED across the concept list.
 
-    MOST COVERAGE WINS, rather than first-tag-wins. A filer that reports
-    capex under PaymentsToAcquireProductiveAssets was being deleted with
-    no trace because the code only ever looked at
-    PaymentsToAcquirePropertyPlantAndEquipment.
+    MOST COVERAGE SETS THE BASIS, then the other tags fill only the years
+    it lacks. Two bugs this replaces, and the second was introduced by the
+    fix for the first.
+
+    1. FIRST TAG WINS. A filer reporting capex under
+       PaymentsToAcquireProductiveAssets was deleted with no trace,
+       because the code only ever looked at
+       PaymentsToAcquirePropertyPlantAndEquipment.
+
+    2. MOST COVERAGE WINS, WHOLE. Choosing one tag and then taking its
+       last value publishes a retired tag's final year as today's figure.
+       ASC 606 moved essentially every US filer off `Revenues` onto
+       `RevenueFromContractWithCustomer...` for years beginning after Dec
+       2017, so a company with nine pre-606 years and eight post-606 years
+       locked onto the dead tag: $5m of 2017 revenue published for a
+       company doing $900m, which then failed the tiny_revenue gate and
+       left the board. The same shape put capex/OCF at 0.11 against a true
+       0.50.
+
+    Merging fixes it, and earlier slots still win every year they cover,
+    so the existing preference order survives wherever it applies. Pre-
+    and post-606 revenue are not an identical basis — a real caveat — but
+    a spliced series is far closer to the truth than one that stopped nine
+    years ago. The compounders module has run this same merge since the
+    cutover bug froze 13% of that board.
     """
     if isinstance(concepts, str):
         concepts = [concepts]
-    best: dict[str, float] = {}
-    best_name = ""
+    per_tag: list[tuple[str, dict]] = []
     for c in concepts:
         series = dict(_spans(_units(facts, c).get(unit)))
-        if len(series) > len(best):
-            best, best_name = series, c
-    return best, best_name
+        if series:
+            per_tag.append((c, series))
+    if not per_tag:
+        return {}, ""
+    # Most years wins. Python's sort is stable, so list order still breaks
+    # ties and the answer cannot move between runs.
+    per_tag.sort(key=lambda kv: -len(kv[1]))
+    merged: dict[str, float] = {}
+    for _c, series in per_tag:
+        for end, val in series.items():
+            merged.setdefault(end, val)
+    return dict(sorted(merged.items())), per_tag[0][0]
 
 
-def instant_value(facts: dict, concepts, unit: str = "USD") -> tuple[float | None, str]:
-    """Latest point-in-time value across a list of concepts.
+def instant_value(facts: dict, concepts,
+                  unit: str = "USD") -> tuple[float | None, str, str]:
+    """(value, concept, as-of date) — THE MOST RECENT balance-sheet fact.
 
-    Returns (None, "") when NOTHING was filed — which is different from
-    zero, and is the distinction the debt gate was losing.
+    Returns (None, "", "") when nothing was filed, which is different from
+    zero and is the distinction the debt gate was losing.
+
+    It used to return the first concept in the list with ANY history, and
+    for a list of alternates that means a retired tag beats a current one.
+    A filer that tagged ShortTermBorrowings through 2017 and has reported
+    current maturities under DebtCurrent ever since published its 2017
+    value — and because that value was 0.0, and 0.0 is not None,
+    schloss.debt_ok's "neither tag present is not zero debt" fallback
+    never fired. A decade-old zero made neither tag absent. Published
+    debt_to_equity 0.30, debt_known True, against a real 0.45.
+
+    The date comes back now so a caller can refuse a balance sheet that
+    stopped years before the company did.
+
+    A MODELLING LIMIT, not a bug: these are treated as alternates, but
+    ShortTermBorrowings and LongTermDebtCurrent are different line items
+    that can legitimately coexist, and taking one understates a filer
+    reporting both. Summing would double-count every filer that uses them
+    as synonyms, which is the commoner case — so the conservative choice
+    stands and the understatement is named here rather than hidden.
     """
     if isinstance(concepts, str):
         concepts = [concepts]
+    best: tuple[float, str, str] | None = None
     for c in concepts:
         series = _instant(_units(facts, c).get(unit))
-        if series:
-            return series[-1][1], c
-    return None, ""
+        if not series:
+            continue
+        end, val = series[-1]
+        # Strictly later wins, so a tie on the same date leaves the
+        # earlier — preferred — tag in front.
+        if best is None or end > best[2]:
+            best = (val, c, end)
+    return best if best else (None, "", "")
 
 
 def eps_series(facts: dict) -> tuple[dict, str, str]:
@@ -346,9 +401,9 @@ def growth(series: dict) -> dict:
     """
     pts = sorted((y, v) for y, v in (series or {}).items() if _num(v) is not None)
     out = {"cagr": None, "cagr_raw": None, "capped": False, "trough": False,
-           "step": False, "years": len(pts), "span": None, "latest_yoy": None,
-           "up_years": None, "of_years": None, "from_year": None,
-           "to_year": None}
+           "step": False, "loss_window": False, "years": len(pts),
+           "span": None, "latest_yoy": None, "up_years": None,
+           "of_years": None, "from_year": None, "to_year": None}
     if len(pts) < 2:
         return out
 
@@ -372,14 +427,48 @@ def growth(series: dict) -> dict:
     if span <= 0:
         return out
 
-    ordered = sorted(vals)
-    median = ordered[len(ordered) // 2] if len(ordered) % 2 else \
-        (ordered[len(ordered) // 2 - 1] + ordered[len(ordered) // 2]) / 2
-    if median > 0 and start < median * TROUGH_BASE_FRAC:
+    # THE WINDOW, not the whole filed history. Both guards exist to judge
+    # the four points the CAGR is actually computed from, and measuring
+    # them against a median that includes every year on file makes the
+    # verdict depend on how long the company has been public.
+    #
+    # A steady 25%/yr compounder passes at fifteen years of EPS and trips
+    # `step_change` at sixteen: the early years drag the whole-history
+    # median down until the latest year clears median x STEP_MULTIPLE. The
+    # rejection is invisible and the reason code is a lie — the company
+    # never had a step change, it just has a long record. That is exactly
+    # the company this screen exists to find.
+    window = vals[-(MIN_EPS_YEARS + 1):]
+    med = median(window)
+    if med is None:
+        return out
+
+    # A LOSS INSIDE THE WINDOW IS NOT A GROWTH RATE. Both guards used to
+    # be gated on `median > 0`, so a window whose median is negative
+    # switched BOTH of them off and fell through to the endpoint formula.
+    # EPS 0.12, -0.80, -0.45, 3.10 has median -0.165 and produced a raw
+    # 195.5% capped to 35.0%, a PEG near 0.2, and the top row on the
+    # board. Positive endpoints around a loss are a turnaround, and an
+    # endpoint CAGR describes a turnaround worse than it describes
+    # anything else.
+    if med <= 0:
+        out["loss_window"] = True
+        return out
+    if start < med * TROUGH_BASE_FRAC:
         out["trough"] = True
         return out
-    if median > 0 and end > median * STEP_MULTIPLE:
+    if end > med * STEP_MULTIPLE:
         out["step"] = True
+        return out
+    # AFTER the two specific guards, not before. Xunlei's window is
+    # 0.06, 0.04, 0.00, 3.31 — median 0.05, so the step guard works and
+    # names exactly what happened. Testing for the zero first would have
+    # relabelled it `loss_window`, which is true but tells the reader less.
+    # This catches the remaining shape: a healthy-looking median with a
+    # loss year buried inside it, e.g. 1.00, -0.50, 2.00, 3.00, which
+    # clears both guards and would otherwise print a tidy 44%/yr.
+    if any(v <= 0 for v in window):
+        out["loss_window"] = True
         return out
     if start <= 0 or end <= 0:
         return out
@@ -451,13 +540,32 @@ REASONS = {
     "short_history": "fewer than four annual EPS periods",
     "trough_base": "base year is a trough — recovery, not growth",
     "step_change": "latest year has no history behind it — a step, not a rate",
+    "loss_window": "a loss year inside the growth window — a turnaround, not a rate",
     "no_growth": "earnings growth below the floor",
     "debt_unknown": "debt not filed and the liability total could not settle it",
     "debt_high": "debt above the leverage ceiling",
+    "stale_balance_sheet": "the debt tags stopped years before the company did",
     "capex_unknown": "capex or operating cash flow not filed",
     "capex_high": "capex above the reinvestment ceiling",
+    "screen_error": "the screener raised on this filer — not a fact about it",
+    "facts_unavailable": "SEC did not return filings — a network fact, not a company one",
     "pass": "passes every filter",
 }
+
+# A balance-sheet fact this far behind the latest annual filing is not a
+# current figure. The debt gate decides membership, so a stale numerator
+# is a fabricated pass, not a stale display value.
+BALANCE_SHEET_LAG_DAYS = 550
+
+# Rejections where the SCREEN could not see, as opposed to the COMPANY
+# failing a gate. Kept beside REASONS so a new code cannot be added to one
+# without the other being obviously incomplete — and named once, because
+# the census partitions on it and the page reads the partition as a funnel.
+UNMEASURED_CODES = (
+    "no_price", "no_cap", "no_equity", "no_revenue", "no_earnings",
+    "cap_implausible", "units_unverified", "debt_unknown", "capex_unknown",
+    "stale_balance_sheet", "screen_error", "facts_unavailable",
+)
 
 
 def evaluate(f: dict) -> dict:
@@ -486,13 +594,20 @@ def evaluate(f: dict) -> dict:
     r["price"], r["market_cap"] = price, cap
     r["size_band"] = size_band(cap)
 
-    if price is None and cap is None:
+    # A MISSING PRICE IS NOT AN EXEMPTION FROM THE PRICE FLOOR. The old
+    # test was `if price is None and cap is None`, so a row carrying a cap
+    # but no price reached the penny gate with price None and skipped it —
+    # `price is not None and price < MIN_PRICE` reads a missing price as
+    # "not a penny stock". The floor exists precisely because a market cap
+    # cannot tell a small business from a registrant with a filing agent,
+    # which is the case where a quote is most likely to be missing.
+    if price is None:
         return done("no_price")
     if cap is None:
         return done("no_cap")
 
     # ── microcap guards, shipped WITH the lower floor ──
-    if price is not None and price < MIN_PRICE:
+    if price < MIN_PRICE:
         return done("penny")
     if cap < MARKET_CAP_MIN:
         return done("too_small")
@@ -560,6 +675,8 @@ def evaluate(f: dict) -> dict:
     r["eps_cagr_raw_pct"] = g["cagr_raw"]
     if g["years"] < MIN_EPS_YEARS + 1:
         return done("short_history")
+    if g.get("loss_window"):
+        return done("loss_window")
     if g["trough"]:
         return done("trough_base")
     if g["step"]:
@@ -569,6 +686,17 @@ def evaluate(f: dict) -> dict:
     r["peg"] = peg(pe_info["pe"], g["cagr"])
 
     # ── debt: the schloss verdict, not a reimplementation ──
+    #
+    # BUT FIRST: is the balance sheet current? instant_value now returns
+    # the date its figure came from, and a debt tag that stopped years
+    # before the company did produces a ratio that looks measured and is
+    # not. That is the gate that decides membership, so a stale numerator
+    # is a fabricated pass rather than a stale display value.
+    bs_date = f.get("debt_as_of") or ""
+    r["debt_as_of"] = bs_date or None
+    if bs_date and _lag_days(bs_date, f.get("last_filing")) > BALANCE_SHEET_LAG_DAYS:
+        return done("stale_balance_sheet")
+
     ok, ratio = S.debt_ok(f.get("short_term_debt"), f.get("long_term_debt"),
                           equity, f.get("total_liabilities"))
     r["debt_to_equity"] = ratio
@@ -622,6 +750,23 @@ def location(f: dict) -> str:
     if f.get("is_international"):
         return "Foreign filer"
     return state or ""
+
+
+def _lag_days(earlier: str | None, later: str | None) -> float:
+    """How far `earlier` sits behind `later`, in days. 0 when unknowable.
+
+    Returns 0 rather than a large number on an unparseable date, so a date
+    this function cannot read never rejects a company on its own — the
+    guard it feeds is a rejection, and an unreadable date is not evidence.
+    """
+    if not earlier or not later:
+        return 0.0
+    try:
+        a = date.fromisoformat(str(earlier)[:10])
+        b = date.fromisoformat(str(later)[:10])
+    except (ValueError, TypeError):
+        return 0.0
+    return max(0.0, (b - a).days)
 
 
 def _stale(last_filing: str | None, as_of: str | None) -> bool:
@@ -714,14 +859,19 @@ def census(rows: list[dict]) -> dict:
         code = r.get("reason") or "unknown"
         counts[code] = counts.get(code, 0) + 1
     passing = counts.get("pass", 0)
-    unmeasured = sum(counts.get(k, 0) for k in
-                     ("units_unverified", "debt_unknown", "capex_unknown",
-                      "no_equity", "no_revenue", "no_earnings", "no_cap",
-                      "no_price", "cap_implausible"))
+    unmeasured = sum(counts.get(k, 0) for k in UNMEASURED_CODES)
+
+    # THE FOUR TILES MUST PARTITION THE UNIVERSE. `rejected` was
+    # len(rows) - passing, which counts every non-passing row — including
+    # all nine unmeasured codes, which the next tile then counted again.
+    # Read left to right as a funnel, a company that could not be measured
+    # appeared twice and the numbers summed past the universe. Rejected
+    # now means "measured, and it failed a gate", so
+    # screened == rejected + unmeasured + passing exactly.
     return {
         "screened": len(rows),
         "passing": passing,
-        "rejected": len(rows) - passing,
+        "rejected": len(rows) - passing - unmeasured,
         "unmeasured": unmeasured,
         "by_reason": dict(sorted(counts.items(), key=lambda kv: -kv[1])),
         "labels": {k: v for k, v in REASONS.items() if k in counts},

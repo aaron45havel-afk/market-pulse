@@ -211,9 +211,11 @@ def _fetch_companyfacts(cik: str) -> dict | None:
 # FACTS → RECORD
 # ═══════════════════════════════════════════════════════════════════
 
-# Most-coverage-wins across each list, rather than first-tag-wins. A filer
-# reporting capex under PaymentsToAcquireProductiveAssets was deleted with
-# no trace because only the generic PP&E tag was ever consulted.
+# MERGED across each list. The tag with the most years sets the basis and
+# the others fill only the years it lacks — see lynch.annual_series. Two
+# bugs are behind that: first-tag-wins deleted a filer reporting capex
+# under PaymentsToAcquireProductiveAssets, and the fix for it (one tag,
+# taken whole) published a retired tag's last year as today's figure.
 REVENUE_TAGS = ["RevenueFromContractWithCustomerExcludingAssessedTax",
                 "Revenues", "RevenueFromContractWithCustomerIncludingAssessedTax",
                 "SalesRevenueNet"]
@@ -242,13 +244,16 @@ def facts_to_record(row: dict, quote: dict, facts: dict, as_of: str) -> dict:
     capex, _cc = L.annual_series(facts, CAPEX_TAGS)
     ocf, _oc2 = L.annual_series(facts, OCF_TAGS)
 
-    equity, _ = L.instant_value(facts, ["StockholdersEquity",
-                                        "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"])
-    assets, _ = L.instant_value(facts, "Assets")
-    liabilities, _ = L.instant_value(facts, "Liabilities")
-    ppe, _ = L.instant_value(facts, "PropertyPlantAndEquipmentNet")
-    st_debt, _ = L.instant_value(facts, ST_DEBT_TAGS)
-    lt_debt, _ = L.instant_value(facts, LT_DEBT_TAGS)
+    equity, _, _ = L.instant_value(facts, ["StockholdersEquity",
+                                           "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"])
+    assets, _, _ = L.instant_value(facts, "Assets")
+    liabilities, _, _ = L.instant_value(facts, "Liabilities")
+    ppe, _, _ = L.instant_value(facts, "PropertyPlantAndEquipmentNet")
+    st_debt, _, st_at = L.instant_value(facts, ST_DEBT_TAGS)
+    lt_debt, _, lt_at = L.instant_value(facts, LT_DEBT_TAGS)
+    # The OLDER of the two dates: the gate is computed from both, so it is
+    # only as current as its stalest input.
+    debt_as_of = min([d for d in (st_at, lt_at) if d], default="")
 
     shares = None
     for tax, concept in (("us-gaap", "CommonStockSharesOutstanding"),
@@ -281,6 +286,7 @@ def facts_to_record(row: dict, quote: dict, facts: dict, as_of: str) -> dict:
         "ppe": ppe,
         "short_term_debt": st_debt,
         "long_term_debt": lt_debt,
+        "debt_as_of": debt_as_of or None,
         "revenue": _last(revenue),
         "net_income": _last(ni_by_year),
         "op_income": _last(op_by_year),
@@ -340,11 +346,40 @@ def build_lynch_screener(max_companyfacts: int | None = None) -> dict:
 
     priced = [u for u in universe if u["ticker"] in quotes]
     log.info("Priced: %d/%d (source: %s)", len(priced), len(tickers), source)
+
+    # THE UNQUOTED ARE SCREENED, NOT ABSENT. This list used to be filtered
+    # and everything else thrown away, so the census counted only the
+    # companies the bulk file happened to carry — and BULK_COVERAGE_MIN is
+    # 0.50, meaning up to half the universe could vanish while the page
+    # still printed the survivor count as "screened". The census is the one
+    # thing on that page claiming to account for the whole universe; it was
+    # the thing under-reporting it.
+    #
+    # Keyed off `quotes`, NOT off `priced`, because `priced` is about to be
+    # truncated by --max-companyfacts and a company held back by a test cap
+    # has not been screened and must not be recorded as unpriced.
+    #
+    # These cost nothing: no price means rejected regardless of the
+    # filings, so no companyfacts pull is needed to know the verdict.
+    rows: list[dict] = [
+        L.evaluate({"ticker": u["ticker"], "name": u["name"], "cik": u.get("cik"),
+                    "exchange": u.get("exchange") or "", "sic": u.get("sic"),
+                    "state": u.get("state") or "", "as_of": as_of,
+                    "price": None, "market_cap": None})
+        for u in universe if u["ticker"] not in quotes
+    ]
+    if rows:
+        log.info("  %d with no quote — screened as no_price, not dropped",
+                 len(rows))
+
     if max_companyfacts:
+        held = len(priced) - max_companyfacts
         priced = priced[:max_companyfacts]
+        if held > 0:
+            log.warning("  --max-companyfacts: %d quoted companies NOT "
+                        "screened; the census undercounts by that much", held)
 
     log.info("Pulling companyfacts for %d companies …", len(priced))
-    rows: list[dict] = []
     last_log = time.time()
     for i, row in enumerate(priced, 1):
         if i % 10 == 0:
@@ -352,13 +387,35 @@ def build_lynch_screener(max_companyfacts: int | None = None) -> dict:
         key = f"lynch_facts_{row['cik']}"
         facts = _rc(key, 168)
         if facts is None:
-            facts = _fetch_companyfacts(row["cik"]) or {}
-            _wc(key, facts)
+            facts = _fetch_companyfacts(row["cik"])
+            # ONLY CACHE A REAL ANSWER. `_get` returns None for every
+            # failure mode — timeout, SEC 403 rate-limit, connection reset
+            # — and the old line coerced that to {} and wrote it to a
+            # 168-hour cache. A single transient 403 therefore poisoned
+            # that filer for a week, and it rendered as `no_equity`: a
+            # fact about the company, asserted from a fact about the
+            # network.
+            if facts:
+                _wc(key, facts)
+        if not facts:
+            rows.append({"ticker": row["ticker"], "name": row.get("name") or "",
+                         "cik": row.get("cik"), "verdict": "reject",
+                         "reason": "facts_unavailable", "reasons": []})
+            continue
         try:
             rec = facts_to_record(row, quotes[row["ticker"]], facts, as_of)
             rows.append(L.evaluate(rec))
         except Exception as e:                  # pragma: no cover — defensive
+            # A ROW, NOT A DISAPPEARANCE. This used to log and continue,
+            # so a company the screener crashed on left no trace anywhere:
+            # not in the board, not in the census, not in any rejection
+            # count. A screener bug is the one failure that must never be
+            # invisible, because it looks exactly like a clean universe.
             log.warning("  screen error for %s: %s", row["ticker"], e)
+            rows.append({"ticker": row["ticker"], "name": row.get("name") or "",
+                         "cik": row.get("cik"), "verdict": "reject",
+                         "reason": "screen_error", "reasons": [],
+                         "error": f"{type(e).__name__}: {e}"})
         if time.time() - last_log > 30:
             passing = sum(1 for r in rows if r["verdict"] == "pass")
             log.info("  %d/%d done (%d passing)", i, len(priced), passing)
