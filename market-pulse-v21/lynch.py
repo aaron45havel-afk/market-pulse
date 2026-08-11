@@ -838,6 +838,13 @@ def evaluate(f: dict) -> dict:
                           equity, f.get("total_liabilities"))
     r["debt_to_equity"] = ratio
     r["debt_known"] = ok is not None
+    # THE INPUTS, ON THE ROW. A published D/E could not be checked against
+    # anything: the snapshot carried the ratio and not the two numbers it
+    # came from, so "0.000, measured" and "0.000, half of it unfiled" were
+    # indistinguishable in the file. Both were on the board.
+    r["short_term_debt"] = _num(f.get("short_term_debt"))
+    r["long_term_debt"] = _num(f.get("long_term_debt"))
+    r["total_liabilities"] = _num(f.get("total_liabilities"))
     if ok is None:
         return done("debt_unknown")
     if ratio is not None and ratio > DEBT_TO_EQUITY_MAX:

@@ -206,13 +206,29 @@ def debt_ok(short_term_debt, long_term_debt, equity,
         return False, None
 
     st, lt = _num(short_term_debt), _num(long_term_debt)
-    if st is None and lt is None:
+
+    # EITHER missing, not both. The old test was `st is None and lt is
+    # None`, and the sum below read `(st or 0.0) + (lt or 0.0)` — so a
+    # company that filed ONE of the two had the other added as zero and the
+    # total marked as measured. That is this function's own defect applied
+    # to the one-sided case: a known number added to an unknown one does
+    # not make a known total.
+    #
+    # It reached the board. lululemon passed the leverage gate at D/E 0.000
+    # with debt_known True — the exact figure lynch.py's docstring lists
+    # among the bugs the module exists to stop — because one tag was filed
+    # and the other simply was not.
+    if st is None or lt is None:
         tl = _num(total_liabilities)
         if tl is None:
             return None, None
+        # The bound that always holds: debt cannot exceed total
+        # liabilities. If the ENTIRE stack sits inside the ceiling then
+        # no-debt is proved rather than presumed — and the ratio still
+        # comes back None, because it was not measured.
         return (True, None) if tl / e <= DEBT_TO_EQUITY_MAX else (None, None)
 
-    ratio = round(((st or 0.0) + (lt or 0.0)) / e, 3)
+    ratio = round((st + lt) / e, 3)
     return ratio <= DEBT_TO_EQUITY_MAX, ratio
 
 

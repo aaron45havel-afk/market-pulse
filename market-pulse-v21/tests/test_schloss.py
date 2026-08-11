@@ -89,9 +89,32 @@ check(ok is True and ratio is None,
 ok, ratio = S.debt_ok(None, None, 1000, total_liabilities=3000)
 check(ok is None and ratio is None,
       "a large liability stack proves nothing either way — still unknown")
+# THIS CHECK USED TO ASSERT (True, 0.1) — "when a real debt tag exists it
+# is used, and the liability bound is ignored". That was the bug written
+# down as a rule. Short-term debt of 100 is filed, LONG-TERM DEBT IS NOT,
+# and the sum read `(st or 0.0) + (lt or 0.0)`, so the unfiled side was
+# added as zero and the total marked measured — against a liability stack
+# three times equity. lululemon reached the live board that way, passing
+# the leverage gate at D/E 0.000 with debt_known True.
+#
+# A known number plus an unknown one is not a known total. One side
+# missing is now treated exactly like both missing.
 ok, ratio = S.debt_ok(100, None, 1000, total_liabilities=3000)
-check(ok is True and ratio == 0.1,
-      "when a real debt tag exists it is used, and the liability bound is ignored")
+check(ok is None and ratio is None,
+      "one filed tag and one unfiled cannot be summed — and a stack of "
+      "3000 against 1000 of equity proves nothing either")
+ok, ratio = S.debt_ok(100, None, 1000, total_liabilities=400)
+check(ok is True and ratio is None,
+      "but if the whole stack fits inside the ceiling, no-debt is still "
+      "proved — and the ratio stays unknown because it was not measured")
+ok, ratio = S.debt_ok(100, 200, 1000)
+check(ok is True and ratio == 0.3,
+      "with BOTH sides filed the ratio is genuinely measured and reported")
+ok, ratio = S.debt_ok(0.0, None, 1000, total_liabilities=None)
+check(ok is None and ratio is None,
+      "the lululemon shape exactly: one tag filed at zero, the other "
+      "unfiled, and no Liabilities tag to bound it — 0.000 was never a "
+      "measurement, and the fallback could not have rescued it either")
 
 
 # ── dividends: paying, and the cut ──────────────────────────────────
