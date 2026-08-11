@@ -142,6 +142,18 @@
         we happened to measure" ranks companies by how little is known about them. The headline is a
         fraction with both numbers showing — <em>4 of the 6 measured, of 13</em> — because "67%" is the
         same figure for a company seen clearly and one barely seen at all.</li>
+    <li><strong>Criterion 13 is a precondition, not a quality.</strong> The other twelve describe how good
+        a business is; this one describes whether a hundred-bagger is arithmetically available from here.
+        The first run listed NVIDIA at <strong>$5.2 trillion</strong> — a hundred-bagger from there is
+        $520tn, several times world GDP — because it cleared four other criteria while 13 sat marked
+        Yikes. That was the right band and the wrong consequence, so the checklist's own Yikes boundary
+        is now a gate. The source says it plainly: <em>"Is Microsoft a great company? Yes. Can it become
+        a 100-bagger from now on? Probably not."</em></li>
+    <li><strong>A P/E above 500x is a near-zero denominator, not a valuation.</strong> Arista arrived
+        with a multiple of 69,913,371 against $245.5bn of market cap — about $3,500 of net income — and
+        printed a peer discount of −198,956,563%. The low end was already bounded at 3x for the same
+        reason; the high end never needed it until this page had no downstream gate to catch it. It is
+        withheld rather than clamped, and kept out of the peer median so it moves nobody else's row.</li>
     <li><strong>Criterion 9 is the one that hurts most.</strong> Analyst coverage is <em>inverted</em> —
         zero analysts is the best score — and it is licensed terminal data. Losing it removes the
         thesis's own explanation of why a quality company would ever be cheap.</li>
@@ -220,6 +232,7 @@ function renderSubtitle() {
   if (r.scoreable_ids) parts.push(`<strong>${r.scoreable_ids.length} of ${r.criteria_total}</strong> criteria are scoreable from free filings`);
   if (r.never_scored_ids) parts.push(`<strong>${r.never_scored_ids.length}</strong> can never be scored`);
   if (r.min_passing != null) parts.push(`a company is listed on <strong>${r.min_passing}</strong> Good-or-Great from at least <strong>${r.min_measured}</strong> measured`);
+  if (r.market_cap_ceiling != null) parts.push(`and nothing over <strong>${f.cap(r.market_cap_ceiling)}</strong> is listed at all`);
   document.getElementById('hbSubtitle').innerHTML =
     `Mayer's <em>100 Baggers</em> and Phelps's <em>100 to 1</em> reduce to two instructions — buy right, `
     + `hold on — and a thirteen-point checklist for the first half. ${parts.join(', ')}. `

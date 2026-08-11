@@ -162,6 +162,36 @@ PEER_MIN = 25
 # revenue means the two tags are not describing the same subtotal.
 GM_RECONCILE_FRAC = 0.02
 
+# A P/E ABOVE THIS IS A NEAR-ZERO DENOMINATOR, not a valuation.
+# lynch.price_earnings bounds the LOW end at PE_SANE[0] — below 3 is a
+# currency or share-basis artefact — but never needed an upper bound,
+# because the Lynch screen gates at PE_MAX = 10 immediately afterwards.
+# Nothing gates it here, and Arista arrived with a P/E of 69,913,371
+# against $245.5bn of market cap, which is about $3,500 of net income.
+# It printed a peer discount of -198,956,563%.
+#
+# Real companies do trade at 200x. Above 500x the ratio has stopped
+# describing the business, which is the same failure as below 3x and gets
+# the same treatment: withheld, not clamped to a pretty number.
+PE_PLAUSIBLE_MAX = 500.0
+
+# ── Criterion 13 is a PRECONDITION, not a quality ────────────────────
+#
+# The other twelve describe how good a business is. This one describes
+# whether a hundred-bagger is arithmetically available from here, and the
+# source material is explicit about it: "Is Microsoft a great company?
+# Yes. Can it become a 100-bagger from now on? Probably not."
+#
+# The first run listed NVIDIA at $5.2 TRILLION. A hundred-bagger from
+# there is $520tn, several times world GDP. It was listed because it
+# cleared four of the other criteria while criterion 13 sat there marked
+# Yikes — which is the correct band and the wrong consequence.
+#
+# So the checklist's own worst band becomes a gate. This invents no
+# threshold: >$10bn is where the source puts Yikes, and its prose argues
+# for exactly this treatment.
+MARKET_CAP_CEILING = 10e9
+
 
 # A measurement, or an explicit absence of one. `value` may not be read
 # unless `measured` is True — every consumer in this module goes through
@@ -370,6 +400,10 @@ def peer_discount(pe_ratio, peer_median_pe, peer_count) -> Measure:
     pe, med, n = _num(pe_ratio), _num(peer_median_pe), _num(peer_count)
     if pe is None:
         return unmeasured("no usable P/E")
+    if pe > PE_PLAUSIBLE_MAX:
+        return unmeasured(f"P/E of {pe:,.0f} is a near-zero denominator, not a "
+                          f"valuation — above the {PE_PLAUSIBLE_MAX:,.0f}x "
+                          f"plausibility ceiling")
     if med is None or n is None or n < PEER_MIN:
         return unmeasured(f"only {int(n) if n is not None else 0} peers in this "
                           f"SIC group, need {PEER_MIN} for a median")

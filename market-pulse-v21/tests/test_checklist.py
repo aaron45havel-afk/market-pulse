@@ -80,6 +80,18 @@ check(C.band_for(13, 4e9) == "Good" and C.band_for(13, 7e9) == "Meh",
       "and its middle bands invert too")
 check(C.band_for(99, 10.0) is None, "a criterion with no thresholds has no band")
 
+# ── criterion 13 is a PRECONDITION, and the first run proved it ──
+# NVIDIA was listed at $5.2 TRILLION because it cleared four other
+# criteria while 13 sat marked Yikes — the right band, the wrong
+# consequence. A hundred-bagger from there is $520tn, several times world
+# GDP. The gate invents no threshold: >$10bn is where the checklist itself
+# puts Yikes, and the source's prose argues for exactly this treatment.
+check(C.MARKET_CAP_CEILING == C.THRESHOLDS[13][0],
+      "the size ceiling IS the checklist's own Yikes boundary — promoted "
+      "from a band to a precondition, not invented")
+check(C.band_for(13, C.MARKET_CAP_CEILING + 1) == "Yikes",
+      "and anything above it was already the worst band")
+
 
 # ══════════════════════════════════════════════════════════════════
 # CRITERION 1 — Carnival, the case the drawdown guard exists for
@@ -204,6 +216,22 @@ check(d.measured and abs(d.value - 50.0) < 1e-9 and d.band == "Great",
 check(not C.peer_discount(8.0, 16.0, 5).measured,
       f"five peers is not a peer group — a company in a thin SIC is not "
       f"thereby cheap (needs {C.PEER_MIN})")
+# ARISTA arrived with a P/E of 69,913,371 against $245.5bn of market cap —
+# about $3,500 of net income — and printed a peer discount of -198,956,563%.
+# lynch.price_earnings bounds the LOW end and never needed an upper one,
+# because the Lynch screen gates at PE_MAX = 10 right afterwards. Nothing
+# gates it here.
+anet = C.peer_discount(69913371.44, 35.14, 900)
+check(not anet.measured and "denominator" in anet.reason,
+      f"a P/E of 69.9 million is a near-zero denominator, not a valuation "
+      f"(got {anet.value})")
+check(C.peer_discount(200.0, 30.0, 40).measured,
+      "but 200x is a real multiple and stays — the ceiling is at 500x, not "
+      "at whatever looks expensive")
+check(C.peer_discount(200.0, 30.0, 40).band == "Yikes",
+      "and lands in Yikes, which is a finding about the price rather than "
+      "about the parser")
+
 check(not C.peer_discount(None, 16.0, 40).measured, "no P/E, no discount")
 check(not C.peer_discount(8.0, -2.0, 40).measured,
       "and a non-positive peer median cannot produce a percentage")
