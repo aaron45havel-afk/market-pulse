@@ -249,6 +249,11 @@ def facts_to_record(row: dict, quote: dict, facts: dict, as_of: str) -> dict:
     assets, _, _ = L.instant_value(facts, "Assets")
     liabilities, _, _ = L.instant_value(facts, "Liabilities")
     ppe, _, _ = L.instant_value(facts, "PropertyPlantAndEquipmentNet")
+    # Greenblatt's denominator. Both are standard instants; if either is
+    # unfiled the return is withheld rather than computed off a smaller
+    # denominator, which would read as an unusually GOOD score.
+    cur_assets, _, _ = L.instant_value(facts, "AssetsCurrent")
+    cur_liabs, _, _ = L.instant_value(facts, "LiabilitiesCurrent")
     st_debt, _, st_at = L.instant_value(facts, ST_DEBT_TAGS)
     lt_debt, _, lt_at = L.instant_value(facts, LT_DEBT_TAGS)
     # The OLDER of the two dates: the gate is computed from both, so it is
@@ -284,6 +289,8 @@ def facts_to_record(row: dict, quote: dict, facts: dict, as_of: str) -> dict:
         "total_assets": assets,
         "total_liabilities": liabilities,
         "ppe": ppe,
+        "current_assets": cur_assets,
+        "current_liabilities": cur_liabs,
         "short_term_debt": st_debt,
         "long_term_debt": lt_debt,
         "debt_as_of": debt_as_of or None,
