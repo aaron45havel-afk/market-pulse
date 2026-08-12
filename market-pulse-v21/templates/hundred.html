@@ -32,14 +32,47 @@
   .hb-cov .never .bar span { background:var(--border); }
   .hb-cov .never .lbl, .hb-cov .never .pct { color:var(--text-dim); font-style:italic; }
 
-  .hb-scroll { overflow-x:auto; }
+  /* THE FRAME. The header has carried `position:sticky; top:0` since the
+     first version and has never once stuck. An ancestor with overflow becomes
+     the scrollport its descendants stick to, and `.hb-scroll` had no bounded
+     height — so there was nothing to stick to, the PAGE scrolled instead, and
+     the header went with it. Bounding the height gives the sticky something
+     to bite on; the key rides above it as a flex sibling, outside the
+     horizontal scroller, so it never slides away sideways either. */
+  .hb-frame { display:flex; flex-direction:column; max-height:calc(100vh - 6rem);
+    border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .hb-scroll { flex:1 1 auto; min-height:0; overflow:auto; }
   table.hb-table { width:100%; border-collapse:collapse; font-size:0.76rem; white-space:nowrap; }
-  .hb-table th { text-align:left; padding:0.45rem 0.4rem; border-bottom:2px solid var(--border);
+  .hb-table th { text-align:left; padding:0.45rem 0.4rem;
     font-size:0.63rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dim);
-    position:sticky; top:0; background:var(--surface); }
+    position:sticky; top:0; z-index:3; background:var(--surface);
+    /* border-collapse drops borders on sticky cells — paint it as a shadow */
+    box-shadow:inset 0 -2px 0 var(--border); }
   .hb-table td { padding:0.4rem; border-bottom:1px solid var(--border); font-variant-numeric:tabular-nums; }
   .hb-table tbody tr:hover td { background:var(--surface2); }
   .hb-table .tick { font-family:var(--font-mono); font-weight:700; }
+  /* The ticker travels sideways for the same reason the header travels
+     downwards: a row you cannot name is not a row. */
+  .hb-table th:first-child, .hb-table td:first-child { position:sticky; left:0;
+    background:var(--surface); box-shadow:inset -1px 0 0 var(--border); }
+  .hb-table th:first-child { z-index:5; box-shadow:inset -1px 0 0 var(--border), inset 0 -2px 0 var(--border); }
+  .hb-table td:first-child { z-index:2; }
+
+  /* THE KEY — frozen with the header, because "what is criterion 11?" gets
+     asked while looking at row 40, not while looking at the top of the page. */
+  .hb-key { flex:0 0 auto; background:var(--surface); border-bottom:1px solid var(--border);
+    padding:0.5rem 0.55rem 0.55rem; }
+  .hb-key-items { display:flex; flex-wrap:wrap; gap:0.22rem 0.8rem; font-size:0.68rem; }
+  .hb-key .i { display:inline-flex; align-items:center; gap:0.3rem; color:var(--text-dim);
+    cursor:help; white-space:nowrap; }
+  .hb-key .i b { font-weight:600; color:var(--text); }
+  .hb-key .role { font-size:0.57rem; text-transform:uppercase; letter-spacing:0.04em; opacity:0.7; }
+  .hb-key-bands { display:flex; flex-wrap:wrap; gap:0.22rem 0.75rem; font-size:0.66rem;
+    margin-top:0.4rem; padding-top:0.4rem; border-top:1px dashed var(--border); }
+  /* The swatch inherits .c13 wholesale — same size, same border, same
+     hatch — so the key shows the actual cell rather than a smaller
+     lookalike that quietly loses the distinction it is there to teach. */
+  .hb-key .sw { flex:0 0 auto; }
 
   /* The 13 cells. Colour is the checklist's own four bands; grey is
      "never scoreable" and is visually distinct from an empty band. */
@@ -57,6 +90,9 @@
   .c13.quiet { background:var(--surface); color:var(--text); border-color:var(--border); }
   .c13.never { background:repeating-linear-gradient(45deg, var(--surface2), var(--surface2) 3px,
     var(--border) 3px, var(--border) 4px); color:var(--text-dim); }
+  /* The key's own chip: a neutral one, so the colour in the key means the
+     band and nothing else. */
+  .c13.key { background:var(--surface2); color:var(--text); border-color:var(--border); }
 
   .hb-head { font-weight:700; font-variant-numeric:tabular-nums; }
   .dim { color:var(--text-dim); }
@@ -135,15 +171,20 @@
     not a ranking</strong>: six criteria are missing for every company, so no order here can be a
     judgement of quality. Use it as a list of filings worth opening.
   </p>
-  <div class="hb-scroll">
-    <table class="hb-table" id="hbTable">
-      <thead><tr>
-        <th>Ticker</th><th>Company</th><th>Location</th><th>Size</th>
-        <th>Mkt cap</th><th>The thirteen</th><th>Measured</th><th>Vetoes</th>
-        <th>Sales</th><th>GM</th><th>EPS</th><th>ROE</th><th>RoC</th><th>Peer disc</th>
-      </tr></thead>
-      <tbody id="hbBody"><tr><td colspan="14" class="empty">Loading…</td></tr></tbody>
-    </table>
+  <div class="hb-frame">
+    <!-- The numbers in the grid are only useful if their names are on the
+         same screen as the row you are reading. -->
+    <div class="hb-key" id="hbKey"></div>
+    <div class="hb-scroll">
+      <table class="hb-table" id="hbTable">
+        <thead><tr>
+          <th>Ticker</th><th>Company</th><th>Location</th><th>Size</th>
+          <th>Mkt cap</th><th>The thirteen</th><th>Measured</th><th>Vetoes</th>
+          <th>Sales</th><th>GM</th><th>EPS</th><th>ROE</th><th>RoC</th><th>Peer disc</th>
+        </tr></thead>
+        <tbody id="hbBody"><tr><td colspan="14" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
   </div>
   <p class="desc" id="hbShowing" style="margin-top:0.6rem;"></p>
 </div>
@@ -211,6 +252,48 @@ const f = {
         : v >= 1e6 ? `$${(v/1e6).toFixed(0)}M` : `$${(v||0).toFixed(0)}`,
   pct: v => v == null ? '—' : `${v.toFixed(1)}%`,
 };
+const esc = s => String(s == null ? '' : s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+// THE KEY. Built from RULES rather than typed into the template, so a
+// criterion that changes role — as 13 did when it stopped voting — cannot
+// go on being described here the way it used to behave.
+function renderKey() {
+  const names = RULES.criterion_names || {};
+  const why   = RULES.not_scored_because || {};
+  const vwhy  = RULES.veto_reasons || {};
+  const never = new Set(RULES.never_scored_ids || []);
+  const veto  = new Set(RULES.veto_ids || []);
+  const gate  = new Set(RULES.gate_ids || []);
+  let items = '';
+  for (let c = 1; c <= (RULES.criteria_total || 13); c++) {
+    const nm = names[c] || ('criterion ' + c);
+    let chip = 'c13 key', role, tip;
+    if (never.has(c)) {
+      chip = 'c13 never'; role = 'never scored';
+      tip = `${c}. ${nm} — never scored, for any company, in any month: ${why[c] || 'no free source'}`;
+    } else if (veto.has(c)) {
+      role = 'can only reject';
+      tip = `${c}. ${nm} — has no positive band. It can reject a company (${vwhy[c] || ''}) and can never put one on the list.`;
+    } else if (gate.has(c)) {
+      role = 'gate · no vote';
+      tip = `${c}. ${nm} — a precondition for membership, not a quality. It shows its band but does not count as a pass.`;
+    } else {
+      role = 'scores';
+      tip = `${c}. ${nm} — scoreable from free filings; counts toward the Good-or-Great tally.`;
+    }
+    items += `<span class="i" title="${esc(tip)}"><span class="${chip}">${c}</span>`
+           + `<b>${esc(nm)}</b><span class="role">${role}</span></span>`;
+  }
+  const bands = [
+    ['Great', 'Great'], ['Good', 'Good'], ['Meh', 'Meh'], ['Yikes', 'Yikes'],
+    ['unmeasured', 'not measured — the company did not file it'],
+    ['never', 'never scoreable — no free source exists'],
+    ['quiet', 'quiet — a veto with nothing visible to say, which is not a pass'],
+  ].map(([cls, lbl]) => `<span class="i"><span class="sw c13 ${cls}"></span>${esc(lbl)}</span>`).join('');
+  document.getElementById('hbKey').innerHTML =
+    `<div class="hb-key-items">${items}</div><div class="hb-key-bands">${bands}</div>`;
+}
 
 // A cell is one of four bands, or unmeasured, or NEVER measurable — and
 // the last two must not look alike. One is a gap in a filing; the other is
@@ -427,7 +510,7 @@ async function loadSnapshot(month) {
       `as of ${META.as_of || month} · ${META.listed_count ?? '—'} on the list of `
       + `${(META.screened_count ?? 0).toLocaleString()} screened`
       + (META.source ? ` · ${META.source}` : '');
-    renderSubtitle(); renderChurn(); renderConcentration(); renderFunnel(); render();
+    renderKey(); renderSubtitle(); renderChurn(); renderConcentration(); renderFunnel(); render();
   } catch (e) {
     document.getElementById('hbBody').innerHTML =
       `<tr><td colspan="14" class="empty">Failed to load: ${e.message}</td></tr>`;
