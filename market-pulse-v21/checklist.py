@@ -775,6 +775,26 @@ def census(rows: list[dict]) -> dict:
     for cid in SCOREABLE_IDS:
         coverage[cid] = sum(1 for r in rows
                             if cid in ((r.get("ledger") or {}).get("measured_ids") or []))
+
+    # THE VETOES MEASURE THINGS AND APPEARED NOWHERE. They are not in
+    # `coverage` because that loop walks SCOREABLE_IDS, and they are not in
+    # `never_scored` because they are not never-scored. A criterion that
+    # removed 18 companies from this board and shows on no panel is exactly
+    # the kind of silent machinery this page exists to expose.
+    veto_coverage = {}
+    for cid in VETO_IDS:
+        fired = quiet = unread = 0
+        for r in rows:
+            m = (r.get("measures") or {}).get(str(cid)) or {}
+            if not m:
+                continue
+            if not m.get("measured"):
+                unread += 1
+            elif m.get("band") == "Yikes":
+                fired += 1
+            else:
+                quiet += 1
+        veto_coverage[cid] = {"fired": fired, "quiet": quiet, "unread": unread}
     # CONCENTRATION, over the LISTED set. A hundred and forty-eight names
     # sounds diversified and is not: measured on the live board the SIC-2
     # Herfindahl is 0.150, which is 6.7 effective sectors, and software
@@ -787,8 +807,18 @@ def census(rows: list[dict]) -> dict:
         sic_counts[k] = sic_counts.get(k, 0) + 1
     n_listed = len(listed)
     hhi = sum((c / n_listed) ** 2 for c in sic_counts.values()) if n_listed else None
+    ranked = sorted(sic_counts.items(), key=lambda kv: -kv[1])
     concentration = {
-        "by_sic": dict(sorted(sic_counts.items(), key=lambda kv: -kv[1])),
+        # AN ARRAY, NOT A DICT. The dict is ordered correctly here and
+        # JavaScript throws that ordering away: `Object.entries` returns
+        # integer-like keys in ASCENDING NUMERIC order regardless of
+        # insertion, and SIC codes are integer-like strings. The page
+        # rendered "SIC 13: 1, SIC 15: 1, SIC 28: 2 …" — the six SMALLEST
+        # sectors — while the 45% one sat off the end of the slice. The
+        # data was right and the format silently reordered it, which is
+        # this codebase's oldest failure wearing a new hat.
+        "by_sic_ranked": [[k, v] for k, v in ranked],
+        "by_sic": dict(ranked),
         "hhi": round(hhi, 4) if hhi else None,
         "effective_sectors": round(1 / hhi, 1) if hhi else None,
         "largest_sic": max(sic_counts, key=sic_counts.get) if sic_counts else None,
@@ -802,6 +832,7 @@ def census(rows: list[dict]) -> dict:
         "concentration": concentration,
         "by_reason": dict(sorted(by_reason.items(), key=lambda kv: -kv[1])),
         "coverage": coverage,
+        "veto_coverage": veto_coverage,
         "criterion_names": CRITERION_NAMES,
         "never_scored": {str(c): NOT_SCORED_BECAUSE[c] for c in NEVER_SCORED_IDS},
     }
