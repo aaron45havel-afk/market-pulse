@@ -52,6 +52,9 @@
   .c13.Meh   { background:#fde68a; border-color:#fcd34d; color:#78350f; }
   .c13.Yikes { background:#fca5a5; border-color:#f87171; color:#7f1d1d; }
   .c13.unmeasured { background:var(--surface2); color:var(--text-dim); border-style:dashed; }
+  /* QUIET IS NOT THE SAME FACT AS NOT-READ and must not look like it.
+     One says nothing visible is wrong; the other says we could not look. */
+  .c13.quiet { background:var(--surface); color:var(--text); border-color:var(--border); }
   .c13.never { background:repeating-linear-gradient(45deg, var(--surface2), var(--surface2) 3px,
     var(--border) 3px, var(--border) 4px); color:var(--text-dim); }
 
@@ -98,7 +101,7 @@
   <p class="desc" id="hbChurnNames" style="margin:0.7rem 0 0;"></p>
 </div>
 
-<!-- CONCENTRATION: 148 names sounds diversified and measures 6.7 sectors -->
+<!-- CONCENTRATION: 31 names measured 4.2 effective sectors, 45% in one -->
 <div class="hb-card" id="hbConcCard" style="display:none;">
   <h2>How many bets this really is</h2>
   <p class="desc">
@@ -115,15 +118,20 @@
   <p class="desc" id="hbFunnelDesc"></p>
   <div class="hb-steps" id="hbSteps"></div>
   <p class="desc" style="margin:0.9rem 0 0.2rem;"><strong>Coverage — how often each criterion could be
-    measured at all.</strong> This is the number the page is built around: six of the thirteen can never
-    be scored, so the best any company reaches is seven.</p>
+    measured at all.</strong> This is the number the page is built around. Three of the thirteen can never be
+    scored, three can only veto and the size gate does not vote — so <strong>six is the ceiling</strong>.</p>
   <div class="hb-cov" id="hbCoverage"></div>
+  <p class="desc" style="margin:0.9rem 0 0.2rem;"><strong>The three that can only say no.</strong>
+    These removed companies from the list; they never put one on it. "Fired" is a veto that rejected a
+    company outright, "quiet" means nothing visible was wrong — which is not evidence that anything was
+    right — and "not read" means the filing could not be reached.</p>
+  <div class="hb-cov" id="hbVetoCov"></div>
 </div>
 
 <div class="hb-card">
   <h2>The reading list — <span id="hbCount">—</span></h2>
   <p class="desc">
-    Ordered by how many of the seven scoreable criteria came out Good or Great. <strong>That is a count,
+    Ordered by how many of the six scoreable criteria came out Good or Great. <strong>That is a count,
     not a ranking</strong>: six criteria are missing for every company, so no order here can be a
     judgement of quality. Use it as a list of filings worth opening.
   </p>
@@ -246,7 +254,7 @@ function vetoCell(r) {
     if (m.band === 'Yikes') {
       return `<span class="c13 Yikes" title="${c}. ${nm} — VETO: ${m.reason}${m.basis ? ' · ' + m.basis : ''}">${c}</span>`;
     }
-    return `<span class="c13" style="background:var(--surface2)" title="${c}. ${nm} — quiet: nothing visible is wrong, which is not evidence that anything is right.${m.basis ? ' · ' + m.basis : ''}">${c}</span>`;
+    return `<span class="c13 quiet" title="${c}. ${nm} — quiet: nothing visible is wrong, which is not evidence that anything is right.${m.basis ? ' · ' + m.basis : ''}">${c}</span>`;
   }).join('');
   return `<span class="grid13">${out}</span>`;
 }
@@ -325,7 +333,13 @@ function renderConcentration() {
     ['Largest sector share', c.largest_share_pct == null ? '—' : c.largest_share_pct + '%', ''],
     ['SIC divisions present', Object.keys(c.by_sic || {}).length, ''],
   ].map(([k,v,cls]) => `<div class="hb-step ${cls}"><div class="n">${v}</div><div class="k">${k}</div></div>`).join('');
-  const top = Object.entries(c.by_sic || {}).slice(0, 6)
+  // FROM THE RANKED ARRAY. Object.entries returns integer-like keys in
+  // ascending NUMERIC order whatever the insertion order was, and SIC codes
+  // are integer-like strings — so this line used to print the six smallest
+  // sectors while the 45% one sat off the end of the slice.
+  const ranked = c.by_sic_ranked
+    || Object.entries(c.by_sic || {}).sort((a, b) => b[1] - a[1]);
+  const top = ranked.slice(0, 6)
     .map(([s,n]) => `SIC ${s}: <strong>${n}</strong> (${(n/listed*100).toFixed(0)}%)`).join(' &nbsp;·&nbsp; ');
   document.getElementById('hbConcDetail').innerHTML =
     `${listed} names across <strong>${c.effective_sectors}</strong> effective sectors (HHI ${c.hhi}). ${top}`;
@@ -363,6 +377,27 @@ function renderFunnel() {
           + `<div class="pct never" title="${why[cid]||''}">never scoreable</div>`;
   }
   document.getElementById('hbCoverage').innerHTML = html;
+
+  const vc = c.veto_coverage || {};
+  let vhtml = '';
+  for (const cid of (RULES.veto_ids || [])) {
+    const v = vc[cid] || {};
+    const fired = v.fired || 0, quiet = v.quiet || 0, unread = v.unread || 0;
+    // SAME DENOMINATOR AS THE BARS ABOVE. Dividing by "companies we tried"
+    // would draw criterion 7 as a third full, when the truth is that its
+    // filings were opened for sixteen companies out of three thousand. A
+    // bar is only readable beside its neighbours if it is measured the same
+    // way, so `screened` it is — and the attempt count goes in words.
+    const seen = fired + quiet, tried = seen + unread, p2 = seen / total * 100;
+    vhtml += `<div class="lbl">${cid}. ${names[cid] || ''}</div>`
+           + `<div class="bar"><span style="width:${p2.toFixed(1)}%"></span></div>`
+           + `<div class="pct"><strong>${fired.toLocaleString()}</strong> fired · `
+           + `${quiet.toLocaleString()} quiet · ${unread.toLocaleString()} not read`
+           + `<br><span class="dim">read for ${seen.toLocaleString()} of `
+           + `${tried.toLocaleString()} attempted</span></div>`;
+  }
+  document.getElementById('hbVetoCov').innerHTML = vhtml
+    || '<div class="lbl dim">no veto data in this snapshot</div>';
 }
 
 function render() {
