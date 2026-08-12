@@ -98,6 +98,18 @@
   <p class="desc" id="hbChurnNames" style="margin:0.7rem 0 0;"></p>
 </div>
 
+<!-- CONCENTRATION: 148 names sounds diversified and measures 6.7 sectors -->
+<div class="hb-card" id="hbConcCard" style="display:none;">
+  <h2>How many bets this really is</h2>
+  <p class="desc">
+    A long list is not a diversified one. If most of these names sell into the same end-market, a basket
+    built from them is <strong>one bet wearing many tickers</strong> — and that is invisible from any other
+    number on the page. Effective sectors is <code>1 / HHI</code> over the listed set's SIC divisions.
+  </p>
+  <div class="hb-steps" id="hbConc"></div>
+  <p class="desc" id="hbConcDetail" style="margin:0.7rem 0 0;"></p>
+</div>
+
 <div class="hb-card">
   <h2>What the screen actually looked at</h2>
   <p class="desc" id="hbFunnelDesc"></p>
@@ -119,10 +131,10 @@
     <table class="hb-table" id="hbTable">
       <thead><tr>
         <th>Ticker</th><th>Company</th><th>Location</th><th>Size</th>
-        <th>Mkt cap</th><th>The thirteen</th><th>Measured</th>
+        <th>Mkt cap</th><th>The thirteen</th><th>Measured</th><th>Vetoes</th>
         <th>Sales</th><th>GM</th><th>EPS</th><th>ROE</th><th>RoC</th><th>Peer disc</th>
       </tr></thead>
-      <tbody id="hbBody"><tr><td colspan="13" class="empty">Loading…</td></tr></tbody>
+      <tbody id="hbBody"><tr><td colspan="14" class="empty">Loading…</td></tr></tbody>
     </table>
   </div>
   <p class="desc" id="hbShowing" style="margin-top:0.6rem;"></p>
@@ -142,6 +154,19 @@
         we happened to measure" ranks companies by how little is known about them. The headline is a
         fraction with both numbers showing — <em>4 of the 6 measured, of 13</em> — because "67%" is the
         same figure for a company seen clearly and one barely seen at all.</li>
+    <li><strong>Three criteria can only say no.</strong> Capital allocation, incentives and moat are the
+        checklist's veto criteria, and no free source can establish any of them <em>positively</em> — every
+        proxy tested for that was broken by a real company. What filings can sometimes show is the
+        negative: margin holding while revenue falls is a harvest, not a moat; capital going in while
+        incremental returns fall is destruction. So they veto and never vote. A count-of-passes rule
+        could not have used them at all: adding them as scoreable criteria would have taken this board
+        from 148 names to roughly 468, which is the opposite of what the criteria are for.</li>
+    <li><strong>"Quiet" is not a pass.</strong> A veto cell that is not red means nothing visible is
+        wrong. It is not evidence that anything is right, and there is deliberately no positive band.</li>
+    <li><strong>The size gate does not also vote.</strong> Criterion 13 used to gate membership <em>and</em>
+        count as a pass, so 99 of the 111 companies sitting at the four-pass minimum were counting "it is
+        small" as one of their four — clearing three quality gates, not four. It still shows its band in
+        the grid; it no longer votes, and the list is honest at 49 rather than flattering at 148.</li>
     <li><strong>Criterion 13 is a precondition, not a quality.</strong> The other twelve describe how good
         a business is; this one describes whether a hundred-bagger is arithmetically available from here.
         The first run listed NVIDIA at <strong>$5.2 trillion</strong> — a hundred-bagger from there is
@@ -205,6 +230,27 @@ function cells(r) {
   return `<span class="grid13">${out}</span>`;
 }
 
+// A veto criterion has no positive band. "quiet" means nothing visible is
+// wrong, which is not evidence that anything is right — and the cell says
+// so rather than showing a tick.
+function vetoCell(r) {
+  const led = r.ledger || {}, ms = r.measures || {};
+  const ids = RULES.veto_ids || [];
+  if (!ids.length) return '<span class="dim">—</span>';
+  const out = ids.map(c => {
+    const m = ms[c];
+    const nm = (RULES.criterion_names || {})[c] || ('criterion ' + c);
+    if (!m || !m.measured) {
+      return `<span class="c13 unmeasured" title="${c}. ${nm} — not read: ${(m && m.reason) || 'no data'}">${c}</span>`;
+    }
+    if (m.band === 'Yikes') {
+      return `<span class="c13 Yikes" title="${c}. ${nm} — VETO: ${m.reason}${m.basis ? ' · ' + m.basis : ''}">${c}</span>`;
+    }
+    return `<span class="c13" style="background:var(--surface2)" title="${c}. ${nm} — quiet: nothing visible is wrong, which is not evidence that anything is right.${m.basis ? ' · ' + m.basis : ''}">${c}</span>`;
+  }).join('');
+  return `<span class="grid13">${out}</span>`;
+}
+
 function val(r, c) {
   const m = (r.measures || {})[c];
   if (!m || !m.measured) return `<span class="dim" title="${(m && m.reason) || 'not measured'}">—</span>`;
@@ -220,7 +266,8 @@ function row(r) {
     <td class="dim">${r.size_band || ''}</td>
     <td>${f.cap(r.market_cap)}</td>
     <td>${cells(r)}</td>
-    <td class="hb-head" title="Six criteria can never be scored, so seven is the ceiling.">${led.headline || '—'}</td>
+    <td class="hb-head" title="Three criteria can never be scored, three can only veto, and the size gate does not vote — so six is the ceiling.">${led.headline || '—'}</td>
+    <td>${vetoCell(r)}</td>
     <td>${val(r,1)}</td><td>${val(r,2)}</td><td>${val(r,3)}</td>
     <td>${val(r,4)}</td><td>${val(r,5)}</td><td>${val(r,11)}</td>
   </tr>`;
@@ -232,7 +279,8 @@ function renderSubtitle() {
   if (r.scoreable_ids) parts.push(`<strong>${r.scoreable_ids.length} of ${r.criteria_total}</strong> criteria are scoreable from free filings`);
   if (r.never_scored_ids) parts.push(`<strong>${r.never_scored_ids.length}</strong> can never be scored`);
   if (r.min_passing != null) parts.push(`a company is listed on <strong>${r.min_passing}</strong> Good-or-Great from at least <strong>${r.min_measured}</strong> measured`);
-  if (r.market_cap_ceiling != null) parts.push(`and nothing over <strong>${f.cap(r.market_cap_ceiling)}</strong> is listed at all`);
+  if (r.market_cap_ceiling != null) parts.push(`nothing over <strong>${f.cap(r.market_cap_ceiling)}</strong> is listed at all`);
+  if (r.veto_ids && r.veto_ids.length) parts.push(`and <strong>${r.veto_ids.length}</strong> can only veto`);
   document.getElementById('hbSubtitle').innerHTML =
     `Mayer's <em>100 Baggers</em> and Phelps's <em>100 to 1</em> reduce to two instructions — buy right, `
     + `hold on — and a thirteen-point checklist for the first half. ${parts.join(', ')}. `
@@ -263,6 +311,24 @@ function renderChurn() {
   if (c.held && c.held.length) bits.push(`<strong>Held:</strong> ${c.held.join(', ')}`);
   if (c.left && c.left.length) bits.push(`<strong>Left:</strong> ${c.left.join(', ')}`);
   document.getElementById('hbChurnNames').innerHTML = bits.join(' &nbsp;·&nbsp; ');
+}
+
+function renderConcentration() {
+  const c = (CENSUS.concentration) || {};
+  const card = document.getElementById('hbConcCard');
+  if (c.effective_sectors == null) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  const listed = CENSUS.listed || 0;
+  document.getElementById('hbConc').innerHTML = [
+    ['Names on the list', listed, ''],
+    ['Effective sectors', c.effective_sectors, c.effective_sectors < 10 ? 'thin' : ''],
+    ['Largest sector share', c.largest_share_pct == null ? '—' : c.largest_share_pct + '%', ''],
+    ['SIC divisions present', Object.keys(c.by_sic || {}).length, ''],
+  ].map(([k,v,cls]) => `<div class="hb-step ${cls}"><div class="n">${v}</div><div class="k">${k}</div></div>`).join('');
+  const top = Object.entries(c.by_sic || {}).slice(0, 6)
+    .map(([s,n]) => `SIC ${s}: <strong>${n}</strong> (${(n/listed*100).toFixed(0)}%)`).join(' &nbsp;·&nbsp; ');
+  document.getElementById('hbConcDetail').innerHTML =
+    `${listed} names across <strong>${c.effective_sectors}</strong> effective sectors (HHI ${c.hhi}). ${top}`;
 }
 
 function renderFunnel() {
@@ -307,7 +373,7 @@ function render() {
   const shown = rows.slice(0, ROW_CAP);
   document.getElementById('hbBody').innerHTML = shown.length
     ? shown.map(row).join('')
-    : '<tr><td colspan="13" class="empty">Nothing on the list.</td></tr>';
+    : '<tr><td colspan="14" class="empty">Nothing on the list.</td></tr>';
   document.getElementById('hbCount').textContent =
     `${rows.length} name${rows.length === 1 ? '' : 's'}`;
   document.getElementById('hbShowing').textContent =
@@ -315,7 +381,7 @@ function render() {
 }
 
 async function loadSnapshot(month) {
-  document.getElementById('hbBody').innerHTML = '<tr><td colspan="13" class="empty">Loading…</td></tr>';
+  document.getElementById('hbBody').innerHTML = '<tr><td colspan="14" class="empty">Loading…</td></tr>';
   try {
     const r = await fetch(`/api/hundred/snapshot/${month}`);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -326,10 +392,10 @@ async function loadSnapshot(month) {
       `as of ${META.as_of || month} · ${META.listed_count ?? '—'} on the list of `
       + `${(META.screened_count ?? 0).toLocaleString()} screened`
       + (META.source ? ` · ${META.source}` : '');
-    renderSubtitle(); renderChurn(); renderFunnel(); render();
+    renderSubtitle(); renderChurn(); renderConcentration(); renderFunnel(); render();
   } catch (e) {
     document.getElementById('hbBody').innerHTML =
-      `<tr><td colspan="13" class="empty">Failed to load: ${e.message}</td></tr>`;
+      `<tr><td colspan="14" class="empty">Failed to load: ${e.message}</td></tr>`;
   }
 }
 
@@ -341,7 +407,7 @@ async function init() {
     if (!d.months || !d.months.length) {
       p.innerHTML = '<option>No snapshots yet</option>';
       document.getElementById('hbBody').innerHTML =
-        '<tr><td colspan="13" class="empty">No snapshot yet — the monthly run has not completed.</td></tr>';
+        '<tr><td colspan="14" class="empty">No snapshot yet — the monthly run has not completed.</td></tr>';
       return;
     }
     p.innerHTML = d.months.map(m => `<option value="${m}">${m}</option>`).join('');
@@ -350,7 +416,7 @@ async function init() {
     loadSnapshot(d.latest);
   } catch (e) {
     document.getElementById('hbBody').innerHTML =
-      `<tr><td colspan="13" class="empty">Failed to load the snapshot list: ${e.message}</td></tr>`;
+      `<tr><td colspan="14" class="empty">Failed to load the snapshot list: ${e.message}</td></tr>`;
   }
 }
 document.getElementById('hbSearch').addEventListener('input', render);

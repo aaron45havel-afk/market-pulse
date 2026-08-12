@@ -29,6 +29,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import checklist as C
 import lynch as L
+import schloss as S
 
 _COUNT = 0
 _FAILS = []
@@ -45,11 +46,18 @@ def check(cond, msg):
 # THE DENOMINATOR IS A CONSTANT
 # ══════════════════════════════════════════════════════════════════
 check(C.CRITERIA == 13, "thirteen is a literal, in one place")
-check(len(C.SCOREABLE_IDS) + len(C.NEVER_SCORED_IDS) == C.CRITERIA,
-      "every criterion is either scoreable or explicitly never scoreable — "
-      "no third category can hide a criterion nobody assigned")
-check(not set(C.SCOREABLE_IDS) & set(C.NEVER_SCORED_IDS),
-      "and the two sets are disjoint")
+_ALL = (set(C.SCOREABLE_IDS) | set(C.GATE_IDS) | set(C.VETO_IDS)
+        | set(C.NEVER_SCORED_IDS))
+check(len(C.SCOREABLE_IDS) + len(C.GATE_IDS) + len(C.VETO_IDS)
+      + len(C.NEVER_SCORED_IDS) == C.CRITERIA and _ALL == set(range(1, 14)),
+      "every criterion is in exactly one of the four categories — scoreable, "
+      "gate, veto, never — and no criterion can hide between them")
+check(len(_ALL) == C.CRITERIA, "the four categories are disjoint")
+check(13 in C.GATE_IDS and 13 not in C.SCOREABLE_IDS,
+      "criterion 13 GATES and does not SCORE. It used to do both: 99 of the "
+      "111 companies at the four-pass minimum were counting 'it is small' as "
+      "one of their four passes, having cleared three quality gates rather "
+      "than four. The board read 148 where the honest figure is 49")
 check(all(c in C.NOT_SCORED_BECAUSE for c in C.NEVER_SCORED_IDS),
       "every unscoreable criterion carries the REASON it cannot be scored, so "
       "a blank cell reads as a limit of the data rather than of the company")
@@ -250,20 +258,26 @@ full = led(c1=C.Measure(30.0, True, "", "Great", ""),
            c5=C.Measure(30.0, True, "", "Great", ""),
            c11=C.Measure(60.0, True, "", "Great", ""),
            c13=C.Measure(0.4e9, True, "", "Great", ""))
-check(full["measured_n"] == 7 and full["passing_n"] == 7,
-      "seven of thirteen is the CEILING — six criteria can never be scored, "
-      "so no company can ever reach 13 and the page must not imply one could")
+check(full["measured_n"] == 6 and full["passing_n"] == 6,
+      "SIX of thirteen is the ceiling now: three can never be scored, three "
+      "can only veto, and the gate does not vote")
+check(full["gate_bands"] == {13: "Great"} and 13 not in full["bands"],
+      "the gate's band is still SHOWN — it is a real measurement and belongs "
+      "in the grid — it simply does not count toward the headline")
 check(full["criteria_total"] == 13, "and the denominator stays thirteen")
 check("of 13" in full["headline"], "which the headline states outright")
 
-thin = led(c13=C.Measure(0.4e9, True, "", "Great", ""))
+thin = led(c1=C.Measure(30.0, True, "", "Great", ""))
 check(thin["measured_n"] == 1 and thin["passing_n"] == 1,
       "a company measured on ONE criterion and passing it")
+check(led(c13=C.Measure(0.4e9, True, "", "Great", ""))["measured_n"] == 0,
+      "and being small, alone, is measured ZERO — it is the price of "
+      "admission, not evidence of quality")
 check(thin["headline"] != full["headline"],
       "must not read the same as one measured on seven and passing seven — "
       "'100%' would be identical for both, which is why there is no percentage")
-check(len(thin["unmeasured_ids"]) == 6,
-      "and its six unmeasured scoreable criteria are listed BY NUMBER")
+check(len(thin["unmeasured_ids"]) == 5,
+      "and its five unmeasured scoreable criteria are listed BY NUMBER")
 
 none = led()
 check(none["measured_n"] == 0 and none["floor_band"] is None,
@@ -277,8 +291,13 @@ check(mixed["floor_band"] == "Yikes" and mixed["floor_criterion"] == 2,
       "the floor names the criterion that owns it — on this repo's own data "
       "one criterion owns 60-84% of all floors, which is why the page does "
       "not rank on the floor")
-check(mixed["great_n"] == 2 and mixed["passing_n"] == 2,
-      "Great and Good both pass; they are counted separately as well")
+check(mixed["great_n"] == 1 and mixed["passing_n"] == 1,
+      "criterion 13's Great is NOT among them — the gate is shown and not "
+      "counted, which is the whole point of splitting it out")
+_gg = led(c1=C.Measure(30.0, True, "", "Great", ""),
+          c2=C.Measure(55.0, True, "", "Good", ""))
+check(_gg["great_n"] == 1 and _gg["passing_n"] == 2,
+      "Great and Good both pass, and are counted separately")
 
 unm = led(c1=C.unmeasured("revenue not filed"))
 check(unm["measured_n"] == 0 and 1 in unm["unmeasured_ids"],
@@ -311,21 +330,120 @@ check(C.churn(aug, None)["held_n"] is None, "with no count at all")
 # ══════════════════════════════════════════════════════════════════
 # CENSUS — partitions, like the Lynch funnel now does
 # ══════════════════════════════════════════════════════════════════
-rows = ([{"verdict": "list", "ledger": {"measured_ids": [1, 2, 13]}}] * 3
-        + [{"verdict": "thin", "reason": "too few measured",
-            "ledger": {"measured_ids": [13]}}] * 5
-        + [{"verdict": "reject", "reason": "too_big", "ledger": {"measured_ids": []}}] * 7)
+rows = ([{"verdict": "list", "sic": "7372", "ledger": {"measured_ids": [1, 2, 11]}}] * 3
+        + [{"verdict": "thin", "reason": "too few measured", "sic": "3674",
+            "ledger": {"measured_ids": [1]}}] * 5
+        + [{"verdict": "reject", "reason": "too_big", "sic": "2834",
+            "ledger": {"measured_ids": []}}] * 7)
 c = C.census(rows)
 check(c["screened"] == c["listed"] + c["thin"] + c["rejected"],
       "screened = listed + thin + rejected, exactly — `thin` is its own "
       "bucket because folding it into `rejected` is how the Lynch funnel "
       "came to count 975 companies twice")
-check(c["coverage"][13] == 8 and c["coverage"][1] == 3,
-      "coverage is counted over the WHOLE universe, not only the survivors — "
-      "the question the page is built around is how much could be seen")
+check(c["coverage"][1] == 8 and 13 not in c["coverage"],
+      "coverage counts every row that reached the criterion — 3 listed plus "
+      "5 thin — because the question is how much could be SEEN, not how much "
+      "survived. And the gate is absent: it would report over a different "
+      "population from every other row in the table")
+check(c["concentration"]["effective_sectors"] == 1.0,
+      "three listed names in one SIC is ONE effective sector — 148 names "
+      "sounds diversified and the live board measures 6.7, with software "
+      "alone at 36%")
 check(set(c["never_scored"]) == {str(x) for x in C.NEVER_SCORED_IDS},
       "and the census carries the six reasons too, so the page cannot render "
       "a blank without one")
+
+
+# ══════════════════════════════════════════════════════════════════
+# THE VETOES — they can only subtract
+# ══════════════════════════════════════════════════════════════════
+# A count-of-passes rule is MONOTONE: growing the scoreable tuple can only
+# ever add companies to the board. Measured against the live snapshot,
+# folding 6, 7 and 8 in as scoreable criteria would have taken it from 148
+# names to roughly 468 — the exact opposite of what the three criteria the
+# checklist uses to say NO are for.
+_Y = C.Measure(-5.0, True, C.VETO_REASONS[8], "Yikes", "")
+_Q = C.Measure(12.0, True, "", "quiet", "")
+_pass4 = dict(c1=C.Measure(30.0, True, "", "Great", ""),
+              c2=C.Measure(75.0, True, "", "Great", ""),
+              c3=C.Measure(25.0, True, "", "Great", ""),
+              c4=C.Measure(30.0, True, "", "Great", ""))
+check(led(**_pass4)["passing_n"] == 4 and not led(**_pass4)["vetoed"],
+      "four passes and no veto")
+check(led(**_pass4, c8=_Y)["vetoed"] and led(**_pass4, c8=_Y)["vetoed_by"] == [8],
+      "a Yikes on a veto criterion removes the company and names which one")
+check(led(**_pass4, c8=_Y)["passing_n"] == 4,
+      "and does NOT change the pass count — the veto subtracts, it never "
+      "votes, so it cannot promote anything either")
+check(led(**_pass4, c8=_Q)["passing_n"] == 4 and not led(**_pass4, c8=_Q)["vetoed"],
+      "a quiet veto changes nothing at all: 'nothing visible is wrong' is "
+      "not evidence that anything is right, and there is no positive band")
+check("Great" not in C.VETO_BANDS and "Good" not in C.VETO_BANDS,
+      "there is NO positive band on a veto criterion, deliberately — no free "
+      "source proves a moat, and offering Great would be the fabrication")
+
+# TUPPERWARE. Every proxy the design review tested scored it Great,
+# unanimously, until it filed Chapter 11: margin held BECAUSE volume was
+# being given up.
+_YR = [f"{2016 + i}-12-31" for i in range(9)]
+_tup_r = dict(zip(_YR, [2300, 2200, 2000, 1800, 1740, 1600, 1300, 1150, 1050]))
+_tup_m = dict(zip(_YR, [68, 68, 67, 68, 69, 68, 67, 66, 67]))
+check(C.moat_veto(_tup_r, _tup_m).band == "Yikes",
+      "a harvest is caught: revenue falling while margin holds")
+check(C.moat_veto(dict(zip(_YR, [round(100 * 1.18 ** i, 1) for i in range(9)])),
+                  dict(zip(_YR, [60, 61, 60, 62, 61, 62, 61, 62, 62]))).band == "quiet",
+      "a compounder with the SAME margin is not")
+check(C.moat_veto(_tup_r, dict(zip(_YR, [68, 64, 60, 55, 50, 45, 40, 36, 32]))).band
+      == "quiet",
+      "and revenue falling WITH margin is an ordinary decline, not a harvest "
+      "— the pair is the signal, neither leg alone")
+check(not C.moat_veto({"2024-12-31": 1.0}, {"2024-12-31": 50.0}).measured,
+      "too few years is unmeasured, never quiet")
+
+# INTEL FY2015-19, which every capital-allocation proxy put in the TOP band.
+# Its LEVEL of return was healthy the whole time.
+_iop = dict(zip(_YR, [13.1e9, 12.9e9, 17.9e9, 23.3e9, 22.0e9, 23.7e9, 19.5e9, 2.2e9, -11.7e9]))
+_icap = dict(zip(_YR, [60e9, 70e9, 80e9, 95e9, 110e9, 130e9, 150e9, 175e9, 190e9]))
+check(C.capital_veto(_iop, _icap).band == "Yikes",
+      "capital ballooning while operating income falls is caught by the "
+      "INCREMENTAL return, which is the only measure that could see it")
+check(C.capital_veto(dict(zip(_YR, [10e9 * 1.27 ** i for i in range(9)])),
+                     dict(zip(_YR, [50e9 * 1.16 ** i for i in range(9)]))).band == "quiet",
+      "a compounder reinvesting well is quiet")
+check(C.capital_veto(_iop, {y: 60e9 for y in _YR}).band == "quiet",
+      "and a company that invested nothing cannot be judged on how well it "
+      "invested — that is quiet, not a veto")
+
+# CRITERION 7, and the hole no budget can fill.
+check(C.ownership_veto(2.0).band == "Yikes" and C.ownership_veto(18.0).band == "quiet",
+      f"under {C.INSIDER_MIN_PCT:.0f}% is no skin in the game")
+check(C.INSIDER_MIN_PCT == S.INSIDER_ALIGNED_MIN * 100,
+      "and the floor is schloss's own constant, imported not retyped")
+_fpi = C.ownership_veto(None, "foreign private issuer — files 20-F, exempt "
+                              "from Regulation 14A; no proxy exists")
+check(not _fpi.measured and "20-F" in _fpi.reason,
+      "a foreign private issuer files NO proxy statement, so its ownership is "
+      "unmeasured — never zero. Reading an absent filing obligation as "
+      "absent ownership is `country or \"United States\"` in a new hat")
+
+# THE DEF 14A PARSER
+check(C.parse_group_ownership(
+      "All executive officers and directors as a group (12 persons) 1,234,567 24.3%")[0]
+      == 24.3, "the group row's percent is the company's own number")
+check(C.parse_group_ownership(
+      "All of our current directors and executive officers as a group 4,010 3.1%")[0]
+      == 3.1, "and the wording varies by filing agent")
+check(C.parse_group_ownership(
+      "All directors and officers as a group (5 persons) 120,000 less than 1%")[0] == 0.5,
+      "'less than 1%' is a real measurement — and must not read as 1.0%, "
+      "which is what matching the percent regex first produces")
+check(C.parse_group_ownership(
+      "All executive officers and directors as a group 1,000 —")[0] is None,
+      "an em-dash is NOT zero — a parse failure returning 0.0 would band as "
+      "the worst score for a founder who may own 45%")
+check(C.parse_group_ownership("<p>a different table</p>")[0] is None
+      and C.parse_group_ownership("")[0] is None,
+      "and no table at all is unmeasured, with a reason")
 
 
 # ── report ──
@@ -335,9 +453,9 @@ if _FAILS:
         print("  ✗", m)
     sys.exit(1)
 print(f"OK — all {_COUNT} checklist checks passed.")
-print(f"   {len(C.SCOREABLE_IDS)} of {C.CRITERIA} criteria scoreable; "
-      f"{len(C.NEVER_SCORED_IDS)} never scoreable "
-      f"({', '.join(str(c) for c in C.NEVER_SCORED_IDS)})")
+print(f"   {len(C.SCOREABLE_IDS)} scoreable · {len(C.GATE_IDS)} gate "
+      f"· {len(C.VETO_IDS)} veto-only · {len(C.NEVER_SCORED_IDS)} never "
+      f"= {C.CRITERIA}")
 print(f"   windows up to {C.MAX_SPANS} spans · peer median needs "
       f"{C.PEER_MIN} peers · no division, no points, no total")
 sys.exit(0)

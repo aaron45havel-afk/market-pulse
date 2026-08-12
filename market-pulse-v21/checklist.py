@@ -65,6 +65,7 @@ against this repo's own snapshots rather than argued:
 from __future__ import annotations
 
 import json
+import re
 from collections import namedtuple
 from datetime import date
 from pathlib import Path
@@ -81,14 +82,43 @@ _DATA_DIR = Path(__file__).resolve().parent / "data" / "hundred_snapshots"
 # which would make the fraction shrink to fit the evidence.
 CRITERIA = 13
 
-# Scoreable from a companyfacts blob plus one bulk quote file.
-SCOREABLE_IDS = (1, 2, 3, 4, 5, 11, 13)
+# Scoreable from a companyfacts blob plus one bulk quote file, and
+# COUNTED toward the "k of m" headline.
+SCOREABLE_IDS = (1, 2, 3, 4, 5, 11)
+
+# MEASURED AND SHOWN, BUT NOT COUNTED. Criterion 13 was in SCOREABLE_IDS
+# and was also the size gate, so it decided membership twice: 99 of the 111
+# companies sitting at exactly the four-pass minimum counted "it is small"
+# as one of their four qualifying passes. They cleared THREE quality gates,
+# not four, and the board read 148 names where the honest figure is 49.
+#
+# A criterion cannot both admit a company and be evidence that it deserved
+# admission. Size still gates, still renders its band in the grid, and no
+# longer votes.
+GATE_IDS = (13,)
+
+# CAN ONLY SAY NO. These three are the checklist's veto criteria — moat,
+# capital allocation, incentives — and no free source can establish any of
+# them POSITIVELY. What free filings can sometimes establish is the
+# negative: revenue falling while margin holds is a harvest; capital going
+# in while incremental returns fall is destruction; a proxy showing
+# management owns almost nothing is not alignment.
+#
+# THE COUNT-OF-PASSES RULE COULD NOT EXPRESS THAT. `passing_n >= 4` over a
+# growing tuple is monotone — adding criteria can only ever ADD companies
+# to the board, never remove one. Measured against the live snapshot,
+# folding 6, 7 and 8 into SCOREABLE_IDS would have taken it from 148 names
+# to roughly 468, which is the exact opposite of what those three
+# criteria are for. So they veto instead of voting: a Yikes here removes a
+# company, and anything else changes nothing.
+VETO_IDS = (6, 7, 8)
 
 # Never scoreable, for the reasons in the module docstring. These are not
 # "missing data" — they are permanently outside what this page can see,
 # and they are rendered differently from a company that simply did not
 # file a tag.
-NEVER_SCORED_IDS = (6, 7, 8, 9, 10, 12)
+# Never scoreable in either direction, positive or negative.
+NEVER_SCORED_IDS = (9, 10, 12)
 
 CRITERION_NAMES = {
     1: "Sales growth CAGR", 2: "Gross margin", 3: "EPS growth",
@@ -101,15 +131,23 @@ CRITERION_NAMES = {
 # Why each unscoreable criterion is unscoreable, shown on the row so the
 # blank is legible as a limit of the data rather than of the company.
 NOT_SCORED_BECAUSE = {
-    6: "no free source; every proxy tested put Intel FY2015-19 in the top band",
-    7: "ownership is in Forms 3/4/5, one request per company; pay proxies read "
-       "Super Micro's $1 CEO salary as perfect alignment",
-    8: "every proxy tested scored Tupperware 'Great' until it filed Chapter 11",
     9: "sell-side counts are licensed terminal data — and this criterion is "
        "INVERTED, so its absence removes the thesis's own reason a quality "
        "company would be cheap",
     10: "employee sentiment is licensed; SEC human-capital disclosure is prose",
     12: "needs analyst estimates; trailing PEG is a different quantity",
+}
+
+# What a veto criterion can say. There is no positive band, deliberately:
+# no free source proves a moat or proves good capital allocation, and
+# offering "Great" here would be the fabrication this whole module exists
+# to prevent. The strongest available statement is "nothing visible is
+# wrong", which is not evidence of anything.
+VETO_BANDS = ("Yikes", "quiet")
+VETO_REASONS = {
+    6: "capital going in while incremental returns fall",
+    7: "management owns almost none of the company",
+    8: "margin held while revenue fell — a harvest, not a moat",
 }
 
 BANDS = ("Yikes", "Meh", "Good", "Great")
@@ -161,6 +199,10 @@ PEER_MIN = 25
 # GrossProfit and Revenue - Cost disagreeing by more than this share of
 # revenue means the two tags are not describing the same subtotal.
 GM_RECONCILE_FRAC = 0.02
+
+# Anchored on schloss.INSIDER_ALIGNED_MIN (0.10), imported rather than
+# retyped so the two boards cannot drift apart on what alignment means.
+INSIDER_MIN_PCT = S.INSIDER_ALIGNED_MIN * 100
 
 # A P/E ABOVE THIS IS A NEAR-ZERO DENOMINATOR, not a valuation.
 # lynch.price_earnings bounds the LOW end at PE_SANE[0] — below 3 is a
@@ -425,6 +467,192 @@ def market_cap(cap) -> Measure:
 
 
 # ═══════════════════════════════════════════════════════════════════
+# THE VETO CRITERIA — they can only say no
+# ═══════════════════════════════════════════════════════════════════
+
+# A harvest needs BOTH legs: revenue genuinely falling, and margin not
+# falling with it. Either alone is ordinary.
+HARVEST_REV_DECLINE = -2.0        # %/yr, revenue CAGR below this
+HARVEST_MARGIN_HOLD = -2.0        # pp of margin lost per year, above this
+HARVEST_MIN_YEARS = 4
+
+# Incremental return, not the level. Intel's LEVEL of ROIC was fine.
+INCREMENTAL_RETURN_MIN = 5.0      # % on incremental capital
+INCREMENTAL_MIN_CAPITAL_GROWTH = 0.20   # capital must have grown 20%+ to judge
+
+
+def moat_veto(revenue_by_year: dict, margin_by_year: dict) -> Measure:
+    """Criterion 8, as a veto only. Detects a HARVEST, never a moat.
+
+    THE SPECIFICATION IS TUPPERWARE. Every proxy the design review tested
+    scored it "Great" unanimously — high margin, high return on capital —
+    for the entire window before it filed Chapter 11. It was not defending
+    a franchise; it was harvesting a shrinking one, and margin held
+    precisely BECAUSE volume was being given up.
+
+    So the signal is not the level, it is the pair. A high margin with
+    rising revenue is a moat. The same margin with falling revenue is a
+    company selling less at a better price each year, which ends.
+
+    THIS FUNCTION CANNOT SAY A COMPANY HAS A MOAT, and no free source can.
+    It says "nothing visible is wrong", which is not the same claim and is
+    rendered differently on the page.
+    """
+    rev = {y: v for y, v in (revenue_by_year or {}).items() if _num(v) is not None}
+    mar = {y: v for y, v in (margin_by_year or {}).items() if _num(v) is not None}
+    years = sorted(set(rev) & set(mar))
+    if len(years) < HARVEST_MIN_YEARS:
+        return unmeasured(f"needs {HARVEST_MIN_YEARS} years of revenue and margin "
+                          f"together, has {len(years)}")
+    y0, y1 = years[0], years[-1]
+    spans = len(years) - 1
+    r0, r1 = rev[y0], rev[y1]
+    if r0 <= 0 or r1 <= 0:
+        return unmeasured("revenue not positive at both ends")
+    rev_cagr = ((r1 / r0) ** (1.0 / spans) - 1.0) * 100.0
+    margin_drift = (mar[y1] - mar[y0]) / spans          # pp per year
+
+    basis = (f"revenue {rev_cagr:+.1f}%/yr, margin {margin_drift:+.1f}pp/yr "
+             f"over {spans} spans")
+    if rev_cagr < HARVEST_REV_DECLINE and margin_drift > HARVEST_MARGIN_HOLD:
+        return Measure(rev_cagr, True, VETO_REASONS[8], "Yikes", basis)
+    return Measure(rev_cagr, True, "", "quiet", basis)
+
+
+def capital_veto(op_income_by_year: dict, invested_capital_by_year: dict) -> Measure:
+    """Criterion 6, as a veto only. Incremental return, not the level.
+
+    THE SPECIFICATION IS INTEL FY2015-19, which every proxy the design
+    review tested placed in the TOP band. Its level of return was healthy
+    throughout. What was happening was that enormous capital was going in
+    at a return far below what the existing base earned — the process-node
+    failure — and only an INCREMENTAL measure can see that.
+
+    delta operating income over delta invested capital, across the window.
+    Judged only when capital actually grew enough for the ratio to mean
+    something; a company that invested nothing cannot be judged on how well
+    it invested.
+
+    Still not a verdict on capital allocation, which needs a human reading
+    a decade of letters. It is one specific way of being wrong, detected.
+    """
+    op = {y: v for y, v in (op_income_by_year or {}).items() if _num(v) is not None}
+    cap = {y: v for y, v in (invested_capital_by_year or {}).items()
+           if _num(v) is not None}
+    years = sorted(set(op) & set(cap))
+    if len(years) < HARVEST_MIN_YEARS:
+        return unmeasured(f"needs {HARVEST_MIN_YEARS} years of operating income and "
+                          f"capital together, has {len(years)}")
+    y0, y1 = years[0], years[-1]
+    d_cap = cap[y1] - cap[y0]
+    if cap[y0] <= 0:
+        return unmeasured("opening invested capital not positive")
+    if d_cap <= cap[y0] * INCREMENTAL_MIN_CAPITAL_GROWTH:
+        # Nothing was invested, so nothing can be said about how well.
+        return Measure(None, True, "", "quiet",
+                       f"capital grew {d_cap / cap[y0] * 100:+.0f}% — too little "
+                       f"to judge incremental return")
+    inc = (op[y1] - op[y0]) / d_cap * 100.0
+    basis = (f"{inc:+.1f}% on ${d_cap / 1e6:,.0f}M of incremental capital, "
+             f"{y0[:4]}-{y1[:4]}")
+    if inc < INCREMENTAL_RETURN_MIN:
+        return Measure(inc, True, VETO_REASONS[6], "Yikes", basis)
+    return Measure(inc, True, "", "quiet", basis)
+
+
+def ownership_veto(pct: float | None, reason: str = "") -> Measure:
+    """Criterion 7, as a veto only, from the DEF 14A group ownership row.
+
+    Bands would be presumptuous — 30% insider ownership is alignment in one
+    company and entrenchment in another, and the row prints the raw percent
+    so a reader can tell which. What IS safe to say is the negative: a
+    management team owning almost nothing has no skin in a fifteen-year
+    outcome, which is the criterion's own "None" band.
+
+    A MISSING PERCENT IS NOT ZERO. Foreign private issuers file no proxy
+    statement at all — they are exempt from Regulation 14A — so roughly one
+    row in eight can never be scored here at any budget. That is a fact
+    about the filing regime, and reading it as "no insider ownership" would
+    be `country or "United States"` wearing a new hat.
+    """
+    if pct is None:
+        return unmeasured(reason or "ownership not read")
+    v = _num(pct)
+    if v is None:
+        return unmeasured(reason or "ownership not numeric")
+    basis = f"officers and directors as a group hold {v:.1f}%"
+    if v < INSIDER_MIN_PCT:
+        return Measure(v, True, VETO_REASONS[7], "Yikes", basis)
+    return Measure(v, True, "", "quiet", basis)
+
+
+# ── The DEF 14A group-ownership row, parsed ─────────────────────────
+#
+# Matches the standard beneficial-ownership summary line. Filing agents
+# word it differently and every variant below appears in real proxies:
+#   "All executive officers and directors as a group (12 persons)"
+#   "All directors and executive officers as a group"
+#   "All of our current directors and executive officers as a group"
+_GROUP_ROW = re.compile(
+    r"all\s+(?:of\s+)?(?:our\s+|the\s+)?(?:current\s+)?"
+    r"(?:(?:executive\s+)?officers?\s+and\s+directors?"
+    r"|directors?\s+and\s+(?:executive\s+)?officers?)"
+    r"[^\n]{0,120}?as\s+a\s+group", re.I)
+
+# The percent cell that follows it. An asterisk or "less than 1%" is a
+# REAL measurement meaning under one percent; an em-dash or a blank is not.
+_PCT = re.compile(r"(\d{1,3}(?:\.\d+)?)\s*%")
+_LESS_THAN_ONE = re.compile(r"(?:\*|less\s+than\s+1\s*%|<\s*1\s*%)", re.I)
+
+
+def parse_group_ownership(text: str) -> tuple[float | None, str]:
+    """(percent, reason) from a DEF 14A's beneficial-ownership table.
+
+    THE COMPANY'S OWN NUMBER, not one this module computes. Proxies state
+    the group total directly, already netted for options exercisable within
+    sixty days, and recomputing it from Forms 4 would be worse — see below.
+
+    Returns (None, reason) on anything it cannot read. NEVER (0.0, ...):
+    a parse failure that returned zero would band as the worst possible
+    score for a founder who may own 45%, which is precisely the shape of
+    the unfiled-debt-tag bug this repo has already paid for twice.
+
+    WHY NOT FORMS 3/4/5, which are structured XML and would parse cleanly:
+    `sharesOwnedFollowingTransaction` is current only as of the filing. An
+    insider who has not traded since 2019 contributes a 2019 count against
+    today's share denominator, and one who never traded contributes their
+    Form 3 count or nothing. The measure is therefore worst for the
+    never-sold founder the criterion exists to find, and best for the
+    executive who sells constantly. It is more accurate the less it
+    matters, so it is refused on accuracy rather than on cost.
+    """
+    if not text:
+        return None, "no document"
+    flat = re.sub(r"<[^>]+>", " ", text)
+    flat = re.sub(r"&nbsp;?", " ", flat)
+    flat = re.sub(r"\s+", " ", flat)
+    m = _GROUP_ROW.search(flat)
+    if not m:
+        return None, "ownership table found, group row not located"
+    tail = flat[m.end():m.end() + 400]
+    pct = _PCT.search(tail)
+    lt1 = _LESS_THAN_ONE.search(tail)
+    # WHICHEVER COMES FIRST, not whichever is checked first. "less than 1%"
+    # contains a numeric percent, so testing _PCT first reads it as 1.0% —
+    # a company reported as UNDER one percent, published as exactly one.
+    if lt1 and (not pct or lt1.start() <= pct.start()):
+        # A real measurement and a real finding: under one percent.
+        return 0.5, ""
+    if pct:
+        try:
+            v = float(pct.group(1))
+        except ValueError:
+            return None, "group row found, percent cell unparseable"
+        return (v, "") if 0.0 <= v <= 100.0 else (None, f"percent out of range: {v}")
+    return None, "group row found, no percent cell"
+
+
+# ═══════════════════════════════════════════════════════════════════
 # THE LEDGER — the actual output
 # ═══════════════════════════════════════════════════════════════════
 
@@ -450,6 +678,26 @@ def ledger(measures: dict) -> dict:
         else:
             unmeasured_ids.append(cid)
 
+    # THE GATE IS SHOWN, NEVER COUNTED. Criterion 13 decides membership
+    # and must not also be evidence for it — 99 of the 111 companies at
+    # the four-pass minimum were counting "it is small" as one of their
+    # four passes, having cleared three quality gates rather than four.
+    gate_bands = {}
+    for cid in GATE_IDS:
+        m = measures.get(cid)
+        if m is not None and m.measured and m.band:
+            gate_bands[cid] = m.band
+
+    # VETOES ONLY SUBTRACT. A Yikes here removes the company; anything
+    # else changes nothing at all, because no free source can establish
+    # any of these three positively.
+    vetoes, veto_quiet = [], []
+    for cid in VETO_IDS:
+        m = measures.get(cid)
+        if m is None or not m.measured:
+            continue
+        (vetoes if m.band == "Yikes" else veto_quiet).append(cid)
+
     passing = [c for c, b in bands.items() if b in PASS_BANDS]
     great = [c for c, b in bands.items() if b == "Great"]
     floors = sorted(bands, key=lambda c: BAND_ORDINAL[bands[c]])
@@ -459,6 +707,12 @@ def ledger(measures: dict) -> dict:
         "measured_n": len(scored),
         "unmeasured_ids": sorted(unmeasured_ids),
         "never_scored_ids": list(NEVER_SCORED_IDS),
+        "gate_ids": list(GATE_IDS),
+        "gate_bands": gate_bands,
+        "veto_ids": list(VETO_IDS),
+        "vetoed_by": sorted(vetoes),
+        "veto_quiet": sorted(veto_quiet),
+        "vetoed": bool(vetoes),
         "bands": bands,
         "passing_ids": sorted(passing),
         "passing_n": len(passing),
@@ -521,9 +775,31 @@ def census(rows: list[dict]) -> dict:
     for cid in SCOREABLE_IDS:
         coverage[cid] = sum(1 for r in rows
                             if cid in ((r.get("ledger") or {}).get("measured_ids") or []))
+    # CONCENTRATION, over the LISTED set. A hundred and forty-eight names
+    # sounds diversified and is not: measured on the live board the SIC-2
+    # Herfindahl is 0.150, which is 6.7 effective sectors, and software
+    # alone is 36% of the list. A basket built from it is one bet wearing
+    # many tickers, and the reader cannot see that from any other number
+    # on the page.
+    sic_counts: dict[str, int] = {}
+    for r in listed:
+        k = str(r.get("sic") or "")[:2] or "??"
+        sic_counts[k] = sic_counts.get(k, 0) + 1
+    n_listed = len(listed)
+    hhi = sum((c / n_listed) ** 2 for c in sic_counts.values()) if n_listed else None
+    concentration = {
+        "by_sic": dict(sorted(sic_counts.items(), key=lambda kv: -kv[1])),
+        "hhi": round(hhi, 4) if hhi else None,
+        "effective_sectors": round(1 / hhi, 1) if hhi else None,
+        "largest_sic": max(sic_counts, key=sic_counts.get) if sic_counts else None,
+        "largest_share_pct": (round(max(sic_counts.values()) / n_listed * 100, 1)
+                              if n_listed else None),
+    }
+
     return {
         "screened": len(rows),
         "listed": len(listed), "thin": len(thin), "rejected": len(rejected),
+        "concentration": concentration,
         "by_reason": dict(sorted(by_reason.items(), key=lambda kv: -kv[1])),
         "coverage": coverage,
         "criterion_names": CRITERION_NAMES,
