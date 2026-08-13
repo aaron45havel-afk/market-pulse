@@ -461,10 +461,6 @@
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                     <span class="label">Map</span>
                 </a>
-                <a href="/affordability" class="{% if '/affordability' in request.url.path %}active{% endif %}">
-                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                    <span class="label">Affordability</span>
-                </a>
                 <a href="/real-mortgage-index" class="{% if '/real-mortgage-index' in request.url.path %}active{% endif %}">
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 14l4-6 4 4 6-9"/></svg>
                     <span class="label">Real Cost Index</span>
@@ -476,10 +472,6 @@
                 <a href="/norcal" class="{% if request.url.path == '/norcal' %}active{% endif %}">
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V10l4-3 4 3 4-6 4 4v13"/><line x1="2" y1="21" x2="22" y2="21"/></svg>
                     <span class="label">CA Real Estate</span>
-                </a>
-                <a href="/landscaper" class="{% if request.url.path == '/landscaper' %}active{% endif %}">
-                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22V12"/><path d="M12 12C12 7 8 3 3 3c0 5 4 9 9 9z"/><path d="M12 12c0-5 4-9 9-9 0 5-4 9-9 9z"/></svg>
-                    <span class="label">Landscaper</span>
                 </a>
                 {% if is_admin(request) %}
                 <a href="/household" class="{% if request.url.path == '/household' %}active{% endif %}">
