@@ -87,10 +87,12 @@ def facts_to_record(row: dict, quote: dict, facts: dict, as_of: str) -> dict:
     cur_assets, _, _ = L.instant_value(facts, "AssetsCurrent")
     cur_liabs, _, _ = L.instant_value(facts, "LiabilitiesCurrent")
 
-    eq_entries = ((((facts or {}).get("facts") or {}).get("us-gaap") or {})
-                  .get("StockholdersEquity") or {}).get("units", {}).get("USD")
-    equity_by_year = dict(L._instant(eq_entries)) if eq_entries else {}
-    eq_by_year_all = equity_by_year
+    def _instant_by_year(concept: str) -> dict:
+        entries = ((((facts or {}).get("facts") or {}).get("us-gaap") or {})
+                   .get(concept) or {}).get("units", {}).get("USD")
+        return dict(L._instant(entries)) if entries else {}
+
+    equity_by_year = _instant_by_year("StockholdersEquity")
 
     last = lambda s: s[max(s)] if s else None
 
@@ -106,11 +108,33 @@ def facts_to_record(row: dict, quote: dict, facts: dict, as_of: str) -> dict:
             margin_by_year[y] = gp / rev * 100.0
     # Invested capital, Greenblatt's basis so it matches criterion 5's
     # denominator rather than inventing a second definition.
+    #
+    # IT SAID THAT AND DID NOT DO IT. This was StockholdersEquity — the one
+    # denominator `checklist.return_on_capital` rejects by name, for the
+    # reason that bites hardest here: "years of buybacks left the equity
+    # base near zero." The capital veto exempts a company whose capital
+    # grew less than INCREMENTAL_MIN_CAPITAL_GROWTH, so on an equity basis
+    # a company returning cash SHRANK its denominator and was excused from
+    # the test — then reported "quiet", which the page defines as nothing
+    # visible being wrong. On the August board 467 of the 998 quiet results
+    # had never been judged at all, 405 of them because equity fell. The
+    # criterion built to catch capital destruction was blind to exactly the
+    # companies whose capital was leaving.
+    #
+    # (current assets - current liabilities) + net PP&E, per year, with
+    # EVERY INPUT FILED — the same rule criterion 5 applies. A year missing
+    # any of the three is dropped rather than defaulted, because a missing
+    # liability shrinks the denominator and flatters the return.
+    ca_by_year = _instant_by_year("AssetsCurrent")
+    cl_by_year = _instant_by_year("LiabilitiesCurrent")
+    ppe_by_year = _instant_by_year("PropertyPlantAndEquipmentNet")
     cap_by_year = {}
-    for y in set(eq_by_year_all) & set(op_by_year):
-        e = eq_by_year_all.get(y)
-        if e is not None and e > 0:
-            cap_by_year[y] = e
+    for y in set(ca_by_year) & set(cl_by_year) & set(ppe_by_year) & set(op_by_year):
+        c = (ca_by_year[y] - cl_by_year[y]) + ppe_by_year[y]
+        # Not positive is undefined, not small: a negative denominator
+        # flips the sign and ranks a struggling company at the top.
+        if c > 0:
+            cap_by_year[y] = c
 
     return {
         "ticker": row["ticker"], "name": row["name"], "cik": row.get("cik"),
