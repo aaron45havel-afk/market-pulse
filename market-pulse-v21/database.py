@@ -221,11 +221,126 @@ def _ensure_household_tables():
         conn.close()
 
 
+def _ensure_hundred_hand_table():
+    """Hand-read 100-bagger criteria — own connection/transaction, same
+    rationale as the two above.
+
+    THIS TABLE IS THE ONLY COPY. The monthly Action rebuilds every row of
+    data/hundred_snapshots/YYYY-MM.json from SEC filings and os.replace()s
+    the file — including within the same month, since the filename key is
+    YYYY-MM. Anything a person typed into that file would not survive the
+    next run. So the reading lives here and is merged on read, and the
+    snapshot stays exactly what the machine produced.
+
+    One row per (ticker, criterion): re-reading a proxy replaces the
+    previous answer rather than accumulating, and entered_at records when.
+    `source` exists because an unsourced hand entry is the same unmeasured
+    number this page was built to expose.
+    """
+    conn = _get_conn()
+    if not conn: return
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS hundred_hand (
+                ticker     VARCHAR(12) NOT NULL,
+                criterion  SMALLINT NOT NULL,
+                value      DOUBLE PRECISION,
+                note       TEXT NOT NULL DEFAULT '',
+                source     TEXT NOT NULL DEFAULT '',
+                read_on    DATE,
+                entered_by VARCHAR(120) NOT NULL DEFAULT '',
+                entered_at TIMESTAMP DEFAULT NOW(),
+                PRIMARY KEY (ticker, criterion)
+            )
+        """)
+        conn.commit(); cur.close()
+    except Exception as e:
+        logger.error(f"hundred_hand table init error: {e}")
+    finally:
+        conn.close()
+
+
+def hundred_hand_save(ticker: str, entry: dict, entered_by: str = "") -> bool:
+    """Upsert one entry. `entry` must already be through hand.validate()."""
+    conn = _get_conn()
+    if not conn: return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO hundred_hand
+                (ticker, criterion, value, note, source, read_on, entered_by, entered_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+            ON CONFLICT (ticker, criterion) DO UPDATE SET
+                value = EXCLUDED.value, note = EXCLUDED.note,
+                source = EXCLUDED.source, read_on = EXCLUDED.read_on,
+                entered_by = EXCLUDED.entered_by, entered_at = NOW()
+        """, (ticker.upper(), entry["criterion"], entry.get("value"),
+              entry.get("note") or "", entry.get("source") or "",
+              entry.get("read_on"), entered_by))
+        conn.commit(); cur.close()
+        return True
+    except Exception as e:
+        logger.error(f"hundred_hand save error: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def hundred_hand_delete(ticker: str, criterion: int) -> bool:
+    conn = _get_conn()
+    if not conn: return False
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM hundred_hand WHERE ticker = %s AND criterion = %s",
+                    (ticker.upper(), int(criterion)))
+        conn.commit(); cur.close()
+        return True
+    except Exception as e:
+        logger.error(f"hundred_hand delete error: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def hundred_hand_all() -> dict:
+    """{TICKER: {criterion_int: entry}} — the shape hand.merge() wants.
+
+    Returns {} rather than an error object when there is no database. The
+    board has to render without one, and "no hand entries" is a true
+    statement about a deployment that has none.
+    """
+    conn = _get_conn()
+    if not conn: return {}
+    out: dict = {}
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT ticker, criterion, value, note, source, read_on, entered_at
+            FROM hundred_hand ORDER BY ticker, criterion
+        """)
+        for tkr, cid, val, note, src, read_on, at in cur.fetchall():
+            out.setdefault(tkr.upper(), {})[int(cid)] = {
+                "criterion": int(cid), "value": val,
+                "note": note or "", "source": src or "",
+                "read_on": read_on.isoformat() if read_on else None,
+                "entered_at": at.isoformat() if at else None,
+            }
+        cur.close()
+        return out
+    except Exception as e:
+        logger.error(f"hundred_hand read error: {e}")
+        return {}
+    finally:
+        conn.close()
+
+
 def init_db():
     # Self-contained migrations first, each in its own transaction, so
     # they can't be rolled back by an unrelated failure in the block below.
     _ensure_landscaper_tables()
     _ensure_household_tables()
+    _ensure_hundred_hand_table()
     conn = _get_conn()
     if not conn: return
     try:
