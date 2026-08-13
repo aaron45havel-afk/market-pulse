@@ -29,6 +29,7 @@
   .hb-cov .bar { background:var(--surface2); border-radius:3px; height:0.6rem; overflow:hidden; }
   .hb-cov .bar span { display:block; height:100%; background:var(--accent2); }
   .hb-cov .pct { font-variant-numeric:tabular-nums; color:var(--text-dim); white-space:nowrap; }
+  .hb-cov .bar span.hot { background:#f87171; }
   .hb-cov .never .bar span { background:var(--border); }
   .hb-cov .never .lbl, .hb-cov .never .pct { color:var(--text-dim); font-style:italic; }
 
@@ -162,6 +163,13 @@
     company outright, "quiet" means nothing visible was wrong — which is not evidence that anything was
     right — and "not read" means the filing could not be reached.</p>
   <div class="hb-cov" id="hbVetoCov"></div>
+  <p class="desc" style="margin:0.9rem 0 0.2rem;"><strong>Where each criterion's answers pile up.</strong>
+    Four times a parser here has emitted a constant where a measurement belonged, and every time a
+    human found it by squinting at a board rather than the code finding it. The signature is always
+    the same: too many companies holding the identical number. A <em>capped</em> criterion piles up
+    on its bound honestly — so the value is shown next to the share, because 100.0 where the cap is
+    100 is a bound and 0.50 where there is no cap at all is a sentinel that escaped as data.</p>
+  <div class="hb-cov" id="hbCluster"></div>
 </div>
 
 <div class="hb-card">
@@ -481,6 +489,26 @@ function renderFunnel() {
   }
   document.getElementById('hbVetoCov').innerHTML = vhtml
     || '<div class="lbl dim">no veto data in this snapshot</div>';
+
+  // THE DETECTOR. Sorted worst-first, because the only version of this
+  // anyone reads is the one that puts the problem on the first line.
+  const cl = c.clustering || {};
+  const ranked = Object.entries(cl).sort((a, b) => b[1].modal_pct - a[1].modal_pct);
+  let chtml = '';
+  for (const [cid, v] of ranked) {
+    const val = Number(cid) === 13 ? f.cap(v.modal)
+              : (Math.round(v.modal * 100) / 100).toLocaleString();
+    chtml += `<div class="lbl${v.flagged ? '' : ' dim'}">${cid}. ${names[cid] || ''}</div>`
+           + `<div class="bar"><span style="width:${Math.min(100, v.modal_pct).toFixed(1)}%"`
+           + `${v.flagged ? ' class="hot"' : ''}></span></div>`
+           + `<div class="pct${v.flagged ? '' : ' dim'}">`
+           + `${v.flagged ? '<strong>' : ''}${v.modal_pct}% on ${val}`
+           + `${v.flagged ? '</strong>' : ''}`
+           + `<br><span class="dim">${v.modal_n.toLocaleString()} of `
+           + `${v.n.toLocaleString()} · ${v.distinct.toLocaleString()} distinct</span></div>`;
+  }
+  document.getElementById('hbCluster').innerHTML = chtml
+    || '<div class="lbl dim">nothing measured in this snapshot</div>';
 }
 
 function render() {

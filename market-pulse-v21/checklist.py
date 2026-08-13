@@ -602,7 +602,26 @@ _GROUP_ROW = re.compile(
 # The percent cell that follows it. An asterisk or "less than 1%" is a
 # REAL measurement meaning under one percent; an em-dash or a blank is not.
 _PCT = re.compile(r"(\d{1,3}(?:\.\d+)?)\s*%")
-_LESS_THAN_ONE = re.compile(r"(?:\*|less\s+than\s+1\s*%|<\s*1\s*%)", re.I)
+
+# AN ASTERISK MEANS TWO THINGS IN THE SAME TABLE and this used to accept
+# both. In the percent column it is the standard "less than 1%" legend. On
+# any other token it is a footnote marker: "(12 persons)*", "(*)",
+# "1,234,567*". Matching a bare `\*` anywhere read the footnote marker as
+# the holding, and because 0.5 sits under INSIDER_MIN_PCT it vetoed the
+# company — discarding the real percent sitting a few characters later.
+#
+# It replaced one fabrication with another. Walking past the intro
+# paragraph (which fixed nine identical 5.00%s) landed the scan on the real
+# table row, where the footnote marker was waiting: nine companies then
+# reported exactly 0.50%, which is 45% of every value the criterion
+# produced, and eight of the ten names that left the board that run were
+# removed by this criterion.
+#
+# The discriminator is position, not content. A legend asterisk STANDS
+# ALONE — whitespace on both sides, because it is the whole cell. A
+# footnote marker is welded to the token it annotates.
+_LESS_THAN_ONE = re.compile(
+    r"(?:(?:^|(?<=\s))\*(?=\s|$)|less\s+than\s+1\s*%|<\s*1\s*%)", re.I)
 
 # A PERCENT INTRODUCED BY A COMPARATIVE IS A THRESHOLD, NOT A HOLDING.
 # Every proxy carries the Section 13(d) boilerplate — "owners of more than
@@ -807,6 +826,65 @@ def churn(current: list, previous: list | None) -> dict:
     }
 
 
+# How much of a criterion's output may sit on one value before the shape
+# stops looking like a measurement. Deliberately loose: a real signal
+# trips it only for a criterion with a hard cap, and those are obvious
+# from the value itself.
+CLUSTER_FLAG_PCT = 10.0
+CLUSTER_MIN_N = 20
+
+
+def value_clustering(rows: list[dict]) -> dict:
+    """Per criterion: how much of its output lands on a single number.
+
+    A DETECTOR FOR THE ONE BUG THIS REPO KEEPS SHIPPING. Four times now a
+    parser has emitted a constant where a measurement belonged, and every
+    time it was found by a human noticing an odd-looking board rather than
+    by anything in the code. The signature is always identical and always
+    visible in one line: nine companies at exactly 5.00% when a regex read
+    the SEC's 5% reporting threshold as a holding, then — after that was
+    fixed — nine at exactly 0.50%, the module's own "less than 1%"
+    sentinel, when a footnote asterisk was read as the percent cell. That
+    second cluster was 45% of everything the criterion produced.
+
+    Reported, not enforced. A capped criterion legitimately piles up on its
+    bound: return on capital stops at ROC_CAP and dozens of companies sit
+    there honestly. The modal VALUE is returned alongside the share
+    precisely so the distinction stays with the reader — 100.0 on a
+    criterion capped at 100 is a bound, 0.50 on a criterion with no bound
+    at all is a sentinel escaping as data.
+    """
+    out = {}
+    for cid in range(1, CRITERIA + 1):
+        vals = []
+        for r in rows or []:
+            m = (r.get("measures") or {}).get(str(cid)) or {}
+            if m.get("measured") and m.get("value") is not None:
+                try:
+                    vals.append(round(float(m["value"]), 4))
+                except (TypeError, ValueError):
+                    continue
+        n = len(vals)
+        if not n:
+            continue
+        counts = {}
+        for v in vals:
+            counts[v] = counts.get(v, 0) + 1
+        modal = max(counts, key=counts.get)
+        modal_n = counts[modal]
+        # The count is bound to a name before dividing. Dividing by a
+        # length inline is banned at source level by the test suite, for
+        # the composite-score reason — and the ban is a raw substring scan
+        # that reads comments too, so this one says it in words.
+        pct = round(modal_n / n * 100.0, 1)
+        out[cid] = {
+            "n": n, "modal": modal, "modal_n": modal_n, "modal_pct": pct,
+            "distinct": len(counts),
+            "flagged": bool(pct >= CLUSTER_FLAG_PCT and n >= CLUSTER_MIN_N),
+        }
+    return out
+
+
 def census(rows: list[dict]) -> dict:
     """The funnel. Partitions — screened = rejected + thin + listed.
 
@@ -887,6 +965,7 @@ def census(rows: list[dict]) -> dict:
         "by_reason": dict(sorted(by_reason.items(), key=lambda kv: -kv[1])),
         "coverage": coverage,
         "veto_coverage": veto_coverage,
+        "clustering": value_clustering(rows),
         "criterion_names": CRITERION_NAMES,
         "never_scored": {str(c): NOT_SCORED_BECAUSE[c] for c in NEVER_SCORED_IDS},
     }

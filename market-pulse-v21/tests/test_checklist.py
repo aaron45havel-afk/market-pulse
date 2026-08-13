@@ -497,6 +497,59 @@ check(_pct is None and _why and "5" not in _why,
       "and a refusal never carries the number it refused — a reason string "
       "reading '5%' is one copy-paste from being shown as the value")
 
+# ── THE ASTERISK, WHICH MEANS TWO THINGS IN THE SAME TABLE ──
+# Fixing the intro-paragraph bug moved the scan onto the real row, where a
+# footnote marker was waiting. Nine companies then reported exactly 0.50% —
+# this module's own "less than 1%" sentinel — which was 45% of every value
+# the criterion produced, and eight of the ten names that left the board
+# that run were removed by this criterion.
+check(C.parse_group_ownership(
+      "All executive officers and directors as a group (12 persons)* "
+      "4,512,880 18.7%")[0] == 18.7,
+      "an asterisk WELDED to a token is a footnote marker, and reading it "
+      "as the percent cell throws away the real number four words later")
+check(C.parse_group_ownership(
+      "All executive officers and directors as a group (9 persons) (*) "
+      "2,145,880 23.4%")[0] == 23.4,
+      "including when the filing agent wraps the marker in parentheses")
+check(C.parse_group_ownership(
+      "All executive officers and directors as a group (6 persons) "
+      "1,234,567* 14.2%")[0] == 14.2,
+      "and when it hangs off the share count instead of the person count")
+check(C.parse_group_ownership(
+      "All directors and officers as a group (5 persons) 120,000 *")[0] == 0.5,
+      "but a LONE asterisk with whitespace either side is the percent cell "
+      "itself — the standard legend for under one percent, and a real "
+      "measurement this must keep reading")
+check(C.parse_group_ownership(
+      "All executive officers and directors as a group (7 persons) 1,200,000 "
+      "11.4% * Includes shares subject to options.")[0] == 11.4,
+      "and a footnote that follows a real percent does not overwrite it")
+
+# ── THE DETECTOR, so the next one announces itself ──
+_rows = [{"measures": {"7": {"measured": True, "value": 0.5}}} for _ in range(9)]
+_rows += [{"measures": {"7": {"measured": True, "value": v}}}
+          for v in (2.9, 8.86, 1.08, 3.8, 5.9, 1.49, 1.18, 99.99, 2.0, 5.0, 5.0)]
+_cl = C.value_clustering(_rows)
+check(_cl[7]["modal"] == 0.5 and _cl[7]["modal_n"] == 9 and _cl[7]["flagged"],
+      "nine values on one number out of twenty is flagged — this is the "
+      "shape the last four fabrications all had, and every one of them was "
+      "caught by a human squinting at a board instead of by the code")
+check(C.value_clustering(
+      [{"measures": {"5": {"measured": True, "value": 100.0}}} for _ in range(53)]
+      )[5]["modal"] == 100.0,
+      "and the modal VALUE comes back beside the share, because a capped "
+      "criterion piles up on its bound honestly — 100.0 where the cap is "
+      "100 is a bound, 0.50 where there is no cap at all is a sentinel")
+check(not C.value_clustering(
+      [{"measures": {"1": {"measured": True, "value": float(i)}}}
+       for i in range(40)])[1]["flagged"],
+      "a real spread is not flagged")
+check(C.value_clustering([]) == {} and C.value_clustering(
+      [{"measures": {"1": {"measured": False, "value": None}}}]) == {},
+      "and nothing measured yields nothing to report, rather than a "
+      "zero that looks like a finding")
+
 
 # ── report ──
 if _FAILS:
