@@ -414,6 +414,23 @@ check(C.capital_veto(_iop, {y: 60e9 for y in _YR}).band == "quiet",
       "and a company that invested nothing cannot be judged on how well it "
       "invested — that is quiet, not a veto")
 
+# TWO DIFFERENT THINGS LAND IN THAT EXEMPTION and were told one sentence.
+_flat = C.capital_veto(_iop, dict(zip(_YR, [60e9 + i * 1e8 for i in range(9)])))
+_gone = C.capital_veto(_iop, dict(zip(_YR, [60e9 - i * 3e9 for i in range(9)])))
+check(_flat.band == "quiet" and "too little invested" in _flat.basis
+      and "FELL" not in _flat.basis,
+      "a company that barely moved its capital is told it invested too "
+      "little to judge, which is what happened to it")
+check(_gone.band == "quiet" and "FELL" in _gone.basis
+      and "too little" not in _gone.basis,
+      "and a company that SHRANK its capital base by a third is told that "
+      "instead — 376 companies on the live board did the second thing and "
+      "read the first sentence, and 'too little' describes smallness, not "
+      "a business returning or writing off half of what it employed")
+check(_gone.value is None and _gone.measured,
+      "both stay quiet with no value: incremental return on a capital base "
+      "that is leaving is undefined, not bad")
+
 # CRITERION 7, and the hole no budget can fill.
 check(C.ownership_veto(2.0).band == "Yikes" and C.ownership_veto(18.0).band == "quiet",
       f"under {C.INSIDER_MIN_PCT:.0f}% is no skin in the game")
