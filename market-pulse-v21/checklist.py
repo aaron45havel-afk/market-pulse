@@ -604,6 +604,29 @@ _GROUP_ROW = re.compile(
 _PCT = re.compile(r"(\d{1,3}(?:\.\d+)?)\s*%")
 _LESS_THAN_ONE = re.compile(r"(?:\*|less\s+than\s+1\s*%|<\s*1\s*%)", re.I)
 
+# A PERCENT INTRODUCED BY A COMPARATIVE IS A THRESHOLD, NOT A HOLDING.
+# Every proxy carries the Section 13(d) boilerplate — "owners of more than
+# 5% of our common stock" — and it sits within a few hundred characters of
+# the ownership table, which is to say inside any window wide enough to
+# catch a real value. Taking the first percent in that window read the
+# boilerplate as the holding: on the live board NINE of the sixteen
+# companies that produced a figure produced exactly 5.00%, every one of
+# them under the 10% floor, every one vetoed and dropped from the list.
+# A table cell never says "more than 24.3%".
+#
+# Deliberately excludes "less than", which IS a real cell value and is
+# handled by _LESS_THAN_ONE above.
+_THRESHOLD_LEAD = re.compile(
+    r"(?:more\s+than|at\s+least|in\s+excess\s+of|greater\s+than|"
+    r"not\s+less\s+than|exceeds?|exceeding|owners?\s+of)\s*$", re.I)
+
+# How far past the group row a real percent cell can sit. The flattened
+# row is "(12 persons) 1,234,567 24.3%" — under thirty characters. Room
+# for footnote markers and a second share column still leaves this far
+# short of a sentence of prose. Beyond it we are reading the next section,
+# not the row, so the answer is "not read" rather than a number.
+_CELL_GAP = 120
+
 
 def parse_group_ownership(text: str) -> tuple[float | None, str]:
     """(percent, reason) from a DEF 14A's beneficial-ownership table.
@@ -631,25 +654,56 @@ def parse_group_ownership(text: str) -> tuple[float | None, str]:
     flat = re.sub(r"<[^>]+>", " ", text)
     flat = re.sub(r"&nbsp;?", " ", flat)
     flat = re.sub(r"\s+", " ", flat)
-    m = _GROUP_ROW.search(flat)
-    if not m:
-        return None, "ownership table found, group row not located"
-    tail = flat[m.end():m.end() + 400]
-    pct = _PCT.search(tail)
-    lt1 = _LESS_THAN_ONE.search(tail)
-    # WHICHEVER COMES FIRST, not whichever is checked first. "less than 1%"
-    # contains a numeric percent, so testing _PCT first reads it as 1.0% —
-    # a company reported as UNDER one percent, published as exactly one.
-    if lt1 and (not pct or lt1.start() <= pct.start()):
-        # A real measurement and a real finding: under one percent.
-        return 0.5, ""
-    if pct:
+    # EVERY OCCURRENCE, NOT THE FIRST. The phrase appears twice in a normal
+    # proxy: once in the paragraph introducing the section ("…by each person
+    # known to us to be the beneficial owner of more than 5% of our common
+    # stock, by each director, and by all executive officers and directors
+    # as a group"), and again as the table's last row. `search` took the
+    # intro, and what follows the intro is the SEC's beneficial-ownership
+    # boilerplate — whose first percent is the 5% reporting threshold.
+    # That is where nine identical 5.00%s came from, and each one vetoed a
+    # company off the board. Walk the matches and take the first that
+    # actually yields a cell.
+    seen = False
+    reason = "ownership table found, group row not located"
+    for m in _GROUP_ROW.finditer(flat):
+        seen = True
+        tail = flat[m.end():m.end() + 400]
+        pct = _PCT.search(tail)
+        lt1 = _LESS_THAN_ONE.search(tail)
+        # WHICHEVER COMES FIRST, not whichever is checked first. "less than
+        # 1%" contains a numeric percent, so testing _PCT first reads it as
+        # 1.0% — a company reported as UNDER one percent, published as
+        # exactly one.
+        if lt1 and (not pct or lt1.start() <= pct.start()):
+            if lt1.start() > _CELL_GAP:
+                reason = ("group row found, nearest '<1%' is "
+                          f"{lt1.start()} characters away — too far to be its cell")
+                continue
+            # A real measurement and a real finding: under one percent.
+            return 0.5, ""
+        if not pct:
+            reason = "group row found, no percent cell"
+            continue
+        # THE CELL, OR NOTHING. Two ways the nearest percent is not the
+        # group's holding, and both used to return a number.
+        if pct.start() > _CELL_GAP:
+            reason = ("group row found, nearest percent is "
+                      f"{pct.start()} characters away — too far to be its cell")
+            continue
+        if _THRESHOLD_LEAD.search(tail[:pct.start()]):
+            reason = ("group row found, but the nearest percent is a "
+                      "disclosure threshold rather than a holding")
+            continue
         try:
             v = float(pct.group(1))
         except ValueError:
-            return None, "group row found, percent cell unparseable"
-        return (v, "") if 0.0 <= v <= 100.0 else (None, f"percent out of range: {v}")
-    return None, "group row found, no percent cell"
+            reason = "group row found, percent cell unparseable"
+            continue
+        if 0.0 <= v <= 100.0:
+            return v, ""
+        reason = f"percent out of range: {v}"
+    return None, (reason if seen else "ownership table found, group row not located")
 
 
 # ═══════════════════════════════════════════════════════════════════

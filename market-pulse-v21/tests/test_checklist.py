@@ -445,6 +445,58 @@ check(C.parse_group_ownership("<p>a different table</p>")[0] is None
       and C.parse_group_ownership("")[0] is None,
       "and no table at all is unmeasured, with a reason")
 
+# ── the shapes a REAL proxy has, which the fixtures above never had ──
+# Every check below returned a wrong number before the walk-all-matches fix,
+# and every wrong number landed under INSIDER_MIN_PCT and vetoed a company
+# off the board. Nine of the sixteen figures on the live August run were
+# exactly 5.00%.
+_INTRO = (
+    "<p>The following table sets forth information regarding beneficial "
+    "ownership of our common stock by each person known to us to be the "
+    "beneficial owner of more than 5% of our common stock, by each of our "
+    "directors, by each named executive officer, and by all executive "
+    "officers and directors as a group.</p>"
+    "<p>Beneficial ownership is determined in accordance with the rules of "
+    "the Securities and Exchange Commission. A person is deemed to be the "
+    "beneficial owner of securities that can be acquired within 60 days.</p>")
+
+check(C.parse_group_ownership(_INTRO)[0] is None,
+      "the section's INTRO paragraph contains the group phrase too, and the "
+      "SEC boilerplate after it opens with the 5% reporting threshold — "
+      "reading that as a holding is where nine identical 5.00%s came from")
+
+check(C.parse_group_ownership(
+      _INTRO + "<table><tr><td>All executive officers and directors as a "
+      "group (9 persons)</td><td>2,145,880</td><td>23.4%</td></tr></table>")[0]
+      == 23.4,
+      "and with the real table present, the intro must be walked past to "
+      "reach the row that actually carries the number")
+
+check(C.parse_group_ownership(
+      "All executive officers and directors as a group (7 persons) held "
+      "shares representing more than 5% of the outstanding common stock")[0] is None,
+      "a percent introduced by a comparative is a THRESHOLD, not a holding — "
+      "a table cell never says 'more than 24.3%'")
+
+check(C.parse_group_ownership(
+      "All executive officers and directors as a group (4 persons) 900,100 "
+      + "x" * 200 + " 12.5%")[0] is None,
+      "and a percent 200 characters downstream belongs to whatever came "
+      "next, not to this row — unmeasured beats a confident wrong number")
+
+_pct, _why = C.parse_group_ownership(
+    "and by all executive officers and directors as a group. Each holder of "
+    "more than 5% of our common stock is listed above.")
+check(_pct is None and "threshold" in _why,
+      "when the boilerplate percent IS close enough to look like a cell, the "
+      "comparative in front of it is what gives it away — and the refusal "
+      "names that, so the page can say why the cell is empty")
+
+_pct, _why = C.parse_group_ownership(_INTRO)
+check(_pct is None and _why and "5" not in _why,
+      "and a refusal never carries the number it refused — a reason string "
+      "reading '5%' is one copy-paste from being shown as the value")
+
 
 # ── report ──
 if _FAILS:
