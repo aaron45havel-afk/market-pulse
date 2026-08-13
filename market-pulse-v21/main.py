@@ -5233,9 +5233,87 @@ async def api_hundred_snapshot(month: str):
                 cen["clustering"] = _C.value_clustering(data.get("companies") or [])
             except Exception:
                 logger.exception("hundred: clustering backfill failed")
+        # HAND ENTRIES ARE MERGED HERE, NOT BUILT IN. The monthly Action
+        # reconstructs every row from filings and replaces this file
+        # wholesale, so a reading written into it would not survive the
+        # next run. Merging on read also means the Action needs no
+        # database and no change at all.
+        try:
+            import hand as _H
+            from database import hundred_hand_all
+            entries = hundred_hand_all()
+            if entries:
+                meta["hand"] = _H.merge(data.get("companies") or [], entries)
+            meta["hand_rules"] = _H.RULES
+        except Exception:
+            logger.exception("hundred: hand-entry merge failed")
+        data["_meta"] = meta
         return JSONResponse(data)
     except Exception as e:
         return JSONResponse({"error": f"failed to read snapshot: {e}"}, status_code=500)
+
+
+@app.post("/api/hundred/hand")
+async def api_hundred_hand_save(request: Request):
+    """Record one hand-read criterion.
+
+    Body: {ticker, criterion, value?, note?, source, read_on?}
+
+    Admin-gated because it changes what the board shows. Validation is
+    hand.validate(), which REFUSES rather than coerces — this is the one
+    input on the page that costs a person an hour of reading, and silently
+    storing a share count where a percent belongs would waste it in a way
+    nobody would ever notice.
+    """
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import hand as H
+    from database import hundred_hand_save
+    body = await request.json()
+    ticker = str(body.get("ticker", "")).strip().upper()
+    if not ticker:
+        return JSONResponse({"error": "ticker required"}, status_code=400)
+    try:
+        entry = H.validate(body.get("criterion"), body.get("value"),
+                           note=body.get("note", ""),
+                           source=body.get("source", ""),
+                           read_on=body.get("read_on", ""))
+    except H.Invalid as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    who = ""
+    try:
+        from auth import SESSION_COOKIE, verify_session
+        who = (verify_session(request.cookies.get(SESSION_COOKIE, "")) or {}).get("email", "")
+    except Exception:
+        pass
+    ok = hundred_hand_save(ticker, entry, entered_by=who)
+    if not ok:
+        return JSONResponse(
+            {"error": "could not save — no database is configured, and this "
+                      "is the only copy, so nothing was written"},
+            status_code=503)
+    return JSONResponse({"ok": True, "ticker": ticker, "entry": entry})
+
+
+@app.delete("/api/hundred/hand/{ticker}/{criterion}")
+async def api_hundred_hand_delete(ticker: str, criterion: int, request: Request):
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    from database import hundred_hand_delete
+    ok = hundred_hand_delete(ticker, criterion)
+    return JSONResponse({"ok": ok, "ticker": ticker.upper(), "criterion": criterion},
+                        status_code=200 if ok else 503)
+
+
+@app.get("/api/hundred/hand")
+async def api_hundred_hand_list(request: Request):
+    """Every hand entry. Readable without a gate: it is the reader's own
+    research on their own board, and the write path is what needs guarding."""
+    from database import hundred_hand_all
+    return JSONResponse({"entries": hundred_hand_all(),
+                         "can_edit": _check_admin_token(request)})
 
 
 @app.get("/api/lynch/snapshots")

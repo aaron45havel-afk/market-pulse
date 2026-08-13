@@ -94,6 +94,42 @@
   /* The key's own chip: a neutral one, so the colour in the key means the
      band and nothing else. */
   .c13.key { background:var(--surface2); color:var(--text); border-color:var(--border); }
+  /* READ BY HAND. Deliberately not one of the four bands and deliberately
+     not a colour that reads as good or bad — neither source book gives a
+     cut point for these, so a green cell would be a judgement nobody
+     sourced. It is marked as authored, not as passed. */
+  .c13.hand { background:var(--surface); color:var(--accent2); border-color:var(--accent2);
+    border-style:double; border-width:3px; font-weight:900; }
+
+  .hb-flag { font-size:0.55rem; text-transform:uppercase; letter-spacing:0.04em;
+    background:var(--accent2); color:#fff; border-radius:3px; padding:0.05rem 0.25rem;
+    margin-left:0.3rem; vertical-align:middle; }
+  .hb-read { font:inherit; font-variant-numeric:tabular-nums; cursor:pointer;
+    background:var(--surface2); border:1px solid var(--border); border-radius:5px;
+    color:var(--text-dim); padding:0.1rem 0.4rem; }
+  .hb-read:hover { border-color:var(--accent2); color:var(--text); }
+  .hb-read.has { border-color:var(--accent2); color:var(--accent2); font-weight:700; }
+
+  /* The editor. One company, six criteria, one document each. */
+  .hb-ed { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:50;
+    display:flex; align-items:flex-start; justify-content:center; padding:2rem 1rem;
+    overflow:auto; }
+  .hb-ed-box { background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    max-width:920px; width:100%; padding:1rem 1.1rem; }
+  .hb-ed-row { border-top:1px solid var(--border); padding:0.6rem 0 0.5rem; }
+  .hb-ed-h { font-size:0.82rem; }
+  .hb-ed-doc { font-size:0.7rem; color:var(--text-dim); margin:0.15rem 0 0.35rem; }
+  .hb-ed-f { display:flex; flex-wrap:wrap; gap:0.35rem; align-items:center; }
+  .hb-ed-f input { background:var(--surface2); border:1px solid var(--border); border-radius:5px;
+    padding:0.3rem 0.45rem; color:var(--text); font-size:0.78rem; }
+  .hb-ed-f input.v { width:7rem; } .hb-ed-f input.n { flex:1 1 16rem; }
+  .hb-ed-f input.s { flex:1 1 14rem; }
+  .hb-ed-noscale { font-size:0.7rem; font-style:italic; }
+  .hb-ed-f button { font-size:0.75rem; padding:0.3rem 0.6rem; border-radius:5px; cursor:pointer;
+    border:1px solid var(--border); background:var(--surface2); color:var(--text); }
+  .hb-ed-f .hb-save { border-color:var(--accent2); color:var(--accent2); font-weight:700; }
+  .hb-ed-msg { font-size:0.72rem; margin-top:0.25rem; min-height:0.9rem; color:var(--text-dim); }
+  .hb-ed-msg.bad { color:#b91c1c; } .hb-ed-msg.good { color:var(--mint-ink); }
 
   .hb-head { font-weight:700; font-variant-numeric:tabular-nums; }
   .dim { color:var(--text-dim); }
@@ -187,14 +223,38 @@
       <table class="hb-table" id="hbTable">
         <thead><tr>
           <th>Ticker</th><th>Company</th><th>Location</th><th>Size</th>
-          <th>Mkt cap</th><th>The thirteen</th><th>Measured</th><th>Vetoes</th>
+          <th>Mkt cap</th><th>The thirteen</th><th>Measured</th><th>Vetoes</th><th>Read</th>
           <th>Sales</th><th>GM</th><th>EPS</th><th>ROE</th><th>RoC</th><th>Peer disc</th>
         </tr></thead>
-        <tbody id="hbBody"><tr><td colspan="14" class="empty">Loading…</td></tr></tbody>
+        <tbody id="hbBody"><tr><td colspan="15" class="empty">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
   <p class="desc" id="hbShowing" style="margin-top:0.6rem;"></p>
+</div>
+
+<div class="hb-ed" id="hbEditor" style="display:none;">
+  <div class="hb-ed-box">
+    <div style="display:flex; justify-content:space-between; align-items:baseline; gap:1rem;">
+      <h2 style="margin:0; font-size:1rem;" id="hbEdTitle"></h2>
+      <button id="hbEdClose" style="font-size:0.8rem; cursor:pointer; background:none;
+        border:1px solid var(--border); border-radius:5px; padding:0.2rem 0.5rem;
+        color:var(--text-dim);">Close</button>
+    </div>
+    <p class="desc" style="margin:0.4rem 0 0.2rem;">
+      The six no free source reaches. What you type here is <strong>never counted</strong> in
+      the headline fraction and never adds a company to the list — that count is over all
+      3,318 companies uniformly, and entries only exist for names you already chose to look
+      at, so letting them in would rank companies by how much you already like them.
+      It carries <strong>no band</strong> either: neither book gives a cut point for analyst
+      coverage, work culture or PEG, so the cell shows your number rather than colouring it.
+      <strong>Criterion 7 is the exception</strong> — it is the company's own figure, compelled
+      by the SEC, and the regex reading it has been wrong twice, so your reading of the proxy
+      can retract that veto, or apply it.
+    </p>
+    <div id="hbEdLock"></div>
+    <div id="hbEdRows"></div>
+  </div>
 </div>
 
 <details class="hb-explain">
@@ -251,7 +311,7 @@
 {% endblock %}
 {% block scripts %}
 <script>
-let ROWS = [], META = {}, RULES = {}, CENSUS = {};
+let ROWS = [], META = {}, RULES = {}, CENSUS = {}, HAND = {};
 const ROW_CAP = 200;
 
 const f = {
@@ -298,6 +358,7 @@ function renderKey() {
     ['unmeasured', 'not measured — the company did not file it'],
     ['never', 'never scoreable — no free source exists'],
     ['quiet', 'quiet — a veto with nothing visible to say, which is not a pass'],
+    ['hand', 'read by hand — your number, from a named document, never counted'],
   ].map(([cls, lbl]) => `<span class="i"><span class="sw c13 ${cls}"></span>${esc(lbl)}</span>`).join('');
   document.getElementById('hbKey').innerHTML =
     `<div class="hb-key-items">${items}</div><div class="hb-key-bands">${bands}</div>`;
@@ -306,14 +367,36 @@ function renderKey() {
 // A cell is one of four bands, or unmeasured, or NEVER measurable — and
 // the last two must not look alike. One is a gap in a filing; the other is
 // a gap in what free data can see at all.
+// A hand entry has NO BAND, deliberately. Neither source book gives a cut
+// point for analyst coverage, work culture or forward PEG, so a colour here
+// would be a judgement nobody sourced. The cell carries the number and says
+// who put it there.
+function handTip(c, nm, h) {
+  const unit = (HAND.units || {})[c] || '';
+  const v = h.value == null ? '' : `${h.value}${unit ? ' ' + unit : ''}`;
+  return esc(`${c}. ${nm} — READ BY HAND${v ? ': ' + v : ''}`
+    + (h.note ? ` · ${h.note}` : '')
+    + (h.source ? ` · source: ${h.source}` : '')
+    + (h.read_on ? ` · read ${h.read_on}` : '')
+    + ' · not counted in the headline');
+}
+
 function cells(r) {
   const led = r.ledger || {}, ms = r.measures || {};
   const never = new Set(RULES.never_scored_ids || []);
   const names = RULES.criterion_names || {};
   const why = RULES.not_scored_because || {};
+  const hand = r.hand || {};
   let out = '';
   for (let c = 1; c <= (RULES.criteria_total || 13); c++) {
     const nm = names[c] || ('criterion ' + c);
+    const h = hand[c];
+    if (h) {
+      // Your reading wins the cell over "never scoreable" — that hatch
+      // means no FREE SOURCE reaches it, and you reached it.
+      out += `<span class="c13 hand" title="${handTip(c, nm, h)}">${c}</span>`;
+      continue;
+    }
     if (never.has(c)) {
       out += `<span class="c13 never" title="${c}. ${nm} — NEVER SCORED: ${why[c] || 'no free source'}">${c}</span>`;
       continue;
@@ -336,9 +419,13 @@ function vetoCell(r) {
   const led = r.ledger || {}, ms = r.measures || {};
   const ids = RULES.veto_ids || [];
   if (!ids.length) return '<span class="dim">—</span>';
+  const hand = r.hand || {};
   const out = ids.map(c => {
     const m = ms[c];
     const nm = (RULES.criterion_names || {})[c] || ('criterion ' + c);
+    if (hand[c]) {
+      return `<span class="c13 hand" title="${handTip(c, nm, hand[c])}">${c}</span>`;
+    }
     if (!m || !m.measured) {
       return `<span class="c13 unmeasured" title="${c}. ${nm} — not read: ${(m && m.reason) || 'no data'}">${c}</span>`;
     }
@@ -358,8 +445,12 @@ function val(r, c) {
 
 function row(r) {
   const led = r.ledger || {};
+  const nHand = Object.keys(r.hand || {}).length;
+  const total = (HAND.manual_ids || []).length || 6;
+  const mark = r.hand_verdict
+    ? `<span class="hb-flag" title="${esc(r.hand_verdict)}">by hand</span>` : '';
   return `<tr>
-    <td class="tick">${r.ticker}</td>
+    <td class="tick">${r.ticker}${mark}</td>
     <td title="${(r.name || '').replace(/"/g,'&quot;')}">${(r.name || '').slice(0,30)}</td>
     <td class="dim">${r.location || '—'}</td>
     <td class="dim">${r.size_band || ''}</td>
@@ -367,10 +458,120 @@ function row(r) {
     <td>${cells(r)}</td>
     <td class="hb-head" title="Three criteria can never be scored, three can only veto, and the size gate does not vote — so six is the ceiling.">${led.headline || '—'}</td>
     <td>${vetoCell(r)}</td>
+    <td><button class="hb-read${nHand ? ' has' : ''}" data-tkr="${esc(r.ticker)}"
+        title="The six criteria no free source reaches. Open a filing, type what it says.">${nHand}/${total}</button></td>
     <td>${val(r,1)}</td><td>${val(r,2)}</td><td>${val(r,3)}</td>
     <td>${val(r,4)}</td><td>${val(r,5)}</td><td>${val(r,11)}</td>
   </tr>`;
 }
+
+// ── THE EDITOR ───────────────────────────────────────────────────────
+let EDITING = null, CAN_EDIT = false;
+
+// Whether writes will be accepted, asked ONCE at load. Without this the
+// form looks fine, the Save button 401s, and the reason is invisible —
+// which is a worse failure here than anywhere else on the page, because
+// the thing being lost is an hour of somebody reading a proxy statement.
+async function loadCanEdit() {
+  try {
+    const r = await fetch('/api/hundred/hand');
+    CAN_EDIT = !!(await r.json()).can_edit;
+  } catch (e) { CAN_EDIT = false; }
+}
+
+function openEditor(ticker) {
+  const r = ROWS.find(x => (x.ticker || '') === ticker);
+  if (!r) return;
+  EDITING = ticker;
+  const names = RULES.criterion_names || {};
+  const docs = HAND.documents || {}, units = HAND.units || {};
+  const numeric = new Set(HAND.numeric_ids || []);
+  const hand = r.hand || {};
+  document.getElementById('hbEdTitle').textContent = `${ticker} — ${r.name || ''}`;
+  document.getElementById('hbEdLock').innerHTML = CAN_EDIT ? '' :
+    `<div class="hb-note" style="margin:0.6rem 0 0;"><strong>Read-only.</strong> Saving needs an
+     admin session — open <code>/admin/login?token=…</code> once and this page will accept
+     entries. Existing readings are shown below either way.</div>`;
+  document.getElementById('hbEdRows').innerHTML = (HAND.manual_ids || []).map(c => {
+    const h = hand[c] || {};
+    const isNum = numeric.has(c);
+    return `<div class="hb-ed-row" data-c="${c}">
+      <div class="hb-ed-h"><strong>${c}. ${esc(names[c] || '')}</strong>
+        ${c === HAND.retracting_id ? '<span class="hb-flag">can change the verdict</span>' : ''}</div>
+      <div class="hb-ed-doc">${esc(docs[c] || '')}</div>
+      <div class="hb-ed-f">
+        ${isNum ? `<input class="v" type="number" step="any" placeholder="${esc(units[c] || '')}"
+                    value="${h.value == null ? '' : h.value}">`
+                : `<span class="dim hb-ed-noscale">no agreed scale — write what you found</span>`}
+        <input class="n" placeholder="what you found" value="${esc(h.note || '')}">
+        <input class="s" placeholder="what you read (required)" value="${esc(h.source || '')}">
+        <input class="d" type="date" value="${esc(h.read_on || '')}">
+        <button class="hb-save" data-c="${c}"${CAN_EDIT ? '' : ' disabled'}>Save</button>
+        ${h.source ? `<button class="hb-del" data-c="${c}">Clear</button>` : ''}
+      </div>
+      <div class="hb-ed-msg"></div>
+    </div>`;
+  }).join('');
+  document.getElementById('hbEditor').style.display = '';
+}
+
+function closeEditor() {
+  EDITING = null;
+  document.getElementById('hbEditor').style.display = 'none';
+}
+
+async function saveEntry(cid) {
+  const box = document.querySelector(`.hb-ed-row[data-c="${cid}"]`);
+  const msg = box.querySelector('.hb-ed-msg');
+  const vEl = box.querySelector('.v');
+  msg.className = 'hb-ed-msg';
+  msg.textContent = 'Saving…';
+  try {
+    const res = await fetch('/api/hundred/hand', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        ticker: EDITING, criterion: cid,
+        value: vEl && vEl.value !== '' ? Number(vEl.value) : null,
+        note: box.querySelector('.n').value,
+        source: box.querySelector('.s').value,
+        read_on: box.querySelector('.d').value,
+      }),
+    });
+    const d = await res.json();
+    if (!res.ok) { msg.className = 'hb-ed-msg bad'; msg.textContent = d.error || `HTTP ${res.status}`; return; }
+    msg.className = 'hb-ed-msg good';
+    msg.textContent = 'Saved.';
+    await loadSnapshot(document.getElementById('hbSnap').value);
+    if (EDITING) openEditor(EDITING);
+  } catch (e) {
+    msg.className = 'hb-ed-msg bad'; msg.textContent = String(e);
+  }
+}
+
+async function deleteEntry(cid) {
+  const box = document.querySelector(`.hb-ed-row[data-c="${cid}"]`);
+  const msg = box.querySelector('.hb-ed-msg');
+  try {
+    const res = await fetch(`/api/hundred/hand/${encodeURIComponent(EDITING)}/${cid}`,
+                            {method: 'DELETE'});
+    const d = await res.json();
+    if (!res.ok || !d.ok) { msg.className = 'hb-ed-msg bad'; msg.textContent = d.error || 'could not clear'; return; }
+    await loadSnapshot(document.getElementById('hbSnap').value);
+    if (EDITING) openEditor(EDITING);
+  } catch (e) {
+    msg.className = 'hb-ed-msg bad'; msg.textContent = String(e);
+  }
+}
+
+document.addEventListener('click', ev => {
+  const open = ev.target.closest('.hb-read');
+  if (open) { openEditor(open.dataset.tkr); return; }
+  if (ev.target.closest('#hbEdClose')) { closeEditor(); return; }
+  const s = ev.target.closest('.hb-save');
+  if (s) { saveEntry(Number(s.dataset.c)); return; }
+  const d = ev.target.closest('.hb-del');
+  if (d) { deleteEntry(Number(d.dataset.c)); return; }
+});
 
 function renderSubtitle() {
   const r = RULES;
@@ -519,7 +720,7 @@ function render() {
   const shown = rows.slice(0, ROW_CAP);
   document.getElementById('hbBody').innerHTML = shown.length
     ? shown.map(row).join('')
-    : '<tr><td colspan="14" class="empty">Nothing on the list.</td></tr>';
+    : '<tr><td colspan="15" class="empty">Nothing on the list.</td></tr>';
   document.getElementById('hbCount').textContent =
     `${rows.length} name${rows.length === 1 ? '' : 's'}`;
   document.getElementById('hbShowing').textContent =
@@ -527,13 +728,14 @@ function render() {
 }
 
 async function loadSnapshot(month) {
-  document.getElementById('hbBody').innerHTML = '<tr><td colspan="14" class="empty">Loading…</td></tr>';
+  document.getElementById('hbBody').innerHTML = '<tr><td colspan="15" class="empty">Loading…</td></tr>';
   try {
     const r = await fetch(`/api/hundred/snapshot/${month}`);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const d = await r.json();
     ROWS = d.companies || []; META = d._meta || {};
     RULES = META.rules || {}; CENSUS = META.census || {};
+    HAND = META.hand_rules || {};
     document.getElementById('hbMeta').textContent =
       `as of ${META.as_of || month} · ${META.listed_count ?? '—'} on the list of `
       + `${(META.screened_count ?? 0).toLocaleString()} screened`
@@ -541,7 +743,7 @@ async function loadSnapshot(month) {
     renderKey(); renderSubtitle(); renderChurn(); renderConcentration(); renderFunnel(); render();
   } catch (e) {
     document.getElementById('hbBody').innerHTML =
-      `<tr><td colspan="14" class="empty">Failed to load: ${e.message}</td></tr>`;
+      `<tr><td colspan="15" class="empty">Failed to load: ${e.message}</td></tr>`;
   }
 }
 
@@ -553,16 +755,17 @@ async function init() {
     if (!d.months || !d.months.length) {
       p.innerHTML = '<option>No snapshots yet</option>';
       document.getElementById('hbBody').innerHTML =
-        '<tr><td colspan="14" class="empty">No snapshot yet — the monthly run has not completed.</td></tr>';
+        '<tr><td colspan="15" class="empty">No snapshot yet — the monthly run has not completed.</td></tr>';
       return;
     }
     p.innerHTML = d.months.map(m => `<option value="${m}">${m}</option>`).join('');
     p.value = d.latest;
     p.addEventListener('change', () => loadSnapshot(p.value));
+    await loadCanEdit();
     loadSnapshot(d.latest);
   } catch (e) {
     document.getElementById('hbBody').innerHTML =
-      `<tr><td colspan="14" class="empty">Failed to load the snapshot list: ${e.message}</td></tr>`;
+      `<tr><td colspan="15" class="empty">Failed to load the snapshot list: ${e.message}</td></tr>`;
   }
 }
 document.getElementById('hbSearch').addEventListener('input', render);
