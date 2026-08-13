@@ -91,9 +91,12 @@ check(_v.measured and _v.band == "Yikes",
 
 # The old behaviour, pinned so it cannot come back by accident.
 _old = C.capital_veto(rec["op_income_by_year"], rec["equity_by_year"])
-check(_old.band == "quiet" and "too little to judge" in (_old.basis or ""),
-      "and that is precisely what the equity series still produces, which is "
-      "why this is a fixed denominator and not a fixed threshold")
+check(_old.band == "quiet" and _old.value is None,
+      "and the equity series still exempts the very same company — which is "
+      "why this was a fixed denominator and not a fixed threshold. Asserted "
+      "on the outcome rather than the wording: this check pinned the old "
+      "sentence and broke when that sentence was corrected, which is a test "
+      "guarding prose instead of behaviour")
 
 
 # ── EVERY INPUT MUST BE FILED ────────────────────────────────────────

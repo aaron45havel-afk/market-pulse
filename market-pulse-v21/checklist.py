@@ -548,10 +548,27 @@ def capital_veto(op_income_by_year: dict, invested_capital_by_year: dict) -> Mea
     if cap[y0] <= 0:
         return unmeasured("opening invested capital not positive")
     if d_cap <= cap[y0] * INCREMENTAL_MIN_CAPITAL_GROWTH:
-        # Nothing was invested, so nothing can be said about how well.
+        # Nothing was invested, so nothing can be said about how well — but
+        # TWO DIFFERENT THINGS LAND HERE and they were being told the same
+        # sentence. On the current board 78 companies barely moved their
+        # capital and 376 shrank it, and all 454 read "too little to judge".
+        # "Too little" describes smallness; a company that returned or wrote
+        # off 40% of its capital base did something substantial, and calling
+        # that too little to judge is the same species of error as the rest
+        # of this file's history — a real event described by a sentence that
+        # does not fit it. Both stay quiet, because incremental return on a
+        # capital base that is leaving is undefined rather than bad. Only
+        # the description changes, and it should.
+        moved = d_cap / cap[y0] * 100.0
+        if d_cap < 0:
+            return Measure(None, True, "", "quiet",
+                           f"capital FELL {abs(moved):.0f}% over "
+                           f"{y0[:4]}-{y1[:4]} — incremental return is "
+                           f"undefined when capital is leaving, so this "
+                           f"says nothing either way about the allocation")
         return Measure(None, True, "", "quiet",
-                       f"capital grew {d_cap / cap[y0] * 100:+.0f}% — too little "
-                       f"to judge incremental return")
+                       f"capital grew {moved:+.0f}% over {y0[:4]}-{y1[:4]} "
+                       f"— too little invested to judge how well")
     inc = (op[y1] - op[y0]) / d_cap * 100.0
     basis = (f"{inc:+.1f}% on ${d_cap / 1e6:,.0f}M of incremental capital, "
              f"{y0[:4]}-{y1[:4]}")
