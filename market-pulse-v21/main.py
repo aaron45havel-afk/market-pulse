@@ -5219,7 +5219,21 @@ async def api_hundred_snapshot(month: str):
     if not path.exists():
         return JSONResponse({"error": f"no snapshot for {month}"}, status_code=404)
     try:
-        return JSONResponse(json.loads(path.read_text()))
+        data = json.loads(path.read_text())
+        # BACKFILL THE CLUSTERING READOUT for snapshots built before it
+        # existed. Computed here rather than in the page so there is one
+        # implementation and it is the domain module's — a second copy in
+        # JavaScript is how the sector ordering came to disagree with
+        # itself. The file on disk stays exactly as the Action wrote it.
+        meta = data.get("_meta") or {}
+        cen = meta.get("census")
+        if isinstance(cen, dict) and not cen.get("clustering"):
+            try:
+                import checklist as _C
+                cen["clustering"] = _C.value_clustering(data.get("companies") or [])
+            except Exception:
+                logger.exception("hundred: clustering backfill failed")
+        return JSONResponse(data)
     except Exception as e:
         return JSONResponse({"error": f"failed to read snapshot: {e}"}, status_code=500)
 
