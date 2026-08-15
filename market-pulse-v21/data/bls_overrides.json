@@ -1,46 +1,46 @@
 {
   "_meta": {
-    "as_of": "2026-07-15",
-    "latest_obs": "2026-05-01",
+    "as_of": "2026-08-15",
+    "latest_obs": "2026-06-01",
     "source": "FRED state unemployment series ({STATE}UR), Bureau of Labor Statistics",
     "states_covered": 51
   },
   "overrides": {
     "AL": {
-      "unemployment_pct": 3.0
+      "unemployment_pct": 3.2
     },
     "AK": {
-      "unemployment_pct": 4.6
+      "unemployment_pct": 4.4
     },
     "AZ": {
-      "unemployment_pct": 4.8
+      "unemployment_pct": 4.9
     },
     "AR": {
-      "unemployment_pct": 4.2
+      "unemployment_pct": 4.1
     },
     "CA": {
-      "unemployment_pct": 5.3
+      "unemployment_pct": 5.2
     },
     "CO": {
       "unemployment_pct": 3.9
     },
     "CT": {
-      "unemployment_pct": 5.1
+      "unemployment_pct": 5.2
     },
     "DE": {
-      "unemployment_pct": 5.1
+      "unemployment_pct": 4.9
     },
     "DC": {
-      "unemployment_pct": 6.1
+      "unemployment_pct": 6.0
     },
     "FL": {
-      "unemployment_pct": 4.8
+      "unemployment_pct": 4.7
     },
     "GA": {
       "unemployment_pct": 3.4
     },
     "HI": {
-      "unemployment_pct": 2.5
+      "unemployment_pct": 2.6
     },
     "ID": {
       "unemployment_pct": 3.7
@@ -58,22 +58,22 @@
       "unemployment_pct": 3.8
     },
     "KY": {
-      "unemployment_pct": 4.5
+      "unemployment_pct": 4.7
     },
     "LA": {
-      "unemployment_pct": 4.5
+      "unemployment_pct": 4.4
     },
     "ME": {
       "unemployment_pct": 3.1
     },
     "MD": {
-      "unemployment_pct": 4.4
+      "unemployment_pct": 4.3
     },
     "MA": {
-      "unemployment_pct": 4.5
+      "unemployment_pct": 4.4
     },
     "MI": {
-      "unemployment_pct": 5.1
+      "unemployment_pct": 5.0
     },
     "MN": {
       "unemployment_pct": 4.4
@@ -82,82 +82,82 @@
       "unemployment_pct": 3.8
     },
     "MO": {
-      "unemployment_pct": 3.8
+      "unemployment_pct": 3.7
     },
     "MT": {
-      "unemployment_pct": 3.4
+      "unemployment_pct": 3.3
     },
     "NE": {
-      "unemployment_pct": 3.0
+      "unemployment_pct": 2.9
     },
     "NV": {
-      "unemployment_pct": 5.2
+      "unemployment_pct": 5.1
     },
     "NH": {
-      "unemployment_pct": 3.0
+      "unemployment_pct": 2.9
     },
     "NJ": {
-      "unemployment_pct": 4.7
+      "unemployment_pct": 4.5
     },
     "NM": {
-      "unemployment_pct": 4.9
+      "unemployment_pct": 4.8
     },
     "NY": {
       "unemployment_pct": 4.6
     },
     "NC": {
-      "unemployment_pct": 3.7
+      "unemployment_pct": 3.6
     },
     "ND": {
-      "unemployment_pct": 2.4
+      "unemployment_pct": 2.3
     },
     "OH": {
-      "unemployment_pct": 3.7
+      "unemployment_pct": 3.6
     },
     "OK": {
-      "unemployment_pct": 4.1
+      "unemployment_pct": 4.2
     },
     "OR": {
       "unemployment_pct": 5.2
     },
     "PA": {
-      "unemployment_pct": 4.2
+      "unemployment_pct": 4.1
     },
     "RI": {
-      "unemployment_pct": 4.3
+      "unemployment_pct": 4.1
     },
     "SC": {
-      "unemployment_pct": 4.6
+      "unemployment_pct": 4.4
     },
     "SD": {
-      "unemployment_pct": 2.1
+      "unemployment_pct": 2.0
     },
     "TN": {
-      "unemployment_pct": 3.6
+      "unemployment_pct": 3.5
     },
     "TX": {
-      "unemployment_pct": 4.3
+      "unemployment_pct": 4.4
     },
     "UT": {
-      "unemployment_pct": 3.7
+      "unemployment_pct": 3.6
     },
     "VT": {
       "unemployment_pct": 2.6
     },
     "VA": {
-      "unemployment_pct": 3.8
+      "unemployment_pct": 3.7
     },
     "WA": {
       "unemployment_pct": 5.2
     },
     "WV": {
-      "unemployment_pct": 4.3
+      "unemployment_pct": 4.2
     },
     "WI": {
-      "unemployment_pct": 3.4
+      "unemployment_pct": 3.3
     },
     "WY": {
-      "unemployment_pct": 3.4
+      "unemployment_pct": 3.2
     }
   }
 }
