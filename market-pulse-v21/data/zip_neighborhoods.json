@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "as_of": "2026-08-09",
-    "count": 6685,
+    "as_of": "2026-08-16",
+    "count": 6694,
     "source": "Photon (komoot.io OSM reverse-geocoder), neighbourhood/suburb/district tags"
   },
   "neighborhoods": {
@@ -819,6 +819,7 @@
     "08043": "Alluvium Woods",
     "08045": "Snow Hill",
     "08046": "Millbrook Park",
+    "08048": "Acacia Lumberton Manor",
     "08049": "Greenland",
     "08051": "Centre City",
     "08053": "Tomlinson Mill",
@@ -1992,6 +1993,7 @@
     "16661": "Madera",
     "16662": "Clover Creek",
     "16664": "New Enterprise",
+    "16667": "Osterburg",
     "16678": "East Saxton",
     "16679": "Finleyville",
     "16683": "Seven Stars",
@@ -4419,8 +4421,10 @@
     "44689": "Winesburg",
     "44699": "Tippecanoe",
     "44703": "West Park",
+    "44705": "Pleasant View",
     "44706": "Banker Heights",
     "44707": "Orchard Heights",
+    "44708": "Whipple Heights",
     "44709": "Edgefield",
     "44710": "Harter Heights",
     "44714": "Trump",
@@ -4529,6 +4533,7 @@
     "45715": "Moscow Mills",
     "45729": "Fleming",
     "45742": "Fillmore",
+    "45764": "Kimberly",
     "45766": "Mineral",
     "45767": "Glass",
     "45771": "Dorcas",
@@ -5748,6 +5753,7 @@
     "75494": "Westbrook",
     "75503": "Wamba",
     "75561": "Burns",
+    "75570": "Boston",
     "75572": "Springdale",
     "75601": "Fuston Addition",
     "75602": "Estes",
@@ -6031,6 +6037,7 @@
     "80827": "Tarryall",
     "80829": "Crystal Park",
     "80903": "Downtown",
+    "80908": "Terra Ridge Estates",
     "80917": "Willow Run",
     "80918": "Visa Grande Terrace",
     "81092": "Big Bend",
@@ -6689,6 +6696,8 @@
     "95690": "Snug Harbor",
     "95703": "Applegate",
     "95713": "Iowa Hill",
-    "95714": "Dutch Flat"
+    "95714": "Dutch Flat",
+    "95747": "Bella Terra",
+    "95762": "Stonegate Village"
   }
 }
