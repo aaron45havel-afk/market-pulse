@@ -236,6 +236,28 @@ check(R.INSTANT["stockholders_equity"][0] == "StockholdersEquity",
       "minority interests, which are not the common holder's book")
 
 
+# ── PREFERRED SERIES ARE NOT THE COMMON ──
+# They carry their issuer's CIK, so they inherit its whole balance sheet
+# and appear as a duplicate row — precisely the case is_warrant exists to
+# stop. Nine reached the August board and not one of them got a quote.
+for _t in ("AHL-PD", "ANG-PD", "CDR-PB", "OAK-PA", "SCE-PG", "TRTN-PA",
+           "CFTR-PA", "PHXE-P", "SEAL-PA"):
+    check(R.is_warrant(_t),
+          f"{_t} is a preferred series, not the common — a fixed claim with "
+          f"a par value, about which tangible book per COMMON share says "
+          f"nothing")
+check(R.is_warrant("NONE."),
+      "and a trailing separator with nothing after it is a malformed row "
+      "rather than a share class")
+for _t in ("MOG-A", "BRK-B", "BF-B", "CRD-A"):
+    check(not R.is_warrant(_t),
+          f"{_t} IS the common in a dual-class company and stays — it needs "
+          f"a price, not an exclusion")
+check(not R.is_warrant("AAPL") and R.is_warrant("XYZ-WT")
+      and R.is_warrant("ABCDW"),
+      "ordinary tickers are untouched and warrants still go")
+
+
 # ── THE QUOTE FILL: winner-take-all left the small end unpriced ──
 # The screener feed that wins on coverage lists major exchanges only, so
 # 1,148 of 5,673 companies carried no price on the August board — every
