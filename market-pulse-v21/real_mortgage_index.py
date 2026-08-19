@@ -25,6 +25,7 @@ import json
 import logging
 import os
 import time
+from datetime import date, timedelta
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -79,6 +80,115 @@ START_DATE = "1985-01-01"          # need a few years before 1990 to anchor
 BASE_PERIOD = "1990-01"            # January 1990 = 100
 MORTGAGE_RATE_SERIES = "MORTGAGE30US"
 CPI_LESS_SHELTER_SERIES = "CUSR0000SA0L2"  # CPI-U All items less shelter, SA
+
+
+# ── WHY THE CHART STOPS WHERE IT STOPS ──────────────────────────────
+# The three inputs are inner-joined, so the newest month on the chart is
+# the newest month ALL THREE have. They do not publish on the same
+# schedule, and the slowest one therefore sets the date:
+#
+#   30-year mortgage rate   weekly, current to within days
+#   CPI less shelter        monthly, ~2 weeks after month end
+#   Case-Shiller            monthly, ~2 MONTHS after month end
+#
+# So the chart trailing "today" by two months is the data arriving, not
+# the page failing to refresh — but a bare "as of May 2026" looks exactly
+# like neglect, which is what prompted this. These functions let the page
+# say which input it is waiting on and when that input next publishes,
+# rather than leaving a reader to guess.
+SOURCE_LABELS = {
+    "hpi": "Case-Shiller home prices",
+    "rate": "30-year mortgage rate",
+    "cpi": "CPI less shelter",
+}
+
+# S&P publish Case-Shiller at 9am ET on the last Tuesday of each month,
+# and the report carries the month TWO before it: the release on
+# 2026-08-25 is the June 2026 index.
+CASE_SHILLER_LAG_MONTHS = 2
+
+
+def last_tuesday(year: int, month: int) -> date:
+    """The last Tuesday of a month — Case-Shiller's release day."""
+    nxt = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
+    eom = nxt - timedelta(days=1)
+    # weekday(): Mon=0, Tue=1. Step back to the most recent Tuesday.
+    return eom - timedelta(days=(eom.weekday() - 1) % 7)
+
+
+def next_case_shiller_release(today: date) -> dict:
+    """The next Case-Shiller release on or after `today`, and what it adds.
+
+    Returns the release date and the month that release will cover, so a
+    reader waiting for the chart to advance knows the actual date to look
+    again rather than being told "soon".
+    """
+    y, m = today.year, today.month
+    rel = last_tuesday(y, m)
+    if rel < today:
+        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+        rel = last_tuesday(y, m)
+    cy, cm = y, m - CASE_SHILLER_LAG_MONTHS
+    if cm <= 0:
+        cm += 12
+        cy -= 1
+    return {"date": rel.isoformat(), "covers": f"{cy:04d}-{cm:02d}"}
+
+
+def binding_source(last_observation: dict) -> str | None:
+    """Which input is holding the chart back.
+
+    MEASURED, never assumed. Case-Shiller is the usual answer, but if CPI
+    or the rate series ever stalls this must name that instead — a page
+    that blames the wrong feed sends its reader to check the wrong thing.
+    Returns None when nothing is known rather than guessing.
+    """
+    known = {k: v for k, v in (last_observation or {}).items() if v}
+    if not known:
+        return None
+    return min(known, key=lambda k: known[k])
+
+
+def months_between(earlier: str, later: str) -> int | None:
+    """Whole months from one YYYY-MM to another. None if either is junk."""
+    try:
+        ey, em = (int(x) for x in earlier.split("-")[:2])
+        ly, lm = (int(x) for x in later.split("-")[:2])
+    except (ValueError, AttributeError, TypeError):
+        return None
+    return (ly - ey) * 12 + (lm - em)
+
+
+def freshness(last_observation: dict, as_of_month: str, today: date) -> dict:
+    """Everything the page needs to explain its own end date."""
+    src = binding_source(last_observation)
+    return {
+        "as_of_month": as_of_month,
+        "last_observation": dict(last_observation or {}),
+        "binding_source": src,
+        "binding_label": SOURCE_LABELS.get(src),
+        "months_behind": months_between(as_of_month,
+                                        f"{today.year:04d}-{today.month:02d}"),
+        "next_case_shiller": next_case_shiller_release(today),
+    }
+
+
+def _refresh_freshness(payload: dict) -> dict:
+    """Re-date a cached payload's freshness block against today.
+
+    Payloads written before this block existed have no `last_observation`
+    to work from. Those keep whatever they have rather than getting an
+    invented one — an unexplained date is a smaller lie than a wrong
+    explanation, and the next fetch replaces it anyway.
+    """
+    f = (payload or {}).get("freshness")
+    if not f or not f.get("last_observation"):
+        return payload
+    out = dict(payload)
+    out["freshness"] = freshness(f["last_observation"],
+                                 f.get("as_of_month") or "",
+                                 date.today())
+    return out
 
 
 def _cp(k):
@@ -148,7 +258,12 @@ def compute_index(metro: str = "US", down_pct: float = 10.0) -> dict:
     cache_key = f"rmpi_{metro}_d{int(down_pct)}"
     cached = _rc(cache_key, hrs=24)
     if cached:
-        return cached
+        # The series are a day old at most, but "next release" and "months
+        # behind" are statements about NOW. Served straight from cache they
+        # would eventually name a release date already in the past — the
+        # page would be confidently wrong about the one thing a reader
+        # came to it for. Recompute them against today's date.
+        return _refresh_freshness(cached)
 
     api_key = os.environ.get("FRED_API_KEY", "").strip()
     if not api_key:
@@ -191,6 +306,15 @@ def compute_index(metro: str = "US", down_pct: float = 10.0) -> dict:
             stale["stale_reason"] = f"FRED upstream error: {last_err}"
             return stale
         return {"error": f"FRED fetch failed: {last_err}"}
+
+    # Recorded BEFORE the join, because the join is what hides the answer:
+    # afterwards every series ends on the same month and there is no way
+    # to tell which one ran out first.
+    def _last_month(s):
+        return s.index[-1].strftime("%Y-%m") if len(s) else None
+
+    last_observation = {"hpi": _last_month(hpi), "rate": _last_month(rate),
+                        "cpi": _last_month(cpi)}
 
     # Mortgage rate is weekly (Thursdays); resample to monthly mean so it
     # aligns with HPI + CPI (both monthly).
@@ -253,6 +377,7 @@ def compute_index(metro: str = "US", down_pct: float = 10.0) -> dict:
         "down_pct": down_pct,
         "base_period": base_actual,
         "as_of": now_d,
+        "freshness": freshness(last_observation, now_d[:7], date.today()),
         "series": series,
         "stats": {
             "now": now_v, "now_date": now_d,

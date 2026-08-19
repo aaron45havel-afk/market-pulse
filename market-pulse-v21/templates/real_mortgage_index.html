@@ -18,6 +18,7 @@
     .rmpi-stat .num.trough { color: var(--mint-ink); }
     .rmpi-stat .meaning { color: var(--ink-2); font-size: 0.92rem; margin-top: 0.55rem; line-height: 1.4; }
     .rmpi-stat .when { color: var(--ink-4); font-size: 0.75rem; margin-top: 0.4rem; }
+    .rmpi-stat .when.lag { margin-top: 0.3rem; line-height: 1.45; font-style: italic; }
 
     /* ── Chart card + controls ── */
     .rmpi-chart-card { padding: 1.25rem; }
@@ -77,6 +78,14 @@
         <div class="num now" id="statNow">—</div>
         <div class="meaning" id="statNowMeaning">Loading…</div>
         <div class="when" id="statNowDate"></div>
+        <!-- Why the newest month is not this month. Case-Shiller is
+             published about two months in arrears, so a chart refreshing
+             perfectly still ends two months back — and a bare "as of May"
+             in August is indistinguishable from a page nobody is
+             updating. Filled from the MEASURED series end dates, so if
+             CPI or the rate feed is ever the one lagging it says that
+             instead. -->
+        <div class="when lag" id="statNowLag"></div>
     </div>
     <div class="card rmpi-stat">
         <div class="tag">2006 Bubble Peak</div>
@@ -220,17 +229,54 @@
         const d = new Date(iso + 'T00:00:00');
         return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
     };
+    // Month-and-year is right for naming a data point, but wrong for a
+    // release date — "the next release is Aug 2026" does not tell anyone
+    // which day to look again.
+    const fmtDay = (iso) => {
+        if (!iso) return '';
+        const d = new Date(iso + 'T00:00:00');
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    };
 
     function showError(msg) {
         errorBox.innerHTML = '<div class="rmpi-error">' + msg + '</div>';
     }
     function clearError() { errorBox.innerHTML = ''; }
 
+    // Explains the gap between the newest month on the chart and today.
+    // Every clause is skipped unless the backend actually measured the
+    // thing it describes — a reassuring sentence assembled from missing
+    // fields is worse than no sentence, because it would answer the
+    // reader's question wrongly rather than leaving it open.
+    function renderLag(f) {
+        const el = document.getElementById('statNowLag');
+        if (!el) return;
+        if (!f || f.months_behind == null || f.months_behind < 1) { el.textContent = ''; return; }
+
+        const src  = f.binding_label;
+        const next = f.next_case_shiller || {};
+        const parts = [];
+
+        // Lead with "not stale", because that is the question being asked.
+        parts.push(src
+            ? 'Not stale — this is the newest ' + src + ' reading, the slowest of the three inputs.'
+            : 'Not stale — this is the newest month all three inputs share.');
+
+        // Only Case-Shiller's calendar is known, so name a next release
+        // only when Case-Shiller is the series actually holding things up.
+        if (f.binding_source === 'hpi' && next.date && next.covers) {
+            parts.push('It publishes about two months in arrears. Next release '
+                       + fmtDay(next.date) + ', adding ' + fmtDate(next.covers + '-01') + '.');
+        }
+        el.textContent = parts.join(' ');
+    }
+
     function renderStats(d) {
         const s = d.stats || {};
         const c = d.comparison || {};
         document.getElementById('statNow').textContent       = fmtNum(s.now);
         document.getElementById('statNowDate').textContent   = s.now_date ? 'as of ' + fmtDate(s.now_date) : '';
+        renderLag(d.freshness);
         document.getElementById('statPeak').textContent      = fmtNum(s.peak_2006);
         document.getElementById('statPeakDate').textContent  = s.peak_2006_date ? fmtDate(s.peak_2006_date) : '';
         document.getElementById('statTrough').textContent    = fmtNum(s.trough_2012);
