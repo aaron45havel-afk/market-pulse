@@ -2207,11 +2207,39 @@ async def schloss_page(request: Request):
     and unloved end of the market that a revenue floor would delete."""
     import schloss as SC
     payload = SC.load()
+    # HAND-ENTERED QUOTES, merged on read. 894 of 5,726 rows arrive with no
+    # price because no free feed carries them — every OTC name, and every
+    # dual-class ticker including Berkshire. The balance sheet for those is
+    # fully screened; only the cheapness half is blank. A price typed in
+    # here fills it using the same arithmetic the build uses, and the file
+    # on disk stays exactly what the Action produced.
+    hand_prices = {}
+    try:
+        from database import get_all_prices
+        hand_prices = get_all_prices() or {}
+    except Exception:
+        logger.exception("schloss: could not read hand-entered prices")
+    if hand_prices:
+        for row in payload.get("rows") or []:
+            q = hand_prices.get((row.get("ticker") or "").upper())
+            if not q:
+                continue
+            shares = SC.shares_from_row(row)
+            if shares is None:
+                row["hand_price_note"] = (
+                    f"${q['price']:g} entered, but no share count is "
+                    f"recoverable from this row, so no market cap follows")
+                continue
+            row.update(SC.reprice(row, q["price"] * shares))
+            row["hand_price"] = q["price"]
+            row["hand_price_shares"] = shares
+            row["hand_price_at"] = q.get("entered_at")
     return templates.TemplateResponse("schloss.html", {
         "request":     request,
         "payload":     payload,
         "rows":        payload.get("rows") or [],
         "census":      payload.get("census") or {},
+        "can_edit":    _check_admin_token(request),
         "lists":       SC.board(payload),
         "data_source": SC.data_source_label(payload),
         "S":           SC,

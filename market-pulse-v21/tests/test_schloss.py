@@ -759,6 +759,52 @@ check(all(p in _doc for p in ("SALABLE REAL ESTATE", "SURPLUS DIVISIONS",
       "sheet would understate the very thing he was hunting")
 
 
+# ── HAND-ENTERED QUOTES ──
+# 894 of 5,726 rows arrive with no price: no free feed carries OTC, and
+# none carries a dual-class ticker either. Their balance sheets are fully
+# screened; only the cheapness half is blank.
+_row = {"tangible_book": 2.06e6, "tangible_book_ps": 0.2834,
+        "ncav": 1.31e6, "ncav_ps": 0.18,
+        "riklis": {"ratio": None, "hard": 1.4e6, "net": 9.2e5,
+                   "reason": "no market cap"}}
+check(abs(S.shares_from_row(_row) - 7268000) < 20000,
+      "the share count is RECOVERED from the build's own tangible book per "
+      "share rather than fetched — the build only computes that figure when "
+      "it has a count it trusted enough to divide by")
+check(S.shares_from_row({"ncav": 100.0, "ncav_ps": 2.0}) == 50.0,
+      "NCAV per share is the fallback for a company with no positive book")
+check(S.shares_from_row({"tangible_book": 5.0, "tangible_book_ps": 0}) is None
+      and S.shares_from_row({}) is None,
+      "and a zero or absent per-share figure yields nothing, never a divide "
+      "by zero")
+
+_rp = S.reprice(_row, 0.85 * 7268000)
+check(_rp["price_ready"] and _rp["price_source"] == "hand",
+      "a hand price marks itself as one — a reader must always be able to "
+      "tell which numbers came from a feed")
+check(abs(_rp["p_tangible_book"] - 3.0) < 0.05,
+      "P/TB recomputes from the typed price by the same arithmetic the build "
+      "uses: $0.85 on 7.27m shares against $2.06m of tangible book is 3x, so "
+      "this one clears every gate and is not cheap")
+check(_rp["below_book"] is False and _rp["is_net_net"] is False,
+      "and the discount tests answer honestly rather than staying blank")
+check(_rp["riklis"]["ratio"] is not None,
+      "Riklis fills in too — its numerator never depended on the price")
+
+check(S.reprice(_row, 0)["p_tangible_book"] is None
+      and S.reprice(_row, 0)["riklis"]["ratio"] is None,
+      "a zero market cap prices nothing")
+check(S.reprice({**_row, "implausible": True}, 1e6)["p_tangible_book"] is None,
+      "a balance sheet already judged arithmetically impossible cannot be "
+      "rescued by typing a price at it")
+_fx = S.reprice(_row, 100.0)
+check(_fx["fx_suspect"] and _fx["p_tangible_book"] is None
+      and "currency" in _fx["riklis"]["reason"],
+      "and the currency guard applies to a hand price exactly as it does to "
+      "a fetched one — if the balance sheet was too broken to price from a "
+      "feed it is too broken to price from a keyboard")
+
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

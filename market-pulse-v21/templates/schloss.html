@@ -62,6 +62,25 @@
     padding:0.7rem 0.9rem; margin:1rem 0; font-size:0.8rem; line-height:1.6; color:var(--ink-2); }
   .sc-noprice strong { color:var(--ink-1); }
 
+  .sc-quote-btn { font:inherit; font-size:0.68rem; cursor:pointer; padding:0.05rem 0.35rem;
+    border:1px dashed var(--line); border-radius:5px; background:var(--surface-2); color:var(--ink-3); }
+  .sc-quote-btn:hover { border-style:solid; color:var(--ink-1); }
+  .sc-byhand { display:inline-block; margin-left:0.25rem; font-size:0.6rem; font-weight:800;
+    background:var(--mint-soft); color:var(--mint-ink); border-radius:3px; padding:0 0.2rem; cursor:help; }
+  .sc-byhand.warn { background:rgba(217,119,6,0.18); color:#b45309; }
+  #scQuote { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:60;
+    display:flex; align-items:center; justify-content:center; padding:1rem; }
+  #scQuote .box { background:var(--surface); border:1px solid var(--line); border-radius:12px;
+    padding:1rem 1.1rem; max-width:460px; width:100%; }
+  #scQuote input { background:var(--surface-2); border:1px solid var(--line); border-radius:6px;
+    padding:0.4rem 0.55rem; color:var(--ink-1); font-size:0.9rem; width:100%; }
+  #scQuote .rw { display:flex; gap:0.4rem; margin-top:0.7rem; }
+  #scQuote button { font-size:0.8rem; padding:0.4rem 0.7rem; border-radius:6px; cursor:pointer;
+    border:1px solid var(--line); background:var(--surface-2); color:var(--ink-1); }
+  #scQuote .go { border-color:var(--mint-ink); color:var(--mint-ink); font-weight:700; }
+  #scQuote .msg { font-size:0.75rem; margin-top:0.5rem; min-height:1rem; color:var(--ink-3); }
+  #scQuote .msg.bad { color:var(--coral-ink); }
+
   details.sc-explain { background:var(--surface); border:1px solid var(--line); border-radius:10px;
     padding:0.6rem 1rem; margin:0.8rem 0; font-size:0.82rem; line-height:1.6; }
   details.sc-explain summary { cursor:pointer; font-weight:700; font-size:0.85rem; }
@@ -105,7 +124,7 @@
   <tbody>
   {% for r in rows[:cap] %}
   <tr>
-    <td class="tick">{{ r.ticker }}</td>
+    <td class="tick">{{ r.ticker }}{% if r.hand_price %}<span class="sc-byhand" title="Priced by hand at ${{ '%g'|format(r.hand_price) }} x {{ '{:,.0f}'.format(r.hand_price_shares) }} shares{% if r.hand_price_at %}, entered {{ r.hand_price_at[:10] }}{% endif %}. The share count is the build's own, recovered from tangible book per share.">$</span>{% endif %}{% if r.hand_price_note %}<span class="sc-byhand warn" title="{{ r.hand_price_note }}">!</span>{% endif %}</td>
     <td class="nm-cell" title="{{ r.name }}">{{ r.name }}</td>
     <td class="sc-dim">{{ r.exchange or '—' }}</td>
     <td>
@@ -135,7 +154,7 @@
     <td title="{% if r.management.revenue_unrepresentative %}Revenue is under 2% of total assets, so it is not what this company earns — the ratio would be arithmetic, not description.{% elif r.management.sbc_pct_assets is not none %}{{ r.management.sbc_pct_assets }}% of total assets.{% endif %}">{% if r.management.sbc_pct_revenue is none %}<span class="sc-dim">—</span>{% elif r.management.sbc_pct_revenue > 999 %}&gt;999%{% else %}{{ r.management.sbc_pct_revenue }}%{% endif %}</td>
     <td>{% if r.management.shares_cagr is not none %}{{ '%+.1f'|format(r.management.shares_cagr) }}%{% else %}<span class="sc-dim">—</span>{% endif %}</td>
     <td class="{% if r.below_book %}sc-cheap{% endif %}"
-        title="{% if r.fx_suspect %}Market cap is under 1% of tangible book — the balance sheet and the quote are not in the same currency, so no discount can be computed.{% elif r.market_cap %}Market cap {{ '%.0f'|format(r.market_cap / 1000000) }}M.{% endif %}">{% if r.p_tangible_book is not none %}{{ r.p_tangible_book }}{% elif r.fx_suspect %}<span class="sc-dim">currency?</span>{% elif not r.price_ready %}<span class="sc-dim">no quote</span>{% else %}<span class="sc-dim">&mdash;</span>{% endif %}</td>
+        title="{% if r.fx_suspect %}Market cap is under 1% of tangible book — the balance sheet and the quote are not in the same currency, so no discount can be computed.{% elif r.market_cap %}Market cap {{ '%.0f'|format(r.market_cap / 1000000) }}M.{% endif %}">{% if r.p_tangible_book is not none %}{{ r.p_tangible_book }}{% elif r.fx_suspect %}<span class="sc-dim">currency?</span>{% elif not r.price_ready %}{% if can_edit %}<button class="sc-quote-btn" data-tkr="{{ r.ticker }}" title="No feed carries this one. Type the price you see and every column here fills in.">+ price</button>{% else %}<span class="sc-dim">no quote</span>{% endif %}{% else %}<span class="sc-dim">&mdash;</span>{% endif %}</td>
     <td class="{% if r.is_net_net %}sc-cheap{% endif %}">{% if r.p_ncav is not none %}{{ r.p_ncav }}{% elif not r.price_ready %}<span class="sc-dim">no quote</span>{% else %}<span class="sc-dim">&mdash;</span>{% endif %}</td>
     <td class="{% if r.riklis and r.riklis.ratio is not none and r.riklis.ratio >= 1.0 %}sc-cheap{% endif %}"
         title="{% set rk = r.riklis or {} %}{% if rk.get('net') is not none %}Cash + receivables less all liabilities: {{ '%.0f'|format(rk.get('net') / 1000000) }}M.{% endif %}{% if rk.get('reason') %} {{ rk.get('reason') }}.{% endif %}">{% if rk.get('ratio') is not none %}{{ '%.2f'|format(rk.get('ratio')) }}{% elif rk.get('reason') %}<span class="sc-dim">&mdash;</span>{% else %}<span class="sc-dim">not built</span>{% endif %}</td>
@@ -359,6 +378,28 @@
 </details>
 
 {% endif %}
+
+{% if can_edit %}
+<div id="scQuote" style="display:none;">
+  <div class="box">
+    <h2 style="margin:0 0 0.2rem; font-size:1rem;">Price <span id="scqT"></span></h2>
+    <p class="desc" style="margin:0 0 0.6rem; font-size:0.76rem; color:var(--ink-3); line-height:1.5;">
+      No free feed carries this one. Type the price per share you see at your broker —
+      the share count comes from the build's own tangible book per share, and every
+      price column on the row fills in from it. Stored separately; the monthly file is
+      never touched.
+    </p>
+    <input id="scqP" type="number" step="any" min="0" placeholder="price per share, e.g. 0.85">
+    <div class="rw">
+      <button class="go" id="scqSave">Save</button>
+      <button id="scqDel">Clear</button>
+      <button id="scqX" style="margin-left:auto;">Close</button>
+    </div>
+    <div class="msg" id="scqM"></div>
+  </div>
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block scripts %}
@@ -395,5 +436,68 @@ document.querySelectorAll('table.sortable').forEach(function (table) {
     });
   });
 });
+
+// ── HAND-ENTERED QUOTES ────────────────────────────────────────────
+// 894 rows arrive with no price because no free feed carries them. The
+// balance sheet is fully screened for every one; only the cheapness half
+// is blank, and a price typed here fills it.
+(function () {
+  var box = document.getElementById('scQuote');
+  if (!box) return;                       // read-only visitor
+  var cur = null;
+  var tEl = document.getElementById('scqT');
+  var pEl = document.getElementById('scqP');
+  var mEl = document.getElementById('scqM');
+
+  function open(t) {
+    cur = t; tEl.textContent = t; pEl.value = '';
+    mEl.textContent = ''; mEl.className = 'msg';
+    box.style.display = 'flex'; pEl.focus();
+  }
+  function close() { box.style.display = 'none'; cur = null; }
+
+  async function send(method, body) {
+    mEl.className = 'msg'; mEl.textContent = 'Saving…';
+    try {
+      var res = await fetch('/api/prices' + (method === 'DELETE' ? '/' + encodeURIComponent(cur) : ''), {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      var d = await res.json();
+      if (!res.ok || d.error) {
+        mEl.className = 'msg bad';
+        mEl.textContent = d.error || ('HTTP ' + res.status);
+        return;
+      }
+      location.reload();
+    } catch (e) {
+      mEl.className = 'msg bad'; mEl.textContent = String(e);
+    }
+  }
+
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest('.sc-quote-btn');
+    if (b) { open(b.dataset.tkr); return; }
+    if (ev.target.closest('#scqX')) { close(); return; }
+    if (ev.target.closest('#scqSave')) {
+      var v = parseFloat(pEl.value);
+      if (!(v > 0)) {
+        mEl.className = 'msg bad';
+        mEl.textContent = 'A price has to be a positive number.';
+        return;
+      }
+      send('POST', { ticker: cur, price: v, notes: 'entered on /schloss' });
+      return;
+    }
+    if (ev.target.closest('#scqDel')) { send('DELETE'); return; }
+  });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape' && cur) close();
+    if (ev.key === 'Enter' && cur && document.activeElement === pEl) {
+      document.getElementById('scqSave').click();
+    }
+  });
+})();
 </script>
 {% endblock %}
