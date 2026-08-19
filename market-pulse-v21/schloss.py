@@ -181,6 +181,60 @@ def ncav(current_assets, total_liabilities, preferred=None) -> float | None:
     return ca - tl - (_num(preferred) or 0.0)
 
 
+def riklis_coverage(cash=None, receivables=None, total_liabilities=None,
+                    market_cap=None) -> dict:
+    """Riklis's Ohio State homework: how much of the price comes straight back.
+
+    "Find a company holding more cash than its entire stock was worth in
+    the market." (cash + receivables - ALL liabilities) / market cap. Above
+    1.0 the liquid assets alone, after settling every claim, exceed what
+    the equity costs — you own the operating business for less than free.
+
+    NET OF EVERY LIABILITY, because the whole point is recovering the
+    purchase price at close, and cash pledged against debt recovers
+    nothing. Charging only current liabilities would produce a bigger,
+    friendlier number describing a company nobody could actually buy.
+
+    STRICTER THAN NCAV ON PURPOSE. Graham counts all current assets, so
+    inventory carries the same weight as money in the bank; a warehouse of
+    unsold goods is not the thing Riklis was recovering his price out of.
+    This counts only the two lines whose book value IS their value.
+
+    WHAT IT LEAVES OUT IS WHAT HE CARED MOST ABOUT, and no honest version
+    of this can include it. His numerator was cash, receivables, SALABLE
+    REAL ESTATE and SURPLUS DIVISIONS. Property is filed at historical
+    cost less depreciation — land bought in 1960 sits at 1960 prices — and
+    that gap was precisely his edge, so a version reading PP&E off the
+    balance sheet would understate the exact thing he was hunting while
+    looking more thorough. Divisions need segment data and a judgement
+    about which are surplus. Both are excluded and named rather than
+    approximated: this is the floor his test would have cleared, not the
+    test.
+
+    AND IT IS ONE RULE OF FIVE. The other four — paying in seller notes
+    and convertible preferred, factoring the receivables, selling the real
+    estate, reading the seller's motives — all require owning the company.
+    A minority buyer gets the margin of safety and none of the machinery.
+    """
+    c, r = _num(cash), _num(receivables)
+    tl, cap = _num(total_liabilities), _num(market_cap)
+    if c is None and r is None:
+        return {"ratio": None, "hard": None,
+                "reason": "neither cash nor receivables filed"}
+    if tl is None:
+        return {"ratio": None, "hard": None, "reason": "total liabilities not filed"}
+    # A filed line that is absent is nothing, not unknown — but only once
+    # at least one of the pair arrived, so an unfetched company cannot
+    # present as a company with no cash.
+    hard = (c or 0.0) + (r or 0.0)
+    net = hard - tl
+    if cap is None or cap <= 0:
+        return {"ratio": None, "hard": round(hard, 2), "net": round(net, 2),
+                "reason": "no market cap"}
+    return {"ratio": round(net / cap, 3), "hard": round(hard, 2),
+            "net": round(net, 2), "reason": ""}
+
+
 def non_debt_liabilities(operating_lease_current=None,
                          operating_lease_noncurrent=None,
                          accounts_payable=None,
@@ -557,6 +611,10 @@ def evaluate(f: dict, this_year: int) -> dict:
         "p_ncav": p_ncav,
         "below_book": below,
         "is_net_net": net_net,
+        # Riklis's version of the same question, one notch stricter than
+        # Graham's: cash and receivables only, against every liability.
+        "riklis": riklis_coverage(f.get("cash"), f.get("receivables"),
+                                  f.get("total_liabilities"), cap),
     }
 
 

@@ -681,6 +681,63 @@ check("no data yet" in S.data_source_label({}),
       "and a missing build says so instead of implying a screened market")
 
 
+# ── RIKLIS: the 1949 homework, and what it cannot see ──
+# "Find a company holding more cash than its entire stock was worth."
+_rk = S.riklis_coverage(cash=60e6, receivables=30e6,
+                        total_liabilities=20e6, market_cap=50e6)
+check(_rk["ratio"] == 1.4,
+      "$90m of cash and receivables less $20m of liabilities against a $50m "
+      "market cap is 1.4x — the price comes back at close and the operating "
+      "business is left over")
+
+check(S.riklis_coverage(cash=60e6, receivables=30e6, total_liabilities=200e6,
+                        market_cap=50e6)["ratio"] < 0,
+      "EVERY liability is charged, not just current ones: cash pledged "
+      "against debt recovers nothing, and charging current liabilities alone "
+      "would describe a company nobody could actually buy")
+
+# Stricter than Graham on purpose, shown against the module's own NCAV.
+check(S.ncav(100e6, 40e6) == 60e6
+      and S.riklis_coverage(cash=10e6, receivables=0.0,
+                            total_liabilities=40e6,
+                            market_cap=50e6)["ratio"] == -0.6,
+      "a company whose current assets are mostly INVENTORY passes Graham's "
+      "net-net and fails this one — a warehouse of unsold goods is not what "
+      "a purchase price gets recovered out of")
+
+check(S.riklis_coverage(cash=None, receivables=None, total_liabilities=10e6,
+                        market_cap=50e6)["ratio"] is None,
+      "neither line filed is unmeasured, never zero — a company we did not "
+      "read must not present as a company with no cash")
+check(S.riklis_coverage(cash=50e6, receivables=None, total_liabilities=10e6,
+                        market_cap=50e6)["ratio"] == 0.8,
+      "but once ONE of the pair arrives, an absent partner is nothing rather "
+      "than unknown — a filer reporting cash and no receivables has none")
+check(S.riklis_coverage(cash=50e6, receivables=10e6, total_liabilities=None,
+                        market_cap=50e6)["ratio"] is None,
+      "and with liabilities unfiled there is no net figure to report, because "
+      "the gross one would be the flattering half of the subtraction")
+
+_np = S.riklis_coverage(cash=50e6, receivables=10e6, total_liabilities=10e6,
+                        market_cap=None)
+check(_np["ratio"] is None and _np["net"] == 50e6 and "market cap" in _np["reason"],
+      "with no quote the NET liquid figure still reports — it is a fact about "
+      "the balance sheet — while the ratio waits for a price")
+check(S.riklis_coverage(cash=1e6, receivables=0.0, total_liabilities=0.0,
+                        market_cap=0)["ratio"] is None,
+      "and a zero market cap is refused rather than divided by")
+
+# The part no honest version of this can include. Whitespace-normalised:
+# the point is that the exclusion is NAMED, not where the lines wrap.
+_doc = " ".join((S.riklis_coverage.__doc__ or "").split())
+check(all(p in _doc for p in ("SALABLE REAL ESTATE", "SURPLUS DIVISIONS",
+                              "historical cost")),
+      "the function names what it leaves out: his numerator counted salable "
+      "real estate and surplus divisions, property is filed at historical "
+      "cost, and that gap WAS his edge — so reading PP&E off the balance "
+      "sheet would understate the very thing he was hunting")
+
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

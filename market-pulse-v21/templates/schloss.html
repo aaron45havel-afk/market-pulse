@@ -100,6 +100,7 @@
     <th title="Share count CAGR over 5 years. Negative is buying back.">Dilution</th>
     <th title="Market cap / tangible book. Under 0.80 is the 20% discount Schloss required. Computed from market cap, not price x shares, so it needs no share count.">P/TB</th>
     <th title="Market cap / net current asset value. Under 0.67 is a Graham net-net.">P/NCAV</th>
+    <th title="Riklis, 1949: cash and receivables less ALL liabilities, over market cap. Above 1.00 the liquid assets alone, after settling every claim, exceed what the equity costs — the price comes back at close and the operating business is left over. Stricter than NCAV, which counts inventory too. It EXCLUDES the salable real estate and surplus divisions his own numerator counted: property is filed at historical cost and that gap was his edge, so this is the floor his test would have cleared rather than the test.">Riklis</th>
   </tr></thead>
   <tbody>
   {% for r in rows[:cap] %}
@@ -136,6 +137,8 @@
     <td class="{% if r.below_book %}sc-cheap{% endif %}"
         title="{% if r.fx_suspect %}Market cap is under 1% of tangible book — the balance sheet and the quote are not in the same currency, so no discount can be computed.{% elif r.market_cap %}Market cap {{ '%.0f'|format(r.market_cap / 1000000) }}M.{% endif %}">{% if r.p_tangible_book is not none %}{{ r.p_tangible_book }}{% elif r.fx_suspect %}<span class="sc-dim">currency?</span>{% elif not r.price_ready %}<span class="sc-dim">no quote</span>{% else %}<span class="sc-dim">&mdash;</span>{% endif %}</td>
     <td class="{% if r.is_net_net %}sc-cheap{% endif %}">{% if r.p_ncav is not none %}{{ r.p_ncav }}{% elif not r.price_ready %}<span class="sc-dim">no quote</span>{% else %}<span class="sc-dim">&mdash;</span>{% endif %}</td>
+    <td class="{% if r.riklis and r.riklis.ratio is not none and r.riklis.ratio >= 1.0 %}sc-cheap{% endif %}"
+        title="{% if r.riklis and r.riklis.net is not none %}Cash + receivables less all liabilities: {{ '%.0f'|format(r.riklis.net / 1000000) }}M.{% endif %}{% if r.riklis and r.riklis.reason %} {{ r.riklis.reason }}.{% endif %}">{% if r.riklis and r.riklis.ratio is not none %}{{ '%.2f'|format(r.riklis.ratio) }}{% elif r.riklis and r.riklis.reason %}<span class="sc-dim">&mdash;</span>{% else %}<span class="sc-dim">not built</span>{% endif %}</td>
   </tr>
   {% endfor %}
   </tbody>
@@ -207,6 +210,43 @@
   disappeared.” — the one piece of market timing he allowed himself, and a measurement rather than a forecast.
   The net-net count is the reading that matters, and it is the one that needs a price.
 </p>
+
+<details class="sc-explain">
+  <summary>The stricter version of the same question — Riklis, 1949</summary>
+  <p>
+    A finance professor at Ohio State set his class an odd assignment: find a company holding
+    <em>more cash than its entire stock was worth in the market</em>. Meshulam Riklis found dozens —
+    in cement, whole companies cost less than the money in their own bank accounts — and spent the
+    next forty years running variations on that homework problem. The <strong>Riklis</strong> column
+    is that test: <code>(cash + receivables − all liabilities) ÷ market cap</code>. Above 1.00 the
+    liquid assets alone, after settling every claim, exceed what the equity costs.
+  </p>
+  <p>
+    It is <strong>stricter than the net-net beside it</strong>. Graham counts every current asset, so
+    a warehouse of unsold inventory carries the same weight as money in the bank. A purchase price
+    does not get recovered out of inventory, so this counts only the two lines whose book value
+    <em>is</em> their value. Every liability is charged, not just current ones — cash pledged against
+    debt recovers nothing, and charging current liabilities alone would describe a company nobody
+    could actually buy.
+  </p>
+  <p>
+    <strong>What it leaves out is what he cared most about.</strong> His numerator also counted
+    salable real estate and surplus divisions. Property is filed at historical cost less
+    depreciation — land bought in 1960 sits on the balance sheet at 1960 prices — and
+    <em>that gap was the edge</em>. A version of this reading property off the balance sheet would
+    understate the very thing he was hunting while looking more thorough, so it is excluded and named
+    rather than approximated. Divisions need segment data and a judgement about which are surplus.
+    This is the floor his test would have cleared, not his test.
+  </p>
+  <p>
+    <strong>And it is one rule of five.</strong> The other four were an acquirer's toolkit: pay in
+    seller notes and convertible preferred rather than cash, factor the receivables and sell the real
+    estate before the next deal needs the money, never pay cash for a company that cannot fund the
+    next purchase, and shape the terms around what the seller actually wants. Every one of them
+    requires owning the company. A minority buyer gets the margin of safety and none of the
+    machinery — which is why this is a column here and not a strategy.
+  </p>
+</details>
 
 {% if census.net_nets is none %}
 <div class="sc-noprice">
