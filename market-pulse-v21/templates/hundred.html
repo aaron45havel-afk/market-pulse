@@ -189,6 +189,7 @@
 <div class="hb-card">
   <h2>What the screen actually looked at</h2>
   <p class="desc" id="hbFunnelDesc"></p>
+  <p class="desc" id="hbUniverse" style="margin:-0.3rem 0 0.7rem;"></p>
   <div class="hb-steps" id="hbSteps"></div>
   <p class="desc" style="margin:0.9rem 0 0.2rem;"><strong>Coverage — how often each criterion could be
     measured at all.</strong> This is the number the page is built around. Three of the thirteen can never be
@@ -653,6 +654,31 @@ function renderFunnel() {
     ['Too thin to judge', c.thin, 'thin'],
     ['Rejected', c.rejected, ''],
   ].map(([k,v,cls]) => `<div class="hb-step ${cls}"><div class="n">${(v||0).toLocaleString()}</div><div class="k">${k}</div></div>`).join('');
+
+  // WHAT NEVER REACHED THE SCREEN. "3,318 screened" read as the market
+  // while two thousand companies were dropped upstream by a filter this
+  // page inherited from the Lynch board rather than chose.
+  const u = c.universe_cuts || {};
+  const el = document.getElementById('hbUniverse');
+  if (!u.tickers) { el.innerHTML = ''; }
+  else {
+    const bits = [
+      ['not on a major exchange', u.dropped_not_major_exchange],
+      ['funds, ETFs and blank-cheque shells', u.dropped_not_operating_company],
+      ['financials and biotech by name', u.dropped_sector_keyword],
+      ['financials and biotech by SIC', u.dropped_sector_sic],
+    ].filter(([, n]) => n > 0)
+     .map(([k, n]) => `${n.toLocaleString()} ${k}`).join(' · ');
+    el.innerHTML =
+      `<strong>Before any of that.</strong> SEC lists ${u.tickers.toLocaleString()} tickers; `
+      + `${(u.kept || 0).toLocaleString()} reached the screen. Dropped: ${bits || 'nothing'}. `
+      + (u.sector_filter_on
+          ? `The sector filter is <strong>ON</strong> — banks, insurers, REITs and pharma cannot `
+            + `appear here, which is Lynch's rule and not this checklist's.`
+          : `The sector filter is <strong>OFF</strong>: financials, REITs and pharma are judged on `
+            + `the same thirteen criteria as everyone else, and the three vetoes may still reject `
+            + `them. Being a bank is not itself a finding.`);
+  }
 
   const names = RULES.criterion_names || {}, why = RULES.not_scored_because || {};
   const total = c.screened || 1;

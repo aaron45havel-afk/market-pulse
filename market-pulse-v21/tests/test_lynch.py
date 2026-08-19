@@ -719,6 +719,53 @@ check(_got == {"AAA"},
 check("CCC" not in _got, "an unnamed exchange is not a pass — fail closed")
 check("DDD" not in _got, "OTC is named but is not a major exchange")
 
+# ── THE SECTOR CUT IS A CHOICE, AND EACH SCREEN NOW MAKES ITS OWN ──
+# Lynch drops financials because "growth against the multiple" describes
+# nothing when the balance sheet IS the business. Every screen built on
+# this function inherited that in silence, including a 100-bagger board
+# whose source dataset is full of banks.
+_STICK = {
+    "1": {"ticker": "AAA", "name": "Alpha Manufacturing"},
+    "2": {"ticker": "BNK", "name": "Riverside Bancorp"},
+    "3": {"ticker": "PHR", "name": "Helix Therapeutics"},
+    "4": {"ticker": "SPC", "name": "Onyx Acquisition Corp"},
+    "5": {"ticker": "ETFX", "name": "Broad Market ETF Trust"},
+}
+_SEXCH = {c: {"exchange": "Nasdaq"} for c in "12345"}
+_SDET = {"1": {"sic": "3559"}, "2": {"sic": "6022"}, "3": {"sic": "2834"},
+         "4": {"sic": "6770"}, "5": {"sic": "6726"}}
+
+_lynch_u = {r["ticker"] for r in build_universe(_STICK, _SEXCH, _SDET)}
+_hund_u = {r["ticker"] for r in
+           build_universe(_STICK, _SEXCH, _SDET, exclude_sectors=False)}
+
+check(_lynch_u == {"AAA"},
+      "Lynch's universe is unchanged: the bank and the biotech go, and so "
+      "do the shell and the fund")
+check({"BNK", "PHR"} <= _hund_u,
+      "with the sector filter off the bank and the biotech are back — the "
+      "thirteen criteria judge them on the same terms as anyone else and "
+      "the three vetoes are free to reject them. Being a bank is not itself "
+      "a finding")
+check("SPC" not in _hund_u and "ETFX" not in _hund_u,
+      "but a blank-cheque shell and an ETF are still gone with the filter "
+      "off — they are not operating companies and no screen wants them")
+
+_cuts = build_universe.last_cuts
+check(_cuts["sector_filter_on"] is False and _cuts["kept"] == 3
+      and _cuts["dropped_not_operating_company"] == 2
+      and _cuts["dropped_sector_keyword"] == 0,
+      "and the cuts are counted and carried out, so a page can show what "
+      "never reached the screen instead of printing a filtered subset as "
+      "the whole market")
+
+build_universe(_STICK, _SEXCH, _SDET)
+check(build_universe.last_cuts["dropped_sector_keyword"] == 2
+      and build_universe.last_cuts["dropped_sector_sic"] == 0,
+      "with the filter on, the bank and the biotech are caught by NAME "
+      "before the SIC lookup ever runs — the keyword set is not merely the "
+      "backup its comment calls it")
+
 _named = sum(1 for v in _EXCH.values() if (v or {}).get("exchange"))
 check(_named == 2,
       "2 of 4 exchanges are usable — the old log line printed len(exchanges) "

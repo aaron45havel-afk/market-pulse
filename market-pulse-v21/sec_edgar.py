@@ -56,17 +56,33 @@ EXCLUDED_SIC_RANGES = [
     (8731, 8734),  # R&D services (clinical-stage biotech)
 ]
 
-# Backup keyword filter for companies where SIC isn't available
-EXCLUDED_KEYWORDS = {
+# Backup keyword filter for companies where SIC isn't available.
+#
+# SPLIT INTO TWO SETS, because they were doing two different jobs under one
+# name. NOT_AN_OPERATING_COMPANY removes things that are not companies at
+# all — a fund, a shell, a blank-cheque vehicle — and no screen on this site
+# wants them. SECTOR removes industries, which is a JUDGEMENT belonging to a
+# particular screen: Lynch's criteria do not describe a bank, so his screen
+# excludes them and says why. That exclusion was then inherited by every
+# screen built on this universe, including a 100-bagger board whose source
+# dataset is full of financials — a Lynch decision silently applied to a
+# Mayer thesis because the code was reused.
+NOT_AN_OPERATING_COMPANY = {
+    "investment fund", "closed-end fund", "mutual fund", "etf",
+    "acquisition corp", "blank check", "spac",
+}
+
+SECTOR_KEYWORDS = {
     "bank", "bancorp", "bancshares", "banc", "banking", "savings",
     "insurance", "underwriter", "reinsurance", "assurance",
     "reit", "real estate investment trust", "mortgage",
     "capital trust", "financial group", "credit union",
-    "investment fund", "closed-end fund", "mutual fund", "etf",
-    "acquisition corp", "blank check", "spac",
     "biotech", "biotherapeutics", "biopharma", "biopharmaceutical",
     "therapeutics", "pharmaceutical", "pharma",
 }
+
+# The union, kept under its old name so existing callers are unchanged.
+EXCLUDED_KEYWORDS = NOT_AN_OPERATING_COMPANY | SECTOR_KEYWORDS
 
 SCREENER_RULES = {
     "total_assets_max": "$500M",
@@ -144,10 +160,16 @@ def _is_excluded_sic(sic):
         pass
     return False
 
-def _excluded_keyword(name):
-    """Backup keyword filter when SIC is not available."""
+def _excluded_keyword(name, sectors: bool = True):
+    """Backup keyword filter when SIC is not available.
+
+    `sectors=False` keeps the industry exclusions out of it and removes
+    only things that are not operating companies. A screen that judges
+    banks on their own terms wants the bank; nothing wants the ETF.
+    """
     nl = name.lower()
-    return any(kw in nl for kw in EXCLUDED_KEYWORDS)
+    words = EXCLUDED_KEYWORDS if sectors else NOT_AN_OPERATING_COMPANY
+    return any(kw in nl for kw in words)
 
 # Foreign incorporation states that indicate Chinese/offshore shell companies
 FOREIGN_SHELL_STATES = {
