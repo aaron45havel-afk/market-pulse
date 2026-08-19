@@ -143,8 +143,20 @@ def fetch_quotes_bulk(tickers: list[str]) -> tuple[dict, str]:
 
 def build_universe(tickers: dict | None = None,
                    exchanges: dict | None = None,
-                   details: dict | None = None) -> list[dict]:
-    """Major-exchange filers minus financials, biotech, warrants and SPACs.
+                   details: dict | None = None,
+                   exclude_sectors: bool = True) -> list[dict]:
+    """Major-exchange filers minus warrants, funds and shells — and, when
+    `exclude_sectors` is on, minus financials and biotech too.
+
+    THE SECTOR CUT IS A JUDGEMENT AND NOW SAYS SO. Lynch's criteria do not
+    describe a bank: "earnings growth against the multiple" means something
+    else when the balance sheet IS the business, so his screen drops SIC
+    6000-6999 and the drug codes, and that is defensible where it was
+    argued for. It stopped being defensible the moment every other screen
+    built on this function inherited it in silence. The 100-bagger board
+    ran for months with no financials, REITs or pharma against a source
+    dataset that is full of them — a decision nobody made for that page,
+    applied because the code was convenient.
 
     The three fetches are injectable so this function can be exercised
     offline. It could not be before, which is why a None exchange reached
@@ -168,10 +180,17 @@ def build_universe(tickers: dict | None = None,
              len(tickers), named, len(exchanges))
 
     pre: list[dict] = []
+    dropped_exchange = dropped_structural = dropped_keyword = 0
     for cik, t in tickers.items():
         ticker = (t.get("ticker") or "").upper()
         name = t.get("name") or ""
-        if not ticker or not name or _is_warrant(ticker) or _excluded_keyword(name):
+        if not ticker or not name or _is_warrant(ticker):
+            continue
+        if _excluded_keyword(name, sectors=False):
+            dropped_structural += 1
+            continue
+        if exclude_sectors and _excluded_keyword(name):
+            dropped_keyword += 1
             continue
         # `or ""` not `.get(k, "")` — the second only fires when the key is
         # ABSENT, and SEC ships the key present with a null value for OTC
@@ -181,6 +200,7 @@ def build_universe(tickers: dict | None = None,
         # MAJOR_EXCHANGES` — a blank exchange string passed straight
         # through into a table headed "United States".
         if exch.upper() not in MAJOR_EXCHANGES:
+            dropped_exchange += 1
             continue
         pre.append({"cik": cik, "ticker": ticker, "name": name, "exchange": exch})
 
@@ -193,13 +213,30 @@ def build_universe(tickers: dict | None = None,
     for row in pre:
         d = details.get(row["cik"]) or {}
         sic = d.get("sic")
-        if _is_excluded_sic(sic):
+        if exclude_sectors and _is_excluded_sic(sic):
             dropped_sic += 1
             continue
         row["sic"] = sic
         row["state"] = d.get("state_desc") or d.get("state") or ""
         out.append(row)
-    log.info("  after SIC filter: %d (%d excluded)", len(out), dropped_sic)
+    if exclude_sectors:
+        log.info("  after SIC filter: %d (%d excluded)", len(out), dropped_sic)
+    else:
+        log.info("  sector filter OFF: %d kept, financials and biotech included",
+                 len(out))
+    # WHAT WAS REMOVED BEFORE SCREENING BEGAN, carried out so a page can
+    # show it. A board reporting "3,318 screened" while two thousand
+    # companies were dropped upstream is presenting a filtered subset as
+    # the market, which is the same shape as every other bug on this site.
+    build_universe.last_cuts = {
+        "tickers": len(tickers),
+        "kept": len(out),
+        "dropped_not_major_exchange": dropped_exchange,
+        "dropped_not_operating_company": dropped_structural,
+        "dropped_sector_keyword": dropped_keyword,
+        "dropped_sector_sic": dropped_sic,
+        "sector_filter_on": bool(exclude_sectors),
+    }
     return out
 
 

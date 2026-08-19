@@ -353,7 +353,18 @@ def build(max_companyfacts: int | None = None,
           skip_ownership: bool = False) -> dict:
     """{"rows", "census", "quote_source"} — every company, scored or not."""
     as_of = date.today().isoformat()
-    universe = build_universe()
+    # ITS OWN UNIVERSE, NOT LYNCH'S. Financials, REITs and pharma stay in.
+    # Lynch drops SIC 6000-6999 because his test — earnings growth against
+    # the multiple — describes nothing when the balance sheet IS the
+    # business, and that is a good reason on his page. This page ran on his
+    # filter by inheritance, and Mayer's own 100-bagger dataset is full of
+    # the companies it was quietly removing. The thirteen criteria here
+    # judge a bank on the same terms as anyone else, and the three vetoes
+    # are free to reject it; being a bank is not itself a finding.
+    # Warrants, funds and blank-cheque shells still go: those are not
+    # companies, and no screen on this site wants them.
+    universe = build_universe(exclude_sectors=False)
+    cuts = dict(getattr(build_universe, "last_cuts", {}) or {})
     tickers = [u["ticker"] for u in universe]
 
     log.info("Bulk quotes (one request per source):")
@@ -463,6 +474,17 @@ def build(max_companyfacts: int | None = None,
                         "everything else unaffected", e)
 
     cen = C.census(rows)
+    # The screened count describes what was JUDGED. What never reached the
+    # screen belongs beside it, or the page reports a filtered subset as
+    # the market.
+    cen["universe_cuts"] = cuts
     log.info("100-bagger: %d listed, %d thin, %d rejected of %d screened",
              cen["listed"], cen["thin"], cen["rejected"], cen["screened"])
+    if cuts:
+        log.info("  before screening: %d tickers, dropped %d off-exchange, "
+                 "%d funds/shells, sector filter %s",
+                 cuts.get("tickers", 0),
+                 cuts.get("dropped_not_major_exchange", 0),
+                 cuts.get("dropped_not_operating_company", 0),
+                 "ON" if cuts.get("sector_filter_on") else "OFF")
     return {"rows": rows, "census": cen, "quote_source": source}
