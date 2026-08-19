@@ -236,6 +236,38 @@ check(R.INSTANT["stockholders_equity"][0] == "StockholdersEquity",
       "minority interests, which are not the common holder's book")
 
 
+# ── THE QUOTE FILL: winner-take-all left the small end unpriced ──
+# The screener feed that wins on coverage lists major exchanges only, so
+# 1,148 of 5,673 companies carried no price on the August board — every
+# OTC name among them. Nine of those clear every balance-sheet gate,
+# including George Risk Industries and Nobility Homes, so their cheapness
+# was permanently unknown. The other sources now fill the gaps.
+_want = {"AAA", "BBB", "CCC", "DDD"}
+_primary = {"AAA": {"price": 1.0}, "BBB": {"price": 2.0}, "ZZZ": {"price": 9.0}}
+_extra = [("yahoo", {"CCC": {"price": 3.0}, "AAA": {"price": 999.0}}),
+          ("stockanalysis", {"DDD": {"price": 4.0}, "CCC": {"price": 888.0}})]
+_merged, _stats = R.merge_quote_fill(_want, _primary, _extra)
+
+check({k: v["price"] for k, v in _merged.items()}
+      == {"AAA": 1.0, "BBB": 2.0, "CCC": 3.0, "DDD": 4.0},
+      "the gaps fill and every name gets a price")
+check(_merged["AAA"]["price"] == 1.0,
+      "the WINNING source is authoritative for what it answered — yahoo's "
+      "999 does not overwrite it. Two feeds disagreeing is a fact about the "
+      "feeds, and preferring whichever ran last would make the board's "
+      "numbers depend on source ordering")
+check(_merged["CCC"]["price"] == 3.0,
+      "and the first filler to answer a name keeps it, for the same reason")
+check("ZZZ" not in _merged,
+      "a quote for a company not in the universe is dropped, not carried")
+check(_stats == {"yahoo": 1, "stockanalysis": 1},
+      "each filler reports what it added, so the source label can say which "
+      "feed priced how many rather than naming one and implying it did all")
+check(R.merge_quote_fill(_want, _primary, [])[0].keys() == {"AAA", "BBB"},
+      "with no fillers the result is exactly the winner's answer — the old "
+      "behaviour, unchanged, when the other sources cannot be reached")
+
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

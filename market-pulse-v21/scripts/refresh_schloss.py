@@ -394,6 +394,57 @@ def _quote_json(url: str, timeout: int = 90) -> dict | None:
         return None
 
 
+def _fetch_source(src: dict, want: set) -> dict:
+    """{TICKER: quote} from one bulk source, for the tickers we still need.
+
+    Extracted so the gap-fill pass and the first pass share one
+    implementation — a batched source asked to fill 700 names must batch
+    exactly the way it does when asked for 5,000, or the fill would be a
+    second, subtly different fetcher.
+    """
+    quotes: dict = {}
+    if src.get("batched"):
+        size = src.get("batch_size", 200)
+        ordered = sorted(want)
+        for i in range(0, len(ordered), size):
+            batch = ordered[i:i + size]
+            payload = _quote_json(src["url"].format(
+                syms=urllib.parse.quote(",".join(batch))))
+            if payload is None:
+                break
+            quotes.update(src["parse"](payload))
+            time.sleep(0.4)              # ~2.5 req/s against one host
+    else:
+        payload = _quote_json(src["url"])
+        if payload is not None:
+            quotes = src["parse"](payload)
+    return quotes
+
+
+def merge_quote_fill(want: set, primary: dict,
+                     extra: list) -> tuple[dict, dict]:
+    """(quotes, {source: names_added}) — primary first, then gaps filled.
+
+    Pure, so the never-overwrite rule is testable without a network. The
+    winning source is authoritative for every ticker it answered; later
+    sources may only ADD names it missed, never replace a price it gave.
+    Two feeds disagreeing on a price is a fact about the feeds, and
+    silently preferring whichever ran last would make the board's numbers
+    depend on source ordering.
+    """
+    out = {k: v for k, v in primary.items() if k in want}
+    stats: dict = {}
+    for name, quotes in extra:
+        added = 0
+        for k, v in (quotes or {}).items():
+            if k in want and k not in out:
+                out[k] = v
+                added += 1
+        if added:
+            stats[name] = added
+    return out, stats
+
+
 def fetch_quotes(tickers: list[str]) -> tuple[dict, str]:
     """({TICKER: {price, market_cap}}, source name). Empty dict if none answer.
 
@@ -405,29 +456,45 @@ def fetch_quotes(tickers: list[str]) -> tuple[dict, str]:
     want = set(tickers)
     for src in PF.BULK_SOURCES:
         print(f"  trying {src['name']}...")
-        quotes: dict = {}
-        if src.get("batched"):
-            size = src.get("batch_size", 200)
-            ordered = sorted(want)
-            for i in range(0, len(ordered), size):
-                batch = ordered[i:i + size]
-                payload = _quote_json(src["url"].format(
-                    syms=urllib.parse.quote(",".join(batch))))
-                if payload is None:
-                    break
-                quotes.update(src["parse"](payload))
-                time.sleep(0.4)          # ~2.5 req/s against one host
-        else:
-            payload = _quote_json(src["url"])
-            if payload is not None:
-                quotes = src["parse"](payload)
+        quotes = _fetch_source(src, want)
 
         hit = quotes.keys() & want
         cover = len(hit) / len(want) if want else 0.0
         print(f"    {len(quotes):,} quotes, {len(hit):,} matched "
               f"({cover:.0%} of the board)")
         if cover >= PF.BULK_COVERAGE_MIN:
-            return {k: quotes[k] for k in hit}, src["name"]
+            won = {k: quotes[k] for k in hit}
+            # THE OTHER SOURCES NOW FILL THE GAPS. Winner-take-all left
+            # 1,148 of 5,673 companies unpriced on the August board, among
+            # them every OTC name — the screener feed that wins on
+            # coverage lists major exchanges only. Nine companies clearing
+            # every balance-sheet gate had no price at all, so their
+            # cheapness was permanently unknown: George Risk Industries,
+            # Nobility Homes and seven community banks, which is exactly
+            # the corner of the market this screen exists to find.
+            #
+            # The floor still applies to the WINNER, so a board whose
+            # primary feed failed is still not published; the fill can only
+            # add names the winner missed.
+            missing = want - won.keys()
+            extra = []
+            if missing:
+                print(f"  {len(missing):,} still unpriced — filling from the rest")
+                for other in PF.BULK_SOURCES:
+                    if other["name"] == src["name"] or not missing:
+                        continue
+                    got = _fetch_source(other, missing)
+                    if got:
+                        extra.append((other["name"], got))
+                        missing = missing - got.keys()
+            merged, stats = merge_quote_fill(want, won, extra)
+            label = src["name"]
+            for n, added in stats.items():
+                label += f" + {n} ({added:,})"
+                print(f"    {n} filled {added:,}")
+            print(f"    priced {len(merged):,} of {len(want):,} "
+                  f"({len(merged) / len(want):.0%})")
+            return merged, label
         print(f"    below the {PF.BULK_COVERAGE_MIN:.0%} floor — trying the next source")
     return {}, ""
 
