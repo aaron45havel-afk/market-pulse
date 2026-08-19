@@ -727,6 +727,27 @@ check(S.riklis_coverage(cash=1e6, receivables=0.0, total_liabilities=0.0,
                         market_cap=0)["ratio"] is None,
       "and a zero market cap is refused rather than divided by")
 
+# EVERY RETURN CARRIES EVERY KEY. Omitting `net` on the early refusals
+# took /schloss down with a 500 on every request: the template asked
+# `r.riklis.net is not none`, Jinja handed back Undefined, Undefined is
+# not None so the guard passed, and the arithmetic behind it raised. It
+# survived local checks because the snapshot on disk predated the field,
+# so the cell always took its "not built" branch and the ragged paths were
+# never rendered.
+_SHAPE = {"ratio", "hard", "net", "reason"}
+for _args in (
+        dict(cash=None, receivables=None, total_liabilities=1.0, market_cap=1.0),
+        dict(cash=1.0, receivables=1.0, total_liabilities=None, market_cap=1.0),
+        dict(cash=1.0, receivables=1.0, total_liabilities=1.0, market_cap=None),
+        dict(cash=1.0, receivables=1.0, total_liabilities=1.0, market_cap=0),
+        dict(cash=60e6, receivables=30e6, total_liabilities=20e6, market_cap=50e6)):
+    check(set(S.riklis_coverage(**_args)) == _SHAPE,
+          "every path returns the same keys — a result shape that depends "
+          "on which branch ran cannot be checked by a caller that only ever "
+          "sees one branch, and a template reading the missing one gets "
+          "Undefined, which is not None and so passes an is-not-none guard")
+
+
 # The part no honest version of this can include. Whitespace-normalised:
 # the point is that the exclusion is NAMED, not where the lines wrap.
 _doc = " ".join((S.riklis_coverage.__doc__ or "").split())
