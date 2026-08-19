@@ -38,13 +38,14 @@ from __future__ import annotations
 import argparse
 import gzip
 import json
+import os
 import sys
 import threading
 import time
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -56,6 +57,12 @@ HEADERS = {"User-Agent": SEC_UA, "Accept-Encoding": "gzip, deflate"}
 SEC_RATE = 8.0            # SEC permits 10/s; leave headroom
 SEC_WORKERS = 5
 OUT = Path(__file__).resolve().parent.parent / "data" / "schloss.json"
+# The board is overwritten each run; these are the point-in-time
+# copies that make a forward-return study possible at all.
+SNAPSHOT_DIR = OUT.parent / "schloss_snapshots"
+MAX_SNAPSHOTS = 36        # three years — a one-to-two-year hold
+                          # needs more than one holding period
+                          # of history to say anything.
 
 # How many years of dividends to pull. The cut signal only needs two, but
 # a reader deciding whether a cut is an aberration or the fourth in a row
@@ -814,6 +821,45 @@ def main() -> int:
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(payload, separators=(",", ":")))
+
+    # ── THE POINT-IN-TIME RECORD ────────────────────────────────────
+    # data/schloss.json is overwritten every run, so this board has never
+    # had a history. That is not a cosmetic gap: the universe is CURRENT
+    # SEC registrants, so a company that delists leaves it entirely, and
+    # any backward-looking test is therefore missing exactly the names a
+    # deep-value screen most needs to account for. There is no way to ask
+    # "would that cutoff have beaten the market" of data that cannot see
+    # what died.
+    #
+    # A name captured here stays captured. From this run forward the
+    # answer becomes measurable — in about a year for a one-year hold,
+    # which is the horizon this screen is actually used on.
+    #
+    # --limit runs are excluded on purpose. The file is keyed by month, so
+    # a `--limit 50` smoke test run AFTER the real one would overwrite a
+    # full month of history with fifty alphabetically-first companies and
+    # nothing would look wrong. A truncated universe is not a
+    # point-in-time record of anything.
+    if args.limit:
+        print(f"  snapshot                 skipped (--limit {args.limit}; "
+              f"a partial universe is not a point-in-time record)")
+    else:
+        key = date.today().strftime("%Y-%m")
+        SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
+        snap_path = SNAPSHOT_DIR / f"{key}.json"
+        snap = S.snapshot(payload, date.today().isoformat())
+        tmp = snap_path.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(snap, separators=(",", ":")))
+        os.replace(tmp, snap_path)
+        kept = sorted(SNAPSHOT_DIR.glob("*.json"))
+        dropped = 0
+        for old in kept[:-MAX_SNAPSHOTS] if len(kept) > MAX_SNAPSHOTS else []:
+            old.unlink()
+            dropped += 1
+        print(f"  snapshot                 {snap_path.name} "
+              f"({len(snap['rows']):,} rows, "
+              f"{snap_path.stat().st_size / 1e6:.1f}MB)"
+              + (f", pruned {dropped}" if dropped else ""))
 
     print(f"\nWrote {OUT} in {time.time() - started:.0f}s")
     print(f"  screened                 {c['screened']:>6,}")
