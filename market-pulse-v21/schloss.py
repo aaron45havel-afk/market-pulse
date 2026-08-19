@@ -216,23 +216,34 @@ def riklis_coverage(cash=None, receivables=None, total_liabilities=None,
     estate, reading the seller's motives — all require owning the company.
     A minority buyer gets the margin of safety and none of the machinery.
     """
+    # EVERY RETURN CARRIES EVERY KEY. The first version omitted `net` on
+    # the two early refusals, and a template asking `r.riklis.net is not
+    # none` got Jinja's Undefined — which is not None, so the guard passed
+    # and the arithmetic behind it raised. /schloss returned 500 for every
+    # request until the shape was made invariant.
+    #
+    # It survived local checks because the snapshot on disk predated the
+    # field entirely: `r.riklis` was absent, the whole cell took its
+    # "not built" branch, and the ragged paths were never rendered. A
+    # function whose result shape depends on which branch it took cannot
+    # be checked by a caller that only ever sees one branch.
+    out = {"ratio": None, "hard": None, "net": None, "reason": ""}
     c, r = _num(cash), _num(receivables)
     tl, cap = _num(total_liabilities), _num(market_cap)
     if c is None and r is None:
-        return {"ratio": None, "hard": None,
-                "reason": "neither cash nor receivables filed"}
+        return {**out, "reason": "neither cash nor receivables filed"}
     if tl is None:
-        return {"ratio": None, "hard": None, "reason": "total liabilities not filed"}
+        return {**out, "reason": "total liabilities not filed"}
     # A filed line that is absent is nothing, not unknown — but only once
     # at least one of the pair arrived, so an unfetched company cannot
     # present as a company with no cash.
     hard = (c or 0.0) + (r or 0.0)
     net = hard - tl
     if cap is None or cap <= 0:
-        return {"ratio": None, "hard": round(hard, 2), "net": round(net, 2),
+        return {**out, "hard": round(hard, 2), "net": round(net, 2),
                 "reason": "no market cap"}
-    return {"ratio": round(net / cap, 3), "hard": round(hard, 2),
-            "net": round(net, 2), "reason": ""}
+    return {**out, "ratio": round(net / cap, 3), "hard": round(hard, 2),
+            "net": round(net, 2)}
 
 
 def non_debt_liabilities(operating_lease_current=None,

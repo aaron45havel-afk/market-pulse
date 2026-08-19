@@ -138,7 +138,7 @@
         title="{% if r.fx_suspect %}Market cap is under 1% of tangible book — the balance sheet and the quote are not in the same currency, so no discount can be computed.{% elif r.market_cap %}Market cap {{ '%.0f'|format(r.market_cap / 1000000) }}M.{% endif %}">{% if r.p_tangible_book is not none %}{{ r.p_tangible_book }}{% elif r.fx_suspect %}<span class="sc-dim">currency?</span>{% elif not r.price_ready %}<span class="sc-dim">no quote</span>{% else %}<span class="sc-dim">&mdash;</span>{% endif %}</td>
     <td class="{% if r.is_net_net %}sc-cheap{% endif %}">{% if r.p_ncav is not none %}{{ r.p_ncav }}{% elif not r.price_ready %}<span class="sc-dim">no quote</span>{% else %}<span class="sc-dim">&mdash;</span>{% endif %}</td>
     <td class="{% if r.riklis and r.riklis.ratio is not none and r.riklis.ratio >= 1.0 %}sc-cheap{% endif %}"
-        title="{% if r.riklis and r.riklis.net is not none %}Cash + receivables less all liabilities: {{ '%.0f'|format(r.riklis.net / 1000000) }}M.{% endif %}{% if r.riklis and r.riklis.reason %} {{ r.riklis.reason }}.{% endif %}">{% if r.riklis and r.riklis.ratio is not none %}{{ '%.2f'|format(r.riklis.ratio) }}{% elif r.riklis and r.riklis.reason %}<span class="sc-dim">&mdash;</span>{% else %}<span class="sc-dim">not built</span>{% endif %}</td>
+        title="{% set rk = r.riklis or {} %}{% if rk.get('net') is not none %}Cash + receivables less all liabilities: {{ '%.0f'|format(rk.get('net') / 1000000) }}M.{% endif %}{% if rk.get('reason') %} {{ rk.get('reason') }}.{% endif %}">{% if rk.get('ratio') is not none %}{{ '%.2f'|format(rk.get('ratio')) }}{% elif rk.get('reason') %}<span class="sc-dim">&mdash;</span>{% else %}<span class="sc-dim">not built</span>{% endif %}</td>
   </tr>
   {% endfor %}
   </tbody>
