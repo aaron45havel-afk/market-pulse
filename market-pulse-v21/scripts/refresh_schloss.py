@@ -315,6 +315,19 @@ def is_warrant(ticker: str) -> bool:
     t = (ticker or "").upper()
     if "-" in t or "." in t:
         tail = t.replace(".", "-").split("-")[-1]
+        # PREFERRED SERIES ARE NOT THE COMMON EITHER, and they were getting
+        # through: AHL-PD, ANG-PD, CDR-PB, OAK-PA, SCE-PG, TRTN-PA, CFTR-PA,
+        # PHXE-P and SEAL-PA all carried their issuer's whole balance sheet
+        # into the board, which is precisely the duplicate this function
+        # exists to stop. A preferred share has a fixed claim and a par
+        # value; tangible book per COMMON share says nothing about it, and
+        # no quote feed answered for any of them anyway.
+        if len(tail) in (1, 2) and tail.startswith("P"):
+            return True
+        # A trailing separator with nothing after it is a malformed row,
+        # not a class: "NONE." arrived in the August universe.
+        if not tail:
+            return True
         return tail in WARRANT_SUFFIXES
     return len(t) == 5 and t.endswith(("W", "R", "U"))
 

@@ -624,8 +624,21 @@ def evaluate(f: dict, this_year: int) -> dict:
         "is_net_net": net_net,
         # Riklis's version of the same question, one notch stricter than
         # Graham's: cash and receivables only, against every liability.
-        "riklis": riklis_coverage(f.get("cash"), f.get("receivables"),
-                                  f.get("total_liabilities"), cap),
+        #
+        # THE CURRENCY GUARD APPLIES HERE TOO, and it did not when this
+        # shipped. P/TB and P/NCAV are withheld when the market cap and the
+        # balance sheet are not in the same money; Riklis divides by the
+        # same market cap and was published anyway. Universe Pharmaceuticals
+        # came out at 1272x and YYAI at 502x — both flagged, both showing
+        # "currency?" in the column beside it — and because the ranking
+        # sorts on this number they went straight to the top of the board.
+        # A new column that ignores an existing guard is the same bug as
+        # not having the guard.
+        "riklis": ({"ratio": None, "hard": None, "net": None,
+                    "reason": "market cap and balance sheet are not in the "
+                              "same currency"} if fx_suspect else
+                   riklis_coverage(f.get("cash"), f.get("receivables"),
+                                   f.get("total_liabilities"), cap)),
     }
 
 
