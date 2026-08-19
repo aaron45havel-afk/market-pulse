@@ -246,6 +246,86 @@ def riklis_coverage(cash=None, receivables=None, total_liabilities=None,
             "net": round(net, 2)}
 
 
+def shares_from_row(row: dict) -> float | None:
+    """Share count implied by a per-share figure already on the row.
+
+    The build emits tangible book and tangible book PER SHARE, and only
+    computes the second when it has a share count — so their quotient is
+    that count, recovered rather than re-fetched. NCAV is the fallback for
+    a company with no positive tangible book.
+
+    Deliberately not a new fetch. `market_cap` is preferred everywhere in
+    this module precisely because share counts are missing for hundreds of
+    filers and were catastrophically wrong for one, so this only ever
+    returns a count the build already trusted enough to divide by.
+    """
+    for total, per_share in (("tangible_book", "tangible_book_ps"),
+                             ("ncav", "ncav_ps")):
+        t, ps = _num(row.get(total)), _num(row.get(per_share))
+        if t is not None and ps not in (None, 0):
+            n = t / ps
+            if n > 0:
+                return round(n, 2)
+    return None
+
+
+def reprice(row: dict, market_cap: float) -> dict:
+    """The cheapness half, recomputed from a market cap supplied by hand.
+
+    Every price-dependent field on the row, derived exactly as the build
+    derives them, so a typed-in quote and a fetched one are read by the
+    same arithmetic. Returns only the changed keys; the caller merges.
+
+    THE GUARDS COME WITH IT. A hand-entered price does not get to bypass
+    the currency check or the impossible-book check — if the balance sheet
+    was too broken to price from a feed, it is too broken to price from a
+    keyboard, and the reason is carried through rather than dropped.
+    """
+    cap = _num(market_cap)
+    out = {"market_cap": cap, "price_ready": cap is not None and cap > 0,
+           "price_source": "hand"}
+    if not out["price_ready"]:
+        return {**out, "p_tangible_book": None, "p_ncav": None,
+                "below_book": None, "is_net_net": None,
+                "riklis": {"ratio": None, "hard": None, "net": None,
+                           "reason": "no market cap"}}
+    if row.get("implausible"):
+        return {**out, "p_tangible_book": None, "p_ncav": None,
+                "below_book": None, "is_net_net": None,
+                "riklis": {"ratio": None, "hard": None, "net": None,
+                           "reason": "balance sheet is arithmetically "
+                                     "impossible; no price can fix that"}}
+
+    tb, n = _num(row.get("tangible_book")), _num(row.get("ncav"))
+    fx = bool(tb and tb > 0 and cap / tb < FX_MISMATCH_BELOW)
+    out["fx_suspect"] = fx
+    if fx:
+        return {**out, "p_tangible_book": None, "p_ncav": None,
+                "below_book": None, "is_net_net": None,
+                "riklis": {"ratio": None, "hard": None, "net": None,
+                           "reason": "market cap and balance sheet are not "
+                                     "in the same currency"}}
+
+    p_tb = round(cap / tb, 3) if (tb is not None and tb > 0) else None
+    p_ncav = round(cap / n, 3) if (n is not None and n > 0) else None
+    out["p_tangible_book"] = p_tb
+    out["p_ncav"] = p_ncav
+    out["below_book"] = (p_tb <= 1 - BOOK_DISCOUNT_MIN) if p_tb is not None else False
+    out["is_net_net"] = (p_ncav <= NCAV_MAX_PRICE) if p_ncav is not None else False
+
+    # Riklis needs the raw lines, which the row does not carry — but it
+    # carries the answer computed against the old cap, and the numerator is
+    # independent of price. Rescale rather than refuse.
+    rk = row.get("riklis") or {}
+    net = _num(rk.get("net"))
+    out["riklis"] = ({**rk, "ratio": round(net / cap, 3), "reason": ""}
+                     if net is not None
+                     else {**{"ratio": None, "hard": None, "net": None},
+                           "reason": rk.get("reason") or "cash and receivables "
+                                                         "not filed"})
+    return out
+
+
 def non_debt_liabilities(operating_lease_current=None,
                          operating_lease_noncurrent=None,
                          accounts_payable=None,
