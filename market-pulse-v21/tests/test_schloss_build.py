@@ -290,6 +290,96 @@ check(R.merge_quote_fill(_want, _primary, [])[0].keys() == {"AAA", "BBB"},
       "behaviour, unchanged, when the other sources cannot be reached")
 
 
+# ── the monthly snapshot, driven through main() itself ──
+#
+# The snapshot is the board's only memory. Everything it is for — asking
+# whether a Riklis or net-net cutoff would actually have paid, including
+# the names that later delisted — depends on a file appearing once a month
+# and never being disturbed again. So these drive the REAL main(), with
+# only build() and the two output paths swapped out. A test that
+# re-implemented the write would have proved nothing about the script
+# that runs in CI.
+import json as _json
+import pathlib as _pathlib
+import tempfile as _tempfile
+
+
+def _fake_payload(limit=0):
+    n = limit or 40
+    rows = [{"ticker": f"T{i}", "name": f"Co {i}", "cik": str(i),
+             "price": 1.0, "market_cap": 1e6, "tangible_book": 2e6,
+             "p_tb": 0.5, "ncav": 1e6, "p_ncav": 1.0, "is_net_net": True,
+             "below_book": True, "clears_every_gate": True}
+            for i in range(n)]
+    return {"rows": rows, "generated": "x",
+            "params": {"quote_source": "test"},
+            "census": {"screened": n, "balance_sheet_qualifying": 1,
+                       "positive_ncav": 1, "recent_dividend_cuts": 0,
+                       "priced": n, "price_coverage_pct": 100.0,
+                       "below_book": n, "net_nets": n}}
+
+
+class _Quiet:
+    """main() prints a summary; the suite's output should stay readable."""
+    def write(self, _):
+        return 0
+
+    def flush(self):
+        pass
+
+
+def _run_main(argv, snap_dir, out):
+    real_build, real_out, real_dir = R.build, R.OUT, R.SNAPSHOT_DIR
+    real_argv, real_stdout = sys.argv, sys.stdout
+    R.build, R.OUT, R.SNAPSHOT_DIR = _fake_payload, out, snap_dir
+    sys.argv, sys.stdout = argv, _Quiet()
+    try:
+        return R.main()
+    finally:
+        R.build, R.OUT, R.SNAPSHOT_DIR = real_build, real_out, real_dir
+        sys.argv, sys.stdout = real_argv, real_stdout
+
+
+_tmp = _pathlib.Path(_tempfile.mkdtemp())
+_snaps = _tmp / "schloss_snapshots"
+_out = _tmp / "schloss.json"
+
+_run_main(["refresh_schloss.py"], _snaps, _out)
+_written = sorted(_snaps.glob("*.json"))
+check(len(_written) == 1,
+      "a full run lays down exactly one snapshot, named for the month")
+check(len(_json.loads(_written[0].read_text())["rows"]) == 40,
+      "the snapshot carries every screened row — no threshold is applied, "
+      "because filtering to today's idea of cheap destroys the ability to "
+      "test tomorrow's")
+check(not list(_snaps.glob("*.tmp")),
+      "the write goes through a temp file and is renamed into place, so a "
+      "run killed mid-write leaves last month's file intact rather than "
+      "half a JSON document")
+
+_before = _json.loads(_written[0].read_text())
+_run_main(["refresh_schloss.py", "--limit", "5"], _snaps, _out)
+check(len(_json.loads(_written[0].read_text())["rows"]) == 40,
+      "a --limit run does NOT overwrite the month's snapshot — the file is "
+      "keyed by month, so a smoke test run after the real one would "
+      "otherwise replace a month of history with five companies and "
+      "nothing would look wrong")
+check(len(list(_snaps.glob("*.json"))) == 1,
+      "and it writes no snapshot of its own either")
+
+for _y in (2021, 2022, 2023):
+    for _m in range(1, 13):
+        (_snaps / f"{_y}-{_m:02d}.json").write_text("{}")
+_run_main(["refresh_schloss.py"], _snaps, _out)
+_kept = sorted(p.name for p in _snaps.glob("*.json"))
+check(len(_kept) == R.MAX_SNAPSHOTS,
+      f"the directory is pruned to {R.MAX_SNAPSHOTS} months, so the record "
+      f"cannot grow without bound")
+check(_written[0].name in _kept,
+      "and the prune drops the OLDEST months — never the one just written, "
+      "which sorts last by name")
+
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

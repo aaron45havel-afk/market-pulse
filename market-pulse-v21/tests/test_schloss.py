@@ -805,6 +805,71 @@ check(_fx["fx_suspect"] and _fx["p_tangible_book"] is None
       "feed it is too broken to price from a keyboard")
 
 
+# ── THE POINT-IN-TIME RECORD ──
+# The board is overwritten every run and the universe is CURRENT SEC
+# registrants, so a delisted company leaves it entirely. No cutoff can be
+# tested against data that cannot see what died. These snapshots are the
+# only fix, and the fix only works going forward.
+_full = {"ticker": "ABC", "cik": 42, "name": "Alpha Corp", "exchange": "OTC",
+         "market_cap": 6.2e6, "price": 0.85, "price_ready": True,
+         "price_source": "hand", "tangible_book": 2.06e6,
+         "tangible_book_ps": 0.2834, "ncav": 1.31e6, "ncav_ps": 0.18,
+         "p_tangible_book": 2.999, "p_ncav": 4.692,
+         "riklis": {"ratio": 0.15, "net": 9.2e5, "hard": 1.4e6, "reason": ""},
+         "backing": {"hard_pct": 60.3, "mix": {"cash": 40.0}},
+         "debt_ratio": 0.12, "survival_years": 25,
+         "dividend": {"latest": 0.06, "cut_pct": None, "history": [1, 2, 3]},
+         "gates": {"assets": True, "debt": True, "survival": True,
+                   "pays_dividend": True},
+         "gates_pass": True, "below_book": False, "is_net_net": False,
+         "management": {"sbc_pct_revenue": 1.0}}
+_s = S.snapshot_row(_full)
+check(_s["riklis"] == 0.15 and _s["hard_pct"] == 60.3 and _s["p_ncav"] == 4.692,
+      "every input a threshold might be set on survives the trim — the whole "
+      "point is testing a cutoff nobody has chosen yet")
+check(_s["price_source"] == "hand",
+      "and whether the price was typed or fetched travels with it, because a "
+      "study that mixes the two without knowing is measuring its own author")
+# The rows the refresh actually builds carry NO price_source key at all,
+# so the fallback decides the label for every real row — and it must not
+# invent one. The first draft defaulted to "feed" and thereby claimed a
+# feed had quoted the 885 rows no feed will touch.
+check(S.snapshot_row({"price": 4.25})["price_source"] == "feed",
+      "with no explicit label, a row that HAS a price is a feed price")
+check(S.snapshot_row({"price": None})["price_source"] is None,
+      "and a row with NO price gets no source — null means unpriced, which "
+      "a forward-return study must be able to tell apart from a price of "
+      "zero, because those rows are the illiquid end where this screen "
+      "actually finds things")
+check("management" not in _s and "backing" not in _s,
+      "the blocks that describe a company rather than decide a selection are "
+      "dropped — 8.2MB a month does not become a three-year record")
+check(S.snapshot_row({})["ticker"] is None
+      and S.snapshot_row({})["gates_pass"] is False,
+      "an empty row yields nulls rather than raising: a snapshot that fails "
+      "on one malformed company loses the whole month")
+
+_snap = S.snapshot({"rows": [_full, {}], "census": {"screened": 2},
+                    "params": {"quote_source": "nasdaq"}}, "2026-08-19")
+check(len(_snap["rows"]) == 2 and _snap["_meta"]["as_of"] == "2026-08-19",
+      "the snapshot carries every row and the date it was true")
+check(_snap["_meta"]["census"]["screened"] == 2
+      and _snap["_meta"]["quote_source"] == "nasdaq",
+      "with the census and the feed that produced it, so a month can be read "
+      "without guessing what the board looked like around it")
+check(all("riklis" in r for r in _snap["rows"]),
+      "and NO THRESHOLD IS APPLIED — filtering to today's idea of cheap "
+      "would destroy the ability to test tomorrow's, which is the exercise")
+check(_snap["_meta"]["unpriced_rows"] == 1,
+      "the count of rows carrying no price is stated outright, because it "
+      "is the one number that decides whether a return computed off this "
+      "file means anything, and it cannot be seen from the rows at a glance")
+check(any("hand-entered" in c for c in _snap["_meta"]["caveats"]),
+      "and the record says plainly that hand-typed prices are NOT in it — "
+      "they live in the app database and this file is written by a "
+      "scheduled job that cannot reach it")
+
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

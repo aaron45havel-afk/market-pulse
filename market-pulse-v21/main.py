@@ -5344,6 +5344,38 @@ async def api_hundred_hand_list(request: Request):
                          "can_edit": _check_admin_token(request)})
 
 
+_SCHLOSS_SNAPSHOT_DIR = Path(__file__).resolve().parent / "data" / "schloss_snapshots"
+
+
+@app.get("/api/schloss/snapshots")
+async def api_schloss_snapshot_list():
+    """Every month the Schloss board has been recorded.
+
+    The board itself is overwritten each run, so these are the only
+    point-in-time record — and the only way a forward-return study on this
+    screen can ever avoid survivorship bias, because a company captured
+    here stays captured after it delists.
+    """
+    if not _SCHLOSS_SNAPSHOT_DIR.exists():
+        return JSONResponse({"months": [], "latest": None})
+    months = sorted(p.stem for p in _SCHLOSS_SNAPSHOT_DIR.glob("*.json"))
+    return JSONResponse({"months": months,
+                         "latest": months[-1] if months else None})
+
+
+@app.get("/api/schloss/snapshot/{month}")
+async def api_schloss_snapshot(month: str):
+    if len(month) != 7 or month[4] != "-" or not (month[:4].isdigit() and month[5:].isdigit()):
+        return JSONResponse({"error": "month must be YYYY-MM"}, status_code=400)
+    path = _SCHLOSS_SNAPSHOT_DIR / f"{month}.json"
+    if not path.exists():
+        return JSONResponse({"error": f"no snapshot for {month}"}, status_code=404)
+    try:
+        return JSONResponse(json.loads(path.read_text()))
+    except Exception as e:
+        return JSONResponse({"error": f"failed to read snapshot: {e}"}, status_code=500)
+
+
 @app.get("/api/lynch/snapshots")
 async def api_lynch_snapshot_list():
     if not _LYNCH_SNAPSHOT_DIR.exists():

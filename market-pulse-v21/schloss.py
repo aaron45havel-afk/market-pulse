@@ -326,6 +326,105 @@ def reprice(row: dict, market_cap: float) -> dict:
     return out
 
 
+def snapshot_row(row: dict) -> dict:
+    """One row trimmed to what a forward-return study needs, and no more.
+
+    THE POINT OF KEEPING THESE IS THE COMPANIES THAT LATER VANISH. This
+    board is built from CURRENT SEC registrants, so a company that delists
+    leaves the universe entirely and every backward-looking test run on it
+    is biased by exactly the names a deep-value screen most needs to
+    account for. Capturing the board monthly builds a point-in-time record
+    from now forward: a name recorded this month stays recorded whether or
+    not it is still listed in two years, which is the only way this data
+    can ever answer "would that cutoff have beaten the market".
+
+    Trimmed rather than whole because the full row is 1.4 KB and the whole
+    board is 8.2 MB a month. Kept: identity, the price, every input a
+    threshold might be set on, and the four gates. Dropped: the asset mix,
+    the management block and the dividend history, which describe a
+    company rather than decide a selection.
+
+    NO THRESHOLD IS APPLIED HERE. Filtering to today's idea of cheap would
+    destroy the ability to test tomorrow's, which is the whole exercise.
+    """
+    rk = row.get("riklis") or {}
+    div = row.get("dividend") or {}
+    return {
+        "ticker": row.get("ticker"), "cik": row.get("cik"),
+        "name": row.get("name"), "exchange": row.get("exchange"),
+        "market_cap": row.get("market_cap"), "price": row.get("price"),
+        "price_ready": bool(row.get("price_ready")),
+        # An explicit label wins; otherwise this is DERIVED from whether a
+        # price is actually present, never defaulted. An earlier draft
+        # wrote `row.get("price_source") or "feed"` — the key does not
+        # exist on the rows the refresh builds, so that stamped "feed" on
+        # all 5,717 of them, including the 885 carrying no price at all. A
+        # source label nobody measured is worse than none: a study reading
+        # it back would believe a feed had quoted a row no feed ever
+        # touched. Null here means unpriced, and must stay distinguishable
+        # from a price of zero.
+        "price_source": (row.get("price_source")
+                         or ("feed" if row.get("price") is not None
+                             else None)),
+        "tangible_book": row.get("tangible_book"),
+        "tangible_book_ps": row.get("tangible_book_ps"),
+        "ncav": row.get("ncav"), "ncav_ps": row.get("ncav_ps"),
+        "p_tangible_book": row.get("p_tangible_book"),
+        "p_ncav": row.get("p_ncav"),
+        "riklis": rk.get("ratio"), "riklis_net": rk.get("net"),
+        "hard_pct": (row.get("backing") or {}).get("hard_pct"),
+        "debt_ratio": row.get("debt_ratio"),
+        "survival_years": row.get("survival_years"),
+        "div_per_share": div.get("latest"), "div_cut_pct": div.get("cut_pct"),
+        "gates": row.get("gates"),
+        "gates_pass": bool(row.get("gates_pass")),
+        "below_book": row.get("below_book"),
+        "is_net_net": row.get("is_net_net"),
+        "fx_suspect": bool(row.get("fx_suspect")),
+        "implausible": bool(row.get("implausible")),
+    }
+
+
+def snapshot(payload: dict, as_of: str) -> dict:
+    """The whole board, trimmed, with the census that produced it.
+
+    `_meta` states what is missing as plainly as what is here. A forward-
+    return study run on this file two years from now will have no other
+    way to tell an unpriced row from a worthless one, and the difference
+    decides whether the answer means anything.
+    """
+    out = [snapshot_row(r) for r in payload.get("rows") or []]
+    unpriced = sum(1 for r in out if r["price"] is None)
+    return {
+        "_meta": {
+            "as_of": as_of,
+            "rows": len(out),
+            "quote_source": (payload.get("params") or {}).get("quote_source"),
+            "census": payload.get("census") or {},
+            "why": "point-in-time record: a name captured here stays captured "
+                   "whether or not it is still listed later, which is what the "
+                   "live board cannot do",
+            # Both of these are limits on what this file can answer, and
+            # both are invisible from the rows alone.
+            "unpriced_rows": unpriced,
+            "caveats": [
+                "price is null on %d of %d rows — no feed quotes them. Treat "
+                "those as MISSING, never as zero: they are the small, "
+                "illiquid end where this screen actually finds things, so "
+                "dropping them silently biases any result toward the large "
+                "and liquid." % (unpriced, len(out)),
+                "hand-entered prices are NOT here. They live in the "
+                "application database and are merged when the page renders; "
+                "this file is written by a scheduled job that cannot reach "
+                "it. price_source is 'feed' or null, never 'hand'.",
+                "the universe is current SEC registrants as of as_of. Rows "
+                "are not restated later, which is the entire point.",
+            ],
+        },
+        "rows": out,
+    }
+
+
 def non_debt_liabilities(operating_lease_current=None,
                          operating_lease_noncurrent=None,
                          accounts_payable=None,
