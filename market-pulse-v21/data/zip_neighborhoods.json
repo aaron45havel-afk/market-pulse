@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "as_of": "2026-08-16",
-    "count": 6694,
+    "as_of": "2026-08-23",
+    "count": 6697,
     "source": "Photon (komoot.io OSM reverse-geocoder), neighbourhood/suburb/district tags"
   },
   "neighborhoods": {
@@ -3730,6 +3730,7 @@
     "34797": "Pumpkin Center",
     "34950": "Glidden Park",
     "34982": "Indian River Estates",
+    "34987": "Cana",
     "34996": "Port Sewall",
     "35005": "Shady Grove",
     "35007": "Willmay",
@@ -4505,6 +4506,7 @@
     "45341": "Schauers Acres",
     "45356": "Industry Park",
     "45365": "Buckeye Terrace",
+    "45369": "Sylvan Shores",
     "45378": "Verona",
     "45380": "Frenchtown",
     "45387": "Yellow Springs Historic District",
@@ -5481,6 +5483,7 @@
     "66604": "Westboro",
     "66607": "Belmont",
     "66608": "North Topeka",
+    "66616": "Oakland",
     "66734": "Farlington",
     "66756": "Fox Town",
     "66770": "Riverton",
