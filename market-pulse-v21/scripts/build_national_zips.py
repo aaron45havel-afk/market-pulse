@@ -591,12 +591,25 @@ def crime_proxy(density: float | None, income: int | None, pct_bach: float | Non
     return round(15.0 + blend * 60.0, 1)
 
 
-def impute_rent(home_value: int) -> int:
-    """Estimate monthly rent from home_value when ZORI doesn't cover
-    the ZIP. Uses a national price-to-rent of ~17 (annual). Rough but
-    directionally right. Marked rent_source='imputed' in the DB so
-    consumers can flag it."""
-    return int(round(home_value / NATIONAL_PRICE_TO_RENT / 12))
+# impute_rent() USED TO LIVE HERE AND HAS BEEN DELETED.
+#
+# It returned `home_value / 17 / 12` for any ZIP outside Zillow's ZORI
+# file and wrote that to median_rent_monthly under rent_source='imputed'
+# — 17,358 of 25,774 ZIPs, 67% of the country and 73% of Ohio.
+#
+# It was not "rough but directionally right". It was the home value
+# divided by 204, carrying no information about rent whatsoever, and
+# every yield derived from it was arithmetic performed on itself: across
+# all 17,358 imputed ZIPs there were FIVE distinct cap rates, each 5.88%
+# by construction. A $120k ZIP and an $890k ZIP got the same yield. The
+# rent_source flag let consumers mark it, but a marked number that means
+# nothing is still sitting on the page being read as a rent.
+#
+# Rent now comes from scripts/refresh_rents.py, which fills the ladder
+# in rent_ladder.py from measured sources only — ZORI, HUD SAFMR/FMR,
+# Census ACS B25064. A ZIP no source covers gets NULL and the board
+# renders an absence. Do not reintroduce a fallback here: if coverage
+# needs to go up, add a tier to the ladder.
 
 
 # ─── DB write ───────────────────────────────────────────────────────
@@ -769,10 +782,14 @@ def main(argv: list[str] | None = None) -> int:
         walk = walk_proxy(density)
         rest = restaurant_proxy(walk)
         crime = crime_proxy(density, income, pct_bach)
+        # ZORI or nothing. The other tiers (HUD SAFMR/FMR, Census ACS)
+        # are filled in afterwards by scripts/refresh_rents.py, which
+        # runs on the 2nd — this build only ever lays down the rows.
+        # NOTHING IS IMPUTED: a ZIP ZORI does not cover leaves here with
+        # no rent, and refresh_rents decides whether any other source
+        # can answer for it.
         rent = zori.get(z)
-        rent_source = "zori" if rent else "imputed"
-        if not rent:
-            rent = impute_rent(zh["home_value"])
+        rent_source = "zori" if rent else None
         # Same compute_zip_metrics call real metros use → composite
         # numbers land on the same scale as DALLAS_ZIPS, HOUSTON_ZIPS, etc.
         m = compute_zip_metrics({
