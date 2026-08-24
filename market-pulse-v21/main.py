@@ -4842,6 +4842,13 @@ async def api_zips(
         # zips.db via NULL-AS shims, same pattern as county/neighborhood.
         f_val_expr = "forecast_home_value_12mo" if "forecast_home_value_12mo" in existing_cols else "NULL AS forecast_home_value_12mo"
         f_pct_expr = "forecast_pct_change_12mo" if "forecast_pct_change_12mo" in existing_cols else "NULL AS forecast_pct_change_12mo"
+        # Rent-ladder columns (refresh_rents.py). Same NULL-AS shim, so a
+        # zips.db built before the ladder landed still serves the map —
+        # the rows simply carry no tier until the next rents refresh.
+        tier_expr = ("rent_tier" if "rent_tier" in existing_cols
+                     else "NULL AS rent_tier")
+        basis_expr = ("rent_basis" if "rent_basis" in existing_cols
+                      else "NULL AS rent_basis")
         rows = conn.execute(
             f"""
             SELECT zip, state, name, {county_expr}, {nbhd_expr}, lat, lng,
@@ -4850,7 +4857,7 @@ async def api_zips(
                    median_household_income, pct_bachelors,
                    population, walk_score, crime_index, restaurant_score,
                    {f_val_expr}, {f_pct_expr},
-                   {persona_col} AS composite, rent_source, as_of
+                   {persona_col} AS composite, rent_source, {tier_expr}, {basis_expr}, as_of
             FROM zips
             WHERE lat BETWEEN ? AND ?
               AND lng BETWEEN ? AND ?
@@ -4891,6 +4898,15 @@ async def api_zips(
             "crime_index": r["crime_index"],
             "restaurant_score": r["restaurant_score"],
             "composite": round(r["composite"], 1) if r["composite"] is not None else None,
+            # WHICH SOURCE MEASURED THIS RENT, not a boolean.
+            # `is_imputed` used to be the whole story because there were
+            # only two states: a real ZORI figure, or home_value/17/12.
+            # Nothing is imputed now, so the useful question changed from
+            # "is this real" to "how close to a market rent is it" —
+            # an asking-rent index and a voucher floor are both real and
+            # are not the same claim.
+            "rent_tier": r["rent_tier"],
+            "rent_basis": r["rent_basis"],
             "is_imputed": r["rent_source"] == "imputed",
             "qualifying_income": qualifying_income(r["median_home_value"], r["state"], MORTGAGE_30Y_RATE),
         }
@@ -4927,6 +4943,14 @@ async def api_zips_stats():
         rent_sources = conn.execute(
             "SELECT rent_source, COUNT(*) AS n FROM zips GROUP BY rent_source"
         ).fetchall()
+        # Tier census. The old rent_sources answer only ever had two
+        # values and one of them was not a measurement.
+        try:
+            rent_tiers = conn.execute(
+                "SELECT rent_tier, COUNT(*) AS n FROM zips GROUP BY rent_tier"
+            ).fetchall()
+        except Exception:
+            rent_tiers = []
     finally:
         conn.close()
     return JSONResponse({
@@ -4935,6 +4959,7 @@ async def api_zips_stats():
         "as_of": as_of,
         "states": {r["state"]: r["n"] for r in states},
         "rent_sources": {r["rent_source"]: r["n"] for r in rent_sources},
+        "rent_tiers": {(r["rent_tier"] or "none"): r["n"] for r in rent_tiers},
     })
 
 

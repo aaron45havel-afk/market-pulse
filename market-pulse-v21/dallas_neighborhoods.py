@@ -531,19 +531,42 @@ DEFAULT_PERSONA = "investor"
 
 
 def _compute_composite(sub_scores: dict, weights: dict) -> float:
-    """Weighted sum of sub-scores."""
-    return sum(sub_scores[k] * weights[k] for k in weights)
+    """Weighted sum over the dimensions that are KNOWN.
+
+    A sub-score of None means nobody measured that dimension for this
+    ZIP — newly possible for cap_rate, now that rent is no longer
+    imputed from the home value. The missing dimension's weight is
+    redistributed across the rest rather than counted as zero: scoring
+    an unknown as zero would sink every unmeasured ZIP to the bottom of
+    the board, where it would read as "we looked and it was bad".
+    """
+    known = {k: w for k, w in weights.items() if sub_scores.get(k) is not None}
+    total_w = sum(known.values())
+    if total_w <= 0:
+        return 0.0
+    return sum(sub_scores[k] * w for k, w in known.items()) / total_w
 
 
 def compute_zip_metrics(z: dict) -> dict:
-    """Compute derived metrics + sub-scores + per-persona composites for one ZIP."""
+    """Derived metrics + sub-scores + per-persona composites for one ZIP.
+
+    `median_rent_monthly` MAY BE NONE. Rent was imputed from the home
+    value for 67% of ZIPs, so it was never absent and this function
+    never had to consider it. Now that nothing is imputed, an absent
+    rent has to produce an absent cap rate rather than a zero — a zero
+    cap rate is a claim that the property yields nothing.
+    """
     home_value = z["median_home_value"]
-    annual_rent = z["median_rent_monthly"] * 12
-    cap_rate_pct = (annual_rent / home_value * 100) if home_value > 0 else 0.0
-    rent_to_price = annual_rent / home_value if home_value > 0 else 0.0
+    rent = z.get("median_rent_monthly")
+    if rent is None or not home_value or home_value <= 0:
+        cap_rate_pct = None
+        rent_to_price = None
+    else:
+        cap_rate_pct = rent * 12 / home_value * 100
+        rent_to_price = rent * 12 / home_value
 
     sub_scores = {
-        "cap_rate":      _score_cap_rate(cap_rate_pct),
+        "cap_rate":      None if cap_rate_pct is None else _score_cap_rate(cap_rate_pct),
         "crime_safety":  _score_crime_safety(z["crime_index"]),
         "schools":       _score_schools(z["pct_bachelors"]),
         "income":        _score_income(z["median_household_income"]),
@@ -556,9 +579,10 @@ def compute_zip_metrics(z: dict) -> dict:
         for name, p in PERSONAS.items()
     }
     return {
-        "cap_rate_pct": round(cap_rate_pct, 2),
-        "rent_to_price": round(rent_to_price, 4),
-        "sub_scores": {k: round(v, 1) for k, v in sub_scores.items()},
+        "cap_rate_pct": None if cap_rate_pct is None else round(cap_rate_pct, 2),
+        "rent_to_price": None if rent_to_price is None else round(rent_to_price, 4),
+        "sub_scores": {k: (None if v is None else round(v, 1))
+                       for k, v in sub_scores.items()},
         "composite_by_persona": composite_by_persona,
         "composite_score": composite_by_persona[DEFAULT_PERSONA],
     }

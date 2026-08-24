@@ -981,7 +981,20 @@ function scoreColor(score) {
     return `rgb(${Math.round(234 + (34 - 234) * t)}, ${Math.round(179 + (197 - 179) * t)}, ${Math.round(8 + (94 - 8) * t)})`;
 }
 
-function fmtMoney(v) { return '$' + Math.round(v).toLocaleString('en-US'); }
+// A MISSING VALUE IS NOT ZERO. Math.round(null) is 0, so fmtMoney(null)
+// used to render "$0" — a rent nobody measured shown as free housing.
+// That never fired while rent was imputed for every ZIP; now that
+// nothing is imputed, 430 ZIPs carry no rent and this is live.
+function fmtMoney(v) {
+    if (v === null || v === undefined || Number.isNaN(v)) return '—';
+    return '$' + Math.round(v).toLocaleString('en-US');
+}
+// Same for a yield that cannot be computed. `.toFixed()` on null throws,
+// which would blank the whole leaderboard rather than one cell.
+function fmtPct(v, dp) {
+    if (v === null || v === undefined || Number.isNaN(v)) return '—';
+    return Number(v).toFixed(dp === undefined ? 1 : dp) + '%';
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     // Zoom control on the right so it doesn't collide with the data
@@ -1125,10 +1138,10 @@ document.addEventListener('DOMContentLoaded', () => {
             : `${m.zip_count} ZIPs · ${m.state}`;
         const topRow = m.is_stub
             ? `<div class="pop-stat"><span class="label">State composite</span><span style="color:${color}; font-weight:700;">${m.top_zip.composite_score.toFixed(1)}</span></div>` +
-              `<div class="pop-stat"><span class="label">Gross yield</span><span>${m.top_zip.cap_rate_pct.toFixed(2)}%</span></div>`
+              `<div class="pop-stat"><span class="label">Gross yield</span><span>${fmtPct(m.top_zip.cap_rate_pct, 2)}</span></div>`
             : `<div class="pop-stat"><span class="label">Top ZIP</span><span><strong>${m.top_zip.zip}</strong> ${m.top_zip.name}</span></div>` +
               `<div class="pop-stat"><span class="label">Top score</span><span style="color:${color}; font-weight:700;">${m.top_zip.composite_score.toFixed(1)}</span></div>` +
-              `<div class="pop-stat"><span class="label">Top cap rate</span><span>${m.top_zip.cap_rate_pct.toFixed(2)}%</span></div>`;
+              `<div class="pop-stat"><span class="label">Top cap rate</span><span>${fmtPct(m.top_zip.cap_rate_pct, 2)}</span></div>`;
         // Stubs get a clearer CTA label (the deep-dive page renders
         // the single virtual ZIP, not a real neighborhood breakdown).
         // Real metros use an in-place "View neighborhoods" CTA that
@@ -1725,7 +1738,7 @@ function renderLeaderboard() {
                 <span class="rank">${i + 1}</span>
                 <div class="name">
                     <div class="label">${m.metro_label}${tag}</div>
-                    <div class="meta">${fmtMoney(m.avg_home_value)} &middot; ${m.avg_cap_rate_pct.toFixed(1)}% yield</div>
+                    <div class="meta">${fmtMoney(m.avg_home_value)} &middot; ${fmtPct(m.avg_cap_rate_pct, 1)} yield</div>
                     ${structRow}
                 </div>
                 <span class="score" style="color:${color};">${score.toFixed(0)}</span>
@@ -1767,14 +1780,29 @@ function renderLeaderboard() {
 // the persona composite the API returns (server-side sort). Click a
 // row to fly + open that ZIP's popup. _lastZips is set in
 // fetchZipsForViewport on every moveend.
+// How the rent under each ZIP was measured. `is_imputed` used to be the
+// whole story because there were only two states — a real ZORI figure or
+// home_value/17/12. Nothing is imputed now, so the question changed from
+// "is this real" to "how close to a market rent is it": an asking-rent
+// index and a voucher floor are both real and are not the same claim.
+const RENT_TIERS = {
+    zori:  {short: 'ZORI',  title: 'Zillow ZORI — an index of asking rents. The closest free thing to a market rent.'},
+    safmr: {short: 'SAFMR', title: 'HUD Small Area FMR — a voucher standard near the 40th percentile, set per ZIP. A FLOOR, below a market median by design.'},
+    fmr:   {short: 'FMR',   title: 'HUD county FMR — the same voucher floor, set county-wide, so it cannot tell one ZIP from another.'},
+    acs:   {short: 'ACS',   title: 'Census median GROSS rent — real, but includes utilities, describes leases already signed, and lags about two years.'},
+};
+function rentTierTag(z) {
+    const t = RENT_TIERS[z.rent_tier];
+    if (!t) return '';
+    return `<span class="stub-tag" title="${t.title}">${t.short}</span>`;
+}
+
 function renderZipLeaderboard(list) {
     const cap = 25;
     const visible = _lastZips.slice(0, cap);
     list.innerHTML = visible.map((z, i) => {
         const color = scoreColor(z.composite);
-        const imputedTag = z.is_imputed
-            ? '<span class="stub-tag" title="Rent imputed (no ZORI for this ZIP)">imp</span>'
-            : '';
+        const imputedTag = rentTierTag(z);
         // Prefer neighborhood when we have it — same precedence as the popup.
         // Falls back to the city/state name and finally the ZIP code.
         const place = z.neighborhood || z.name || z.zip;
@@ -1782,9 +1810,9 @@ function renderZipLeaderboard(list) {
             <span class="rank">${i + 1}</span>
             <div class="name">
                 <div class="label">${z.zip} <span style="font-weight:400; color:var(--text-dim);">${place}</span>${imputedTag}</div>
-                <div class="meta">${fmtMoney(z.home_value)} &middot; ${z.cap_rate_pct.toFixed(1)}% yield</div>
+                <div class="meta">${fmtMoney(z.home_value)} &middot; ${fmtPct(z.cap_rate_pct, 1)} yield</div>
             </div>
-            <span class="score" style="color:${color};">${z.composite.toFixed(0)}</span>
+            <span class="score" style="color:${color};">${z.composite == null ? '—' : z.composite.toFixed(0)}</span>
         </div>`;
     }).join('');
     if (_lastZips.length > cap) {
@@ -2269,7 +2297,7 @@ function renderProfileMatches() {
                         <span class="rank">${i + 1}</span>
                         <div class="meta">
                             <div class="label">${m.metro_label}</div>
-                            <div class="stats">${fmtMoney(m.avg_home_value)} · ${m.avg_cap_rate_pct.toFixed(1)}% yield</div>
+                            <div class="stats">${fmtMoney(m.avg_home_value)} · ${fmtPct(m.avg_cap_rate_pct, 1)} yield</div>
                         </div>
                         <span class="score" style="color:${color};">${score.toFixed(0)}</span>
                     </div>`;
@@ -2984,9 +3012,15 @@ function buildZipDetailHTML(z) {
     if (z.name) subParts.push(z.name);
     if (z.county) subParts.push(z.county);
     const subtitle = subParts.join(' · ') || z.state;
-    const imputedFlag = z.is_imputed
-        ? '<div style="font-size:10px; color:#92400e; margin-top:2px;">⚠ rent imputed (no ZORI)</div>'
-        : '';
+    // Name the source under the rent, or say plainly that nobody
+    // measured one. A blank cell with no explanation reads as a page
+    // that failed to load rather than a rent that does not exist.
+    const _tier = RENT_TIERS[z.rent_tier];
+    const imputedFlag = _tier
+        ? `<div style="font-size:10px; color:var(--text-dim); margin-top:2px;" title="${_tier.title}">rent basis: ${_tier.short}</div>`
+        : (z.rent == null
+            ? '<div style="font-size:10px; color:#92400e; margin-top:2px;">no measured rent for this ZIP — nothing is estimated from the home value</div>'
+            : '');
     return (
         `<div style="font-weight:700; font-size:0.95rem;">${titleName}</div>` +
         `<div style="font-size:0.72rem; color:var(--text-dim); margin-bottom:0.5rem;">${subtitle}</div>` +
@@ -2994,11 +3028,11 @@ function buildZipDetailHTML(z) {
         `<div class="pop-stat"><span class="label">Home value</span><span>${fmtMoney(z.home_value)}</span></div>` +
         (yoyDisplay ? `<div class="pop-stat"><span class="label">YoY</span><span>${yoyDisplay}</span></div>` : '') +
         `<div class="pop-stat"><span class="label">Rent /mo</span><span>${fmtMoney(z.rent)}</span></div>` +
-        `<div class="pop-stat"><span class="label">Cap rate</span><span>${z.cap_rate_pct.toFixed(2)}%</span></div>` +
+        `<div class="pop-stat"><span class="label">Cap rate</span><span>${fmtPct(z.cap_rate_pct, 2)}</span></div>` +
         (z.qualifying_income
             ? `<div class="pop-stat" title="Annual gross income needed at 28% DTI, 20% down, 30Y fixed at the current rate. Includes state property tax + insurance."><span class="label">Salary needed</span><span>${fmtMoney(z.qualifying_income)}</span></div>`
             : '') +
-        `<div class="pop-stat"><span class="label">Composite</span><span style="color:${scoreColor(z.composite)}; font-weight:700;">${z.composite.toFixed(1)}</span></div>` +
+        `<div class="pop-stat"><span class="label">Composite</span><span style="color:${scoreColor(z.composite)}; font-weight:700;">${z.composite == null ? '—' : z.composite.toFixed(1)}</span></div>` +
         ((z.forecast_12mo != null) ? (
             `<div class="pop-section-label" style="margin-top:0.55rem;">Forecast (12mo) <span style="background:rgba(245,158,11,0.18); color:#f59e0b; padding:1px 5px; border-radius:3px; font-size:0.6rem; font-weight:700; margin-left:0.3rem;">BETA</span></div>` +
             `<div class="pop-stat"><span class="label">Target value</span><span>${fmtMoney(z.forecast_12mo)}</span></div>` +
@@ -3066,7 +3100,7 @@ function renderZipLayer(zips) {
         m.bindTooltip(
             `<strong>${z.zip}</strong> · ${z.state}<br>` +
             `${fmtMoney(z.home_value)} · ${fmtMoney(z.rent)}/mo<br>` +
-            `cap ${z.cap_rate_pct.toFixed(1)}% · score <strong>${z.composite.toFixed(0)}</strong>`,
+            `cap ${fmtPct(z.cap_rate_pct, 1)} · score <strong>${z.composite == null ? '—' : z.composite.toFixed(0)}</strong>`,
             { sticky: true, opacity: 0.95, direction: 'top' }
         );
         if (useSheet) {
