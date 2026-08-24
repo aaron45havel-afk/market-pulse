@@ -104,9 +104,35 @@
     border: 1px solid var(--line); color: var(--ink-2); white-space: nowrap;
   }
   .m-chip.spec { color: var(--rust); border-color: var(--rust); }
-  .m-chip.score { color: var(--ochre); border-color: var(--ochre); }
+  /* PRESENCE of an assessment is the signal worth colouring; absence is
+     the default state. Ochre is the target-notch accent and trains the
+     eye to mean "attend to this" — twelve identical ochre NOT SCORED
+     badges is wallpaper, and it competes with the accent's real job. */
+  .m-chip.scored { color: var(--ochre); border-color: var(--ochre); }
+  .m-chip.unscored { color: var(--ink-2); border-color: var(--line); }
   .m-chip.stale { color: var(--ochre); border-color: var(--ochre); }
-  .m-chip.failing { color: var(--rust); border-color: var(--rust); }
+  /* Ochre, not rust. Rust is reserved for invalidation and speculative
+     flags; a failing rubric is neither, and spending the reserved colour
+     on a third meaning is what makes a reserved colour stop working. */
+  .m-chip.failing { color: var(--ochre); border-color: var(--ochre); }
+
+  /* ── thesis + invalidation ──
+     The substance of the record. `invalidation` is what the user needs
+     in front of them on the day a price triggers, so on a triggered row
+     it renders open by default. Rust marks the heading only — the body
+     is ordinary secondary text, because a wall of alarm-coloured prose
+     is unreadable and stops meaning anything. */
+  .m-thesis { font-size: 0.82rem; color: var(--ink-2); line-height: 1.55; margin-top: 0.45rem; }
+  .m-kills { margin-top: 0.5rem; border-top: 1px solid var(--line); padding-top: 0.45rem; }
+  .m-kills > summary {
+    cursor: pointer; list-style: none; display: flex; align-items: center; gap: 0.4rem;
+    font-family: var(--cond); text-transform: uppercase; letter-spacing: 0.07em;
+    font-size: 0.66rem; font-weight: 600; color: var(--rust); min-height: 28px;
+  }
+  .m-kills > summary::-webkit-details-marker { display: none; }
+  .m-kills > summary::before { content: "▸"; font-size: 0.7rem; transition: transform 0.15s; }
+  .m-kills[open] > summary::before { transform: rotate(90deg); }
+  .m-kills .body { font-size: 0.82rem; color: var(--ink-2); line-height: 1.55; padding: 0.35rem 0 0 1rem; }
 
   /* ── the gauge ──
      Target notch at 40%, visible range 0.6x-1.6x. Left of the notch is
@@ -144,7 +170,20 @@
   .moat-scope button.act:hover { border-color: var(--ochre); }
   .moat-scope button.act.primary { border-color: var(--brine); color: var(--brine); }
   .moat-scope button.act.danger { border-color: var(--rust); color: var(--rust); }
-  .m-acts { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.65rem; }
+  /* ARCHIVE is a quiet text link, not a bordered button. It had a rust
+     border, which made the most destructive action the loudest thing on
+     every card — and spent the rust that is reserved for invalidation
+     and speculative flags. */
+  .moat-scope button.act.quiet {
+    background: none; border: 0; color: var(--ink-2); padding: 0.45rem 0.2rem;
+    text-decoration: underline; text-underline-offset: 3px; font-weight: 500;
+  }
+  .moat-scope button.act.quiet:hover { color: var(--ink); border: 0; }
+  .m-acts { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; margin-top: 0.65rem; }
+  .m-acts .spacer { margin-left: auto; }
+  /* The sort toggle reads as a sentence — state, then action — so it is
+     the one control that is not shouted in condensed uppercase. */
+  #mSortBtn { text-transform: none; letter-spacing: 0.01em; font-family: var(--sans); font-size: 0.76rem; }
 
   /* ── THE TRIGGER ──
      A triggered row pins to the top, is bordered in ochre, and shows
@@ -271,7 +310,19 @@
     const d = await api("/api/moats");
     STATE.rows = d.rows || [];
     STATE.counts = d.counts || {};
+    if (!STATE.segChosen) pickOpeningSegment();
     render();
+  }
+
+  // ARMED is the right daily-use surface once something is armed, and
+  // the wrong opening screen before that — the app's first statement
+  // would be an empty list. Fall through to the first stage that has
+  // anything in it, but stop falling through the moment one is armed.
+  function pickOpeningSegment() {
+    const c = STATE.counts;
+    if (c.armed > 0) { STATE.seg = "ARMED"; return; }
+    STATE.seg = c.qualified > 0 ? "QUALIFIED"
+              : c.candidates > 0 ? "CANDIDATE" : "ARMED";
   }
 
   // ── header counts ──
@@ -316,7 +367,14 @@
     if (row.moatType)  chips.push(`<span class="m-chip">${esc(MOAT_TYPES[row.moatType] || row.moatType)}</span>`);
     if (row.sentiment === "SPECULATIVE") chips.push(`<span class="m-chip spec">speculative</span>`);
     else if (row.sentiment) chips.push(`<span class="m-chip">${esc(SENTIMENTS[row.sentiment] || row.sentiment)}</span>`);
-    if (row.rubric) chips.push(`<span class="m-chip score">${esc(row.score_label)}</span>`);
+    // Scored is the signal; unscored is the default state, so only the
+    // former gets the accent colour.
+    if (row.rubric) {
+      const scored = row.score_label !== "not scored";
+      chips.push(scored
+        ? `<span class="m-chip scored">scored ${esc(row.score_label)}</span>`
+        : `<span class="m-chip unscored">not scored</span>`);
+    }
     if (row.rubric_failing) chips.push(`<span class="m-chip failing">newest rubric fails</span>`);
     if (st.stale) chips.push(`<span class="m-chip stale">stale price</span>`);
 
@@ -331,8 +389,9 @@
         </div>
         <div class="asset">${esc(row.sourceNote || "")}</div>
         <div class="m-acts">
-          <button class="act" data-act="rubric" ${CAN_EDIT ? "" : "disabled"}>Start rubric</button>
-          <button class="act danger" data-act="archive" ${CAN_EDIT ? "" : "disabled"}>Archive</button>
+          <button class="act primary" data-act="rubric" ${CAN_EDIT ? "" : "disabled"}>Start rubric</button>
+          <span class="spacer"></span>
+          <button class="act quiet" data-act="archive" ${CAN_EDIT ? "" : "disabled"}>Archive</button>
         </div>
       </div>`;
     }
@@ -363,6 +422,19 @@
         <button class="act primary" data-act="ack" ${CAN_EDIT ? "" : "disabled"}>I have read this</button>
       </div>` : "";
 
+    // THE SUBSTANCE OF THE RECORD. Both fields were in the payload all
+    // along and simply never written out. `invalidation` opens by
+    // default on a triggered row — the day a price triggers is the one
+    // moment it exists for, and a disclosure the user has to think to
+    // open is one they will not open then.
+    const thesis = row.thesis
+      ? `<div class="m-thesis">${esc(row.thesis)}</div>` : "";
+    const kills = row.invalidation ? `
+      <details class="m-kills"${row.needs_ack ? " open" : ""}>
+        <summary>What kills this thesis</summary>
+        <div class="body">${esc(row.invalidation)}</div>
+      </details>` : "";
+
     return `<div class="m-row ${row.needs_ack ? "triggered" : ""}" data-id="${row.id}">
       <div class="m-row-top">
         <span class="tkr">${esc(row.ticker)}</span>
@@ -370,7 +442,9 @@
         ${chips.join(" ")}
       </div>
       ${row.assetLine ? `<div class="asset">${esc(row.assetLine)}</div>` : ""}
+      ${thesis}
       ${fired}
+      ${kills}
       ${armed ? gaugeHtml(row) : ""}
       ${armed ? `
       <div class="m-prices">
@@ -393,10 +467,12 @@
         ${armed
           ? `<button class="act" data-act="plan">${p.planLockedAt ? "Plan" : "Write plan"}</button>
              <button class="act" data-act="note">Note</button>
-             <button class="act" data-act="disarm" ${CAN_EDIT ? "" : "disabled"}>Disarm</button>`
+             <span class="spacer"></span>
+             <button class="act quiet" data-act="disarm" ${CAN_EDIT ? "" : "disabled"}>Disarm</button>`
           : `<button class="act primary" data-act="arm" ${CAN_EDIT ? "" : "disabled"}>Arm</button>
              <button class="act" data-act="rubric" ${CAN_EDIT ? "" : "disabled"}>Re-review</button>
-             <button class="act danger" data-act="archive" ${CAN_EDIT ? "" : "disabled"}>Archive</button>`}
+             <span class="spacer"></span>
+             <button class="act quiet" data-act="archive" ${CAN_EDIT ? "" : "disabled"}>Archive</button>`}
       </div>
     </div>`;
   }
@@ -437,23 +513,61 @@
 
     $("#mRows").innerHTML = rows.length
       ? rows.map(rowHtml).join("")
-      : `<div class="m-empty">Nothing at this stage.</div>`;
+      : emptyState(STATE.seg);
+    document.querySelectorAll(".m-segs button").forEach(x =>
+      x.setAttribute("aria-selected", String(x.dataset.seg === STATE.seg)));
+  }
+
+  // An empty stage should say what to do next, not just report absence.
+  // "Nothing at this stage" was the app's opening statement on first use.
+  function emptyState(seg) {
+    const c = STATE.counts;
+    if (seg === "ARMED") {
+      return `<div class="m-empty">Nothing armed yet.` +
+        (c.qualified ? ` ${c.qualified} <a href="#" data-goto="QUALIFIED">qualified</a> ` +
+          `name${c.qualified === 1 ? " is" : "s are"} waiting on a target price.` : "") +
+        `</div>`;
+    }
+    if (seg === "QUALIFIED") {
+      return `<div class="m-empty">Nothing qualified. ` +
+        `<a href="#" data-goto="CANDIDATE">Candidates</a> get here by passing a rubric.</div>`;
+    }
+    if (seg === "CANDIDATE") {
+      return `<div class="m-empty">No candidates. ` +
+        `<a href="#" data-do="add">Add one</a>, or ` +
+        `<a href="#" data-do="import">import a CSV</a>.</div>`;
+    }
+    return `<div class="m-empty">Nothing archived yet.</div>`;
   }
 
   // ── segmented nav ──
+  function goTo(seg) { STATE.seg = seg; STATE.segChosen = true; render(); }
+
   document.querySelectorAll(".m-segs button").forEach(b => {
-    b.addEventListener("click", () => {
-      document.querySelectorAll(".m-segs button")
-        .forEach(x => x.setAttribute("aria-selected", String(x === b)));
-      STATE.seg = b.dataset.seg;
-      render();
-    });
+    b.addEventListener("click", () => goTo(b.dataset.seg));
   });
 
+  // Empty-state links: jump to a tab, or open an action directly.
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest("a[data-goto], a[data-do]");
+    if (!a) return;
+    e.preventDefault();
+    if (a.dataset.goto) goTo(a.dataset.goto);
+    else if (a.dataset.do === "add") $("#mAddBtn").click();
+    else if (a.dataset.do === "import") $("#mImportBtn").click();
+  });
+
+  // State AND action, so the label cannot be read as either one alone.
+  function sortLabel() {
+    return STATE.sort === "order"
+      ? "Sorted by your order · switch to distance"
+      : "Sorted by distance · switch to your order";
+  }
+  $("#mSortBtn").textContent = sortLabel();
   $("#mSortBtn").addEventListener("click", (e) => {
     STATE.sort = STATE.sort === "order" ? "distance" : "order";
-    e.target.textContent = "Sort: " + (STATE.sort === "order" ? "your order" : "distance to target");
-    e.target.setAttribute("aria-pressed", String(STATE.sort === "distance"));
+    e.currentTarget.textContent = sortLabel();
+    e.currentTarget.setAttribute("aria-pressed", String(STATE.sort === "distance"));
     render();
   });
 
@@ -465,7 +579,11 @@
       const row = STATE.rows.find(r => r.id === id);
       try {
         if (field === "target") {
-          await api(`/api/moats/${id}/arm`, { targetPrice: value });
+          // /target, NOT /arm. /arm refuses anything not in QUALIFIED, so
+          // on every armed row this silently 400'd — the typed value sat
+          // on screen while the stored target never moved.
+          const res = await api(`/api/moats/${id}/target`, { target: value });
+          if (res.newly_triggered) { await refresh(); return; }
         } else {
           const res = await api(`/api/moats/${id}/price`, { price: value });
           // A price that just crossed the target opens the plan
@@ -510,7 +628,19 @@
       else if (act === "restore") { await api(`/api/moats/${id}/restore`, {}); await refresh(); }
       else if (act === "archive") archiveDlg(row);
       else if (act === "rubric")  rubricDlg(row);
-      else if (act === "arm")     armDlg(row);
+      // ARM ON AN UNSCORED HOLDING GOES TO QUESTION ONE, not to a dead
+      // button and not to a bare refusal. Grandfathering keeps the seeds
+      // at QUALIFIED without a rubric; it was never meant to carry them
+      // to the stage that can trigger a real purchase decision.
+      else if (act === "arm") {
+        if (row.rubric_armable) armDlg(row);
+        else if (!row.rubric_complete) rubricDlg(row, { thenArm: true });
+        // Complete, but a gate says no. Refuse HERE rather than after the
+        // user has filled in a target and written a plan for a holding
+        // that was never going to be armed.
+        else gateRefusedDlg(row, { version: (row.rubric || {}).version,
+                                   failures: row.rubric_failures });
+      }
       else if (act === "plan")    planDlg(row);
       else if (act === "note")    noteDlg(row);
     } catch (err) { alert(err.message || "That did not work."); }
@@ -550,6 +680,24 @@
       } catch (err) { $("#cE", d).textContent = err.message; }
     };
   });
+
+  // A gate failure is not a dead end. Name the gate, then offer the one
+  // action that makes sense — archive with a reason — so the assessment
+  // that just cost the user an hour has somewhere to land.
+  function gateRefusedDlg(row, res) {
+    const d = dialog(`
+      <h3>${esc(row.ticker)} — does not pass</h3>
+      <p class="m-note">${res.version ? `Assessment on file as version ${res.version}. It stays
+        readable either way; a rubric that failed is the most useful thing in
+        the file two years from now.` : ""}</p>
+      ${(res.failures || []).map(f => `<div class="m-warn">${esc(f.message)}</div>`).join("")}
+      <div class="m-acts">
+        <button class="act" id="gArch">Archive with a reason</button>
+        <button class="act primary" value="cancel">Leave it qualified</button>
+      </div>`);
+    $("button[value=cancel]", d).onclick = () => d.close();
+    $("#gArch", d).onclick = () => { d.close(); archiveDlg(row); };
+  }
 
   function archiveDlg(row) {
     const d = dialog(`
@@ -681,14 +829,18 @@
   // The rubric asks one question at a time on a phone. A GATE FAILURE IS
   // REPORTED THE MOMENT IT IS ANSWERED — letting someone finish a long
   // form and then rejecting it wastes the only thing this costs.
-  function rubricDlg(row) {
-    const sel = (id, opts, blank) =>
+  function rubricDlg(row, opts) {
+    opts = opts || {};
+    const sel = (id, options, blank) =>
       `<select id="${id}"><option value="">${blank}</option>` +
-      opts.map(o => `<option value="${o}">${o.toLowerCase().replace(/_/g, " ")}</option>`).join("") +
+      options.map(o => `<option value="${o}">${o.toLowerCase().replace(/_/g, " ")}</option>`).join("") +
       `</select>`;
     const d = dialog(`
       <h3>${esc(row.ticker)} — rubric${row.rubric ? " (re-review)" : ""}</h3>
-      ${row.rubric ? `<p class="m-note">This creates a new version. The
+      ${opts.thenArm ? `<p class="m-note">Arming needs a completed rubric —
+        this one has not been through the questions. Answer them and you will
+        go straight on to setting a target.</p>`
+      : row.rubric ? `<p class="m-note">This creates a new version. The
         previous one is kept and stays readable.</p>` : ""}
 
       <div class="m-field" style="margin-top:0.8rem">
@@ -742,20 +894,30 @@
           evidence: $("#rEv", d).value });
         // Saved either way — a rubric that failed is the most useful
         // thing in the file two years later.
-        if (res.passed && row.stage === "CANDIDATE") {
+        if (!res.passed) {
+          d.close(); await refresh();
+          // A failed gate on the way to arming is refused the same way
+          // the candidate path refuses it: named, and with archive as
+          // the offered next step rather than a dead end.
+          gateRefusedDlg(row, res);
+          return;
+        }
+        if (row.stage === "CANDIDATE") {
           try { await api(`/api/moats/${row.id}/promote`, {}); }
           catch (pe) {
             d.close(); await refresh();
             alert((pe.reasons || [pe.message]).join("\n\n"));
             return;
           }
-        } else if (!res.passed) {
-          d.close(); await refresh();
-          alert("Assessment saved (version " + res.version + "), and it does not "
-                + "pass:\n\n" + res.failures.map(f => "• " + f.message).join("\n\n"));
-          return;
         }
-        d.close(); await refresh();
+        d.close();
+        await refresh();
+        // Continue straight into arming rather than dumping the user back
+        // at the list — they asked to arm, and the rubric was the detour.
+        if (opts.thenArm) {
+          const fresh = STATE.rows.find(r => r.id === row.id);
+          if (fresh && fresh.stage === "QUALIFIED") armDlg(fresh);
+        }
       } catch (err) { $("#rE", d).textContent = err.message; }
     };
   }

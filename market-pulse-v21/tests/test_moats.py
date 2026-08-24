@@ -186,15 +186,52 @@ check(M.can_promote(FULL, _gf)["ok"] is True,
 # ── arming ──
 ARMABLE = {"stage": "QUALIFIED"}
 POS = {"targetPrice": 20.0, "lastPrice": 28.5, "plan": "Buy a third."}
-check(M.can_arm(ARMABLE, POS, 0)["ok"] is True, "target + price + plan arms")
-check(M.can_arm(ARMABLE, {**POS, "plan": ""}, 0)["ok"] is False,
+check(M.can_arm(ARMABLE, POS, 0, GOOD)["ok"] is True, "target + price + plan arms")
+check(M.can_arm(ARMABLE, {**POS, "plan": ""}, 0, GOOD)["ok"] is False,
       "no plan, no arming — the plan IS the commitment, so arming without "
       "one would create a holding that can trigger with nothing to show")
-check(M.can_arm(ARMABLE, {**POS, "targetPrice": None}, 0)["ok"] is False
-      and M.can_arm(ARMABLE, {**POS, "lastPrice": None}, 0)["ok"] is False,
+check(M.can_arm(ARMABLE, {**POS, "targetPrice": None}, 0, GOOD)["ok"] is False
+      and M.can_arm(ARMABLE, {**POS, "lastPrice": None}, 0, GOOD)["ok"] is False,
       "and both prices are required")
-check(M.can_arm({"stage": "CANDIDATE"}, POS, 0)["ok"] is False,
+check(M.can_arm({"stage": "CANDIDATE"}, POS, 0, GOOD)["ok"] is False,
       "a candidate cannot skip qualification and arm directly")
+
+# ── the rubric requirement, enforced at the ARMING boundary only ──
+#
+# Grandfathering lets the twelve seeds sit at QUALIFIED without a rubric
+# they were never given. It was never meant to carry them to ARMED, which
+# is the stage that can demand money of you.
+_gfr = M.grandfathered_rubric()
+check(M.can_arm(ARMABLE, POS, 0, _gfr)["ok"] is False,
+      "A GRANDFATHERED HOLDING CANNOT BE ARMED. Its every rubric answer is "
+      "null; arming is what makes a holding able to trigger a real purchase "
+      "decision, and a null assessment must not be able to do that")
+check(M.can_arm(ARMABLE, POS, 0, _gfr)["needs_rubric"] is True,
+      "and it says so, so the UI can route into the rubric rather than "
+      "showing a dead button — a refusal with nowhere to go is the same as "
+      "hiding the action")
+check(M.can_promote({**FULL, "stage": "CANDIDATE"}, _gfr)["ok"] is True,
+      "while QUALIFYING on a grandfathered rubric still works — the "
+      "requirement applies at the arming boundary and nowhere else")
+check(M.can_arm(ARMABLE, POS, 0)["ok"] is False
+      and M.can_arm(ARMABLE, POS, 0)["needs_rubric"] is True,
+      "omitting the rubric argument entirely FAILS CLOSED rather than "
+      "skipping the check — a caller that forgets it gets a loud refusal, "
+      "not a silent hole in the one gate before an armed position")
+check(M.can_arm(ARMABLE, POS, 0, {})["ok"] is False,
+      "and neither an empty rubric")
+_arm_gate = M.can_arm(ARMABLE, POS, 0, {**GOOD, "replicableWithCapital": True})
+check(_arm_gate["ok"] is False and _arm_gate["needs_rubric"] is False
+      and any("capital intensity" in r for r in _arm_gate["reasons"]),
+      "a COMPLETE rubric that fails a gate is refused too, and names the "
+      "gate rather than asking for a rubric that already exists")
+check(M.rubric_is_complete(_gfr) is True
+      and M.rubric_is_complete_for_arming(_gfr) is False,
+      "the two completeness tests differ on exactly one case — the "
+      "grandfathered placeholder — which is the whole reason both exist")
+check(M.rubric_is_complete_for_arming(GOOD) is True
+      and M.rubric_is_complete_for_arming({}) is False,
+      "and agree everywhere else")
 
 # The checks below deliberately reference the CONSTANTS, so they prove the
 # behaviour rather than a magic number. That leaves a hole: the constants
@@ -205,11 +242,11 @@ check(M.DECAY_DAYS == 90, "a candidate decays after 90 days")
 check(M.STALE_DAYS == 30, "a price is stale after 30 days")
 check(M.EVIDENCE_MIN == 120, "evidence needs 120 characters")
 
-_cap = M.can_arm(ARMABLE, POS, M.ARMED_CAP)
+_cap = M.can_arm(ARMABLE, POS, M.ARMED_CAP, GOOD)
 check(_cap["ok"] is False and _cap["at_cap"] is True,
       f"the {M.ARMED_CAP + 1}th arm is refused until something is disarmed — "
       f"capital is finite and the cap is the app admitting it")
-check(M.can_arm(ARMABLE, POS, M.ARMED_CAP - 1)["ok"] is True,
+check(M.can_arm(ARMABLE, POS, M.ARMED_CAP - 1, GOOD)["ok"] is True,
       "the 15th is allowed; the cap is a ceiling, not an off-by-one")
 
 

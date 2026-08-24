@@ -160,6 +160,50 @@ check(D.moat_update(new_id, {"ticker": "HACK", "id": 999}) is True
       "so a stray field in a request body cannot rewrite which company a "
       "row is about")
 
+
+# ── the two properties an in-place UPDATE would silently break ──
+#
+# Both of these pass a naive test while destroying the thing they are
+# for, so they are checked at the ROW level: the original rubric's row id
+# and every column of it, and the archived holding's continued existence.
+def _rubric_rows(hid):
+    c = D._get_conn(); cur = c.cursor()
+    cur.execute("SELECT id, version, grandfathered, score, evidence FROM pm_rubrics "
+                "WHERE holding_id=%s ORDER BY version", (hid,))
+    out = cur.fetchall(); cur.close(); c.close()
+    return out
+
+
+_gw = {r["ticker"]: r for r in D.moat_all()}["GWRS"]["id"]
+_v1 = _rubric_rows(_gw)
+D.moat_rubric_add(_gw, M.validate_rubric(GOOD))
+_v2 = _rubric_rows(_gw)
+check(len(_v2) == len(_v1) + 1, "a re-review INSERTs rather than updating")
+check(_v1[0] == [r for r in _v2 if r[1] == 1][0],
+      "and version 1's ROW IS BYTE-IDENTICAL afterwards — same id, same "
+      "score, same evidence. An UPDATE in place would leave one row that "
+      "still reads as 'a rubric exists' while the original assessment is "
+      "gone, and no count-based check would notice")
+
+_arch_before = D.moat_count()
+D.moat_update(new_id, {"stage": "ARCHIVED",
+                       "archiveReason": "Cremation mix worsened two years running",
+                       "archivedAt": datetime(2026, 8, 24, 9, 0)})
+_conn = D._get_conn(); _cur = _conn.cursor()
+_cur.execute("SELECT stage, archived_at FROM pm_holdings WHERE id=%s", (new_id,))
+_row = _cur.fetchone()
+_cur.execute("SELECT ticker FROM pm_holdings WHERE archive_reason ILIKE %s",
+             ("%cremation mix%",))
+_found = [r[0] for r in _cur.fetchall()]
+_cur.close(); _conn.close()
+check(_row is not None and _row[0] == "ARCHIVED" and _row[1] is not None,
+      "archiving sets the stage AND stamps archived_at")
+check(D.moat_count() == _arch_before,
+      "and DELETES nothing — the row count is unchanged")
+check(_found == ["VMC"],
+      "the archived row stays searchable by its reason, which is the whole "
+      "reason a reason is required")
+
 _wipe()
 
 # ── report ──
