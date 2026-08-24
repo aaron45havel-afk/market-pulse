@@ -5376,6 +5376,505 @@ async def api_schloss_snapshot(month: str):
         return JSONResponse({"error": f"failed to read snapshot: {e}"}, status_code=500)
 
 
+# ── permit-moat watchlist ────────────────────────────────────────────
+#
+# The one board here that is not a screener. It holds the user to a
+# decision they wrote down while calm, so the routes are shaped around
+# refusing things: no endpoint below can talk its way past a rubric
+# gate, clear a trigger, or overwrite a locked plan without saying so.
+# All the decision logic lives in moats.py and is proved offline; these
+# handlers validate, persist, and re-read.
+def _moat_now():
+    # Imported locally: this module's top-level line is `from datetime
+    # import date`, so the bare name `datetime` is NOT bound here and
+    # using it would NameError on the first price anyone entered.
+    from datetime import datetime as _dt
+    return _dt.now()
+
+
+def _moat_view(request: Request) -> dict:
+    """Everything the page needs, assembled once."""
+    import moats as M
+    from database import moat_all
+    rows = moat_all()
+    now = _moat_now()
+    for r in rows:
+        pos = r.get("position") or {}
+        r["distance_pct"] = M.distance_pct(pos.get("lastPrice"),
+                                           pos.get("targetPrice"))
+        r["gauge"] = M.gauge(pos.get("lastPrice"), pos.get("targetPrice"))
+        r["staleness"] = M.price_staleness(pos, now)
+        r["needs_ack"] = M.needs_acknowledgement(pos)
+        r["needs_triage"] = M.needs_triage(r, now)
+        r["age"] = M.relative_age(r.get("addedAt"), now)
+        r["score_label"] = M.display_score(r.get("rubric"))
+        # A holding whose NEWEST rubric fails is flagged, never demoted.
+        # A stage that changed itself overnight would be a decision
+        # nobody made.
+        rb = r.get("rubric") or {}
+        r["rubric_failing"] = bool(rb) and rb.get("passed") is False
+    return {"rows": rows, "counts": M.counts(rows, now)}
+
+
+def _moat_find(rows: list, holding_id: int) -> dict | None:
+    return next((r for r in rows if r.get("id") == holding_id), None)
+
+
+def _moat_jsonable(value):
+    """Dates and datetimes to ISO strings, everywhere, recursively.
+
+    Postgres hands back real date/datetime objects and the default JSON
+    encoder refuses them, so /api/moats returned a 500 and the board
+    rendered empty even though the page itself was a clean 200. Applied
+    only AFTER the derived fields are computed — needs_triage,
+    price_staleness and relative_age all do arithmetic on these and
+    would break on strings.
+    """
+    from datetime import date as _d, datetime as _dt
+    if isinstance(value, (_d, _dt)):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {k: _moat_jsonable(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_moat_jsonable(v) for v in value]
+    return value
+
+
+def _moat_reject(reasons, status: int = 400):
+    """A refusal always names what would have to be different."""
+    if isinstance(reasons, str):
+        reasons = [reasons]
+    return JSONResponse({"error": " ".join(reasons), "reasons": list(reasons)},
+                        status_code=status)
+
+
+@app.get("/moats")
+async def moats_page(request: Request):
+    """Permit moats — a watchlist for assets that cannot be replicated.
+
+    A mineral deposit, an adjudicated water right, an NRC license, a
+    Jones Act hull, consecrated cemetery land. The strategy is to wait
+    for one of these to fall to a pre-set price and then buy, which only
+    works if you can act when the price actually falls — and the price
+    only falls when the news is bad. So this page is a commitment
+    device first and a list second.
+
+    It recommends nothing. It shows the user their own targets and their
+    own words back.
+    """
+    view = _moat_view(request)
+    import moats as M
+    return templates.TemplateResponse("moats.html", {
+        "request": request,
+        "rows": view["rows"],
+        "counts": view["counts"],
+        "can_edit": _check_admin_token(request),
+        "moat_types": M.MOAT_TYPES,
+        "sentiments": M.SENTIMENTS,
+        "permit_trends": M.PERMIT_TRENDS,
+        "terminal_demand": M.TERMINAL_DEMAND,
+        "cheap_because": M.CHEAP_BECAUSE,
+        "score_criteria": M.SCORE_CRITERIA,
+        "armed_cap": M.ARMED_CAP,
+        "stale_days": M.STALE_DAYS,
+        "decay_days": M.DECAY_DAYS,
+        "evidence_min": M.EVIDENCE_MIN,
+        "naics_targets": M.NAICS_TARGETS,
+        "default_ceiling": M.DEFAULT_CAP_CEILING,
+    })
+
+
+@app.get("/api/moats")
+async def api_moats_list(request: Request):
+    view = _moat_view(request)
+    return JSONResponse(_moat_jsonable(
+        {**view, "can_edit": _check_admin_token(request)}), status_code=200)
+
+
+@app.post("/api/moats/candidate")
+async def api_moats_add(request: Request):
+    """Ticker, name, why you noticed it. Nothing else, ever.
+
+    This has to survive being done one-handed on a phone in under
+    fifteen seconds. Every extra required field is a reason not to write
+    the name down at all, and a name not written down is the one certain
+    way to lose it.
+    """
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import moats as M
+    from database import moat_add
+    try:
+        cand = M.validate_candidate(await request.json())
+    except M.Invalid as e:
+        return _moat_reject(str(e))
+    hid = moat_add(cand)
+    if hid is None:
+        return _moat_reject(f"{cand['ticker']} is already on the list. "
+                            f"Re-adding would overwrite what is there.", 409)
+    return JSONResponse({"ok": True, "id": hid, "ticker": cand["ticker"]})
+
+
+@app.post("/api/moats/{holding_id}/fields")
+async def api_moats_fields(holding_id: int, request: Request):
+    """Save the thesis fields. Promotion checks them; this only stores."""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import moats as M
+    from database import moat_update
+    body = await request.json()
+    allowed = ("assetLine", "thesis", "invalidation", "moatType",
+               "sentiment", "name", "exchange", "sourceNote")
+    fields = {k: (str(v).strip() if v is not None else None)
+              for k, v in body.items() if k in allowed}
+    if fields.get("moatType") and fields["moatType"] not in M.MOAT_TYPES:
+        return _moat_reject("Unknown moat type.")
+    if fields.get("sentiment") and fields["sentiment"] not in M.SENTIMENTS:
+        return _moat_reject("Unknown sentiment.")
+    if not fields:
+        return _moat_reject("Nothing to save.")
+    moat_update(holding_id, fields)
+    return JSONResponse({"ok": True})
+
+
+@app.post("/api/moats/{holding_id}/rubric")
+async def api_moats_rubric(holding_id: int, request: Request):
+    """Record an assessment as a NEW VERSION, and report the gates.
+
+    Always stored, pass or fail. A rubric that failed is the most useful
+    thing in the file two years later, and one that is only kept when it
+    agrees with you is not a record.
+    """
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import moats as M
+    from database import moat_rubric_add, moat_update
+    try:
+        rubric = M.validate_rubric(await request.json())
+    except M.Invalid as e:
+        return _moat_reject(str(e))
+    version = moat_rubric_add(holding_id, rubric)
+    if version is None:
+        return _moat_reject("Could not save the rubric.", 500)
+    moat_update(holding_id, {})          # counts as touching it
+    ev = M.evaluate(rubric)
+    return JSONResponse({"ok": True, "version": version, "score": ev["score"],
+                         "passed": ev["passed"], "failures": ev["failures"]})
+
+
+@app.get("/api/moats/{holding_id}/rubrics")
+async def api_moats_rubric_history(holding_id: int, request: Request):
+    """Every version, newest first. Nothing here is ever overwritten."""
+    from database import moat_rubric_history
+    return JSONResponse(_moat_jsonable(
+        {"versions": moat_rubric_history(holding_id)}))
+
+
+@app.post("/api/moats/{holding_id}/promote")
+async def api_moats_promote(holding_id: int, request: Request):
+    """CANDIDATE -> QUALIFIED. Blocked by either gate, with NO override.
+
+    The refusal names which gate failed and what it means, because a
+    refusal that does not say what would have to be different is a wall
+    rather than a gate.
+    """
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import moats as M
+    from database import moat_update
+    view = _moat_view(request)
+    h = _moat_find(view["rows"], holding_id)
+    if not h:
+        return _moat_reject("No such holding.", 404)
+    verdict = M.can_promote(h, h.get("rubric"))
+    if not verdict["ok"]:
+        return JSONResponse({"error": " ".join(verdict["reasons"]),
+                             "reasons": verdict["reasons"],
+                             "failures": verdict["failures"]}, status_code=400)
+    moat_update(holding_id, {"stage": "QUALIFIED"})
+    return JSONResponse({"ok": True, "stage": "QUALIFIED"})
+
+
+@app.post("/api/moats/{holding_id}/arm")
+async def api_moats_arm(holding_id: int, request: Request):
+    """QUALIFIED -> ARMED. Needs a target, a price, and a locked plan.
+
+    The armed cap is enforced HERE, against a freshly counted board,
+    rather than trusting a number the client sent.
+    """
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import moats as M
+    from database import moat_update, moat_position_upsert
+    body = await request.json()
+    view = _moat_view(request)
+    h = _moat_find(view["rows"], holding_id)
+    if not h:
+        return _moat_reject("No such holding.", 404)
+
+    pos = dict(h.get("position") or {})
+    for key in ("targetPrice", "lastPrice"):
+        if body.get(key) not in (None, ""):
+            try:
+                v = float(body[key])
+            except (TypeError, ValueError):
+                return _moat_reject(f"{key} must be a number.")
+            if v <= 0:
+                return _moat_reject("Prices have to be greater than zero.")
+            pos[key] = v
+    if (body.get("plan") or "").strip():
+        pos["plan"] = body["plan"].strip()
+
+    verdict = M.can_arm(h, pos, view["counts"]["armed"])
+    if not verdict["ok"]:
+        return JSONResponse({"error": " ".join(verdict["reasons"]),
+                             "reasons": verdict["reasons"],
+                             "at_cap": verdict["at_cap"],
+                             "armed": view["counts"]["armed"]}, status_code=400)
+
+    now = _moat_now()
+    write = {"targetPrice": pos["targetPrice"], "lastPrice": pos["lastPrice"],
+             "lastPriceAt": now}
+    if not (h.get("position") or {}).get("planLockedAt"):
+        write.update(M.lock_plan({}, pos["plan"], now))
+    # Arming can itself trigger, when the price is already at the target.
+    res = M.apply_price({**pos, **write}, pos["lastPrice"], now)
+    write.update({k: v for k, v in res["changed"].items() if k != "lastPriceAt"})
+    moat_position_upsert(holding_id, write)
+    moat_update(holding_id, {"stage": "ARMED"})
+    return JSONResponse({"ok": True, "stage": "ARMED",
+                         "triggered": res["triggered"]})
+
+
+@app.post("/api/moats/{holding_id}/disarm")
+async def api_moats_disarm(holding_id: int, request: Request):
+    """ARMED -> QUALIFIED. The target, plan and notes all stay put.
+
+    Disarming frees a slot; it does not erase the thinking. Re-arming
+    later should find the plan exactly where it was left.
+    """
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    from database import moat_update
+    moat_update(holding_id, {"stage": "QUALIFIED"})
+    return JSONResponse({"ok": True, "stage": "QUALIFIED"})
+
+
+@app.post("/api/moats/{holding_id}/price")
+async def api_moats_price(holding_id: int, request: Request):
+    """Record a price, and report whether it just crossed the target."""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import moats as M
+    from database import moat_position_upsert
+    body = await request.json()
+    view = _moat_view(request)
+    h = _moat_find(view["rows"], holding_id)
+    if not h:
+        return _moat_reject("No such holding.", 404)
+    try:
+        res = M.apply_price(h.get("position") or {}, body.get("price"), _moat_now())
+    except M.Invalid as e:
+        return _moat_reject(str(e))
+    moat_position_upsert(holding_id, res["changed"])
+    now = _moat_now()
+    return JSONResponse({
+        "ok": True,
+        "newly_triggered": res["newly_triggered"],
+        "triggered": res["triggered"],
+        "distance_pct": res["distance_pct"],
+        "gauge": res["gauge"],
+        "staleness": M.price_staleness({**(h.get("position") or {}),
+                                        **res["changed"]}, now),
+        "plan": (h.get("position") or {}).get("plan") or "",
+        "plan_locked_at": str((h.get("position") or {}).get("planLockedAt") or ""),
+    })
+
+
+@app.post("/api/moats/{holding_id}/acknowledge")
+async def api_moats_acknowledge(holding_id: int, request: Request):
+    """The user confirms they have read their own plan.
+
+    This is the whole point of the app. It is a separate, explicit
+    action precisely so it cannot happen by scrolling past.
+    """
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    from database import moat_position_upsert
+    moat_position_upsert(holding_id, {"acknowledged": True})
+    return JSONResponse({"ok": True})
+
+
+@app.post("/api/moats/{holding_id}/plan")
+async def api_moats_plan(holding_id: int, request: Request):
+    """Save or change the plan. Changing a locked one needs confirmation.
+
+    The previous text is appended to the notes with the date it was
+    committed to. Rewriting the thesis mid-drawdown is the failure this
+    app exists to defend against, so the friction is deliberate and the
+    old words are kept rather than replaced.
+    """
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import moats as M
+    from database import moat_position_upsert
+    body = await request.json()
+    view = _moat_view(request)
+    h = _moat_find(view["rows"], holding_id)
+    if not h:
+        return _moat_reject("No such holding.", 404)
+    pos = h.get("position") or {}
+    try:
+        changed = M.edit_plan(pos, body.get("plan"), _moat_now(),
+                              confirmed=bool(body.get("confirmed")))
+    except M.Invalid as e:
+        return JSONResponse({"error": str(e),
+                             "needs_confirmation": bool(pos.get("planLockedAt")),
+                             "locked_at": str(pos.get("planLockedAt") or ""),
+                             "current_plan": pos.get("plan") or ""},
+                            status_code=400)
+    if changed:
+        moat_position_upsert(holding_id, changed)
+    return JSONResponse({"ok": True, "changed": bool(changed)})
+
+
+@app.post("/api/moats/{holding_id}/note")
+async def api_moats_note(holding_id: int, request: Request):
+    """Append-only. Existing entries are never rewritten."""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import moats as M
+    from database import moat_position_upsert, moat_update
+    body = await request.json()
+    view = _moat_view(request)
+    h = _moat_find(view["rows"], holding_id)
+    if not h:
+        return _moat_reject("No such holding.", 404)
+    try:
+        changed = M.append_note(h.get("position") or {}, body.get("note"),
+                                _moat_now())
+    except M.Invalid as e:
+        return _moat_reject(str(e))
+    moat_position_upsert(holding_id, changed)
+    moat_update(holding_id, {})
+    return JSONResponse({"ok": True})
+
+
+@app.post("/api/moats/{holding_id}/archive")
+async def api_moats_archive(holding_id: int, request: Request):
+    """Always requires a reason. Never deletes.
+
+    In a year this is the only thing that will explain the decision, and
+    the accumulated record of what was passed on is the most valuable
+    thing this app builds over a decade.
+    """
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import moats as M
+    from database import moat_update
+    body = await request.json()
+    verdict = M.can_archive(body.get("reason"))
+    if not verdict["ok"]:
+        return _moat_reject(verdict["reasons"])
+    moat_update(holding_id, {"stage": "ARCHIVED",
+                             "archiveReason": verdict["reason"],
+                             "archivedAt": _moat_now()})
+    return JSONResponse({"ok": True, "stage": "ARCHIVED"})
+
+
+@app.post("/api/moats/{holding_id}/restore")
+async def api_moats_restore(holding_id: int, request: Request):
+    """Back to CANDIDATE, with the archive reason kept as history."""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    from database import moat_update
+    moat_update(holding_id, {"stage": "CANDIDATE", "archivedAt": None})
+    return JSONResponse({"ok": True, "stage": "CANDIDATE"})
+
+
+@app.post("/api/moats/import/preview")
+async def api_moats_import_preview(request: Request):
+    """Parse and filter a CSV. WRITES NOTHING.
+
+    Reports every rejected row in a named bucket, and the buckets sum to
+    the input. "We found 140 matches" means nothing without "out of
+    what, and why not the rest" — and a filter that reports only its
+    winners cannot be checked.
+    """
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import moats as M
+    from database import moat_all
+    body = await request.json()
+    try:
+        parsed = M.parse_csv(body.get("csv"))
+    except M.Invalid as e:
+        return _moat_reject(str(e))
+    ceiling = body.get("ceiling", M.DEFAULT_CAP_CEILING)
+    if ceiling in ("", None):
+        ceiling = None
+    else:
+        try:
+            ceiling = float(ceiling)
+        except (TypeError, ValueError):
+            return _moat_reject("The market cap ceiling must be a number, "
+                                "or blank for no ceiling.")
+    existing = [h["ticker"] for h in moat_all()]
+    result = M.filter_import(parsed["rows"], existing, cap_ceiling=ceiling)
+    return JSONResponse({**result, "skipped_rows": parsed["skipped"],
+                         "columns": parsed["columns"], "ceiling": ceiling})
+
+
+@app.post("/api/moats/import/commit")
+async def api_moats_import_commit(request: Request):
+    """Bulk-add the matched rows as candidates.
+
+    Re-filtered server-side against a freshly read watchlist rather than
+    trusting the preview the client is holding — the two are separated
+    by however long the user spent reading it.
+    """
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import moats as M
+    from database import moat_all, moat_add
+    body = await request.json()
+    rows = body.get("rows") or []
+    if not isinstance(rows, list) or not rows:
+        return _moat_reject("Nothing selected to import.")
+    existing = [h["ticker"] for h in moat_all()]
+    result = M.filter_import(
+        [{"ticker": str(r.get("ticker", "")).strip().upper(),
+          "name": r.get("name") or "", "naics": M.normalize_naics(r.get("naics")),
+          "marketCap": M.parse_market_cap(r.get("marketCap"))} for r in rows],
+        existing, cap_ceiling=None)
+
+    added, skipped = [], []
+    for r in result["matched"]:
+        hid = moat_add({"ticker": r["ticker"], "name": r["name"],
+                        "exchange": "", "stage": "CANDIDATE",
+                        "sourceNote": r.get("sourceNote") or "",
+                        "naics": r["naics"], "marketCapAtAdd": r.get("marketCap")})
+        (added if hid else skipped).append(r["ticker"])
+    return JSONResponse({"ok": True, "added": added, "skipped": skipped,
+                         "already_tracked": [r["ticker"] for r
+                                             in result["already_tracked"]],
+                         "rejected": result["counts"]["wrong_naics"]})
+
+
 @app.get("/api/lynch/snapshots")
 async def api_lynch_snapshot_list():
     if not _LYNCH_SNAPSHOT_DIR.exists():

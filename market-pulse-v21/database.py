@@ -335,12 +335,380 @@ def hundred_hand_all() -> dict:
         conn.close()
 
 
+# ── permit-moat watchlist ────────────────────────────────────────────
+#
+# THIS IS THE ONLY COPY OF ANY OF IT. Every other board in this app is
+# rebuilt from SEC filings by a scheduled job, and the database holds
+# only the few things a person typed. Here the person typed all of it —
+# the thesis, the invalidation, the target, the plan — and there is no
+# upstream to rebuild from. Nothing is ever hard-deleted: archiving sets
+# a stage and a reason, because the record of what was passed on and why
+# is the most valuable thing this accumulates over a decade.
+#
+# Rubrics are versioned rather than updated. A re-review must never
+# destroy the original assessment; being able to read what you thought
+# in 2026 alongside what you think now is the point of keeping them.
+def _ensure_moat_tables():
+    """Own connection/transaction, same rationale as the groups above."""
+    conn = _get_conn()
+    if not conn: return
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS pm_holdings (
+                id                SERIAL PRIMARY KEY,
+                ticker            VARCHAR(12) UNIQUE NOT NULL,
+                name              TEXT NOT NULL DEFAULT '',
+                exchange          VARCHAR(12) NOT NULL DEFAULT '',
+                stage             VARCHAR(12) NOT NULL DEFAULT 'CANDIDATE',
+                source_note       TEXT NOT NULL DEFAULT '',
+                asset_line        TEXT,
+                moat_type         VARCHAR(24),
+                sentiment         VARCHAR(16),
+                thesis            TEXT,
+                invalidation      TEXT,
+                naics             VARCHAR(6),
+                market_cap_at_add DOUBLE PRECISION,
+                anchor_price      DOUBLE PRECISION,
+                anchor_as_of      DATE,
+                added_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+                last_touched_at   TIMESTAMP NOT NULL DEFAULT NOW(),
+                archive_reason    TEXT,
+                archived_at       TIMESTAMP,
+                sort_order        INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        # Every answer column is NULLABLE on purpose. The twelve seeds
+        # carry a grandfathered rubric with no answers at all, and NOT
+        # NULL here would force inventing them — fabricated evidence in
+        # the one record the design depends on. `score` is nullable for
+        # the same reason: 0 is a result, absence is not.
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS pm_rubrics (
+                id                      SERIAL PRIMARY KEY,
+                holding_id              INTEGER NOT NULL
+                                        REFERENCES pm_holdings(id) ON DELETE CASCADE,
+                version                 INTEGER NOT NULL,
+                replicable_with_capital BOOLEAN,
+                permit_trend            VARCHAR(12),
+                freight_pct             SMALLINT,
+                terminal_demand         VARCHAR(12),
+                cheap_because           VARCHAR(24),
+                evidence                TEXT NOT NULL DEFAULT '',
+                score                   SMALLINT,
+                passed                  BOOLEAN NOT NULL DEFAULT FALSE,
+                grandfathered           BOOLEAN NOT NULL DEFAULT FALSE,
+                assessed_at             TIMESTAMP NOT NULL DEFAULT NOW(),
+                UNIQUE (holding_id, version)
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS pm_positions (
+                holding_id     INTEGER PRIMARY KEY
+                               REFERENCES pm_holdings(id) ON DELETE CASCADE,
+                target_price   DOUBLE PRECISION,
+                last_price     DOUBLE PRECISION,
+                last_price_at  TIMESTAMP,
+                plan           TEXT,
+                plan_locked_at TIMESTAMP,
+                triggered_at   TIMESTAMP,
+                acknowledged   BOOLEAN NOT NULL DEFAULT FALSE,
+                notes          TEXT NOT NULL DEFAULT ''
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS pm_holdings_stage_idx "
+                    "ON pm_holdings (stage)")
+        conn.commit(); cur.close()
+    except Exception as e:
+        logger.error(f"pm_* table init error: {e}")
+    finally:
+        conn.close()
+
+
+# snake_case in Postgres, camelCase in the domain module and templates.
+# One mapping in one place, rather than two spellings of every field
+# drifting apart across three files.
+_HOLDING_COLS = (
+    "id", "ticker", "name", "exchange", "stage", "source_note", "asset_line",
+    "moat_type", "sentiment", "thesis", "invalidation", "naics",
+    "market_cap_at_add", "anchor_price", "anchor_as_of", "added_at",
+    "last_touched_at", "archive_reason", "archived_at", "sort_order",
+)
+_HOLDING_KEYS = (
+    "id", "ticker", "name", "exchange", "stage", "sourceNote", "assetLine",
+    "moatType", "sentiment", "thesis", "invalidation", "naics",
+    "marketCapAtAdd", "anchorPrice", "anchorAsOf", "addedAt",
+    "lastTouchedAt", "archiveReason", "archivedAt", "sortOrder",
+)
+_POSITION_COLS = ("target_price", "last_price", "last_price_at", "plan",
+                  "plan_locked_at", "triggered_at", "acknowledged", "notes")
+_POSITION_KEYS = ("targetPrice", "lastPrice", "lastPriceAt", "plan",
+                  "planLockedAt", "triggeredAt", "acknowledged", "notes")
+_RUBRIC_COLS = ("id", "version", "replicable_with_capital", "permit_trend",
+                "freight_pct", "terminal_demand", "cheap_because", "evidence",
+                "score", "passed", "grandfathered", "assessed_at")
+_RUBRIC_KEYS = ("id", "version", "replicableWithCapital", "permitTrend",
+                "freightPctOfValue", "terminalDemand50yr", "cheapBecause",
+                "evidence", "score", "passed", "grandfathered", "assessedAt")
+
+_HOLDING_SET = dict(zip(_HOLDING_KEYS, _HOLDING_COLS))
+_POSITION_SET = dict(zip(_POSITION_KEYS, _POSITION_COLS))
+
+
+def _row_to_dict(row, keys):
+    return {k: v for k, v in zip(keys, row)}
+
+
+def moat_all() -> list:
+    """Every holding with its position and newest rubric, ready to render.
+
+    Returns [] rather than an error object when there is no database.
+    The page has to render without one, and an empty watchlist is a true
+    statement about a deployment that has none.
+    """
+    conn = _get_conn()
+    if not conn: return []
+    try:
+        cur = conn.cursor()
+        cur.execute(f"SELECT {', '.join(_HOLDING_COLS)} FROM pm_holdings "
+                    f"ORDER BY sort_order, ticker")
+        holdings = [_row_to_dict(r, _HOLDING_KEYS) for r in cur.fetchall()]
+        by_id = {h["id"]: h for h in holdings}
+        for h in holdings:
+            h["position"], h["rubric"], h["rubric_count"] = None, None, 0
+
+        cur.execute(f"SELECT holding_id, {', '.join(_POSITION_COLS)} "
+                    f"FROM pm_positions")
+        for r in cur.fetchall():
+            if r[0] in by_id:
+                by_id[r[0]]["position"] = _row_to_dict(r[1:], _POSITION_KEYS)
+
+        # DISTINCT ON gives the newest version per holding in one pass.
+        # Prior versions stay in the table and are read on demand — a
+        # re-review must never destroy the original assessment.
+        cur.execute(f"""
+            SELECT DISTINCT ON (holding_id) holding_id, {', '.join(_RUBRIC_COLS)}
+            FROM pm_rubrics ORDER BY holding_id, version DESC
+        """)
+        for r in cur.fetchall():
+            if r[0] in by_id:
+                by_id[r[0]]["rubric"] = _row_to_dict(r[1:], _RUBRIC_KEYS)
+
+        cur.execute("SELECT holding_id, COUNT(*) FROM pm_rubrics GROUP BY holding_id")
+        for hid, n in cur.fetchall():
+            if hid in by_id:
+                by_id[hid]["rubric_count"] = int(n)
+
+        cur.close()
+        return holdings
+    except Exception as e:
+        logger.error(f"pm_holdings read error: {e}")
+        return []
+    finally:
+        conn.close()
+
+
+def moat_rubric_history(holding_id: int) -> list:
+    """Every version, newest first. Nothing here is ever overwritten."""
+    conn = _get_conn()
+    if not conn: return []
+    try:
+        cur = conn.cursor()
+        cur.execute(f"SELECT {', '.join(_RUBRIC_COLS)} FROM pm_rubrics "
+                    f"WHERE holding_id = %s ORDER BY version DESC",
+                    (int(holding_id),))
+        out = [_row_to_dict(r, _RUBRIC_KEYS) for r in cur.fetchall()]
+        cur.close()
+        return out
+    except Exception as e:
+        logger.error(f"pm_rubrics history error: {e}")
+        return []
+    finally:
+        conn.close()
+
+
+def moat_add(holding: dict) -> int | None:
+    """Insert a holding. Returns its id, or None if the ticker is taken.
+
+    ON CONFLICT DO NOTHING rather than an upsert: re-adding a ticker
+    already on the list must not quietly overwrite a thesis someone
+    spent an evening writing.
+    """
+    conn = _get_conn()
+    if not conn: return None
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO pm_holdings
+                (ticker, name, exchange, stage, source_note, naics,
+                 market_cap_at_add, asset_line, moat_type, sentiment,
+                 thesis, invalidation, anchor_price, anchor_as_of, sort_order)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                    COALESCE((SELECT MAX(sort_order) + 1 FROM pm_holdings), 0))
+            ON CONFLICT (ticker) DO NOTHING
+            RETURNING id
+        """, (holding["ticker"].upper(), holding.get("name") or "",
+              holding.get("exchange") or "", holding.get("stage") or "CANDIDATE",
+              holding.get("sourceNote") or "", holding.get("naics"),
+              holding.get("marketCapAtAdd"), holding.get("assetLine"),
+              holding.get("moatType"), holding.get("sentiment"),
+              holding.get("thesis"), holding.get("invalidation"),
+              holding.get("anchorPrice"), holding.get("anchorAsOf")))
+        row = cur.fetchone()
+        conn.commit(); cur.close()
+        return int(row[0]) if row else None
+    except Exception as e:
+        logger.error(f"pm_holdings add error: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+def moat_update(holding_id: int, fields: dict, touch: bool = True) -> bool:
+    """Partial update by domain key. Unknown keys are ignored, not guessed.
+
+    `touch` refreshes last_touched_at, which is what the 90-day decay
+    reads. Every deliberate action on a candidate counts as touching it.
+    """
+    sets, vals = [], []
+    for k, v in (fields or {}).items():
+        col = _HOLDING_SET.get(k)
+        if col and col not in ("id", "ticker", "added_at"):
+            sets.append(f"{col} = %s")
+            vals.append(v)
+    if touch:
+        sets.append("last_touched_at = NOW()")
+    if not sets:
+        return False
+    conn = _get_conn()
+    if not conn: return False
+    try:
+        cur = conn.cursor()
+        cur.execute(f"UPDATE pm_holdings SET {', '.join(sets)} WHERE id = %s",
+                    (*vals, int(holding_id)))
+        ok = cur.rowcount > 0
+        conn.commit(); cur.close()
+        return ok
+    except Exception as e:
+        logger.error(f"pm_holdings update error: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def moat_position_upsert(holding_id: int, fields: dict) -> bool:
+    """Create or patch the position row. ONLY the named fields change.
+
+    A blind upsert of the whole row would clear plan_locked_at or
+    triggered_at every time a price was typed, which is precisely the
+    history this app exists to keep.
+    """
+    sets, cols, vals = [], [], []
+    for k, v in (fields or {}).items():
+        col = _POSITION_SET.get(k)
+        if col:
+            sets.append(f"{col} = EXCLUDED.{col}")
+            cols.append(col)
+            vals.append(v)
+    if not cols:
+        return False
+    conn = _get_conn()
+    if not conn: return False
+    try:
+        cur = conn.cursor()
+        cur.execute(f"""
+            INSERT INTO pm_positions (holding_id, {', '.join(cols)})
+            VALUES (%s, {', '.join(['%s'] * len(cols))})
+            ON CONFLICT (holding_id) DO UPDATE SET {', '.join(sets)}
+        """, (int(holding_id), *vals))
+        conn.commit(); cur.close()
+        return True
+    except Exception as e:
+        logger.error(f"pm_positions upsert error: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def moat_rubric_add(holding_id: int, rubric: dict) -> int | None:
+    """Append version N+1. Prior versions are left untouched, always."""
+    conn = _get_conn()
+    if not conn: return None
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO pm_rubrics
+                (holding_id, version, replicable_with_capital, permit_trend,
+                 freight_pct, terminal_demand, cheap_because, evidence,
+                 score, passed, grandfathered)
+            VALUES (%s,
+                    COALESCE((SELECT MAX(version) + 1 FROM pm_rubrics
+                              WHERE holding_id = %s), 1),
+                    %s,%s,%s,%s,%s,%s,%s,%s,%s)
+            RETURNING id, version
+        """, (int(holding_id), int(holding_id),
+              rubric.get("replicableWithCapital"), rubric.get("permitTrend"),
+              rubric.get("freightPctOfValue"), rubric.get("terminalDemand50yr"),
+              rubric.get("cheapBecause"), rubric.get("evidence") or "",
+              rubric.get("score"), bool(rubric.get("passed")),
+              bool(rubric.get("grandfathered"))))
+        row = cur.fetchone()
+        conn.commit(); cur.close()
+        return int(row[1]) if row else None
+    except Exception as e:
+        logger.error(f"pm_rubrics add error: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+def moat_count() -> int:
+    conn = _get_conn()
+    if not conn: return 0
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM pm_holdings")
+        n = int(cur.fetchone()[0])
+        cur.close()
+        return n
+    except Exception as e:
+        logger.error(f"pm_holdings count error: {e}")
+        return 0
+    finally:
+        conn.close()
+
+
+def moat_seed_if_empty() -> int:
+    """Lay down the twelve, once, on a watchlist that has never had any.
+
+    Guarded on EMPTINESS rather than on per-ticker conflicts, so a user
+    who deliberately archived a seed does not get it silently reinstated
+    on the next deploy. Returns how many were written.
+    """
+    import moats as M
+    if moat_count() > 0:
+        return 0
+    written = 0
+    for s in M.SEED:
+        hid = moat_add({**s, "stage": "QUALIFIED",
+                        "sourceNote": "Seeded — assessed before this "
+                                      "watchlist existed."})
+        if hid:
+            moat_rubric_add(hid, M.grandfathered_rubric())
+            written += 1
+    if written:
+        logger.info(f"pm_holdings seeded with {written} holdings")
+    return written
+
+
 def init_db():
     # Self-contained migrations first, each in its own transaction, so
     # they can't be rolled back by an unrelated failure in the block below.
     _ensure_landscaper_tables()
     _ensure_household_tables()
     _ensure_hundred_hand_table()
+    _ensure_moat_tables()
+    moat_seed_if_empty()
     conn = _get_conn()
     if not conn: return
     try:

@@ -1,0 +1,832 @@
+{% extends "base.html" %}
+{% block title %}Permit Moats · Market Pulse{% endblock %}
+
+{#
+  A watchlist for assets that cannot be replicated, and the plan for each.
+
+  This page is a COMMITMENT DEVICE, not a dashboard. The strategy — wait
+  for an unrepeatable asset to fall to a pre-set price, then buy — only
+  pays if you can act when the price actually falls, and the price only
+  falls when the news is bad. So the loudest thing on the page is not a
+  number: it is the user's own words, shown back to them at the moment
+  they are least able to write them.
+
+  Visual direction is an industrial survey document, not a fintech
+  dashboard — a mine assay report, a USGS map legend, a bill of lading.
+  Dark ground, limestone text, one teal for the buy zone, ochre for
+  markings, rust reserved strictly for invalidation and speculative
+  flags. It is scoped to .moat-scope so it does not leak into the rest
+  of the app, which is deliberately light.
+
+  Price DIRECTION is never the signal here and is never coloured. The
+  only thing that matters is distance from a target the user set.
+#}
+
+{% block content %}
+<style>
+  /* IBM Plex, with a real fallback stack — the CSP allows Google Fonts
+     but a page that only works when a font server does is a page that
+     will one day render in Times New Roman. */
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&display=swap');
+
+  .moat-scope {
+    --ground:  #12171A;   /* cool near-black */
+    --panel:   #1C2429;
+    --panel-2: #232D33;
+    --line:    #2E3A41;
+    --ink:     #DAD6C8;   /* warm pale limestone */
+    --ink-2:   #8C9599;
+    --brine:   #69A79C;   /* in the buy zone */
+    --ochre:   #C4883C;   /* targets and markings */
+    --rust:    #A8543F;   /* invalidation + speculative ONLY */
+    --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    --cond: 'IBM Plex Sans Condensed', 'IBM Plex Sans', system-ui, sans-serif;
+    --sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    margin: -1.5rem -1.5rem -3rem;
+    padding: 1.1rem 1.1rem 4rem;
+    min-height: 100vh;
+  }
+  @media (max-width: 640px) { .moat-scope { margin: -1rem -1rem -2rem; padding: 0.9rem 0.9rem 5rem; } }
+
+  .moat-scope h1, .moat-scope h2, .moat-scope h3, .moat-scope .tag {
+    font-family: var(--cond); text-transform: uppercase;
+    letter-spacing: 0.06em; font-weight: 600; color: var(--ink);
+  }
+  .moat-scope h1 { font-size: 1.15rem; margin: 0; letter-spacing: 0.11em; }
+  /* Every number, ticker and label is monospaced and tabular so columns
+     line up down the page the way a survey table does. */
+  .moat-scope .num, .moat-scope .tkr, .moat-scope input, .moat-scope .mono {
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+  }
+  .moat-scope a { color: var(--brine); }
+  .moat-scope :focus-visible {
+    outline: 2px solid var(--ochre); outline-offset: 2px; border-radius: 2px;
+  }
+
+  /* ── header ── */
+  .m-head {
+    display: flex; flex-wrap: wrap; gap: 0.5rem 0.9rem;
+    align-items: baseline; justify-content: space-between;
+    border-bottom: 1px solid var(--line); padding-bottom: 0.7rem; margin-bottom: 0.7rem;
+  }
+  .m-counts { display: flex; flex-wrap: wrap; gap: 0.75rem; font-family: var(--mono); font-size: 0.72rem; color: var(--ink-2); }
+  .m-counts b { color: var(--ink); font-weight: 600; }
+  .m-counts .triage-count { color: var(--ochre); }
+  .m-counts .triage-count b { color: var(--ochre); }
+
+  /* ── segmented control ── */
+  .m-segs { display: flex; gap: 0; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; margin-bottom: 0.9rem; }
+  .m-segs button {
+    flex: 1; background: var(--panel); color: var(--ink-2); border: 0;
+    border-right: 1px solid var(--line); padding: 0.55rem 0.3rem; cursor: pointer;
+    font-family: var(--cond); text-transform: uppercase; letter-spacing: 0.07em;
+    font-size: 0.73rem; font-weight: 600; min-height: 42px;
+  }
+  .m-segs button:last-child { border-right: 0; }
+  .m-segs button[aria-selected="true"] { background: var(--panel-2); color: var(--ink); box-shadow: inset 0 -2px 0 var(--ochre); }
+
+  /* ── rows ── */
+  .m-row {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 3px; padding: 0.75rem 0.85rem; margin-bottom: 0.55rem;
+  }
+  .m-row.candidate { background: transparent; border-style: dashed; }
+  .m-row-top { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+  .m-row .tkr { font-size: 0.98rem; font-weight: 600; letter-spacing: 0.04em; }
+  .m-row .co { color: var(--ink-2); font-size: 0.82rem; flex: 1; min-width: 8ch; }
+  .m-row .asset { font-size: 0.79rem; color: var(--ink-2); margin-top: 0.35rem; line-height: 1.45; }
+  .m-chip {
+    font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.05em;
+    text-transform: uppercase; padding: 0.12rem 0.36rem; border-radius: 2px;
+    border: 1px solid var(--line); color: var(--ink-2); white-space: nowrap;
+  }
+  .m-chip.spec { color: var(--rust); border-color: var(--rust); }
+  .m-chip.score { color: var(--ochre); border-color: var(--ochre); }
+  .m-chip.stale { color: var(--ochre); border-color: var(--ochre); }
+  .m-chip.failing { color: var(--rust); border-color: var(--rust); }
+
+  /* ── the gauge ──
+     Target notch at 40%, visible range 0.6x-1.6x. Left of the notch is
+     the buy zone and is tinted. The state is ALSO in the aria-label and
+     in the printed distance, never in colour alone. */
+  .m-gauge { position: relative; height: 22px; margin: 0.6rem 0 0.3rem; background: var(--panel-2); border: 1px solid var(--line); border-radius: 2px; }
+  .m-gauge .zone { position: absolute; inset: 0 auto 0 0; width: 40%; background: rgba(105,167,156,0.14); border-right: 1px solid var(--ochre); }
+  .m-gauge .mark { position: absolute; top: -3px; bottom: -3px; width: 3px; background: var(--ink); border-radius: 1px; transform: translateX(-1.5px); }
+  .m-gauge .mark.in { background: var(--brine); }
+  .m-gauge .mark.clamped { width: 9px; background: repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 4px); }
+  .m-gauge-meta { display: flex; justify-content: space-between; gap: 0.5rem; font-family: var(--mono); font-size: 0.7rem; color: var(--ink-2); }
+  .m-gauge-meta .dist.in { color: var(--brine); }
+
+  /* ── price entry ── */
+  .m-prices { display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap; margin-top: 0.6rem; }
+  .m-field { display: flex; flex-direction: column; gap: 0.18rem; }
+  .m-field label { font-family: var(--cond); text-transform: uppercase; letter-spacing: 0.07em; font-size: 0.63rem; color: var(--ink-2); }
+  .moat-scope input, .moat-scope textarea, .moat-scope select {
+    background: var(--ground); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 2px; padding: 0.45rem 0.5rem; font-size: 0.9rem; min-height: 40px;
+  }
+  .moat-scope input.px { width: 8.5ch; text-align: right; }
+  .moat-scope textarea { width: 100%; font-family: var(--sans); line-height: 1.5; min-height: 90px; }
+  .moat-scope select { min-width: 12ch; }
+  .m-saved { font-family: var(--mono); font-size: 0.68rem; color: var(--brine); opacity: 0; transition: opacity 0.2s; }
+  .m-saved.on { opacity: 1; }
+
+  /* ── buttons ── */
+  .moat-scope button.act {
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 2px; padding: 0.45rem 0.7rem; cursor: pointer; min-height: 40px;
+    font-family: var(--cond); text-transform: uppercase; letter-spacing: 0.07em;
+    font-size: 0.7rem; font-weight: 600;
+  }
+  .moat-scope button.act:hover { border-color: var(--ochre); }
+  .moat-scope button.act.primary { border-color: var(--brine); color: var(--brine); }
+  .moat-scope button.act.danger { border-color: var(--rust); color: var(--rust); }
+  .m-acts { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.65rem; }
+
+  /* ── THE TRIGGER ──
+     A triggered row pins to the top, is bordered in ochre, and shows
+     the user's own plan at full size. It cannot be dismissed by
+     scrolling: the only way past it is the acknowledge button. That
+     interaction is the entire point of this app. */
+  .m-row.triggered { border: 2px solid var(--ochre); background: var(--panel-2); }
+  .m-fired { font-family: var(--cond); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.72rem; color: var(--ochre); margin-top: 0.55rem; }
+  .m-plan {
+    border-left: 3px solid var(--ochre); background: var(--ground);
+    padding: 0.7rem 0.85rem; margin: 0.5rem 0; border-radius: 0 2px 2px 0;
+  }
+  .m-plan .who { font-family: var(--cond); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.63rem; color: var(--ink-2); margin-bottom: 0.35rem; }
+  .m-plan .txt { white-space: pre-wrap; line-height: 1.6; font-size: 0.95rem; }
+
+  /* ── triage ── */
+  .m-triage { border: 1px solid var(--ochre); border-radius: 3px; padding: 0.75rem 0.85rem; margin-bottom: 0.9rem; background: rgba(196,136,60,0.07); }
+  .m-triage h2 { font-size: 0.8rem; color: var(--ochre); margin: 0 0 0.3rem; }
+
+  /* ── dialogs ── */
+  .moat-scope dialog {
+    background: var(--panel); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 3px; padding: 1.1rem; max-width: 560px; width: calc(100vw - 2rem);
+  }
+  .moat-scope dialog::backdrop { background: rgba(0,0,0,0.72); }
+  .moat-scope dialog h3 { font-size: 0.9rem; margin: 0 0 0.7rem; }
+  .m-warn { border-left: 3px solid var(--rust); padding: 0.6rem 0.75rem; margin: 0.6rem 0; background: rgba(168,84,63,0.09); font-size: 0.85rem; line-height: 1.55; }
+  .m-err { color: var(--rust); font-size: 0.85rem; line-height: 1.55; margin-top: 0.5rem; }
+  .m-note { color: var(--ink-2); font-size: 0.78rem; line-height: 1.55; }
+  .m-empty { color: var(--ink-2); font-size: 0.85rem; padding: 1.4rem 0; text-align: center; }
+
+  /* Wide content scrolls inside itself; the page body never does. */
+  .m-scroll { overflow-x: auto; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .moat-scope *, .moat-scope *::before { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<div class="moat-scope">
+  <div class="m-head">
+    <h1>Permit Moats</h1>
+    <div class="m-counts" id="mCounts" aria-live="polite">
+      <span><b>{{ counts.candidates }}</b> candidates</span>
+      <span><b>{{ counts.qualified }}</b> qualified</span>
+      <span><b>{{ counts.armed }}</b>/{{ armed_cap }} armed</span>
+      <span class="triage-count"><b>{{ counts.triage }}</b> needing triage</span>
+    </div>
+  </div>
+
+  <p class="m-note" style="margin:0 0 0.9rem;">
+    Assets that cannot be replicated — a deposit, a permit, an adjudicated
+    water right, a licence, a US-built hull, consecrated ground. You set the
+    price. This page holds you to what you said you would do at it, and says
+    nothing about whether the price is wise.
+  </p>
+
+  {% if not can_edit %}
+  <p class="m-note" style="border-left:3px solid var(--line);padding-left:0.7rem;">
+    Read-only. Sign in as admin to enter prices, write plans or change a stage.
+  </p>
+  {% endif %}
+
+  {# The triage queue does not clear itself and is visible on every
+     segment. Two actions only: start a rubric, or archive with a reason. #}
+  <div class="m-triage" id="mTriage" hidden>
+    <h2>Needing triage</h2>
+    <p class="m-note" style="margin:0 0 0.5rem;">
+      Untouched for {{ decay_days }}+ days. Read it or let it go — a list that
+      only grows stops being a list.
+    </p>
+    <div id="mTriageRows"></div>
+  </div>
+
+  <div class="m-segs" role="tablist" aria-label="Watchlist stage">
+    <button role="tab" data-seg="ARMED"     aria-selected="true">Armed</button>
+    <button role="tab" data-seg="QUALIFIED" aria-selected="false">Qualified</button>
+    <button role="tab" data-seg="CANDIDATE" aria-selected="false">Candidates</button>
+    <button role="tab" data-seg="ARCHIVED"  aria-selected="false">Archived</button>
+  </div>
+
+  <div class="m-acts" style="margin:0 0 0.9rem;">
+    <button class="act primary" id="mAddBtn"{% if not can_edit %} disabled{% endif %}>+ Candidate</button>
+    <button class="act" id="mSortBtn" aria-pressed="false">Sort: your order</button>
+    <button class="act" id="mImportBtn"{% if not can_edit %} disabled{% endif %}>Import CSV</button>
+  </div>
+
+  <div id="mRows" aria-live="polite"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const CAN_EDIT   = {{ 'true' if can_edit else 'false' }};
+  const ARMED_CAP  = {{ armed_cap }};
+  const EVIDENCE_MIN = {{ evidence_min }};
+  const MOAT_TYPES = {{ moat_types | tojson }};
+  const SENTIMENTS = {{ sentiments | tojson }};
+  const TRENDS     = {{ permit_trends | tojson }};
+  const DEMAND     = {{ terminal_demand | tojson }};
+  const CHEAP      = {{ cheap_because | tojson }};
+  const CEILING    = {{ default_ceiling }};
+
+  let STATE = { rows: [], counts: {}, seg: "ARMED", sort: "order" };
+
+  const $  = (s, r) => (r || document).querySelector(s);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
+      c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const money = (v) => (v == null || v === "") ? "—" : Number(v).toFixed(2);
+
+  async function api(path, body, method) {
+    const r = await fetch(path, {
+      method: method || (body ? "POST" : "GET"),
+      headers: { "Content-Type": "application/json" },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    let data = {};
+    try { data = await r.json(); } catch (e) { /* non-JSON error page */ }
+    if (!r.ok) throw Object.assign(new Error(data.error || ("HTTP " + r.status)), data);
+    return data;
+  }
+
+  async function refresh() {
+    const d = await api("/api/moats");
+    STATE.rows = d.rows || [];
+    STATE.counts = d.counts || {};
+    render();
+  }
+
+  // ── header counts ──
+  function renderCounts() {
+    const c = STATE.counts;
+    $("#mCounts").innerHTML =
+        `<span><b>${c.candidates || 0}</b> candidates</span>` +
+        `<span><b>${c.qualified || 0}</b> qualified</span>` +
+        `<span><b>${c.armed || 0}</b>/${ARMED_CAP} armed</span>` +
+        `<span class="triage-count"><b>${c.triage || 0}</b> needing triage</span>`;
+  }
+
+  // ── the gauge ──
+  // Colour is never the only carrier: the distance is printed, and the
+  // aria-label spells the state out in words.
+  function gaugeHtml(row) {
+    const g = row.gauge || {};
+    if (g.pos == null) {
+      return `<div class="m-gauge-meta"><span>${esc(g.label || "No gauge.")}</span></div>`;
+    }
+    const d = row.distance_pct;
+    const dist = d == null ? "—"
+        : (d <= 0 ? Math.abs(d).toFixed(1) + "% below" : d.toFixed(1) + "% above");
+    return `
+      <div class="m-gauge" role="img" aria-label="${esc(g.label)}">
+        <div class="zone"></div>
+        <div class="mark ${g.in_buy_zone ? "in" : ""} ${g.clamped ? "clamped" : ""}"
+             style="left:${g.pos}%"></div>
+      </div>
+      <div class="m-gauge-meta">
+        <span class="dist ${g.in_buy_zone ? "in" : ""}">${esc(dist)} target</span>
+        <span>target ${money((row.position || {}).targetPrice)}</span>
+      </div>`;
+  }
+
+  // ── one row ──
+  function rowHtml(row) {
+    const p = row.position || {};
+    const st = row.staleness || {};
+    const isCand = row.stage === "CANDIDATE";
+    const chips = [];
+    if (row.moatType)  chips.push(`<span class="m-chip">${esc(MOAT_TYPES[row.moatType] || row.moatType)}</span>`);
+    if (row.sentiment === "SPECULATIVE") chips.push(`<span class="m-chip spec">speculative</span>`);
+    else if (row.sentiment) chips.push(`<span class="m-chip">${esc(SENTIMENTS[row.sentiment] || row.sentiment)}</span>`);
+    if (row.rubric) chips.push(`<span class="m-chip score">${esc(row.score_label)}</span>`);
+    if (row.rubric_failing) chips.push(`<span class="m-chip failing">newest rubric fails</span>`);
+    if (st.stale) chips.push(`<span class="m-chip stale">stale price</span>`);
+
+    // A candidate row is deliberately sparse — no price, no gauge. Its
+    // visual poverty is the reminder that it has not earned anything yet.
+    if (isCand) {
+      return `<div class="m-row candidate" data-id="${row.id}">
+        <div class="m-row-top">
+          <span class="tkr">${esc(row.ticker)}</span>
+          <span class="co">${esc(row.name)}</span>
+          <span class="m-chip">${esc(row.age || "")}</span>
+        </div>
+        <div class="asset">${esc(row.sourceNote || "")}</div>
+        <div class="m-acts">
+          <button class="act" data-act="rubric" ${CAN_EDIT ? "" : "disabled"}>Start rubric</button>
+          <button class="act danger" data-act="archive" ${CAN_EDIT ? "" : "disabled"}>Archive</button>
+        </div>
+      </div>`;
+    }
+
+    if (row.stage === "ARCHIVED") {
+      return `<div class="m-row" data-id="${row.id}">
+        <div class="m-row-top">
+          <span class="tkr">${esc(row.ticker)}</span>
+          <span class="co">${esc(row.name)}</span>
+        </div>
+        <div class="asset"><strong>Archived:</strong> ${esc(row.archiveReason || "no reason recorded")}</div>
+        <div class="m-acts">
+          <button class="act" data-act="restore" ${CAN_EDIT ? "" : "disabled"}>Restore to candidate</button>
+        </div>
+      </div>`;
+    }
+
+    const armed = row.stage === "ARMED";
+    // THE TRIGGER. The plan is shown at full size and the only way past
+    // it is the acknowledge button — it is not dismissible by scrolling.
+    const fired = row.needs_ack ? `
+      <div class="m-fired">Target reached${p.triggeredAt ? " · " + esc(String(p.triggeredAt).slice(0, 16).replace("T", " ")) : ""}</div>
+      <div class="m-plan">
+        <div class="who">What you said you would do${p.planLockedAt ? ", written " + esc(String(p.planLockedAt).slice(0, 10)) : ""}</div>
+        <div class="txt">${esc(p.plan || "")}</div>
+      </div>
+      <div class="m-acts">
+        <button class="act primary" data-act="ack" ${CAN_EDIT ? "" : "disabled"}>I have read this</button>
+      </div>` : "";
+
+    return `<div class="m-row ${row.needs_ack ? "triggered" : ""}" data-id="${row.id}">
+      <div class="m-row-top">
+        <span class="tkr">${esc(row.ticker)}</span>
+        <span class="co">${esc(row.name)}</span>
+        ${chips.join(" ")}
+      </div>
+      ${row.assetLine ? `<div class="asset">${esc(row.assetLine)}</div>` : ""}
+      ${fired}
+      ${armed ? gaugeHtml(row) : ""}
+      ${armed ? `
+      <div class="m-prices">
+        <div class="m-field">
+          <label for="px-${row.id}">Last price</label>
+          <input class="px num" id="px-${row.id}" type="text" inputmode="decimal"
+                 value="${p.lastPrice == null ? "" : p.lastPrice}"
+                 data-act="price" ${CAN_EDIT ? "" : "disabled"}>
+        </div>
+        <div class="m-field">
+          <label for="tg-${row.id}">Target</label>
+          <input class="px num" id="tg-${row.id}" type="text" inputmode="decimal"
+                 value="${p.targetPrice == null ? "" : p.targetPrice}"
+                 data-act="target" ${CAN_EDIT ? "" : "disabled"}>
+        </div>
+        <span class="m-saved" data-saved>saved</span>
+        <span class="m-note" style="margin-left:auto">${esc(st.label || "no price yet")}</span>
+      </div>` : ""}
+      <div class="m-acts">
+        ${armed
+          ? `<button class="act" data-act="plan">${p.planLockedAt ? "Plan" : "Write plan"}</button>
+             <button class="act" data-act="note">Note</button>
+             <button class="act" data-act="disarm" ${CAN_EDIT ? "" : "disabled"}>Disarm</button>`
+          : `<button class="act primary" data-act="arm" ${CAN_EDIT ? "" : "disabled"}>Arm</button>
+             <button class="act" data-act="rubric" ${CAN_EDIT ? "" : "disabled"}>Re-review</button>
+             <button class="act danger" data-act="archive" ${CAN_EDIT ? "" : "disabled"}>Archive</button>`}
+      </div>
+    </div>`;
+  }
+
+  function render() {
+    renderCounts();
+    const triage = STATE.rows.filter(r => r.needs_triage);
+    $("#mTriage").hidden = triage.length === 0;
+    $("#mTriageRows").innerHTML = triage.map(r => `
+      <div class="m-row candidate" data-id="${r.id}" style="margin-bottom:0.4rem">
+        <div class="m-row-top">
+          <span class="tkr">${esc(r.ticker)}</span>
+          <span class="co">${esc(r.name)}</span>
+          <span class="m-chip">added ${esc(r.age || "")}</span>
+        </div>
+        <div class="m-acts">
+          <button class="act" data-act="rubric" ${CAN_EDIT ? "" : "disabled"}>Start rubric</button>
+          <button class="act danger" data-act="archive" ${CAN_EDIT ? "" : "disabled"}>Archive</button>
+        </div>
+      </div>`).join("");
+
+    let rows = STATE.rows.filter(r => r.stage === STATE.seg);
+    // Triggered rows pin to the top under every sort. Below them, either
+    // the user's own order or distance ascending with unpriced LAST —
+    // an unpriced row must never masquerade as the closest to target.
+    rows.sort((a, b) => {
+      const pin = (a.needs_ack ? 0 : 1) - (b.needs_ack ? 0 : 1);
+      if (pin) return pin;
+      if (STATE.sort === "distance") {
+        const da = a.distance_pct, db = b.distance_pct;
+        if (da == null && db == null) return 0;
+        if (da == null) return 1;
+        if (db == null) return -1;
+        return da - db;
+      }
+      return (a.sortOrder || 0) - (b.sortOrder || 0);
+    });
+
+    $("#mRows").innerHTML = rows.length
+      ? rows.map(rowHtml).join("")
+      : `<div class="m-empty">Nothing at this stage.</div>`;
+  }
+
+  // ── segmented nav ──
+  document.querySelectorAll(".m-segs button").forEach(b => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll(".m-segs button")
+        .forEach(x => x.setAttribute("aria-selected", String(x === b)));
+      STATE.seg = b.dataset.seg;
+      render();
+    });
+  });
+
+  $("#mSortBtn").addEventListener("click", (e) => {
+    STATE.sort = STATE.sort === "order" ? "distance" : "order";
+    e.target.textContent = "Sort: " + (STATE.sort === "order" ? "your order" : "distance to target");
+    e.target.setAttribute("aria-pressed", String(STATE.sort === "distance"));
+    render();
+  });
+
+  // ── price entry: debounced autosave, optimistic, no modal ──
+  const timers = {};
+  function savePrice(id, field, value, el) {
+    clearTimeout(timers[id + field]);
+    timers[id + field] = setTimeout(async () => {
+      const row = STATE.rows.find(r => r.id === id);
+      try {
+        if (field === "target") {
+          await api(`/api/moats/${id}/arm`, { targetPrice: value });
+        } else {
+          const res = await api(`/api/moats/${id}/price`, { price: value });
+          // A price that just crossed the target opens the plan
+          // immediately. Waiting for the next page load would be the one
+          // moment this app exists for, missed.
+          if (res.newly_triggered) { await refresh(); return; }
+        }
+        const chip = el.parentElement.parentElement.querySelector("[data-saved]");
+        if (chip) { chip.classList.add("on"); setTimeout(() => chip.classList.remove("on"), 1200); }
+        await refresh();
+      } catch (err) {
+        alert(err.message || "Could not save that.");
+        await refresh();
+      }
+    }, 700);
+  }
+
+  // ── delegated actions ──
+  document.addEventListener("input", (e) => {
+    const el = e.target;
+    if (!el.dataset || !CAN_EDIT) return;
+    const holder = el.closest("[data-id]");
+    if (!holder) return;
+    if (el.dataset.act === "price" || el.dataset.act === "target") {
+      const v = parseFloat(el.value);
+      if (!isFinite(v) || v <= 0) return;      // never post junk
+      savePrice(Number(holder.dataset.id), el.dataset.act, v, el);
+    }
+  });
+
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button[data-act]");
+    if (!btn) return;
+    const holder = btn.closest("[data-id]");
+    if (!holder) return;
+    const id = Number(holder.dataset.id);
+    const row = STATE.rows.find(r => r.id === id);
+    const act = btn.dataset.act;
+    try {
+      if (act === "ack")      { await api(`/api/moats/${id}/acknowledge`, {}); await refresh(); }
+      else if (act === "disarm")  { await api(`/api/moats/${id}/disarm`, {}); await refresh(); }
+      else if (act === "restore") { await api(`/api/moats/${id}/restore`, {}); await refresh(); }
+      else if (act === "archive") archiveDlg(row);
+      else if (act === "rubric")  rubricDlg(row);
+      else if (act === "arm")     armDlg(row);
+      else if (act === "plan")    planDlg(row);
+      else if (act === "note")    noteDlg(row);
+    } catch (err) { alert(err.message || "That did not work."); }
+  });
+
+  // ── dialogs ──
+  function dialog(html) {
+    const d = document.createElement("dialog");
+    d.innerHTML = html;
+    document.querySelector(".moat-scope").appendChild(d);
+    d.addEventListener("close", () => d.remove());
+    d.showModal();
+    return d;
+  }
+
+  $("#mAddBtn").addEventListener("click", () => {
+    const d = dialog(`
+      <h3>New candidate</h3>
+      <p class="m-note">Ticker, name, and why you noticed it. Nothing else —
+        this should take fifteen seconds.</p>
+      <div class="m-field" style="margin-top:0.7rem"><label>Ticker</label>
+        <input id="cT" autocapitalize="characters" autocomplete="off"></div>
+      <div class="m-field" style="margin-top:0.5rem"><label>Name</label>
+        <input id="cN" autocomplete="off"></div>
+      <div class="m-field" style="margin-top:0.5rem"><label>Why you noticed it</label>
+        <textarea id="cS" style="min-height:70px"></textarea></div>
+      <div class="m-err" id="cE"></div>
+      <div class="m-acts"><button class="act primary" id="cGo">Add</button>
+        <button class="act" value="cancel">Cancel</button></div>`);
+    $("button[value=cancel]", d).onclick = () => d.close();
+    $("#cGo", d).onclick = async () => {
+      try {
+        await api("/api/moats/candidate", {
+          ticker: $("#cT", d).value, name: $("#cN", d).value,
+          sourceNote: $("#cS", d).value });
+        d.close(); await refresh();
+      } catch (err) { $("#cE", d).textContent = err.message; }
+    };
+  });
+
+  function archiveDlg(row) {
+    const d = dialog(`
+      <h3>Archive ${esc(row.ticker)}</h3>
+      <p class="m-note">Nothing is deleted. In a year this reason is the only
+        thing that will explain the decision.</p>
+      <div class="m-field" style="margin-top:0.7rem"><label>Why</label>
+        <textarea id="aR" style="min-height:80px"></textarea></div>
+      <div class="m-err" id="aE"></div>
+      <div class="m-acts"><button class="act danger" id="aGo">Archive</button>
+        <button class="act" value="cancel">Cancel</button></div>`);
+    $("button[value=cancel]", d).onclick = () => d.close();
+    $("#aGo", d).onclick = async () => {
+      try {
+        await api(`/api/moats/${row.id}/archive`, { reason: $("#aR", d).value });
+        d.close(); await refresh();
+      } catch (err) { $("#aE", d).textContent = err.message; }
+    };
+  }
+
+  function noteDlg(row) {
+    const existing = (row.position || {}).notes || "";
+    const d = dialog(`
+      <h3>${esc(row.ticker)} — notes</h3>
+      <div class="m-field"><label>Add an entry</label>
+        <textarea id="nT" style="min-height:70px"></textarea></div>
+      <div class="m-err" id="nE"></div>
+      <div class="m-acts"><button class="act primary" id="nGo">Append</button>
+        <button class="act" value="cancel">Close</button></div>
+      ${existing ? `<div class="m-note" style="margin-top:0.9rem;white-space:pre-wrap;border-top:1px solid var(--line);padding-top:0.7rem;max-height:38vh;overflow:auto">${esc(existing)}</div>` : ""}`);
+    $("button[value=cancel]", d).onclick = () => d.close();
+    $("#nGo", d).onclick = async () => {
+      try {
+        await api(`/api/moats/${row.id}/note`, { note: $("#nT", d).value });
+        d.close(); await refresh();
+      } catch (err) { $("#nE", d).textContent = err.message; }
+    };
+  }
+
+  // Changing a locked plan shows the DATE of the commitment being
+  // overwritten, and says plainly what is happening. The friction is
+  // the feature.
+  function planDlg(row) {
+    const p = row.position || {};
+    const locked = !!p.planLockedAt;
+    const when = locked ? String(p.planLockedAt).slice(0, 10) : "";
+    const d = dialog(`
+      <h3>${esc(row.ticker)} — ${locked ? "your plan" : "write your plan"}</h3>
+      ${locked ? `
+        <div class="m-plan"><div class="who">Committed ${esc(when)}</div>
+          <div class="txt">${esc(p.plan || "")}</div></div>
+        <div class="m-warn" id="pW" hidden>
+          You are changing a commitment you made on <strong>${esc(when)}</strong>,
+          when you were not watching it fall. The previous wording is kept in
+          the notes.
+        </div>
+        <div class="m-acts"><button class="act" id="pEdit">Change it</button>
+          <button class="act primary" value="cancel">Leave it alone</button></div>
+        <div id="pForm" hidden>
+          <div class="m-field" style="margin-top:0.7rem"><label>New plan</label>
+            <textarea id="pT">${esc(p.plan || "")}</textarea></div>
+          <div class="m-err" id="pE"></div>
+          <div class="m-acts"><button class="act danger" id="pGo">Replace the commitment</button></div>
+        </div>`
+      : `<p class="m-note">What will you actually do when it reaches the target?
+           Write it now, while nothing is happening.</p>
+         <div class="m-field" style="margin-top:0.7rem"><label>Plan</label>
+           <textarea id="pT"></textarea></div>
+         <div class="m-err" id="pE"></div>
+         <div class="m-acts"><button class="act primary" id="pGo">Save</button>
+           <button class="act" value="cancel">Cancel</button></div>`}`);
+    $("button[value=cancel]", d).onclick = () => d.close();
+    if (locked) {
+      $("#pEdit", d).onclick = () => {
+        $("#pW", d).hidden = false; $("#pForm", d).hidden = false; $("#pEdit", d).disabled = true;
+      };
+    }
+    const go = $("#pGo", d);
+    if (go) go.onclick = async () => {
+      try {
+        await api(`/api/moats/${row.id}/plan`,
+                  { plan: $("#pT", d).value, confirmed: locked });
+        d.close(); await refresh();
+      } catch (err) { $("#pE", d).textContent = err.message; }
+    };
+  }
+
+  function armDlg(row) {
+    const p = row.position || {};
+    const full = (STATE.counts.armed || 0) >= ARMED_CAP;
+    // At the cap, show what is already armed, ranked, so the trade-off
+    // is explicit rather than an error message.
+    const armedList = STATE.rows.filter(r => r.stage === "ARMED")
+      .sort((a, b) => ((b.rubric || {}).score || 0) - ((a.rubric || {}).score || 0))
+      .map(r => `<div class="mono" style="font-size:0.78rem;padding:0.2rem 0">
+                   ${esc(r.ticker)} · ${esc(r.score_label)} ·
+                   ${r.distance_pct == null ? "unpriced" : r.distance_pct.toFixed(0) + "% from target"}</div>`).join("");
+    const d = dialog(`
+      <h3>Arm ${esc(row.ticker)}</h3>
+      ${full ? `<div class="m-warn">
+          ${ARMED_CAP} are already armed. Capital is finite, so this list is
+          capped — disarm one of these before arming another.
+          <div style="margin-top:0.5rem">${armedList}</div>
+        </div>` : ""}
+      <div class="m-prices">
+        <div class="m-field"><label>Target price</label>
+          <input class="px num" id="aTg" type="text" inputmode="decimal"
+                 value="${p.targetPrice == null ? "" : p.targetPrice}"></div>
+        <div class="m-field"><label>Last price</label>
+          <input class="px num" id="aLp" type="text" inputmode="decimal"
+                 value="${p.lastPrice == null ? "" : p.lastPrice}"></div>
+      </div>
+      <div class="m-field" style="margin-top:0.7rem"><label>What you will do at the target</label>
+        <textarea id="aPl" placeholder="Written now, read when it triggers.">${esc(p.plan || "")}</textarea></div>
+      <div class="m-err" id="aE"></div>
+      <div class="m-acts"><button class="act primary" id="aGo" ${full ? "disabled" : ""}>Arm</button>
+        <button class="act" value="cancel">Cancel</button></div>`);
+    $("button[value=cancel]", d).onclick = () => d.close();
+    if (!full) $("#aGo", d).onclick = async () => {
+      try {
+        await api(`/api/moats/${row.id}/arm`, {
+          targetPrice: $("#aTg", d).value, lastPrice: $("#aLp", d).value,
+          plan: $("#aPl", d).value });
+        d.close(); await refresh();
+      } catch (err) { $("#aE", d).textContent = (err.reasons || [err.message]).join(" "); }
+    };
+  }
+
+  // The rubric asks one question at a time on a phone. A GATE FAILURE IS
+  // REPORTED THE MOMENT IT IS ANSWERED — letting someone finish a long
+  // form and then rejecting it wastes the only thing this costs.
+  function rubricDlg(row) {
+    const sel = (id, opts, blank) =>
+      `<select id="${id}"><option value="">${blank}</option>` +
+      opts.map(o => `<option value="${o}">${o.toLowerCase().replace(/_/g, " ")}</option>`).join("") +
+      `</select>`;
+    const d = dialog(`
+      <h3>${esc(row.ticker)} — rubric${row.rubric ? " (re-review)" : ""}</h3>
+      ${row.rubric ? `<p class="m-note">This creates a new version. The
+        previous one is kept and stays readable.</p>` : ""}
+
+      <div class="m-field" style="margin-top:0.8rem">
+        <label>Could capital alone reproduce this asset?</label>
+        <select id="rRep"><option value="">choose</option>
+          <option value="false">No — it cannot be reproduced</option>
+          <option value="true">Yes — money could rebuild it</option></select>
+      </div>
+      <div class="m-warn" id="rGate1" hidden>
+        If capital alone reproduces the asset there is no moat, only capital
+        intensity. This holding cannot be promoted on this answer.
+      </div>
+
+      <div class="m-field" style="margin-top:0.7rem"><label>Permit trend</label>
+        ${sel("rTrend", TRENDS, "choose")}</div>
+      <div class="m-field" style="margin-top:0.7rem"><label>Freight as % of delivered value</label>
+        <input class="num" id="rFr" type="text" inputmode="decimal" style="width:8ch"></div>
+      <div class="m-field" style="margin-top:0.7rem"><label>Demand on a 50-year view</label>
+        ${sel("rDem", DEMAND, "choose")}</div>
+
+      <div class="m-field" style="margin-top:0.7rem"><label>Why is it cheap?</label>
+        ${sel("rCheap", CHEAP, "choose")}</div>
+      <div class="m-warn" id="rGate2" hidden>
+        A melting asset is not a discount. Structural decline means the price
+        is low because the business is going away, which no entry price fixes.
+      </div>
+
+      <div class="m-field" style="margin-top:0.7rem">
+        <label>Evidence — where these answers came from</label>
+        <textarea id="rEv"></textarea>
+        <span class="m-note" id="rCount">0 / ${EVIDENCE_MIN} characters</span>
+      </div>
+      <div class="m-err" id="rE"></div>
+      <div class="m-acts"><button class="act primary" id="rGo">Save assessment</button>
+        <button class="act" value="cancel">Cancel</button></div>`);
+
+    $("button[value=cancel]", d).onclick = () => d.close();
+    $("#rRep", d).onchange = (e) => { $("#rGate1", d).hidden = e.target.value !== "true"; };
+    $("#rCheap", d).onchange = (e) => { $("#rGate2", d).hidden = e.target.value !== "STRUCTURAL_DECLINE"; };
+    $("#rEv", d).oninput = (e) => {
+      $("#rCount", d).textContent = `${e.target.value.trim().length} / ${EVIDENCE_MIN} characters`;
+    };
+    $("#rGo", d).onclick = async () => {
+      try {
+        const res = await api(`/api/moats/${row.id}/rubric`, {
+          replicableWithCapital: $("#rRep", d).value,
+          permitTrend: $("#rTrend", d).value,
+          freightPctOfValue: $("#rFr", d).value,
+          terminalDemand50yr: $("#rDem", d).value,
+          cheapBecause: $("#rCheap", d).value,
+          evidence: $("#rEv", d).value });
+        // Saved either way — a rubric that failed is the most useful
+        // thing in the file two years later.
+        if (res.passed && row.stage === "CANDIDATE") {
+          try { await api(`/api/moats/${row.id}/promote`, {}); }
+          catch (pe) {
+            d.close(); await refresh();
+            alert((pe.reasons || [pe.message]).join("\n\n"));
+            return;
+          }
+        } else if (!res.passed) {
+          d.close(); await refresh();
+          alert("Assessment saved (version " + res.version + "), and it does not "
+                + "pass:\n\n" + res.failures.map(f => "• " + f.message).join("\n\n"));
+          return;
+        }
+        d.close(); await refresh();
+      } catch (err) { $("#rE", d).textContent = err.message; }
+    };
+  }
+
+  // ── CSV import ──
+  $("#mImportBtn").addEventListener("click", () => {
+    const d = dialog(`
+      <h3>Import by NAICS</h3>
+      <p class="m-note">No database has a field for "owns an unrepeatable
+        permit", and a numeric screen just finds capital-intensive companies.
+        Industry code is the one screen that works, because these moats
+        cluster into a short list of them. This narrows the reading list — it
+        does not do the reading.</p>
+      <div class="m-field" style="margin-top:0.7rem"><label>Market cap ceiling ($)</label>
+        <input class="num" id="iC" type="text" inputmode="decimal" value="${CEILING}" style="width:16ch"></div>
+      <div class="m-field" style="margin-top:0.6rem">
+        <label>CSV — needs at least ticker and NAICS columns</label>
+        <textarea id="iCsv" style="min-height:110px" placeholder="ticker,name,naics,marketCap"></textarea></div>
+      <div class="m-field" style="margin-top:0.5rem"><label>…or choose a file</label>
+        <input type="file" id="iFile" accept=".csv,text/csv"></div>
+      <div class="m-err" id="iE"></div>
+      <div id="iOut"></div>
+      <div class="m-acts"><button class="act primary" id="iGo">Preview</button>
+        <button class="act" value="cancel">Close</button></div>`);
+    $("button[value=cancel]", d).onclick = () => d.close();
+    $("#iFile", d).onchange = (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const fr = new FileReader();
+      fr.onload = () => { $("#iCsv", d).value = fr.result; };
+      fr.readAsText(f);
+    };
+    $("#iGo", d).onclick = async () => {
+      $("#iE", d).textContent = "";
+      try {
+        const r = await api("/api/moats/import/preview",
+                            { csv: $("#iCsv", d).value, ceiling: $("#iC", d).value });
+        const c = r.counts;
+        // Every rejected row is accounted for by name. "140 matches"
+        // means nothing without "out of what, and why not the rest".
+        $("#iOut", d).innerHTML = `
+          <div class="m-note" style="margin-top:0.8rem;border-top:1px solid var(--line);padding-top:0.7rem">
+            <div class="mono">${c.matched} to add · ${c.input} rows read</div>
+            <div class="mono" style="margin-top:0.3rem">
+              ${c.already_tracked} already tracked · ${c.wrong_naics} outside the code list ·
+              ${c.over_ceiling} over the ceiling · ${c.unreadable_cap} unreadable cap ·
+              ${c.duplicate_in_file} duplicated in the file${r.skipped_rows.length ? " · " + r.skipped_rows.length + " unreadable rows" : ""}
+            </div>
+            <div class="m-scroll" style="margin-top:0.6rem;max-height:32vh;overflow:auto">
+              ${r.matched.map(m => `<div class="mono" style="font-size:0.76rem;padding:0.15rem 0">${esc(m.ticker)} · ${esc(m.name)} · ${esc(m.sourceNote)}</div>`).join("") || "<em>nothing new</em>"}
+            </div>
+          </div>`;
+        if (c.matched) {
+          const go = document.createElement("button");
+          go.className = "act primary";
+          go.textContent = `Add ${c.matched} as candidates`;
+          go.onclick = async () => {
+            const res = await api("/api/moats/import/commit", { rows: r.matched });
+            d.close(); await refresh();
+            alert(`Added ${res.added.length}.` + (res.already_tracked.length
+              ? ` ${res.already_tracked.length} were already tracked.` : ""));
+          };
+          $("#iOut", d).appendChild(go);
+        }
+      } catch (err) { $("#iE", d).textContent = err.message; }
+    };
+  });
+
+  refresh().catch(err => {
+    $("#mRows").innerHTML = `<div class="m-empty">Could not load the watchlist: ${esc(err.message)}</div>`;
+  });
+})();
+</script>
+{% endblock %}
