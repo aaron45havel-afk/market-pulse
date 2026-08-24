@@ -319,20 +319,41 @@ def _label(field: str) -> str:
     }.get(field, field)
 
 
-def can_arm(holding: dict, position: dict | None, armed_count: int) -> dict:
-    """QUALIFIED -> ARMED. Requires a target, a price, and a saved plan.
+def can_arm(holding: dict, position: dict | None, armed_count: int,
+            rubric: dict | None = None) -> dict:
+    """QUALIFIED -> ARMED. Target, price, plan, AND a completed rubric.
 
     `armed_count` is the number ALREADY armed, excluding this one.
+
+    THE RUBRIC REQUIREMENT IS ENFORCED AT THIS BOUNDARY, NOT AT
+    QUALIFICATION. Grandfathering exists so the twelve seeds can sit at
+    QUALIFIED without a rubric they were never given — they were judged
+    before this app existed. It was never meant to carry them all the
+    way to armed, which is the stage that can trigger a real purchase
+    decision. A holding whose every rubric answer is null must not be
+    able to demand money of you.
+
+    `rubric` defaults to None, which reads as incomplete and REFUSES.
+    Failing closed is deliberate: a caller that forgets to pass the
+    rubric gets a loud refusal rather than a silent hole in the one gate
+    that stands between a null assessment and an armed position.
     """
     h = holding or {}
     p = position or {}
     reasons: list[str] = []
+    needs_rubric = not rubric_is_complete_for_arming(rubric)
 
     if h.get("stage") != "QUALIFIED":
         reasons.append(
             f"Only a qualified holding can be armed — this one is "
             f"{h.get('stage') or 'unset'}."
         )
+    if needs_rubric:
+        reasons.append("Arming needs a completed rubric. This holding has "
+                       "not been through the questions yet.")
+    else:
+        for f in gate_failures(rubric):
+            reasons.append(f["message"])
     if p.get("targetPrice") in (None, ""):
         reasons.append("Set the price you would actually buy at.")
     if p.get("lastPrice") in (None, ""):
@@ -347,7 +368,24 @@ def can_arm(holding: dict, position: dict | None, armed_count: int) -> dict:
             f"{ARMED_CAP} armed already. Capital is finite — disarm "
             f"something before arming this."
         )
-    return {"ok": not reasons, "reasons": reasons, "at_cap": at_cap}
+    # `needs_rubric` travels back so the UI can route the user into the
+    # rubric form rather than showing a dead button. A refusal with
+    # nowhere to go is the same as hiding the action.
+    return {"ok": not reasons, "reasons": reasons, "at_cap": at_cap,
+            "needs_rubric": needs_rubric}
+
+
+def rubric_is_complete_for_arming(rubric: dict | None) -> bool:
+    """Like rubric_is_complete, but grandfathering does NOT count.
+
+    The two differ on exactly one case and it is the whole point of this
+    function: a grandfathered placeholder is enough to hold a seed at
+    QUALIFIED, and is not enough to arm it. Anywhere else they agree.
+    """
+    r = rubric or {}
+    if r.get("grandfathered"):
+        return False
+    return rubric_is_complete(r)
 
 
 def can_archive(reason: str) -> dict:

@@ -5413,6 +5413,16 @@ def _moat_view(request: Request) -> dict:
         # nobody made.
         rb = r.get("rubric") or {}
         r["rubric_failing"] = bool(rb) and rb.get("passed") is False
+        # Grandfathering holds a seed at QUALIFIED without a rubric; it is
+        # NOT enough to arm one. The page reads these three to route ARM
+        # to the right place: the rubric form when the questions have not
+        # been answered, the refusal when they have and a gate says no,
+        # and the arming form only when neither is true. Sending someone
+        # into the arming form and refusing them after they fill it in is
+        # the same waste as rejecting a rubric after they finish it.
+        r["rubric_complete"] = M.rubric_is_complete_for_arming(rb)
+        r["rubric_failures"] = M.gate_failures(rb) if r["rubric_complete"] else []
+        r["rubric_armable"] = r["rubric_complete"] and not r["rubric_failures"]
     return {"rows": rows, "counts": M.counts(rows, now)}
 
 
@@ -5630,11 +5640,14 @@ async def api_moats_arm(holding_id: int, request: Request):
     if (body.get("plan") or "").strip():
         pos["plan"] = body["plan"].strip()
 
-    verdict = M.can_arm(h, pos, view["counts"]["armed"])
+    verdict = M.can_arm(h, pos, view["counts"]["armed"], h.get("rubric"))
     if not verdict["ok"]:
+        # `needs_rubric` lets the client route into the rubric form
+        # instead of showing a dead button.
         return JSONResponse({"error": " ".join(verdict["reasons"]),
                              "reasons": verdict["reasons"],
                              "at_cap": verdict["at_cap"],
+                             "needs_rubric": verdict["needs_rubric"],
                              "armed": view["counts"]["armed"]}, status_code=400)
 
     now = _moat_now()
@@ -5664,6 +5677,59 @@ async def api_moats_disarm(holding_id: int, request: Request):
     from database import moat_update
     moat_update(holding_id, {"stage": "QUALIFIED"})
     return JSONResponse({"ok": True, "stage": "QUALIFIED"})
+
+
+@app.post("/api/moats/{holding_id}/target")
+async def api_moats_target(holding_id: int, request: Request):
+    """Change the target on a holding that is already armed.
+
+    THIS EXISTS BECAUSE THE TARGET INPUT WAS INERT. The page posted a
+    target edit to /arm, which refuses anything not in QUALIFIED — so on
+    every armed row, the field the whole page is built around silently
+    failed with "only a qualified holding can be armed". The value the
+    user typed stayed on screen while the stored target never moved.
+
+    A target change re-runs the SAME trigger rule as a price change,
+    against the price already on file: moving a target up to meet the
+    market is exactly as much a crossing as the price falling to meet
+    the target, and the plan is owed either way.
+    """
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import moats as M
+    from database import moat_position_upsert
+    body = await request.json()
+    view = _moat_view(request)
+    h = _moat_find(view["rows"], holding_id)
+    if not h:
+        return _moat_reject("No such holding.", 404)
+    if h.get("stage") not in ("ARMED", "QUALIFIED"):
+        return _moat_reject("Only an armed or qualified holding has a target.")
+    try:
+        target = float(body.get("target"))
+    except (TypeError, ValueError):
+        return _moat_reject("The target must be a number.")
+    if target <= 0:
+        return _moat_reject("A target has to be greater than zero.")
+
+    pos = dict(h.get("position") or {})
+    write = {"targetPrice": target}
+    res = None
+    if pos.get("lastPrice"):
+        res = M.apply_price({**pos, "targetPrice": target}, pos["lastPrice"],
+                            _moat_now())
+        # Keep the price stamp — the price itself did not change, only the
+        # target did, and re-dating it would hide a genuinely stale quote.
+        write.update({k: v for k, v in res["changed"].items()
+                      if k != "lastPriceAt"})
+    moat_position_upsert(holding_id, write)
+    return JSONResponse(_moat_jsonable({
+        "ok": True, "targetPrice": target,
+        "newly_triggered": bool(res and res["newly_triggered"]),
+        "distance_pct": res["distance_pct"] if res else None,
+        "gauge": res["gauge"] if res else M.gauge(None, target),
+    }))
 
 
 @app.post("/api/moats/{holding_id}/price")
