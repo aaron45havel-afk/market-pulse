@@ -532,6 +532,13 @@
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
                     <span class="label">Quiet Value</span>
                 </a>
+                {# The starting multiple is a choice; the growth is a bet.
+                   UBS HOLT's excess-return grid, weighted by how trailing
+                   growth actually rolls forward. #}
+                <a href="/holt" class="{% if request.url.path == '/holt' %}active{% endif %}">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                    <span class="label">Multiple Grid</span>
+                </a>
                 <a href="/compounders" class="{% if request.url.path == '/compounders' %}active{% endif %}">
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 17 8 12 12 15 21 5"/><polyline points="15 5 21 5 21 11"/></svg>
                     <span class="label">Compounders</span>

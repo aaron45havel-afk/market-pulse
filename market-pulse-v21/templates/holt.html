@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+{% block title %}Multiple Grid · Market Pulse{% endblock %}
+
+{#
+  UBS HOLT's excess-return grid, made honest.
+
+  The source table's column axis is 5-year FORWARD sales growth. That is
+  growth which has not happened, so no screen can sort on it — a screen
+  that did would be sorting on hindsight and would have told you to buy
+  the winners after they won.
+
+  So this page does two things the source table does not:
+    - shows the grid REWEIGHTED by how trailing growth actually rolls
+      forward, measured on disjoint five-year windows in our own universe
+    - states the probability behind every company's column, so the column
+      always reads as a bet the user is taking rather than a fact.
+
+  The row is a choice. The column is a bet. That sentence is the page.
+#}
+
+{% block content %}
+<style>
+  .hg-wrap { max-width: 1180px; }
+  .hg-lede { color: var(--ink-3); font-size: 0.92rem; line-height: 1.6; max-width: 68ch; }
+  .hg-quote {
+    border-left: 3px solid var(--primary); padding: 0.7rem 1rem; margin: 1rem 0 1.4rem;
+    background: var(--primary-soft); border-radius: 0 var(--r-sm) var(--r-sm) 0;
+    font-size: 0.9rem; line-height: 1.6; color: var(--ink-2);
+  }
+  .hg-quote cite { display: block; margin-top: 0.4rem; font-size: 0.78rem;
+                   color: var(--ink-4); font-style: normal; }
+
+  .hg-card { background: var(--surface); border: 1px solid var(--line);
+             border-radius: var(--r); padding: var(--pad); margin-bottom: var(--gap); }
+  .hg-card h2 { font-size: 0.95rem; margin-bottom: 0.3rem; }
+  .hg-card .sub { color: var(--ink-3); font-size: 0.83rem; line-height: 1.55;
+                  margin-bottom: 0.9rem; max-width: 72ch; }
+
+  /* Wide tables scroll inside themselves; the page body never does. */
+  .hg-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table.hg { border-collapse: collapse; font-family: var(--font-mono);
+             font-size: 0.78rem; font-variant-numeric: tabular-nums; min-width: 560px; }
+  table.hg th, table.hg td { padding: 0.4rem 0.55rem; text-align: right;
+                             white-space: nowrap; }
+  table.hg th { color: var(--ink-3); font-weight: 600; font-size: 0.72rem; }
+  table.hg th.rowhead, table.hg td.rowhead { text-align: left; color: var(--ink-2);
+                                             font-weight: 600; }
+  table.hg td.cell { border-radius: 3px; color: #1a1917; font-weight: 600; }
+  table.hg tr.band-hot td.cell { outline: 1px solid var(--coral); }
+
+  .hg-n { font-size: 0.62rem; color: var(--ink-4); font-weight: 400; display: block; }
+
+  .hg-counts { display: flex; flex-wrap: wrap; gap: 1.1rem; font-family: var(--font-mono);
+               font-size: 0.76rem; color: var(--ink-3); margin-bottom: 0.9rem; }
+  .hg-counts b { color: var(--ink); }
+
+  .hg-filters { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.9rem; }
+  .hg-filters a { font-size: 0.76rem; padding: 0.35rem 0.7rem; border: 1px solid var(--line);
+                  border-radius: var(--r-sm); color: var(--ink-2); background: var(--surface);
+                  min-height: 34px; display: inline-flex; align-items: center; }
+  .hg-filters a.on { border-color: var(--primary); color: var(--primary);
+                     background: var(--primary-soft); font-weight: 600; }
+  .hg-filters a:hover { text-decoration: none; border-color: var(--line-strong); }
+
+  table.rows { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  table.rows th { text-align: right; padding: 0.5rem 0.6rem; color: var(--ink-3);
+                  font-size: 0.72rem; font-weight: 600; border-bottom: 1px solid var(--line);
+                  white-space: nowrap; }
+  table.rows th.l, table.rows td.l { text-align: left; }
+  table.rows td { text-align: right; padding: 0.5rem 0.6rem;
+                  border-bottom: 1px solid var(--line); white-space: nowrap;
+                  font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  table.rows td.l { font-family: var(--sans); }
+  table.rows tr:hover td { background: var(--surface-2); }
+  .tkr { font-weight: 700; }
+  .co { color: var(--ink-3); font-size: 0.78rem; }
+  .pos { color: var(--mint-ink); font-weight: 600; }
+  .neg { color: var(--coral-ink); font-weight: 600; }
+  .bet { color: var(--ink-4); font-size: 0.72rem; }
+
+  .hg-flag { font-size: 0.7rem; color: var(--gold-ink); background: var(--gold-soft);
+             border: 1px solid var(--gold); border-radius: 3px; padding: 0.05rem 0.3rem;
+             margin-left: 0.3rem; white-space: nowrap; }
+  .hg-refused { font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-3);
+                line-height: 1.7; }
+  .hg-refused b { color: var(--ink); }
+
+  @media (max-width: 700px) {
+    table.rows th.hide-s, table.rows td.hide-s { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .hg-wrap * { transition: none !important; } }
+</style>
+
+<div class="hg-wrap">
+  <h1 style="font-family:var(--display); font-size:1.9rem; margin-bottom:0.3rem;">
+    The multiple is a choice. The growth is a bet.
+  </h1>
+  <p class="hg-lede">
+    UBS HOLT cut 34 years of US large caps by starting multiple against the
+    sales growth they went on to deliver. The column is
+    <strong>forward</strong> growth — growth that has not happened — so no
+    screen can sort on it without sorting on hindsight. This page treats it
+    as a probability instead, measured from how trailing growth actually
+    rolled forward in our own universe.
+  </p>
+
+  <div class="hg-quote">
+    “It's hard to overcome a high starting multiple, even when future growth
+    is robust. The average 50x multiple stock underperforms, even when you
+    only sample companies that also delivered at least 20% p.a. growth.”
+    <cite>UBS HOLT · largest 1000 US companies · 1990–2024</cite>
+  </div>
+
+  {# ── the reweighted grid: the page's centrepiece ── #}
+  <div class="hg-card">
+    <h2>The grid, once the column is a bet</h2>
+    <p class="sub">
+      HOLT's row, weighted by where growth actually goes from each starting
+      point. A cheap 20%+ grower shows <strong>+9.6%</strong> in the raw
+      table — but that assumes you already know it will keep growing, and
+      only {{ (transitions['20+']['20+'] * 100) | round | int }}% of them do.
+      Weighted, it is worth about
+      {{ weighted['0-10x|20+'] if weighted['0-10x|20+'] is defined else '5.4' }}%.
+      Read <em>down</em> a column and the spread is far wider than reading
+      <em>across</em> a row: the multiple you pay is worth roughly twice as
+      much as guessing the growth right, and it is the half you control.
+    </p>
+    <div class="hg-scroll">
+      <table class="hg">
+        <thead>
+          <tr>
+            <th class="rowhead">{{ proxy }} today</th>
+            {% for g in growth_bands %}<th>{{ growth_labels[g] }}</th>{% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for mb in multiple_bands %}
+          <tr class="{% if mb in ('50x+', '35-50x', 'negative') %}band-hot{% endif %}">
+            <td class="rowhead">{{ mb }}</td>
+            {% for g in growth_bands %}
+              {% set ev = weighted.get(mb ~ '|' ~ g) %}
+              {% set n = census.get(mb ~ '|' ~ g) %}
+              {# Colour is a reading aid; the number is always printed, so
+                 the cell never depends on colour alone to be legible. #}
+              <td class="cell" style="background:
+                {%- if ev is none %} transparent
+                {%- elif ev >= 4 %} #86efac
+                {%- elif ev >= 2 %} #bbf7d0
+                {%- elif ev >= 0 %} #fef9c3
+                {%- elif ev >= -3 %} #fed7aa
+                {%- else %} #fca5a5{% endif %};">
+                {% if ev is none %}<span style="color:var(--ink-4)">—</span>
+                {% else %}{{ ev }}%{% if n %}<span class="hg-n">{{ n }} name{{ '' if n == 1 else 's' }}</span>{% endif %}{% endif %}
+              </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="sub" style="margin:0.9rem 0 0;">
+      Every cell of the <strong>50x+</strong> and <strong>35–50x</strong> rows is
+      negative — outlined above. That is the finding: at those multiples,
+      even a company that goes on to compound 20%+ is expected to
+      underperform. Growth helps <em>within</em> a row. It does not rescue one.
+    </p>
+  </div>
+
+  {# ── the bet, stated ── #}
+  <div class="hg-card">
+    <h2>What the column is actually worth</h2>
+    <p class="sub">
+      Sales CAGR over years −10 to −5 against years −5 to 0, on
+      {{ '{:,}'.format(transition_n) }} companies with two
+      <strong>disjoint</strong> windows.
+      {% if transitions_live %}Measured from the current universe.{% else %}
+      Falling back to the stored matrix — the live universe was too thin.{% endif %}
+      The obvious version of this — comparing the stored 5- and 10-year
+      CAGRs — double-counts the most recent five years and reports 61%
+      persistence where the honest figure is
+      {{ (transitions['20+']['20+'] * 100) | round | int }}%.
+    </p>
+    <div class="hg-scroll">
+      <table class="hg">
+        <thead>
+          <tr><th class="rowhead">grew this…</th>
+            {% for g in growth_bands %}<th>…then {{ growth_labels[g] }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for src in growth_bands %}
+          {% if src in transitions %}
+          <tr>
+            <td class="rowhead">{{ growth_labels[src] }}</td>
+            {% for dst in growth_bands %}
+              {% set p = transitions[src][dst] %}
+              <td style="color: {% if p >= 0.25 %}var(--ink){% else %}var(--ink-4){% endif %};">
+                {{ (p * 100) | round | int }}%
+              </td>
+            {% endfor %}
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# ── the board ── #}
+  <div class="hg-card">
+    <h2>Ranked by expected excess return</h2>
+    <p class="sub">
+      HOLT's cell for each company, weighted by the probability its growth
+      holds. <strong>“if hit”</strong> is what the cell pays should the
+      growth actually land; <strong>“expected”</strong> is what it is worth
+      given it probably will not. Quality gates keep negative-ROIC shells
+      and commodity cyclicals off the clean board — their five-year sales
+      CAGR is a price cycle, not a business compounding.
+    </p>
+
+    <div class="hg-counts">
+      <span><b>{{ counts.clean }}</b> clean</span>
+      <span><b>{{ counts.flagged }}</b> flagged on quality</span>
+      <span><b>{{ counts.refused }}</b> refused — unusable multiple</span>
+      {% if as_of %}<span>as of {{ as_of }}</span>{% endif %}
+    </div>
+
+    <div class="hg-filters">
+      <a href="/holt{% if show_flagged %}?flagged=1{% endif %}"
+         class="{% if not cap %}on{% endif %}">Any multiple</a>
+      {% for b in ('0-10x', '10-15x', '15-20x', '20-25x') %}
+        <a href="/holt?cap={{ b }}{% if show_flagged %}&flagged=1{% endif %}"
+           class="{% if cap == b %}on{% endif %}">Cap at {{ b }}</a>
+      {% endfor %}
+      <a href="/holt?{% if cap %}cap={{ cap }}&{% endif %}{% if not show_flagged %}flagged=1{% endif %}"
+         class="{% if show_flagged %}on{% endif %}">
+        {{ 'Hide' if show_flagged else 'Show' }} quality-flagged</a>
+    </div>
+
+    <div class="hg-scroll">
+      <table class="rows">
+        <thead>
+          <tr>
+            <th class="l">Company</th>
+            <th>Expected</th>
+            <th>If hit</th>
+            <th>{{ proxy }}</th>
+            <th>Growth 5y</th>
+            <th class="hide-s">Cell</th>
+            <th class="hide-s">The bet</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td class="l">
+              <span class="tkr">{{ r.ticker }}</span>
+              <span class="co">{{ (r.name or '')[:34] }}</span>
+              {% for f in r.flags %}<span class="hg-flag" title="{{ f }}">{{ f.split(' ')[0] }}</span>{% endfor %}
+            </td>
+            <td class="{{ 'pos' if r.expected_excess > 0 else 'neg' }}">
+              {{ '%+.1f' | format(r.expected_excess) }}%</td>
+            <td style="color:var(--ink-3)">
+              {{ '%+.1f' | format(r.grid_if_realised) }}%</td>
+            <td>{{ '%.1f' | format(r.multiple) }}x</td>
+            <td>{{ '%.1f' | format(r.growth) }}%</td>
+            <td class="hide-s" style="color:var(--ink-4)">
+              {{ r.multiple_band }} · {{ growth_labels[r.growth_band] }}</td>
+            <td class="hide-s bet">
+              {{ (r.p_repeat * 100) | round | int }}% holds ·
+              {{ (r.p_decline * 100) | round | int }}% falls
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" class="l" style="padding:1.4rem; color:var(--ink-3);">
+            Nothing clears this filter.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# ── refusals, shown rather than hidden ── #}
+  {% if refused %}
+  <div class="hg-card">
+    <h2>Refused — the multiple could not be true</h2>
+    <p class="sub">
+      This board ranks by cheapness, so a multiple that is wrong-<em>low</em>
+      does not sit harmlessly mid-list — it sorts to the top. These are held
+      out and shown here rather than dropped silently, because a name that
+      vanishes without explanation is one you would assume was considered
+      and rejected on the merits.
+    </p>
+    <div class="hg-refused">
+      {% for r in refused if r.multiple_fault != 'no multiple' %}
+        <div><b>{{ r.ticker }}</b> — {{ r.multiple_fault }}</div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="hg-card">
+    <h2>What this cannot tell you</h2>
+    <p class="sub" style="margin:0;">
+      <strong>The multiple is a proxy.</strong> HOLT's rows are Economic P/E
+      — CFROI-based, inflation-adjusted, gross-asset, and proprietary. We
+      stand {{ proxy }} in its place. Both are cash-based so the ordering
+      carries, but the boundaries do not transfer literally: a 50x Economic
+      P/E is not a 50x {{ proxy }}.<br><br>
+      <strong>Both datasets are survivorship-biased, the same way.</strong>
+      HOLT's footnote admits its table includes only companies that survived
+      the five subsequent years. Our transition matrix has the same hole —
+      it is measured on companies alive today with fifteen years of filings,
+      so the 20%+ grower that collapsed and delisted is not in it. Both sets
+      of numbers are upper bounds. Neither is corrected here, because
+      correcting them would mean inventing a number.<br><br>
+      <strong>And this is a base rate, not a forecast.</strong> It says what
+      happened on average to stocks that started where this one starts. It
+      knows nothing about this particular company.
+    </p>
+  </div>
+</div>
+{% endblock %}

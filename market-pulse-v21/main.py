@@ -2191,6 +2191,75 @@ async def compounders_page(request: Request):
     })
 
 
+@app.get("/holt")
+async def holt_page(request: Request):
+    """The starting multiple is a choice; the growth is a bet.
+
+    UBS HOLT's grid of median 5-year excess returns, cut by starting
+    multiple against 5-year FORWARD sales growth. The column axis cannot
+    be screened on — it is growth that has not happened — so this page
+    treats it as a probability measured from how trailing growth actually
+    rolled forward in our own universe, and scores each company as HOLT's
+    row weighted by that distribution.
+
+    The finding the page exists to carry: every cell of the 50x+ row is
+    negative even after a company delivers 20%+ growth. You cannot
+    reliably choose the column. You always choose the row.
+    """
+    import holt as H
+    from compounders import _load
+    data = _load() or {}
+    rows = [{**m, "ticker": t} for t, m in (data.get("tickers") or {}).items()
+            if isinstance(m, dict)]
+
+    # Transitions measured from THIS universe rather than the baked
+    # default, so the probabilities age with the data instead of
+    # freezing at whatever the file said the day it was written.
+    pairs = []
+    for r in rows:
+        e = H.early_cagr(r.get("revenue_last"), r.get("rev_cagr5"),
+                         r.get("rev_cagr10"))
+        if e is not None and r.get("rev_cagr5") is not None:
+            pairs.append((e, r["rev_cagr5"]))
+    live = H.transition_matrix(pairs)
+    transitions = live if len(live) == len(H.GROWTH_BANDS) else H.DEFAULT_TRANSITIONS
+
+    cap = (request.query_params.get("cap") or "").strip()
+    if cap not in H.MULTIPLE_BANDS:
+        cap = None
+    show_flagged = request.query_params.get("flagged") == "1"
+    res = H.rank(rows, transitions, require_clean=not show_flagged, max_band=cap)
+
+    # The weighted grid — HOLT's table as it reads once the column is a
+    # bet rather than a fact. This is the page's centrepiece.
+    weighted = {}
+    for mb in H.MULTIPLE_BANDS:
+        for gb in H.GROWTH_BANDS:
+            ev = H.expected_excess(mb, gb, transitions)
+            if ev is not None:
+                weighted[f"{mb}|{gb}"] = round(ev, 1)
+
+    return templates.TemplateResponse("holt.html", {
+        "request": request,
+        "rows": res["rows"][:200],
+        "counts": res["counts"],
+        "refused": res["refused"][:40],
+        "grid": H.GRID,
+        "weighted": weighted,
+        "census": H.grid_census(res["clean"]),
+        "multiple_bands": H.MULTIPLE_BANDS,
+        "growth_bands": H.GROWTH_BANDS,
+        "growth_labels": H.GROWTH_LABELS,
+        "transitions": transitions,
+        "transitions_live": len(live) == len(H.GROWTH_BANDS),
+        "transition_n": len(pairs),
+        "proxy": H.MULTIPLE_PROXY,
+        "cap": cap,
+        "show_flagged": show_flagged,
+        "as_of": data.get("as_of"),
+    })
+
+
 @app.get("/schloss")
 async def schloss_page(request: Request):
     """Walter Schloss's method, run off SEC filings alone.
