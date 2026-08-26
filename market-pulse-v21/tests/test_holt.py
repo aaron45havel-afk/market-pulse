@@ -82,6 +82,28 @@ check(H.multiple_fault(21.9, 1280.7) is None,
 check(H.multiple_fault(5.0, 55.0) is not None,
       "while a median inside the usable range still refuses a divergent "
       "current value")
+# The ceiling was 60x on the first pass and let the two names at the TOP
+# of the live board straight through — both had rich-but-real medians
+# that happened to clear it.
+check(H.multiple_fault(7.8, 76.3) is not None,
+      "Globant at 7.8x against a 76x median is REFUSED. A 60x ceiling sat "
+      "around the 93rd percentile of medians and waved this through to "
+      "number one on the board — 'rich' is not the same as 'meaningless'")
+check(H.multiple_fault(8.7, 63.3) is not None,
+      "and Trade Desk at 8.7x against 63x, which was number three")
+check(H.multiple_fault(21.9, 428.1) is None
+      and H.multiple_fault(21.9, 1280.7) is None,
+      "while Snap's 428x and Inspire's 1,280x medians are still treated as "
+      "the broken numbers they are — FCF near zero, not a price ever paid")
+check(H.multiple_fault(24.2, 0.0) is None,
+      "a median of zero disables the divergence test rather than tripping "
+      "it — twenty-one companies carry one. There is no low ceiling to "
+      "match the high one, because with a median under 2x the test could "
+      "only fire below 0.4x, which the absolute floor already refuses; a "
+      "guard there would be unreachable code claiming to do a job")
+check(H.MEDIAN_USABLE_MAX == 150.0,
+      "the usable band is pinned, since every check above references the "
+      "constants and would survive the numbers drifting")
 check(H.multiple_fault(18.0, None) is None,
       "and with no median to compare against, the absolute floor decides "
       "alone rather than the name being dropped")
