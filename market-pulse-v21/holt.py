@@ -109,9 +109,24 @@ MEDIAN_DIVERGENCE = 5.0
 # the company was ever priced at 1,280x free cash flow — it means free
 # cash flow was near zero through most of those years, so the ratio
 # exploded. Comparing today's honest 21.9x against that would refuse the
-# name for the crime of having finally started generating cash. Fifteen
-# of the twenty-two names this guard first caught were this, not a fault.
-MEDIAN_USABLE_MAX = 60.0
+# name for the crime of having finally started generating cash.
+#
+# THE FIRST VERSION OF THIS CEILING WAS 60x AND IT WAS FAR TOO TIGHT.
+# Across 1,274 companies the median P/FCF distribution runs p90=47x,
+# p95=75x, p98=128x — so 60x sits around the 93rd percentile and treats
+# "rich" as "meaningless". The names it waved through were the two at the
+# TOP of the board: Globant at 7.8x against a 76x median (9.8x apart) and
+# Trade Desk at 8.7x against 63x (7.3x apart), both skipping the check
+# purely because their medians cleared the ceiling. 150x keeps out the
+# eighteen genuinely broken ones and lets the guard do its job on the
+# rest.
+MEDIAN_USABLE_MAX = 150.0
+# There is no matching LOW ceiling, and deliberately so. Twenty-one
+# companies carry a 0.0x fifteen-year median, which is equally useless as
+# a baseline — but the divergence test only fires when the current value
+# is under median/5, and with a median below 2x that means under 0.4x,
+# which MULTIPLE_FLOOR already refuses outright. A second guard there
+# would be unreachable code claiming to do a job.
 
 
 def multiple_fault(now, median=None) -> str | None:
