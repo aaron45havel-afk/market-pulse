@@ -176,6 +176,15 @@ SQL_ALLOWED = {
     "lib/ops/jobs.py": {"mf_jobs"},
     # DDL and the ledger. This is where schema is supposed to live.
     "lib/ops/migrations/runner.py": {"mf_migrations"},
+    # The chicken and egg. Every repository write needs a Scope, a Scope
+    # needs a session, a session needs a user — so the FIRST
+    # platform_admin cannot be created through the application at all.
+    # The alternatives were a default account (which never gets deleted)
+    # or a self-registration route on the staff portal (an open door).
+    # A one-shot script run by whoever already holds DATABASE_URL grants
+    # no authority they did not have; it just does it correctly.
+    "scripts/mfops_bootstrap.py": {"mf_organizations", "mf_divisions",
+                                   "mf_users", "mf_user_roles", "mf_roles"},
     # Tests set up and inspect state directly, which is the only way to
     # prove the repository's scoping is doing anything.
 }
@@ -204,8 +213,8 @@ check(not _raw,
       "the narrowly-listed exceptions. Found: " + "; ".join(_raw))
 check(set(SQL_ALLOWED) - {"lib/ops/repository.py"} == {
           "lib/ops/audit.py", "lib/ops/auth.py", "lib/ops/jobs.py",
-          "lib/ops/migrations/runner.py"},
-      "and the exception list is exactly these four files — a new entry "
+          "lib/ops/migrations/runner.py", "scripts/mfops_bootstrap.py"},
+      "and the exception list is exactly these five files — a new entry "
       "has to be added here deliberately, where the justification comment "
       "sits next to it")
 
