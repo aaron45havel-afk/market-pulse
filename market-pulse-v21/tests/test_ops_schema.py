@@ -147,18 +147,29 @@ check(not re.search(r"\b\w*(amount|cents|price|rent|balance|fee)\w*\s+(?!BIGINT)
 # would look completely ordinary in review.
 ROOT = Path(__file__).resolve().parent.parent
 
-# Every allowance is named, with the reason it is not a hole:
+# Every allowance is named, AND NAMES THE TABLES IT MAY TOUCH. A blanket
+# exemption would mean each of these files could grow a query against any
+# ops table later and the guard would keep passing — which is how an
+# allowlist stops being a boundary and becomes a list of files nobody
+# checks.
 SQL_ALLOWED = {
-    # The sanctioned path itself.
-    "lib/ops/repository.py",
-    # The audit writer. It only ever INSERTs into mf_audit_log, and an
-    # audit row is a fact rather than a scoped record — there is nothing
-    # for the repository to filter. Routing it through repository.insert()
-    # would also mean the audit of a write depended on the caller having
-    # create permission on the log, which is backwards.
-    "lib/ops/audit.py",
+    # The sanctioned path itself. Unrestricted by definition.
+    "lib/ops/repository.py": None,
+    # The audit writer. Only ever INSERTs into mf_audit_log, and an audit
+    # row is a fact rather than a scoped record — there is nothing for the
+    # repository to filter. Routing it through repository.insert() would
+    # also make the audit of a write depend on the caller having create
+    # permission on the log, which is backwards.
+    "lib/ops/audit.py": {"mf_audit_log"},
+    # Authentication CANNOT be scoped, because it is what produces a
+    # scope: there is no Scope to filter by until login succeeds. It also
+    # reads password_hash and mfa_secret, which the repository bans
+    # outright. So it gets direct SQL — narrowed to the four identity
+    # tables, so it cannot quietly grow a query against a rent ledger.
+    "lib/ops/auth.py": {"mf_users", "mf_sessions", "mf_roles",
+                        "mf_user_roles"},
     # DDL and the ledger. This is where schema is supposed to live.
-    "lib/ops/migrations/runner.py",
+    "lib/ops/migrations/runner.py": {"mf_migrations"},
     # Tests set up and inspect state directly, which is the only way to
     # prove the repository's scoping is doing anything.
 }
@@ -169,17 +180,28 @@ SQL_REF = re.compile(
 _raw = []
 for path in sorted(ROOT.rglob("*.py")):
     rel = path.relative_to(ROOT).as_posix()
-    if rel.startswith("tests/") or rel in SQL_ALLOWED:
+    if rel.startswith("tests/") or "/__pycache__/" in f"/{rel}":
         continue
-    if "/__pycache__/" in f"/{rel}":
+    allowed = SQL_ALLOWED.get(rel, frozenset())
+    if allowed is None:
         continue
-    for m in SQL_REF.finditer(path.read_text()):
-        line = path.read_text()[:m.start()].count("\n") + 1
-        _raw.append(f"{rel}:{line} → {m.group(1)}")
+    body = path.read_text()
+    for m in SQL_REF.finditer(body):
+        table = m.group(1)
+        if table in allowed:
+            continue
+        line = body[:m.start()].count("\n") + 1
+        _raw.append(f"{rel}:{line} → {table}")
 
 check(not _raw,
-      "NO SQL OUTSIDE lib/ops/repository.py TOUCHES AN mf_ TABLE. Found: "
-      + "; ".join(_raw))
+      "NO SQL OUTSIDE lib/ops/repository.py TOUCHES AN mf_ TABLE, beyond "
+      "the narrowly-listed exceptions. Found: " + "; ".join(_raw))
+check(set(SQL_ALLOWED) - {"lib/ops/repository.py"} == {
+          "lib/ops/audit.py", "lib/ops/auth.py",
+          "lib/ops/migrations/runner.py"},
+      "and the exception list is exactly these three files — a new entry "
+      "has to be added here deliberately, where the justification comment "
+      "sits next to it")
 
 # And the scanner has to be able to see one. Written as a literal here
 # rather than by planting a file, so the check is honest about what it
@@ -211,15 +233,24 @@ _ops_router_files = sorted(
 if _ops_router_files:
     import importlib
 
-    _undeclared = []
+    _undeclared, _checked = [], 0
     for rel in _ops_router_files:
         mod = importlib.import_module(rel[:-3].replace("/", "."))
         for attr in vars(mod).values():
             if hasattr(attr, "routes"):
                 _undeclared += RG.undeclared(attr)
+                _checked += sum(1 for r in attr.routes
+                                if getattr(r, "path", "").startswith("/ops"))
     check(not _undeclared,
           "EVERY ROUTE UNDER /ops DECLARES A SCOPE. Undeclared: "
           + "; ".join(sorted(set(_undeclared))))
+    # Without this the guard passes just as happily when the import found
+    # no routers at all — which is the shape of a test that quietly
+    # stopped testing. It has to have looked at something.
+    check(_checked >= 20,
+          f"and it actually examined the ops routes rather than an empty "
+          f"list (saw {_checked}; four portals x five auth routes is "
+          f"twenty before the API)")
 else:
     # Say it out loud rather than passing quietly. A guard with nothing
     # to check is not the same as a guard that found nothing wrong, and
@@ -236,6 +267,11 @@ else:
 # ── discovery refuses one-way migrations ──
 found = R.discover()
 check(len(found) >= 1, "0001_foundation is discovered")
+# Everything on disk, so the cycle below stays correct as migrations are
+# added. A test pinned to one migration name starts silently proving less
+# the moment there are two — 0002_auth was exactly that moment.
+ALL_NAMES = [f"{m['version']:04d}_{m['name']}" for m in found]
+ALL_VERSIONS = [m["version"] for m in found]
 check(found[0]["version"] == 1 and found[0]["name"] == "foundation",
       "version and name parse out of the filename")
 check(found[0]["sql_up"].strip() and found[0]["sql_down"].strip(),
@@ -407,7 +443,9 @@ check(mf_tables() == [], "the test starts against a database with no mf_ tables"
 
 # ── up ──
 ran = attempt("first up", R.migrate, conn, actor="test_ops_schema")
-check(ran == ["0001_foundation"], f"the migration applies (got {ran})")
+check(ran == ALL_NAMES,
+      f"EVERY migration on disk applies, in order (expected {ALL_NAMES}, "
+      f"got {ran})")
 
 _tables = set(mf_tables())
 for t in ("mf_organizations", "mf_divisions", "mf_users", "mf_roles",
@@ -421,8 +459,10 @@ check(R.migrate(conn) == [],
       "a migration does something a second run would repeat")
 
 st = R.status(conn)
-check(st["applied"] == [1] and st["pending"] == [] and st["problems"] == [],
-      "status reports one applied, nothing pending, no drift")
+check(st["applied"] == ALL_VERSIONS and st["pending"] == []
+      and st["problems"] == [],
+      f"status reports them all applied, nothing pending, no drift "
+      f"(got {st})")
 
 
 # ── seeds ──
@@ -524,8 +564,10 @@ check(R.verify(conn) == [], "restored, no complaints")
 
 
 # ── down ──
-back = attempt("rollback", R.rollback, conn)
-check(back == ["0001_foundation"], f"the migration rolls back (got {back})")
+back = attempt("rollback", R.rollback, conn, steps=len(ALL_NAMES))
+check(back == list(reversed(ALL_NAMES)),
+      f"ALL of them roll back, newest first (expected "
+      f"{list(reversed(ALL_NAMES))}, got {back})")
 check(mf_tables() == ["mf_migrations"],
       f"AND LEAVES NOTHING BEHIND except the ledger itself. Still there: "
       f"{[t for t in mf_tables() if t != 'mf_migrations']}")
@@ -543,7 +585,7 @@ check(one("SELECT COUNT(*) FROM mf_migrations") == 0,
 
 # ── up again ──
 ran2 = attempt("second up", R.migrate, conn, actor="test_ops_schema")
-check(ran2 == ["0001_foundation"],
+check(ran2 == ALL_NAMES,
       "and it applies a SECOND time cleanly. up/down/up is the cycle that "
       "catches a down which drops less than the up created — the first up "
       "always works, it is the second that fails")
@@ -586,7 +628,7 @@ cur.execute("DROP FUNCTION IF EXISTS mf_audit_log_immutable() CASCADE")
 conn.commit()
 cur.close()
 
-check(B.migrate_on_boot(_factory) == ["0001_foundation"],
+check(B.migrate_on_boot(_factory) == ALL_NAMES,
       "and applies the foundation on a database that has never seen it — "
       "which is what the first Railway deploy after this merge does")
 check(len(mf_tables()) == 12, "the tables are there afterwards")

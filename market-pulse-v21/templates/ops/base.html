@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ label }} Portal{% endblock %}</title>
+    <meta name="robots" content="noindex, nofollow">
+    <!--
+      A SEPARATE BASE TEMPLATE FROM THE ANALYSIS BOARDS, deliberately —
+      ARCHITECTURE.md §3. The two halves share a process and a database
+      and nothing else, and a shared layout is how a tenant ends up one
+      misplaced nav link away from a stock screener.
+
+      No external stylesheets, fonts or scripts. Every asset the
+      analysis side pulls from a CDN is a third party that would see the
+      referrer of a page a resident visits to pay rent. A system font
+      stack costs nothing and tells nobody anything.
+    -->
+    <style>
+        :root {
+            --bg: #f6f5f3; --surface: #fff; --line: #e3e1dd;
+            --ink: #1a1917; --ink-2: #57544f; --ink-3: #8a8680;
+            --accent: #1f4d3d; --danger: #8c2f2f; --radius: 10px;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #16181a; --surface: #1e2124; --line: #32363a;
+                --ink: #f0efec; --ink-2: #b4b0aa; --ink-3: #85817b;
+                --accent: #6ab89c; --danger: #e08585;
+            }
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: var(--bg); color: var(--ink);
+            font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI",
+                  Roboto, "Helvetica Neue", Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .wrap { max-width: 900px; margin: 0 auto; padding: 24px 20px 64px; }
+        .bar {
+            display: flex; align-items: baseline; gap: 12px;
+            border-bottom: 1px solid var(--line); padding-bottom: 14px;
+            margin-bottom: 28px; flex-wrap: wrap;
+        }
+        .bar h1 { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+        .bar .portal {
+            font-size: 11px; text-transform: uppercase; letter-spacing: 0.09em;
+            color: var(--accent); border: 1px solid var(--line);
+            border-radius: 99px; padding: 3px 9px; font-weight: 600;
+        }
+        .bar .spacer { flex: 1; }
+        .card {
+            background: var(--surface); border: 1px solid var(--line);
+            border-radius: var(--radius); padding: 22px; margin-bottom: 18px;
+        }
+        .card h2 {
+            font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;
+            color: var(--ink-3); font-weight: 600; margin-bottom: 14px;
+        }
+        label { display: block; font-size: 13px; color: var(--ink-2);
+                margin-bottom: 5px; }
+        input[type=text], input[type=email], input[type=password] {
+            width: 100%; padding: 10px 12px; font-size: 15px;
+            border: 1px solid var(--line); border-radius: 8px;
+            background: var(--bg); color: var(--ink); margin-bottom: 15px;
+            font-family: inherit;
+        }
+        input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+        button {
+            background: var(--accent); color: #fff; border: 0;
+            padding: 10px 20px; border-radius: 8px; font-size: 15px;
+            font-weight: 500; cursor: pointer; font-family: inherit;
+        }
+        button.quiet { background: transparent; color: var(--ink-2);
+                       border: 1px solid var(--line); }
+        .error {
+            background: color-mix(in srgb, var(--danger) 10%, transparent);
+            border: 1px solid var(--danger); color: var(--danger);
+            padding: 10px 12px; border-radius: 8px; margin-bottom: 16px;
+            font-size: 14px;
+        }
+        .kv { display: grid; grid-template-columns: 150px 1fr; gap: 7px 16px;
+              font-size: 14px; }
+        .kv dt { color: var(--ink-3); }
+        .note { font-size: 13px; color: var(--ink-3); margin-top: 10px; }
+        code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+               font-size: 13px; }
+        a { color: var(--accent); }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="bar">
+        <h1>Multifamily Ops</h1>
+        <span class="portal">{{ label }}</span>
+        <span class="spacer"></span>
+        {% block barextra %}{% endblock %}
+    </div>
+    {% block content %}{% endblock %}
+</div>
+</body>
+</html>

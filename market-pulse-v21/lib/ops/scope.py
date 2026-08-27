@@ -229,6 +229,11 @@ class Scope:
     portal: str
     grants: tuple[RoleGrant, ...] = ()
     privilege_epoch: int = 1
+    # Set by auth.resolve() so a route can rotate or revoke the session it
+    # is running under. A field rather than an attribute set afterwards,
+    # because this class is frozen — and it is frozen so that nothing
+    # downstream can widen its own authority mid-request.
+    session_id: int | None = None
 
     def __post_init__(self):
         if self.portal not in PORTALS:

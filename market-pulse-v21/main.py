@@ -79,6 +79,18 @@ if os.path.isdir(static_dir):
     app.mount("/static", CachedStaticFiles(directory=static_dir), name="static")
 templates = Jinja2Templates(directory="templates")
 
+# ── the multifamily ops platform ──
+# ARCHITECTURE.md §3: "main.py gains one include_router call per portal
+# and nothing else." One router covers all four, so this is that line.
+# Wrapped because the ops half must never be why the analysis boards
+# fail to start — the same fail-open reasoning as lib/ops/bootstrap.py,
+# and it stops applying the moment these routes carry real traffic.
+try:
+    from routers.ops import router as ops_router
+    app.include_router(ops_router)
+except Exception as _ops_err:      # pragma: no cover - defensive
+    logger.error("ops routes not mounted: %s", _ops_err)
+
 
 @app.get("/")
 async def home():
