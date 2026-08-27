@@ -701,6 +701,21 @@ def moat_seed_if_empty() -> int:
     return written
 
 
+def _ops_migrate():
+    """Bring the multifamily-ops (mf_) schema up. Never raises.
+
+    Everything above this line uses CREATE TABLE IF NOT EXISTS, which has
+    no down path. The mf_ tables use numbered up/down migrations with a
+    ledger instead — see lib/ops/migrations/. The import is local so a
+    missing lib/ops cannot break boot for the analysis boards.
+    """
+    try:
+        from lib.ops.bootstrap import migrate_on_boot
+        migrate_on_boot(_get_conn)
+    except Exception as e:
+        logger.error("ops bootstrap unavailable: %s", e)
+
+
 def init_db():
     # Self-contained migrations first, each in its own transaction, so
     # they can't be rolled back by an unrelated failure in the block below.
@@ -709,6 +724,7 @@ def init_db():
     _ensure_hundred_hand_table()
     _ensure_moat_tables()
     moat_seed_if_empty()
+    _ops_migrate()
     conn = _get_conn()
     if not conn: return
     try:
