@@ -86,8 +86,8 @@ templates = Jinja2Templates(directory="templates")
 # fail to start — the same fail-open reasoning as lib/ops/bootstrap.py,
 # and it stops applying the moment these routes carry real traffic.
 try:
-    from routers.ops import router as ops_router
-    app.include_router(ops_router)
+    import routers.ops
+    routers.ops.attach(app)
 except Exception as _ops_err:      # pragma: no cover - defensive
     logger.error("ops routes not mounted: %s", _ops_err)
 

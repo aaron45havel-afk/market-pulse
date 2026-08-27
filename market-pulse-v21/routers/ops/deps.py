@@ -18,13 +18,14 @@ new handler simply does not have.
 from __future__ import annotations
 
 import logging
-import uuid
+import re
 
 from fastapi import Depends, HTTPException, Request
 
 from lib.ops import audit as A
 from lib.ops import auth as AU
 from lib.ops import clock as C
+from lib.ops import obs
 from lib.ops import repository as RP
 from lib.ops import routeguard as RG
 from lib.ops import scope as S
@@ -44,14 +45,30 @@ def time_service() -> C.TimeService:
     return C.TimeService()
 
 
+_INBOUND_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
+
+
 def request_id(request: Request) -> str:
     """One id per request, echoed into every audit row and log line.
 
-    Honours an inbound X-Request-ID so a trace can be followed across a
-    proxy, but generates one otherwise — an audit trail whose rows cannot
-    be tied together is a list, not a trail.
+    Cached on request.state, because generating a fresh one per call
+    would give the audit row and the log line different ids and defeat
+    the entire purpose.
+
+    An inbound X-Request-ID is honoured so a trace can be followed across
+    a proxy — but VALIDATED first. It is attacker-controlled and ends up
+    in log lines and an append-only audit table, so a newline in it would
+    let somebody forge log entries, and an unbounded one would let them
+    write a megabyte per request into a table that cannot be pruned.
     """
-    return request.headers.get("X-Request-ID") or uuid.uuid4().hex[:16]
+    existing = getattr(request.state, "mf_request_id", None)
+    if existing:
+        return existing
+    inbound = request.headers.get("X-Request-ID") or ""
+    rid = inbound if _INBOUND_ID.match(inbound) else obs.new_request_id()
+    request.state.mf_request_id = rid
+    obs.bind(request_id=rid)
+    return rid
 
 
 def db():
@@ -154,6 +171,7 @@ def current_scope(request: Request, conn=Depends(db),
     if scope is None:
         raise HTTPException(401, "not signed in")
 
+    obs.bind(user_id=scope.user_id, portal=scope.portal)
     reason = RG.enforce(scope, decl)
     if reason:
         log.info("403 on %s for user=%s portal=%s: %s", request.url.path,

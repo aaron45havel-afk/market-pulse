@@ -39,3 +39,20 @@ Format: `- [PHASE-SEEN] item — why it matters`
 - [P1] `JurisdictionClock.deadline(counting="business")` counts weekdays only — public
   holidays are not modelled. Phase 7 needs real per-jurisdiction holiday calendars
   before any business-day deadline is treated as legally reliable.
+- [P1] **Comms consent is recorded, not checked.** `integrations/comms.py` takes a
+  `reason` from a closed vocabulary and writes it to the audit log, but nothing compares
+  it against a stored preference — there is no preference table until Phase 3. SMS in
+  particular is regulated. A caller passing a marketing reason today gets it sent.
+- [P1] No document scoping. `mf_documents` is readable only by `platform_admin`, because
+  its `visibility` column would show every tenant every tenant-visible document in the
+  organization. Phase 2's `mf_leases` gives it a real owner to scope by; until then the
+  grant is deliberately absent from every other role.
+- [P1] `mf_user_roles.property_id` has no foreign key — `mf_properties` does not exist
+  yet. Phase 2's migration must add the constraint, not just the table.
+- [P1] Object storage falls back to local disk when `MF_S3_BUCKET` is unset, with a
+  warning. On Railway that is an ephemeral volume, which is exactly the durability
+  failure ARCHITECTURE.md §4 rules out for documents that decide deposit disputes.
+  Configure R2 or B2 before any real document is uploaded.
+- [P1] `jobs.run_forever` has no test — a loop that never returns cannot have one. All
+  the logic is in `run_one`, which is tested; the shell is kept thin for that reason,
+  and it is still untested code running as a production process.

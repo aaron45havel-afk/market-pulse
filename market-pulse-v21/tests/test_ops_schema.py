@@ -168,6 +168,12 @@ SQL_ALLOWED = {
     # tables, so it cannot quietly grow a query against a rent ledger.
     "lib/ops/auth.py": {"mf_users", "mf_sessions", "mf_roles",
                         "mf_user_roles"},
+    # The job worker is not a user: no session, no portal, no Scope, so
+    # there is nothing for the scoping layer to filter by. It also needs
+    # FOR UPDATE SKIP LOCKED, which the repository deliberately does not
+    # express. Narrowed to mf_jobs — a worker with unrestricted SQL would
+    # be an unauthenticated path to every ops table.
+    "lib/ops/jobs.py": {"mf_jobs"},
     # DDL and the ledger. This is where schema is supposed to live.
     "lib/ops/migrations/runner.py": {"mf_migrations"},
     # Tests set up and inspect state directly, which is the only way to
@@ -197,9 +203,9 @@ check(not _raw,
       "NO SQL OUTSIDE lib/ops/repository.py TOUCHES AN mf_ TABLE, beyond "
       "the narrowly-listed exceptions. Found: " + "; ".join(_raw))
 check(set(SQL_ALLOWED) - {"lib/ops/repository.py"} == {
-          "lib/ops/audit.py", "lib/ops/auth.py",
+          "lib/ops/audit.py", "lib/ops/auth.py", "lib/ops/jobs.py",
           "lib/ops/migrations/runner.py"},
-      "and the exception list is exactly these three files — a new entry "
+      "and the exception list is exactly these four files — a new entry "
       "has to be added here deliberately, where the justification comment "
       "sits next to it")
 

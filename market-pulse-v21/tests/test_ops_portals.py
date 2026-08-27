@@ -439,6 +439,34 @@ try:
           f"and the token stops working immediately afterwards, whether or "
           f"not the browser dropped the cookie (got {status})")
 
+    # ── request ids ──
+    status, _, headers = http("GET", "/ops/staff/login")
+    rid = headers.get("X-Request-ID")
+    check(rid and len(rid) >= 8,
+          f"every response carries an X-Request-ID (got {rid!r})")
+    _, _, h2 = http("GET", "/ops/staff/login")
+    check(h2.get("X-Request-ID") != rid,
+          "and a different one per request")
+
+    _, _, h3 = http("GET", "/ops/staff/login",
+                    headers={"X-Request-ID": "trace-from-the-proxy"})
+    check(h3.get("X-Request-ID") == "trace-from-the-proxy",
+          "AN INBOUND ID IS HONOURED, so a trace can be followed across a "
+          "proxy rather than restarting at this process")
+
+    _, _, h4 = http("GET", "/ops/staff/login",
+                    headers={"X-Request-ID": "a" * 500})
+    check(h4.get("X-Request-ID") != "a" * 500,
+          "BUT AN OVERLONG ONE IS REPLACED. The header is "
+          "attacker-controlled and lands in an append-only table nobody "
+          "can prune — a megabyte per request would be a slow way to fill "
+          "the disk")
+    _, _, h5 = http("GET", "/ops/staff/login",
+                    headers={"X-Request-ID": "ok-id~with!bad;chars"})
+    check(h5.get("X-Request-ID") != "ok-id~with!bad;chars",
+          "and one with characters outside [A-Za-z0-9._-] is replaced, "
+          "since it ends up in log lines that somebody greps")
+
     # ── the analysis side is untouched ──
     status, _, headers = http("GET", "/")
     check(status == 308 and headers.get("Location") == "/map",
