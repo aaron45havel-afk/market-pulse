@@ -140,6 +140,99 @@ check(not re.search(r"\b\w*(amount|cents|price|rent|balance|fee)\w*\s+(?!BIGINT)
       "any money-shaped column in the foundation is BIGINT")
 
 
+# ── guard 2 of 3: mf_ tables are reachable only through the repository ──
+# ARCHITECTURE.md §2: "no raw conn.execute against an mf_* table outside
+# it". The scoping predicate is applied in exactly one place, so a query
+# written anywhere else is a query with no authorization on it — and it
+# would look completely ordinary in review.
+ROOT = Path(__file__).resolve().parent.parent
+
+# Every allowance is named, with the reason it is not a hole:
+SQL_ALLOWED = {
+    # The sanctioned path itself.
+    "lib/ops/repository.py",
+    # The audit writer. It only ever INSERTs into mf_audit_log, and an
+    # audit row is a fact rather than a scoped record — there is nothing
+    # for the repository to filter. Routing it through repository.insert()
+    # would also mean the audit of a write depended on the caller having
+    # create permission on the log, which is backwards.
+    "lib/ops/audit.py",
+    # DDL and the ledger. This is where schema is supposed to live.
+    "lib/ops/migrations/runner.py",
+    # Tests set up and inspect state directly, which is the only way to
+    # prove the repository's scoping is doing anything.
+}
+
+SQL_REF = re.compile(
+    r"\b(?:FROM|JOIN|INTO|UPDATE|TABLE|TRUNCATE)\s+(mf_[a-z_]+)", re.I)
+
+_raw = []
+for path in sorted(ROOT.rglob("*.py")):
+    rel = path.relative_to(ROOT).as_posix()
+    if rel.startswith("tests/") or rel in SQL_ALLOWED:
+        continue
+    if "/__pycache__/" in f"/{rel}":
+        continue
+    for m in SQL_REF.finditer(path.read_text()):
+        line = path.read_text()[:m.start()].count("\n") + 1
+        _raw.append(f"{rel}:{line} → {m.group(1)}")
+
+check(not _raw,
+      "NO SQL OUTSIDE lib/ops/repository.py TOUCHES AN mf_ TABLE. Found: "
+      + "; ".join(_raw))
+
+# And the scanner has to be able to see one. Written as a literal here
+# rather than by planting a file, so the check is honest about what it
+# actually detects.
+check(SQL_REF.search("cur.execute('SELECT * FROM mf_users')"),
+      "the scanner catches a plain SELECT")
+check(SQL_REF.search('cur.execute("UPDATE mf_leases SET rent = 1")'),
+      "and an UPDATE against a table that does not exist yet — Phase 2's "
+      "tables are covered the day they are created, without editing this")
+check(SQL_REF.search("DELETE FROM  mf_audit_log"), "and odd whitespace")
+check(SQL_REF.search("SELECT x FROM a JOIN mf_users u ON u.id = a.uid"),
+      "and a JOIN, which is the one a FROM-only scanner misses")
+check(not SQL_REF.search('has_mf_data = True'),
+      "but NOT an ordinary variable that happens to start with mf_ — "
+      "main.py has several, and a scanner that cried wolf on those would "
+      "be switched off inside a week")
+check(not SQL_REF.search('return {"mf_score": score}'),
+      "nor a dict key")
+
+
+# ── guard 3 of 3: every /ops route declares a scope ──
+from lib.ops import routeguard as RG
+
+_ops_router_files = sorted(
+    p.relative_to(ROOT).as_posix()
+    for p in (ROOT / "routers" / "ops").glob("*.py")
+    if p.name != "__init__.py")
+
+if _ops_router_files:
+    import importlib
+
+    _undeclared = []
+    for rel in _ops_router_files:
+        mod = importlib.import_module(rel[:-3].replace("/", "."))
+        for attr in vars(mod).values():
+            if hasattr(attr, "routes"):
+                _undeclared += RG.undeclared(attr)
+    check(not _undeclared,
+          "EVERY ROUTE UNDER /ops DECLARES A SCOPE. Undeclared: "
+          + "; ".join(sorted(set(_undeclared))))
+else:
+    # Say it out loud rather than passing quietly. A guard with nothing
+    # to check is not the same as a guard that found nothing wrong, and
+    # writing it the other way is how a vacuous test survives to the day
+    # it was supposed to matter. The enumerator itself is exercised
+    # against a router built for the purpose in tests/test_ops_authz.py.
+    check(RG.undeclared.__doc__ is not None,
+          "the route enumerator exists and is armed")
+    print("   NOTE: routers/ops/ is empty, so guard 3 has no real routes "
+          "to check yet.\n   Its enumerator is proved against a synthetic "
+          "router in tests/test_ops_authz.py.")
+
+
 # ── discovery refuses one-way migrations ──
 found = R.discover()
 check(len(found) >= 1, "0001_foundation is discovered")
@@ -436,10 +529,13 @@ check(back == ["0001_foundation"], f"the migration rolls back (got {back})")
 check(mf_tables() == ["mf_migrations"],
       f"AND LEAVES NOTHING BEHIND except the ledger itself. Still there: "
       f"{[t for t in mf_tables() if t != 'mf_migrations']}")
-check(one("SELECT COUNT(*) FROM pg_proc WHERE proname='mf_audit_log_immutable'") == 0,
-      "including the trigger function — a leftover function makes the "
+check(one("SELECT COUNT(*) FROM pg_proc WHERE proname LIKE 'mf!_%' "
+          "ESCAPE '!'") == 0,
+      "including BOTH trigger functions — a leftover function makes the "
       "next up fail on CREATE OR REPLACE differences, or worse, succeed "
-      "against a stale definition")
+      "against a stale definition. Matched by prefix rather than by name "
+      "so a function added in a later migration is covered without "
+      "editing this check")
 check(one("SELECT COUNT(*) FROM mf_migrations") == 0,
       "and the ledger row is gone, so the migration is genuinely pending "
       "again rather than applied-but-absent")

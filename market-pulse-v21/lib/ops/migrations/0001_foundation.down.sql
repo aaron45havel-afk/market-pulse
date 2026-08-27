@@ -26,7 +26,10 @@ DROP FUNCTION IF EXISTS mf_audit_log_immutable();
 
 DROP TABLE IF EXISTS mf_jurisdiction_rules;
 DROP TABLE IF EXISTS mf_jurisdictions;
+
+DROP TRIGGER IF EXISTS mf_user_roles_scope_ck ON mf_user_roles;
 DROP TABLE IF EXISTS mf_user_roles;
+DROP FUNCTION IF EXISTS mf_user_roles_scope_check();
 DROP TABLE IF EXISTS mf_roles;
 
 -- mf_divisions.head_user_id points at mf_users and mf_users.division_id

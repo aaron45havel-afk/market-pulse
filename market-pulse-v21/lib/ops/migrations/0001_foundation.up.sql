@@ -72,7 +72,9 @@ CREATE TABLE mf_roles (
 
 -- A role assignment MAY be scoped. Both scope columns NULL means the role
 -- applies organization-wide; that is only ever correct for platform_admin,
--- and mf_user_roles_scope_ck enforces it rather than trusting the caller.
+-- and mf_user_roles_scope_ck below enforces it rather than trusting the
+-- caller. It is a TRIGGER and not a CHECK constraint because the rule
+-- depends on mf_roles.key, and a CHECK cannot read another table.
 CREATE TABLE mf_user_roles (
     id              BIGSERIAL PRIMARY KEY,
     user_id         BIGINT NOT NULL REFERENCES mf_users(id) ON DELETE CASCADE,
@@ -88,6 +90,36 @@ CREATE TABLE mf_user_roles (
     UNIQUE (user_id, role_id, division_id, property_id)
 );
 CREATE INDEX mf_user_roles_user_idx ON mf_user_roles (user_id) WHERE revoked_at IS NULL;
+
+-- An organization-wide grant is the single most dangerous row in this
+-- schema: lib/ops/scope.py reads an unscoped grant as "no division
+-- filter", so a division_manager row with both scope columns NULL would
+-- silently see every division. That must be impossible to write, not
+-- merely discouraged — the application layer already refuses it, and an
+-- application-layer rule is one bug away from not applying.
+CREATE OR REPLACE FUNCTION mf_user_roles_scope_check() RETURNS TRIGGER AS $$
+DECLARE
+    role_key TEXT;
+BEGIN
+    SELECT key INTO role_key FROM mf_roles WHERE id = NEW.role_id;
+    IF role_key IS NULL THEN
+        RAISE EXCEPTION 'mf_user_roles.role_id % does not name a role', NEW.role_id;
+    END IF;
+    IF role_key <> 'platform_admin'
+       AND NEW.division_id IS NULL
+       AND NEW.property_id IS NULL THEN
+        RAISE EXCEPTION
+            'an unscoped % grant is not permitted', role_key
+            USING HINT = 'Only platform_admin may hold an organization-wide '
+                         'role. Scope this grant to a division or a property.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER mf_user_roles_scope_ck
+    BEFORE INSERT OR UPDATE ON mf_user_roles
+    FOR EACH ROW EXECUTE FUNCTION mf_user_roles_scope_check();
 
 -- ── jurisdictions ──
 CREATE TABLE mf_jurisdictions (
