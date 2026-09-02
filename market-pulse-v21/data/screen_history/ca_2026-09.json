@@ -1,0 +1,86 @@
+{
+ "period": "2026-09",
+ "market": "CA",
+ "params": {
+  "assets": 200000,
+  "down_pct": 20.0,
+  "safety_tier": "safe",
+  "winter": "moderate"
+ },
+ "max_purchase": 800000,
+ "universe_n": 945,
+ "buyable": {
+  "94706": {
+   "name": "Albany",
+   "region": "NorCal",
+   "entry": 515457,
+   "kind": "condo",
+   "minutes": 11.5,
+   "anchor": "OAK",
+   "safety": "safe",
+   "violent": 194
+  }
+ },
+ "aspirational": {
+  "94087": {
+   "name": "Sunnyvale",
+   "region": "NorCal",
+   "entry": 988615,
+   "kind": "condo",
+   "minutes": 14.4,
+   "anchor": "SJ",
+   "safety": "safe",
+   "violent": 248
+  },
+  "95030": {
+   "name": "Los Gatos",
+   "region": "NorCal",
+   "entry": 1374867,
+   "kind": "condo",
+   "minutes": 16.0,
+   "anchor": "SJ",
+   "safety": "very_safe",
+   "violent": 140
+  },
+  "94041": {
+   "name": "Mountain View",
+   "region": "NorCal",
+   "entry": 1079798,
+   "kind": "condo",
+   "minutes": 17.7,
+   "anchor": "SJ",
+   "safety": "safe",
+   "violent": 249
+  },
+  "94040": {
+   "name": "Mountain View",
+   "region": "NorCal",
+   "entry": 868875,
+   "kind": "condo",
+   "minutes": 18.1,
+   "anchor": "SJ",
+   "safety": "safe",
+   "violent": 249
+  },
+  "94010": {
+   "name": "Hillsborough",
+   "region": "NorCal",
+   "entry": 1070014,
+   "kind": "condo",
+   "minutes": 22.4,
+   "anchor": "SF",
+   "safety": "safe",
+   "violent": 155
+  },
+  "94025": {
+   "name": "Menlo Park",
+   "region": "NorCal",
+   "entry": 1271784,
+   "kind": "condo",
+   "minutes": 26.2,
+   "anchor": "SJ",
+   "safety": "safe",
+   "violent": 249
+  }
+ }
+}

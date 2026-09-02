@@ -1,0 +1,175 @@
+{
+ "period": "2026-09",
+ "market": "NE",
+ "params": {
+  "assets": 200000,
+  "down_pct": 20.0,
+  "safety_tier": "safe",
+  "winter": "moderate"
+ },
+ "max_purchase": 800000,
+ "universe_n": 749,
+ "buyable": {
+  "06901": {
+   "name": "Stamford",
+   "region": "CT Shoreline",
+   "entry": 384013,
+   "kind": "all-homes",
+   "minutes": 4.0,
+   "anchor": "STM",
+   "safety": "safe",
+   "violent": 193
+  },
+  "06902": {
+   "name": "Stamford",
+   "region": "CT Shoreline",
+   "entry": 601373,
+   "kind": "all-homes",
+   "minutes": 4.6,
+   "anchor": "STM",
+   "safety": "safe",
+   "violent": 193
+  },
+  "06906": {
+   "name": "Stamford",
+   "region": "CT Shoreline",
+   "entry": 652350,
+   "kind": "all-homes",
+   "minutes": 5.8,
+   "anchor": "STM",
+   "safety": "safe",
+   "violent": 193
+  },
+  "06905": {
+   "name": "Stamford",
+   "region": "CT Shoreline",
+   "entry": 762762,
+   "kind": "all-homes",
+   "minutes": 7.0,
+   "anchor": "STM",
+   "safety": "safe",
+   "violent": 193
+  },
+  "02914": {
+   "name": "East Providence",
+   "region": "RI + South Coast",
+   "entry": 434305,
+   "kind": "all-homes",
+   "minutes": 7.1,
+   "anchor": "PVD",
+   "safety": "very_safe",
+   "violent": 94
+  },
+  "06825": {
+   "name": "Fairfield",
+   "region": "CT Shoreline",
+   "entry": 757096,
+   "kind": "all-homes",
+   "minutes": 7.8,
+   "anchor": "BDG",
+   "safety": "very_safe",
+   "violent": 28
+  },
+  "02916": {
+   "name": "East Providence",
+   "region": "RI + South Coast",
+   "entry": 506415,
+   "kind": "all-homes",
+   "minutes": 8.2,
+   "anchor": "PVD",
+   "safety": "very_safe",
+   "violent": 94
+  },
+  "06907": {
+   "name": "Stamford",
+   "region": "CT Shoreline",
+   "entry": 717784,
+   "kind": "all-homes",
+   "minutes": 8.3,
+   "anchor": "STM",
+   "safety": "safe",
+   "violent": 193
+  },
+  "02910": {
+   "name": "Cranston",
+   "region": "RI + South Coast",
+   "entry": 413929,
+   "kind": "all-homes",
+   "minutes": 8.5,
+   "anchor": "PVD",
+   "safety": "very_safe",
+   "violent": 119
+  },
+  "02915": {
+   "name": "East Providence",
+   "region": "RI + South Coast",
+   "entry": 450676,
+   "kind": "all-homes",
+   "minutes": 9.8,
+   "anchor": "PVD",
+   "safety": "very_safe",
+   "violent": 94
+  },
+  "02920": {
+   "name": "Cranston",
+   "region": "RI + South Coast",
+   "entry": 459943,
+   "kind": "all-homes",
+   "minutes": 10.0,
+   "anchor": "PVD",
+   "safety": "very_safe",
+   "violent": 119
+  },
+  "06614": {
+   "name": "Stratford",
+   "region": "CT Shoreline",
+   "entry": 483407,
+   "kind": "all-homes",
+   "minutes": 10.0,
+   "anchor": "BDG",
+   "safety": "very_safe",
+   "violent": 112
+  },
+  "02888": {
+   "name": "Warwick",
+   "region": "RI + South Coast",
+   "entry": 422103,
+   "kind": "all-homes",
+   "minutes": 10.6,
+   "anchor": "PVD",
+   "safety": "very_safe",
+   "violent": 80
+  },
+  "06460": {
+   "name": "Milford",
+   "region": "CT Shoreline",
+   "entry": 515844,
+   "kind": "all-homes",
+   "minutes": 13.5,
+   "anchor": "BDG",
+   "safety": "very_safe",
+   "violent": 82
+  },
+  "02889": {
+   "name": "Warwick",
+   "region": "RI + South Coast",
+   "entry": 422167,
+   "kind": "all-homes",
+   "minutes": 14.9,
+   "anchor": "PVD",
+   "safety": "very_safe",
+   "violent": 80
+  },
+  "01970": {
+   "name": "Salem",
+   "region": "Boston metro",
+   "entry": 612213,
+   "kind": "all-homes",
+   "minutes": 22.8,
+   "anchor": "BOS",
+   "safety": "safe",
+   "violent": 152
+  }
+ },
+ "aspirational": {}
+}
