@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "as_of": "2026-09-01",
+  "as_of": "2026-09-02",
   "days_scanned": 1,
   "rows_parsed": 6019,
   "filings_scanned": 813,
@@ -18,17 +18,17 @@
   },
   "watched_forms": [
    "SC 13E-3",
-   "SC TO-I",
-   "NT 10-K",
-   "DEFM14A",
-   "DEF 14A",
    "NT 10-Q",
+   "DEFM14A",
+   "NT 10-K",
+   "DEF 14A",
    "SC TO-T",
-   "SC 13D",
-   "15-12G",
-   "15-15D",
-   "10-12B",
+   "SC TO-I",
    "15-12B",
+   "15-12G",
+   "10-12B",
+   "15-15D",
+   "SC 13D",
    "15F",
    "8-K",
    "15",
@@ -1776,8 +1776,8 @@
    "company": "AXIA Energia S.A.",
    "cik": "1439124",
    "filed": "20260831",
-   "url": "https://www.sec.gov/Archives/edgar/data/1439124/0001213900-26-095647.txt",
-   "accession": "0001213900-26-095647.txt",
+   "url": "https://www.sec.gov/Archives/edgar/data/1439124/0001213900-26-095848.txt",
+   "accession": "0001213900-26-095848.txt",
    "label": "Insider open-market purchase",
    "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
    "typical_days": 180,
@@ -1794,16 +1794,16 @@
     "price_per_share": 10.2447,
     "suspect": null,
     "buyers": [
-     "Corso Matte Ana Silvia",
-     "de Bittencourt Marinho Gisomar Francisco"
+     "de Bittencourt Marinho Gisomar Francisco",
+     "Corso Matte Ana Silvia"
     ],
     "roles": [
-     "Director",
-     "See Remarks*"
+     "See Remarks*",
+     "Director"
     ],
     "by_insider": true,
     "dates": [
-     "2026-08-28"
+     "2026-08-26"
     ]
    },
    "filings": 2,
