@@ -209,6 +209,49 @@ check(L.EPS_GROWTH_CAP > L.EPS_GROWTH_MIN,
       "the cap sits above the gate, so bounding it cannot reject a company "
       "that would otherwise have passed")
 
+# THE CAP IS A CLAMP, NEVER A GATE — and this is the property that makes
+# moving it safe. lynch.py:897 gates on the CLAMPED value
+# (g["cagr"] < EPS_GROWTH_MIN), so the question "does raising the ceiling
+# change who passes?" is really "is min(raw, ceiling) >= MIN sensitive to
+# ceiling?". It is not, for any ceiling above the gate: raising a floor-
+# tested clamp can only move a value up, and a company under the floor was
+# under it at its raw rate anyway.
+#
+# Asserted across the range rather than argued, because the day somebody
+# turns the cap into a rejection ("growth above X is implausible, drop the
+# row") this check fails and says exactly what broke. The screen would
+# then be excluding its best candidates for being good, which is the one
+# failure this whole module is written against.
+_shapes = {
+    "steady": {"2021-12-31": 4.00, "2022-12-31": 4.60, "2023-12-31": 5.20,
+               "2024-12-31": 6.00},                       # ~14%/yr
+    "hyper": {"2021-12-31": 1.00, "2022-12-31": 2.00, "2023-12-31": 3.00,
+              "2024-12-31": 4.00, "2025-12-31": 8.00},    # past every cap
+    "crawling": {"2021-12-31": 4.00, "2022-12-31": 4.05, "2023-12-31": 4.10,
+                 "2024-12-31": 4.15},                     # ~1%/yr, under the gate
+    "flat": {"2021-12-31": 4.00, "2022-12-31": 4.00, "2023-12-31": 4.00,
+             "2024-12-31": 4.00},                         # exactly 0%
+}
+
+
+def _passes_growth_gate(series, cap):
+    g = L.growth(series, cap=cap)
+    return g["cagr"] is not None and g["cagr"] >= L.EPS_GROWTH_MIN
+
+
+for _name, _series in _shapes.items():
+    _verdicts = {c: _passes_growth_gate(_series, c)
+                 for c in (35.0, 50.0, 100.0, 1000.0)}
+    check(len(set(_verdicts.values())) == 1,
+          f"{_name}: the growth gate returns the same verdict at every "
+          f"ceiling from 35 to 1000 ({_verdicts}) — a clamp above the gate "
+          f"cannot change who passes, only what number they are shown at")
+
+check(L.growth(_shapes["hyper"], cap=35.0)["cagr"] == 35.0
+      and L.growth(_shapes["hyper"], cap=50.0)["cagr"] == 50.0,
+      "while the DISPLAYED rate does track the ceiling, which is the whole "
+      "of what moving it changes")
+
 # ── deceleration, which an endpoint CAGR cannot see ──
 # Four of the six live rows had FALLING earnings and were rendered as
 # growth stocks.
@@ -258,10 +301,17 @@ check(L.price_earnings(None, 1e6)["pe"] is None, "no cap, no multiple")
 
 check(L.peg(9.0, 30.0) == 0.3, "PEG is P/E over growth")
 check(L.peg(9.0, None) is None, "and needs both")
-check(L.peg(L.PE_SANE[0], L.EPS_GROWTH_CAP) >= 0.08,
-      "with both inputs bounded, PEG has a hard floor instead of running "
-      "to 0.01 — the nine live PEGs were 0.01 to 0.49, so DEEP fired on "
-      "100% of rows while the default sort was PEG ascending")
+_peg_floor = L.peg(L.PE_SANE[0], L.EPS_GROWTH_CAP)
+check(_peg_floor == round(L.PE_SANE[0] / L.EPS_GROWTH_CAP, 2)
+      and _peg_floor >= 0.05,
+      f"with both inputs bounded, PEG has a hard floor instead of running "
+      f"to 0.01 — the nine live PEGs were 0.01 to 0.49, so DEEP fired on "
+      f"100% of rows while the default sort was PEG ascending. The floor is "
+      f"PE_SANE[0] / EPS_GROWTH_CAP and MOVES DOWN as the cap moves up: it "
+      f"was 0.086 at a 35% cap and is {_peg_floor} at {L.EPS_GROWTH_CAP}%. "
+      f"Asserted against the constants rather than a literal, because a "
+      f"literal here silently became the thing under test the moment the "
+      f"cap changed")
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -539,14 +589,23 @@ check(_son["cagr"] is None,
 # are not the anomaly.
 _rocket = L.growth({"2020-12-31": 0.80, "2021-12-31": 1.10, "2022-12-31": 1.50,
                     "2023-12-31": 2.00, "2024-12-31": 6.50})
-check(_rocket["spike"] and _rocket["cagr"] == 35.0,
-      "a company still compounding without its best year KEEPS its rate and "
-      "stays on the board — rejecting every spike would cut the category "
-      "Lynch actually hunted. 0.80 -> 1.10 -> 1.50 -> 2.00 is 35.7%/yr "
-      "before the 6.50 year is counted at all")
-check(_rocket["cagr_through_spike"] == 35.0 and _rocket["capped"],
-      "both figures are capped here, so the badge is what tells the reader "
-      "the +225% year was set aside")
+check(_rocket["spike"] and _rocket["cagr"] == 35.7,
+      f"a company still compounding without its best year KEEPS its rate and "
+      f"stays on the board — rejecting every spike would cut the category "
+      f"Lynch actually hunted. 0.80 -> 1.10 -> 1.50 -> 2.00 is 35.7%/yr "
+      f"before the 6.50 year is counted at all, and under a "
+      f"{L.EPS_GROWTH_CAP}% ceiling that is what the row prints. Under the "
+      f"old 35% cap it printed 35.0 — the ceiling, not the rate — while "
+      f"this very message claimed it kept its rate. They agree now "
+      f"(got {_rocket['cagr']})")
+check(_rocket["cagr_through_spike"] == L.EPS_GROWTH_CAP
+      and _rocket["capped"] is False,
+      f"and ONLY the through-spike figure reaches the ceiling: 0.80 -> 6.50 "
+      f"is 68.7%/yr, shown at {L.EPS_GROWTH_CAP}. The REPORTED rate is the "
+      f"honest 35.7, so `capped` is False — which means the spike badge, "
+      f"not the cap badge, is what tells the reader the +225% year was set "
+      f"aside (got through_spike={_rocket['cagr_through_spike']}, "
+      f"capped={_rocket['capped']})")
 
 # THE PRECEDENCE MATTERS. A verdict already reached is not overwritten by
 # "could not tell": the turnaround's +788.9% would trip the spike test, and
@@ -590,13 +649,17 @@ check(not _early["trough"],
       "this screen exists to find")
 _psix = L.growth({"2020-12-31": -2.12, "2021-12-31": 0.49, "2022-12-31": 1.15,
                   "2023-12-31": 3.01, "2024-12-31": 4.94})
-check(not _psix["trough"] and _psix["cagr"] == 35.0,
-      "recovery INTO growth qualifies: nothing behind PSIX's 0.49 base was "
-      "higher, and the last-year column still shows the reader +64%")
+check(not _psix["trough"] and _psix["cagr"] == L.EPS_GROWTH_CAP,
+      f"recovery INTO growth qualifies: nothing behind PSIX's 0.49 base was "
+      f"higher, and the last-year column still shows the reader +64%. Its "
+      f"raw {_psix['cagr_raw']}%/yr is far past any ceiling, so this asserts "
+      f"the CAP rather than a rate — written as the constant so it tracks "
+      f"the cap instead of rotting the next time one moves")
 check(L.growth({"2021-12-31": 0.10, "2022-12-31": 0.30, "2023-12-31": 0.90,
-                "2024-12-31": 2.70})["cagr"] == 35.0,
+                "2024-12-31": 2.70})["cagr"] == L.EPS_GROWTH_CAP,
       "a company with exactly four points has no history behind the window "
-      "at all, so it can never be a trough")
+      "at all, so it can never be a trough — 0.10 -> 2.70 is 199.9%/yr and "
+      "prints at the ceiling")
 
 # ── return on capital: reported, never gated ──
 _light = L.return_on_capital(300e6, 500e6, 400e6, 120e6)

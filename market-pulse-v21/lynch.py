@@ -62,10 +62,25 @@ MIN_EPS_YEARS = 3               # need this many spans, so 4 annual points
 PE_SANE = (3.0, 10.0)
 
 # Growth was the last unbounded term in the app AND the default sort key,
-# which made the ranking monotone in the estimator's own error. Sustaining
-# 35%/yr for three years is rare enough that a GARP buyer should not
-# underwrite it, and high enough not to bind on a genuine fast grower.
-EPS_GROWTH_CAP = 35.0
+# which made the ranking monotone in the estimator's own error. The cap is
+# a CLAMP, never a gate: a company compounding faster is shown AT the cap
+# and keeps its true rate in cagr_raw. Nothing is rejected for growing.
+#
+# Raised from 35 to 50. The 35 was set to be "rare enough that a GARP buyer
+# should not underwrite it, and high enough not to bind on a genuine fast
+# grower", and the second half stopped being true — it was binding on
+# ordinary rows rather than only on the estimator's blow-ups. BOSC on the
+# 2026-09 board is the case: a real 35.3%, clamped to 35.0 and displayed
+# at exactly the ceiling, which reads as "we stopped measuring" rather
+# than as a rate.
+#
+# 50 keeps the property that matters. The clamp exists so the default sort
+# is not monotone in the estimator's own error, and the errors it was
+# built for are not 40% rows — they are the 195.5% turnaround and the 273%
+# step change named below, both of which are still far outside it and, more
+# to the point, are now caught by their own guards BEFORE the clamp is
+# reached. The clamp is the backstop, not the mechanism.
+EPS_GROWTH_CAP = 50.0
 
 # A base year this far below the window's median is a trough, and the
 # "growth" measured off it is a recovery. Abercrombie's 0.05 against a
@@ -86,9 +101,12 @@ BASE_JUMP_MULTIPLE = 5.0
 # base of 0.06 sits ABOVE the median of 0.04, because the entire history
 # is near zero. Nothing is depressed; the company simply has no history at
 # its current level, and one year at 83x the median is a step change, not
-# a rate that can be extrapolated. Without this it passes at the capped
-# 35%, comfortably over the 10% gate, which is worse than the 273% it
-# printed before — a fabricated number that looks reasonable.
+# a rate that can be extrapolated. Without this it passes AT THE CEILING,
+# whatever the ceiling is, comfortably over the 10% gate — which is worse
+# than the 273% it printed before, because a fabricated number that looks
+# reasonable gets acted on and an absurd one does not. This guard fires
+# BEFORE the clamp and does not depend on its value, which is why raising
+# EPS_GROWTH_CAP does not re-open the case.
 STEP_MULTIPLE = 5.0
 
 # A base this far below the PRE-WINDOW peak is a drawdown, not a start.
@@ -582,8 +600,11 @@ def _rate(pts: list, spans: int | None = None, cap: float | None = None,
     # be gated on `median > 0`, so a window whose median is negative
     # switched BOTH of them off and fell through to the endpoint formula.
     # EPS 0.12, -0.80, -0.45, 3.10 has median -0.165 and produced a raw
-    # 195.5% capped to 35.0%, a PEG near 0.2, and the top row on the
-    # board. Positive endpoints around a loss are a turnaround, and an
+    # 195.5% clamped to the ceiling (35.0 at the time), a PEG near 0.2, and
+    # the top row on the board — the clamp is what made a nonsense rate
+    # look like a merely excellent one. Like the step guard, this fires
+    # before the clamp and is unaffected by its value.
+    # Positive endpoints around a loss are a turnaround, and an
     # endpoint CAGR describes a turnaround worse than it describes
     # anything else.
     if med <= 0:
@@ -619,8 +640,11 @@ def _rate(pts: list, spans: int | None = None, cap: float | None = None,
     # already been dragged up by the recovered years — so it cannot see the
     # hole. Carnival's revenue ran 16.4, 17.5, 18.9, 20.8, 5.6, 1.9, 12.2,
     # 21.6, 25.0, 26.5: measured over 3 spans it compounds at 29.5%, over 5
-    # at a capped 35.0%, over 9 at 5.5%. Great, Great, Yikes — one company,
-    # one filing history, and no existing guard fires at any window.
+    # at a raw 69.4% that prints AT WHATEVER CEILING THE CALLER PASSED, over
+    # 9 at 5.5%. Great, Great, Yikes — one company, one filing history, and
+    # no existing guard fires at any window. (This is the revenue path, so
+    # the ceiling is checklist.REV_GROWTH_CAP, not EPS_GROWTH_CAP; the
+    # comment used to name a number that belonged to neither.)
     #
     # Opt-in because it is a REVENUE test. Earnings collapse to near zero
     # in ordinary years and the pre-window peak would reject honest
