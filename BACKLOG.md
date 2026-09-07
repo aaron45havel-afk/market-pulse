@@ -27,3 +27,12 @@ Format: `- [PHASE-SEEN] item — why it matters`
   Holdings at 0.8x P/FCF, Trade Desk at $13.80). Guarded on `/holt`, unfixed at source,
   and every board reading `pfcf_now` is affected.
 - [P0] `CRON_SECRET` was exposed in an earlier session and has not been rotated.
+- [P0] `refresh-quiet-value.yml` (weekly) has failed 4 runs in a row (Aug 15, 22, 29,
+  Sep 5 2026). Both price sources it depends on are unreachable from GitHub-hosted
+  runners: stooq answers HTTP 200 with a Cloudflare JS-challenge page instead of CSV,
+  Yahoo returns HTTP 429 (cloud IPs blocked). The script correctly refuses to write a
+  board with no market data rather than going stale silently, but that means the
+  quiet-value screen itself has now been stale for ~4 weeks. Needs either a paid/keyed
+  price API, a self-hosted runner with a residential-ish IP, or a decision to drop one
+  of the two sources. See `market-pulse-v21/scripts/refresh_quiet_value.py` and the
+  `Refresh quiet-value screen` workflow run history.
