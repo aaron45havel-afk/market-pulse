@@ -1,6 +1,6 @@
 {
  "_meta": {
-  "as_of": "2026-09-09",
+  "as_of": "2026-09-10",
   "days_scanned": 1,
   "rows_parsed": 4109,
   "filings_scanned": 1120,
@@ -19,18 +19,18 @@
   "watched_forms": [
    "SC 13E-3",
    "DEFM14A",
-   "SC TO-T",
    "SC TO-I",
-   "DEF 14A",
    "NT 10-K",
    "NT 10-Q",
-   "15-12G",
+   "SC TO-T",
+   "DEF 14A",
    "10-12B",
-   "15-15D",
    "15-12B",
    "SC 13D",
-   "8-K",
+   "15-12G",
+   "15-15D",
    "15F",
+   "8-K",
    "15",
    "4"
   ],
