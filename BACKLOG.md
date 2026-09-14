@@ -27,3 +27,12 @@ Format: `- [PHASE-SEEN] item — why it matters`
   Holdings at 0.8x P/FCF, Trade Desk at $13.80). Guarded on `/holt`, unfixed at source,
   and every board reading `pfcf_now` is affected.
 - [P0] `CRON_SECRET` was exposed in an earlier session and has not been rotated.
+- [P0] `refresh-quiet-value.yml` has never once succeeded (all 9 runs since it shipped
+  on 2026-08-09, weekly on Saturdays, are `failure` or `cancelled`). Root cause per the
+  2026-09-12 run log: both price sources it can reach from a GitHub-hosted runner are
+  unusable — Stooq answers with a JS bot-check page, Yahoo returns HTTP 429 on every
+  request. The circuit breaker added in #214 is working as designed (refuses to write a
+  short board rather than publish broken data), so the page correctly shows "no data"
+  instead of garbage, but the quiet-value screen has never had live numbers. Needs a
+  price source reachable from Actions runners (a keyed API, or routing through a proxy)
+  — a data-source/vendor decision, not a code fix.

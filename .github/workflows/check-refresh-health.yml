@@ -1,0 +1,84 @@
+name: Check data-refresh health
+
+# The market data on schloss/hundred/moats/holt/catalysts/quiet-value/etc. only stays
+# current if the refresh-*.yml workflows actually succeed. GitHub surfaces a red X on
+# each workflow's own Actions page, but nothing rolls those up — a workflow can fail
+# silently, run after run, until someone happens to look. This does that looking, once
+# a week: it opens/updates a single tracking issue naming any refresh-*.yml workflow
+# whose last three scheduled runs all failed. A workflow that fails once and recovers
+# on its own next run is not flagged — several of these (the catalyst queue especially)
+# do that routinely against flaky upstream feeds and self-heal within a day.
+on:
+  schedule:
+    - cron: '17 15 * * 1'   # Mondays ~15:17 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: { workflows } } = await github.rest.actions.listRepoWorkflows({
+              owner: context.repo.owner, repo: context.repo.repo, per_page: 100,
+            });
+            const refreshWorkflows = workflows.filter(w =>
+              w.state === 'active' && /^refresh-.*\.yml$/.test(w.path.split('/').pop()));
+
+            const failing = [];
+            for (const wf of refreshWorkflows) {
+              const { data: { workflow_runs } } = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner, repo: context.repo.repo, workflow_id: wf.id,
+                event: 'schedule', status: 'completed', per_page: 3,
+              });
+              const attempted = workflow_runs.length;
+              const allFailed = attempted > 0 && workflow_runs.every(r => r.conclusion === 'failure');
+              if (allFailed) {
+                failing.push({
+                  name: wf.name,
+                  workflow_url: wf.html_url,
+                  last_run_url: workflow_runs[0].html_url,
+                  runs_checked: attempted,
+                  failing_since: workflow_runs[attempted - 1].created_at,
+                });
+              }
+            }
+
+            const title = 'Data refresh workflows need attention';
+            const existing = (await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: 'open' })).data
+              .find(i => i.title === title);
+
+            if (failing.length === 0) {
+              if (existing) {
+                await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body: 'Weekly check: every refresh-*.yml workflow has a passing run within its last 3 scheduled attempts. Closing.' });
+                await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: existing.number, state: 'closed' });
+              }
+              return;
+            }
+
+            const body = 'These data-refresh workflows failed on every one of the last '
+              + '(up to 3) scheduled runs checked, meaning the data they own is not '
+              + 'updating:\n\n'
+              + failing.map(f =>
+                  `- **${f.name}** — failing since ${f.failing_since} (${f.runs_checked} of ${f.runs_checked} checked runs failed). `
+                  + `[Latest run](${f.last_run_url}) · [workflow](${f.workflow_url})`).join('\n')
+              + '\n\nThis issue is opened and updated weekly by *Check data-refresh health* '
+              + '(`.github/workflows/check-refresh-health.yml`). It auto-closes once every '
+              + 'workflow listed above has a passing scheduled run.';
+
+            if (existing) {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.number, body });
+            } else {
+              await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body });
+            }
