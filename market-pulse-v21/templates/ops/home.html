@@ -1,0 +1,43 @@
+{% extends "ops/base.html" %}
+{% block title %}{{ label }} portal{% endblock %}
+{% block barextra %}
+<form method="post" action="/ops/{{ portal }}/logout" style="margin:0">
+    <button type="submit" class="quiet">Sign out</button>
+</form>
+{% endblock %}
+{% block content %}
+
+<div class="card">
+    <h2>This session</h2>
+    <dl class="kv">
+        <dt>Signed in as</dt>
+        <dd>{{ me.full_name or me.email if me else "—" }}</dd>
+        <dt>Email</dt><dd>{{ me.email if me else "—" }}</dd>
+        <dt>Portal</dt><dd>{{ portal }}</dd>
+        <dt>Roles in effect</dt>
+        <dd>{% if roles %}{{ roles | join(", ") }}{% else %}none{% endif %}</dd>
+        <dt>Divisions</dt>
+        <dd>{% if divisions %}{{ divisions | join(", ") }}
+            {% else %}organization-wide{% endif %}</dd>
+        <dt>People visible</dt><dd>{{ visible_people }}</dd>
+    </dl>
+    <p class="note">
+        Roles in effect are the ones this <em>portal</em> admits, not
+        everything the account holds. Someone who is both staff and a
+        resident sees only their resident role here.
+    </p>
+</div>
+
+<div class="card">
+    <h2>Phase 1</h2>
+    <p style="font-size:14px;color:var(--ink-2)">
+        The foundation is in place: money as integer cents, legal dates
+        resolved in each property's timezone, scoped data access with an
+        append-only audit trail, and migrations that run both ways.
+        Properties, units and leases arrive in Phase 2 — until then this
+        page is here to prove a session reaches it and that the wrong
+        portal does not.
+    </p>
+</div>
+
+{% endblock %}

@@ -37,3 +37,19 @@ Those move slowly and Zillow doesn't publish them.
 Rural or low-volume ZIPs may not appear in Zillow's public CSVs. The
 script logs a list of missing ZIPs at the end of each run. Those keep
 their hardcoded values from the snapshot.
+
+## mfops_bootstrap.py
+
+Creates the first organization, division and platform administrator for
+the multifamily ops platform. Run once, by whoever holds `DATABASE_URL`:
+
+    DATABASE_URL=... python scripts/mfops_bootstrap.py \
+        --org "Havel Property Holdings LLC" \
+        --division "California" \
+        --email you@example.com --migrate
+
+Prints a TOTP secret once — `platform_admin` requires MFA, so without
+enrolling it the account is created and immediately unusable. Refuses to
+run a second time if any platform administrator already exists; create
+further ones by signing in and granting the role, which leaves an audit
+trail.
