@@ -339,6 +339,14 @@ async def finance(request: Request):
     return templates.TemplateResponse("finance.html", {"request": request})
 
 
+@app.get("/fcf-quality")
+async def fcf_quality_page(request: Request):
+    """FCF quality — VFLO's two-stage funnel over the whole market.
+
+    Reads from data/fcf_quality_snapshots/ (monthly, built by Action)."""
+    return templates.TemplateResponse("fcf_quality.html", {"request": request})
+
+
 @app.get("/lynch")
 async def lynch(request: Request):
     """Peter Lynch GARP screener — large-cap value growth.
@@ -5324,6 +5332,8 @@ _LYNCH_SNAPSHOT_DIR = Path(__file__).resolve().parent / "data" / "lynch_snapshot
 
 _HUNDRED_SNAPSHOT_DIR = Path(__file__).resolve().parent / "data" / "hundred_snapshots"
 
+_FCFQ_SNAPSHOT_DIR = Path(__file__).resolve().parent / "data" / "fcf_quality_snapshots"
+
 
 @app.get("/api/hundred/snapshots")
 async def api_hundred_snapshot_list():
@@ -6033,6 +6043,30 @@ async def api_moats_import_commit(request: Request):
                          "already_tracked": [r["ticker"] for r
                                              in result["already_tracked"]],
                          "rejected": result["counts"]["wrong_naics"]})
+
+
+@app.get("/api/fcf-quality/snapshots")
+async def api_fcfq_snapshot_list():
+    if not _FCFQ_SNAPSHOT_DIR.exists():
+        return JSONResponse({"months": [], "latest": None})
+    months = sorted(
+        (p.stem for p in _FCFQ_SNAPSHOT_DIR.glob("*.json")),
+        reverse=True,
+    )
+    return JSONResponse({"months": months, "latest": months[0] if months else None})
+
+
+@app.get("/api/fcf-quality/snapshot/{month}")
+async def api_fcfq_snapshot(month: str):
+    if len(month) != 7 or month[4] != "-" or not (month[:4].isdigit() and month[5:].isdigit()):
+        return JSONResponse({"error": "month must be YYYY-MM"}, status_code=400)
+    path = _FCFQ_SNAPSHOT_DIR / f"{month}.json"
+    if not path.exists():
+        return JSONResponse({"error": f"no snapshot for {month}"}, status_code=404)
+    try:
+        return JSONResponse(json.loads(path.read_text()))
+    except Exception as e:
+        return JSONResponse({"error": f"failed to read snapshot: {e}"}, status_code=500)
 
 
 @app.get("/api/lynch/snapshots")
