@@ -24,6 +24,7 @@ from fastapi import Depends, HTTPException, Request
 
 from lib.ops import audit as A
 from lib.ops import auth as AU
+from lib.ops import bootstrap as B
 from lib.ops import clock as C
 from lib.ops import obs
 from lib.ops import repository as RP
@@ -76,8 +77,25 @@ def db():
 
     The repository never commits; this owns the transaction, so a write
     and the audit row describing it land together or not at all.
+
+    THE SCHEMA GATE LIVES HERE because this is the one chokepoint every
+    ops data path goes through — directly, or via current_scope() and
+    repository(). Putting it on each route instead would make the guard
+    only as good as the next route somebody adds, and the point of a
+    fail-closed check is that forgetting it is not an available mistake.
+
+    Checked BEFORE a connection is taken: a boot that could not verify
+    the schema is not a boot whose connections should be used.
     """
     import database as D
+
+    if not B.schema_ready():
+        # 503, not 500: the request is fine and the deployment is not, so
+        # a retry once the schema is current is the right client response.
+        reason = B.schema_state()["reason"]
+        log.error("ops request refused, schema not ready: %s", reason)
+        raise HTTPException(503, f"ops unavailable: {reason}")
+
     conn = D._get_conn()
     if conn is None:
         raise HTTPException(503, "database unavailable")

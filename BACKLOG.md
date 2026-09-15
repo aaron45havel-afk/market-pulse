@@ -32,10 +32,10 @@ Format: `- [PHASE-SEEN] item — why it matters`
   owner on a single `DATABASE_URL` — the owner can re-grant to itself and a superuser
   bypasses grants entirely. Needs a separate non-owner application role, which is
   infrastructure work, not a migration. The trigger is the whole guarantee until then.
-- [P1] Ops migrations fail OPEN at boot (`lib/ops/bootstrap.py`): a failure is logged and
-  the app keeps serving. Correct while no ops routes exist and no ops data is at risk;
-  it must flip to fail-closed the moment Phase 1-D puts real traffic on `mf_*`, because
-  serving against an unexpected schema is how data gets corrupted.
+- [P1] The ops fail-closed gate is on `deps.db()`, so the login PAGES still render when
+  the schema is unverified and only 503 on submit. Harmless — the POST is gated — but a
+  form that accepts a password it cannot check is a worse error message than a page
+  saying the platform is down. Wants a readiness check on the GET handlers, or a banner.
 - [P1] `JurisdictionClock.deadline(counting="business")` counts weekdays only — public
   holidays are not modelled. Phase 7 needs real per-jurisdiction holiday calendars
   before any business-day deadline is treated as legally reliable.
