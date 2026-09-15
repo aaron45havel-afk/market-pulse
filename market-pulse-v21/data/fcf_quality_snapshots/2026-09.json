@@ -29,7 +29,7 @@
     "compounders": "same",
     "schloss": "same"
    },
-   "reason": "previous snapshot predates logic stamping, so an unchanged screen cannot be proved",
+   "reason": "inputs unchanged but the build's own code changed",
    "verified": true
   },
   "growth_components": [
@@ -48,7 +48,7 @@
     "not_in_schloss": 252
    }
   },
-  "logic": "bd914d44e441fcb6",
+  "logic": "5024c5f24c429442",
   "min_market_cap": 50000000,
   "min_revenue": 10000000,
   "multiple_flagged": 24,

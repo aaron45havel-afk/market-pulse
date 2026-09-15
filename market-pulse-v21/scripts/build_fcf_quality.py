@@ -39,7 +39,7 @@ them makes this build fast enough to outrun its own inputs: 13 seconds
 against the 36 minutes the compounders refresh takes. Dispatch both by
 hand in sequence and this one reads the tree as it stood before the
 refresh pushed, producing last month's board with this month's date on
-it — silently, with a green tick. fcf_quality.refresh_verdict() decides
+it — silently, with a green tick. freshness.verdict() decides
 whether there is anything new to say before any work is done; see the
 comment above it for why "the inputs are older than the snapshot" is
 NOT the rule that catches this. --force overrides it.
@@ -47,7 +47,6 @@ NOT the rule that catches this. --force overrides it.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from datetime import date, timezone, datetime
@@ -57,6 +56,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 import fcf_quality as Q          # noqa: E402
+import freshness as F            # noqa: E402
 import holt as H                 # noqa: E402
 
 SCHLOSS = ROOT / "data" / "schloss.json"
@@ -190,19 +190,15 @@ def multiple_guard(rows: list) -> int:
     return flagged
 
 
-def logic_stamp() -> str:
-    """Content hash of the code that decides what the board says.
+# Two files, because either can change the board on unchanged inputs:
+# fcf_quality.py is the funnel, this script is the join and the guards
+# wrapped around it. freshness.py is deliberately NOT hashed — a comment
+# fix there would rebuild every joining board in the repo at once.
+LOGIC_FILES = (ROOT / "fcf_quality.py", Path(__file__).resolve())
 
-    Two files, because either can change the output on unchanged inputs:
-    fcf_quality.py is the funnel, this script is the join and the guards
-    wrapped around it. Hashing bytes rather than tracking a version
-    number means nobody has to remember to bump anything — which is the
-    only kind of version stamp that stays true.
-    """
-    h = hashlib.sha256()
-    for p in (ROOT / "fcf_quality.py", Path(__file__).resolve()):
-        h.update(p.read_bytes())
-    return h.hexdigest()[:16]
+
+def logic_stamp() -> str:
+    return F.logic_stamp(LOGIC_FILES)
 
 
 def previous_inputs(out_dir: Path):
@@ -210,7 +206,7 @@ def previous_inputs(out_dir: Path):
 
     Snapshots are named YYYY-MM.json, so the newest sorts last. Reads
     from `_meta` and tolerates a snapshot written before `logic` existed:
-    a missing hash comes back as None, which refresh_verdict() treats as
+    a missing hash comes back as None, which freshness.verdict() treats as
     "cannot prove the screen is unchanged" and builds.
     """
     if not out_dir.exists():
@@ -244,7 +240,7 @@ def build(out_dir: Path = OUT_DIR, force: bool = False) -> dict:
         "logic": logic_stamp(),
     }
     previous = previous_inputs(out_dir)
-    verdict = Q.refresh_verdict(current, previous)
+    verdict = F.verdict(current, previous)
     if force:
         verdict = dict(verdict, action="build", forced=True,
                        reason=f"--force (would otherwise {verdict['action']}: "
@@ -352,11 +348,8 @@ def main() -> int:
         # Not a build. Print the dates BEFORE the verdict text, because
         # the dates are what tell the operator which refresh failed to
         # land — the sentence only says that one did.
-        prev = r["previous"] or {}
-        print(f"inputs   compounders {r['inputs']['compounders']}   "
-              f"schloss {r['inputs']['schloss']}")
-        print(f"on disk  compounders {prev.get('compounders')}   "
-              f"schloss {prev.get('schloss')}   ({prev.get('_file')})")
+        for line in F.describe(r["inputs"], r["previous"]):
+            print(line)
         print()
         print(f"{v['action'].upper()}: {v['reason']}")
         if v["action"] == "fault":
@@ -370,8 +363,8 @@ def main() -> int:
     print(f"wrote {r['path']}")
     print(f"  freshness       {v['reason']}"
           f"{'' if v.get('verified') else '  [NOT VERIFIED]'}")
-    print(f"  inputs          compounders {r['inputs']['compounders']}, "
-          f"schloss {r['inputs']['schloss']}")
+    for line in F.describe(r["inputs"], r["previous"]):
+        print(f"  {line}")
     print(f"  basis           {m['basis']}")
     ev = m["ev_inputs"]
     print(f"  ev inputs       {ev['with_debt']}/{ev['of']} with debt, "
