@@ -708,12 +708,19 @@ def _ops_migrate():
     no down path. The mf_ tables use numbered up/down migrations with a
     ledger instead — see lib/ops/migrations/. The import is local so a
     missing lib/ops cannot break boot for the analysis boards.
+
+    Failing here does not disable the ops platform quietly. Bootstrap
+    records that the schema is unverified and the ops routes then refuse
+    with a 503 naming the reason; swallowing the exception protects the
+    BOARDS, not the platform. If this except branch is reached at all the
+    readiness flag was never set, which is already the not-ready default,
+    so the routes close either way.
     """
     try:
         from lib.ops.bootstrap import migrate_on_boot
         migrate_on_boot(_get_conn)
     except Exception as e:
-        logger.error("ops bootstrap unavailable: %s", e)
+        logger.error("ops bootstrap unavailable (ops routes refuse): %s", e)
 
 
 def init_db():

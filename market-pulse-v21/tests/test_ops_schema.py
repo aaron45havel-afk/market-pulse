@@ -615,10 +615,18 @@ check(fails("DELETE FROM mf_audit_log WHERE id = -999"),
       "the guarantee on the second deploy")
 
 
-# ── boot wiring: fails open, and says so ──
-# database.init_db() calls this on every deploy. The analysis boards have
-# been serving for months and Phase 1 is not allowed to be the reason they
-# stop, so every failure path here has to end in "log it and continue".
+# ── boot wiring: the PROCESS fails open, the OPS ROUTES fail closed ──
+# database.init_db() calls this on every deploy, at import time, so an
+# exception here does not degrade the ops platform — it stops /screener and
+# every other board that has been serving for months. migrate_on_boot()
+# therefore never raises.
+#
+# That is NOT the same as letting ops serve. Serving traffic against a
+# schema you did not expect is how data gets corrupted, and Phase 1-D put
+# real traffic on the mf_ tables, so every exit path below also records
+# whether the schema is known-good. routers/ops/deps.db() refuses when it
+# is not. The two directions are tested together because the bug is
+# believing one implies the other.
 from lib.ops import bootstrap as B
 
 
@@ -626,33 +634,69 @@ def _factory():
     return psycopg2.connect(DB_URL)
 
 
+B.reset_state()
+check(B.schema_ready() is False,
+      "THE DEFAULT IS NOT READY. If migrate_on_boot is never called — a "
+      "failed import, a new process that mounts the routers without "
+      "running init_db — ops is closed rather than open. A readiness flag "
+      "defaulting to true only works when somebody remembers to set it")
+check(B.schema_state()["reason"] == "ops migrations have not run in this "
+      "process",
+      "and the reason says so, because it is what the 503 body quotes")
+
 check(B.migrate_on_boot(_factory) == [],
       "boot applies nothing when the schema is already current")
+check(B.schema_ready() is True and B.schema_state()["reason"] == "schema current",
+      "AND NOTHING RUNNING IS NOT A FAILURE. 'no migrations applied' is the "
+      "correct return both when the schema is current and when the database "
+      "is on fire, which is exactly why readiness is a separate question "
+      "from the return value")
 
-# from empty
-for t in ["mf_sessions", "mf_jobs", "mf_documents", "mf_audit_log",
-          "mf_jurisdiction_rules", "mf_jurisdictions", "mf_user_roles",
-          "mf_roles", "mf_users", "mf_divisions", "mf_organizations",
-          "mf_migrations"]:
+def _drop_all_mf():
+    for t in ["mf_sessions", "mf_jobs", "mf_documents", "mf_audit_log",
+              "mf_jurisdiction_rules", "mf_jurisdictions", "mf_user_roles",
+              "mf_roles", "mf_users", "mf_divisions", "mf_organizations",
+              "mf_migrations"]:
+        cur = conn.cursor()
+        cur.execute(f"DROP TABLE IF EXISTS {t} CASCADE")
+        conn.commit()
+        cur.close()
     cur = conn.cursor()
-    cur.execute(f"DROP TABLE IF EXISTS {t} CASCADE")
+    cur.execute("DROP FUNCTION IF EXISTS mf_audit_log_immutable() CASCADE")
     conn.commit()
     cur.close()
-cur = conn.cursor()
-cur.execute("DROP FUNCTION IF EXISTS mf_audit_log_immutable() CASCADE")
-conn.commit()
-cur.close()
 
+
+_drop_all_mf()          # from empty
 check(B.migrate_on_boot(_factory) == ALL_NAMES,
       "and applies the foundation on a database that has never seen it — "
       "which is what the first Railway deploy after this merge does")
 check(len(mf_tables()) == 12, "the tables are there afterwards")
+check(B.schema_ready() is True, "and ops opens once it has")
 
+# ── MF_OPS_MIGRATE=0 stops it WRITING, not LOOKING ──
 os.environ["MF_OPS_MIGRATE"] = "0"
 check(B.migrate_on_boot(_factory) == [],
-      "MF_OPS_MIGRATE=0 skips — the escape hatch for a deploy where the "
-      "ops schema is the thing that is broken")
+      "MF_OPS_MIGRATE=0 applies nothing — the escape hatch for a deploy "
+      "where the ops schema is the thing that is broken")
+check(B.schema_ready() is True,
+      "and ops still SERVES when the schema is already current, because "
+      "declining to write to a schema is not the same as being unable to "
+      "trust it")
+
+_drop_all_mf()
+B.reset_state()
+check(B.migrate_on_boot(_factory) == [],
+      "with the schema behind AND applying disabled, nothing runs")
+check(B.schema_ready() is False and "not applied" in B.schema_state()["reason"],
+      "AND OPS CLOSES. This is the case the flag would have hidden if it "
+      "only skipped: MF_OPS_MIGRATE=0 against a database missing every "
+      "table would otherwise have read as a clean boot and served the "
+      "portals over tables that are not there")
 os.environ.pop("MF_OPS_MIGRATE")
+
+check(B.migrate_on_boot(_factory) == ALL_NAMES and B.schema_ready() is True,
+      "clearing the flag brings the schema and ops back up together")
 
 
 def _explodes():
@@ -661,12 +705,27 @@ def _explodes():
 
 check(B.migrate_on_boot(_explodes) == [],
       "A CONNECTION FAILURE RETURNS EMPTY RATHER THAN RAISING. This is the "
-      "one that matters: init_db() runs at import time, so an exception "
-      "here takes down /screener and every other board over a platform "
-      "with no users yet")
+      "one that matters for the BOARDS: init_db() runs at import time, so "
+      "an exception here takes down /screener and every other board")
+check(B.schema_ready() is False
+      and "on fire" in B.schema_state()["reason"],
+      "AND CLOSES OPS, quoting the error. Swallowing the exception protects "
+      "the boards; it does not license serving the platform against a "
+      "database nobody could reach")
+
+# Opened first ON PURPOSE. Checking that no-connection leaves the gate
+# shut is worth nothing if the gate was already shut going in — the
+# assertion has to be about the TRANSITION, or a boot path that forgets to
+# mark anything at all passes it.
+B.migrate_on_boot(_factory)
+check(B.schema_ready() is True, "(open again before the next case)")
 check(B.migrate_on_boot(lambda: None) == [],
       "and no DATABASE_URL is a skip, not a crash")
+check(B.schema_ready() is False,
+      "which CLOSES ops from open — no connection means no verification, "
+      "and unverified is the one thing the gate exists to refuse")
 
+B.migrate_on_boot(_factory)          # back to ready before the drift case
 cur = conn.cursor()
 cur.execute("UPDATE mf_migrations SET checksum='deadbeefdeadbeef' WHERE version=1")
 conn.commit()
@@ -675,10 +734,15 @@ check(B.migrate_on_boot(_factory) == [],
       "boot refuses to migrate over checksum drift too, rather than "
       "inheriting the runner's exception or forcing past it — a deploy is "
       "the worst moment to guess at what schema is actually there")
+check(B.schema_ready() is False and "drift" in B.schema_state()["reason"],
+      "and drift closes ops. A database whose schema no checkout describes "
+      "is the definition of the case where writes must not happen")
 cur = conn.cursor()
 cur.execute("UPDATE mf_migrations SET checksum=%s WHERE version=1", (_orig,))
 conn.commit()
 cur.close()
+B.migrate_on_boot(_factory)
+check(B.schema_ready() is True, "and fixing the drift reopens it")
 
 
 conn.close()
