@@ -20,14 +20,19 @@ right. So the market cap is sound where the price is not, and every
 multiple here is computed from it. Booking's P/FCF goes from a
 nonsensical 0.7x to 16.0x on that one change.
 
-WHAT IS MISSING, and it is the important limitation: neither file carries
-total debt or cash. So enterprise value cannot be computed and the board
-falls back — uniformly, every row on the same denominator — to market
-cap. fcf_quality.choose_basis() makes that decision and the snapshot
-records it, so the page can say which question it is answering. Adding
-debt and cash to the compounders refresh is what turns this into a true
-EV board; until then it is a free-cash-flow-to-market-cap board, which is
-a real measure and a different one.
+THE BASIS IS DECIDED BY THE DATA, not by this script. refresh_compounders
+now extracts total debt, cash, preferred stock and minority interest, so
+each row may be able to supply an enterprise value. fcf_quality.
+choose_basis() looks at the cohort: if any row can, the board ranks on EV
+and rows that cannot are listed unranked; if none can — a compounders file
+built before that extractor existed — every row drops to market cap
+together, which is a different measure and is labelled as one everywhere
+it appears.
+
+What is never allowed is a board with some rows on each. Market cap is
+smaller than enterprise value for any company carrying net debt, so a
+mixed board would hand a higher yield, and a better rank, to whichever
+rows were missing a debt tag.
 """
 from __future__ import annotations
 
@@ -77,11 +82,18 @@ def load_join() -> tuple[list, dict]:
             "country": c.get("country"),
             "industry": c.get("industry"),
             "sic": c.get("sic"),
-            # Neither source carries these. Left explicitly absent rather
-            # than defaulted, so enterprise_value() refuses rather than
-            # computing an EV out of assumed zeros.
-            "total_debt": None,
-            "cash": None,
+            # Enterprise-value inputs, once refresh_compounders has been
+            # re-run with the balance-sheet extractor. Absent until then,
+            # and absent is what they must be: enterprise_value() refuses
+            # rather than computing an EV out of assumed zeros, and
+            # choose_basis() drops the whole board to market cap so no row
+            # gains an advantage from a tag another row is missing.
+            "total_debt": c.get("total_debt"),
+            "cash": c.get("cash"),
+            "preferred": c.get("preferred"),
+            "minority": c.get("minority"),
+            "debt_inferred_zero": c.get("debt_inferred_zero"),
+            "bs_as_of": c.get("bs_as_of"),
             # The two growth legs available from filings. VFLO's third —
             # a 3-5 year consensus EPS growth estimate — has no filing
             # equivalent and is simply not here.
@@ -157,7 +169,8 @@ def build(out_dir: Path = OUT_DIR) -> dict:
             "exchange", "country", "industry", "pfcf", "pfcf_med",
             "multiple_fault", "fcf_conv", "capex_ocf", "roic_med",
             "op_margin_now", "nd_ebit", "rev_cagr5", "years", "cyclical",
-            "foreign", "basis", "ev", "reason", "leverage_note")
+            "foreign", "basis", "ev", "reason", "leverage_note",
+            "total_debt", "cash", "debt_inferred_zero", "bs_as_of")
 
     def slim(r):
         return {k: r.get(k) for k in keep if r.get(k) is not None}
@@ -189,6 +202,13 @@ def build(out_dir: Path = OUT_DIR) -> dict:
             "growth_components": ["sales_trend", "fcf_trend"],
             "vflo_components": ["sales trend", "EBITDA trend",
                                "long-term EPS growth estimate"],
+            "ev_inputs": {
+                "with_debt": sum(1 for r in rows if r.get("total_debt") is not None),
+                "with_cash": sum(1 for r in rows if r.get("cash") is not None),
+                "debt_inferred_zero": sum(1 for r in rows
+                                          if r.get("debt_inferred_zero")),
+                "of": len(rows),
+            },
             "join": join_meta,
             "census": result["census"],
             "multiple_flagged": multiple_flagged,
@@ -221,6 +241,10 @@ def main() -> int:
     c = m["census"]
     print(f"wrote {r['path']}")
     print(f"  basis           {m['basis']}")
+    ev = m["ev_inputs"]
+    print(f"  ev inputs       {ev['with_debt']}/{ev['of']} with debt, "
+          f"{ev['with_cash']}/{ev['of']} with cash, "
+          f"{ev['debt_inferred_zero']} inferred debt-free")
     print(f"  joined          {m['join']['joined']} of "
           f"{m['join']['compounders_rows']} compounders rows")
     print(f"  measured        {c['measured']}")

@@ -544,6 +544,219 @@ def _rows_for(node: dict, unit: str) -> dict[int, float]:
     return series
 
 
+# ── balance sheet: the enterprise-value inputs ───────────────────────
+#
+# Everything above this point is a DURATION fact — revenue over a year,
+# cash flow over a year. These are INSTANTS: a balance on one date. They
+# need their own extractor for a reason that bites immediately.
+#
+# A 10-K reports two balance sheets, this year's and last year's, and
+# companyfacts stamps BOTH with the fiscal year of the FILING. So keying
+# an instant on `fy` the way _rows_for does for durations gives two facts
+# competing for one slot, and whichever the SEC happened to list last
+# wins. For a balance sheet that is not a rounding difference — it is
+# last year's debt on this year's row.
+#
+# The `end` date is unambiguous where `fy` is not, so these take the
+# latest `end` and ignore `fy` entirely.
+BALANCE_TAGS: dict[str, list[tuple[str, str]]] = {
+    "cash": [
+        ("us-gaap", "CashAndCashEquivalentsAtCarryingValue"),
+        ("us-gaap", "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents"),
+        ("us-gaap", "CashAndDueFromBanks"),
+        ("ifrs-full", "CashAndCashEquivalents"),
+    ],
+    # VFLO's definition is "total debt", so operating-lease liabilities are
+    # deliberately absent: ASC 842 put them on the balance sheet in 2019
+    # and including them would make every retailer and restaurant look
+    # abruptly more levered than the index it is being compared against.
+    "debt_total": [
+        ("us-gaap", "DebtLongtermAndShorttermCombinedAmount"),
+    ],
+    "debt_noncurrent": [
+        ("us-gaap", "LongTermDebtNoncurrent"),
+        ("ifrs-full", "NoncurrentPortionOfNoncurrentBorrowings"),
+    ],
+    # AMBIGUOUS ON PURPOSE, and handled separately below. US GAAP
+    # `LongTermDebt` means total long-term debt INCLUDING current
+    # maturities in some filings and excluding them in others, so adding
+    # it to `LongTermDebtCurrent` double-counts for the first group.
+    "debt_longterm_ambiguous": [
+        ("us-gaap", "LongTermDebt"),
+        ("us-gaap", "LongTermDebtAndCapitalLeaseObligations"),
+    ],
+    "debt_current": [
+        ("us-gaap", "LongTermDebtCurrent"),
+        ("us-gaap", "LongTermDebtAndCapitalLeaseObligationsCurrent"),
+    ],
+    "debt_short": [
+        ("us-gaap", "ShortTermBorrowings"),
+        ("us-gaap", "OtherShortTermBorrowings"),
+        ("us-gaap", "CommercialPaper"),
+        ("ifrs-full", "ShorttermBorrowings"),
+    ],
+    "preferred": [
+        ("us-gaap", "PreferredStockValue"),
+        ("us-gaap", "PreferredStockValueOutstanding"),
+    ],
+    "minority": [
+        ("us-gaap", "MinorityInterest"),
+        ("ifrs-full", "NoncontrollingInterests"),
+    ],
+    # Not an EV component. Presence of either is EVIDENCE THAT A BALANCE
+    # SHEET WAS FILED AT ALL, which is what lets "no debt tag" be read as
+    # "no debt" rather than "not mapped" — see balance_sheet().
+    "equity": [
+        ("us-gaap", "StockholdersEquity"),
+        ("us-gaap", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"),
+        ("ifrs-full", "Equity"),
+    ],
+    "liabilities": [
+        ("us-gaap", "Liabilities"),
+        ("ifrs-full", "Liabilities"),
+    ],
+}
+
+
+def _latest_instant(facts: dict, slots: list[tuple[str, str]],
+                    want_unit: str = "USD"):
+    """(value, as_of, unit) for the most recent annual balance-sheet fact.
+
+    Latest `end` wins, across every slot and in one unit. `fy` is not
+    consulted: a 10-K's comparative prior-year balance carries the same
+    `fy` as the current one, so it is not an identifier here.
+
+    The unit is RETURNED rather than assumed, for the same reason
+    _annual_series returns it — a balance sheet in yen must never be
+    subtracted from a market capitalisation in dollars. Toyota's P/FCF
+    read 0.2 the last time this repo mixed two currencies.
+    """
+    best_by_unit: dict[str, tuple[str, float]] = {}
+    for taxonomy, tag in slots:
+        node = (facts.get(taxonomy) or {}).get(tag)
+        if not node:
+            continue
+        for unit, rows in (node.get("units") or {}).items():
+            for v in rows:
+                if v.get("form") not in ANNUAL_FORMS:
+                    continue
+                # A duration fact has a start; an instant does not. Guard
+                # against a tag that reports both shapes.
+                if v.get("start"):
+                    continue
+                end, val = v.get("end"), v.get("val")
+                if not end or not isinstance(val, (int, float)):
+                    continue
+                prev = best_by_unit.get(unit)
+                if prev is None or end > prev[0]:
+                    best_by_unit[unit] = (end, float(val))
+    if not best_by_unit:
+        return None, None, None
+    if want_unit in best_by_unit:
+        unit = want_unit
+    else:
+        # Most recent wins, then alphabetical, so the answer cannot change
+        # between runs because the SEC reordered a JSON object.
+        unit = sorted(best_by_unit, key=lambda u: (best_by_unit[u][0], u),
+                      reverse=True)[0]
+    end, val = best_by_unit[unit]
+    return val, end, unit
+
+
+def balance_sheet(facts: dict, want_unit: str = "USD") -> dict:
+    """The enterprise-value inputs, or an explicit absence.
+
+    Returns total_debt, cash, preferred and minority in ONE unit, with the
+    date they were measured and the reason for anything missing.
+
+    TOTAL DEBT IS ASSEMBLED, NOT READ. Almost nobody files a single
+    total-debt tag, so it is:
+
+        DebtLongtermAndShorttermCombinedAmount        if present, alone
+        else  noncurrent + current portion + short-term borrowings
+
+    and the noncurrent leg prefers `LongTermDebtNoncurrent`. The fallback
+    `LongTermDebt` is used ONLY when no current-portion tag exists,
+    because US GAAP lets `LongTermDebt` mean total-including-current in
+    some filings and excluding-current in others — so adding it to a
+    current portion double-counts for half the filers and there is no way
+    to tell which half from the fact alone. Skipping the sum when there is
+    nothing to double-count keeps the ambiguity out of the number.
+
+    NO DEBT TAG IS NOT AUTOMATICALLY UNKNOWN. A genuinely debt-free
+    company files no debt tag, and treating that as unmeasurable would
+    throw away exactly the balance sheets this screen most wants. So: if
+    the company filed a balance sheet at all — equity or total liabilities
+    present — an absent debt tag is read as zero and FLAGGED as inferred.
+    If it filed no balance sheet, debt is None and the row is not ranked.
+    """
+    def one(key):
+        return _latest_instant(facts, BALANCE_TAGS[key], want_unit)
+
+    cash, cash_at, cash_unit = one("cash")
+    combined, comb_at, comb_unit = one("debt_total")
+    noncur, noncur_at, noncur_unit = one("debt_noncurrent")
+    ambig, ambig_at, ambig_unit = one("debt_longterm_ambiguous")
+    current, cur_at, cur_unit = one("debt_current")
+    short, short_at, short_unit = one("debt_short")
+    pref, pref_at, pref_unit = one("preferred")
+    mino, mino_at, mino_unit = one("minority")
+    equity, _, eq_unit = one("equity")
+    liab, _, liab_unit = one("liabilities")
+
+    units = {u for u in (cash_unit, comb_unit, noncur_unit, ambig_unit,
+                         cur_unit, short_unit, eq_unit, liab_unit) if u}
+    unit = want_unit if want_unit in units else (sorted(units)[0] if units else None)
+
+    notes = []
+    debt = None
+    if combined is not None and comb_unit == unit:
+        debt = combined
+        notes.append("single combined debt tag")
+    else:
+        parts = []
+        if noncur is not None and noncur_unit == unit:
+            parts.append(noncur)
+        elif ambig is not None and ambig_unit == unit:
+            # Only safe when there is no current portion to double-count.
+            if current is None:
+                parts.append(ambig)
+                notes.append("LongTermDebt used with no current portion filed")
+            else:
+                notes.append("LongTermDebt ignored: ambiguous against a "
+                             "filed current portion, and adding both "
+                             "double-counts for filers who include it")
+        if current is not None and cur_unit == unit:
+            parts.append(current)
+        if short is not None and short_unit == unit:
+            parts.append(short)
+        if parts:
+            debt = sum(parts)
+
+    filed_a_balance_sheet = (equity is not None or liab is not None
+                             or cash is not None)
+    debt_inferred_zero = False
+    if debt is None and filed_a_balance_sheet:
+        debt = 0.0
+        debt_inferred_zero = True
+        notes.append("no debt tag on a filed balance sheet — read as zero "
+                     "debt rather than unknown, because a debt-free "
+                     "company files nothing here")
+
+    return {
+        "total_debt": debt,
+        "debt_inferred_zero": debt_inferred_zero,
+        "cash": cash if cash_unit == unit else None,
+        "preferred": pref if pref_unit == unit else None,
+        "minority": mino if mino_unit == unit else None,
+        "unit": unit,
+        "as_of": max([d for d in (cash_at, comb_at, noncur_at, ambig_at,
+                                  cur_at, short_at) if d], default=None),
+        "filed_balance_sheet": filed_a_balance_sheet,
+        "notes": notes,
+    }
+
+
 def _annual_series(facts: dict, slots: list[tuple[str, str]],
                    want_unit: str = "USD") -> tuple[dict[int, float], str]:
     """{fiscal_year: value} merged across every tag reporting in ONE unit,
@@ -856,10 +1069,25 @@ def compute_metrics(facts: dict) -> dict | None:
     fcf_ps_by_year = {y: fcf[y] / shares[y] for y in fcf
                       if y in shares and shares[y] > 0}
 
+    # ── enterprise-value inputs ──
+    # Read here rather than in the consumer so the currency check happens
+    # where the currency is known. `currency` is the unit of the MONEY
+    # series (revenue is the anchor); a balance sheet in any other unit is
+    # dropped rather than mixed, because the market capitalisation it will
+    # be combined with is in dollars.
+    bs = balance_sheet(facts, want_unit=currency)
+    bs_usable = bs["unit"] == currency
     return {
         "fy_last": last,
         "years": len(years),
         "currency": currency,
+        "total_debt": bs["total_debt"] if bs_usable else None,
+        "cash": bs["cash"] if bs_usable else None,
+        "preferred": bs["preferred"] if bs_usable else None,
+        "minority": bs["minority"] if bs_usable else None,
+        "bs_as_of": bs["as_of"] if bs_usable else None,
+        "debt_inferred_zero": bs["debt_inferred_zero"] if bs_usable else None,
+        "bs_unit": bs["unit"],
         "revenue_last": rev[last],
         "rev_cagr5": _cagr(rev, 5), "rev_cagr10": _cagr(rev, 10),
         "rev_cagr15": _cagr(rev, LOOKBACK),

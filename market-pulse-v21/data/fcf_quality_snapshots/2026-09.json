@@ -13,6 +13,12 @@
    "unmeasurable": 439,
    "unscorable": 56
   },
+  "ev_inputs": {
+   "debt_inferred_zero": 0,
+   "of": 1636,
+   "with_cash": 0,
+   "with_debt": 0
+  },
   "fcf_take": 0.1875,
   "forward_looking": false,
   "forward_note": "VFLO averages trailing and FORWARD 12-month free cash flow and includes a 3-5 year consensus EPS growth estimate. Both need an analyst feed. Everything here is trailing, from filings.",
