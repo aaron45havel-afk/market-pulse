@@ -433,6 +433,157 @@ check(R._rows_for(inst, "USD") == {2015: 42.0},
 bad = {"units": {"USD": [dur("not-a-date", "2015-12-31", 7.0, 2015)]}}
 check(R._rows_for(bad, "USD") == {}, "a malformed date is dropped, not guessed at")
 
+# ══════════════════════════════════════════════════════════════════
+# BALANCE SHEET — the enterprise-value inputs
+# ══════════════════════════════════════════════════════════════════
+# Instants, not durations, and the difference is not cosmetic. A 10-K
+# carries TWO balance sheets and companyfacts stamps both with the fiscal
+# year of the FILING, so keying on `fy` the way the duration extractor
+# does puts last year's debt on this year's row.
+
+
+def inst(taxonomy, tag, rows, unit="USD"):
+    return {taxonomy: {tag: {"units": {unit: rows}}}}
+
+
+def merge(*ds):
+    out = {}
+    for d in ds:
+        for tax, tags in d.items():
+            out.setdefault(tax, {}).update(tags)
+    return out
+
+
+TWO_YEARS = inst("us-gaap", "CashAndCashEquivalentsAtCarryingValue", [
+    {"end": "2024-09-28", "val": 29_943, "fy": 2024, "fp": "FY", "form": "10-K"},
+    {"end": "2023-09-30", "val": 30_737, "fy": 2024, "fp": "FY", "form": "10-K"},
+])
+val, as_of, unit = R._latest_instant(TWO_YEARS, R.BALANCE_TAGS["cash"])
+check(val == 29_943 and as_of == "2024-09-28",
+      f"THE LATEST BALANCE SHEET WINS, NOT THE LAST ONE LISTED. Both facts "
+      f"carry fy=2024 because that is the FILING's year, so `fy` cannot "
+      f"tell them apart and the `end` date is the only identifier that "
+      f"can (got {val} at {as_of})")
+
+REVERSED = inst("us-gaap", "CashAndCashEquivalentsAtCarryingValue", [
+    {"end": "2023-09-30", "val": 30_737, "fy": 2024, "fp": "FY", "form": "10-K"},
+    {"end": "2024-09-28", "val": 29_943, "fy": 2024, "fp": "FY", "form": "10-K"},
+])
+check(R._latest_instant(REVERSED, R.BALANCE_TAGS["cash"])[0] == 29_943,
+      "and the answer does not depend on the order the SEC listed them in")
+
+DURATION_MIXED = inst("us-gaap", "CashAndCashEquivalentsAtCarryingValue", [
+    {"start": "2023-10-01", "end": "2024-09-28", "val": 999, "fy": 2024,
+     "fp": "FY", "form": "10-K"},
+    {"end": "2024-09-28", "val": 29_943, "fy": 2024, "fp": "FY", "form": "10-K"},
+])
+check(R._latest_instant(DURATION_MIXED, R.BALANCE_TAGS["cash"])[0] == 29_943,
+      "a duration fact under a balance-sheet tag is skipped — it has a "
+      "start, and a balance does not")
+
+check(R._latest_instant({}, R.BALANCE_TAGS["cash"]) == (None, None, None),
+      "nothing filed is an explicit absence, not a zero")
+check(R._latest_instant(inst("us-gaap", "CashAndCashEquivalentsAtCarryingValue", [
+        {"end": "2024-06-30", "val": 5, "fy": 2024, "fp": "Q2", "form": "10-Q"}]),
+      R.BALANCE_TAGS["cash"])[0] is None,
+      "and a quarterly balance sheet is not an annual one")
+
+
+# ── total debt is ASSEMBLED, and the assembly is where it goes wrong ──
+def bs(**kw):
+    """Build a facts dict from {tag: value} plus an `end` date."""
+    end = kw.pop("end", "2025-12-31")
+    parts = [inst("us-gaap", tag, [{"end": end, "val": v, "fy": 2025,
+                                    "fp": "FY", "form": "10-K"}])
+             for tag, v in kw.items()]
+    return merge(*parts) if parts else {}
+
+
+combined = R.balance_sheet(bs(DebtLongtermAndShorttermCombinedAmount=5_000,
+                              LongTermDebtNoncurrent=4_000,
+                              LongTermDebtCurrent=500,
+                              CashAndCashEquivalentsAtCarryingValue=900))
+check(combined["total_debt"] == 5_000,
+      f"A SINGLE COMBINED DEBT TAG IS USED ALONE, not added to the "
+      f"components it already contains (got {combined['total_debt']})")
+
+summed = R.balance_sheet(bs(LongTermDebtNoncurrent=4_000,
+                            LongTermDebtCurrent=500,
+                            ShortTermBorrowings=250,
+                            CashAndCashEquivalentsAtCarryingValue=900))
+check(summed["total_debt"] == 4_750,
+      f"otherwise it is noncurrent + current portion + short-term "
+      f"borrowings (got {summed['total_debt']})")
+check(summed["cash"] == 900, "and cash comes across")
+
+# THE DOUBLE-COUNT. US GAAP `LongTermDebt` means total-including-current
+# for some filers and excluding-current for others, and the fact carries
+# nothing that says which.
+ambiguous = R.balance_sheet(bs(LongTermDebt=4_500, LongTermDebtCurrent=500,
+                               CashAndCashEquivalentsAtCarryingValue=900))
+check(ambiguous["total_debt"] == 500,
+      f"`LongTermDebt` IS IGNORED WHEN A CURRENT PORTION IS ALSO FILED. "
+      f"Adding them gives 5,000 for a filer whose LongTermDebt already "
+      f"includes the 500 — an overstated denominator, which UNDERSTATES "
+      f"the yield, so this one errs toward missing a name rather than "
+      f"promoting one (got {ambiguous['total_debt']})")
+check(any("double-count" in n for n in ambiguous["notes"]),
+      "and the row says why the tag was dropped")
+
+lone = R.balance_sheet(bs(LongTermDebt=4_500,
+                          CashAndCashEquivalentsAtCarryingValue=900))
+check(lone["total_debt"] == 4_500,
+      "but with no current portion filed there is nothing to double-count, "
+      "so the ambiguous tag is used")
+
+# ── absence of a debt tag is not absence of information ──
+debtfree = R.balance_sheet(bs(CashAndCashEquivalentsAtCarryingValue=900,
+                              StockholdersEquity=12_000))
+check(debtfree["total_debt"] == 0.0 and debtfree["debt_inferred_zero"],
+      "A COMPANY THAT FILED A BALANCE SHEET AND NO DEBT TAG IS READ AS "
+      "DEBT-FREE, flagged. Calling it unknown would discard exactly the "
+      "balance sheets an FCF-quality screen most wants")
+check(summed["debt_inferred_zero"] is False,
+      "while a company with real debt tags is not flagged")
+
+nothing = R.balance_sheet({})
+check(nothing["total_debt"] is None and not nothing["filed_balance_sheet"],
+      "but a company with NO balance sheet at all has unknown debt — the "
+      "inference needs evidence that a balance sheet exists, and absence "
+      "of everything is not that evidence")
+
+# ── currency, the bug this repo has already paid for once ──
+JPY = inst("us-gaap", "LongTermDebtNoncurrent",
+           [{"end": "2025-03-31", "val": 8_000_000, "fy": 2025, "fp": "FY",
+             "form": "20-F"}], unit="JPY")
+jp = R.balance_sheet(JPY, want_unit="USD")
+check(jp["unit"] == "JPY",
+      f"a yen balance sheet reports itself as yen (got {jp['unit']}) — the "
+      f"caller must refuse to subtract it from a dollar market cap, which "
+      f"is the mistake that once put Toyota's P/FCF at 0.2")
+
+MIXED = merge(
+    inst("us-gaap", "LongTermDebtNoncurrent",
+         [{"end": "2025-12-31", "val": 4_000, "fy": 2025, "fp": "FY", "form": "10-K"}]),
+    inst("us-gaap", "CashAndCashEquivalentsAtCarryingValue",
+         [{"end": "2025-12-31", "val": 700_000, "fy": 2025, "fp": "FY", "form": "10-K"}],
+         unit="EUR"))
+mx = R.balance_sheet(MIXED, want_unit="USD")
+check(mx["total_debt"] == 4_000 and mx["cash"] is None,
+      f"AND A COMPONENT IN A DIFFERENT UNIT IS DROPPED RATHER THAN MIXED "
+      f"IN. Subtracting 700,000 euros of cash from a dollar enterprise "
+      f"value would not error — it would just produce a company that "
+      f"looks like net cash (got debt={mx['total_debt']}, "
+      f"cash={mx['cash']})")
+
+check(R.balance_sheet(bs(LongTermDebtNoncurrent=4_000,
+                         CashAndCashEquivalentsAtCarryingValue=900,
+                         PreferredStockValue=300,
+                         MinorityInterest=150))["preferred"] == 300,
+      "preferred stock and minority interest come across for VFLO's EV "
+      "definition, which adds both")
+
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

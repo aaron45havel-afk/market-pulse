@@ -1,5178 +1,5178 @@
 {
- "as_of": "2026-06",
- "fetched_at": "2026-08-08T14:24Z",
+ "as_of": "2026-07",
+ "fetched_at": "2026-09-08T17:41Z",
  "series": {
   "90004": {
    "cagr15": 3.8,
-   "max_dd": -14.9,
+   "max_dd": -15.3,
    "n_months": 180,
-   "price": 726140,
+   "price": 722244,
    "vol": 6.9
   },
   "90005": {
    "cagr15": 3.7,
-   "max_dd": -16.3,
+   "max_dd": -16.7,
    "n_months": 180,
-   "price": 689366,
+   "price": 688852,
    "vol": 7.6
   },
   "90006": {
-   "cagr15": 5.0,
-   "max_dd": -13.3,
+   "cagr15": 4.9,
+   "max_dd": -13.7,
    "n_months": 180,
-   "price": 625112,
+   "price": 623265,
    "vol": 7.6
   },
   "90008": {
-   "cagr15": 6.7,
-   "max_dd": -13.0,
+   "cagr15": 6.8,
+   "max_dd": -12.4,
    "n_months": 180,
-   "price": 549541,
-   "vol": 9.8
+   "price": 554055,
+   "vol": 9.7
   },
   "90010": {
-   "cagr15": 3.9,
-   "max_dd": -10.2,
+   "cagr15": 3.8,
+   "max_dd": -10.5,
    "n_months": 180,
-   "price": 951374,
+   "price": 931856,
    "vol": 5.9
   },
   "90012": {
-   "cagr15": 4.4,
-   "max_dd": -13.7,
+   "cagr15": 4.5,
+   "max_dd": -14.0,
    "n_months": 180,
-   "price": 538662,
+   "price": 540307,
    "vol": 8.4
   },
   "90013": {
-   "cagr15": 4.8,
+   "cagr15": 4.9,
    "max_dd": -14.9,
    "n_months": 180,
-   "price": 586426,
+   "price": 594882,
    "vol": 9.4
   },
   "90014": {
-   "cagr15": 6.7,
+   "cagr15": 6.8,
    "max_dd": -18.2,
    "n_months": 180,
-   "price": 526645,
+   "price": 520403,
    "vol": 12.5
   },
   "90015": {
-   "cagr15": 2.1,
-   "max_dd": -22.8,
+   "cagr15": 2.2,
+   "max_dd": -22.9,
    "n_months": 180,
-   "price": 584801,
-   "vol": 8.1
+   "price": 589208,
+   "vol": 8.2
   },
   "90016": {
    "cagr15": 9.3,
-   "max_dd": -10.8,
+   "max_dd": -11.5,
    "n_months": 180,
-   "price": 530275,
+   "price": 526665,
    "vol": 11.5
   },
   "90017": {
-   "cagr15": 2.7,
+   "cagr15": 2.8,
    "max_dd": -30.2,
    "n_months": 180,
-   "price": 570661,
+   "price": 575425,
    "vol": 10.0
   },
   "90019": {
-   "cagr15": 4.3,
-   "max_dd": -15.9,
+   "cagr15": 4.4,
+   "max_dd": -16.3,
    "n_months": 180,
-   "price": 768768,
+   "price": 771854,
    "vol": 7.8
   },
   "90020": {
    "cagr15": 5.9,
-   "max_dd": -11.8,
+   "max_dd": -12.2,
    "n_months": 180,
-   "price": 539836,
+   "price": 539354,
    "vol": 9.9
   },
   "90024": {
    "cagr15": 4.4,
-   "max_dd": -8.2,
+   "max_dd": -8.4,
    "n_months": 180,
-   "price": 996354,
-   "vol": 6.5
+   "price": 998384,
+   "vol": 6.4
   },
   "90025": {
    "cagr15": 4.5,
-   "max_dd": -8.3,
+   "max_dd": -8.7,
    "n_months": 180,
-   "price": 938949,
+   "price": 938124,
    "vol": 6.4
   },
   "90026": {
-   "cagr15": 6.0,
+   "cagr15": 6.1,
    "max_dd": -7.1,
    "n_months": 180,
-   "price": 722662,
+   "price": 718984,
    "vol": 7.5
   },
   "90027": {
    "cagr15": 5.3,
    "max_dd": -16.1,
    "n_months": 180,
-   "price": 729243,
-   "vol": 8.2
+   "price": 720949,
+   "vol": 8.3
   },
   "90028": {
    "cagr15": 2.7,
    "max_dd": -22.7,
    "n_months": 180,
-   "price": 704984,
+   "price": 708236,
    "vol": 7.4
   },
   "90029": {
    "cagr15": 3.1,
    "max_dd": -36.4,
-   "n_months": 174,
-   "price": 664103,
+   "n_months": 175,
+   "price": 678418,
    "vol": 10.5
   },
   "90031": {
    "cagr15": 6.2,
-   "max_dd": -10.2,
+   "max_dd": -10.7,
    "n_months": 180,
-   "price": 543215,
+   "price": 539720,
    "vol": 8.3
   },
   "90032": {
-   "cagr15": 7.6,
-   "max_dd": -10.9,
+   "cagr15": 7.7,
+   "max_dd": -10.4,
    "n_months": 180,
-   "price": 490399,
+   "price": 491395,
    "vol": 9.7
   },
   "90034": {
-   "cagr15": 5.1,
-   "max_dd": -13.8,
+   "cagr15": 5.2,
+   "max_dd": -14.0,
    "n_months": 180,
-   "price": 684435,
-   "vol": 8.5
+   "price": 689257,
+   "vol": 8.4
   },
   "90035": {
    "cagr15": 4.3,
    "max_dd": -11.8,
    "n_months": 180,
-   "price": 886718,
-   "vol": 6.8
+   "price": 901436,
+   "vol": 6.7
   },
   "90036": {
    "cagr15": 3.8,
-   "max_dd": -12.9,
+   "max_dd": -13.1,
    "n_months": 180,
-   "price": 836429,
+   "price": 843790,
    "vol": 6.6
   },
   "90038": {
    "cagr15": 3.9,
-   "max_dd": -14.1,
+   "max_dd": -14.4,
    "n_months": 180,
-   "price": 723427,
+   "price": 712895,
    "vol": 6.2
   },
   "90039": {
    "cagr15": 5.3,
-   "max_dd": -7.0,
+   "max_dd": -7.1,
    "n_months": 180,
-   "price": 787831,
+   "price": 782180,
    "vol": 6.5
   },
   "90041": {
    "cagr15": 6.2,
-   "max_dd": -9.2,
+   "max_dd": -9.1,
    "n_months": 180,
-   "price": 673550,
-   "vol": 6.1
+   "price": 678141,
+   "vol": 6.0
   },
   "90042": {
    "cagr15": 5.4,
-   "max_dd": -11.3,
+   "max_dd": -10.9,
    "n_months": 180,
-   "price": 584059,
+   "price": 581119,
    "vol": 8.2
   },
   "90044": {
    "cagr15": 6.7,
    "max_dd": -15.2,
-   "n_months": 174,
-   "price": 479656,
-   "vol": 9.1
+   "n_months": 175,
+   "price": 484601,
+   "vol": 9.0
   },
   "90045": {
-   "cagr15": 5.4,
-   "max_dd": -14.0,
+   "cagr15": 5.6,
+   "max_dd": -11.8,
    "n_months": 180,
-   "price": 594097,
-   "vol": 8.1
+   "price": 592810,
+   "vol": 8.0
   },
   "90046": {
    "cagr15": 4.2,
-   "max_dd": -12.4,
+   "max_dd": -12.7,
    "n_months": 180,
-   "price": 698079,
+   "price": 701316,
    "vol": 7.0
   },
   "90047": {
    "cagr15": 5.8,
    "max_dd": -5.9,
-   "n_months": 101,
-   "price": 701212,
+   "n_months": 102,
+   "price": 707381,
    "vol": 6.9
   },
   "90048": {
    "cagr15": 4.8,
    "max_dd": -9.7,
    "n_months": 180,
-   "price": 964890,
+   "price": 979910,
    "vol": 6.9
   },
   "90049": {
    "cagr15": 4.2,
    "max_dd": -6.7,
    "n_months": 180,
-   "price": 1098642,
+   "price": 1092364,
    "vol": 5.9
   },
   "90056": {
-   "cagr15": 6.3,
-   "max_dd": -12.6,
+   "cagr15": 6.4,
+   "max_dd": -11.1,
    "n_months": 180,
-   "price": 660928,
-   "vol": 8.3
+   "price": 661601,
+   "vol": 8.1
   },
   "90057": {
    "cagr15": 6.6,
-   "max_dd": -13.3,
+   "max_dd": -13.8,
    "n_months": 180,
-   "price": 427270,
+   "price": 421504,
    "vol": 11.1
   },
   "90064": {
-   "cagr15": 4.4,
-   "max_dd": -9.9,
+   "cagr15": 4.5,
+   "max_dd": -10.0,
    "n_months": 180,
-   "price": 909851,
+   "price": 906585,
    "vol": 6.3
   },
   "90065": {
    "cagr15": 8.6,
    "max_dd": -6.6,
    "n_months": 180,
-   "price": 801394,
+   "price": 801711,
    "vol": 7.2
   },
   "90066": {
    "cagr15": 5.1,
-   "max_dd": -10.3,
+   "max_dd": -10.8,
    "n_months": 180,
-   "price": 764216,
+   "price": 763372,
    "vol": 7.6
   },
   "90068": {
    "cagr15": 4.0,
-   "max_dd": -16.5,
+   "max_dd": -17.0,
    "n_months": 180,
-   "price": 643679,
+   "price": 644802,
    "vol": 7.2
   },
   "90069": {
    "cagr15": 4.5,
-   "max_dd": -9.1,
+   "max_dd": -9.4,
    "n_months": 180,
-   "price": 831467,
-   "vol": 6.7
+   "price": 835748,
+   "vol": 6.6
   },
   "90077": {
-   "cagr15": 6.9,
+   "cagr15": 6.8,
    "max_dd": -7.0,
    "n_months": 180,
-   "price": 1066901,
+   "price": 1061065,
    "vol": 6.4
   },
   "90094": {
    "cagr15": 5.8,
    "max_dd": -6.7,
    "n_months": 180,
-   "price": 1189843,
+   "price": 1178712,
    "vol": 6.8
   },
   "90201": {
    "cagr15": 7.7,
-   "max_dd": -6.0,
+   "max_dd": -5.7,
    "n_months": 180,
-   "price": 532097,
-   "vol": 6.4
+   "price": 533376,
+   "vol": 6.3
   },
   "90210": {
-   "cagr15": 4.4,
+   "cagr15": 4.5,
    "max_dd": -13.8,
    "n_months": 180,
-   "price": 1520477,
+   "price": 1536679,
    "vol": 7.7
   },
   "90211": {
-   "cagr15": 3.2,
+   "cagr15": 3.3,
    "max_dd": -12.2,
    "n_months": 180,
-   "price": 1136759,
-   "vol": 6.0
+   "price": 1165562,
+   "vol": 5.9
   },
   "90212": {
    "cagr15": 4.8,
    "max_dd": -11.2,
    "n_months": 180,
-   "price": 1497773,
+   "price": 1493593,
    "vol": 7.1
   },
   "90220": {
    "cagr15": 7.6,
    "max_dd": -7.3,
    "n_months": 180,
-   "price": 501185,
+   "price": 502222,
    "vol": 7.0
   },
   "90230": {
    "cagr15": 4.9,
-   "max_dd": -12.2,
+   "max_dd": -11.3,
    "n_months": 180,
-   "price": 614978,
-   "vol": 8.1
+   "price": 616756,
+   "vol": 8.0
   },
   "90232": {
-   "cagr15": 5.7,
-   "max_dd": -7.6,
+   "cagr15": 5.8,
+   "max_dd": -6.7,
    "n_months": 180,
-   "price": 1089030,
+   "price": 1085762,
    "vol": 7.0
   },
   "90240": {
    "cagr15": 6.0,
-   "max_dd": -6.8,
+   "max_dd": -6.7,
    "n_months": 180,
-   "price": 642479,
-   "vol": 6.2
+   "price": 639766,
+   "vol": 6.1
   },
   "90241": {
    "cagr15": 7.3,
-   "max_dd": -7.4,
+   "max_dd": -7.1,
    "n_months": 180,
-   "price": 516793,
+   "price": 522271,
    "vol": 6.9
   },
   "90242": {
    "cagr15": 6.5,
-   "max_dd": -13.3,
+   "max_dd": -13.1,
    "n_months": 180,
-   "price": 536320,
-   "vol": 7.4
+   "price": 531521,
+   "vol": 7.3
   },
   "90245": {
    "cagr15": 4.4,
    "max_dd": -8.3,
    "n_months": 180,
-   "price": 866141,
-   "vol": 6.0
+   "price": 861894,
+   "vol": 5.9
   },
   "90247": {
-   "cagr15": 6.9,
-   "max_dd": -7.8,
+   "cagr15": 7.0,
+   "max_dd": -7.2,
    "n_months": 180,
-   "price": 560451,
+   "price": 557039,
    "vol": 7.5
   },
   "90248": {
-   "cagr15": 6.1,
+   "cagr15": 6.0,
    "max_dd": -5.0,
-   "n_months": 164,
-   "price": 769385,
+   "n_months": 165,
+   "price": 770472,
    "vol": 6.2
   },
   "90249": {
    "cagr15": 6.7,
-   "max_dd": -8.2,
+   "max_dd": -7.2,
    "n_months": 180,
-   "price": 592290,
+   "price": 593065,
    "vol": 7.3
   },
   "90250": {
    "cagr15": 4.9,
-   "max_dd": -11.2,
+   "max_dd": -10.7,
    "n_months": 180,
-   "price": 767353,
-   "vol": 6.5
+   "price": 771216,
+   "vol": 6.4
   },
   "90254": {
    "cagr15": 6.4,
    "max_dd": -7.5,
    "n_months": 180,
-   "price": 1632925,
-   "vol": 5.6
+   "price": 1612911,
+   "vol": 5.5
   },
   "90255": {
-   "cagr15": 7.8,
-   "max_dd": -13.7,
+   "cagr15": 7.9,
+   "max_dd": -12.2,
    "n_months": 180,
-   "price": 470720,
-   "vol": 8.4
+   "price": 469045,
+   "vol": 8.3
   },
   "90260": {
    "cagr15": 7.1,
-   "max_dd": -7.4,
+   "max_dd": -6.8,
    "n_months": 180,
-   "price": 574461,
-   "vol": 7.1
+   "price": 573736,
+   "vol": 7.0
   },
   "90262": {
-   "cagr15": 6.7,
-   "max_dd": -6.5,
-   "n_months": 174,
-   "price": 578540,
-   "vol": 6.6
+   "cagr15": 6.6,
+   "max_dd": -7.0,
+   "n_months": 175,
+   "price": 580367,
+   "vol": 6.7
   },
   "90265": {
-   "cagr15": 6.3,
+   "cagr15": 6.4,
    "max_dd": -8.6,
    "n_months": 180,
-   "price": 1234367,
+   "price": 1224796,
    "vol": 8.1
   },
   "90266": {
-   "cagr15": 7.2,
+   "cagr15": 7.4,
    "max_dd": -7.9,
    "n_months": 180,
-   "price": 2450652,
+   "price": 2390086,
    "vol": 6.9
   },
   "90272": {
    "cagr15": 4.2,
-   "max_dd": -13.0,
+   "max_dd": -13.6,
    "n_months": 180,
-   "price": 1138711,
+   "price": 1125845,
    "vol": 6.7
   },
   "90274": {
    "cagr15": 4.9,
-   "max_dd": -6.1,
+   "max_dd": -6.4,
    "n_months": 180,
-   "price": 784979,
+   "price": 780648,
    "vol": 5.6
   },
   "90275": {
    "cagr15": 5.2,
    "max_dd": -7.3,
    "n_months": 180,
-   "price": 798830,
-   "vol": 5.9
+   "price": 791443,
+   "vol": 6.0
   },
   "90277": {
    "cagr15": 5.5,
    "max_dd": -7.1,
    "n_months": 180,
-   "price": 1159379,
+   "price": 1153310,
    "vol": 5.5
   },
   "90278": {
    "cagr15": 6.0,
    "max_dd": -7.3,
    "n_months": 180,
-   "price": 1259159,
+   "price": 1268963,
    "vol": 6.0
   },
   "90280": {
    "cagr15": 6.4,
-   "max_dd": -10.0,
+   "max_dd": -9.9,
    "n_months": 180,
-   "price": 571851,
-   "vol": 6.0
+   "price": 572382,
+   "vol": 5.9
   },
   "90290": {
-   "cagr15": 5.8,
+   "cagr15": 5.7,
    "max_dd": -7.4,
    "n_months": 180,
-   "price": 695569,
-   "vol": 6.9
+   "price": 694944,
+   "vol": 7.0
   },
   "90291": {
-   "cagr15": 3.7,
+   "cagr15": 3.8,
    "max_dd": -20.3,
    "n_months": 180,
-   "price": 1209924,
+   "price": 1236862,
    "vol": 9.0
   },
   "90292": {
-   "cagr15": 4.9,
+   "cagr15": 5.0,
    "max_dd": -8.8,
    "n_months": 180,
-   "price": 1152007,
+   "price": 1154282,
    "vol": 7.1
   },
   "90293": {
    "cagr15": 4.9,
-   "max_dd": -10.9,
+   "max_dd": -11.3,
    "n_months": 180,
-   "price": 698742,
-   "vol": 7.4
+   "price": 699148,
+   "vol": 7.3
   },
   "90301": {
-   "cagr15": 10.7,
-   "max_dd": -8.8,
+   "cagr15": 10.9,
+   "max_dd": -7.3,
    "n_months": 180,
-   "price": 486228,
+   "price": 483899,
    "vol": 11.0
   },
   "90302": {
-   "cagr15": 9.9,
-   "max_dd": -11.2,
+   "cagr15": 10.0,
+   "max_dd": -11.8,
    "n_months": 180,
-   "price": 454107,
+   "price": 454566,
    "vol": 11.7
   },
   "90305": {
-   "cagr15": 7.6,
-   "max_dd": -11.2,
+   "cagr15": 7.7,
+   "max_dd": -10.4,
    "n_months": 180,
-   "price": 595182,
-   "vol": 8.5
+   "price": 590919,
+   "vol": 8.4
   },
   "90401": {
    "cagr15": 3.3,
-   "max_dd": -18.5,
+   "max_dd": -19.2,
    "n_months": 180,
-   "price": 1040310,
+   "price": 1028601,
    "vol": 7.4
   },
   "90402": {
    "cagr15": 4.8,
    "max_dd": -12.7,
    "n_months": 180,
-   "price": 1555742,
-   "vol": 9.7
+   "price": 1544263,
+   "vol": 9.6
   },
   "90403": {
-   "cagr15": 4.6,
+   "cagr15": 4.7,
    "max_dd": -9.8,
    "n_months": 180,
-   "price": 1190484,
+   "price": 1171887,
    "vol": 7.3
   },
   "90404": {
-   "cagr15": 4.7,
-   "max_dd": -9.1,
+   "cagr15": 4.8,
+   "max_dd": -9.4,
    "n_months": 180,
-   "price": 884654,
+   "price": 886429,
    "vol": 7.2
   },
   "90405": {
    "cagr15": 4.5,
    "max_dd": -9.1,
    "n_months": 180,
-   "price": 1000121,
+   "price": 998526,
    "vol": 7.4
   },
   "90501": {
    "cagr15": 4.7,
-   "max_dd": -7.0,
+   "max_dd": -6.4,
    "n_months": 180,
-   "price": 716476,
+   "price": 710986,
    "vol": 5.4
   },
   "90502": {
    "cagr15": 6.4,
-   "max_dd": -12.3,
+   "max_dd": -11.2,
    "n_months": 180,
-   "price": 514431,
-   "vol": 8.0
+   "price": 511329,
+   "vol": 7.9
   },
   "90503": {
    "cagr15": 4.3,
-   "max_dd": -7.3,
+   "max_dd": -6.7,
    "n_months": 180,
-   "price": 818425,
-   "vol": 5.2
+   "price": 814394,
+   "vol": 5.1
   },
   "90504": {
-   "cagr15": 5.4,
-   "max_dd": -5.8,
+   "cagr15": 5.5,
+   "max_dd": -4.9,
    "n_months": 180,
-   "price": 716547,
+   "price": 711770,
    "vol": 5.4
   },
   "90505": {
-   "cagr15": 4.0,
-   "max_dd": -7.6,
+   "cagr15": 4.1,
+   "max_dd": -6.5,
    "n_months": 180,
-   "price": 613315,
+   "price": 613680,
    "vol": 5.6
   },
   "90601": {
    "cagr15": 6.8,
-   "max_dd": -6.1,
+   "max_dd": -5.6,
    "n_months": 180,
-   "price": 533936,
+   "price": 533891,
    "vol": 6.7
   },
   "90602": {
    "cagr15": 6.1,
-   "max_dd": -6.9,
+   "max_dd": -6.3,
    "n_months": 180,
-   "price": 771013,
-   "vol": 6.2
+   "price": 769804,
+   "vol": 6.1
   },
   "90603": {
-   "cagr15": 6.1,
-   "max_dd": -7.2,
+   "cagr15": 6.2,
+   "max_dd": -6.5,
    "n_months": 180,
-   "price": 620794,
+   "price": 622501,
    "vol": 6.1
   },
   "90604": {
    "cagr15": 7.4,
-   "max_dd": -7.9,
+   "max_dd": -7.6,
    "n_months": 180,
-   "price": 596885,
-   "vol": 6.9
+   "price": 596611,
+   "vol": 6.8
   },
   "90605": {
    "cagr15": 6.4,
-   "max_dd": -10.4,
+   "max_dd": -10.2,
    "n_months": 180,
-   "price": 531422,
-   "vol": 7.2
+   "price": 531432,
+   "vol": 7.1
   },
   "90620": {
-   "cagr15": 5.6,
-   "max_dd": -9.0,
+   "cagr15": 5.7,
+   "max_dd": -8.6,
    "n_months": 180,
-   "price": 715066,
-   "vol": 7.3
+   "price": 720524,
+   "vol": 7.2
   },
   "90621": {
    "cagr15": 5.9,
-   "max_dd": -8.7,
+   "max_dd": -8.1,
    "n_months": 180,
-   "price": 827592,
-   "vol": 6.6
+   "price": 827885,
+   "vol": 6.5
   },
   "90623": {
-   "cagr15": 5.4,
+   "cagr15": 5.3,
    "max_dd": -4.1,
-   "n_months": 101,
-   "price": 659109,
+   "n_months": 102,
+   "price": 657914,
    "vol": 6.3
   },
   "90630": {
-   "cagr15": 6.7,
-   "max_dd": -7.9,
+   "cagr15": 6.8,
+   "max_dd": -7.0,
    "n_months": 180,
-   "price": 707469,
-   "vol": 6.8
+   "price": 712156,
+   "vol": 6.7
   },
   "90631": {
    "cagr15": 8.8,
    "max_dd": -3.6,
-   "n_months": 164,
-   "price": 538775,
+   "n_months": 165,
+   "price": 537257,
    "vol": 8.0
   },
   "90638": {
    "cagr15": 6.1,
-   "max_dd": -6.7,
+   "max_dd": -5.8,
    "n_months": 180,
-   "price": 597999,
-   "vol": 5.6
+   "price": 594745,
+   "vol": 5.5
   },
   "90640": {
    "cagr15": 6.5,
-   "max_dd": -10.6,
+   "max_dd": -10.2,
    "n_months": 180,
-   "price": 525588,
-   "vol": 7.5
+   "price": 522453,
+   "vol": 7.4
   },
   "90650": {
    "cagr15": 7.5,
-   "max_dd": -8.0,
+   "max_dd": -7.5,
    "n_months": 180,
-   "price": 570378,
-   "vol": 7.0
+   "price": 566919,
+   "vol": 6.9
   },
   "90660": {
-   "cagr15": 7.2,
+   "cagr15": 7.1,
    "max_dd": -6.4,
    "n_months": 180,
-   "price": 559779,
+   "price": 555689,
    "vol": 6.5
   },
   "90670": {
    "cagr15": 6.0,
    "max_dd": -5.4,
    "n_months": 180,
-   "price": 766009,
+   "price": 764755,
    "vol": 5.8
   },
   "90680": {
    "cagr15": 7.8,
-   "max_dd": -6.8,
+   "max_dd": -6.4,
    "n_months": 180,
-   "price": 598611,
+   "price": 599606,
    "vol": 7.8
   },
   "90701": {
    "cagr15": 5.2,
-   "max_dd": -7.6,
+   "max_dd": -7.4,
    "n_months": 180,
-   "price": 514367,
+   "price": 515347,
    "vol": 5.9
   },
   "90703": {
-   "cagr15": 5.7,
-   "max_dd": -6.0,
+   "cagr15": 5.8,
+   "max_dd": -5.5,
    "n_months": 180,
-   "price": 537291,
+   "price": 536297,
    "vol": 5.1
   },
   "90704": {
-   "cagr15": 4.4,
-   "max_dd": -7.9,
+   "cagr15": 4.5,
+   "max_dd": -7.2,
    "n_months": 180,
-   "price": 850042,
-   "vol": 5.1
+   "price": 837077,
+   "vol": 5.0
   },
   "90706": {
-   "cagr15": 6.6,
+   "cagr15": 6.5,
    "max_dd": -8.7,
    "n_months": 180,
-   "price": 592600,
-   "vol": 6.6
+   "price": 593095,
+   "vol": 6.5
   },
   "90710": {
-   "cagr15": 5.6,
-   "max_dd": -14.3,
+   "cagr15": 5.7,
+   "max_dd": -13.4,
    "n_months": 180,
-   "price": 560943,
-   "vol": 7.3
+   "price": 563159,
+   "vol": 7.1
   },
   "90715": {
-   "cagr15": 6.7,
-   "max_dd": -8.6,
+   "cagr15": 6.8,
+   "max_dd": -7.9,
    "n_months": 180,
-   "price": 601952,
-   "vol": 7.2
+   "price": 604179,
+   "vol": 7.1
   },
   "90716": {
    "cagr15": 8.2,
-   "max_dd": -5.1,
+   "max_dd": -4.7,
    "n_months": 180,
-   "price": 454536,
+   "price": 457388,
    "vol": 8.6
   },
   "90717": {
-   "cagr15": 4.8,
-   "max_dd": -12.9,
+   "cagr15": 4.9,
+   "max_dd": -11.9,
    "n_months": 180,
-   "price": 604539,
-   "vol": 6.5
+   "price": 600483,
+   "vol": 6.3
   },
   "90720": {
-   "cagr15": 5.6,
-   "max_dd": -9.0,
+   "cagr15": 5.7,
+   "max_dd": -8.1,
    "n_months": 180,
-   "price": 969075,
-   "vol": 6.5
+   "price": 974980,
+   "vol": 6.4
   },
   "90723": {
    "cagr15": 8.5,
    "max_dd": -12.5,
    "n_months": 180,
-   "price": 480520,
-   "vol": 9.5
+   "price": 481265,
+   "vol": 9.4
   },
   "90731": {
    "cagr15": 4.7,
-   "max_dd": -17.6,
+   "max_dd": -16.7,
    "n_months": 180,
-   "price": 576364,
-   "vol": 7.5
+   "price": 581048,
+   "vol": 7.3
   },
   "90732": {
-   "cagr15": 5.1,
-   "max_dd": -10.2,
+   "cagr15": 5.2,
+   "max_dd": -8.8,
    "n_months": 180,
-   "price": 551375,
-   "vol": 6.5
+   "price": 551476,
+   "vol": 6.4
   },
   "90740": {
-   "cagr15": 2.8,
+   "cagr15": 2.7,
    "max_dd": -18.9,
-   "n_months": 125,
-   "price": 395169,
+   "n_months": 126,
+   "price": 400974,
    "vol": 7.1
   },
   "90744": {
-   "cagr15": 5.6,
-   "max_dd": -23.8,
+   "cagr15": 5.7,
+   "max_dd": -22.1,
    "n_months": 180,
-   "price": 454354,
-   "vol": 9.0
+   "price": 454223,
+   "vol": 8.8
   },
   "90745": {
    "cagr15": 7.2,
-   "max_dd": -9.5,
+   "max_dd": -8.6,
    "n_months": 180,
-   "price": 518675,
-   "vol": 8.2
+   "price": 515603,
+   "vol": 8.1
   },
   "90746": {
    "cagr15": 6.1,
-   "max_dd": -6.6,
+   "max_dd": -6.3,
    "n_months": 180,
-   "price": 669299,
+   "price": 665749,
    "vol": 6.3
   },
   "90755": {
    "cagr15": 4.8,
-   "max_dd": -13.1,
+   "max_dd": -11.7,
    "n_months": 180,
-   "price": 573679,
-   "vol": 7.8
+   "price": 568325,
+   "vol": 7.7
   },
   "90802": {
    "cagr15": 6.2,
-   "max_dd": -9.7,
+   "max_dd": -9.2,
    "n_months": 180,
-   "price": 471235,
+   "price": 469735,
    "vol": 8.0
   },
   "90803": {
-   "cagr15": 5.8,
-   "max_dd": -4.5,
+   "cagr15": 5.9,
+   "max_dd": -4.3,
    "n_months": 180,
-   "price": 697506,
+   "price": 699464,
    "vol": 6.3
   },
   "90804": {
-   "cagr15": 6.5,
-   "max_dd": -11.7,
+   "cagr15": 6.6,
+   "max_dd": -10.6,
    "n_months": 180,
-   "price": 470026,
-   "vol": 8.8
+   "price": 473722,
+   "vol": 8.7
   },
   "90805": {
    "cagr15": 8.5,
-   "max_dd": -10.5,
+   "max_dd": -10.0,
    "n_months": 180,
-   "price": 402109,
-   "vol": 9.5
+   "price": 403452,
+   "vol": 9.4
   },
   "90806": {
    "cagr15": 5.2,
-   "max_dd": -12.3,
+   "max_dd": -11.4,
    "n_months": 180,
-   "price": 527369,
-   "vol": 7.3
+   "price": 529817,
+   "vol": 7.2
   },
   "90807": {
    "cagr15": 6.9,
-   "max_dd": -12.9,
+   "max_dd": -12.2,
    "n_months": 180,
-   "price": 484833,
-   "vol": 7.8
+   "price": 484544,
+   "vol": 7.7
   },
   "90808": {
-   "cagr15": 4.8,
-   "max_dd": -8.6,
+   "cagr15": 4.9,
+   "max_dd": -7.4,
    "n_months": 180,
-   "price": 566450,
-   "vol": 6.6
+   "price": 569674,
+   "vol": 6.5
   },
   "90810": {
-   "cagr15": 10.5,
+   "cagr15": 10.3,
    "max_dd": -11.0,
    "n_months": 180,
-   "price": 406052,
-   "vol": 11.4
+   "price": 409010,
+   "vol": 11.3
   },
   "90813": {
    "cagr15": 7.8,
-   "max_dd": -9.3,
+   "max_dd": -9.9,
    "n_months": 180,
-   "price": 430431,
-   "vol": 9.5
+   "price": 425712,
+   "vol": 9.4
   },
   "90814": {
    "cagr15": 5.5,
-   "max_dd": -13.7,
+   "max_dd": -12.7,
    "n_months": 180,
-   "price": 524029,
-   "vol": 7.2
+   "price": 520422,
+   "vol": 7.0
   },
   "90815": {
    "cagr15": 5.1,
-   "max_dd": -10.8,
+   "max_dd": -10.0,
    "n_months": 180,
-   "price": 526972,
-   "vol": 6.3
+   "price": 531372,
+   "vol": 6.2
   },
   "91001": {
    "cagr15": 4.3,
-   "max_dd": -20.1,
+   "max_dd": -20.3,
    "n_months": 180,
-   "price": 463124,
+   "price": 463062,
    "vol": 7.7
   },
   "91006": {
    "cagr15": 5.0,
    "max_dd": -5.8,
    "n_months": 180,
-   "price": 1026085,
+   "price": 1015362,
    "vol": 5.3
   },
   "91007": {
    "cagr15": 4.1,
    "max_dd": -5.8,
    "n_months": 180,
-   "price": 830870,
-   "vol": 5.5
+   "price": 820787,
+   "vol": 5.4
   },
   "91010": {
-   "cagr15": 5.9,
-   "max_dd": -10.1,
+   "cagr15": 6.0,
+   "max_dd": -9.4,
    "n_months": 180,
-   "price": 537707,
-   "vol": 6.9
+   "price": 540327,
+   "vol": 6.8
   },
   "91016": {
    "cagr15": 5.4,
-   "max_dd": -5.9,
+   "max_dd": -5.4,
    "n_months": 180,
-   "price": 656017,
+   "price": 654231,
    "vol": 6.0
   },
   "91020": {
    "cagr15": 6.1,
-   "max_dd": -7.3,
+   "max_dd": -7.2,
    "n_months": 180,
-   "price": 822634,
+   "price": 828345,
    "vol": 6.0
   },
   "91024": {
-   "cagr15": 4.6,
+   "cagr15": 4.7,
    "max_dd": -6.4,
    "n_months": 180,
-   "price": 820714,
-   "vol": 5.6
+   "price": 816738,
+   "vol": 5.5
   },
   "91030": {
    "cagr15": 4.1,
    "max_dd": -8.4,
    "n_months": 180,
-   "price": 832027,
+   "price": 826348,
    "vol": 6.0
   },
   "91040": {
-   "cagr15": 6.0,
-   "max_dd": -14.2,
+   "cagr15": 6.2,
+   "max_dd": -12.4,
    "n_months": 180,
-   "price": 567794,
-   "vol": 7.9
+   "price": 570485,
+   "vol": 7.8
   },
   "91042": {
    "cagr15": 6.0,
-   "max_dd": -15.2,
+   "max_dd": -14.6,
    "n_months": 180,
-   "price": 607488,
-   "vol": 8.0
+   "price": 608718,
+   "vol": 7.8
   },
   "91101": {
-   "cagr15": 4.3,
-   "max_dd": -6.9,
+   "cagr15": 4.4,
+   "max_dd": -6.0,
    "n_months": 180,
-   "price": 734797,
+   "price": 734192,
    "vol": 5.7
   },
   "91103": {
    "cagr15": 6.4,
    "max_dd": -6.3,
    "n_months": 180,
-   "price": 827647,
+   "price": 830345,
    "vol": 5.3
   },
   "91104": {
-   "cagr15": 5.5,
-   "max_dd": -7.9,
+   "cagr15": 5.6,
+   "max_dd": -6.5,
    "n_months": 180,
-   "price": 688539,
+   "price": 686702,
    "vol": 6.0
   },
   "91105": {
-   "cagr15": 4.4,
+   "cagr15": 4.5,
    "max_dd": -6.5,
    "n_months": 180,
-   "price": 1173792,
+   "price": 1153912,
    "vol": 4.8
   },
   "91106": {
    "cagr15": 5.1,
-   "max_dd": -7.1,
+   "max_dd": -6.0,
    "n_months": 180,
-   "price": 707194,
-   "vol": 5.9
+   "price": 702043,
+   "vol": 5.8
   },
   "91107": {
-   "cagr15": 5.3,
-   "max_dd": -7.3,
+   "cagr15": 5.4,
+   "max_dd": -6.1,
    "n_months": 180,
-   "price": 690385,
-   "vol": 6.0
+   "price": 686350,
+   "vol": 5.9
   },
   "91201": {
-   "cagr15": 5.6,
-   "max_dd": -8.0,
+   "cagr15": 5.7,
+   "max_dd": -7.6,
    "n_months": 180,
-   "price": 696293,
-   "vol": 6.9
+   "price": 705409,
+   "vol": 6.8
   },
   "91202": {
    "cagr15": 6.1,
-   "max_dd": -8.4,
+   "max_dd": -7.1,
    "n_months": 180,
-   "price": 670646,
-   "vol": 7.1
+   "price": 669214,
+   "vol": 7.0
   },
   "91203": {
    "cagr15": 6.3,
-   "max_dd": -7.9,
+   "max_dd": -6.9,
    "n_months": 180,
-   "price": 671181,
-   "vol": 7.1
+   "price": 674566,
+   "vol": 7.0
   },
   "91204": {
-   "cagr15": 5.2,
-   "max_dd": -10.9,
+   "cagr15": 5.3,
+   "max_dd": -9.9,
    "n_months": 180,
-   "price": 626855,
-   "vol": 7.1
+   "price": 624605,
+   "vol": 7.0
   },
   "91205": {
    "cagr15": 6.8,
-   "max_dd": -9.7,
+   "max_dd": -9.3,
    "n_months": 180,
-   "price": 622855,
-   "vol": 6.9
+   "price": 621061,
+   "vol": 6.8
   },
   "91206": {
-   "cagr15": 6.1,
-   "max_dd": -10.2,
+   "cagr15": 6.2,
+   "max_dd": -9.5,
    "n_months": 180,
-   "price": 637772,
-   "vol": 7.4
+   "price": 639757,
+   "vol": 7.3
   },
   "91207": {
    "cagr15": 6.4,
-   "max_dd": -7.5,
+   "max_dd": -7.1,
    "n_months": 180,
-   "price": 632270,
+   "price": 638691,
    "vol": 7.7
   },
   "91208": {
    "cagr15": 5.9,
    "max_dd": -8.6,
    "n_months": 180,
-   "price": 633484,
-   "vol": 7.2
+   "price": 649951,
+   "vol": 7.1
   },
   "91214": {
    "cagr15": 5.6,
-   "max_dd": -6.5,
+   "max_dd": -5.9,
    "n_months": 180,
-   "price": 691026,
+   "price": 698308,
    "vol": 6.1
   },
   "91301": {
    "cagr15": 5.9,
    "max_dd": -5.6,
    "n_months": 180,
-   "price": 539126,
+   "price": 536696,
    "vol": 7.3
   },
   "91302": {
    "cagr15": 4.8,
    "max_dd": -9.5,
    "n_months": 180,
-   "price": 699035,
+   "price": 690430,
    "vol": 7.5
   },
   "91303": {
-   "cagr15": 6.5,
-   "max_dd": -12.9,
+   "cagr15": 6.6,
+   "max_dd": -11.3,
    "n_months": 180,
-   "price": 437995,
-   "vol": 9.4
+   "price": 435963,
+   "vol": 9.3
   },
   "91304": {
    "cagr15": 7.0,
-   "max_dd": -15.8,
+   "max_dd": -16.5,
    "n_months": 180,
-   "price": 408454,
-   "vol": 10.5
+   "price": 404751,
+   "vol": 10.4
   },
   "91306": {
    "cagr15": 7.2,
-   "max_dd": -9.4,
+   "max_dd": -9.1,
    "n_months": 180,
-   "price": 460504,
+   "price": 460232,
    "vol": 10.1
   },
   "91307": {
-   "cagr15": 6.0,
-   "max_dd": -5.8,
+   "cagr15": 5.9,
+   "max_dd": -6.2,
    "n_months": 180,
-   "price": 636436,
+   "price": 630462,
    "vol": 6.5
   },
   "91311": {
    "cagr15": 5.8,
    "max_dd": -7.4,
    "n_months": 180,
-   "price": 586545,
+   "price": 586488,
    "vol": 7.2
   },
   "91316": {
-   "cagr15": 5.4,
-   "max_dd": -12.1,
+   "cagr15": 5.5,
+   "max_dd": -12.5,
    "n_months": 180,
-   "price": 452147,
+   "price": 453009,
    "vol": 8.9
   },
   "91321": {
-   "cagr15": 6.8,
-   "max_dd": -15.2,
+   "cagr15": 6.9,
+   "max_dd": -14.2,
    "n_months": 180,
-   "price": 433200,
-   "vol": 10.1
+   "price": 431551,
+   "vol": 10.0
   },
   "91324": {
-   "cagr15": 6.6,
-   "max_dd": -6.6,
+   "cagr15": 6.7,
+   "max_dd": -5.6,
    "n_months": 180,
-   "price": 613212,
-   "vol": 7.0
+   "price": 616110,
+   "vol": 6.9
   },
   "91325": {
    "cagr15": 5.9,
-   "max_dd": -8.1,
+   "max_dd": -7.8,
    "n_months": 180,
-   "price": 574758,
-   "vol": 7.3
+   "price": 573562,
+   "vol": 7.2
   },
   "91326": {
-   "cagr15": 3.8,
-   "max_dd": -6.6,
+   "cagr15": 3.9,
+   "max_dd": -6.9,
    "n_months": 180,
-   "price": 751977,
+   "price": 753586,
    "vol": 6.7
   },
   "91331": {
    "cagr15": 8.2,
-   "max_dd": -8.2,
+   "max_dd": -7.6,
    "n_months": 180,
-   "price": 482984,
-   "vol": 8.5
+   "price": 481394,
+   "vol": 8.4
   },
   "91335": {
-   "cagr15": 7.7,
-   "max_dd": -9.9,
+   "cagr15": 7.6,
+   "max_dd": -9.4,
    "n_months": 180,
-   "price": 512193,
+   "price": 507188,
    "vol": 8.7
   },
   "91340": {
-   "cagr15": 8.6,
-   "max_dd": -8.1,
+   "cagr15": 8.7,
+   "max_dd": -6.9,
    "n_months": 180,
-   "price": 467423,
-   "vol": 8.2
+   "price": 469515,
+   "vol": 8.1
   },
   "91342": {
-   "cagr15": 7.2,
-   "max_dd": -9.6,
+   "cagr15": 7.3,
+   "max_dd": -8.7,
    "n_months": 180,
-   "price": 518888,
-   "vol": 8.3
+   "price": 517134,
+   "vol": 8.2
   },
   "91343": {
    "cagr15": 7.4,
-   "max_dd": -6.3,
+   "max_dd": -6.8,
    "n_months": 180,
-   "price": 503767,
+   "price": 504622,
    "vol": 8.7
   },
   "91344": {
-   "cagr15": 6.1,
-   "max_dd": -14.8,
+   "cagr15": 6.2,
+   "max_dd": -13.9,
    "n_months": 180,
-   "price": 557205,
-   "vol": 7.9
+   "price": 553057,
+   "vol": 7.8
   },
   "91345": {
    "cagr15": 8.2,
-   "max_dd": -4.8,
+   "max_dd": -5.3,
    "n_months": 180,
-   "price": 496946,
+   "price": 499351,
    "vol": 7.6
   },
   "91350": {
    "cagr15": 6.5,
-   "max_dd": -7.6,
+   "max_dd": -6.9,
    "n_months": 180,
-   "price": 532623,
+   "price": 531545,
    "vol": 8.6
   },
   "91351": {
    "cagr15": 5.9,
-   "max_dd": -13.4,
+   "max_dd": -12.4,
    "n_months": 180,
-   "price": 428142,
-   "vol": 9.1
+   "price": 427575,
+   "vol": 9.0
   },
   "91352": {
    "cagr15": 7.7,
-   "max_dd": -11.6,
+   "max_dd": -10.2,
    "n_months": 180,
-   "price": 457726,
-   "vol": 9.6
+   "price": 457737,
+   "vol": 9.5
   },
   "91354": {
    "cagr15": 5.0,
    "max_dd": -7.6,
    "n_months": 180,
-   "price": 617662,
-   "vol": 7.3
+   "price": 614988,
+   "vol": 7.2
   },
   "91355": {
-   "cagr15": 5.5,
-   "max_dd": -10.2,
+   "cagr15": 5.6,
+   "max_dd": -9.3,
    "n_months": 180,
-   "price": 503581,
-   "vol": 8.0
+   "price": 500716,
+   "vol": 7.9
   },
   "91356": {
    "cagr15": 5.7,
-   "max_dd": -11.2,
+   "max_dd": -12.0,
    "n_months": 180,
-   "price": 460900,
+   "price": 461546,
    "vol": 9.0
   },
   "91360": {
    "cagr15": 5.3,
-   "max_dd": -9.6,
+   "max_dd": -8.8,
    "n_months": 180,
-   "price": 512618,
+   "price": 507652,
    "vol": 7.6
   },
   "91361": {
-   "cagr15": 6.2,
-   "max_dd": -5.7,
+   "cagr15": 6.3,
+   "max_dd": -5.6,
    "n_months": 180,
-   "price": 719560,
-   "vol": 6.1
+   "price": 713656,
+   "vol": 6.0
   },
   "91362": {
    "cagr15": 5.0,
-   "max_dd": -8.3,
+   "max_dd": -7.9,
    "n_months": 180,
-   "price": 634691,
-   "vol": 7.1
+   "price": 632575,
+   "vol": 7.0
   },
   "91364": {
    "cagr15": 4.5,
-   "max_dd": -14.5,
+   "max_dd": -14.7,
    "n_months": 180,
-   "price": 554572,
+   "price": 548221,
    "vol": 7.6
   },
   "91367": {
    "cagr15": 4.7,
-   "max_dd": -12.2,
+   "max_dd": -12.7,
    "n_months": 180,
-   "price": 519985,
+   "price": 518442,
    "vol": 7.5
   },
   "91377": {
    "cagr15": 5.3,
-   "max_dd": -6.0,
+   "max_dd": -5.5,
    "n_months": 180,
-   "price": 570183,
+   "price": 570587,
    "vol": 6.8
   },
   "91381": {
    "cagr15": 5.8,
-   "max_dd": -6.8,
+   "max_dd": -6.1,
    "n_months": 180,
-   "price": 622697,
+   "price": 619826,
    "vol": 7.3
   },
   "91387": {
    "cagr15": 6.0,
-   "max_dd": -14.0,
+   "max_dd": -13.4,
    "n_months": 180,
-   "price": 449966,
-   "vol": 9.8
+   "price": 449621,
+   "vol": 9.7
   },
   "91390": {
    "cagr15": 5.7,
-   "max_dd": -8.8,
+   "max_dd": -7.7,
    "n_months": 180,
-   "price": 537814,
+   "price": 535325,
    "vol": 7.9
   },
   "91401": {
    "cagr15": 5.5,
-   "max_dd": -9.5,
+   "max_dd": -9.9,
    "n_months": 180,
-   "price": 602710,
-   "vol": 7.8
+   "price": 607047,
+   "vol": 7.7
   },
   "91402": {
    "cagr15": 9.1,
-   "max_dd": -7.8,
+   "max_dd": -8.3,
    "n_months": 180,
-   "price": 457732,
+   "price": 458512,
    "vol": 10.4
   },
   "91403": {
    "cagr15": 5.2,
-   "max_dd": -8.3,
+   "max_dd": -7.5,
    "n_months": 180,
-   "price": 630575,
-   "vol": 6.7
+   "price": 626289,
+   "vol": 6.6
   },
   "91405": {
-   "cagr15": 8.0,
-   "max_dd": -8.9,
+   "cagr15": 8.1,
+   "max_dd": -9.2,
    "n_months": 180,
-   "price": 459308,
+   "price": 461612,
    "vol": 9.8
   },
   "91406": {
    "cagr15": 7.0,
-   "max_dd": -10.3,
+   "max_dd": -10.7,
    "n_months": 180,
-   "price": 460525,
+   "price": 461192,
    "vol": 9.3
   },
   "91411": {
-   "cagr15": 6.3,
-   "max_dd": -11.5,
+   "cagr15": 6.4,
+   "max_dd": -9.9,
    "n_months": 180,
-   "price": 498866,
-   "vol": 8.7
+   "price": 503161,
+   "vol": 8.6
   },
   "91423": {
    "cagr15": 5.3,
-   "max_dd": -8.0,
+   "max_dd": -8.2,
    "n_months": 180,
-   "price": 648498,
+   "price": 647914,
    "vol": 6.8
   },
   "91436": {
-   "cagr15": 5.1,
-   "max_dd": -7.6,
+   "cagr15": 5.2,
+   "max_dd": -7.2,
    "n_months": 180,
-   "price": 840230,
-   "vol": 6.3
+   "price": 830772,
+   "vol": 6.2
   },
   "91501": {
    "cagr15": 5.7,
    "max_dd": -6.4,
    "n_months": 180,
-   "price": 739342,
+   "price": 737706,
    "vol": 6.7
   },
   "91502": {
    "cagr15": 5.7,
    "max_dd": -6.9,
    "n_months": 180,
-   "price": 693351,
+   "price": 693010,
    "vol": 6.9
   },
   "91504": {
    "cagr15": 5.3,
-   "max_dd": -10.5,
+   "max_dd": -10.0,
    "n_months": 180,
-   "price": 691379,
-   "vol": 6.9
+   "price": 688993,
+   "vol": 6.8
   },
   "91505": {
    "cagr15": 5.2,
-   "max_dd": -8.2,
+   "max_dd": -7.6,
    "n_months": 180,
-   "price": 686048,
+   "price": 686523,
    "vol": 6.5
   },
   "91506": {
    "cagr15": 4.9,
-   "max_dd": -9.2,
+   "max_dd": -9.6,
    "n_months": 180,
-   "price": 700849,
+   "price": 697952,
    "vol": 7.1
   },
   "91601": {
    "cagr15": 5.9,
-   "max_dd": -6.1,
+   "max_dd": -6.3,
    "n_months": 180,
-   "price": 622823,
-   "vol": 7.1
+   "price": 624493,
+   "vol": 7.0
   },
   "91602": {
-   "cagr15": 5.1,
-   "max_dd": -7.6,
+   "cagr15": 5.2,
+   "max_dd": -7.8,
    "n_months": 180,
-   "price": 702795,
+   "price": 709356,
    "vol": 6.6
   },
   "91604": {
-   "cagr15": 4.8,
-   "max_dd": -8.5,
+   "cagr15": 4.9,
+   "max_dd": -7.9,
    "n_months": 180,
-   "price": 788429,
+   "price": 792835,
    "vol": 6.5
   },
   "91605": {
    "cagr15": 6.8,
-   "max_dd": -9.8,
+   "max_dd": -8.6,
    "n_months": 180,
-   "price": 521580,
-   "vol": 7.8
+   "price": 523391,
+   "vol": 7.7
   },
   "91606": {
-   "cagr15": 7.0,
-   "max_dd": -8.2,
+   "cagr15": 7.1,
+   "max_dd": -7.6,
    "n_months": 180,
-   "price": 534890,
+   "price": 535768,
    "vol": 8.3
   },
   "91607": {
    "cagr15": 6.0,
-   "max_dd": -10.3,
+   "max_dd": -9.1,
    "n_months": 180,
-   "price": 607830,
-   "vol": 8.1
+   "price": 604559,
+   "vol": 8.0
   },
   "91701": {
-   "cagr15": 8.7,
-   "max_dd": -6.8,
+   "cagr15": 8.8,
+   "max_dd": -5.7,
    "n_months": 180,
-   "price": 471305,
-   "vol": 10.0
+   "price": 468609,
+   "vol": 9.9
   },
   "91702": {
    "cagr15": 7.5,
-   "max_dd": -8.2,
+   "max_dd": -7.3,
    "n_months": 180,
-   "price": 546676,
+   "price": 543441,
    "vol": 8.1
   },
   "91706": {
    "cagr15": 7.0,
-   "max_dd": -9.3,
+   "max_dd": -8.5,
    "n_months": 180,
-   "price": 510019,
-   "vol": 8.2
+   "price": 508953,
+   "vol": 8.1
   },
   "91708": {
    "cagr15": 6.0,
    "max_dd": -7.6,
    "n_months": 180,
-   "price": 662003,
+   "price": 663336,
    "vol": 9.2
   },
   "91709": {
-   "cagr15": 5.4,
-   "max_dd": -9.9,
-   "n_months": 180,
-   "price": 632043,
-   "vol": 8.1
-  },
-  "91710": {
-   "cagr15": 7.5,
+   "cagr15": 5.5,
    "max_dd": -8.5,
    "n_months": 180,
-   "price": 535366,
-   "vol": 9.0
+   "price": 624204,
+   "vol": 8.0
+  },
+  "91710": {
+   "cagr15": 7.6,
+   "max_dd": -7.1,
+   "n_months": 180,
+   "price": 530963,
+   "vol": 8.9
   },
   "91711": {
-   "cagr15": 5.3,
-   "max_dd": -5.9,
+   "cagr15": 5.4,
+   "max_dd": -5.0,
    "n_months": 180,
-   "price": 686044,
+   "price": 691637,
    "vol": 5.9
   },
   "91722": {
    "cagr15": 5.8,
-   "max_dd": -11.2,
+   "max_dd": -10.3,
    "n_months": 180,
-   "price": 574945,
-   "vol": 7.4
+   "price": 571204,
+   "vol": 7.3
   },
   "91723": {
-   "cagr15": 5.6,
-   "max_dd": -10.6,
+   "cagr15": 5.7,
+   "max_dd": -9.6,
    "n_months": 180,
-   "price": 605546,
-   "vol": 6.7
+   "price": 604423,
+   "vol": 6.6
   },
   "91724": {
    "cagr15": 7.3,
-   "max_dd": -6.6,
+   "max_dd": -6.4,
    "n_months": 180,
-   "price": 548576,
+   "price": 543734,
    "vol": 7.1
   },
   "91730": {
    "cagr15": 8.0,
-   "max_dd": -8.6,
+   "max_dd": -8.7,
    "n_months": 180,
-   "price": 510403,
+   "price": 506048,
    "vol": 11.0
   },
   "91731": {
    "cagr15": 6.1,
-   "max_dd": -7.3,
+   "max_dd": -6.8,
    "n_months": 180,
-   "price": 583753,
+   "price": 579741,
    "vol": 6.5
   },
   "91732": {
-   "cagr15": 6.4,
-   "max_dd": -7.1,
+   "cagr15": 6.5,
+   "max_dd": -6.3,
    "n_months": 180,
-   "price": 575409,
+   "price": 572179,
    "vol": 6.8
   },
   "91733": {
    "cagr15": 6.2,
-   "max_dd": -7.0,
+   "max_dd": -6.5,
    "n_months": 180,
-   "price": 599079,
+   "price": 595083,
    "vol": 6.6
   },
   "91737": {
-   "cagr15": 8.6,
-   "max_dd": -6.7,
+   "cagr15": 8.7,
+   "max_dd": -7.1,
    "n_months": 180,
-   "price": 407125,
+   "price": 405767,
    "vol": 10.3
   },
   "91739": {
-   "cagr15": 6.6,
-   "max_dd": -8.0,
+   "cagr15": 6.7,
+   "max_dd": -5.7,
    "n_months": 180,
-   "price": 606788,
+   "price": 606508,
    "vol": 8.7
   },
   "91740": {
    "cagr15": 5.3,
-   "max_dd": -7.2,
+   "max_dd": -6.6,
    "n_months": 180,
-   "price": 626340,
+   "price": 622601,
    "vol": 6.4
   },
   "91741": {
-   "cagr15": 4.6,
-   "max_dd": -7.6,
+   "cagr15": 4.7,
+   "max_dd": -6.5,
    "n_months": 180,
-   "price": 696728,
-   "vol": 5.8
+   "price": 691777,
+   "vol": 5.7
   },
   "91744": {
    "cagr15": 7.6,
    "max_dd": -5.0,
    "n_months": 180,
-   "price": 562099,
+   "price": 559197,
    "vol": 7.1
   },
   "91745": {
-   "cagr15": 5.7,
-   "max_dd": -10.5,
+   "cagr15": 5.8,
+   "max_dd": -9.4,
    "n_months": 180,
-   "price": 543752,
-   "vol": 7.5
+   "price": 543212,
+   "vol": 7.4
   },
   "91746": {
-   "cagr15": 6.6,
-   "max_dd": -7.6,
+   "cagr15": 6.7,
+   "max_dd": -6.5,
    "n_months": 180,
-   "price": 533579,
+   "price": 533112,
    "vol": 7.9
   },
   "91748": {
    "cagr15": 5.5,
-   "max_dd": -8.4,
+   "max_dd": -7.6,
    "n_months": 180,
-   "price": 419369,
-   "vol": 7.2
+   "price": 422593,
+   "vol": 7.1
   },
   "91750": {
    "cagr15": 5.6,
-   "max_dd": -8.9,
+   "max_dd": -8.3,
    "n_months": 180,
-   "price": 434824,
-   "vol": 6.8
+   "price": 433757,
+   "vol": 6.7
   },
   "91752": {
    "cagr15": 6.7,
-   "max_dd": -5.7,
+   "max_dd": -5.9,
    "n_months": 180,
-   "price": 561584,
+   "price": 562373,
    "vol": 10.0
   },
   "91754": {
    "cagr15": 5.0,
-   "max_dd": -5.2,
+   "max_dd": -4.7,
    "n_months": 180,
-   "price": 681393,
-   "vol": 5.5
+   "price": 678189,
+   "vol": 5.4
   },
   "91755": {
    "cagr15": 5.0,
    "max_dd": -5.6,
    "n_months": 180,
-   "price": 722879,
+   "price": 716950,
    "vol": 5.6
   },
   "91761": {
    "cagr15": 7.7,
-   "max_dd": -6.3,
+   "max_dd": -5.8,
    "n_months": 180,
-   "price": 578368,
+   "price": 582670,
    "vol": 9.1
   },
   "91762": {
-   "cagr15": 8.8,
-   "max_dd": -7.5,
+   "cagr15": 8.9,
+   "max_dd": -6.0,
    "n_months": 180,
-   "price": 527560,
+   "price": 527915,
    "vol": 10.6
   },
   "91763": {
-   "cagr15": 8.2,
-   "max_dd": -8.0,
+   "cagr15": 8.3,
+   "max_dd": -6.7,
    "n_months": 180,
-   "price": 481249,
-   "vol": 9.6
+   "price": 478922,
+   "vol": 9.5
   },
   "91764": {
-   "cagr15": 8.5,
-   "max_dd": -6.4,
+   "cagr15": 8.6,
+   "max_dd": -5.3,
    "n_months": 180,
-   "price": 495875,
+   "price": 498530,
    "vol": 9.3
   },
   "91765": {
    "cagr15": 5.7,
-   "max_dd": -9.6,
+   "max_dd": -8.5,
    "n_months": 180,
-   "price": 559253,
-   "vol": 8.1
+   "price": 559244,
+   "vol": 8.0
   },
   "91766": {
    "cagr15": 6.9,
-   "max_dd": -9.2,
+   "max_dd": -8.7,
    "n_months": 180,
-   "price": 481656,
+   "price": 481677,
    "vol": 8.6
   },
   "91767": {
    "cagr15": 8.0,
-   "max_dd": -8.1,
+   "max_dd": -7.1,
    "n_months": 180,
-   "price": 495999,
+   "price": 495635,
    "vol": 8.9
   },
   "91768": {
    "cagr15": 7.8,
-   "max_dd": -8.1,
+   "max_dd": -7.7,
    "n_months": 180,
-   "price": 579755,
+   "price": 583863,
    "vol": 8.3
   },
   "91770": {
-   "cagr15": 4.8,
-   "max_dd": -5.7,
+   "cagr15": 4.9,
+   "max_dd": -5.5,
    "n_months": 180,
-   "price": 638668,
+   "price": 637385,
    "vol": 5.5
   },
   "91773": {
    "cagr15": 5.7,
-   "max_dd": -7.9,
+   "max_dd": -7.6,
    "n_months": 180,
-   "price": 581694,
-   "vol": 6.0
+   "price": 581417,
+   "vol": 5.9
   },
   "91775": {
    "cagr15": 5.3,
    "max_dd": -6.7,
    "n_months": 180,
-   "price": 765865,
+   "price": 761735,
    "vol": 5.4
   },
   "91776": {
    "cagr15": 5.3,
    "max_dd": -6.2,
    "n_months": 180,
-   "price": 747310,
+   "price": 743902,
    "vol": 5.3
   },
   "91780": {
-   "cagr15": 4.3,
-   "max_dd": -6.5,
+   "cagr15": 4.4,
+   "max_dd": -6.0,
    "n_months": 180,
-   "price": 844981,
+   "price": 840861,
    "vol": 5.5
   },
   "91784": {
-   "cagr15": 5.3,
-   "max_dd": -7.2,
+   "cagr15": 5.4,
+   "max_dd": -6.1,
    "n_months": 180,
-   "price": 726553,
-   "vol": 6.3
+   "price": 724886,
+   "vol": 6.2
   },
   "91786": {
-   "cagr15": 6.7,
-   "max_dd": -8.8,
+   "cagr15": 6.8,
+   "max_dd": -7.1,
    "n_months": 180,
-   "price": 536325,
-   "vol": 8.1
+   "price": 537179,
+   "vol": 8.0
   },
   "91789": {
    "cagr15": 5.7,
-   "max_dd": -8.9,
+   "max_dd": -7.8,
    "n_months": 180,
-   "price": 602477,
-   "vol": 7.4
+   "price": 599714,
+   "vol": 7.3
   },
   "91790": {
    "cagr15": 6.5,
-   "max_dd": -7.3,
+   "max_dd": -6.9,
    "n_months": 180,
-   "price": 628945,
-   "vol": 6.6
+   "price": 628250,
+   "vol": 6.5
   },
   "91791": {
    "cagr15": 6.0,
-   "max_dd": -6.7,
+   "max_dd": -5.9,
    "n_months": 180,
-   "price": 582257,
-   "vol": 7.4
+   "price": 582577,
+   "vol": 7.3
   },
   "91792": {
    "cagr15": 6.7,
-   "max_dd": -6.9,
+   "max_dd": -6.2,
    "n_months": 180,
-   "price": 555860,
+   "price": 554059,
    "vol": 7.5
   },
   "91801": {
    "cagr15": 5.5,
    "max_dd": -4.5,
    "n_months": 180,
-   "price": 692136,
+   "price": 687031,
    "vol": 5.6
   },
   "91803": {
    "cagr15": 5.5,
-   "max_dd": -6.0,
+   "max_dd": -5.5,
    "n_months": 180,
-   "price": 713493,
+   "price": 711169,
    "vol": 6.0
   },
   "91901": {
-   "cagr15": 7.8,
-   "max_dd": -7.1,
+   "cagr15": 7.9,
+   "max_dd": -7.4,
    "n_months": 180,
-   "price": 433895,
+   "price": 433763,
    "vol": 8.0
   },
   "91902": {
-   "cagr15": 7.7,
-   "max_dd": -7.1,
+   "cagr15": 7.8,
+   "max_dd": -7.2,
    "n_months": 180,
-   "price": 521557,
-   "vol": 7.7
+   "price": 515220,
+   "vol": 7.6
   },
   "91910": {
    "cagr15": 8.4,
-   "max_dd": -4.1,
+   "max_dd": -4.0,
    "n_months": 180,
-   "price": 554141,
+   "price": 549828,
    "vol": 7.8
   },
   "91911": {
-   "cagr15": 9.6,
+   "cagr15": 9.7,
    "max_dd": -5.0,
    "n_months": 180,
-   "price": 525631,
+   "price": 520101,
    "vol": 8.2
   },
   "91913": {
    "cagr15": 7.8,
    "max_dd": -6.5,
    "n_months": 180,
-   "price": 619322,
+   "price": 621381,
    "vol": 7.8
   },
   "91914": {
    "cagr15": 8.7,
    "max_dd": -6.1,
    "n_months": 180,
-   "price": 654339,
+   "price": 647403,
    "vol": 8.0
   },
   "91915": {
    "cagr15": 7.2,
    "max_dd": -6.7,
    "n_months": 180,
-   "price": 693153,
+   "price": 692292,
    "vol": 7.8
   },
   "91932": {
-   "cagr15": 8.5,
+   "cagr15": 8.6,
    "max_dd": -6.1,
    "n_months": 180,
-   "price": 689193,
+   "price": 680531,
    "vol": 7.3
   },
   "91941": {
-   "cagr15": 7.7,
-   "max_dd": -8.8,
+   "cagr15": 7.8,
+   "max_dd": -8.9,
    "n_months": 180,
-   "price": 488642,
-   "vol": 8.4
+   "price": 485887,
+   "vol": 8.3
   },
   "91942": {
-   "cagr15": 7.8,
-   "max_dd": -6.6,
+   "cagr15": 7.9,
+   "max_dd": -6.7,
    "n_months": 180,
-   "price": 529102,
+   "price": 523362,
    "vol": 8.5
   },
   "91945": {
    "cagr15": 9.6,
-   "max_dd": -7.7,
+   "max_dd": -8.0,
    "n_months": 180,
-   "price": 466972,
-   "vol": 8.7
+   "price": 463504,
+   "vol": 8.8
   },
   "91950": {
-   "cagr15": 8.3,
+   "cagr15": 8.4,
    "max_dd": -6.9,
    "n_months": 180,
-   "price": 472106,
+   "price": 473490,
    "vol": 7.3
   },
   "91977": {
-   "cagr15": 9.4,
+   "cagr15": 9.5,
    "max_dd": -5.8,
    "n_months": 180,
-   "price": 525378,
+   "price": 522282,
    "vol": 8.0
   },
   "91978": {
    "cagr15": 8.4,
-   "max_dd": -9.1,
+   "max_dd": -8.7,
    "n_months": 180,
-   "price": 503876,
+   "price": 497004,
    "vol": 8.8
   },
   "92003": {
    "cagr15": 8.8,
-   "max_dd": -5.2,
+   "max_dd": -5.4,
    "n_months": 180,
-   "price": 508547,
+   "price": 508102,
    "vol": 8.3
   },
   "92007": {
-   "cagr15": 7.8,
+   "cagr15": 7.9,
    "max_dd": -5.4,
    "n_months": 180,
-   "price": 1214364,
+   "price": 1229328,
    "vol": 6.1
   },
   "92008": {
    "cagr15": 6.6,
    "max_dd": -6.3,
    "n_months": 180,
-   "price": 1058041,
+   "price": 1053972,
    "vol": 7.2
   },
   "92009": {
-   "cagr15": 6.6,
-   "max_dd": -6.9,
+   "cagr15": 6.7,
+   "max_dd": -6.0,
    "n_months": 180,
-   "price": 755710,
+   "price": 749708,
    "vol": 7.7
   },
   "92010": {
-   "cagr15": 7.1,
+   "cagr15": 7.2,
    "max_dd": -5.4,
    "n_months": 180,
-   "price": 817120,
+   "price": 805317,
    "vol": 7.2
   },
   "92011": {
    "cagr15": 6.9,
    "max_dd": -5.3,
    "n_months": 180,
-   "price": 1110198,
-   "vol": 6.9
+   "price": 1115889,
+   "vol": 6.8
   },
   "92014": {
-   "cagr15": 7.6,
+   "cagr15": 7.8,
    "max_dd": -5.2,
    "n_months": 180,
-   "price": 1494696,
+   "price": 1508385,
    "vol": 6.1
   },
   "92019": {
-   "cagr15": 7.5,
-   "max_dd": -5.3,
+   "cagr15": 7.6,
+   "max_dd": -5.5,
    "n_months": 180,
-   "price": 507669,
-   "vol": 7.6
+   "price": 505717,
+   "vol": 7.5
   },
   "92020": {
-   "cagr15": 9.2,
-   "max_dd": -7.6,
+   "cagr15": 9.3,
+   "max_dd": -7.7,
    "n_months": 180,
-   "price": 424616,
+   "price": 418952,
    "vol": 9.5
   },
   "92021": {
    "cagr15": 8.9,
-   "max_dd": -7.4,
+   "max_dd": -7.6,
    "n_months": 180,
-   "price": 450616,
-   "vol": 8.5
+   "price": 449369,
+   "vol": 8.6
   },
   "92024": {
-   "cagr15": 6.7,
+   "cagr15": 6.8,
    "max_dd": -6.7,
    "n_months": 180,
-   "price": 917895,
+   "price": 912401,
    "vol": 6.9
   },
   "92025": {
-   "cagr15": 7.9,
-   "max_dd": -6.0,
+   "cagr15": 8.0,
+   "max_dd": -6.2,
    "n_months": 180,
-   "price": 518007,
+   "price": 512607,
    "vol": 9.2
   },
   "92026": {
    "cagr15": 8.4,
-   "max_dd": -8.8,
+   "max_dd": -9.3,
    "n_months": 180,
-   "price": 437237,
+   "price": 432495,
    "vol": 9.6
   },
   "92027": {
-   "cagr15": 10.0,
-   "max_dd": -9.6,
+   "cagr15": 10.1,
+   "max_dd": -9.9,
    "n_months": 180,
-   "price": 412427,
+   "price": 405390,
    "vol": 9.5
   },
   "92029": {
-   "cagr15": 7.0,
+   "cagr15": 6.9,
    "max_dd": -7.0,
-   "n_months": 174,
-   "price": 610647,
+   "n_months": 175,
+   "price": 600600,
    "vol": 7.8
   },
   "92037": {
-   "cagr15": 5.6,
+   "cagr15": 5.7,
    "max_dd": -6.6,
    "n_months": 180,
-   "price": 1055922,
+   "price": 1044452,
    "vol": 6.8
   },
   "92040": {
-   "cagr15": 9.1,
-   "max_dd": -8.2,
+   "cagr15": 9.2,
+   "max_dd": -8.4,
    "n_months": 180,
-   "price": 409216,
+   "price": 406746,
    "vol": 10.0
   },
   "92054": {
-   "cagr15": 6.7,
-   "max_dd": -8.6,
+   "cagr15": 6.8,
+   "max_dd": -7.4,
    "n_months": 180,
-   "price": 885676,
-   "vol": 7.6
+   "price": 889033,
+   "vol": 7.5
   },
   "92056": {
-   "cagr15": 7.9,
+   "cagr15": 8.0,
    "max_dd": -4.8,
    "n_months": 180,
-   "price": 622547,
-   "vol": 7.8
+   "price": 618315,
+   "vol": 7.7
   },
   "92057": {
-   "cagr15": 8.7,
+   "cagr15": 8.8,
    "max_dd": -7.3,
    "n_months": 180,
-   "price": 480304,
+   "price": 478165,
    "vol": 9.2
   },
   "92058": {
    "cagr15": 9.3,
-   "max_dd": -5.7,
+   "max_dd": -5.8,
    "n_months": 180,
-   "price": 533498,
+   "price": 530624,
    "vol": 9.1
   },
   "92064": {
    "cagr15": 7.8,
    "max_dd": -6.3,
    "n_months": 180,
-   "price": 713516,
-   "vol": 7.2
+   "price": 710459,
+   "vol": 7.1
   },
   "92065": {
-   "cagr15": 7.8,
-   "max_dd": -8.0,
+   "cagr15": 7.9,
+   "max_dd": -6.6,
    "n_months": 180,
-   "price": 459310,
+   "price": 455967,
    "vol": 8.0
   },
   "92069": {
-   "cagr15": 8.2,
-   "max_dd": -6.7,
+   "cagr15": 8.3,
+   "max_dd": -6.8,
    "n_months": 180,
-   "price": 530362,
+   "price": 526489,
    "vol": 9.3
   },
   "92071": {
-   "cagr15": 8.1,
-   "max_dd": -5.9,
+   "cagr15": 8.2,
+   "max_dd": -6.2,
    "n_months": 180,
-   "price": 550733,
-   "vol": 7.8
+   "price": 547518,
+   "vol": 7.7
   },
   "92075": {
-   "cagr15": 7.2,
+   "cagr15": 7.4,
    "max_dd": -6.0,
    "n_months": 180,
-   "price": 1443336,
-   "vol": 6.8
+   "price": 1446435,
+   "vol": 6.7
   },
   "92078": {
-   "cagr15": 7.3,
+   "cagr15": 7.4,
    "max_dd": -7.5,
    "n_months": 180,
-   "price": 735947,
+   "price": 733680,
    "vol": 8.7
   },
   "92081": {
    "cagr15": 7.1,
    "max_dd": -5.1,
    "n_months": 180,
-   "price": 620417,
+   "price": 618758,
    "vol": 8.0
   },
   "92083": {
-   "cagr15": 9.3,
-   "max_dd": -5.3,
+   "cagr15": 9.4,
+   "max_dd": -5.5,
    "n_months": 180,
-   "price": 519691,
+   "price": 515733,
    "vol": 9.0
   },
   "92084": {
    "cagr15": 8.0,
    "max_dd": -5.2,
    "n_months": 180,
-   "price": 570687,
+   "price": 566690,
    "vol": 8.2
   },
   "92101": {
    "cagr15": 4.0,
-   "max_dd": -13.0,
+   "max_dd": -13.3,
    "n_months": 180,
-   "price": 714515,
+   "price": 709010,
    "vol": 7.5
   },
   "92102": {
    "cagr15": 9.1,
-   "max_dd": -5.4,
+   "max_dd": -5.6,
    "n_months": 180,
-   "price": 516704,
+   "price": 515155,
    "vol": 8.2
   },
   "92103": {
    "cagr15": 5.3,
-   "max_dd": -10.0,
+   "max_dd": -10.3,
    "n_months": 180,
-   "price": 708502,
+   "price": 701909,
    "vol": 7.3
   },
   "92104": {
-   "cagr15": 7.9,
-   "max_dd": -7.2,
+   "cagr15": 8.0,
+   "max_dd": -7.4,
    "n_months": 180,
-   "price": 553475,
+   "price": 546424,
    "vol": 9.0
   },
   "92105": {
    "cagr15": 11.0,
    "max_dd": -7.4,
    "n_months": 180,
-   "price": 418520,
-   "vol": 10.4
+   "price": 415233,
+   "vol": 10.5
   },
   "92106": {
-   "cagr15": 6.9,
+   "cagr15": 7.1,
    "max_dd": -4.8,
    "n_months": 180,
-   "price": 1058885,
+   "price": 1051897,
    "vol": 6.3
   },
   "92107": {
-   "cagr15": 6.3,
+   "cagr15": 6.5,
    "max_dd": -7.3,
    "n_months": 180,
-   "price": 757025,
+   "price": 750243,
    "vol": 6.9
   },
   "92108": {
-   "cagr15": 6.6,
-   "max_dd": -9.7,
+   "cagr15": 6.7,
+   "max_dd": -10.1,
    "n_months": 180,
-   "price": 536982,
+   "price": 531137,
    "vol": 9.1
   },
   "92109": {
-   "cagr15": 6.7,
+   "cagr15": 6.9,
    "max_dd": -5.8,
    "n_months": 180,
-   "price": 947815,
-   "vol": 6.5
+   "price": 943026,
+   "vol": 6.4
   },
   "92110": {
-   "cagr15": 6.1,
-   "max_dd": -11.6,
+   "cagr15": 6.2,
+   "max_dd": -10.2,
    "n_months": 180,
-   "price": 588917,
-   "vol": 8.5
+   "price": 586372,
+   "vol": 8.4
   },
   "92111": {
    "cagr15": 7.0,
-   "max_dd": -8.2,
+   "max_dd": -8.5,
    "n_months": 180,
-   "price": 607299,
-   "vol": 7.6
+   "price": 603671,
+   "vol": 7.5
   },
   "92113": {
-   "cagr15": 8.4,
+   "cagr15": 8.5,
    "max_dd": -7.0,
    "n_months": 180,
-   "price": 454255,
-   "vol": 8.5
+   "price": 457591,
+   "vol": 8.4
   },
   "92114": {
    "cagr15": 9.2,
    "max_dd": -4.7,
    "n_months": 180,
-   "price": 559954,
+   "price": 561198,
    "vol": 8.2
   },
   "92115": {
    "cagr15": 9.2,
-   "max_dd": -8.7,
+   "max_dd": -9.0,
    "n_months": 180,
-   "price": 445899,
+   "price": 444885,
    "vol": 9.4
   },
   "92116": {
-   "cagr15": 8.4,
-   "max_dd": -8.2,
+   "cagr15": 8.5,
+   "max_dd": -8.3,
    "n_months": 180,
-   "price": 548895,
+   "price": 543871,
    "vol": 10.2
   },
   "92117": {
    "cagr15": 6.1,
-   "max_dd": -10.4,
+   "max_dd": -10.6,
    "n_months": 180,
-   "price": 581062,
-   "vol": 8.0
+   "price": 578145,
+   "vol": 7.9
   },
   "92118": {
-   "cagr15": 6.4,
-   "max_dd": -5.8,
+   "cagr15": 6.6,
+   "max_dd": -4.1,
    "n_months": 180,
-   "price": 2025669,
+   "price": 2010103,
    "vol": 5.9
   },
   "92119": {
    "cagr15": 7.2,
-   "max_dd": -10.7,
+   "max_dd": -11.1,
    "n_months": 180,
-   "price": 494755,
+   "price": 490190,
    "vol": 9.5
   },
   "92120": {
-   "cagr15": 7.5,
-   "max_dd": -8.7,
+   "cagr15": 7.6,
+   "max_dd": -9.2,
    "n_months": 180,
-   "price": 504577,
-   "vol": 8.6
+   "price": 498023,
+   "vol": 8.5
   },
   "92121": {
    "cagr15": 5.9,
    "max_dd": -8.4,
    "n_months": 180,
-   "price": 777215,
+   "price": 779408,
    "vol": 7.7
   },
   "92122": {
    "cagr15": 6.3,
-   "max_dd": -8.6,
+   "max_dd": -8.9,
    "n_months": 180,
-   "price": 674078,
+   "price": 670769,
    "vol": 7.5
   },
   "92123": {
-   "cagr15": 6.7,
+   "cagr15": 6.8,
    "max_dd": -8.9,
    "n_months": 180,
-   "price": 607393,
+   "price": 602326,
    "vol": 7.9
   },
   "92124": {
-   "cagr15": 6.4,
-   "max_dd": -6.7,
+   "cagr15": 6.5,
+   "max_dd": -6.5,
    "n_months": 180,
-   "price": 686819,
+   "price": 680917,
    "vol": 7.0
   },
   "92126": {
-   "cagr15": 7.2,
-   "max_dd": -9.7,
+   "cagr15": 7.3,
+   "max_dd": -9.9,
    "n_months": 180,
-   "price": 591207,
+   "price": 589487,
    "vol": 9.1
   },
   "92127": {
    "cagr15": 6.6,
-   "max_dd": -10.0,
+   "max_dd": -10.4,
    "n_months": 180,
-   "price": 706738,
+   "price": 698587,
    "vol": 9.5
   },
   "92128": {
    "cagr15": 6.3,
    "max_dd": -8.6,
    "n_months": 180,
-   "price": 660795,
+   "price": 655270,
    "vol": 8.5
   },
   "92129": {
-   "cagr15": 7.1,
-   "max_dd": -10.5,
+   "cagr15": 7.2,
+   "max_dd": -10.9,
    "n_months": 180,
-   "price": 598233,
+   "price": 591853,
    "vol": 9.5
   },
   "92130": {
-   "cagr15": 6.2,
+   "cagr15": 6.3,
    "max_dd": -9.4,
    "n_months": 180,
-   "price": 902577,
-   "vol": 8.2
+   "price": 898673,
+   "vol": 8.1
   },
   "92131": {
-   "cagr15": 6.7,
+   "cagr15": 6.8,
    "max_dd": -8.6,
    "n_months": 180,
-   "price": 731490,
+   "price": 723766,
    "vol": 8.3
   },
   "92139": {
    "cagr15": 10.3,
    "max_dd": -5.4,
    "n_months": 180,
-   "price": 524672,
-   "vol": 8.2
+   "price": 522934,
+   "vol": 8.3
   },
   "92154": {
    "cagr15": 9.7,
-   "max_dd": -6.6,
+   "max_dd": -6.7,
    "n_months": 180,
-   "price": 562495,
+   "price": 561567,
    "vol": 8.7
   },
   "92173": {
    "cagr15": 9.5,
-   "max_dd": -7.7,
+   "max_dd": -7.9,
    "n_months": 180,
-   "price": 416056,
+   "price": 411642,
    "vol": 9.0
   },
   "92220": {
-   "cagr15": 6.9,
-   "max_dd": -10.4,
+   "cagr15": 7.0,
+   "max_dd": -9.1,
    "n_months": 180,
-   "price": 286948,
-   "vol": 9.7
+   "price": 286333,
+   "vol": 9.6
   },
   "92223": {
    "cagr15": 6.5,
-   "max_dd": -15.2,
+   "max_dd": -14.8,
    "n_months": 180,
-   "price": 438725,
-   "vol": 8.1
+   "price": 439083,
+   "vol": 7.9
   },
   "92308": {
    "cagr15": 6.1,
-   "max_dd": -5.4,
+   "max_dd": -4.8,
    "n_months": 180,
-   "price": 364589,
+   "price": 365822,
    "vol": 8.0
   },
   "92313": {
-   "cagr15": 7.2,
+   "cagr15": 7.4,
    "max_dd": -8.4,
    "n_months": 180,
-   "price": 407296,
-   "vol": 8.7
+   "price": 407602,
+   "vol": 8.6
   },
   "92315": {
-   "cagr15": 6.1,
-   "max_dd": -17.0,
+   "cagr15": 6.2,
+   "max_dd": -17.1,
    "n_months": 180,
-   "price": 425049,
+   "price": 420358,
    "vol": 11.8
   },
   "92324": {
    "cagr15": 10.2,
-   "max_dd": -8.8,
+   "max_dd": -8.1,
    "n_months": 180,
-   "price": 319594,
-   "vol": 11.0
+   "price": 314862,
+   "vol": 10.9
   },
   "92335": {
    "cagr15": 10.5,
    "max_dd": -8.8,
    "n_months": 180,
-   "price": 335888,
+   "price": 336166,
    "vol": 11.4
   },
   "92336": {
    "cagr15": 6.5,
    "max_dd": -6.3,
    "n_months": 180,
-   "price": 583814,
+   "price": 583904,
    "vol": 7.6
   },
   "92346": {
-   "cagr15": 7.2,
-   "max_dd": -10.0,
+   "cagr15": 7.3,
+   "max_dd": -8.7,
    "n_months": 180,
-   "price": 461225,
-   "vol": 7.7
+   "price": 460266,
+   "vol": 7.6
   },
   "92352": {
    "cagr15": 1.3,
    "max_dd": -43.8,
    "n_months": 180,
-   "price": 491676,
-   "vol": 12.9
+   "price": 488119,
+   "vol": 12.8
   },
   "92354": {
-   "cagr15": 6.6,
-   "max_dd": -11.8,
+   "cagr15": 6.7,
+   "max_dd": -10.3,
    "n_months": 180,
-   "price": 543159,
-   "vol": 7.7
+   "price": 539810,
+   "vol": 7.5
   },
   "92359": {
    "cagr15": 10.0,
    "max_dd": -13.4,
    "n_months": 180,
-   "price": 312949,
-   "vol": 11.6
+   "price": 312041,
+   "vol": 11.5
   },
   "92373": {
-   "cagr15": 6.7,
-   "max_dd": -8.2,
+   "cagr15": 6.8,
+   "max_dd": -6.7,
    "n_months": 180,
-   "price": 429496,
-   "vol": 7.3
+   "price": 428400,
+   "vol": 7.2
   },
   "92374": {
-   "cagr15": 5.8,
-   "max_dd": -14.3,
+   "cagr15": 5.9,
+   "max_dd": -12.5,
    "n_months": 180,
-   "price": 472248,
-   "vol": 7.6
+   "price": 466919,
+   "vol": 7.5
   },
   "92376": {
    "cagr15": 9.6,
    "max_dd": -5.7,
    "n_months": 180,
-   "price": 444347,
+   "price": 443420,
    "vol": 10.1
   },
   "92395": {
-   "cagr15": 9.5,
-   "max_dd": -11.8,
+   "cagr15": 9.9,
+   "max_dd": -7.8,
    "n_months": 180,
-   "price": 268233,
+   "price": 267949,
    "vol": 10.0
   },
   "92399": {
    "cagr15": 6.7,
-   "max_dd": -5.3,
+   "max_dd": -4.3,
    "n_months": 180,
-   "price": 553963,
+   "price": 554258,
    "vol": 6.5
   },
   "92404": {
-   "cagr15": 11.2,
+   "cagr15": 11.3,
    "max_dd": -5.9,
    "n_months": 180,
-   "price": 258832,
-   "vol": 10.2
+   "price": 260699,
+   "vol": 10.1
   },
   "92405": {
    "cagr15": 12.7,
    "max_dd": -6.3,
    "n_months": 180,
-   "price": 292598,
+   "price": 293480,
    "vol": 11.0
   },
   "92407": {
-   "cagr15": 12.6,
-   "max_dd": -8.4,
+   "cagr15": 12.8,
+   "max_dd": -5.7,
    "n_months": 180,
-   "price": 284644,
-   "vol": 11.8
+   "price": 287836,
+   "vol": 11.7
   },
   "92408": {
    "cagr15": 8.9,
    "max_dd": -7.1,
-   "n_months": 126,
-   "price": 421137,
+   "n_months": 127,
+   "price": 418760,
    "vol": 7.8
   },
   "92410": {
-   "cagr15": 11.4,
+   "cagr15": 11.5,
    "max_dd": -9.1,
    "n_months": 180,
-   "price": 269891,
+   "price": 271412,
    "vol": 12.0
   },
   "92501": {
-   "cagr15": 9.6,
+   "cagr15": 9.5,
    "max_dd": -5.6,
    "n_months": 180,
-   "price": 393149,
+   "price": 397167,
    "vol": 8.0
   },
   "92503": {
    "cagr15": 9.5,
-   "max_dd": -6.4,
+   "max_dd": -7.1,
    "n_months": 180,
-   "price": 371441,
+   "price": 373720,
    "vol": 9.3
   },
   "92504": {
    "cagr15": 8.1,
    "max_dd": -4.6,
-   "n_months": 179,
-   "price": 447325,
+   "n_months": 180,
+   "price": 444007,
    "vol": 8.7
   },
   "92505": {
    "cagr15": 8.1,
    "max_dd": -2.9,
    "n_months": 180,
-   "price": 430978,
+   "price": 432289,
    "vol": 8.0
   },
   "92506": {
    "cagr15": 7.7,
    "max_dd": -4.8,
    "n_months": 180,
-   "price": 503212,
-   "vol": 7.7
+   "price": 503153,
+   "vol": 7.6
   },
   "92507": {
-   "cagr15": 7.2,
-   "max_dd": -9.7,
+   "cagr15": 7.3,
+   "max_dd": -8.8,
    "n_months": 180,
-   "price": 367756,
+   "price": 368839,
    "vol": 9.1
   },
   "92508": {
-   "cagr15": 9.5,
+   "cagr15": 9.4,
    "max_dd": -2.8,
-   "n_months": 148,
-   "price": 386021,
+   "n_months": 149,
+   "price": 388379,
    "vol": 7.0
   },
   "92509": {
    "cagr15": 9.3,
    "max_dd": -4.6,
    "n_months": 180,
-   "price": 500210,
+   "price": 504814,
    "vol": 8.8
   },
   "92530": {
-   "cagr15": 11.0,
+   "cagr15": 10.9,
    "max_dd": -4.1,
    "n_months": 180,
-   "price": 392475,
-   "vol": 11.2
+   "price": 392282,
+   "vol": 11.1
   },
   "92532": {
    "cagr15": 7.7,
    "max_dd": -8.5,
    "n_months": 180,
-   "price": 535414,
+   "price": 541640,
    "vol": 9.7
   },
   "92543": {
    "cagr15": 11.8,
    "max_dd": -10.8,
    "n_months": 180,
-   "price": 216347,
+   "price": 216849,
    "vol": 11.1
   },
   "92544": {
-   "cagr15": 10.7,
+   "cagr15": 10.6,
    "max_dd": -6.9,
    "n_months": 180,
-   "price": 245988,
+   "price": 249392,
    "vol": 11.7
   },
   "92545": {
    "cagr15": 10.1,
    "max_dd": -10.0,
    "n_months": 180,
-   "price": 256123,
-   "vol": 10.6
+   "price": 257269,
+   "vol": 10.5
   },
   "92551": {
    "cagr15": 9.5,
    "max_dd": -6.4,
    "n_months": 180,
-   "price": 388821,
-   "vol": 10.4
+   "price": 388961,
+   "vol": 10.3
   },
   "92553": {
-   "cagr15": 9.0,
+   "cagr15": 8.9,
    "max_dd": -6.1,
    "n_months": 180,
-   "price": 391837,
+   "price": 398137,
    "vol": 8.9
   },
   "92555": {
    "cagr15": 10.0,
    "max_dd": -4.6,
    "n_months": 180,
-   "price": 383549,
+   "price": 385233,
    "vol": 9.6
   },
   "92562": {
    "cagr15": 8.5,
    "max_dd": -5.5,
    "n_months": 180,
-   "price": 469826,
+   "price": 470923,
    "vol": 10.0
   },
   "92563": {
    "cagr15": 8.9,
    "max_dd": -5.5,
    "n_months": 180,
-   "price": 451555,
+   "price": 453091,
    "vol": 9.7
   },
   "92583": {
-   "cagr15": 9.3,
-   "max_dd": -12.0,
+   "cagr15": 9.4,
+   "max_dd": -11.8,
    "n_months": 180,
-   "price": 235906,
-   "vol": 10.4
+   "price": 236780,
+   "vol": 10.3
   },
   "92586": {
    "cagr15": 10.4,
    "max_dd": -5.5,
    "n_months": 180,
-   "price": 273534,
+   "price": 274972,
    "vol": 10.1
   },
   "92587": {
    "cagr15": 8.9,
    "max_dd": -4.5,
    "n_months": 180,
-   "price": 474033,
-   "vol": 9.8
+   "price": 468702,
+   "vol": 9.7
   },
   "92591": {
    "cagr15": 8.6,
    "max_dd": -4.8,
    "n_months": 180,
-   "price": 559993,
+   "price": 563207,
    "vol": 9.7
   },
   "92592": {
    "cagr15": 8.3,
    "max_dd": -5.7,
    "n_months": 180,
-   "price": 515931,
-   "vol": 9.4
+   "price": 518772,
+   "vol": 9.5
   },
   "92596": {
    "cagr15": 8.6,
    "max_dd": -7.6,
    "n_months": 180,
-   "price": 499118,
+   "price": 505765,
    "vol": 10.7
   },
   "92602": {
    "cagr15": 6.4,
-   "max_dd": -6.5,
+   "max_dd": -6.1,
    "n_months": 180,
-   "price": 1278785,
+   "price": 1273224,
    "vol": 8.2
   },
   "92603": {
    "cagr15": 6.8,
    "max_dd": -3.9,
    "n_months": 180,
-   "price": 1392854,
-   "vol": 8.0
+   "price": 1377628,
+   "vol": 7.9
   },
   "92604": {
    "cagr15": 7.2,
-   "max_dd": -6.3,
+   "max_dd": -5.7,
    "n_months": 180,
-   "price": 1023109,
+   "price": 1018161,
    "vol": 8.2
   },
   "92606": {
    "cagr15": 6.5,
-   "max_dd": -7.1,
+   "max_dd": -6.5,
    "n_months": 180,
-   "price": 952011,
-   "vol": 7.7
+   "price": 946950,
+   "vol": 7.6
   },
   "92610": {
    "cagr15": 6.7,
-   "max_dd": -6.3,
+   "max_dd": -6.5,
    "n_months": 180,
-   "price": 692881,
+   "price": 688530,
    "vol": 9.3
   },
   "92612": {
    "cagr15": 6.8,
    "max_dd": -4.5,
    "n_months": 180,
-   "price": 1010548,
+   "price": 997959,
    "vol": 7.6
   },
   "92614": {
    "cagr15": 7.0,
-   "max_dd": -6.3,
+   "max_dd": -5.9,
    "n_months": 180,
-   "price": 962482,
+   "price": 955674,
    "vol": 7.6
   },
   "92618": {
-   "cagr15": 6.9,
-   "max_dd": -4.8,
+   "cagr15": 6.8,
+   "max_dd": -4.9,
    "n_months": 180,
-   "price": 1355314,
+   "price": 1338573,
    "vol": 9.2
   },
   "92620": {
    "cagr15": 7.6,
    "max_dd": -5.9,
    "n_months": 180,
-   "price": 1296733,
+   "price": 1281718,
    "vol": 8.7
   },
   "92624": {
    "cagr15": 9.2,
    "max_dd": -5.1,
-   "n_months": 176,
-   "price": 1249865,
-   "vol": 8.2
+   "n_months": 177,
+   "price": 1254144,
+   "vol": 8.1
   },
   "92625": {
-   "cagr15": 7.3,
+   "cagr15": 7.2,
    "max_dd": -6.6,
    "n_months": 180,
-   "price": 2562606,
+   "price": 2559286,
    "vol": 6.8
   },
   "92626": {
-   "cagr15": 6.9,
-   "max_dd": -8.3,
+   "cagr15": 7.0,
+   "max_dd": -7.8,
    "n_months": 180,
-   "price": 795978,
-   "vol": 7.1
+   "price": 792746,
+   "vol": 7.0
   },
   "92627": {
-   "cagr15": 6.8,
-   "max_dd": -6.0,
+   "cagr15": 6.9,
+   "max_dd": -5.4,
    "n_months": 180,
-   "price": 949516,
+   "price": 949835,
    "vol": 6.7
   },
   "92629": {
    "cagr15": 7.8,
-   "max_dd": -5.2,
+   "max_dd": -4.6,
    "n_months": 180,
-   "price": 1076484,
-   "vol": 8.1
+   "price": 1075450,
+   "vol": 8.0
   },
   "92630": {
    "cagr15": 7.5,
-   "max_dd": -6.0,
+   "max_dd": -5.4,
    "n_months": 180,
-   "price": 623001,
+   "price": 618122,
    "vol": 10.0
   },
   "92637": {
    "cagr15": 4.9,
    "max_dd": -6.9,
-   "n_months": 150,
-   "price": 464274,
+   "n_months": 151,
+   "price": 467998,
    "vol": 7.8
   },
   "92646": {
-   "cagr15": 6.3,
-   "max_dd": -6.6,
+   "cagr15": 6.4,
+   "max_dd": -5.8,
    "n_months": 180,
-   "price": 747914,
+   "price": 753988,
    "vol": 6.6
   },
   "92647": {
-   "cagr15": 7.2,
-   "max_dd": -12.3,
+   "cagr15": 7.3,
+   "max_dd": -10.9,
    "n_months": 180,
-   "price": 590843,
-   "vol": 8.3
+   "price": 590759,
+   "vol": 8.1
   },
   "92648": {
-   "cagr15": 6.2,
-   "max_dd": -5.8,
+   "cagr15": 6.3,
+   "max_dd": -5.1,
    "n_months": 180,
-   "price": 900453,
+   "price": 903401,
    "vol": 6.1
   },
   "92649": {
-   "cagr15": 5.5,
-   "max_dd": -8.1,
+   "cagr15": 5.6,
+   "max_dd": -6.9,
    "n_months": 180,
-   "price": 691112,
-   "vol": 6.8
+   "price": 689512,
+   "vol": 6.7
   },
   "92651": {
-   "cagr15": 8.5,
-   "max_dd": -7.4,
+   "cagr15": 8.6,
+   "max_dd": -6.9,
    "n_months": 180,
-   "price": 1639556,
+   "price": 1657656,
    "vol": 8.3
   },
   "92653": {
-   "cagr15": 8.2,
-   "max_dd": -7.4,
+   "cagr15": 8.3,
+   "max_dd": -7.1,
    "n_months": 180,
-   "price": 701960,
-   "vol": 9.5
+   "price": 701275,
+   "vol": 9.4
   },
   "92655": {
-   "cagr15": 7.1,
+   "cagr15": 7.0,
    "max_dd": -5.7,
-   "n_months": 126,
-   "price": 626091,
+   "n_months": 127,
+   "price": 621807,
    "vol": 6.9
   },
   "92656": {
-   "cagr15": 7.1,
-   "max_dd": -6.6,
+   "cagr15": 7.2,
+   "max_dd": -6.2,
    "n_months": 180,
-   "price": 831012,
+   "price": 828932,
    "vol": 8.8
   },
   "92657": {
-   "cagr15": 8.2,
+   "cagr15": 8.1,
    "max_dd": -4.2,
    "n_months": 180,
-   "price": 2173215,
+   "price": 2174767,
    "vol": 7.4
   },
   "92660": {
-   "cagr15": 7.1,
+   "cagr15": 7.2,
    "max_dd": -5.5,
    "n_months": 180,
-   "price": 1764611,
-   "vol": 6.8
+   "price": 1739670,
+   "vol": 6.7
   },
   "92661": {
-   "cagr15": 7.9,
+   "cagr15": 8.0,
    "max_dd": -5.2,
-   "n_months": 146,
-   "price": 2023586,
-   "vol": 8.0
+   "n_months": 147,
+   "price": 2037208,
+   "vol": 7.9
   },
   "92663": {
    "cagr15": 8.2,
-   "max_dd": -7.9,
+   "max_dd": -7.5,
    "n_months": 180,
-   "price": 1380190,
-   "vol": 7.2
+   "price": 1370459,
+   "vol": 7.1
   },
   "92672": {
-   "cagr15": 8.1,
+   "cagr15": 8.2,
    "max_dd": -4.5,
    "n_months": 180,
-   "price": 1115317,
-   "vol": 7.5
+   "price": 1110438,
+   "vol": 7.4
   },
   "92673": {
-   "cagr15": 7.0,
+   "cagr15": 7.1,
    "max_dd": -5.7,
    "n_months": 180,
-   "price": 1064322,
-   "vol": 7.6
+   "price": 1064792,
+   "vol": 7.5
   },
   "92675": {
    "cagr15": 7.9,
    "max_dd": -4.4,
    "n_months": 180,
-   "price": 692861,
+   "price": 690447,
    "vol": 8.7
   },
   "92677": {
-   "cagr15": 7.1,
-   "max_dd": -5.3,
+   "cagr15": 7.2,
+   "max_dd": -5.0,
    "n_months": 180,
-   "price": 762996,
-   "vol": 8.5
+   "price": 762141,
+   "vol": 8.4
   },
   "92679": {
    "cagr15": 6.8,
-   "max_dd": -6.8,
+   "max_dd": -6.2,
    "n_months": 180,
-   "price": 689703,
-   "vol": 8.5
+   "price": 683030,
+   "vol": 8.4
   },
   "92683": {
    "cagr15": 7.0,
-   "max_dd": -6.6,
+   "max_dd": -6.4,
    "n_months": 180,
-   "price": 712812,
+   "price": 714706,
    "vol": 6.5
   },
   "92688": {
    "cagr15": 7.0,
-   "max_dd": -7.2,
+   "max_dd": -6.4,
    "n_months": 180,
-   "price": 683102,
+   "price": 679884,
    "vol": 9.2
   },
   "92691": {
-   "cagr15": 7.4,
-   "max_dd": -7.9,
+   "cagr15": 7.5,
+   "max_dd": -7.1,
    "n_months": 180,
-   "price": 611397,
+   "price": 607059,
    "vol": 9.9
   },
   "92692": {
    "cagr15": 6.5,
    "max_dd": -5.6,
    "n_months": 180,
-   "price": 831799,
+   "price": 828814,
    "vol": 7.7
   },
   "92694": {
    "cagr15": 6.6,
-   "max_dd": -6.5,
+   "max_dd": -6.2,
    "n_months": 180,
-   "price": 897811,
+   "price": 898361,
    "vol": 9.2
   },
   "92701": {
-   "cagr15": 6.9,
-   "max_dd": -5.6,
-   "n_months": 155,
-   "price": 411178,
+   "cagr15": 6.8,
+   "max_dd": -5.9,
+   "n_months": 156,
+   "price": 413248,
    "vol": 6.6
   },
   "92703": {
    "cagr15": 8.2,
-   "max_dd": -7.4,
+   "max_dd": -6.3,
    "n_months": 180,
-   "price": 534261,
-   "vol": 9.0
+   "price": 535601,
+   "vol": 8.9
   },
   "92704": {
    "cagr15": 9.3,
    "max_dd": -5.2,
-   "n_months": 162,
-   "price": 490551,
+   "n_months": 163,
+   "price": 488185,
    "vol": 8.0
   },
   "92705": {
-   "cagr15": 10.1,
-   "max_dd": -4.9,
-   "n_months": 162,
-   "price": 536366,
-   "vol": 7.1
+   "cagr15": 10.0,
+   "max_dd": -5.2,
+   "n_months": 163,
+   "price": 537012,
+   "vol": 7.2
   },
   "92706": {
-   "cagr15": 9.0,
+   "cagr15": 8.9,
    "max_dd": -3.1,
-   "n_months": 164,
-   "price": 507451,
+   "n_months": 165,
+   "price": 506510,
    "vol": 8.1
   },
   "92707": {
-   "cagr15": 7.8,
+   "cagr15": 7.7,
    "max_dd": -3.9,
-   "n_months": 155,
-   "price": 499869,
+   "n_months": 156,
+   "price": 499952,
    "vol": 6.8
   },
   "92708": {
-   "cagr15": 6.4,
-   "max_dd": -6.3,
+   "cagr15": 6.5,
+   "max_dd": -5.1,
    "n_months": 180,
-   "price": 630312,
-   "vol": 6.1
+   "price": 632961,
+   "vol": 6.0
   },
   "92780": {
    "cagr15": 8.5,
-   "max_dd": -4.5,
+   "max_dd": -4.7,
    "n_months": 180,
-   "price": 600645,
+   "price": 598957,
    "vol": 9.1
   },
   "92782": {
    "cagr15": 6.6,
-   "max_dd": -6.2,
+   "max_dd": -5.8,
    "n_months": 180,
-   "price": 946844,
+   "price": 940867,
    "vol": 7.2
   },
   "92801": {
    "cagr15": 7.6,
    "max_dd": -4.5,
    "n_months": 180,
-   "price": 669215,
+   "price": 669972,
    "vol": 7.5
   },
   "92802": {
    "cagr15": 7.6,
-   "max_dd": -4.5,
+   "max_dd": -4.0,
    "n_months": 180,
-   "price": 673494,
+   "price": 673265,
    "vol": 6.8
   },
   "92804": {
-   "cagr15": 8.3,
+   "cagr15": 8.2,
    "max_dd": -4.0,
-   "n_months": 164,
-   "price": 554492,
+   "n_months": 165,
+   "price": 555763,
    "vol": 7.3
   },
   "92805": {
    "cagr15": 6.2,
    "max_dd": -4.7,
    "n_months": 180,
-   "price": 694530,
-   "vol": 6.5
+   "price": 693255,
+   "vol": 6.4
   },
   "92806": {
    "cagr15": 7.9,
    "max_dd": -3.4,
-   "n_months": 162,
-   "price": 618148,
+   "n_months": 163,
+   "price": 617577,
    "vol": 6.6
   },
   "92807": {
    "cagr15": 7.0,
-   "max_dd": -7.2,
+   "max_dd": -6.9,
    "n_months": 180,
-   "price": 637492,
+   "price": 634291,
    "vol": 7.4
   },
   "92808": {
    "cagr15": 6.4,
-   "max_dd": -7.3,
+   "max_dd": -6.6,
    "n_months": 180,
-   "price": 713783,
+   "price": 711695,
    "vol": 7.8
   },
   "92821": {
    "cagr15": 6.6,
-   "max_dd": -6.2,
+   "max_dd": -6.0,
    "n_months": 180,
-   "price": 720918,
-   "vol": 7.1
+   "price": 725609,
+   "vol": 7.0
   },
   "92831": {
    "cagr15": 7.0,
-   "max_dd": -5.3,
+   "max_dd": -4.6,
    "n_months": 180,
-   "price": 558131,
-   "vol": 7.3
+   "price": 558866,
+   "vol": 7.2
   },
   "92832": {
-   "cagr15": 8.3,
+   "cagr15": 8.2,
    "max_dd": -4.2,
-   "n_months": 164,
-   "price": 545336,
+   "n_months": 165,
+   "price": 548301,
    "vol": 8.6
   },
   "92833": {
-   "cagr15": 6.9,
-   "max_dd": -5.9,
+   "cagr15": 7.0,
+   "max_dd": -5.2,
    "n_months": 180,
-   "price": 737294,
+   "price": 737416,
    "vol": 6.8
   },
   "92835": {
    "cagr15": 7.3,
-   "max_dd": -4.6,
+   "max_dd": -4.8,
    "n_months": 180,
-   "price": 550707,
+   "price": 549620,
    "vol": 8.4
   },
   "92840": {
    "cagr15": 7.3,
    "max_dd": -3.6,
-   "n_months": 164,
-   "price": 569057,
+   "n_months": 165,
+   "price": 570897,
    "vol": 6.2
   },
   "92841": {
    "cagr15": 6.8,
-   "max_dd": -5.9,
+   "max_dd": -5.7,
    "n_months": 180,
-   "price": 608623,
+   "price": 616544,
    "vol": 6.7
   },
   "92843": {
    "cagr15": 7.6,
-   "max_dd": -5.7,
+   "max_dd": -5.6,
    "n_months": 180,
-   "price": 561086,
+   "price": 560563,
    "vol": 7.7
   },
   "92844": {
    "cagr15": 7.4,
-   "max_dd": -5.8,
+   "max_dd": -5.2,
    "n_months": 180,
-   "price": 629898,
-   "vol": 6.8
+   "price": 631316,
+   "vol": 6.7
   },
   "92845": {
    "cagr15": 6.5,
-   "max_dd": -13.7,
+   "max_dd": -13.2,
    "n_months": 180,
-   "price": 633597,
-   "vol": 7.9
+   "price": 632928,
+   "vol": 7.7
   },
   "92865": {
    "cagr15": 7.5,
    "max_dd": -4.6,
    "n_months": 180,
-   "price": 699774,
+   "price": 698641,
    "vol": 7.1
   },
   "92866": {
-   "cagr15": 8.0,
+   "cagr15": 7.9,
    "max_dd": -4.0,
-   "n_months": 162,
-   "price": 629403,
+   "n_months": 163,
+   "price": 632373,
    "vol": 6.2
   },
   "92867": {
-   "cagr15": 6.8,
+   "cagr15": 6.9,
    "max_dd": -6.1,
    "n_months": 180,
-   "price": 818732,
-   "vol": 7.4
+   "price": 814301,
+   "vol": 7.3
   },
   "92868": {
    "cagr15": 9.0,
-   "max_dd": -5.0,
+   "max_dd": -4.4,
    "n_months": 180,
-   "price": 556803,
+   "price": 556953,
    "vol": 8.6
   },
   "92869": {
-   "cagr15": 8.0,
+   "cagr15": 7.9,
    "max_dd": -4.2,
-   "n_months": 168,
-   "price": 696252,
-   "vol": 7.5
+   "n_months": 169,
+   "price": 696104,
+   "vol": 7.6
   },
   "92870": {
    "cagr15": 6.7,
-   "max_dd": -6.0,
+   "max_dd": -5.3,
    "n_months": 180,
-   "price": 666574,
-   "vol": 7.3
+   "price": 665804,
+   "vol": 7.2
   },
   "92879": {
    "cagr15": 7.5,
-   "max_dd": -5.4,
+   "max_dd": -5.7,
    "n_months": 180,
-   "price": 461792,
+   "price": 461307,
    "vol": 9.1
   },
   "92880": {
-   "cagr15": 6.5,
+   "cagr15": 6.4,
    "max_dd": -5.3,
-   "n_months": 174,
-   "price": 647093,
+   "n_months": 175,
+   "price": 655675,
    "vol": 8.2
   },
   "92881": {
-   "cagr15": 7.4,
+   "cagr15": 7.5,
    "max_dd": -6.1,
    "n_months": 180,
-   "price": 664709,
+   "price": 661870,
    "vol": 8.5
   },
   "92882": {
-   "cagr15": 7.9,
+   "cagr15": 8.0,
    "max_dd": -4.5,
    "n_months": 180,
-   "price": 455940,
+   "price": 452274,
    "vol": 9.2
   },
   "92883": {
    "cagr15": 5.8,
    "max_dd": -5.8,
    "n_months": 180,
-   "price": 632539,
+   "price": 640938,
    "vol": 7.5
   },
   "92886": {
    "cagr15": 6.0,
    "max_dd": -6.6,
    "n_months": 180,
-   "price": 749995,
-   "vol": 7.9
+   "price": 745549,
+   "vol": 7.8
   },
   "92887": {
-   "cagr15": 5.9,
-   "max_dd": -6.8,
+   "cagr15": 6.0,
+   "max_dd": -6.1,
    "n_months": 180,
-   "price": 603910,
+   "price": 605396,
    "vol": 8.5
   },
   "93063": {
-   "cagr15": 5.7,
-   "max_dd": -11.3,
+   "cagr15": 5.8,
+   "max_dd": -10.3,
    "n_months": 180,
-   "price": 497489,
-   "vol": 7.6
+   "price": 496438,
+   "vol": 7.5
   },
   "93065": {
    "cagr15": 5.3,
-   "max_dd": -8.8,
+   "max_dd": -8.2,
    "n_months": 180,
-   "price": 586642,
-   "vol": 6.8
+   "price": 584295,
+   "vol": 6.7
   },
   "93277": {
    "cagr15": 6.9,
    "max_dd": -5.4,
-   "n_months": 138,
-   "price": 261177,
-   "vol": 6.3
+   "n_months": 139,
+   "price": 262776,
+   "vol": 6.4
   },
   "93291": {
-   "cagr15": 6.4,
+   "cagr15": 6.3,
    "max_dd": -6.4,
-   "n_months": 138,
-   "price": 269965,
+   "n_months": 139,
+   "price": 271619,
    "vol": 6.3
   },
   "93301": {
-   "cagr15": 10.5,
+   "cagr15": 10.4,
    "max_dd": -2.6,
-   "n_months": 175,
-   "price": 183823,
+   "n_months": 176,
+   "price": 181419,
    "vol": 8.4
   },
   "93306": {
-   "cagr15": 8.2,
-   "max_dd": -4.4,
+   "cagr15": 8.3,
+   "max_dd": -3.5,
    "n_months": 180,
-   "price": 248712,
-   "vol": 7.4
+   "price": 247573,
+   "vol": 7.5
   },
   "93307": {
-   "cagr15": 8.5,
+   "cagr15": 8.4,
    "max_dd": -4.3,
-   "n_months": 113,
-   "price": 271113,
-   "vol": 7.2
+   "n_months": 114,
+   "price": 267543,
+   "vol": 7.3
   },
   "93308": {
    "cagr15": 8.1,
    "max_dd": -2.6,
-   "n_months": 174,
-   "price": 231042,
+   "n_months": 175,
+   "price": 232504,
    "vol": 5.5
   },
   "93309": {
    "cagr15": 8.4,
-   "max_dd": -4.8,
+   "max_dd": -4.0,
    "n_months": 180,
-   "price": 229326,
+   "price": 229010,
    "vol": 8.2
   },
   "93311": {
-   "cagr15": 7.9,
+   "cagr15": 7.8,
    "max_dd": -6.0,
-   "n_months": 175,
-   "price": 263388,
-   "vol": 7.7
+   "n_months": 176,
+   "price": 260844,
+   "vol": 7.8
   },
   "93550": {
    "cagr15": 10.5,
-   "max_dd": -5.4,
+   "max_dd": -5.6,
    "n_months": 180,
-   "price": 310841,
+   "price": 308719,
    "vol": 10.2
   },
   "93551": {
    "cagr15": 7.9,
    "max_dd": -9.1,
    "n_months": 180,
-   "price": 399705,
-   "vol": 8.8
+   "price": 396539,
+   "vol": 8.7
   },
   "93561": {
    "cagr15": 8.7,
    "max_dd": -4.7,
-   "n_months": 174,
-   "price": 244660,
+   "n_months": 175,
+   "price": 244189,
    "vol": 6.5
   },
   "93611": {
-   "cagr15": 6.7,
-   "max_dd": -4.2,
+   "cagr15": 6.8,
+   "max_dd": -3.4,
    "n_months": 180,
-   "price": 369238,
+   "price": 368391,
    "vol": 5.6
   },
   "93612": {
-   "cagr15": 10.3,
-   "max_dd": -7.5,
+   "cagr15": 10.4,
+   "max_dd": -6.6,
    "n_months": 180,
-   "price": 224841,
-   "vol": 8.7
+   "price": 224577,
+   "vol": 8.6
   },
   "93619": {
    "cagr15": 6.2,
    "max_dd": -3.7,
    "n_months": 180,
-   "price": 427192,
+   "price": 426984,
    "vol": 6.4
   },
   "93702": {
-   "cagr15": 8.1,
+   "cagr15": 7.9,
    "max_dd": -14.4,
    "n_months": 180,
-   "price": 141842,
-   "vol": 8.2
+   "price": 143007,
+   "vol": 8.1
   },
   "93703": {
    "cagr15": 9.9,
-   "max_dd": -4.9,
+   "max_dd": -4.5,
    "n_months": 180,
-   "price": 174243,
+   "price": 177518,
    "vol": 8.0
   },
   "93704": {
-   "cagr15": 6.6,
-   "max_dd": -9.7,
+   "cagr15": 6.7,
+   "max_dd": -8.2,
    "n_months": 180,
-   "price": 272879,
+   "price": 273343,
    "vol": 6.4
   },
   "93705": {
-   "cagr15": 9.0,
+   "cagr15": 9.1,
    "max_dd": -4.2,
    "n_months": 180,
-   "price": 165689,
+   "price": 164729,
    "vol": 7.8
   },
   "93710": {
    "cagr15": 10.2,
-   "max_dd": -2.0,
+   "max_dd": -2.3,
    "n_months": 180,
-   "price": 192603,
+   "price": 189846,
    "vol": 7.2
   },
   "93711": {
-   "cagr15": 5.8,
-   "max_dd": -8.3,
+   "cagr15": 5.9,
+   "max_dd": -6.9,
    "n_months": 180,
-   "price": 286299,
+   "price": 285238,
    "vol": 5.3
   },
   "93720": {
-   "cagr15": 6.7,
-   "max_dd": -4.5,
+   "cagr15": 6.8,
+   "max_dd": -4.6,
    "n_months": 180,
-   "price": 277890,
-   "vol": 5.6
+   "price": 272296,
+   "vol": 5.7
   },
   "93721": {
-   "cagr15": 8.7,
-   "max_dd": -7.6,
+   "cagr15": 8.8,
+   "max_dd": -7.9,
    "n_months": 180,
-   "price": 162764,
-   "vol": 8.2
+   "price": 164829,
+   "vol": 8.3
   },
   "93726": {
    "cagr15": 10.2,
-   "max_dd": -3.9,
+   "max_dd": -3.7,
    "n_months": 180,
-   "price": 206734,
+   "price": 204887,
    "vol": 8.5
   },
   "93727": {
    "cagr15": 9.0,
-   "max_dd": -4.2,
+   "max_dd": -3.8,
    "n_months": 180,
-   "price": 179268,
+   "price": 181849,
    "vol": 6.6
   },
   "94002": {
-   "cagr15": 5.9,
-   "max_dd": -17.1,
+   "cagr15": 6.0,
+   "max_dd": -17.3,
    "n_months": 180,
-   "price": 859610,
-   "vol": 10.4
+   "price": 859931,
+   "vol": 10.5
   },
   "94005": {
    "cagr15": 5.2,
    "max_dd": -15.6,
    "n_months": 180,
-   "price": 845911,
+   "price": 842580,
    "vol": 9.2
   },
   "94010": {
-   "cagr15": 5.3,
+   "cagr15": 5.4,
    "max_dd": -12.0,
    "n_months": 180,
-   "price": 1070014,
+   "price": 1076895,
    "vol": 8.7
   },
   "94014": {
-   "cagr15": 5.7,
-   "max_dd": -18.3,
+   "cagr15": 5.8,
+   "max_dd": -18.4,
    "n_months": 180,
-   "price": 724461,
+   "price": 727516,
    "vol": 10.1
   },
   "94015": {
-   "cagr15": 5.6,
-   "max_dd": -18.2,
+   "cagr15": 5.7,
+   "max_dd": -18.3,
    "n_months": 180,
-   "price": 521755,
+   "price": 529893,
    "vol": 11.5
   },
   "94019": {
-   "cagr15": 5.0,
-   "max_dd": -11.7,
+   "cagr15": 5.2,
+   "max_dd": -11.8,
    "n_months": 180,
-   "price": 733845,
+   "price": 727673,
    "vol": 7.9
   },
   "94022": {
-   "cagr15": 6.7,
+   "cagr15": 6.6,
    "max_dd": -10.7,
    "n_months": 180,
-   "price": 1524970,
+   "price": 1536149,
    "vol": 10.4
   },
   "94025": {
-   "cagr15": 5.0,
+   "cagr15": 5.2,
    "max_dd": -12.2,
    "n_months": 180,
-   "price": 1271784,
+   "price": 1270953,
    "vol": 9.3
   },
   "94030": {
-   "cagr15": 5.0,
+   "cagr15": 5.1,
    "max_dd": -13.2,
    "n_months": 180,
-   "price": 913071,
+   "price": 919463,
    "vol": 8.0
   },
   "94040": {
    "cagr15": 6.2,
-   "max_dd": -17.5,
+   "max_dd": -17.6,
    "n_months": 180,
-   "price": 868875,
+   "price": 882380,
    "vol": 12.5
   },
   "94041": {
    "cagr15": 6.3,
    "max_dd": -12.3,
    "n_months": 180,
-   "price": 1079798,
+   "price": 1103506,
    "vol": 11.2
   },
   "94043": {
    "cagr15": 6.6,
    "max_dd": -16.2,
    "n_months": 180,
-   "price": 976343,
-   "vol": 12.4
+   "price": 983225,
+   "vol": 12.5
   },
   "94044": {
-   "cagr15": 5.8,
+   "cagr15": 5.9,
    "max_dd": -12.2,
    "n_months": 180,
-   "price": 878746,
-   "vol": 8.8
+   "price": 876488,
+   "vol": 8.7
   },
   "94061": {
-   "cagr15": 5.6,
+   "cagr15": 5.8,
    "max_dd": -17.4,
    "n_months": 180,
-   "price": 830394,
+   "price": 832747,
    "vol": 9.9
   },
   "94062": {
-   "cagr15": 5.9,
+   "cagr15": 6.2,
    "max_dd": -14.7,
    "n_months": 180,
-   "price": 866452,
+   "price": 867759,
    "vol": 10.2
   },
   "94063": {
    "cagr15": 7.1,
    "max_dd": -15.9,
    "n_months": 180,
-   "price": 986679,
+   "price": 979824,
    "vol": 11.1
   },
   "94065": {
-   "cagr15": 5.5,
-   "max_dd": -15.5,
+   "cagr15": 5.6,
+   "max_dd": -15.6,
    "n_months": 180,
-   "price": 1054306,
+   "price": 1059299,
    "vol": 9.3
   },
   "94066": {
    "cagr15": 5.7,
    "max_dd": -23.5,
    "n_months": 180,
-   "price": 434441,
+   "price": 445412,
    "vol": 14.0
   },
   "94070": {
-   "cagr15": 5.0,
+   "cagr15": 5.1,
    "max_dd": -19.0,
    "n_months": 180,
-   "price": 967265,
+   "price": 974776,
    "vol": 10.0
   },
   "94080": {
-   "cagr15": 6.3,
+   "cagr15": 6.4,
    "max_dd": -12.7,
    "n_months": 180,
-   "price": 719341,
+   "price": 723742,
    "vol": 10.0
   },
   "94085": {
-   "cagr15": 7.1,
+   "cagr15": 7.0,
    "max_dd": -13.7,
    "n_months": 180,
-   "price": 1035077,
+   "price": 1033519,
    "vol": 12.8
   },
   "94086": {
-   "cagr15": 7.3,
+   "cagr15": 7.2,
    "max_dd": -13.3,
    "n_months": 180,
-   "price": 962333,
+   "price": 962326,
    "vol": 12.6
   },
   "94087": {
-   "cagr15": 6.9,
+   "cagr15": 6.8,
    "max_dd": -12.6,
    "n_months": 180,
-   "price": 988615,
-   "vol": 12.0
+   "price": 993104,
+   "vol": 12.1
   },
   "94089": {
    "cagr15": 7.6,
    "max_dd": -13.7,
    "n_months": 180,
-   "price": 1176402,
+   "price": 1171357,
    "vol": 11.7
   },
   "94102": {
-   "cagr15": 2.8,
+   "cagr15": 3.0,
    "max_dd": -23.1,
    "n_months": 180,
-   "price": 700338,
+   "price": 714656,
    "vol": 9.1
   },
   "94103": {
-   "cagr15": 2.8,
+   "cagr15": 2.9,
    "max_dd": -25.9,
    "n_months": 180,
-   "price": 776865,
+   "price": 790059,
    "vol": 9.6
   },
   "94105": {
-   "cagr15": 3.3,
+   "cagr15": 3.4,
    "max_dd": -18.9,
    "n_months": 180,
-   "price": 1079965,
+   "price": 1112752,
    "vol": 9.2
   },
   "94107": {
-   "cagr15": 3.5,
+   "cagr15": 3.6,
    "max_dd": -19.7,
    "n_months": 180,
-   "price": 934788,
+   "price": 957339,
    "vol": 9.2
   },
   "94108": {
-   "cagr15": 2.9,
+   "cagr15": 3.0,
    "max_dd": -21.9,
    "n_months": 180,
-   "price": 917424,
+   "price": 930395,
    "vol": 7.9
   },
   "94109": {
-   "cagr15": 3.0,
+   "cagr15": 3.1,
    "max_dd": -19.6,
    "n_months": 180,
-   "price": 987272,
+   "price": 1015070,
    "vol": 8.4
   },
   "94110": {
-   "cagr15": 4.8,
+   "cagr15": 4.9,
    "max_dd": -14.3,
    "n_months": 180,
-   "price": 1110288,
+   "price": 1127039,
    "vol": 9.5
   },
   "94111": {
-   "cagr15": 3.3,
+   "cagr15": 3.4,
    "max_dd": -16.3,
    "n_months": 180,
-   "price": 1103000,
+   "price": 1101071,
    "vol": 7.9
   },
   "94112": {
-   "cagr15": 6.6,
+   "cagr15": 6.7,
    "max_dd": -12.5,
    "n_months": 180,
-   "price": 865800,
+   "price": 878005,
    "vol": 8.6
   },
   "94114": {
-   "cagr15": 5.2,
+   "cagr15": 5.3,
    "max_dd": -14.5,
    "n_months": 180,
-   "price": 1427938,
-   "vol": 8.7
+   "price": 1462369,
+   "vol": 8.8
   },
   "94115": {
-   "cagr15": 4.6,
+   "cagr15": 4.7,
    "max_dd": -14.1,
    "n_months": 180,
-   "price": 1207923,
+   "price": 1221428,
    "vol": 7.8
   },
   "94116": {
-   "cagr15": 3.5,
+   "cagr15": 3.6,
    "max_dd": -15.3,
-   "n_months": 151,
-   "price": 1001467,
-   "vol": 7.1
+   "n_months": 152,
+   "price": 1016724,
+   "vol": 7.0
   },
   "94117": {
-   "cagr15": 5.5,
+   "cagr15": 5.6,
    "max_dd": -13.6,
    "n_months": 180,
-   "price": 1371691,
+   "price": 1391791,
    "vol": 8.8
   },
   "94118": {
-   "cagr15": 4.9,
+   "cagr15": 5.1,
    "max_dd": -14.9,
    "n_months": 180,
-   "price": 1457832,
+   "price": 1495552,
    "vol": 7.7
   },
   "94121": {
-   "cagr15": 5.5,
+   "cagr15": 5.7,
    "max_dd": -13.1,
    "n_months": 180,
-   "price": 1195628,
+   "price": 1217327,
    "vol": 7.8
   },
   "94122": {
-   "cagr15": 5.7,
+   "cagr15": 5.8,
    "max_dd": -13.4,
    "n_months": 180,
-   "price": 1187932,
+   "price": 1209204,
    "vol": 7.8
   },
   "94123": {
-   "cagr15": 4.4,
+   "cagr15": 4.6,
    "max_dd": -14.4,
    "n_months": 180,
-   "price": 1724891,
-   "vol": 7.9
+   "price": 1767168,
+   "vol": 8.0
   },
   "94124": {
-   "cagr15": 5.6,
+   "cagr15": 5.7,
    "max_dd": -18.8,
    "n_months": 180,
-   "price": 646321,
+   "price": 653124,
    "vol": 9.8
   },
   "94127": {
-   "cagr15": 4.7,
+   "cagr15": 4.8,
    "max_dd": -17.5,
    "n_months": 180,
-   "price": 800270,
+   "price": 814921,
    "vol": 8.6
   },
   "94131": {
-   "cagr15": 5.4,
+   "cagr15": 5.5,
    "max_dd": -12.5,
    "n_months": 180,
-   "price": 977670,
+   "price": 998677,
    "vol": 8.5
   },
   "94132": {
-   "cagr15": 5.4,
+   "cagr15": 5.5,
    "max_dd": -17.4,
    "n_months": 180,
-   "price": 789580,
+   "price": 796785,
    "vol": 9.6
   },
   "94133": {
-   "cagr15": 3.1,
+   "cagr15": 3.3,
    "max_dd": -17.3,
    "n_months": 180,
-   "price": 1248019,
+   "price": 1277656,
    "vol": 8.1
   },
   "94134": {
-   "cagr15": 4.9,
+   "cagr15": 5.0,
    "max_dd": -15.0,
    "n_months": 180,
-   "price": 750577,
+   "price": 754238,
    "vol": 8.1
   },
   "94158": {
-   "cagr15": 4.9,
+   "cagr15": 5.0,
    "max_dd": -12.7,
    "n_months": 180,
-   "price": 1335087,
+   "price": 1340170,
    "vol": 9.0
   },
   "94301": {
    "cagr15": 5.3,
    "max_dd": -16.6,
    "n_months": 180,
-   "price": 1571454,
+   "price": 1562237,
    "vol": 11.1
   },
   "94303": {
    "cagr15": 4.9,
-   "max_dd": -26.4,
+   "max_dd": -26.6,
    "n_months": 180,
-   "price": 886537,
+   "price": 875745,
    "vol": 12.6
   },
   "94305": {
-   "cagr15": 5.2,
+   "cagr15": 5.3,
    "max_dd": -16.3,
    "n_months": 180,
-   "price": 1030462,
+   "price": 1033177,
    "vol": 11.7
   },
   "94306": {
    "cagr15": 5.4,
    "max_dd": -15.3,
    "n_months": 180,
-   "price": 1156978,
+   "price": 1167519,
    "vol": 11.2
   },
   "94401": {
-   "cagr15": 4.6,
+   "cagr15": 4.8,
    "max_dd": -21.1,
    "n_months": 180,
-   "price": 659078,
+   "price": 670104,
    "vol": 10.7
   },
   "94402": {
-   "cagr15": 5.0,
+   "cagr15": 5.1,
    "max_dd": -11.8,
    "n_months": 180,
-   "price": 1091526,
+   "price": 1087316,
    "vol": 7.9
   },
   "94403": {
-   "cagr15": 4.8,
+   "cagr15": 4.9,
    "max_dd": -22.6,
    "n_months": 180,
-   "price": 772755,
+   "price": 773948,
    "vol": 11.2
   },
   "94404": {
-   "cagr15": 4.9,
-   "max_dd": -15.1,
+   "cagr15": 5.0,
+   "max_dd": -15.2,
    "n_months": 180,
-   "price": 931800,
+   "price": 932877,
    "vol": 9.0
   },
   "94501": {
-   "cagr15": 4.3,
+   "cagr15": 4.4,
    "max_dd": -18.4,
    "n_months": 180,
-   "price": 624647,
+   "price": 622752,
    "vol": 9.3
   },
   "94502": {
-   "cagr15": 5.6,
+   "cagr15": 5.7,
    "max_dd": -12.6,
    "n_months": 180,
-   "price": 1095168,
-   "vol": 8.3
+   "price": 1095916,
+   "vol": 8.2
   },
   "94505": {
-   "cagr15": 6.4,
+   "cagr15": 6.3,
    "max_dd": -12.0,
-   "n_months": 125,
-   "price": 522697,
+   "n_months": 126,
+   "price": 517452,
    "vol": 8.6
   },
   "94509": {
-   "cagr15": 5.8,
-   "max_dd": -23.2,
-   "n_months": 125,
-   "price": 238824,
+   "cagr15": 5.7,
+   "max_dd": -23.4,
+   "n_months": 126,
+   "price": 238784,
    "vol": 10.8
   },
   "94510": {
-   "cagr15": 7.6,
-   "max_dd": -10.3,
+   "cagr15": 7.7,
+   "max_dd": -8.9,
    "n_months": 180,
-   "price": 458642,
+   "price": 450747,
    "vol": 10.6
   },
   "94518": {
-   "cagr15": 2.4,
-   "max_dd": -20.3,
-   "n_months": 125,
-   "price": 328619,
-   "vol": 7.3
+   "cagr15": 2.3,
+   "max_dd": -20.9,
+   "n_months": 126,
+   "price": 328019,
+   "vol": 7.4
   },
   "94519": {
    "cagr15": 4.5,
    "max_dd": -13.0,
-   "n_months": 125,
-   "price": 415194,
+   "n_months": 126,
+   "price": 438249,
    "vol": 6.7
   },
   "94520": {
    "cagr15": 3.5,
-   "max_dd": -21.1,
-   "n_months": 126,
-   "price": 293265,
-   "vol": 8.4
+   "max_dd": -21.3,
+   "n_months": 127,
+   "price": 292142,
+   "vol": 8.5
   },
   "94521": {
-   "cagr15": 3.3,
-   "max_dd": -14.4,
-   "n_months": 125,
-   "price": 371540,
-   "vol": 6.9
+   "cagr15": 3.2,
+   "max_dd": -14.9,
+   "n_months": 126,
+   "price": 369946,
+   "vol": 7.0
   },
   "94523": {
-   "cagr15": 2.5,
-   "max_dd": -9.8,
-   "n_months": 125,
-   "price": 478282,
+   "cagr15": 2.4,
+   "max_dd": -10.0,
+   "n_months": 126,
+   "price": 476793,
    "vol": 4.9
   },
   "94526": {
    "cagr15": 5.2,
    "max_dd": -28.6,
-   "n_months": 125,
-   "price": 863678,
+   "n_months": 126,
+   "price": 879012,
    "vol": 12.9
   },
   "94530": {
    "cagr15": 0.6,
-   "max_dd": -22.1,
-   "n_months": 125,
-   "price": 578170,
-   "vol": 6.5
+   "max_dd": -22.2,
+   "n_months": 126,
+   "price": 578823,
+   "vol": 6.4
   },
   "94531": {
-   "cagr15": 5.5,
-   "max_dd": -16.7,
-   "n_months": 125,
-   "price": 349176,
+   "cagr15": 5.4,
+   "max_dd": -17.0,
+   "n_months": 126,
+   "price": 346019,
    "vol": 8.9
   },
   "94533": {
-   "cagr15": 9.3,
-   "max_dd": -14.0,
+   "cagr15": 9.4,
+   "max_dd": -14.1,
    "n_months": 180,
-   "price": 272129,
+   "price": 269176,
    "vol": 13.5
   },
   "94534": {
    "cagr15": 6.5,
    "max_dd": -7.5,
    "n_months": 180,
-   "price": 535461,
+   "price": 526440,
    "vol": 8.5
   },
   "94536": {
    "cagr15": 6.2,
-   "max_dd": -12.7,
+   "max_dd": -13.3,
    "n_months": 180,
-   "price": 591398,
-   "vol": 11.8
+   "price": 590106,
+   "vol": 11.9
   },
   "94538": {
    "cagr15": 6.9,
-   "max_dd": -16.4,
+   "max_dd": -16.8,
    "n_months": 180,
-   "price": 657535,
+   "price": 654088,
    "vol": 12.8
   },
   "94539": {
-   "cagr15": 5.7,
-   "max_dd": -10.6,
+   "cagr15": 5.6,
+   "max_dd": -10.9,
    "n_months": 180,
-   "price": 943272,
-   "vol": 8.3
+   "price": 939844,
+   "vol": 8.4
   },
   "94541": {
    "cagr15": 7.8,
-   "max_dd": -12.0,
+   "max_dd": -12.3,
    "n_months": 180,
-   "price": 546667,
+   "price": 552277,
    "vol": 12.9
   },
   "94542": {
    "cagr15": 7.0,
    "max_dd": -12.5,
    "n_months": 180,
-   "price": 820619,
+   "price": 800500,
    "vol": 10.1
   },
   "94544": {
    "cagr15": 9.3,
-   "max_dd": -16.3,
+   "max_dd": -16.7,
    "n_months": 180,
-   "price": 497893,
+   "price": 497775,
    "vol": 16.8
   },
   "94545": {
-   "cagr15": 7.6,
-   "max_dd": -18.0,
+   "cagr15": 7.5,
+   "max_dd": -18.4,
    "n_months": 180,
-   "price": 559206,
+   "price": 559282,
    "vol": 13.7
   },
   "94546": {
    "cagr15": 5.1,
-   "max_dd": -23.1,
+   "max_dd": -23.5,
    "n_months": 180,
-   "price": 516974,
-   "vol": 12.6
+   "price": 512337,
+   "vol": 12.5
   },
   "94547": {
-   "cagr15": 3.6,
-   "max_dd": -13.4,
-   "n_months": 125,
-   "price": 446496,
+   "cagr15": 3.5,
+   "max_dd": -13.6,
+   "n_months": 126,
+   "price": 450020,
    "vol": 6.9
   },
   "94549": {
-   "cagr15": 1.6,
-   "max_dd": -16.2,
-   "n_months": 125,
-   "price": 1130060,
+   "cagr15": 1.5,
+   "max_dd": -16.9,
+   "n_months": 126,
+   "price": 1124271,
    "vol": 5.7
   },
   "94550": {
-   "cagr15": 8.7,
+   "cagr15": 8.6,
    "max_dd": -7.7,
    "n_months": 180,
-   "price": 698879,
+   "price": 696555,
    "vol": 10.4
   },
   "94551": {
    "cagr15": 7.2,
    "max_dd": -9.8,
    "n_months": 180,
-   "price": 703481,
+   "price": 696792,
    "vol": 11.7
   },
   "94552": {
    "cagr15": 6.2,
    "max_dd": -14.7,
    "n_months": 180,
-   "price": 1177139,
+   "price": 1166556,
    "vol": 8.9
   },
   "94553": {
-   "cagr15": 3.4,
-   "max_dd": -10.6,
-   "n_months": 125,
-   "price": 444720,
+   "cagr15": 3.3,
+   "max_dd": -11.1,
+   "n_months": 126,
+   "price": 440270,
    "vol": 6.6
   },
   "94555": {
    "cagr15": 5.6,
-   "max_dd": -14.7,
+   "max_dd": -15.2,
    "n_months": 180,
-   "price": 818294,
-   "vol": 9.8
+   "price": 812463,
+   "vol": 9.7
   },
   "94556": {
    "cagr15": 3.3,
    "max_dd": -9.4,
-   "n_months": 125,
-   "price": 663307,
+   "n_months": 126,
+   "price": 667332,
    "vol": 5.8
   },
   "94559": {
-   "cagr15": 6.0,
-   "max_dd": -8.5,
+   "cagr15": 6.1,
+   "max_dd": -9.2,
    "n_months": 180,
-   "price": 606466,
+   "price": 606060,
    "vol": 7.9
   },
   "94560": {
    "cagr15": 7.9,
-   "max_dd": -10.7,
+   "max_dd": -11.4,
    "n_months": 180,
-   "price": 790308,
+   "price": 780854,
    "vol": 13.3
   },
   "94561": {
-   "cagr15": 4.8,
+   "cagr15": 4.7,
    "max_dd": -9.7,
-   "n_months": 125,
-   "price": 392347,
+   "n_months": 126,
+   "price": 389074,
    "vol": 7.4
   },
   "94564": {
    "cagr15": 2.8,
-   "max_dd": -18.4,
-   "n_months": 125,
-   "price": 401141,
+   "max_dd": -18.5,
+   "n_months": 126,
+   "price": 402103,
    "vol": 7.5
   },
   "94565": {
-   "cagr15": 3.9,
-   "max_dd": -17.6,
-   "n_months": 125,
-   "price": 318646,
+   "cagr15": 3.8,
+   "max_dd": -17.8,
+   "n_months": 126,
+   "price": 316041,
    "vol": 7.9
   },
   "94566": {
    "cagr15": 5.7,
-   "max_dd": -13.6,
+   "max_dd": -13.8,
    "n_months": 180,
-   "price": 747704,
+   "price": 736396,
    "vol": 8.9
   },
   "94568": {
    "cagr15": 5.4,
-   "max_dd": -18.3,
+   "max_dd": -19.1,
    "n_months": 180,
-   "price": 859241,
-   "vol": 10.9
+   "price": 862376,
+   "vol": 11.0
   },
   "94577": {
-   "cagr15": 6.0,
-   "max_dd": -19.8,
+   "cagr15": 6.1,
+   "max_dd": -20.1,
    "n_months": 180,
-   "price": 474427,
+   "price": 470018,
    "vol": 11.9
   },
   "94578": {
    "cagr15": 7.8,
-   "max_dd": -17.4,
+   "max_dd": -17.5,
    "n_months": 180,
-   "price": 440491,
+   "price": 439788,
    "vol": 13.8
   },
   "94579": {
-   "cagr15": 4.9,
-   "max_dd": -24.1,
-   "n_months": 156,
-   "price": 449959,
-   "vol": 8.8
+   "cagr15": 4.8,
+   "max_dd": -24.3,
+   "n_months": 157,
+   "price": 451785,
+   "vol": 8.9
   },
   "94580": {
-   "cagr15": 8.5,
+   "cagr15": 8.6,
    "max_dd": -9.9,
    "n_months": 180,
-   "price": 494337,
-   "vol": 12.7
+   "price": 493960,
+   "vol": 12.6
   },
   "94582": {
-   "cagr15": 3.7,
-   "max_dd": -10.7,
-   "n_months": 125,
-   "price": 769148,
+   "cagr15": 3.6,
+   "max_dd": -11.1,
+   "n_months": 126,
+   "price": 765349,
    "vol": 7.7
   },
   "94583": {
    "cagr15": 2.8,
-   "max_dd": -11.9,
-   "n_months": 125,
-   "price": 654556,
+   "max_dd": -12.3,
+   "n_months": 126,
+   "price": 657458,
    "vol": 6.8
   },
   "94587": {
    "cagr15": 7.0,
-   "max_dd": -20.1,
+   "max_dd": -20.5,
    "n_months": 180,
-   "price": 522010,
+   "price": 519119,
    "vol": 13.9
   },
   "94588": {
    "cagr15": 5.1,
-   "max_dd": -15.6,
+   "max_dd": -15.8,
    "n_months": 180,
-   "price": 674016,
-   "vol": 9.0
+   "price": 664287,
+   "vol": 9.1
   },
   "94589": {
-   "cagr15": 9.7,
-   "max_dd": -15.4,
-   "n_months": 148,
-   "price": 228007,
-   "vol": 13.4
+   "cagr15": 9.6,
+   "max_dd": -15.8,
+   "n_months": 149,
+   "price": 224781,
+   "vol": 13.5
   },
   "94590": {
-   "cagr15": 11.8,
-   "max_dd": -20.6,
+   "cagr15": 11.9,
+   "max_dd": -21.0,
    "n_months": 180,
-   "price": 274942,
-   "vol": 15.9
+   "price": 273904,
+   "vol": 16.0
   },
   "94591": {
    "cagr15": 8.4,
-   "max_dd": -16.0,
+   "max_dd": -16.3,
    "n_months": 180,
-   "price": 390474,
+   "price": 386793,
    "vol": 12.6
   },
   "94595": {
    "cagr15": 1.3,
    "max_dd": -15.9,
-   "n_months": 125,
-   "price": 553353,
+   "n_months": 126,
+   "price": 554606,
    "vol": 5.6
   },
   "94596": {
    "cagr15": -0.1,
-   "max_dd": -21.0,
-   "n_months": 126,
-   "price": 427085,
+   "max_dd": -21.3,
+   "n_months": 127,
+   "price": 425364,
    "vol": 5.1
   },
   "94597": {
-   "cagr15": 2.2,
-   "max_dd": -10.7,
-   "n_months": 125,
-   "price": 539955,
+   "cagr15": 2.1,
+   "max_dd": -11.0,
+   "n_months": 126,
+   "price": 539602,
    "vol": 4.6
   },
   "94598": {
    "cagr15": 1.9,
-   "max_dd": -15.8,
-   "n_months": 125,
-   "price": 522987,
-   "vol": 6.0
+   "max_dd": -16.0,
+   "n_months": 126,
+   "price": 537012,
+   "vol": 6.1
   },
   "94601": {
-   "cagr15": 5.5,
+   "cagr15": 5.6,
    "max_dd": -26.1,
    "n_months": 180,
-   "price": 521099,
+   "price": 521036,
    "vol": 11.6
   },
   "94602": {
-   "cagr15": 4.8,
+   "cagr15": 5.0,
    "max_dd": -29.1,
    "n_months": 180,
-   "price": 441439,
+   "price": 443606,
    "vol": 11.9
   },
   "94603": {
    "cagr15": 6.2,
-   "max_dd": -22.5,
+   "max_dd": -22.9,
    "n_months": 180,
-   "price": 497799,
-   "vol": 12.5
+   "price": 499115,
+   "vol": 12.4
   },
   "94605": {
-   "cagr15": 5.7,
-   "max_dd": -23.7,
+   "cagr15": 5.8,
+   "max_dd": -23.8,
    "n_months": 180,
-   "price": 476326,
+   "price": 477736,
    "vol": 12.4
   },
   "94606": {
-   "cagr15": 5.7,
-   "max_dd": -35.6,
+   "cagr15": 5.9,
+   "max_dd": -35.7,
    "n_months": 180,
-   "price": 472675,
+   "price": 465018,
    "vol": 15.4
   },
   "94607": {
-   "cagr15": 2.7,
-   "max_dd": -35.3,
+   "cagr15": 2.8,
+   "max_dd": -35.6,
    "n_months": 180,
-   "price": 430980,
+   "price": 429269,
    "vol": 11.6
   },
   "94608": {
-   "cagr15": 3.7,
+   "cagr15": 3.8,
    "max_dd": -30.8,
    "n_months": 180,
-   "price": 433593,
+   "price": 432004,
    "vol": 11.5
   },
   "94609": {
-   "cagr15": 4.5,
+   "cagr15": 4.6,
    "max_dd": -26.6,
    "n_months": 180,
-   "price": 596784,
+   "price": 596775,
    "vol": 11.1
   },
   "94610": {
-   "cagr15": 4.8,
+   "cagr15": 5.0,
    "max_dd": -33.1,
    "n_months": 180,
-   "price": 437084,
+   "price": 437405,
    "vol": 15.4
   },
   "94611": {
-   "cagr15": 3.2,
+   "cagr15": 3.3,
    "max_dd": -36.5,
    "n_months": 180,
-   "price": 391322,
+   "price": 390806,
    "vol": 13.2
   },
   "94612": {
-   "cagr15": 2.1,
-   "max_dd": -40.2,
+   "cagr15": 2.2,
+   "max_dd": -40.3,
    "n_months": 180,
-   "price": 496388,
+   "price": 492927,
    "vol": 12.6
   },
   "94618": {
    "cagr15": 2.7,
-   "max_dd": -27.6,
+   "max_dd": -27.7,
    "n_months": 180,
-   "price": 549544,
-   "vol": 9.4
+   "price": 552282,
+   "vol": 9.5
   },
   "94619": {
    "cagr15": 4.4,
    "max_dd": -30.0,
    "n_months": 180,
-   "price": 531678,
+   "price": 532301,
    "vol": 11.6
   },
   "94702": {
-   "cagr15": 5.6,
+   "cagr15": 5.7,
    "max_dd": -16.8,
    "n_months": 180,
-   "price": 740740,
+   "price": 753015,
    "vol": 8.9
   },
   "94703": {
-   "cagr15": 5.2,
+   "cagr15": 5.3,
    "max_dd": -17.6,
    "n_months": 180,
-   "price": 710188,
+   "price": 705835,
    "vol": 9.0
   },
   "94704": {
-   "cagr15": 3.8,
+   "cagr15": 3.9,
    "max_dd": -17.7,
    "n_months": 180,
-   "price": 628389,
+   "price": 623691,
    "vol": 7.8
   },
   "94705": {
-   "cagr15": 4.8,
+   "cagr15": 5.0,
    "max_dd": -14.1,
    "n_months": 180,
-   "price": 774092,
+   "price": 769826,
    "vol": 7.8
   },
   "94706": {
    "cagr15": 4.9,
    "max_dd": -20.3,
-   "n_months": 169,
-   "price": 515457,
+   "n_months": 170,
+   "price": 514867,
    "vol": 9.8
   },
   "94708": {
-   "cagr15": 4.6,
+   "cagr15": 4.7,
    "max_dd": -16.4,
    "n_months": 180,
-   "price": 1111912,
-   "vol": 8.2
+   "price": 1098749,
+   "vol": 8.1
   },
   "94709": {
-   "cagr15": 4.3,
+   "cagr15": 4.4,
    "max_dd": -15.4,
    "n_months": 180,
-   "price": 787177,
+   "price": 774827,
    "vol": 8.6
   },
   "94801": {
    "cagr15": 2.9,
-   "max_dd": -19.5,
-   "n_months": 125,
-   "price": 407025,
+   "max_dd": -19.7,
+   "n_months": 126,
+   "price": 401552,
    "vol": 7.7
   },
   "94803": {
-   "cagr15": 5.4,
+   "cagr15": 5.3,
    "max_dd": -12.0,
-   "n_months": 125,
-   "price": 348594,
-   "vol": 8.3
+   "n_months": 126,
+   "price": 348751,
+   "vol": 8.4
   },
   "94804": {
-   "cagr15": 7.7,
-   "max_dd": -23.0,
+   "cagr15": 7.9,
+   "max_dd": -23.2,
    "n_months": 180,
-   "price": 459343,
+   "price": 463202,
    "vol": 15.1
   },
   "94806": {
-   "cagr15": 2.7,
-   "max_dd": -23.6,
-   "n_months": 125,
-   "price": 373423,
+   "cagr15": 2.6,
+   "max_dd": -23.8,
+   "n_months": 126,
+   "price": 371632,
    "vol": 8.1
   },
   "94901": {
-   "cagr15": 6.6,
+   "cagr15": 6.7,
    "max_dd": -11.5,
    "n_months": 180,
-   "price": 520388,
+   "price": 521735,
    "vol": 10.6
   },
   "94903": {
-   "cagr15": 5.3,
+   "cagr15": 5.4,
    "max_dd": -13.4,
    "n_months": 180,
-   "price": 573694,
+   "price": 578299,
    "vol": 8.6
   },
   "94904": {
-   "cagr15": 5.2,
+   "cagr15": 5.3,
    "max_dd": -15.1,
    "n_months": 180,
-   "price": 753679,
+   "price": 761762,
    "vol": 8.7
   },
   "94920": {
-   "cagr15": 5.7,
+   "cagr15": 5.8,
    "max_dd": -9.4,
    "n_months": 180,
-   "price": 1364539,
+   "price": 1366989,
    "vol": 7.0
   },
   "94925": {
-   "cagr15": 6.9,
+   "cagr15": 7.0,
    "max_dd": -9.4,
    "n_months": 180,
-   "price": 933253,
+   "price": 938163,
    "vol": 8.4
   },
   "94941": {
-   "cagr15": 5.8,
+   "cagr15": 5.9,
    "max_dd": -10.5,
    "n_months": 180,
-   "price": 1016803,
+   "price": 1027572,
    "vol": 7.4
   },
   "94945": {
-   "cagr15": 7.5,
+   "cagr15": 7.6,
    "max_dd": -6.5,
    "n_months": 180,
-   "price": 648734,
+   "price": 646866,
    "vol": 9.3
   },
   "94947": {
-   "cagr15": 7.1,
-   "max_dd": -8.1,
+   "cagr15": 7.2,
+   "max_dd": -8.4,
    "n_months": 180,
-   "price": 532135,
+   "price": 532486,
    "vol": 11.0
   },
   "94949": {
-   "cagr15": 6.3,
+   "cagr15": 6.4,
    "max_dd": -8.6,
    "n_months": 180,
-   "price": 588498,
+   "price": 590155,
    "vol": 8.3
   },
   "94952": {
-   "cagr15": 6.1,
-   "max_dd": -4.2,
+   "cagr15": 6.2,
+   "max_dd": -4.0,
    "n_months": 180,
-   "price": 660384,
+   "price": 657386,
    "vol": 7.1
   },
   "94954": {
-   "cagr15": 5.5,
-   "max_dd": -8.2,
+   "cagr15": 5.6,
+   "max_dd": -7.3,
    "n_months": 180,
-   "price": 608794,
+   "price": 603823,
    "vol": 7.2
   },
   "94965": {
    "cagr15": 5.1,
-   "max_dd": -10.1,
+   "max_dd": -9.8,
    "n_months": 180,
-   "price": 954457,
+   "price": 970872,
    "vol": 7.3
   },
   "95003": {
-   "cagr15": 6.2,
+   "cagr15": 6.3,
    "max_dd": -8.7,
    "n_months": 180,
-   "price": 895954,
+   "price": 889263,
    "vol": 7.1
   },
   "95006": {
-   "cagr15": 6.4,
+   "cagr15": 6.3,
    "max_dd": -5.8,
-   "n_months": 150,
-   "price": 510984,
+   "n_months": 151,
+   "price": 516332,
    "vol": 6.9
   },
   "95008": {
    "cagr15": 7.1,
    "max_dd": -10.6,
    "n_months": 180,
-   "price": 827865,
+   "price": 825023,
    "vol": 10.2
   },
   "95010": {
-   "cagr15": 4.8,
+   "cagr15": 4.9,
    "max_dd": -11.3,
    "n_months": 180,
-   "price": 670382,
+   "price": 667579,
    "vol": 7.5
   },
   "95014": {
-   "cagr15": 6.2,
+   "cagr15": 6.1,
    "max_dd": -12.3,
    "n_months": 180,
-   "price": 1116989,
+   "price": 1137206,
    "vol": 10.0
   },
   "95020": {
    "cagr15": 8.4,
-   "max_dd": -6.7,
+   "max_dd": -6.9,
    "n_months": 180,
-   "price": 553049,
+   "price": 546508,
    "vol": 12.1
   },
   "95030": {
    "cagr15": 6.2,
    "max_dd": -11.6,
    "n_months": 180,
-   "price": 1374867,
+   "price": 1373707,
    "vol": 9.1
   },
   "95032": {
    "cagr15": 7.4,
    "max_dd": -9.5,
    "n_months": 180,
-   "price": 1191933,
+   "price": 1178506,
    "vol": 9.2
   },
   "95035": {
    "cagr15": 7.5,
    "max_dd": -9.7,
    "n_months": 180,
-   "price": 905796,
-   "vol": 10.8
+   "price": 896891,
+   "vol": 10.9
   },
   "95037": {
    "cagr15": 7.6,
    "max_dd": -8.0,
    "n_months": 180,
-   "price": 778522,
+   "price": 781780,
    "vol": 9.8
   },
   "95050": {
-   "cagr15": 6.6,
-   "max_dd": -11.3,
+   "cagr15": 6.5,
+   "max_dd": -11.9,
    "n_months": 180,
-   "price": 756083,
+   "price": 754891,
    "vol": 11.8
   },
   "95051": {
    "cagr15": 6.4,
-   "max_dd": -17.8,
+   "max_dd": -18.2,
    "n_months": 180,
-   "price": 758694,
+   "price": 759794,
    "vol": 12.9
   },
   "95054": {
-   "cagr15": 6.4,
-   "max_dd": -12.3,
+   "cagr15": 6.3,
+   "max_dd": -12.4,
    "n_months": 180,
-   "price": 871804,
+   "price": 869777,
    "vol": 11.7
   },
   "95060": {
    "cagr15": 5.7,
    "max_dd": -6.7,
    "n_months": 180,
-   "price": 702129,
+   "price": 707344,
    "vol": 6.6
   },
   "95062": {
-   "cagr15": 6.5,
+   "cagr15": 6.6,
    "max_dd": -9.3,
    "n_months": 180,
-   "price": 714585,
-   "vol": 7.5
+   "price": 718091,
+   "vol": 7.4
   },
   "95065": {
-   "cagr15": 5.0,
+   "cagr15": 4.9,
    "max_dd": -7.9,
-   "n_months": 138,
-   "price": 786983,
+   "n_months": 139,
+   "price": 794424,
    "vol": 7.2
   },
   "95066": {
    "cagr15": 5.5,
-   "max_dd": -9.7,
+   "max_dd": -10.0,
    "n_months": 180,
-   "price": 657995,
+   "price": 663749,
    "vol": 7.7
   },
   "95070": {
-   "cagr15": 5.3,
-   "max_dd": -11.7,
+   "cagr15": 5.2,
+   "max_dd": -12.1,
    "n_months": 180,
-   "price": 1157650,
+   "price": 1165475,
    "vol": 9.4
   },
   "95073": {
-   "cagr15": 5.8,
+   "cagr15": 5.7,
    "max_dd": -6.6,
-   "n_months": 138,
-   "price": 700773,
+   "n_months": 139,
+   "price": 696846,
    "vol": 6.3
   },
   "95076": {
-   "cagr15": 6.1,
-   "max_dd": -16.5,
+   "cagr15": 6.0,
+   "max_dd": -16.6,
    "n_months": 180,
-   "price": 623464,
-   "vol": 8.3
+   "price": 625065,
+   "vol": 8.4
   },
   "95110": {
-   "cagr15": 6.3,
+   "cagr15": 6.4,
    "max_dd": -19.6,
    "n_months": 180,
-   "price": 633133,
+   "price": 632787,
    "vol": 12.4
   },
   "95111": {
    "cagr15": 9.3,
-   "max_dd": -9.6,
+   "max_dd": -10.0,
    "n_months": 180,
-   "price": 577087,
+   "price": 577824,
    "vol": 13.8
   },
   "95112": {
    "cagr15": 6.0,
-   "max_dd": -14.5,
+   "max_dd": -14.9,
    "n_months": 180,
-   "price": 674927,
-   "vol": 11.0
+   "price": 669840,
+   "vol": 11.1
   },
   "95116": {
    "cagr15": 8.7,
-   "max_dd": -10.7,
+   "max_dd": -10.9,
    "n_months": 180,
-   "price": 560682,
+   "price": 562215,
    "vol": 13.3
   },
   "95117": {
    "cagr15": 6.8,
    "max_dd": -12.2,
    "n_months": 180,
-   "price": 812193,
+   "price": 813907,
    "vol": 11.7
   },
   "95118": {
    "cagr15": 7.1,
    "max_dd": -10.9,
    "n_months": 180,
-   "price": 589792,
+   "price": 592265,
    "vol": 12.8
   },
   "95119": {
    "cagr15": 7.0,
    "max_dd": -10.0,
    "n_months": 180,
-   "price": 954482,
+   "price": 951762,
    "vol": 11.1
   },
   "95120": {
    "cagr15": 5.6,
-   "max_dd": -8.3,
+   "max_dd": -8.4,
    "n_months": 180,
-   "price": 1191614,
-   "vol": 8.4
+   "price": 1170578,
+   "vol": 8.5
   },
   "95121": {
    "cagr15": 8.8,
-   "max_dd": -9.1,
+   "max_dd": -9.7,
    "n_months": 180,
-   "price": 643212,
+   "price": 640762,
    "vol": 12.2
   },
   "95122": {
-   "cagr15": 8.0,
-   "max_dd": -12.6,
+   "cagr15": 7.9,
+   "max_dd": -12.9,
    "n_months": 180,
-   "price": 554874,
-   "vol": 13.0
+   "price": 552557,
+   "vol": 13.1
   },
   "95123": {
    "cagr15": 7.8,
-   "max_dd": -11.5,
+   "max_dd": -12.1,
    "n_months": 180,
-   "price": 586049,
+   "price": 584497,
    "vol": 13.6
   },
   "95124": {
    "cagr15": 6.7,
-   "max_dd": -10.1,
+   "max_dd": -10.4,
    "n_months": 180,
-   "price": 754605,
-   "vol": 10.7
+   "price": 754732,
+   "vol": 10.8
   },
   "95125": {
    "cagr15": 5.8,
-   "max_dd": -13.4,
+   "max_dd": -13.7,
    "n_months": 180,
-   "price": 804520,
-   "vol": 10.2
+   "price": 803189,
+   "vol": 10.3
   },
   "95126": {
    "cagr15": 6.1,
-   "max_dd": -12.5,
+   "max_dd": -13.0,
    "n_months": 180,
-   "price": 763309,
-   "vol": 10.5
+   "price": 758614,
+   "vol": 10.6
   },
   "95127": {
-   "cagr15": 8.4,
-   "max_dd": -13.1,
+   "cagr15": 8.3,
+   "max_dd": -13.7,
    "n_months": 180,
-   "price": 514940,
+   "price": 517113,
    "vol": 13.4
   },
   "95128": {
    "cagr15": 5.9,
-   "max_dd": -11.8,
+   "max_dd": -12.3,
    "n_months": 180,
-   "price": 735446,
-   "vol": 10.8
+   "price": 729325,
+   "vol": 10.9
   },
   "95129": {
-   "cagr15": 6.3,
-   "max_dd": -13.1,
+   "cagr15": 6.2,
+   "max_dd": -13.5,
    "n_months": 180,
-   "price": 797455,
-   "vol": 11.7
+   "price": 798251,
+   "vol": 11.8
   },
   "95131": {
    "cagr15": 6.6,
-   "max_dd": -11.9,
+   "max_dd": -12.5,
    "n_months": 180,
-   "price": 841051,
-   "vol": 11.2
+   "price": 833739,
+   "vol": 11.3
   },
   "95132": {
    "cagr15": 7.4,
-   "max_dd": -10.8,
+   "max_dd": -11.2,
    "n_months": 180,
-   "price": 668731,
-   "vol": 12.7
+   "price": 664774,
+   "vol": 12.8
   },
   "95133": {
-   "cagr15": 9.0,
-   "max_dd": -9.5,
+   "cagr15": 8.9,
+   "max_dd": -10.0,
    "n_months": 180,
-   "price": 667103,
+   "price": 664302,
    "vol": 14.0
   },
   "95134": {
-   "cagr15": 6.5,
+   "cagr15": 6.4,
    "max_dd": -14.0,
    "n_months": 180,
-   "price": 872466,
+   "price": 867038,
    "vol": 11.2
   },
   "95135": {
    "cagr15": 6.6,
    "max_dd": -7.2,
    "n_months": 180,
-   "price": 781793,
-   "vol": 8.7
+   "price": 777563,
+   "vol": 8.8
   },
   "95136": {
    "cagr15": 7.1,
-   "max_dd": -9.0,
+   "max_dd": -9.4,
    "n_months": 180,
-   "price": 841847,
-   "vol": 10.5
+   "price": 831882,
+   "vol": 10.6
   },
   "95138": {
-   "cagr15": 6.9,
-   "max_dd": -11.4,
+   "cagr15": 6.8,
+   "max_dd": -11.8,
    "n_months": 180,
-   "price": 850501,
+   "price": 841788,
    "vol": 10.8
   },
   "95139": {
    "cagr15": 7.5,
-   "max_dd": -8.7,
-   "n_months": 163,
-   "price": 836390,
+   "max_dd": -8.8,
+   "n_months": 164,
+   "price": 828719,
    "vol": 8.5
   },
   "95148": {
    "cagr15": 8.1,
-   "max_dd": -8.3,
+   "max_dd": -8.7,
    "n_months": 180,
-   "price": 764463,
+   "price": 757387,
    "vol": 11.2
   },
   "95203": {
-   "cagr15": 11.0,
-   "max_dd": -15.0,
-   "n_months": 125,
-   "price": 150367,
-   "vol": 14.3
+   "cagr15": 10.8,
+   "max_dd": -15.5,
+   "n_months": 126,
+   "price": 152567,
+   "vol": 14.4
   },
   "95207": {
-   "cagr15": 8.5,
-   "max_dd": -17.3,
+   "cagr15": 8.6,
+   "max_dd": -17.7,
    "n_months": 180,
-   "price": 196438,
+   "price": 199265,
    "vol": 10.3
   },
   "95209": {
-   "cagr15": 10.4,
-   "max_dd": -13.6,
+   "cagr15": 10.5,
+   "max_dd": -14.0,
    "n_months": 180,
-   "price": 258744,
+   "price": 259367,
    "vol": 10.6
   },
   "95210": {
    "cagr15": 11.7,
-   "max_dd": -8.3,
+   "max_dd": -8.7,
    "n_months": 180,
-   "price": 233404,
+   "price": 233816,
    "vol": 11.4
   },
   "95219": {
-   "cagr15": 8.3,
-   "max_dd": -13.3,
+   "cagr15": 8.4,
+   "max_dd": -13.7,
    "n_months": 180,
-   "price": 298904,
-   "vol": 8.6
+   "price": 298898,
+   "vol": 8.7
   },
   "95240": {
-   "cagr15": 8.9,
-   "max_dd": -15.5,
+   "cagr15": 9.0,
+   "max_dd": -16.4,
    "n_months": 180,
-   "price": 237790,
+   "price": 237114,
    "vol": 10.3
   },
   "95242": {
    "cagr15": 9.3,
-   "max_dd": -9.9,
+   "max_dd": -10.3,
    "n_months": 180,
-   "price": 287840,
+   "price": 288817,
    "vol": 10.0
   },
   "95307": {
    "cagr15": 7.7,
    "max_dd": -9.1,
-   "n_months": 139,
-   "price": 290274,
+   "n_months": 140,
+   "price": 293588,
    "vol": 8.2
   },
   "95337": {
-   "cagr15": 9.3,
-   "max_dd": -24.3,
-   "n_months": 163,
-   "price": 263742,
+   "cagr15": 9.2,
+   "max_dd": -24.6,
+   "n_months": 164,
+   "price": 262378,
    "vol": 12.2
   },
   "95350": {
-   "cagr15": 9.4,
-   "max_dd": -13.9,
+   "cagr15": 9.6,
+   "max_dd": -14.3,
    "n_months": 180,
-   "price": 249684,
+   "price": 247631,
    "vol": 10.3
   },
   "95354": {
-   "cagr15": 11.0,
-   "max_dd": -15.0,
+   "cagr15": 11.3,
+   "max_dd": -15.4,
    "n_months": 180,
-   "price": 270953,
-   "vol": 11.4
+   "price": 272886,
+   "vol": 11.5
   },
   "95355": {
-   "cagr15": 9.5,
-   "max_dd": -9.5,
+   "cagr15": 9.6,
+   "max_dd": -9.8,
    "n_months": 180,
-   "price": 278870,
+   "price": 277862,
    "vol": 9.5
   },
   "95356": {
-   "cagr15": 8.8,
-   "max_dd": -14.4,
+   "cagr15": 8.9,
+   "max_dd": -15.0,
    "n_months": 180,
-   "price": 263117,
+   "price": 262183,
    "vol": 10.6
   },
   "95361": {
-   "cagr15": 6.4,
+   "cagr15": 6.3,
    "max_dd": -7.2,
-   "n_months": 125,
-   "price": 386544,
+   "n_months": 126,
+   "price": 386331,
    "vol": 6.7
   },
   "95376": {
-   "cagr15": 9.3,
-   "max_dd": -22.1,
+   "cagr15": 9.4,
+   "max_dd": -22.8,
    "n_months": 180,
-   "price": 369776,
+   "price": 367891,
    "vol": 14.1
   },
   "95382": {
    "cagr15": 8.6,
    "max_dd": -5.5,
    "n_months": 180,
-   "price": 297908,
-   "vol": 8.4
+   "price": 299331,
+   "vol": 8.5
   },
   "95391": {
-   "cagr15": 5.7,
-   "max_dd": -15.7,
-   "n_months": 125,
-   "price": 537524,
+   "cagr15": 5.6,
+   "max_dd": -16.7,
+   "n_months": 126,
+   "price": 525928,
    "vol": 11.9
   },
   "95476": {
-   "cagr15": 4.8,
-   "max_dd": -12.6,
+   "cagr15": 5.0,
+   "max_dd": -11.1,
    "n_months": 180,
-   "price": 595244,
-   "vol": 7.6
+   "price": 594558,
+   "vol": 7.5
   },
   "95602": {
-   "cagr15": 9.2,
+   "cagr15": 9.1,
    "max_dd": -12.9,
-   "n_months": 125,
-   "price": 200266,
+   "n_months": 126,
+   "price": 199776,
    "vol": 11.2
   },
   "95603": {
-   "cagr15": 6.5,
-   "max_dd": -15.2,
+   "cagr15": 6.6,
+   "max_dd": -15.5,
    "n_months": 180,
-   "price": 305928,
+   "price": 306442,
    "vol": 8.9
   },
   "95605": {
-   "cagr15": 5.2,
-   "max_dd": -12.9,
-   "n_months": 125,
-   "price": 429475,
+   "cagr15": 5.0,
+   "max_dd": -13.9,
+   "n_months": 126,
+   "price": 427714,
    "vol": 8.7
   },
   "95608": {
-   "cagr15": 7.7,
-   "max_dd": -12.4,
+   "cagr15": 7.8,
+   "max_dd": -12.8,
    "n_months": 180,
-   "price": 314777,
-   "vol": 10.2
+   "price": 312587,
+   "vol": 10.1
   },
   "95610": {
-   "cagr15": 7.8,
-   "max_dd": -12.2,
+   "cagr15": 7.9,
+   "max_dd": -12.6,
    "n_months": 180,
-   "price": 327476,
+   "price": 326845,
    "vol": 9.8
   },
   "95616": {
-   "cagr15": 4.4,
-   "max_dd": -8.6,
+   "cagr15": 4.5,
+   "max_dd": -8.3,
    "n_months": 180,
-   "price": 473554,
-   "vol": 5.5
+   "price": 472448,
+   "vol": 5.4
   },
   "95618": {
    "cagr15": 5.2,
-   "max_dd": -6.8,
+   "max_dd": -7.0,
    "n_months": 180,
-   "price": 406653,
+   "price": 405073,
    "vol": 6.5
   },
   "95621": {
    "cagr15": 9.5,
-   "max_dd": -14.7,
+   "max_dd": -15.1,
    "n_months": 180,
-   "price": 267352,
-   "vol": 12.6
+   "price": 266017,
+   "vol": 12.7
   },
   "95624": {
-   "cagr15": 9.0,
-   "max_dd": -16.0,
+   "cagr15": 9.1,
+   "max_dd": -16.5,
    "n_months": 180,
-   "price": 285449,
+   "price": 284047,
    "vol": 11.9
   },
   "95628": {
-   "cagr15": 7.7,
-   "max_dd": -11.9,
+   "cagr15": 7.8,
+   "max_dd": -12.5,
    "n_months": 180,
-   "price": 312921,
+   "price": 313229,
    "vol": 9.2
   },
   "95630": {
-   "cagr15": 6.7,
-   "max_dd": -11.4,
+   "cagr15": 6.8,
+   "max_dd": -11.7,
    "n_months": 180,
-   "price": 442186,
+   "price": 444053,
    "vol": 9.4
   },
   "95632": {
    "cagr15": 8.0,
-   "max_dd": -10.5,
+   "max_dd": -10.7,
    "n_months": 180,
-   "price": 351302,
+   "price": 349446,
    "vol": 10.0
   },
   "95648": {
-   "cagr15": 7.2,
-   "max_dd": -8.7,
+   "cagr15": 7.3,
+   "max_dd": -8.1,
    "n_months": 180,
-   "price": 412819,
+   "price": 411475,
    "vol": 10.0
   },
   "95660": {
-   "cagr15": 9.2,
-   "max_dd": -18.3,
-   "n_months": 134,
-   "price": 177916,
-   "vol": 11.7
+   "cagr15": 9.0,
+   "max_dd": -19.5,
+   "n_months": 135,
+   "price": 169396,
+   "vol": 11.8
   },
   "95661": {
    "cagr15": 6.8,
-   "max_dd": -13.2,
+   "max_dd": -13.6,
    "n_months": 180,
-   "price": 344068,
-   "vol": 9.3
+   "price": 343532,
+   "vol": 9.2
   },
   "95662": {
-   "cagr15": 8.3,
-   "max_dd": -15.1,
+   "cagr15": 8.4,
+   "max_dd": -15.5,
    "n_months": 180,
-   "price": 283407,
-   "vol": 9.8
+   "price": 283653,
+   "vol": 9.9
   },
   "95670": {
-   "cagr15": 7.9,
+   "cagr15": 8.0,
    "max_dd": -8.9,
    "n_months": 180,
-   "price": 322374,
+   "price": 319006,
    "vol": 10.2
   },
   "95677": {
    "cagr15": 7.3,
    "max_dd": -7.8,
    "n_months": 180,
-   "price": 371121,
-   "vol": 10.6
+   "price": 370708,
+   "vol": 10.5
   },
   "95678": {
    "cagr15": 8.1,
-   "max_dd": -10.4,
+   "max_dd": -10.7,
    "n_months": 180,
-   "price": 360566,
+   "price": 358337,
    "vol": 10.3
   },
   "95682": {
    "cagr15": 6.6,
-   "max_dd": -14.8,
+   "max_dd": -15.2,
    "n_months": 180,
-   "price": 338240,
+   "price": 335671,
    "vol": 10.1
   },
   "95683": {
    "cagr15": 6.7,
    "max_dd": -7.4,
    "n_months": 180,
-   "price": 498275,
+   "price": 493986,
    "vol": 6.8
   },
   "95687": {
    "cagr15": 10.4,
-   "max_dd": -12.4,
+   "max_dd": -12.7,
    "n_months": 180,
-   "price": 293859,
+   "price": 293417,
    "vol": 13.5
   },
   "95688": {
-   "cagr15": 8.8,
-   "max_dd": -12.1,
+   "cagr15": 8.9,
+   "max_dd": -12.5,
    "n_months": 180,
-   "price": 366025,
-   "vol": 11.9
+   "price": 362135,
+   "vol": 11.8
   },
   "95691": {
    "cagr15": 6.4,
-   "max_dd": -11.8,
-   "n_months": 143,
-   "price": 375694,
+   "max_dd": -12.1,
+   "n_months": 144,
+   "price": 374142,
    "vol": 8.1
   },
   "95695": {
-   "cagr15": 6.5,
-   "max_dd": -7.9,
+   "cagr15": 6.6,
+   "max_dd": -8.2,
    "n_months": 180,
-   "price": 326878,
-   "vol": 8.4
+   "price": 326798,
+   "vol": 8.3
   },
   "95747": {
    "cagr15": 6.1,
    "max_dd": -9.3,
-   "n_months": 133,
-   "price": 369073,
+   "n_months": 134,
+   "price": 368596,
    "vol": 8.0
   },
   "95757": {
    "cagr15": 9.0,
-   "max_dd": -11.7,
+   "max_dd": -12.1,
    "n_months": 180,
-   "price": 424514,
+   "price": 424530,
    "vol": 11.1
   },
   "95758": {
-   "cagr15": 8.4,
-   "max_dd": -10.3,
+   "cagr15": 8.5,
+   "max_dd": -10.4,
    "n_months": 180,
-   "price": 385456,
+   "price": 382710,
    "vol": 10.2
   },
   "95765": {
-   "cagr15": 5.6,
-   "max_dd": -13.4,
+   "cagr15": 5.7,
+   "max_dd": -13.7,
    "n_months": 180,
-   "price": 345598,
+   "price": 344243,
    "vol": 8.5
   },
   "95811": {
-   "cagr15": 3.2,
-   "max_dd": -17.1,
+   "cagr15": 3.4,
+   "max_dd": -17.5,
    "n_months": 180,
-   "price": 503580,
-   "vol": 6.8
+   "price": 502611,
+   "vol": 6.7
   },
   "95814": {
-   "cagr15": 5.9,
-   "max_dd": -27.0,
+   "cagr15": 6.1,
+   "max_dd": -27.2,
    "n_months": 180,
-   "price": 441661,
+   "price": 441953,
    "vol": 11.0
   },
   "95816": {
    "cagr15": 4.7,
    "max_dd": -21.6,
-   "n_months": 162,
-   "price": 511487,
+   "n_months": 163,
+   "price": 522251,
    "vol": 9.5
   },
   "95821": {
-   "cagr15": 7.6,
-   "max_dd": -15.9,
+   "cagr15": 7.8,
+   "max_dd": -16.7,
    "n_months": 180,
-   "price": 261462,
-   "vol": 11.6
+   "price": 258096,
+   "vol": 11.5
   },
   "95822": {
-   "cagr15": 7.1,
-   "max_dd": -17.4,
+   "cagr15": 7.3,
+   "max_dd": -14.9,
    "n_months": 180,
-   "price": 336046,
-   "vol": 9.5
+   "price": 337771,
+   "vol": 9.4
   },
   "95823": {
-   "cagr15": 11.3,
-   "max_dd": -10.3,
+   "cagr15": 11.2,
+   "max_dd": -10.6,
    "n_months": 180,
-   "price": 212013,
+   "price": 211338,
    "vol": 11.3
   },
   "95825": {
-   "cagr15": 6.2,
-   "max_dd": -18.3,
+   "cagr15": 6.3,
+   "max_dd": -18.9,
    "n_months": 180,
-   "price": 268350,
+   "price": 265143,
    "vol": 9.7
   },
   "95826": {
-   "cagr15": 9.3,
-   "max_dd": -14.0,
+   "cagr15": 9.5,
+   "max_dd": -14.4,
    "n_months": 180,
-   "price": 254255,
-   "vol": 12.6
+   "price": 250313,
+   "vol": 12.5
   },
   "95827": {
    "cagr15": 9.2,
    "max_dd": -11.2,
-   "n_months": 160,
-   "price": 308310,
+   "n_months": 161,
+   "price": 305450,
    "vol": 8.9
   },
   "95828": {
-   "cagr15": 8.9,
-   "max_dd": -11.2,
+   "cagr15": 9.0,
+   "max_dd": -11.5,
    "n_months": 180,
-   "price": 288129,
+   "price": 284808,
    "vol": 10.8
   },
   "95831": {
    "cagr15": 7.8,
-   "max_dd": -15.0,
+   "max_dd": -15.2,
    "n_months": 180,
-   "price": 327030,
+   "price": 323469,
    "vol": 9.9
   },
   "95833": {
    "cagr15": 9.7,
-   "max_dd": -9.7,
+   "max_dd": -10.0,
    "n_months": 180,
-   "price": 335999,
+   "price": 335381,
    "vol": 10.7
   },
   "95834": {
    "cagr15": 8.9,
-   "max_dd": -11.5,
+   "max_dd": -12.0,
    "n_months": 180,
-   "price": 296154,
-   "vol": 11.6
+   "price": 297374,
+   "vol": 11.5
   },
   "95835": {
-   "cagr15": 8.0,
-   "max_dd": -10.3,
+   "cagr15": 8.1,
+   "max_dd": -10.8,
    "n_months": 180,
-   "price": 362415,
+   "price": 361332,
    "vol": 11.0
   },
   "95841": {
    "cagr15": 9.0,
-   "max_dd": -15.8,
+   "max_dd": -16.5,
    "n_months": 180,
-   "price": 241370,
-   "vol": 13.9
+   "price": 241142,
+   "vol": 13.8
   },
   "95842": {
-   "cagr15": 7.9,
-   "max_dd": -19.2,
+   "cagr15": 7.8,
+   "max_dd": -20.1,
    "n_months": 180,
-   "price": 190776,
-   "vol": 12.5
+   "price": 188045,
+   "vol": 12.4
   },
   "95843": {
    "cagr15": 9.3,
-   "max_dd": -14.5,
+   "max_dd": -14.7,
    "n_months": 180,
-   "price": 291340,
+   "price": 288587,
    "vol": 12.2
   },
   "95864": {
-   "cagr15": 4.8,
+   "cagr15": 5.0,
    "max_dd": -6.7,
    "n_months": 180,
-   "price": 513615,
+   "price": 508299,
    "vol": 5.0
   },
   "95991": {
-   "cagr15": 7.7,
-   "max_dd": -15.4,
-   "n_months": 125,
-   "price": 186942,
-   "vol": 9.9
+   "cagr15": 7.6,
+   "max_dd": -15.5,
+   "n_months": 126,
+   "price": 189394,
+   "vol": 10.0
   },
   "95993": {
    "cagr15": 8.3,
    "max_dd": -6.2,
    "n_months": 180,
-   "price": 363717,
+   "price": 360482,
    "vol": 6.1
   }
  },

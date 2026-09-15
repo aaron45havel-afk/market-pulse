@@ -1,73 +1,73 @@
 {
- "as_of": "2026-08",
- "fetched_at": "2026-08-12T14:34Z",
+ "as_of": "2026-09",
+ "fetched_at": "2026-09-12T16:24Z",
  "method": "equity index: log-price deviation from 36-mo trend, z-scored, mapped to 100 +/- 1.5*z",
  "series": {
   "CH": {
-   "prev": 103.2,
+   "prev": 102.14,
    "source_label": "iShares MSCI Switzerland ETF cycle proxy",
    "trend": "falling",
-   "value": 102.94
+   "value": 101.99
   },
   "CL": {
-   "prev": 102.44,
+   "prev": 102.18,
    "source_label": "iShares MSCI Chile ETF cycle proxy",
-   "trend": "flat",
-   "value": 102.38
+   "trend": "falling",
+   "value": 102.07
   },
   "HK": {
-   "prev": 101.61,
+   "prev": 101.55,
    "source_label": "iShares MSCI Hong Kong ETF cycle proxy",
-   "trend": "rising",
-   "value": 101.55
+   "trend": "falling",
+   "value": 101.48
   },
   "MY": {
-   "prev": 101.65,
+   "prev": 101.42,
    "source_label": "iShares MSCI Malaysia ETF cycle proxy",
-   "trend": "rising",
-   "value": 101.64
+   "trend": "falling",
+   "value": 101.32
   },
   "NL": {
-   "prev": 103.3,
+   "prev": 102.97,
    "source_label": "iShares MSCI Netherlands ETF cycle proxy",
    "trend": "falling",
-   "value": 103.24
+   "value": 102.79
   },
   "PH": {
-   "prev": 100.16,
+   "prev": 98.81,
    "source_label": "iShares MSCI Philippines ETF cycle proxy",
-   "trend": "rising",
-   "value": 100.26
+   "trend": "falling",
+   "value": 98.83
   },
   "PL": {
-   "prev": 102.84,
+   "prev": 102.83,
    "source_label": "iShares MSCI Poland ETF cycle proxy",
-   "trend": "rising",
-   "value": 102.75
+   "trend": "flat",
+   "value": 102.67
   },
   "SE": {
-   "prev": 102.1,
+   "prev": 101.77,
    "source_label": "iShares MSCI Sweden ETF cycle proxy",
-   "trend": "rising",
-   "value": 101.91
+   "trend": "falling",
+   "value": 101.65
   },
   "SG": {
-   "prev": 103.25,
+   "prev": 102.97,
    "source_label": "iShares MSCI Singapore ETF cycle proxy",
-   "trend": "rising",
-   "value": 103.06
+   "trend": "flat",
+   "value": 102.83
   },
   "TH": {
-   "prev": 102.23,
+   "prev": 102.34,
    "source_label": "iShares MSCI Thailand ETF cycle proxy",
    "trend": "flat",
-   "value": 102.3
+   "value": 102.29
   },
   "TW": {
-   "prev": 103.67,
+   "prev": 103.8,
    "source_label": "iShares MSCI Taiwan ETF cycle proxy",
-   "trend": "falling",
-   "value": 103.68
+   "trend": "rising",
+   "value": 103.65
   }
  }
 }

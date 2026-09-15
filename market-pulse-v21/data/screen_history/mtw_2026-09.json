@@ -1,0 +1,20 @@
+{
+ "period": "2026-09",
+ "market": "MTW",
+ "params": {
+  "assets": 200000,
+  "down_pct": 20.0,
+  "safety_tier": "safe",
+  "winter": "moderate"
+ },
+ "_inputs": {
+  "zips": "sha256:1615d90907008094",
+  "condo": "sha256:fd1f2973214f41db",
+  "crime": "sha256:d96ace07536e8e54",
+  "logic": "750c509dc7eea9f1"
+ },
+ "max_purchase": 800000,
+ "universe_n": 481,
+ "buyable": {},
+ "aspirational": {}
+}

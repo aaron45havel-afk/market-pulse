@@ -1,24 +1,72 @@
 name: Snapshot strict-screen history
 
-# Runs AFTER the monthly market data lands (Zillow 1st 12:00 UTC,
-# national-zips rebuild 1st 14:00 UTC) so the snapshot reflects the new
-# prices. Produces the "what changed this month" log on /norcal.
+# Produces the "what changed this month" log on /norcal.
+#
+# THE OLD SCHEDULE RAN BEFORE TWO OF ITS THREE INPUTS, which the comment
+# here did not say because it named the jobs upstream of the data rather
+# than the files the screen opens. The screen reads zips.db, norcal_condo
+# .json and headroom/crime.json. Against a 15:00-on-the-2nd run:
+#
+#   national-zips   1st 14:00   -> zips.db          lands BEFORE.  fine
+#   rent ladder     2nd 16:00   -> zips.db          lands ONE HOUR AFTER
+#   NorCal condo    8th 14:00   -> norcal_condo     lands SIX DAYS AFTER
+#
+# So every month's change log was built from the previous month's condo
+# overlay, and missed the rent-ladder pass over zips.db entirely. It is
+# visible in the history: the September snapshot was written on the 2nd
+# and norcal_condo was refreshed on the 8th, leaving /norcal showing
+# superseded entry prices for the rest of the month.
+#
+# CHAINED to both late inputs, so the log rebuilds when they land. The
+# cron moves to the 9th as a fallback rather than as the main path — by
+# then everything has landed. The freshness guard in the build makes the
+# extra runs cheap: a rebuild with nothing new writes nothing.
 on:
   schedule:
-    - cron: '0 15 2 * *'   # 15:00 UTC on the 2nd
+    - cron: '0 15 9 * *'   # 15:00 UTC on the 9th, after the condo refresh
   workflow_dispatch: {}
+  workflow_run:
+    workflows:
+      - "Refresh rent ladder"
+      - "Refresh NorCal condo data (monthly)"
+    types: [completed]
 
 permissions:
   contents: write
 
+concurrency:
+  group: refresh-screen-history
+  cancel-in-progress: false
+
 jobs:
   snapshot:
     runs-on: ubuntu-latest
+    # A chained run only makes sense if the job it chained from succeeded;
+    # every other trigger has no upstream conclusion to check.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
     steps:
+      # ref is PINNED to main so a run reads the tip rather than whatever
+      # SHA its trigger happens to carry. This snapshot exists to record
+      # what CHANGED, so a stale tree does not merely age the numbers — it
+      # publishes "no change" as though that were an observation.
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      # The guard is pure, so its suite gates the snapshot. A guard whose
+      # own tests fail is worse than none: it still prints a verdict.
+      - name: Prove the freshness guard before trusting it
+        working-directory: market-pulse-v21
+        run: python tests/test_freshness.py
+
+      # Writes NOTHING for a market whose inputs and screen code are both
+      # unchanged, and exits 0 — a fallback run against unmoved inputs is
+      # not a failure. Exits non-zero only if a dated input rolled back.
       - name: Snapshot both markets
         working-directory: market-pulse-v21
         run: python scripts/snapshot_screens.py

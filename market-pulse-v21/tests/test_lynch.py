@@ -195,19 +195,61 @@ check(12.0 < real["cagr"] < 13.0,
       f"and reports its real rate (got {real['cagr']})")
 check(real["capped"] is False, "uncapped")
 
-# ── the cap ──
-hot = L.growth({"2021-12-31": 1.00, "2022-12-31": 2.00, "2023-12-31": 3.00,
-                "2024-12-31": 4.00, "2025-12-31": 8.00})
+# ── NO CEILING ON THE REPORTED RATE ──
+# There was one, at 35%. It is gone: the board prints what it measured and
+# the reader judges it. The four checks below are what "no cap" has to
+# mean concretely.
+check(L.EPS_GROWTH_CAP is None,
+      f"the EPS ceiling is None — not a large number, which would still "
+      f"clamp somewhere and would serialise into the snapshot's _meta as "
+      f"a value the page would render as a cap (got {L.EPS_GROWTH_CAP!r})")
+
+hot = L.growth({"2021-12-31": 1.00, "2022-12-31": 2.00, "2023-12-31": 4.00,
+                "2024-12-31": 8.00, "2025-12-31": 16.00})
 check(hot["step"] is False,
       "hyper-growth with real history behind it is not a step change — "
-      "8.00 against a median of 3.00 is 2.7x, well inside the multiple")
-check(hot["cagr"] == L.EPS_GROWTH_CAP,
-      f"growth past the cap is shown at the cap (got {hot['cagr']})")
-check(hot["cagr_raw"] > L.EPS_GROWTH_CAP, "the raw rate is kept")
-check(hot["capped"] is True, "and the row says it was capped")
-check(L.EPS_GROWTH_CAP > L.EPS_GROWTH_MIN,
-      "the cap sits above the gate, so bounding it cannot reject a company "
-      "that would otherwise have passed")
+      "16.00 against a median of 6.00 is 2.7x, well inside the multiple")
+check(hot["cagr"] == 100.0 and hot["cagr_raw"] == 100.0,
+      f"a clean doubling reports 100%/yr and NOTHING TRIMS IT. Under the "
+      f"old cap this printed 35.0, which is not a rate the company "
+      f"achieved — it is the number the screen stopped counting at "
+      f"(got {hot['cagr']})")
+check(hot["capped"] is False,
+      "and no row is badged as capped, because none is")
+check(L.growth({"2021-12-31": 0.10, "2022-12-31": 0.30,
+                "2023-12-31": 0.90, "2024-12-31": 2.70})["cagr"] == 199.9,
+      "199.9%/yr prints as 199.9%/yr. Absurd is allowed to LOOK absurd, "
+      "which is the whole argument for removing the clamp: it used to "
+      "rewrite a nonsense rate as a merely excellent one and leave it on "
+      "the board looking underwritable")
+
+# THE CLAMP WAS NEVER WHAT REJECTED ANYTHING, and this is the evidence for
+# that claim rather than the assertion of it. Every artefact the cap was
+# covering for is still caught, by its own named guard, with no ceiling in
+# force. If any of these ever starts passing, the guard broke — and the
+# cap would not have saved it either, only disguised it as a 35% row.
+_artefacts = {
+    "ANF 493.6% (trough)": (
+        {"2021-01-30": 4.20, "2022-01-29": 0.05, "2023-01-28": 6.22,
+         "2024-02-03": 10.69, "2025-02-01": 10.46}, "trough"),
+    "XNET 273.1% (step)": (
+        {"2021-12-31": 0.00, "2022-12-31": 0.06, "2023-12-31": 0.04,
+         "2024-12-31": 0.00, "2025-12-31": 3.31}, "step"),
+    "turnaround 195.5% (loss)": (
+        {"2021-12-31": 0.12, "2022-12-31": -0.80, "2023-12-31": -0.45,
+         "2024-12-31": 3.10}, "loss_window"),
+    "Sonoco (spike)": (
+        {"2020-12-31": -0.86, "2021-12-31": 4.72, "2022-12-31": 4.80,
+         "2023-12-31": 1.65, "2024-12-31": 10.07}, "spike"),
+}
+for _label, (_series, _guard) in _artefacts.items():
+    _g = L.growth(_series)
+    check(_g["cagr"] is None,
+          f"{_label} is REJECTED with no ceiling in force — it reports no "
+          f"rate at all rather than a clamped one (got {_g['cagr']})")
+    check(_g.get(_guard) is True,
+          f"{_label} names {_guard} as the reason, so the rejection is "
+          f"legible in the funnel rather than anonymous")
 
 # ── deceleration, which an endpoint CAGR cannot see ──
 # Four of the six live rows had FALLING earnings and were rendered as
@@ -258,10 +300,29 @@ check(L.price_earnings(None, 1e6)["pe"] is None, "no cap, no multiple")
 
 check(L.peg(9.0, 30.0) == 0.3, "PEG is P/E over growth")
 check(L.peg(9.0, None) is None, "and needs both")
-check(L.peg(L.PE_SANE[0], L.EPS_GROWTH_CAP) >= 0.08,
-      "with both inputs bounded, PEG has a hard floor instead of running "
-      "to 0.01 — the nine live PEGs were 0.01 to 0.49, so DEEP fired on "
-      "100% of rows while the default sort was PEG ascending")
+# PEG NO LONGER HAS AN ARITHMETIC FLOOR, and that is a real cost of
+# removing the growth ceiling rather than an oversight. PEG is P/E over
+# growth and the default sort is PEG ascending, so the floor used to be
+# PE_SANE[0] / EPS_GROWTH_CAP = 0.086. With no ceiling the denominator is
+# unbounded and PEG runs toward zero, which is the state the cap was
+# originally introduced to end.
+#
+# It is accepted here because the thing that actually produced those
+# near-zero PEGs was never the missing clamp — it was rates like 493.6%
+# and 273%, and each of those now has a named guard that rejects the row
+# outright (asserted above, with no ceiling in force). What survives to
+# be sorted is a measured rate. Asserted rather than left implicit so that
+# whoever reads the top of a PEG-sorted board knows what is holding it up.
+check(L.EPS_GROWTH_CAP is None and L.peg(L.PE_SANE[0], 500.0) <= 0.01
+      and L.peg(L.PE_SANE[0], 2000.0) == 0.0,
+      f"with no growth ceiling PEG has NO arithmetic floor — a 500% rate "
+      f"against the minimum sane P/E gives {L.peg(L.PE_SANE[0], 500.0)}, "
+      f"which is the bottom of the 0.01-to-0.49 range the clamp was "
+      f"introduced to end, and at 2000% it rounds to zero. The guards, not "
+      f"the clamp, are what keep a rate like that off the board at all")
+check(L.peg(9.0, 100.0) == 0.09,
+      "and an honest fast grower's PEG is simply small, which is the "
+      "signal Lynch was actually after")
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -539,14 +600,20 @@ check(_son["cagr"] is None,
 # are not the anomaly.
 _rocket = L.growth({"2020-12-31": 0.80, "2021-12-31": 1.10, "2022-12-31": 1.50,
                     "2023-12-31": 2.00, "2024-12-31": 6.50})
-check(_rocket["spike"] and _rocket["cagr"] == 35.0,
-      "a company still compounding without its best year KEEPS its rate and "
-      "stays on the board — rejecting every spike would cut the category "
-      "Lynch actually hunted. 0.80 -> 1.10 -> 1.50 -> 2.00 is 35.7%/yr "
-      "before the 6.50 year is counted at all")
-check(_rocket["cagr_through_spike"] == 35.0 and _rocket["capped"],
-      "both figures are capped here, so the badge is what tells the reader "
-      "the +225% year was set aside")
+check(_rocket["spike"] and _rocket["cagr"] == 35.7,
+      f"a company still compounding without its best year KEEPS its rate "
+      f"and stays on the board — rejecting every spike would cut the "
+      f"category Lynch actually hunted. 0.80 -> 1.10 -> 1.50 -> 2.00 is "
+      f"35.7%/yr before the 6.50 year is counted at all, and 35.7 is now "
+      f"what it prints. Under the old cap it printed 35.0 while this very "
+      f"message claimed it kept its rate (got {_rocket['cagr']})")
+check(_rocket["cagr_through_spike"] == 80.8 and _rocket["capped"] is False,
+      f"and the rate THROUGH the spike is shown beside it at its true "
+      f"80.8%/yr, so the reader can see the size of what was set aside. "
+      f"Both figures used to clamp to 35.0, which made a +225% year and a "
+      f"steady 35.7% compounder print the SAME NUMBER — the spike badge "
+      f"was carrying information the numbers had been stripped of "
+      f"(got {_rocket['cagr_through_spike']})")
 
 # THE PRECEDENCE MATTERS. A verdict already reached is not overwritten by
 # "could not tell": the turnaround's +788.9% would trip the spike test, and
@@ -590,13 +657,17 @@ check(not _early["trough"],
       "this screen exists to find")
 _psix = L.growth({"2020-12-31": -2.12, "2021-12-31": 0.49, "2022-12-31": 1.15,
                   "2023-12-31": 3.01, "2024-12-31": 4.94})
-check(not _psix["trough"] and _psix["cagr"] == 35.0,
-      "recovery INTO growth qualifies: nothing behind PSIX's 0.49 base was "
-      "higher, and the last-year column still shows the reader +64%")
+check(not _psix["trough"] and _psix["cagr"] == 116.0,
+      f"recovery INTO growth qualifies: nothing behind PSIX's 0.49 base was "
+      f"higher, and the last-year column still shows the reader +64%. Its "
+      f"116%/yr is now printed as 116%/yr — the row is admitted on the "
+      f"trough test and the READER decides what 116 is worth, which is the "
+      f"whole point of dropping the ceiling (got {_psix['cagr']})")
 check(L.growth({"2021-12-31": 0.10, "2022-12-31": 0.30, "2023-12-31": 0.90,
-                "2024-12-31": 2.70})["cagr"] == 35.0,
+                "2024-12-31": 2.70})["cagr"] == 199.9,
       "a company with exactly four points has no history behind the window "
-      "at all, so it can never be a trough")
+      "at all, so it can never be a trough — and at 199.9%/yr it says so "
+      "plainly instead of being flattened to a plausible-looking 35")
 
 # ── return on capital: reported, never gated ──
 _light = L.return_on_capital(300e6, 500e6, 400e6, 120e6)

@@ -61,11 +61,44 @@ MIN_EPS_YEARS = 3               # need this many spans, so 4 annual points
 # WITHHELD and badged, not silently dropped.
 PE_SANE = (3.0, 10.0)
 
-# Growth was the last unbounded term in the app AND the default sort key,
-# which made the ranking monotone in the estimator's own error. Sustaining
-# 35%/yr for three years is rare enough that a GARP buyer should not
-# underwrite it, and high enough not to bind on a genuine fast grower.
-EPS_GROWTH_CAP = 35.0
+# NO CEILING ON THE REPORTED EPS RATE. None means the board prints the rate
+# it measured, whatever it is, and the reader judges it.
+#
+# There WAS one, at 35%, and its reasoning was sound when written: "growth
+# was the last unbounded term in the app AND the default sort key, which
+# made the ranking monotone in the estimator's own error." At the time the
+# clamp was the only thing standing between a fabricated rate and the top
+# of a PEG-ascending sort.
+#
+# It is not the only thing any more. Every artefact it was covering for now
+# has its OWN named guard, and each fires BEFORE the clamp and never
+# consults its value:
+#
+#     ANF    493.6%  ->  trough        base of 0.05 under a median of 6.22
+#     XNET   273.1%  ->  step          one year at 83x the median
+#     0.12, -0.80, -0.45, 3.10 -> loss_window   a turnaround is not a rate
+#     Sonoco  28.7%  ->  spike         1.65 -> 10.07 in a single year
+#
+# tests/test_lynch.py runs all four with no ceiling and every one is still
+# rejected, by name. The clamp had stopped being the mechanism and become a
+# second, blunter copy of it — and a worse one, because clamping rejects
+# nothing. It rewrites a nonsense rate as a merely excellent one and leaves
+# it on the board looking reasonable, which is exactly how the 195.5%
+# turnaround printed 35.0% and took the top row.
+#
+# WHAT THIS COSTS, stated plainly rather than discovered later. PEG is P/E
+# over growth and is the default sort ascending, so its floor was
+# PE_SANE[0] / EPS_GROWTH_CAP — 0.086 — and is now zero. A row that clears
+# all four guards while still carrying an inflated rate will sort to the
+# top with a PEG near nothing. The defence is no longer arithmetic: it is
+# that the guards name their rejections, that cagr_raw was always the
+# honest number, and that a rate of 300% now READS as 300% instead of
+# being flattened into something that looks underwritable.
+#
+# The `cap=` parameter on growth() stays and is unaffected — checklist.py
+# passes REV_GROWTH_CAP = 60 for the revenue window, a different question
+# about a different series.
+EPS_GROWTH_CAP = None
 
 # A base year this far below the window's median is a trough, and the
 # "growth" measured off it is a recovery. Abercrombie's 0.05 against a
@@ -86,9 +119,12 @@ BASE_JUMP_MULTIPLE = 5.0
 # base of 0.06 sits ABOVE the median of 0.04, because the entire history
 # is near zero. Nothing is depressed; the company simply has no history at
 # its current level, and one year at 83x the median is a step change, not
-# a rate that can be extrapolated. Without this it passes at the capped
-# 35%, comfortably over the 10% gate, which is worse than the 273% it
-# printed before — a fabricated number that looks reasonable.
+# a rate that can be extrapolated. Without this guard it passes, and with
+# the growth ceiling removed it would now pass at its full 273% rather
+# than at a clamped 35% — which is the LESS dangerous of the two, because
+# 273% is visibly fabricated and 35% looks like something a person could
+# underwrite. This guard, not any ceiling, is what keeps the row off the
+# board; it fires before the clamp ever ran and never consulted its value.
 STEP_MULTIPLE = 5.0
 
 # A base this far below the PRE-WINDOW peak is a drawdown, not a start.
@@ -546,6 +582,9 @@ def _rate(pts: list, spans: int | None = None, cap: float | None = None,
     # a second copy would drift out of step with the first, which this
     # codebase has already paid for once.
     n = MIN_EPS_YEARS if spans is None else int(spans)
+    # `cap=None` means "use this module's default", which is itself None —
+    # no ceiling. A caller wanting one passes it: checklist.py sends
+    # REV_GROWTH_CAP for the revenue window and still gets clamped.
     ceiling = EPS_GROWTH_CAP if cap is None else float(cap)
     if n < 1 or len(pts) < n + 1:
         return out
@@ -582,8 +621,11 @@ def _rate(pts: list, spans: int | None = None, cap: float | None = None,
     # be gated on `median > 0`, so a window whose median is negative
     # switched BOTH of them off and fell through to the endpoint formula.
     # EPS 0.12, -0.80, -0.45, 3.10 has median -0.165 and produced a raw
-    # 195.5% capped to 35.0%, a PEG near 0.2, and the top row on the
-    # board. Positive endpoints around a loss are a turnaround, and an
+    # 195.5% which the ceiling then in force rewrote as 35.0%, a PEG near
+    # 0.2, and the top row on the board — the clamp did not reject it, it
+    # dressed it up. That row is the reason there is no longer a ceiling
+    # and the reason THIS guard exists.
+    # Positive endpoints around a loss are a turnaround, and an
     # endpoint CAGR describes a turnaround worse than it describes
     # anything else.
     if med <= 0:
@@ -619,8 +661,11 @@ def _rate(pts: list, spans: int | None = None, cap: float | None = None,
     # already been dragged up by the recovered years — so it cannot see the
     # hole. Carnival's revenue ran 16.4, 17.5, 18.9, 20.8, 5.6, 1.9, 12.2,
     # 21.6, 25.0, 26.5: measured over 3 spans it compounds at 29.5%, over 5
-    # at a capped 35.0%, over 9 at 5.5%. Great, Great, Yikes — one company,
+    # at a raw 69.4%, over 9 at 5.5%. Great, Great, Yikes — one company,
     # one filing history, and no existing guard fires at any window.
+    # (This is the REVENUE path, whose caller still passes a ceiling —
+    # checklist.REV_GROWTH_CAP = 60 — so the 5-span figure prints at 60.
+    # The comment used to say 35.0, a number belonging to neither cap.)
     #
     # Opt-in because it is a REVENUE test. Earnings collapse to near zero
     # in ordinary years and the pre-window peak would reject honest
@@ -657,8 +702,17 @@ def _rate(pts: list, spans: int | None = None, cap: float | None = None,
 
     raw = ((end / start) ** (1.0 / span) - 1.0) * 100.0
     out["cagr_raw"] = round(raw, 1)
-    out["capped"] = raw > ceiling
-    out["cagr"] = round(min(raw, ceiling), 1)
+    # No ceiling means the measured rate IS the reported rate, and nothing
+    # is badged as capped. Written as an explicit None test rather than
+    # leaning on float("inf"): infinity would clamp correctly and then
+    # serialise into the snapshot's _meta as the JSON token `Infinity`,
+    # which is not valid JSON and which the page's JSON.parse rejects.
+    if ceiling is None:
+        out["capped"] = False
+        out["cagr"] = round(raw, 1)
+    else:
+        out["capped"] = raw > ceiling
+        out["cagr"] = round(min(raw, ceiling), 1)
     return out
 
 

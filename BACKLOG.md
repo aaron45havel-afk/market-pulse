@@ -56,3 +56,27 @@ Format: `- [PHASE-SEEN] item — why it matters`
 - [P1] `jobs.run_forever` has no test — a loop that never returns cannot have one. All
   the logic is in `run_one`, which is tested; the shell is kept thin for that reason,
   and it is still untested code running as a production process.
+- [FCFQ] The IFRS debt tag ladder in `refresh_compounders.BALANCE_TAGS` is too narrow.
+  Foreign filers whose borrowings sit under element names it does not carry come through
+  with a fraction of their real debt — Korea Electric, Ecopetrol, Toyota, POSCO, Takeda
+  and Wipro all did. `fcf_quality.debt_cross_check` refuses those rows rather than ranking
+  them, so nothing wrong reaches the board, but the fix is more `ifrs-full` borrowing tags,
+  not more guards. 48 rows are currently refused this way.
+- [FCFQ] `inferred_zero_fault` cannot tell a genuinely debt-free large cap from an unmapped
+  debt tag, so it refuses both above $10bn. Vertex, Intuitive Surgical, Shopify and Datadog
+  are really debt-light and are really excluded — 34 rows. Widening the tag ladder is what
+  shrinks this; raising the threshold alone would let General Motors back in at a market-cap
+  denominator and an inflated yield.
+- [FCFQ] `snapshot_screens` declares its inputs by CONTENT HASH, so it can see that one
+  moved but never that one rolled BACKWARD — `freshness.verdict`'s fault branch is
+  unreachable for it. None of its three inputs offers a usable date: `zips.db` is SQLite
+  with no metadata, `norcal_condo.json` writes a bare `"2026-07"` that `fromisoformat`
+  rejects, and `headroom/crime.json` is annual. Giving `refresh_norcal` and
+  `build_national_zips` an ISO `_meta.as_of` each would upgrade those two stamps to dated
+  ones and turn the fault branch on; the guard needs no change.
+- [FCFQ] The freshness guard covers the two builds that JOIN (`fcf-quality`,
+  `screen-history`). It is not applicable to the fetchers, whose inputs are the network —
+  those need a delta guard on the result size instead, which `refresh_lynch_screener` and
+  `refresh_hundred` already carry and `refresh_screener`, `refresh_quiet_value`,
+  `refresh_catalysts` and `refresh_aristocrats` do not. A fetcher that comes back with an
+  empty or halved result currently publishes it.

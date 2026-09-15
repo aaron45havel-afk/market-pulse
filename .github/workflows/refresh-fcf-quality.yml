@@ -1,0 +1,125 @@
+name: Refresh FCF quality snapshot
+
+# Victory's VFLO funnel — rank on free cash flow yield, then on growth among
+# the survivors — run over every filer the pipeline can measure rather than
+# the largest 400.
+#
+# THIS JOB MAKES NO NETWORK CALLS. It joins two files already in the repo:
+#
+#   data/compounders.json   free cash flow, revenue, sales and FCF trends
+#   data/schloss.json       market capitalisation
+#
+# Both are produced by refresh-compounders (5th, 09:00) and refresh-schloss
+# (7th, 08:00), each of which already handles SEC's rate limits, its tag
+# ladders and its foreign filers. A third fetcher repeating that work would
+# be a third set of parsing bugs to keep in step, so this one waits for both
+# inputs to land — on schloss finishing, or failing that the 8th — and then
+# does arithmetic.
+#
+# That also means it is cheap to re-run by hand after either input changes,
+# and that a failure here is a bug in the screen rather than a bad day at
+# data.sec.gov.
+
+on:
+  schedule:
+    - cron: '0 10 8 * *'
+  workflow_dispatch:
+  # CHAINED, because the schedule alone is not enough. This build takes 13
+  # seconds and the compounders refresh it depends on takes ~36 minutes, so
+  # dispatching both by hand in sequence produces a snapshot from the
+  # PREVIOUS month's inputs — which is exactly what happened on the first
+  # real run, silently and with a green tick on both jobs.
+  #
+  # Chained to SCHLOSS, not compounders, because schloss is the LAST of the
+  # two inputs to land each month (7th vs 5th). Chaining to the first one
+  # rebuilds the board on the 5th with fresh cash flows over month-old market
+  # caps, and this is a yield screen — a stale denominator reorders the
+  # ranking, it does not merely age it. Firing on schloss means both inputs
+  # are current, and the 8th-of-month cron below becomes a fallback rather
+  # than a correction.
+  workflow_run:
+    workflows: ["Refresh Schloss screen (monthly)"]
+    types: [completed]
+  # Rebuild whenever the screen's own logic changes, so a snapshot is never
+  # produced by a different version of the funnel than the one on the page.
+  push:
+    branches: [main]
+    paths:
+      - 'market-pulse-v21/fcf_quality.py'
+      - 'market-pulse-v21/scripts/build_fcf_quality.py'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-fcf-quality
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # A chained run only makes sense if the job it chained from succeeded;
+    # every other trigger has no upstream conclusion to check.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
+    steps:
+      # ref is PINNED to main, because on a workflow_run event the default is
+      # ambiguous and this build cannot afford the ambiguity. The event payload
+      # carries the TRIGGERING run's head SHA — for a scheduled schloss job,
+      # main as it stood before schloss committed the new market caps — while
+      # the docs describe GITHUB_SHA for this event as the last commit on the
+      # default branch. If checkout resolves the former, the chained run
+      # rebuilds the board from the very file it exists to wait for, and does
+      # it silently: the job succeeds, the snapshot is just a month old.
+      # Naming the branch makes the question moot instead of answering it.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # The domain module is pure, so its suite gates the build. A snapshot
+      # produced by a screen whose own tests fail is worse than no snapshot:
+      # it looks like a board.
+      - name: Prove the screen before running it
+        working-directory: market-pulse-v21
+        run: |
+          python tests/test_fcf_quality.py
+          python tests/test_freshness.py
+
+      # Exits 0 WITHOUT writing when neither input nor the screen's own
+      # code has moved since the last snapshot — a fallback cron firing
+      # against unchanged inputs is a normal Tuesday, not a failure, and
+      # the one thing that must not happen is re-dating the old board.
+      # Exits NON-ZERO if an input went backward, which means this
+      # checkout predates a refresh that already landed. Either way the
+      # step log prints both input dates, which is what says WHICH
+      # refresh failed to land.
+      - name: Build the snapshot
+        working-directory: market-pulse-v21
+        run: python scripts/build_fcf_quality.py
+
+      - name: Commit if it changed
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add market-pulse-v21/data/fcf_quality_snapshots/
+          if git diff --cached --quiet; then
+            echo "no change"
+            exit 0
+          fi
+          git commit -m "chore: refresh FCF quality snapshot"
+          # The other refresh jobs may have pushed while this one ran.
+          for i in 1 2 3 4; do
+            if git push; then exit 0; fi
+            echo "push failed, rebasing and retrying ($i)"
+            git pull --rebase --autostash
+            sleep $((i * 3))
+          done
+          echo "could not push after 4 attempts" >&2
+          exit 1

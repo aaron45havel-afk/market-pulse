@@ -320,12 +320,21 @@
         maxBounds: L.latLngBounds([22, -127], [51, -64]),
         maxBoundsViscosity: 0.6,
     }).setView([38.5, -96], 4);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-        subdomains: 'abcd', maxZoom: 19,
-        attribution: '© OpenStreetMap, © CARTO',
+    // Esri World Light Gray Canvas, base + labels as two layers so
+    // place names sit above the choropleth. Was CartoDB Positron, which
+    // now watermarks unauthenticated tiles "API KEY REQUIRED" — see the
+    // longer note in national_map.html. Path is {z}/{y}/{x}, Y BEFORE X,
+    // and maxNativeZoom caps tile requests at the deepest zoom this
+    // service actually has, letting Leaflet upscale rather than paint
+    // blank grey past it.
+    const ESRI_CANVAS =
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas';
+    L.tileLayer(ESRI_CANVAS + '/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19, maxNativeZoom: 16,
+        attribution: 'Tiles © Esri',
     }).addTo(map);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
-        subdomains: 'abcd', maxZoom: 19, attribution: '',
+    L.tileLayer(ESRI_CANVAS + '/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19, maxNativeZoom: 16, attribution: '',
         pane: 'shadowPane',
     }).addTo(map);
 

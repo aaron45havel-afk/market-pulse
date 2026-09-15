@@ -262,9 +262,12 @@
     .lb-row .stub-tag { display: inline-block; margin-left: 0.35rem; padding: 1px 5px; border-radius: 3px; background: var(--surface2); color: var(--text-dim); font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; vertical-align: 1px; }
     .lb-footer { padding: 0.55rem 0.5rem; font-size: 0.72rem; color: var(--text-dim); font-style: italic; text-align: center; border-top: 1px solid var(--border); }
     .lb-row .score { font-size: 1rem; font-weight: 700; flex-shrink: 0; font-variant-numeric: tabular-nums; }
-    /* Base tiles are CartoDB Dark Matter (already designed for overlays).
+    /* Base tiles are a light grey canvas already designed for overlays.
        No filter needed — drop the brightness/saturate CSS that was
-       darkening OSM in the prior layout. */
+       darkening OSM in the prior layout. (Named CartoDB Dark Matter here
+       for a long time; it was Positron, and is now Esri Light Gray. The
+       point the comment is making — no CSS filter — has been true
+       throughout, which is how the wrong name survived.) */
     /* Lift popups above the map's floating UI (map-search + zip-banner
        at z:1000, Leaflet controls also at z:1000). Default popup pane
        z-index is 700, so without this override the search bar renders
@@ -380,11 +383,18 @@
     .leaflet-interactive:focus { outline: none; }
     .leaflet-container svg .leaflet-interactive { outline: none; }
 
-    /* Mute CartoDB place-name labels at country zoom — at zoom 4-5
+    /* Mute the place-name label tiles at country zoom — at zoom 4-5
        "UNITED STATES" / "MEXICO" / "CUBA" render at full size which
        feels intrusive on a state-level data map. 60% opacity keeps
        cities readable at higher zoom but tones down the country
-       headers without removing them. */
+       headers without removing them.
+
+       Selector kept as-is across the Esri swap: the layer ORDER and
+       panes are unchanged, so whatever this matched before it matches
+       now. Worth knowing it may match nothing — the labels layer asks
+       for shadowPane, and a layer Leaflet moves out of the tile pane is
+       not its nth-child. If country labels look too loud, that is the
+       first thing to check rather than the opacity value. */
     .leaflet-tile-pane .leaflet-layer:nth-child(2) { opacity: 0.6; }
 
     /* ─── Find-your-fit pane (lives inside the right rail as a tab) ── */
@@ -1050,20 +1060,42 @@ document.addEventListener('DOMContentLoaded', () => {
     // sheet panes (rather than duplicating) so all the existing
     // listeners / IDs / data bindings keep working untouched.
     initBottomSheet(map);
-    // CartoDB Positron (no labels) — clean light grey base, designed
+    // Esri World Light Gray Canvas — clean light grey base, designed
     // for data viz. White midtones in the choropleth fade gracefully
     // into the base instead of smearing into olive (which the old
     // red→yellow→green palette + tan OSM/dark grey base was doing).
     // Labels-only loads as a separate top layer so place names sit
     // above polygons and read clearly.
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+    //
+    // WAS CartoDB Positron, which gave the same base + labels split.
+    // CARTO moved their basemaps behind registration and now stamps
+    // unauthenticated tiles with an "API KEY REQUIRED" watermark — they
+    // still serve, they just arrive defaced. Esri's equivalent needs no
+    // key, so there is no secret to rotate and no quota to outgrow.
+    //
+    // Two differences from every other Leaflet tile URL in this repo,
+    // both easy to get wrong:
+    //   * the path is {z}/{y}/{x} — Y BEFORE X. Transposed, it returns
+    //     tiles of somewhere else rather than erroring, so the map looks
+    //     perfectly plausible and is simply the wrong place.
+    //   * no {s} subdomain and no {r} retina variant.
+    //
+    // maxNativeZoom is the load-bearing one. This service has no tiles
+    // past z16, but the map allows 19 and the ZIP and neighborhood
+    // layers are exactly what people zoom that far for. Without it,
+    // Leaflet requests z17-19, gets 404s, and paints blank grey at the
+    // moment somebody has drilled into the detail they came for. With
+    // it, z16 tiles are upscaled — slightly soft, but continuous.
+    const ESRI_CANVAS =
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas';
+    L.tileLayer(ESRI_CANVAS + '/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19,
-        subdomains: 'abcd',
-        attribution: '&copy; OpenStreetMap, &copy; CARTO',
+        maxNativeZoom: 16,
+        attribution: 'Tiles &copy; Esri',
     }).addTo(map);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+    L.tileLayer(ESRI_CANVAS + '/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19,
-        subdomains: 'abcd',
+        maxNativeZoom: 16,
         attribution: '',
         pane: 'shadowPane',
     }).addTo(map);

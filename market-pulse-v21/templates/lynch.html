@@ -138,10 +138,10 @@
         <th data-sort="market_cap" title="From the bulk market file, not price x shares — the computed version disagreed with the Schloss board by more than 2x on 211 companies, in both directions.">Mkt cap<span class="arrow">↕</span></th>
         <th data-sort="price">Price<span class="arrow">↕</span></th>
         <th data-sort="pe_ratio" title="Market cap over net income. Neither side touches a share count, so it is immune to the ADS ratio and to a non-USD EPS.">P/E<span class="arrow">↕</span></th>
-        <th data-sort="eps_3yr_cagr_pct" title="Endpoint CAGR between annual periods, capped. A trough base or a step change reports no rate at all.">EPS CAGR<span class="arrow">↕</span></th>
+        <th data-sort="eps_3yr_cagr_pct" title="Endpoint CAGR between annual periods, reported as measured with no ceiling. A trough base, a step change, a loss year or a spike reports no rate at all — the guards reject, they do not trim.">EPS CAGR<span class="arrow">↕</span></th>
         <th data-sort="latest_yoy" title="Latest year versus the one before. An endpoint CAGR is structurally blind to deceleration, which was the only thing that mattered to Lynch for a fast grower.">Last yr<span class="arrow">↕</span></th>
         <th data-sort="up_years" title="Years the figure rose, out of the periods on file.">Up<span class="arrow">↕</span></th>
-        <th data-sort="peg" title="P/E over growth. Both inputs bounded, so this has a floor instead of running to 0.01.">PEG<span class="arrow">↕</span></th>
+        <th data-sort="peg" title="P/E over growth. Growth is no longer bounded, so this has no floor — a very fast grower sorts to the top with a PEG near zero. Read it beside the EPS path, not on its own.">PEG<span class="arrow">↕</span></th>
         <th data-sort="roe" title="Average ROE over the last three fiscal years, bounded at 100%. Flattered by leverage — read it beside RoC.">ROE<span class="arrow">↕</span></th>
         <th data-sort="roc" title="Greenblatt&#39;s return on capital: operating income over net working capital plus net PP&amp;E. The one column that answers whether the growth is EARNED or BOUGHT — a company can compound EPS for years by ploughing capital into projects returning less than they cost, and every other column here applauds it. Pre-tax on purpose: an effective tax rate needs two more tags that go missing, and a statutory 21% would be a fabricated number. Reported, never gated. Blank means an input was not filed.">RoC<span class="arrow">↕</span></th>
         <th data-sort="op_margin" title="Latest operating margin. Computed and discarded for three builds — which is why a 1.4% margin sat beside a 27% ROE unnoticed.">Op mgn<span class="arrow">↕</span></th>
@@ -187,12 +187,17 @@
         a company still compounding without its best year stays, badged, at the conservative rate.</li>
     <li><strong>A turnaround is not a growth rate.</strong> Both guards above used to switch off when the
         window's median was negative, so EPS of 0.12, −0.80, −0.45, 3.10 fell through to the endpoint
-        formula and printed a capped 35%/yr with a PEG near 0.2 — the top row. A loss year inside the
+        formula and produced a raw 195.5%/yr, which the growth ceiling then in force rewrote as a tidy
+        35%/yr with a PEG near 0.2 — the top row. That is the case against clamping: it did not reject
+        anything, it made a nonsense rate look underwritable. A loss year inside the
         window now reports no rate at all. The guards also measure against the four points the rate is
         computed from, not the whole filed history; measuring against everything made a steady compounder's
         verdict depend on how many years it had been public, and rejected it at sixteen.</li>
-    <li><strong>Every ratio is bounded</strong> and shows its raw value on hover. Growth is capped, the P/E
-        has a floor as well as a ceiling, ROE is capped as equity approaches zero.</li>
+    <li><strong>Growth is NOT capped</strong> — the rate is reported as measured, however large, and you
+        judge it. The four guards above reject an unsound rate outright rather than trimming it to
+        something plausible. The cost is that PEG no longer has a floor, so a very fast grower sorts to
+        the top of a PEG-ascending board with a ratio near zero; read the EPS path beside it. The P/E
+        still has a floor as well as a ceiling, and ROE is still bounded as equity approaches zero.</li>
     <li><strong>Not here:</strong> forward earnings (Lynch's PEG used <em>expected</em> growth — every free
         version substitutes a trailing rate, which is exactly why the trough guard matters), institutional
         ownership, and daily volume. None is obtainable free from a CI runner.</li>
