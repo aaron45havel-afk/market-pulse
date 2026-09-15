@@ -12,8 +12,9 @@ name: Refresh FCF quality snapshot
 # Both are produced by refresh-compounders (5th, 09:00) and refresh-schloss
 # (7th, 08:00), each of which already handles SEC's rate limits, its tag
 # ladders and its foreign filers. A third fetcher repeating that work would
-# be a third set of parsing bugs to keep in step, so this one runs on the
-# 8th — after both inputs have landed — and does arithmetic.
+# be a third set of parsing bugs to keep in step, so this one waits for both
+# inputs to land — on schloss finishing, or failing that the 8th — and then
+# does arithmetic.
 #
 # That also means it is cheap to re-run by hand after either input changes,
 # and that a failure here is a bug in the screen rather than a bad day at
@@ -28,8 +29,16 @@ on:
   # dispatching both by hand in sequence produces a snapshot from the
   # PREVIOUS month's inputs — which is exactly what happened on the first
   # real run, silently and with a green tick on both jobs.
+  #
+  # Chained to SCHLOSS, not compounders, because schloss is the LAST of the
+  # two inputs to land each month (7th vs 5th). Chaining to the first one
+  # rebuilds the board on the 5th with fresh cash flows over month-old market
+  # caps, and this is a yield screen — a stale denominator reorders the
+  # ranking, it does not merely age it. Firing on schloss means both inputs
+  # are current, and the 8th-of-month cron below becomes a fallback rather
+  # than a correction.
   workflow_run:
-    workflows: ["Refresh Compounders screen (monthly)"]
+    workflows: ["Refresh Schloss screen (monthly)"]
     types: [completed]
   # Rebuild whenever the screen's own logic changes, so a snapshot is never
   # produced by a different version of the funnel than the one on the page.
@@ -56,7 +65,18 @@ jobs:
       github.event_name != 'workflow_run' ||
       github.event.workflow_run.conclusion == 'success'
     steps:
+      # ref is PINNED to main, because on a workflow_run event the default is
+      # ambiguous and this build cannot afford the ambiguity. The event payload
+      # carries the TRIGGERING run's head SHA — for a scheduled schloss job,
+      # main as it stood before schloss committed the new market caps — while
+      # the docs describe GITHUB_SHA for this event as the last commit on the
+      # default branch. If checkout resolves the former, the chained run
+      # rebuilds the board from the very file it exists to wait for, and does
+      # it silently: the job succeeds, the snapshot is just a month old.
+      # Naming the branch makes the question moot instead of answering it.
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - uses: actions/setup-python@v5
         with:
