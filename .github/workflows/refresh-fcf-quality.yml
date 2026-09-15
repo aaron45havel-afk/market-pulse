@@ -89,6 +89,14 @@ jobs:
         working-directory: market-pulse-v21
         run: python tests/test_fcf_quality.py
 
+      # Exits 0 WITHOUT writing when neither input nor the screen's own
+      # code has moved since the last snapshot — a fallback cron firing
+      # against unchanged inputs is a normal Tuesday, not a failure, and
+      # the one thing that must not happen is re-dating the old board.
+      # Exits NON-ZERO if an input went backward, which means this
+      # checkout predates a refresh that already landed. Either way the
+      # step log prints both input dates, which is what says WHICH
+      # refresh failed to land.
       - name: Build the snapshot
         working-directory: market-pulse-v21
         run: python scripts/build_fcf_quality.py

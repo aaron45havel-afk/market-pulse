@@ -33,10 +33,21 @@ What is never allowed is a board with some rows on each. Market cap is
 smaller than enterprise value for any company carrying net debt, so a
 mixed board would hand a higher yield, and a better rank, to whichever
 rows were missing a debt tag.
+
+IT REFUSES TO RE-DATE AN OLD BOARD. Reading files instead of fetching
+them makes this build fast enough to outrun its own inputs: 13 seconds
+against the 36 minutes the compounders refresh takes. Dispatch both by
+hand in sequence and this one reads the tree as it stood before the
+refresh pushed, producing last month's board with this month's date on
+it — silently, with a green tick. fcf_quality.refresh_verdict() decides
+whether there is anything new to say before any work is done; see the
+comment above it for why "the inputs are older than the snapshot" is
+NOT the rule that catches this. --force overrides it.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from datetime import date, timezone, datetime
@@ -179,8 +190,69 @@ def multiple_guard(rows: list) -> int:
     return flagged
 
 
-def build(out_dir: Path = OUT_DIR) -> dict:
+def logic_stamp() -> str:
+    """Content hash of the code that decides what the board says.
+
+    Two files, because either can change the output on unchanged inputs:
+    fcf_quality.py is the funnel, this script is the join and the guards
+    wrapped around it. Hashing bytes rather than tracking a version
+    number means nobody has to remember to bump anything — which is the
+    only kind of version stamp that stays true.
+    """
+    h = hashlib.sha256()
+    for p in (ROOT / "fcf_quality.py", Path(__file__).resolve()):
+        h.update(p.read_bytes())
+    return h.hexdigest()[:16]
+
+
+def previous_inputs(out_dir: Path):
+    """What the most recent snapshot on disk was built from, or None.
+
+    Snapshots are named YYYY-MM.json, so the newest sorts last. Reads
+    from `_meta` and tolerates a snapshot written before `logic` existed:
+    a missing hash comes back as None, which refresh_verdict() treats as
+    "cannot prove the screen is unchanged" and builds.
+    """
+    if not out_dir.exists():
+        return None
+    files = sorted(out_dir.glob("[0-9][0-9][0-9][0-9]-[0-9][0-9].json"))
+    if not files:
+        return None
+    try:
+        meta = json.loads(files[-1].read_text()).get("_meta", {})
+    except (ValueError, OSError):
+        return None
+    join = meta.get("join", {})
+    return {
+        "compounders": join.get("compounders_as_of"),
+        "schloss": join.get("schloss_as_of"),
+        "logic": meta.get("logic"),
+        "_file": files[-1].name,
+    }
+
+
+def build(out_dir: Path = OUT_DIR, force: bool = False) -> dict:
     rows, join_meta = load_join()
+
+    # FRESHNESS, decided before any work is done. See the module comment
+    # in fcf_quality.py: this build is fast enough to outrun its own
+    # inputs, and a board re-dated from stale files is indistinguishable
+    # from a fresh one once it is on the page.
+    current = {
+        "compounders": join_meta["compounders_as_of"],
+        "schloss": join_meta["schloss_as_of"],
+        "logic": logic_stamp(),
+    }
+    previous = previous_inputs(out_dir)
+    verdict = Q.refresh_verdict(current, previous)
+    if force:
+        verdict = dict(verdict, action="build", forced=True,
+                       reason=f"--force (would otherwise {verdict['action']}: "
+                              f"{verdict['reason']})")
+    if verdict["action"] != "build":
+        return {"path": None, "snapshot": None, "verdict": verdict,
+                "inputs": current, "previous": previous}
+
     result = Q.screen(rows)
 
     for bucket in ("final", "fcf_cut", "measured"):
@@ -207,6 +279,8 @@ def build(out_dir: Path = OUT_DIR) -> dict:
     snapshot = {
         "_meta": {
             "built": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            "logic": current["logic"],
+            "freshness": verdict,
             "basis": result["basis"],
             "basis_note": (
                 "Yield is free cash flow over MARKET CAP, not enterprise "
@@ -259,18 +333,45 @@ def build(out_dir: Path = OUT_DIR) -> dict:
     month = date.today().strftime("%Y-%m")
     path = out_dir / f"{month}.json"
     path.write_text(json.dumps(snapshot, indent=1, sort_keys=True))
-    return {"path": path, "snapshot": snapshot}
+    return {"path": path, "snapshot": snapshot, "verdict": verdict,
+            "inputs": current, "previous": previous}
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", default=str(OUT_DIR))
+    ap.add_argument("--force", action="store_true",
+                    help="write the snapshot even if the freshness guard "
+                         "says the inputs have not moved")
     args = ap.parse_args()
 
-    r = build(Path(args.out))
+    r = build(Path(args.out), force=args.force)
+    v = r["verdict"]
+
+    if r["snapshot"] is None:
+        # Not a build. Print the dates BEFORE the verdict text, because
+        # the dates are what tell the operator which refresh failed to
+        # land — the sentence only says that one did.
+        prev = r["previous"] or {}
+        print(f"inputs   compounders {r['inputs']['compounders']}   "
+              f"schloss {r['inputs']['schloss']}")
+        print(f"on disk  compounders {prev.get('compounders')}   "
+              f"schloss {prev.get('schloss')}   ({prev.get('_file')})")
+        print()
+        print(f"{v['action'].upper()}: {v['reason']}")
+        if v["action"] == "fault":
+            return 1
+        print()
+        print("Nothing written. Re-run with --force to write it anyway.")
+        return 0
+
     s, m = r["snapshot"], r["snapshot"]["_meta"]
     c = m["census"]
     print(f"wrote {r['path']}")
+    print(f"  freshness       {v['reason']}"
+          f"{'' if v.get('verified') else '  [NOT VERIFIED]'}")
+    print(f"  inputs          compounders {r['inputs']['compounders']}, "
+          f"schloss {r['inputs']['schloss']}")
     print(f"  basis           {m['basis']}")
     ev = m["ev_inputs"]
     print(f"  ev inputs       {ev['with_debt']}/{ev['of']} with debt, "
