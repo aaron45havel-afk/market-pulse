@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+{% block title %}FCF Quality — Market Pulse{% endblock %}
+{% block extra_css %}
+<style>
+  main .container { max-width: 1900px; }
+
+  .fq-sub { color:var(--text-dim); font-size:0.9rem; line-height:1.6; max-width:960px; margin:0 0 0.9rem; }
+  .fq-bar { display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap; }
+  .fq-search { background:var(--surface2); border:1px solid var(--border); border-radius:6px;
+    padding:0.4rem 0.6rem; color:var(--text); font-size:0.85rem; min-width:180px; max-width:280px; outline:none; }
+  .fq-search:focus { border-color:var(--accent2); }
+
+  .fq-card { background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:0.85rem 1rem; margin:1rem 0; }
+  .fq-card h2 { margin:0 0 0.25rem; font-size:1rem; }
+  .fq-card .desc { font-size:0.79rem; color:var(--text-dim); margin:0 0 0.7rem; line-height:1.6; }
+
+  /* The funnel, ours beside theirs */
+  .fq-funnels { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+  @media (max-width:900px) { .fq-funnels { grid-template-columns:1fr; } }
+  .fq-fun h3 { font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em;
+    color:var(--text-dim); margin:0 0 0.45rem; font-weight:700; }
+  .fq-stage { display:grid; grid-template-columns: 1fr auto auto; gap:0.5rem; align-items:baseline;
+    background:var(--surface2); border:1px solid var(--border); border-radius:7px;
+    padding:0.45rem 0.65rem; margin-bottom:0.35rem; }
+  .fq-stage .lab { font-size:0.78rem; }
+  .fq-stage .lab small { color:var(--text-dim); font-size:0.68rem; display:block; }
+  .fq-stage .v { font-variant-numeric:tabular-nums; font-weight:700; font-size:0.9rem; min-width:4.2rem; text-align:right; }
+  .fq-stage .v small { display:block; font-size:0.6rem; font-weight:600; color:var(--text-dim);
+    text-transform:uppercase; letter-spacing:0.04em; }
+  .fq-stage.final { border-color:var(--mint); }
+  .up { color:var(--mint-ink); } .down { color:var(--coral-ink); }
+
+  .fq-tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:0.55rem; margin:1rem 0; }
+  .fq-tile { background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:0.6rem 0.75rem; }
+  .fq-tile .v { font-size:1.35rem; font-weight:800; line-height:1.15; font-variant-numeric:tabular-nums; }
+  .fq-tile .k { font-size:0.63rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dim); margin-top:0.15rem; }
+  .fq-tile .n { font-size:0.66rem; color:var(--text-dim); }
+  .fq-tile.hero { border-color:var(--accent2); }
+  .fq-tile.hero .v { color:var(--accent2); }
+
+  .fq-scroll { overflow-x:auto; }
+  table.fq-table { width:100%; border-collapse:collapse; font-size:0.76rem; white-space:nowrap; }
+  .fq-table th { text-align:right; padding:0.45rem 0.4rem; border-bottom:2px solid var(--border);
+    font-size:0.62rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dim);
+    cursor:pointer; user-select:none; position:sticky; top:0; background:var(--surface); }
+  .fq-table th:nth-child(-n+3) { text-align:left; }
+  .fq-table td { padding:0.4rem; border-bottom:1px solid var(--border); text-align:right; font-variant-numeric:tabular-nums; }
+  .fq-table td:nth-child(-n+3) { text-align:left; }
+  .fq-table tbody tr:hover td { background:var(--surface2); }
+  .fq-table th:first-child, .fq-table td:first-child { position:sticky; left:0; z-index:2; background:var(--surface); }
+  .fq-table tbody tr:hover td:first-child { background:var(--surface2); }
+  .fq-table thead th:first-child { z-index:3; }
+  .fq-table .tick { font-family:var(--font-mono); font-weight:700; }
+  .fq-table td.nm { max-width:16rem; overflow:hidden; text-overflow:ellipsis; }
+  .dim { color:var(--text-dim); }
+
+  .band { display:inline-block; padding:0 5px; border-radius:3px; font-size:0.57rem; font-weight:700;
+    letter-spacing:0.04em; background:var(--surface2); color:var(--text-dim); border:1px solid var(--border);
+    text-transform:uppercase; }
+  .band.small, .band.micro { background:rgba(34,197,94,0.14); color:var(--mint-ink); border-color:rgba(34,197,94,0.4); }
+  .flag { display:inline-block; padding:0 5px; border-radius:999px; font-size:0.57rem; font-weight:700;
+    margin-left:0.25rem; cursor:help; background:rgba(217,119,6,0.14); color:#b45309;
+    border:1px solid rgba(217,119,6,0.35); }
+
+  .fq-warn { background:rgba(217,119,6,0.10); border:1px solid rgba(217,119,6,0.38);
+    border-radius:10px; padding:0.75rem 1rem; margin:1rem 0; font-size:0.8rem; line-height:1.65; }
+  .fq-warn strong { color:#b45309; }
+
+  details.fq-explain { background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:0.6rem 1rem; margin:0.9rem 0; font-size:0.82rem; line-height:1.65; }
+  details.fq-explain summary { cursor:pointer; font-weight:700; font-size:0.85rem; }
+  details.fq-explain ul { margin:0.5rem 0 0.5rem 1.1rem; padding:0; }
+  details.fq-explain li { margin-bottom:0.4rem; }
+  .empty { padding:2rem 1rem; text-align:center; color:var(--text-dim); font-size:0.9rem; }
+</style>
+{% endblock %}
+{% block content %}
+
+<h1>💵 FCF Quality — the whole market</h1>
+<p class="fq-sub" id="fqSub">Loading…</p>
+
+<div class="fq-card" style="padding:0.7rem 1rem;">
+  <div class="fq-bar">
+    <label for="fqSnap" style="font-size:0.8rem; color:var(--text-dim); font-weight:600;">Snapshot</label>
+    <select id="fqSnap" style="background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:0.35rem 0.55rem; color:var(--text); font-size:0.85rem;">
+      <option value="">Loading…</option>
+    </select>
+    <span id="fqMeta" style="font-size:0.75rem; color:var(--text-dim);"></span>
+    <input id="fqSearch" class="fq-search" placeholder="Filter by ticker or name…">
+    <label style="font-size:0.78rem; display:flex; align-items:center; gap:0.35rem; cursor:pointer;">
+      <input type="checkbox" id="fqSmall">
+      <span><strong>Hide large caps</strong> <span class="dim">— show only what a 400-name
+      large-cap index cannot hold</span></span>
+    </label>
+  </div>
+</div>
+
+<div class="fq-warn" id="fqBasis" style="display:none;"></div>
+
+<div class="fq-tiles" id="fqTiles"></div>
+
+<!-- THE FUNNEL, OURS BESIDE THEIRS -->
+<div class="fq-card">
+  <h2>The funnel, beside the index that defined it</h2>
+  <p class="desc">
+    VFLO publishes its own rebalance table, which makes this checkable rather than merely
+    plausible. The <em>shape</em> is the signature: the cash-flow screen roughly doubles the
+    yield and costs growth, then the growth filter puts the growth back at almost no cost in
+    yield. Absolute levels differ — a whole-market universe is cheaper and more dispersed
+    than the largest 400 — but a run that does not reproduce those movements has a bug.
+  </p>
+  <div class="fq-funnels">
+    <div class="fq-fun">
+      <h3>This screen — whole market</h3>
+      <div id="fqOurs"></div>
+    </div>
+    <div class="fq-fun">
+      <h3>Victory US Large Cap FCF Index — published</h3>
+      <div id="fqTheirs"></div>
+    </div>
+  </div>
+</div>
+
+<div class="fq-card">
+  <h2>Passing both stages — <span id="fqCount">—</span></h2>
+  <p class="desc" id="fqTableDesc"></p>
+  <div class="fq-scroll">
+    <table class="fq-table" id="fqTable">
+      <thead><tr>
+        <th data-sort="ticker">Ticker</th>
+        <th data-sort="name">Company</th>
+        <th data-sort="size_band">Size</th>
+        <th data-sort="fcf_yield" title="Free cash flow over the denominator named at the top of this page. Higher is cheaper.">FCF yield ↕</th>
+        <th data-sort="growth_score" title="Average percentile rank of the sales trend and the FCF trend, against every measured company in this snapshot.">Growth score ↕</th>
+        <th data-sort="sales_trend" title="Slope of the revenue series over its own mean — VFLO's construction, so a $12m line and a $12bn line growing at the same rate score the same.">Sales trend ↕</th>
+        <th data-sort="fcf_trend" title="The same construction on free cash flow. Stands in for VFLO's EBITDA trend.">FCF trend ↕</th>
+        <th data-sort="pfcf" title="Market cap over trailing free cash flow.">P/FCF ↕</th>
+        <th data-sort="market_cap" title="Market capitalisation.">Mkt cap ↕</th>
+        <th data-sort="fcf" title="Trailing free cash flow: operating cash flow less capex, including capitalised software and intangibles.">FCF ↕</th>
+        <th data-sort="nd_ebit" title="Net debt over EBIT. On a market-cap basis a high number means this row's yield is overstated.">Net debt/EBIT ↕</th>
+        <th data-sort="roic_med" title="Median return on invested capital. Reported, never gated.">RoC ↕</th>
+      </tr></thead>
+      <tbody id="fqBody"><tr><td colspan="12" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<details class="fq-explain">
+  <summary>What this is, and what it deliberately does not do</summary>
+  <ul>
+    <li><strong>The order is the method.</strong> Cheap on cash first, growing second. Rank on a
+        blend of the two instead and a spectacular grower on a 1% yield walks into a screen whose
+        entire premise is buying cash flow cheaply. Drop the second stage and you buy value traps —
+        which is visible in the funnel above, where the cash-flow screen alone lowers the growth of
+        what it keeps.</li>
+    <li><strong>The proportions are VFLO's own</strong> — 75 of 400, then 50 of 75. Carried as
+        fractions rather than counts, because this universe is not 400 and fixed counts would
+        silently change how selective the screen is as coverage moved.</li>
+    <li><strong>No forward estimates, and this is the real gap.</strong> VFLO averages trailing and
+        <em>forward</em> 12-month free cash flow, and its growth score includes a 3–5 year consensus
+        EPS growth estimate. Both need an analyst feed. Everything here comes from filings, so
+        everything here is trailing. A company whose cash flow is about to fall off a cliff looks
+        identical to one whose is about to double. The guards below catch bad <em>data</em>; nothing
+        in a filing catches a bad <em>future</em>.</li>
+    <li><strong>Missing is never a pass.</strong> A company whose debt tag did not file is not given
+        zero debt — that would shrink its denominator, raise its yield, and push it up a board sorted
+        by yield, so the company that failed to file would outrank the one that did. It is measured,
+        counted, and left unranked with a reason.</li>
+    <li><strong>One denominator for the whole board.</strong> Mixing a market-cap yield and an
+        enterprise-value yield in one ranking compares two different quantities and hands an
+        advantage to whichever rows are missing data. The cohort picks one basis; rows that cannot
+        supply it are listed, not blended in.</li>
+    <li><strong>A broken price is a bargain.</strong> Every multiple here is computed from market
+        capitalisation rather than share price, because the share price in the source file is wrong
+        for some tickers — Booking Holdings arrives at $193 against a real ~$4,500, which would print
+        a 0.7x P/FCF and take the top of the board. On market cap it is 16.0x. Rows are additionally
+        run through the same fault test the HOLT board uses, and flagged, not dropped.</li>
+    <li><strong>Not here:</strong> sector caps, position weighting, or a 4% holding limit. VFLO is a
+        fund and has to be investable; this is a screen and stops at selection. Their published final
+        stage lifts yield again by weighting holdings by free cash flow — there is no fourth stage
+        here to compare it to.</li>
+  </ul>
+</details>
+
+<script>
+const fmtB = n => n == null ? '—'
+  : n >= 1e12 ? '$' + (n/1e12).toFixed(2) + 'T'
+  : n >= 1e9  ? '$' + (n/1e9).toFixed(1) + 'B'
+  : n >= 1e6  ? '$' + (n/1e6).toFixed(0) + 'M'
+  : '$' + n.toFixed(0);
+const num = (v, d = 1, suf = '') => v == null ? '<span class="dim">—</span>'
+  : v.toFixed(d) + suf;
+
+let SNAP = null, SORT = { key: 'fcf_yield', dir: -1 };
+
+function stageRow(label, sub, yieldV, growthV, growthLabel, prev, isFinal) {
+  const arrow = (v, p) => (p == null || v == null) ? ''
+    : v > p ? ' <span class="up">▲</span>' : v < p ? ' <span class="down">▼</span>' : '';
+  return `<div class="fq-stage${isFinal ? ' final' : ''}">
+    <div class="lab">${label}<small>${sub || ''}</small></div>
+    <div class="v">${yieldV == null ? '—' : yieldV.toFixed(2) + '%'}${arrow(yieldV, prev && prev.y)}<small>FCF yield</small></div>
+    <div class="v">${growthV == null ? '—' : growthV.toFixed(2) + '%'}${arrow(growthV, prev && prev.g)}<small>${growthLabel}</small></div>
+  </div>`;
+}
+
+function renderFunnels() {
+  const ours = SNAP.stages || [];
+  let prev = null, html = '';
+  ours.forEach((s, i) => {
+    // The RATE, not the percentile rank. A rank has a median of ~50 in its
+    // own cohort by construction, so plotting it makes every funnel look
+    // flat regardless of what the stage did.
+    const g = (s.median_growth_rates || {}).sales_trend;
+    html += stageRow(s.label, `${s.count} companies`, s.median_fcf_yield, g,
+                     'sales trend', prev, i === ours.length - 1);
+    prev = { y: s.median_fcf_yield, g: g };
+  });
+  document.getElementById('fqOurs').innerHTML = html || '<div class="empty">—</div>';
+
+  const v = (SNAP._meta.vflo_published || {}).stages || [];
+  let p2 = null, h2 = '';
+  v.forEach((s, i) => {
+    h2 += stageRow(s.label, '', s.fcf_yield, s.growth_rate, 'growth rate',
+                   p2, i === v.length - 1);
+    p2 = { y: s.fcf_yield, g: s.growth_rate };
+  });
+  h2 += `<p class="desc" style="margin:0.5rem 0 0; font-size:0.72rem;">${
+    (SNAP._meta.vflo_published || {}).note || ''}</p>`;
+  document.getElementById('fqTheirs').innerHTML = h2;
+}
+
+function renderTiles() {
+  const m = SNAP._meta, c = m.census, fin = SNAP.final || [];
+  const yields = fin.map(r => r.fcf_yield).filter(v => v != null).sort((a, b) => a - b);
+  const med = yields.length ? yields[Math.floor(yields.length / 2)] : null;
+  const smallN = (SNAP.below_large_cap || []).length;
+  const lev = fin.filter(r => r.leverage_note).length;
+  document.getElementById('fqTiles').innerHTML = `
+    <div class="fq-tile hero"><div class="v">${fin.length}</div>
+      <div class="k">Pass both stages</div>
+      <div class="n">of ${c.measured.toLocaleString()} measured</div></div>
+    <div class="fq-tile hero"><div class="v">${smallN}</div>
+      <div class="k">Below large cap</div>
+      <div class="n">invisible to a 400-name index</div></div>
+    <div class="fq-tile"><div class="v">${med == null ? '—' : med.toFixed(1) + '%'}</div>
+      <div class="k">Median FCF yield</div>
+      <div class="n">on ${m.basis === 'ev' ? 'enterprise value' : 'market cap'}</div></div>
+    <div class="fq-tile"><div class="v">${c.input.toLocaleString()}</div>
+      <div class="k">Companies read</div>
+      <div class="n">${c.unmeasurable.toLocaleString()} could not be measured</div></div>
+    <div class="fq-tile"><div class="v">${lev}</div>
+      <div class="k">Yield overstated</div>
+      <div class="n">levered, on a market-cap basis</div></div>`;
+}
+
+function rowsNow() {
+  let rows = (SNAP.final || []).slice();
+  const q = (document.getElementById('fqSearch').value || '').trim().toLowerCase();
+  if (q) rows = rows.filter(r => (r.ticker || '').toLowerCase().includes(q)
+                              || (r.name || '').toLowerCase().includes(q));
+  if (document.getElementById('fqSmall').checked) {
+    const keep = new Set(SNAP.below_large_cap || []);
+    rows = rows.filter(r => keep.has(r.ticker));
+  }
+  const k = SORT.key;
+  const get = r => k === 'sales_trend' || k === 'fcf_trend'
+    ? (r.growth_components || {})[k] : r[k];
+  rows.sort((a, b) => {
+    const x = get(a), y = get(b);
+    if (x == null && y == null) return 0;
+    if (x == null) return 1;            // missing always sorts last, both ways
+    if (y == null) return -1;
+    return typeof x === 'string' ? SORT.dir * x.localeCompare(y) : SORT.dir * (x - y);
+  });
+  return rows;
+}
+
+function renderTable() {
+  const rows = rowsNow();
+  document.getElementById('fqCount').textContent = `${rows.length} names`;
+  const body = document.getElementById('fqBody');
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="12" class="empty">Nothing matches.</td></tr>';
+    return;
+  }
+  body.innerHTML = rows.map(r => {
+    const g = r.growth_components || {};
+    const flags = [];
+    if (r.leverage_note) flags.push(`<span class="flag" title="${r.leverage_note}">levered</span>`);
+    if (r.multiple_fault) flags.push(`<span class="flag" title="${r.multiple_fault}">check price</span>`);
+    if (r.cyclical) flags.push(`<span class="flag" title="Flagged cyclical — a trend through a commodity cycle is not compounding.">cyclical</span>`);
+    return `<tr>
+      <td class="tick">${r.ticker}</td>
+      <td class="nm" title="${(r.name || '').replace(/"/g, '&quot;')}">${r.name || ''}${flags.join('')}</td>
+      <td><span class="band ${r.size_band || ''}">${r.size_band || '—'}</span></td>
+      <td><strong>${num(r.fcf_yield, 2, '%')}</strong></td>
+      <td>${num(r.growth_score, 0)}</td>
+      <td>${num(g.sales_trend, 1, '%')}</td>
+      <td>${num(g.fcf_trend, 1, '%')}</td>
+      <td>${num(r.pfcf, 1, 'x')}</td>
+      <td>${fmtB(r.market_cap)}</td>
+      <td>${fmtB(r.fcf)}</td>
+      <td>${num(r.nd_ebit, 1, 'x')}</td>
+      <td>${num(r.roic_med, 0, '%')}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAll() {
+  const m = SNAP._meta;
+  document.getElementById('fqSub').innerHTML =
+    `Victory's VFLO method — rank on free cash flow yield, keep the top
+     ${(m.fcf_take * 100).toFixed(1)}%, then keep the best
+     ${(m.growth_take * 100).toFixed(0)}% of those on a growth score — run over
+     <strong>every filer this pipeline can measure</strong> rather than the largest 400.
+     BofA puts that construction at 18.2%/yr since 1999 against 8.5% for the Russell 1000.
+     Yield is free cash flow over <strong>${m.basis === 'ev' ? 'enterprise value' : 'market capitalisation'}</strong>,
+     trailing only.`;
+  document.getElementById('fqMeta').textContent =
+    `built ${m.built} · ${m.census.measured.toLocaleString()} measured · `
+    + `${m.census.final} pass · sources ${m.join.compounders_as_of} / ${m.join.schloss_as_of}`;
+
+  const warn = document.getElementById('fqBasis');
+  const bits = [];
+  if (m.basis !== 'ev') bits.push(`<strong>Yield is on market cap, not enterprise value.</strong> ${m.basis_note}`);
+  if (!m.forward_looking) bits.push(`<strong>No forward estimates.</strong> ${m.forward_note}`);
+  if (bits.length) { warn.innerHTML = bits.join('<br><br>'); warn.style.display = ''; }
+
+  renderTiles(); renderFunnels(); renderTable();
+  document.getElementById('fqTableDesc').textContent =
+    `Sorted by ${SORT.key.replace('_', ' ')}. Every rejection in this snapshot names its `
+    + `reason; ${m.census.unmeasurable.toLocaleString()} companies were read and could not be measured.`;
+}
+
+async function load(month) {
+  const r = await fetch(`/api/fcf-quality/snapshot/${month}`);
+  if (!r.ok) { document.getElementById('fqBody').innerHTML =
+    '<tr><td colspan="12" class="empty">No snapshot yet.</td></tr>'; return; }
+  SNAP = await r.json();
+  renderAll();
+}
+
+(async () => {
+  const list = await (await fetch('/api/fcf-quality/snapshots')).json();
+  const sel = document.getElementById('fqSnap');
+  if (!list.months || !list.months.length) {
+    sel.innerHTML = '<option>none</option>';
+    document.getElementById('fqSub').textContent =
+      'No snapshot has been built yet. Run scripts/build_fcf_quality.py.';
+    document.getElementById('fqBody').innerHTML =
+      '<tr><td colspan="12" class="empty">No snapshot yet.</td></tr>';
+    return;
+  }
+  sel.innerHTML = list.months.map(m => `<option value="${m}">${m}</option>`).join('');
+  sel.value = list.latest;
+  sel.onchange = () => load(sel.value);
+  document.getElementById('fqSearch').oninput = () => SNAP && renderTable();
+  document.getElementById('fqSmall').onchange = () => SNAP && renderTable();
+  document.querySelectorAll('#fqTable th[data-sort]').forEach(th => {
+    th.onclick = () => {
+      const k = th.dataset.sort;
+      SORT = { key: k, dir: SORT.key === k ? -SORT.dir : -1 };
+      renderTable();
+    };
+  });
+  load(list.latest);
+})();
+</script>
+{% endblock %}
