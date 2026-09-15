@@ -38,13 +38,10 @@ Format: `- [PHASE-SEEN] item — why it matters`
   are really debt-light and are really excluded — 34 rows. Widening the tag ladder is what
   shrinks this; raising the threshold alone would let General Motors back in at a market-cap
   denominator and an inflated yield.
-- [FCFQ] `refresh-fcf-quality` has no freshness assertion on its own inputs, and the
-  `workflow_run` chain only covers the scheduled path. The chain now fires on schloss —
-  the later of the two inputs — so the monthly sequence is safe. A MANUAL dispatch is
-  not: compounders takes ~36 minutes and this build takes 13 seconds, so dispatching
-  both by hand in sequence still writes a snapshot from the previous month's inputs,
-  silently and with a green tick. That is how the first real run went wrong. The
-  trigger-level fix cannot close it, because no trigger knows what the operator meant.
-  The data-level one can: have `build_fcf_quality.py` read the `as_of` on
-  `compounders.json` and `schloss.json` and refuse to write a snapshot whose inputs are
-  older than the one already on disk.
+- [FCFQ] The freshness guard covers `fcf-quality` only. `refresh_verdict` compares both
+  input stamps and a content hash of the screen's own code, and skips rather than
+  re-dating an unchanged board — but every other build script in this repo has the same
+  shape (read committed files, write a dated snapshot) and none of them check. The
+  screen-history, lynch and quiet-value builds are the closest analogues. Generalising
+  the guard is a bigger change than copying it, because the other snapshots do not all
+  carry their inputs' `as_of` in their own metadata.

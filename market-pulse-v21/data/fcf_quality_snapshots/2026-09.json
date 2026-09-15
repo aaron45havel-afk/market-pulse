@@ -23,6 +23,15 @@
   "fcf_take": 0.1875,
   "forward_looking": false,
   "forward_note": "VFLO averages trailing and FORWARD 12-month free cash flow and includes a 3-5 year consensus EPS growth estimate. Both need an analyst feed. Everything here is trailing, from filings.",
+  "freshness": {
+   "action": "build",
+   "moved": {
+    "compounders": "same",
+    "schloss": "same"
+   },
+   "reason": "previous snapshot predates logic stamping, so an unchanged screen cannot be proved",
+   "verified": true
+  },
   "growth_components": [
    "sales_trend",
    "fcf_trend"
@@ -39,6 +48,7 @@
     "not_in_schloss": 252
    }
   },
+  "logic": "bd914d44e441fcb6",
   "min_market_cap": 50000000,
   "min_revenue": 10000000,
   "multiple_flagged": 24,
