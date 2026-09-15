@@ -53,6 +53,26 @@ COMPOUNDERS = ROOT / "data" / "compounders.json"
 OUT_DIR = ROOT / "data" / "fcf_quality_snapshots"
 
 
+def _oracle_net_debt(c: dict):
+    """Net debt implied by this pipeline's own net-debt/EBIT ratio.
+
+    Deliberately a DIFFERENT path to the same number than the balance
+    sheet: nd_ebit is computed upstream from EBIT and a net-debt figure
+    the compounders refresh assembles its own way. Two paths agreeing is
+    evidence; one path alone is an assertion.
+
+    EBIT is approximated as revenue x operating margin, so this carries
+    real error and the check that consumes it is loose by design.
+    """
+    nd, rev, om = c.get("nd_ebit"), c.get("revenue_last"), c.get("op_margin_now")
+    if nd is None or not rev or om is None:
+        return None
+    ebit = rev * om / 100.0
+    if ebit <= 0:
+        return None
+    return nd * ebit
+
+
 def load_join() -> tuple[list, dict]:
     """Every company both files can describe, as screen() input rows."""
     sch = json.loads(SCHLOSS.read_text())
@@ -94,6 +114,14 @@ def load_join() -> tuple[list, dict]:
             "minority": c.get("minority"),
             "debt_inferred_zero": c.get("debt_inferred_zero"),
             "bs_as_of": c.get("bs_as_of"),
+            # An INDEPENDENT estimate of the same quantity, from a
+            # different code path: this pipeline's own net-debt/EBIT,
+            # multiplied back out. fcf_quality.debt_cross_check() refuses
+            # a row whose extracted debt is under half of it — foreign
+            # IFRS filers whose borrowings sit under element names the tag
+            # ladder does not carry come through with a fraction of their
+            # real debt, and a fraction of the debt is an inflated yield.
+            "oracle_net_debt": _oracle_net_debt(c),
             # The two growth legs available from filings. VFLO's third —
             # a 3-5 year consensus EPS growth estimate — has no filing
             # equivalent and is simply not here.
@@ -203,6 +231,9 @@ def build(out_dir: Path = OUT_DIR) -> dict:
             "vflo_components": ["sales trend", "EBITDA trend",
                                "long-term EPS growth estimate"],
             "ev_inputs": {
+                "debt_cross_check_refused": sum(
+                    1 for r in result["rejected"]
+                    if "net-debt/EBIT" in (r.get("reason") or "")),
                 "with_debt": sum(1 for r in rows if r.get("total_debt") is not None),
                 "with_cash": sum(1 for r in rows if r.get("cash") is not None),
                 "debt_inferred_zero": sum(1 for r in rows

@@ -167,6 +167,84 @@ def enterprise_value(market_cap, total_debt=None, cash=None,
             "reason": ""}
 
 
+# ── a second opinion on the debt, and why it is one-sided ────────────
+#
+# The balance-sheet extractor agrees with the pipeline's independently
+# computed net-debt/EBIT for the typical company — median ratio exactly
+# 1.00, p25 to p90 of 0.79 to 1.09 across 1,120 cross-checkable rows. It
+# fails on a specific group: foreign IFRS filers whose debt sits under
+# element names the tag ladder does not carry. Korea Electric, Ecopetrol,
+# Toyota, POSCO, Takeda and Wipro all came through with a fraction of
+# their real borrowings, and 13.5% of rows disagree in SIGN — the
+# extractor reporting net cash where the ratio says net debt.
+#
+# THE GUARD IS ASYMMETRIC AND THAT IS THE POINT. An overstated debt
+# figure inflates enterprise value, which LOWERS the yield, which loses a
+# name — a cost paid in missed opportunities nobody sees. An understated
+# one shrinks enterprise value, RAISES the yield, and promotes the row up
+# a board sorted by yield. Only the second is refused. The screen should
+# fail toward missing something rather than toward recommending it.
+DEBT_UNDERSTATEMENT_LIMIT = 0.5     # of the independent estimate
+DEBT_ORACLE_FLOOR = 100_000_000     # below this the estimate cannot discriminate
+
+
+# A company this large with NO debt tag at all has an unmapped tag, not a
+# clean balance sheet. General Motors and BP both arrived with zero debt
+# inferred, and the cross-check cannot catch them: when the extractor
+# finds nothing, the independent estimate is usually built from the same
+# nothing, so both paths agree and both are wrong. Agreement is only
+# evidence when the two paths are genuinely independent.
+#
+# Size is the discriminator that does not depend on either path. A small
+# company with no debt tag is ordinary — plenty of them carry no debt. A
+# company worth tens of billions that filed no borrowings at all is not
+# debt-free; it is filed under an element name the ladder does not have.
+# Market cap, not revenue, because it comes from a USD quote file and a
+# foreign filer's revenue is in its own currency.
+INFERRED_DEBT_FREE_MAX_CAP = 10_000_000_000
+
+
+def inferred_zero_fault(debt_inferred_zero, market_cap) -> str | None:
+    """Why an inferred debt-free balance sheet is not credible, or None."""
+    if not debt_inferred_zero:
+        return None
+    mc = _num(market_cap)
+    if mc is None or mc < INFERRED_DEBT_FREE_MAX_CAP:
+        return None
+    return (f"no borrowings tag of any kind on a company worth "
+            f"${mc/1e9:.0f}bn. Below ${INFERRED_DEBT_FREE_MAX_CAP/1e9:.0f}bn "
+            f"an absent debt tag is ordinary; at this size it is an "
+            f"element name the tag ladder does not carry. Reading it as "
+            f"zero would set enterprise value to market cap and inflate "
+            f"the yield — and the independent net-debt check cannot catch "
+            f"it, because when the extractor finds nothing the estimate is "
+            f"usually built from the same nothing and agrees.")
+
+
+def debt_cross_check(net_debt, oracle_net_debt) -> str | None:
+    """Why this row's extracted debt cannot be trusted, or None.
+
+    `oracle_net_debt` is an independent estimate from a different code
+    path — net-debt/EBIT multiplied back out by EBIT. It carries its own
+    error, so this is deliberately loose: it fires on a company whose
+    debt is understated by half or more, not on ordinary disagreement.
+    """
+    o = _num(oracle_net_debt)
+    if o is None or o < DEBT_ORACLE_FLOOR:
+        return None                 # nothing to check against
+    n = _num(net_debt)
+    if n is None:
+        return None
+    if n < o * DEBT_UNDERSTATEMENT_LIMIT:
+        return (f"the debt tags found sum to ${n/1e9:.2f}bn of net debt "
+                f"against ${o/1e9:.2f}bn implied by this company's own "
+                f"net-debt/EBIT — under half. Two independent paths "
+                f"disagreeing that far means the tag ladder missed "
+                f"borrowings, which would shrink enterprise value, RAISE "
+                f"the yield and move this row up a board sorted by yield.")
+    return None
+
+
 def fcf_yield(fcf, ev) -> float | None:
     """Free cash flow over enterprise value, as a percent.
 
@@ -398,6 +476,24 @@ def measure(row: dict, basis: str = "ev") -> dict:
         denom = mc
     else:
         raise Unmeasurable(f"unknown basis {basis!r}")
+
+    # Two independent paths to the same quantity. When they disagree in
+    # the direction that flatters, the row is not ranked.
+    if basis == "ev":
+        bogus = inferred_zero_fault(row.get("debt_inferred_zero"), mc)
+        if bogus:
+            out["measured"] = True
+            out["basis"] = None
+            out["reason"] = bogus
+            return out
+        disagree = debt_cross_check(
+            (_num(row.get("total_debt")) or 0) - (_num(row.get("cash")) or 0),
+            row.get("oracle_net_debt"))
+        if disagree:
+            out["measured"] = True
+            out["basis"] = None
+            out["reason"] = disagree
+            return out
 
     out["basis"] = basis
     y = fcf_yield(fcf, denom)

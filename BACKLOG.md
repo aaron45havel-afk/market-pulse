@@ -27,3 +27,19 @@ Format: `- [PHASE-SEEN] item — why it matters`
   Holdings at 0.8x P/FCF, Trade Desk at $13.80). Guarded on `/holt`, unfixed at source,
   and every board reading `pfcf_now` is affected.
 - [P0] `CRON_SECRET` was exposed in an earlier session and has not been rotated.
+- [FCFQ] The IFRS debt tag ladder in `refresh_compounders.BALANCE_TAGS` is too narrow.
+  Foreign filers whose borrowings sit under element names it does not carry come through
+  with a fraction of their real debt — Korea Electric, Ecopetrol, Toyota, POSCO, Takeda
+  and Wipro all did. `fcf_quality.debt_cross_check` refuses those rows rather than ranking
+  them, so nothing wrong reaches the board, but the fix is more `ifrs-full` borrowing tags,
+  not more guards. 48 rows are currently refused this way.
+- [FCFQ] `inferred_zero_fault` cannot tell a genuinely debt-free large cap from an unmapped
+  debt tag, so it refuses both above $10bn. Vertex, Intuitive Surgical, Shopify and Datadog
+  are really debt-light and are really excluded — 34 rows. Widening the tag ladder is what
+  shrinks this; raising the threshold alone would let General Motors back in at a market-cap
+  denominator and an inflated yield.
+- [FCFQ] `refresh-fcf-quality` can run against a stale `compounders.json` if both are
+  dispatched by hand: the compounders job takes ~36 minutes and the FCF build takes 13
+  seconds, so a manual run of both in sequence produces a snapshot from the PREVIOUS
+  month's inputs. It happened on the first real run. A `workflow_run` trigger chained to
+  the compounders workflow would remove the race.
