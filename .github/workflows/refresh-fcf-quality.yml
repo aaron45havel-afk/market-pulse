@@ -87,7 +87,9 @@ jobs:
       # it looks like a board.
       - name: Prove the screen before running it
         working-directory: market-pulse-v21
-        run: python tests/test_fcf_quality.py
+        run: |
+          python tests/test_fcf_quality.py
+          python tests/test_freshness.py
 
       # Exits 0 WITHOUT writing when neither input nor the screen's own
       # code has moved since the last snapshot — a fallback cron firing

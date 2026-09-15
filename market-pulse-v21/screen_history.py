@@ -21,6 +21,8 @@ import json
 from datetime import date
 from pathlib import Path
 
+import freshness
+
 _HIST = Path(__file__).resolve().parent / "data" / "screen_history"
 
 # Price moves smaller than this are noise from the ZHVI revision cycle,
@@ -37,8 +39,71 @@ def current_period(today: date | None = None) -> str:
     return f"{d.year:04d}-{d.month:02d}"
 
 
+# ── What this snapshot is built FROM ─────────────────────────────────
+# The strict screen reads committed files rather than fetching, so it can
+# finish before the refreshes that feed it have pushed — the same shape
+# that published a stale FCF-quality board on its first run.
+#
+# THESE ARE THE FILES norcal.screen() ACTUALLY OPENS, which is not the
+# same list as the jobs that feed it. The first attempt here declared
+# zillow_overrides.json and zip_neighborhoods.json, because those are what
+# the cron comment names as the upstream refreshes — but the screen never
+# reads either. Zillow reaches it only after build_national_zips has baked
+# it into zips.db, and a guard that watches a file its build does not open
+# will skip a run whose real input moved. The test for a declared input is
+# "does the screen open it", not "does something upstream write it".
+#
+# STAMPED BY CONTENT, NOT BY DATE, because none of the three offers a
+# usable one: zips.db is 28MB of SQLite with no metadata, norcal_condo
+# writes a bare "2026-07" that fromisoformat rejects, and crime.json is a
+# research layer on an annual cycle. See freshness.py — a hash answers
+# "did this move" exactly but cannot see a ROLLBACK, so this build detects
+# redundancy and does not detect a backwards checkout.
+#
+# The researched layers in LAYER_TTL_DAYS below are a separate question.
+# They age on a scale of years and are reported to the reader as an age
+# rather than gating anything; these decide the answer.
+SNAPSHOT_INPUT_FILES = {
+    "zips": "zips.db",                    # universe, median values, scores
+    "condo": "norcal_condo.json",         # the condo entry prices
+    "crime": "headroom/crime.json",       # the safety gate
+}
+
+
+def snapshot_inputs() -> dict:
+    """{layer: content stamp} for the files the screen reads.
+
+    A file that cannot be read maps to None, which freshness.verdict()
+    reads as unverifiable — it builds, and records that nothing could be
+    proved, rather than treating absence as agreement.
+    """
+    base = Path(__file__).resolve().parent / "data"
+    return {name: freshness.content_stamp(base / rel)
+            for name, rel in SNAPSHOT_INPUT_FILES.items()}
+
+
+def previous_inputs(market: str) -> dict | None:
+    """What the most recent snapshot for this market was built from.
+
+    Per-market rather than repo-wide, because markets are added over time
+    and a new one has no history of its own. Returns None when there is no
+    prior snapshot, or when the prior one predates input recording — both
+    of which mean the run cannot be shown to be redundant, so it proceeds.
+    """
+    ps = periods(market)
+    if not ps:
+        return None
+    prev = load(market, ps[-1])
+    if not prev:
+        return None
+    inputs = prev.get("_inputs")
+    if not isinstance(inputs, dict):
+        return None
+    return dict(inputs, _file=_path(market, ps[-1]).name)
+
+
 def snapshot(res: dict, market: str, period: str | None = None,
-             params: dict | None = None) -> dict:
+             params: dict | None = None, inputs: dict | None = None) -> dict:
     """Persist one month's screen result. Stores only what a diff needs."""
     period = period or current_period()
     _HIST.mkdir(parents=True, exist_ok=True)
@@ -51,6 +116,11 @@ def snapshot(res: dict, market: str, period: str | None = None,
                 for s in lst}
     snap = {"period": period, "market": market,
             "params": params or {},
+            # Provenance, so the NEXT run can tell a real rebuild from a
+            # re-dating of this one. Written even when empty: a snapshot
+            # with no `_inputs` is how previous_inputs() recognises a file
+            # from before this existed.
+            "_inputs": inputs or {},
             "max_purchase": res["power"]["max_purchase"],
             "universe_n": res["universe_n"],
             "buyable": rows(res["buyable"]),

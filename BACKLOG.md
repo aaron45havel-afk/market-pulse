@@ -38,10 +38,16 @@ Format: `- [PHASE-SEEN] item — why it matters`
   are really debt-light and are really excluded — 34 rows. Widening the tag ladder is what
   shrinks this; raising the threshold alone would let General Motors back in at a market-cap
   denominator and an inflated yield.
-- [FCFQ] The freshness guard covers `fcf-quality` only. `refresh_verdict` compares both
-  input stamps and a content hash of the screen's own code, and skips rather than
-  re-dating an unchanged board — but every other build script in this repo has the same
-  shape (read committed files, write a dated snapshot) and none of them check. The
-  screen-history, lynch and quiet-value builds are the closest analogues. Generalising
-  the guard is a bigger change than copying it, because the other snapshots do not all
-  carry their inputs' `as_of` in their own metadata.
+- [FCFQ] `snapshot_screens` declares its inputs by CONTENT HASH, so it can see that one
+  moved but never that one rolled BACKWARD — `freshness.verdict`'s fault branch is
+  unreachable for it. None of its three inputs offers a usable date: `zips.db` is SQLite
+  with no metadata, `norcal_condo.json` writes a bare `"2026-07"` that `fromisoformat`
+  rejects, and `headroom/crime.json` is annual. Giving `refresh_norcal` and
+  `build_national_zips` an ISO `_meta.as_of` each would upgrade those two stamps to dated
+  ones and turn the fault branch on; the guard needs no change.
+- [FCFQ] The freshness guard covers the two builds that JOIN (`fcf-quality`,
+  `screen-history`). It is not applicable to the fetchers, whose inputs are the network —
+  those need a delta guard on the result size instead, which `refresh_lynch_screener` and
+  `refresh_hundred` already carry and `refresh_screener`, `refresh_quiet_value`,
+  `refresh_catalysts` and `refresh_aristocrats` do not. A fetcher that comes back with an
+  empty or halved result currently publishes it.

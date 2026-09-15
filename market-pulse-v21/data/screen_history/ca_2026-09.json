@@ -7,13 +7,19 @@
   "safety_tier": "safe",
   "winter": "moderate"
  },
+ "_inputs": {
+  "zips": "sha256:1615d90907008094",
+  "condo": "sha256:fd1f2973214f41db",
+  "crime": "sha256:d96ace07536e8e54",
+  "logic": "750c509dc7eea9f1"
+ },
  "max_purchase": 800000,
  "universe_n": 945,
  "buyable": {
   "94706": {
    "name": "Albany",
    "region": "NorCal",
-   "entry": 515457,
+   "entry": 514867,
    "kind": "condo",
    "minutes": 11.5,
    "anchor": "OAK",
@@ -25,7 +31,7 @@
   "94087": {
    "name": "Sunnyvale",
    "region": "NorCal",
-   "entry": 988615,
+   "entry": 993104,
    "kind": "condo",
    "minutes": 14.4,
    "anchor": "SJ",
@@ -35,7 +41,7 @@
   "95030": {
    "name": "Los Gatos",
    "region": "NorCal",
-   "entry": 1374867,
+   "entry": 1373707,
    "kind": "condo",
    "minutes": 16.0,
    "anchor": "SJ",
@@ -45,7 +51,7 @@
   "94041": {
    "name": "Mountain View",
    "region": "NorCal",
-   "entry": 1079798,
+   "entry": 1103506,
    "kind": "condo",
    "minutes": 17.7,
    "anchor": "SJ",
@@ -55,7 +61,7 @@
   "94040": {
    "name": "Mountain View",
    "region": "NorCal",
-   "entry": 868875,
+   "entry": 882380,
    "kind": "condo",
    "minutes": 18.1,
    "anchor": "SJ",
@@ -65,7 +71,7 @@
   "94010": {
    "name": "Hillsborough",
    "region": "NorCal",
-   "entry": 1070014,
+   "entry": 1076895,
    "kind": "condo",
    "minutes": 22.4,
    "anchor": "SF",
@@ -75,7 +81,7 @@
   "94025": {
    "name": "Menlo Park",
    "region": "NorCal",
-   "entry": 1271784,
+   "entry": 1270953,
    "kind": "condo",
    "minutes": 26.2,
    "anchor": "SJ",
