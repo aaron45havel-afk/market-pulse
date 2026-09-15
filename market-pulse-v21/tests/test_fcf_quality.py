@@ -358,6 +358,67 @@ check(Q.screen([])["census"]["input"] == 0,
 
 
 # ══════════════════════════════════════════════════════════════════
+# TWO INDEPENDENT PATHS TO THE DEBT, AND WHAT EACH CATCHES
+# ══════════════════════════════════════════════════════════════════
+# The balance-sheet extractor agrees with the pipeline's own
+# net-debt/EBIT for the typical company — median ratio exactly 1.00 over
+# 1,120 cross-checkable rows. It fails on foreign IFRS filers whose
+# borrowings sit under element names the ladder does not carry.
+
+check(Q.debt_cross_check(0.4e9, 4.0e9) is not None,
+      "AN EXTRACTED NET DEBT UNDER HALF AN INDEPENDENT ESTIMATE IS "
+      "REFUSED. AT&T, T-Mobile, Home Depot and Union Pacific all came "
+      "through this way — real borrowings the tag ladder missed")
+check("up a board sorted by yield" in Q.debt_cross_check(0.4e9, 4.0e9),
+      "and the reason names the consequence, not just the discrepancy")
+check(Q.debt_cross_check(3.6e9, 4.0e9) is None,
+      "ordinary disagreement passes — the estimate approximates EBIT as "
+      "revenue x operating margin and carries real error of its own, so "
+      "the check is deliberately loose")
+
+check(Q.debt_cross_check(8.0e9, 4.0e9) is None,
+      "AND IT IS ONE-SIDED. An OVERSTATED debt inflates enterprise value, "
+      "lowers the yield and loses a name — a cost nobody sees. An "
+      "understated one promotes a row up the board. Only the second is "
+      "refused: the screen fails toward missing something rather than "
+      "toward recommending it")
+check(Q.debt_cross_check(0.0, 1e6) is None,
+      "and a tiny estimate cannot discriminate, so it abstains rather "
+      "than firing on noise")
+check(Q.debt_cross_check(1e9, None) is None, "no estimate is no check")
+
+# ── what the cross-check structurally cannot catch ──
+# When the extractor finds NOTHING, the independent estimate is usually
+# built from the same nothing, so both paths agree and both are wrong.
+# Agreement is only evidence when the paths are independent.
+check(Q.inferred_zero_fault(True, 77e9) is not None,
+      "A $77bn COMPANY WITH NO BORROWINGS TAG OF ANY KIND IS REFUSED. "
+      "General Motors arrived exactly this way, and the cross-check could "
+      "not see it: its net-debt estimate said net cash too")
+check(Q.inferred_zero_fault(True, 200e6) is None,
+      "but a small company with no debt tag is ordinary — plenty carry "
+      "none, and refusing them would gut the small-cap half of a screen "
+      "whose whole point is reaching below large cap")
+check(Q.inferred_zero_fault(False, 77e9) is None,
+      "a company with real debt tags is never touched by this")
+check(Q.inferred_zero_fault(True, None) is None,
+      "and an unknown size abstains")
+check("tag ladder does not carry" in Q.inferred_zero_fault(True, 77e9),
+      "the reason says what is actually wrong — an unmapped element, not "
+      "a clean balance sheet")
+
+# THE COST, ASSERTED SO IT IS NOT FORGOTTEN. This guard cannot tell a
+# genuinely debt-free large cap from an unmapped tag, so it refuses both.
+# Vertex, Intuitive Surgical and Datadog are really debt-light and are
+# really excluded. That is accepted: a screen that omits them is worse
+# than one that ranks General Motors as debt-free at an inflated yield.
+check(Q.inferred_zero_fault(True, 130e9) is not None,
+      "a genuinely debt-free large cap is refused TOO, and knowingly — "
+      "size alone cannot separate the two cases, and the conservative "
+      "direction is the one that does not promote a wrong row")
+
+
+# ══════════════════════════════════════════════════════════════════
 # LEVERAGE, ON A MARKET-CAP BASIS
 # ══════════════════════════════════════════════════════════════════
 # The sharpest edge on a board that cannot compute enterprise value.

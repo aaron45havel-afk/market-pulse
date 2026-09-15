@@ -23,6 +23,14 @@ on:
   schedule:
     - cron: '0 10 8 * *'
   workflow_dispatch:
+  # CHAINED, because the schedule alone is not enough. This build takes 13
+  # seconds and the compounders refresh it depends on takes ~36 minutes, so
+  # dispatching both by hand in sequence produces a snapshot from the
+  # PREVIOUS month's inputs — which is exactly what happened on the first
+  # real run, silently and with a green tick on both jobs.
+  workflow_run:
+    workflows: ["Refresh Compounders screen (monthly)"]
+    types: [completed]
   # Rebuild whenever the screen's own logic changes, so a snapshot is never
   # produced by a different version of the funnel than the one on the page.
   push:
@@ -42,6 +50,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # A chained run only makes sense if the job it chained from succeeded;
+    # every other trigger has no upstream conclusion to check.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
     steps:
       - uses: actions/checkout@v4
 
