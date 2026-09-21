@@ -27,6 +27,17 @@ Format: `- [PHASE-SEEN] item — why it matters`
   Holdings at 0.8x P/FCF, Trade Desk at $13.80). Guarded on `/holt`, unfixed at source,
   and every board reading `pfcf_now` is affected.
 - [P0] `CRON_SECRET` was exposed in an earlier session and has not been rotated.
+- [P0] `refresh-quiet-value.yml` has failed every scheduled run since it shipped (6 of 6
+  Saturdays, Aug 15 – Sep 19 2026) and `/quiet-value` has never had a data file — the
+  page has been live with zero real data since launch. Root cause confirmed from job
+  logs (run 35454482483): both price sources reject GitHub Actions runner IPs — Stooq
+  returns an HTML bot-check page instead of CSV, Yahoo returns HTTP 429 on every
+  request. The workflow's own circuit breaker (added in #211) correctly refuses to
+  publish on this and exits 1, so the failure is loud, but nobody is watching a green
+  checkmark's absence — `check-layer-freshness.yml` only covers the research layers,
+  not fetcher screens. Needs either a third price source reachable from Actions IPs, a
+  self-hosted/proxied runner, or a paid key (Finnhub etc.); this is a data-sourcing
+  decision, not a code bug, so flagging rather than picking one.
 - [P1] `mf_audit_log` has the immutability trigger ARCHITECTURE.md §5.4 asks for but not
   the insert-only grant. A grant is meaningless while the app connects as the table's
   owner on a single `DATABASE_URL` — the owner can re-grant to itself and a superuser
