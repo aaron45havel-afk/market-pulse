@@ -1,15 +1,22 @@
 name: Refresh crime layer (FBI CDE)
 
-# Pulls current FBI Crime Data Explorer figures for every city already in
-# data/headroom/crime.json. Runs on GitHub's runners because THEY have
-# unrestricted egress — the dev sandbox's proxy blocks every .gov host,
-# which is why this layer was hand-researched to begin with.
+# Pulls every city police agency's reported crime from the FBI Crime Data
+# Explorer and rebuilds data/headroom/crime.json, which the safety gate on
+# /multifamily, /norcal and /headroom reads.
 #
-# SETUP (one time): create a free key at https://api.data.gov/signup/ and
-# save it as the CDE_API_KEY repository secret. Without it the job exits
-# 2 and reports what to do, rather than silently doing nothing.
+# NO KEY. The Crime Data Explorer's own backend (cde.ucr.cjis.gov/LATEST)
+# answers without the api.data.gov key the public gateway asks for. The old
+# keyed refresher is gone: it only updated the 394 hand-researched cities,
+# and it read the agency list as a flat list when the FBI returns it keyed
+# by county, so it could never have matched one.
 #
-# Cadence: the FBI publishes annually in the autumn, so this checks each
+# TWO STEPS. fetch_fbi_crime.py makes ~24,000 requests (every city agency,
+# violent + property, three years) and writes the raw per-agency file;
+# build_crime.py applies the trust rules in crime_build.py to it, offline.
+# Each refuses to publish a broken result and leaves the committed files
+# alone.
+#
+# Cadence: the FBI publishes a year's data each September, so this runs in
 # October and again in January in case the release slipped.
 on:
   schedule:
@@ -17,51 +24,72 @@ on:
     - cron: '0 16 5 1 *'    # Jan 5
   workflow_dispatch:
     inputs:
-      year:
-        description: 'FBI data year to pull'
+      end_year:
+        description: 'Last complete calendar year to pull (default: last year)'
         required: false
-      dry_run:
-        description: 'Report only, do not write'
+        default: ''
+      force:
+        description: 'Publish despite the coverage guards'
         type: boolean
         default: false
 
 permissions:
   contents: write
 
+concurrency:
+  group: refresh-crime
+  cancel-in-progress: false
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: market-pulse-v21
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-      - name: Pull FBI CDE figures
-        working-directory: market-pulse-v21
-        env:
-          CDE_API_KEY: ${{ secrets.CDE_API_KEY }}
+          python-version: '3.11'
+      - name: Prove the rules before an hour of requests
         run: |
-          if [ -z "$CDE_API_KEY" ]; then
-            echo "::error::CDE_API_KEY secret is not set. Get a free key at https://api.data.gov/signup/ and add it under Settings → Secrets and variables → Actions. Until then the crime layer stays on its hand-researched snapshot."
-            exit 2
-          fi
+          python tests/test_crime_build.py
+          python tests/test_safety.py
+      - name: Fetch every city agency
+        run: |
+          set -euo pipefail
           ARGS=""
-          [ -n "${{ inputs.year }}" ] && ARGS="--year ${{ inputs.year }}"
-          [ "${{ inputs.dry_run }}" = "true" ] && ARGS="$ARGS --dry-run"
-          python scripts/refresh_crime.py $ARGS
-      - name: Verify the screens still build
-        working-directory: market-pulse-v21
+          if [ -n "${{ inputs.end_year }}" ]; then ARGS="$ARGS --end-year ${{ inputs.end_year }}"; fi
+          if [ "${{ inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
+          python scripts/fetch_fbi_crime.py $ARGS
+      - name: Build crime.json
+        run: |
+          set -euo pipefail
+          ARGS=""
+          if [ "${{ inputs.force }}" = "true" ]; then ARGS="--force"; fi
+          python scripts/build_crime.py $ARGS
+      - name: Verify the safety gate and the screens still build
         run: |
           python tests/test_safety.py
           python scripts/snapshot_screens.py
       - name: Commit
         run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
           git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add market-pulse-v21/data/headroom/crime.json market-pulse-v21/data/screen_history/
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add market-pulse-v21/data/headroom/crime.json market-pulse-v21/data/headroom/fbi_agencies.json market-pulse-v21/data/screen_history/
           if git diff --staged --quiet; then
             echo "No change."
-          else
-            git commit -m "Crime layer: FBI CDE refresh $(date -u +%Y-%m-%d)"
-            git push
+            exit 0
           fi
+          git commit -m "Crime layer: FBI CDE refresh $(date -u +%Y-%m-%d)"
+          for i in 1 2 3 4; do
+            git push origin HEAD:main && exit 0
+            sleep $((i * 5))
+            git pull --rebase origin main || true
+          done
+          exit 1

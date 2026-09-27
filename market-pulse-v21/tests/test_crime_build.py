@@ -13,6 +13,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
+import build_crime as B                                    # noqa: E402
+import crime_build as C                                    # noqa: E402
 import fetch_fbi_crime as F                                # noqa: E402
 
 _COUNT = 0
@@ -114,6 +116,184 @@ for pull, limited, should, why in (
         refused = True
     check(refused is should, why)
 
+
+
+# ══════════════════════════════════════════════════════════════════
+# NAMES — agency to place
+# ══════════════════════════════════════════════════════════════════
+for name, want in (
+        ("Akron Police Department", ("Akron", False)),
+        ("Colerain Township Police Department, Hamilton County", ("Colerain", True)),
+        ("Jackson Township  Police Department, Franklin County", ("Jackson", True)),
+        ("Village of Leesburg Police Department", ("Leesburg", False)),
+        ("Bay View Village Police Department", ("Bay View", False)),
+        ("Oxford City Police Department", ("Oxford", False)),
+        ("Columbus Division of Police", ("Columbus", False)),
+        ("Cherry Hill Township Police Department", ("Cherry Hill", True)),
+        ("Bethel Park Borough Police Department", ("Bethel Park", False)),
+        ("Hanover Police Dept.", ("Hanover", False)),
+        ("Erie County Sheriff's Office", (None, False))):
+    check(C.agency_place(name) == want, f"{name!r} → {want} (got {C.agency_place(name)})")
+check(C.norm_place("St. Clair Shores") == C.norm_place("Saint Clair Shores")
+      and C.norm_place("Mt. Vernon") == C.norm_place("Mount Vernon")
+      and C.norm_place("Coeur d'Alene") == C.norm_place("Coeur dAlene"),
+      "Saint/St., Mount/Mt. and apostrophes match; nothing else is merged")
+check(C.norm_place("Springfield") != C.norm_place("Springfield Township"),
+      "the words stay: Springfield is not Springfield Township")
+
+
+# ══════════════════════════════════════════════════════════════════
+# RATES — what a figure has to survive
+# ══════════════════════════════════════════════════════════════════
+def ag(v, p, pop=50_000, months=12, **kw):
+    """v, p: {year: offenses}."""
+    return dict({"ori": "XX0000000", "name": "Testville Police Department", "state": "OH",
+                 "v": {str(y): {"n": n, "m": months, "pop": pop} for y, n in v.items()},
+                 "p": {str(y): {"n": n, "m": months, "pop": pop} for y, n in p.items()}}, **kw)
+
+
+_r = C.trusted_rate(ag({2023: 100, 2024: 90, 2025: 80}, {2023: 900, 2024: 850, 2025: 800}))
+check(_r["violent"] == 160.0 and _r["property"] == 1600.0 and _r["years"] == ["2025"]
+      and _r["basis"] == "latest" and _r["suspect"] is None,
+      "a city of 50,000 is rated on its latest complete year: 80 / 50,000 = 160 per 100k")
+_part = ag({2023: 100, 2024: 90, 2025: 80}, {2023: 900, 2024: 850, 2025: 800})
+_part["v"]["2025"]["m"] = 9
+_r = C.trusted_rate(_part)
+check(_r["years"] == ["2024"] and _r["violent"] == 180.0,
+      "A PARTIAL YEAR IS SKIPPED, NOT SCALED: nine months of 2025 fall back to "
+      "complete 2024")
+_pp = ag({2025: 80}, {2025: 800})
+_pp["p"]["2025"]["m"] = 11
+check(C.trusted_rate(_pp)["violent"] is None and "no complete year" in C.trusted_rate(_pp)["suspect"],
+      "a year needs twelve months of property crime too — and no complete year "
+      "at all is no figure, with the reason")
+_small = C.trusted_rate(ag({2023: 3, 2024: 0, 2025: 1}, {2023: 20, 2024: 15, 2025: 10}, pop=2_000))
+check(_small["basis"] == "pooled" and _small["years"] == ["2023", "2024", "2025"]
+      and _small["violent"] == round(4 / 6_000 * 100_000, 1),
+      "A SMALL TOWN POOLS ITS COMPLETE YEARS: 4 incidents over 3 years of 2,000 "
+      "people is 66.7, not the 0 or 150 a single year would say")
+_drop = C.trusted_rate(ag({2023: 100, 2024: 110, 2025: 30}, {2023: 900, 2024: 850, 2025: 800}))
+check(_drop["suspect"] and "fell from an average of 105 to 30" in _drop["suspect"],
+      "A COLLAPSE IS SUSPECT: 105 a year to 30 reads as a reporting change")
+_pdrop = C.trusted_rate(ag({2023: 100, 2024: 110, 2025: 95}, {2023: 900, 2024: 850, 2025: 200}))
+check(_pdrop["suspect"] and _pdrop["suspect"].startswith("property"),
+      "and a property-crime collapse counts too — under-reporting rarely hits one")
+_edge = C.trusted_rate(ag({2023: 100, 2024: 100, 2025: 40}, {2023: 900, 2024: 900, 2025: 900}))
+check(_edge["suspect"] is None,
+      "exactly 40% of the prior average is not a collapse — the line is under 40%")
+check(C.trusted_rate(ag({2023: 9, 2024: 9, 2025: 1}, {2023: 5, 2024: 5, 2025: 5}, pop=12_000))["suspect"] is None,
+      "a drop from a tiny base (under 10 a year) is noise, not a flag")
+_zero = C.trusted_rate(ag({2023: 0, 2024: 0, 2025: 0}, {2023: 40, 2024: 50, 2025: 45}, pop=8_000))
+check(_zero["suspect"] and "no violent offenses" in _zero["suspect"],
+      "ZERO VIOLENT CRIME FOR YEARS IN A TOWN OF 8,000 IS A REPORTING GAP, not a record")
+check(C.trusted_rate(ag({2023: 0, 2024: 0, 2025: 0}, {2023: 4, 2024: 5, 2025: 3}, pop=900))["suspect"] is None,
+      "while a village of 900 can genuinely go three years without one")
+
+
+# ══════════════════════════════════════════════════════════════════
+# MATCHING — agency to ZIP city
+# ══════════════════════════════════════════════════════════════════
+CITIES = {("OH", "springfield"): {"key": "Springfield, OH", "lat": 39.92, "lng": -83.81},
+          ("OH", "akron"): {"key": "Akron, OH", "lat": 41.08, "lng": -81.52},
+          ("OH", "franklin"): {"key": "Franklin, OH", "lat": 39.56, "lng": -84.30},
+          ("OH", "twinsburg"): {"key": "Twinsburg, OH", "lat": 41.31, "lng": -81.44},
+          ("IN", "akron"): {"key": "Akron, IN", "lat": 41.04, "lng": -86.03}}
+AGS = [
+    {"ori": "OH1", "name": "Springfield Police Department", "state": "OH", "lat": 39.92, "lng": -83.80},
+    {"ori": "OH2", "name": "Springfield Township Police Department, Hamilton County",
+     "state": "OH", "lat": 39.26, "lng": -84.52},
+    {"ori": "OH3", "name": "Akron Police Department", "state": "OH", "lat": 41.08, "lng": -81.52},
+    {"ori": "OH4", "name": "Franklin Police Department", "state": "OH", "lat": 41.90, "lng": -80.80},
+    {"ori": "OH5", "name": "Twinsburg Police Department", "state": "OH", "lat": 41.31, "lng": -81.44},
+    {"ori": "OH6", "name": "Twinsburg City Police Department", "state": "OH", "lat": 41.31, "lng": -81.44},
+    {"ori": "IN1", "name": "Akron Police Department", "state": "IN", "lat": 41.04, "lng": -86.03}]
+_m, _rep = C.match_agencies(AGS, CITIES)
+check(_m["Springfield, OH"]["ori"] == "OH1",
+      "A CITY AGENCY BEATS A TOWNSHIP AGENCY OF THE SAME NAME — Springfield "
+      "Township's rate is not Springfield's")
+check(_m["Akron, OH"]["ori"] == "OH3" and _m["Akron, IN"]["ori"] == "IN1",
+      "same name, different state, different city")
+check("Franklin, OH" not in _m and _rep["too_far"] >= 1,
+      "A NAME MATCH 170 KM FROM THE CITY'S ZIPS IS REFUSED — that is another "
+      "Franklin, not this one")
+check("Twinsburg, OH" not in _m and _rep["ambiguous"] == 1,
+      "two city agencies claiming one name is ambiguous, and gets no figure")
+
+
+# ══════════════════════════════════════════════════════════════════
+# MERGING — the researched table meets the FBI
+# ══════════════════════════════════════════════════════════════════
+EXIST = {"Marion, IN": {"violent_per_100k": 106.9, "confidence": "suspect", "note": "implausibly low"},
+         "Warsaw, IN": {"violent_per_100k": 413.7, "confidence": "medium", "note": "aggregator"},
+         "Peru, IN": {"violent_per_100k": 300.0, "confidence": "high", "note": "researched"}}
+FBI = {"Marion, IN": {"violent_per_100k": 95.0, "confidence": "high"},
+       "Warsaw, IN": {"violent_per_100k": 390.0, "confidence": "high"},
+       "Akron, OH": {"violent_per_100k": 700.0, "confidence": "high"}}
+_t, _cnt = C.merge(EXIST, FBI)
+check(_t["Marion, IN"]["confidence"] == "suspect" and _t["Marion, IN"]["violent_per_100k"] == 106.9
+      and _t["Marion, IN"]["fbi"]["violent_per_100k"] == 95.0,
+      "A RESEARCHER'S SUSPECT STAYS SUSPECT — the FBI figure rides along for "
+      "review, never promoted to a label")
+check(_t["Warsaw, IN"]["violent_per_100k"] == 390.0 and _t["Warsaw, IN"]["prior_note"] == "aggregator",
+      "an FBI figure replaces an aggregator one, keeping the old note")
+check(_t["Peru, IN"] == EXIST["Peru, IN"] and "Akron, OH" in _t,
+      "a researched city the FBI didn't match is kept; a new city is added")
+check(_cnt == {"fbi": 2, "kept_suspect": 1, "replaced": 1, "kept_research": 1},
+      f"and the merge counts what it did ({_cnt})")
+_e = C.entry_for({"ori": "OH9", "name": "X Police Department"},
+                 {"violent": 30.0, "property": 400.0, "basis": "latest", "years": ["2025"],
+                  "population": 20_000, "suspect": "violent offenses fell"}, [2023, 2024, 2025])
+check(_e["confidence"] == "suspect" and _e["note"].startswith("Not used"),
+      "an FBI figure that failed a rule is written as suspect, with the reason")
+_e = C.entry_for({"ori": "OH9", "name": "X Police Department"},
+                 {"violent": None, "property": None, "basis": None, "years": [],
+                  "population": None, "suspect": "no complete year"}, [2023, 2024, 2025])
+check(_e["violent_per_100k"] is None and "no complete year" in _e["note"],
+      "and a department with no complete year is written as no figure, saying why")
+
+
+# ══════════════════════════════════════════════════════════════════
+# BUILD — zips.db cities, every spelling, and the publish guard
+# ══════════════════════════════════════════════════════════════════
+import sqlite3                                               # noqa: E402
+
+_db = sqlite3.connect(":memory:")
+_db.execute("CREATE TABLE zips (zip TEXT, name TEXT, state TEXT, lat REAL, lng REAL)")
+_db.executemany("INSERT INTO zips VALUES (?,?,?,?,?)", [
+    ("44301", "Akron, OH", "OH", 41.04, -81.52), ("44310", "Akron", "OH", 41.12, -81.52),
+    ("63101", "Saint Louis", "MO", 38.63, -90.19), ("63102", "St. Louis", "MO", 38.63, -90.18)])
+_zc = B.zip_cities(_db)
+check(_zc[("OH", "akron")]["keys"] == ["Akron, OH"] and abs(_zc[("OH", "akron")]["lat"] - 41.08) < 1e-9,
+      "'Akron, OH' and 'Akron' in zips.db are one city, centred on its ZIPs")
+check(_zc[("MO", "stlouis")]["keys"] == ["Saint Louis, MO", "St. Louis, MO"],
+      "two spellings of one city are both kept as keys")
+_raw = {"_meta": {"years": [2023, 2024, 2025]}, "agencies": [
+    ag({2023: 1900, 2024: 1800, 2025: 1700}, {2023: 9000, 2024: 8500, 2025: 8000},
+       pop=280_000, ori="MO0000001", name="St. Louis Police Department", state="MO",
+       lat=38.63, lng=-90.20)]}
+_tb, _rp = B.build(_raw, _zc, {})
+check(_tb.get("Saint Louis, MO", {}).get("ori") == "MO0000001"
+      and _tb.get("St. Louis, MO", {}).get("ori") == "MO0000001",
+      "THE FIGURE IS WRITTEN UNDER EVERY SPELLING zips.db USES — safety.py "
+      "looks a ZIP up by its own name, so a figure under one spelling alone "
+      "would leave half the city's ZIPs unknown")
+check(_tb["St. Louis, MO"]["violent_per_100k"] == round(1700 / 280_000 * 100_000, 1)
+      and _rp["outcomes"] == {"usable": 1},
+      "and the report counts it once, as one usable city")
+_many = {f"C{i}, OH": {"violent_per_100k": 100.0, "confidence": "high"} for i in range(3_000)}
+for table, prev, should, why in (
+        (_many, {}, False, "3,000 usable cities publish"),
+        (dict(list(_many.items())[:1_500]), {}, True, "1,500 is under the floor and is refused"),
+        (dict(list(_many.items())[:2_200]), _many, True,
+         "A 27% FALL IN USABLE CITIES AGAINST THE LAST TABLE IS REFUSED"),
+        ({k: dict(v, confidence="suspect") for k, v in _many.items()}, {}, True,
+         "suspect figures don't count as usable")):
+    try:
+        B.guard(table, prev, force=False)
+        refused = False
+    except B.Refuse:
+        refused = True
+    check(refused is should, why)
 
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")
