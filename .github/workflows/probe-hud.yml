@@ -33,10 +33,10 @@ jobs:
         run: |
           python tests/test_rent_ladder.py
           python tests/test_rents_build.py
-      - name: The real script, every state
+      - name: The real script, the states the first run mismatched on spelling
         env:
           HUD_API_TOKEN: ${{ secrets.HUD_API_TOKEN }}
-        run: python scripts/refresh_rents.py
+        run: python scripts/refresh_rents.py --states AL,AR,FL,IA,IL,IN,LA,MD,MI,MN,MO,NY,TX,WI
       - name: How HUD's 2-bedroom compares with Zillow where both exist
         run: |
           python - <<'PY'
@@ -60,6 +60,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add market-pulse-v21/data/zips.db
           git diff --staged --quiet && { echo "no change"; exit 0; }
-          git commit -m "chore: rent ladder with HUD SAFMR + county FMR (first run)"
+          git commit -m "chore: rent ladder — re-pull the states with Saint/St. county names"
           for i in 1 2 3 4; do git push origin HEAD:claude/legal-rep-invoice-tracking-9j1i9r && exit 0; sleep $((i * 5)); git pull --rebase origin claude/legal-rep-invoice-tracking-9j1i9r || true; done
           exit 1

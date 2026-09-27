@@ -404,14 +404,22 @@ def fetch_hud(states: list[str], token: str, pause: float = 0.4) -> dict:
 # ─── ZIP → county, by name ───────────────────────────────────────────
 def _norm_county(name: str) -> str:
     """Spelling-only normalisation: accents, case, periods, apostrophes,
-    hyphens and spacing. Never the words — "Richmond city" and "Richmond
-    County" are different places in Virginia and stay different here."""
+    hyphens, spacing, and Saint/St. Never the words — "Richmond city" and
+    "Richmond County" are different places in Virginia and stay different.
+
+    Every rule here came from the first national run, which left 423 ZIPs
+    unmatched on nothing but spelling: zips.db writes "Saint Louis County",
+    "De Kalb County" and "O Brien County" where HUD writes "St. Louis",
+    "DeKalb" and "O'Brien".
+    """
     import unicodedata
     n = unicodedata.normalize("NFKD", name or "")
     n = "".join(ch for ch in n if not unicodedata.combining(ch)).casefold()
     for ch in ".'’":
         n = n.replace(ch, "")
-    return " ".join(n.replace("-", " ").split())
+    words = n.replace("-", " ").split()
+    words = [{"saint": "st", "sainte": "ste"}.get(w, w) for w in words]
+    return "".join(words)
 
 
 def county_fips_by_name(zip_rows, hud_counties) -> tuple[dict, dict]:

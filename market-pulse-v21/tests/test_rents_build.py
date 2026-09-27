@@ -164,13 +164,19 @@ HUD_COUNTIES = [("OH", "Adams County", "39001"), ("OH", "Cuyahoga County", "3903
                 ("NM", "Doña Ana County", "35013"), ("MO", "St. Louis County", "29189"),
                 ("MD", "Prince George's County", "24033"),
                 ("IN", "Adams County", "18001"),
+                ("AL", "DeKalb County", "01049"), ("IA", "O'Brien County", "19141"),
+                ("MO", "Ste. Genevieve County", "29186"), ("MO", "St. Louis city", "29510"),
+                ("IN", "LaPorte County", "18091"),
                 ("XX", "Twin County", "99001"), ("XX", "twin county", "99002")]
 ZIP_ROWS = [("45693", "OH", "Adams County"), ("44107", "OH", "Cuyahoga County"),
             ("46711", "IN", "Adams County"),
             ("23219", "VA", "Richmond city"), ("22572", "VA", "Richmond County"),
             ("88001", "NM", "Dona Ana County"), ("63105", "MO", "St Louis County"),
             ("20706", "MD", "Prince Georges County"),
-            ("99999", "XX", "Twin County"), ("44999", "OH", "Nowhere County")]
+            ("99999", "XX", "Twin County"), ("44999", "OH", "Nowhere County"),
+            ("35967", "AL", "De Kalb County"), ("51201", "IA", "O Brien County"),
+            ("63670", "MO", "Sainte Genevieve County"), ("63101", "MO", "Saint Louis City"),
+            ("63122", "MO", "Saint Louis County"), ("46350", "IN", "La Porte County")]
 _f, _un = R.county_fips_by_name(ZIP_ROWS, HUD_COUNTIES)
 check(_f["45693"] == "39001" and _f["46711"] == "18001",
       "SAME NAME, DIFFERENT STATE, DIFFERENT COUNTY: Adams County, Ohio and "
@@ -180,6 +186,14 @@ check(_f["23219"] == "51760" and _f["22572"] == "51159",
       "normalising spelling never touches the words")
 check(_f["88001"] == "35013" and _f["63105"] == "29189" and _f["20706"] == "24033",
       "spelling differences match: an accent, a period, an apostrophe")
+check(_f["35967"] == "01049" and _f["51201"] == "19141" and _f["46350"] == "18091"
+      and _f["63670"] == "29186",
+      "THE SPELLINGS THE FIRST NATIONAL RUN MISSED NOW MATCH: De Kalb/DeKalb, "
+      "O Brien/O'Brien, La Porte/LaPorte, Sainte/Ste. — 423 ZIPs were left "
+      "without a county rent on nothing but spelling")
+check(_f["63101"] == "29510" and _f["63122"] == "29189",
+      "and Saint/St. matches without merging St. Louis city into St. Louis "
+      "County — two places, two FMRs")
 check("99999" not in _f and "44999" not in _f,
       "A NAME THAT MAPS TO TWO COUNTIES, OR TO NONE, GETS NO FMR — "
       "ambiguity is dropped, not resolved by a guess")

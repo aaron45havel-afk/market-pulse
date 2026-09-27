@@ -83,9 +83,15 @@ check(R.resolve(zori=1467)["basis"] == "asking"
       and R.resolve(acs=980)["basis"] == "occupied-gross",
       "and the BASIS is named — $1,467 of asking-rent index and $1,180 of "
       "voucher floor are not the same claim about the same thing")
-check("FLOOR, NOT A MARKET RENT" in R.resolve(safmr=1180)["caveat"],
-      "the 40th-percentile problem is stated in the SAFMR caveat rather "
-      "than left for the reader to know")
+_sc = R.resolve(safmr=1180)["caveat"]
+check("not an asking rent" in _sc and "1.01x" in _sc and "Not a floor" in _sc
+      and "utilities" in R.resolve(safmr=1180)["measures"],
+      "THE SAFMR CAVEAT SAYS WHAT THE DATA SHOWED, not what the 40th "
+      "percentile suggested: the first national run found it 1.01x Zillow at "
+      "the median (it is GROSS rent, so utilities offset the percentile) — "
+      "the old 'floor, below market by design' was wrong")
+check("0.93x" in R.resolve(fmr=1100)["caveat"],
+      "and the county FMR caveat carries its own measured comparison")
 check("includes utilities" in R.resolve(acs=980)["caveat"]
       and "lags" in R.resolve(acs=980)["caveat"],
       "and the ACS caveat names both of its distortions")
