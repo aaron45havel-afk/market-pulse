@@ -77,6 +77,9 @@
        single input the whole board rests on, and ~69% of ZIPs nationally
        have no observed rent series at all. */
     .imputed-flag { color: #d97706; font-weight: 800; margin-left: 1px; cursor: help; }
+    /* Which source a rent came from when it isn't Zillow's asking-rent index. */
+    .rent-tag { font-size: 0.68em; font-weight: 700; color: var(--ink-3); border: 1px solid currentColor;
+                border-radius: 3px; padding: 0 3px; margin-left: 3px; cursor: help; vertical-align: 1px; }
 
     /* Deal checker — the one place on the page where nothing is estimated. */
     .deal-check { border: 1px solid var(--border); border-radius: 12px; margin: 0.9rem 0;
@@ -423,7 +426,7 @@
             {% else %}But this one loses on that benchmark: ${{ '{:,.0f}'.format(vs_rent.net_cost) }}/mo to own versus ${{ '{:,.0f}'.format(vs_rent.rent_equivalent) }}/mo to rent the same unit is <b>${{ '{:,.0f}'.format(-vs_rent.monthly_advantage) }}/mo worse</b>. Principal paydown and appreciation are the case for doing it anyway — they are not shown here and should not be assumed.
             {% endif %}
             <b>Not included:</b> utilities, maintenance, capex reserves, vacancy, or management. The <i>Stressed</i> column is where those live.
-            Rent basis: {% if rent_basis == 'input' %}your ${{ '{:,.0f}'.format(vs_rent.rent_equivalent) }}/unit input.{% elif rent_basis == 'observed' %}median of the <b>{{ n_observed }}</b> ZIP{{ 's' if n_observed != 1 }} (of {{ n_rents }} shown) with an observed ZORI rent series — imputed ZIPs are excluded from this median.{% if rent_thin %} <b>That is a thin sample</b>; treat it as indicative, not as a market read.{% endif %}{% elif rent_basis == 'imputed' %}<b>none of the {{ n_rents }} shown ZIPs has an observed rent series</b>, so this median is built from value÷17÷12 placeholders and restates home values rather than measuring rent. Enter a rent you've actually seen listed.{% else %}—{% endif %}
+            Rent basis: {% if rent_basis == 'input' %}your ${{ '{:,.0f}'.format(vs_rent.rent_equivalent) }}/unit input.{% elif rent_basis == 'observed' %}median of the <b>{{ n_observed }}</b> ZIP{{ 's' if n_observed != 1 }} (of {{ n_rents }} shown) with a measured rent (Zillow or HUD).{% if rent_thin %} <b>That is a thin sample</b>; treat it as indicative, not as a market read.{% endif %}{% elif rent_basis == 'imputed' %}<b>none of the {{ n_rents }} shown ZIPs has an observed rent series</b>, so this median is built from value÷17÷12 placeholders and restates home values rather than measuring rent. Enter a rent you've actually seen listed.{% else %}—{% endif %}
         </div>
         {% endif %}
 
@@ -457,15 +460,15 @@
     {% endif %}
 
     {# ── Deal checker ──────────────────────────────────────────────
-       The board ranks ZIPs off an ESTIMATED building price and a rent
-       that is imputed in ~69% of ZIPs. Both of those disappear the
+       The board ranks ZIPs off an ESTIMATED building price and a ZIP-wide
+       rent — Zillow's index or HUD's voucher benchmark. Both disappear the
        moment the user has a real listing in front of them, so this is
        where the page stops estimating and starts underwriting. #}
     {% if not national %}
     <details class="deal-check" {% if deal %}open{% endif %}>
         <summary>🔎 Check a specific listing — real ask, real rents</summary>
         <div class="body">
-            <p class="deal-why">Everything above is a market estimate: an SFR median scaled by a unit factor, against a rent that is imputed in most ZIPs.
+            <p class="deal-why">Everything above is a market estimate: an SFR median scaled by a unit factor, against a ZIP-wide rent (Zillow's index, or HUD's voucher benchmark where Zillow has none).
             Type the numbers off an actual listing and the two weakest inputs go away.</p>
             <form class="deal-form" method="get" action="/multifamily">
                 <input type="hidden" name="state" value="{{ state }}">
@@ -636,9 +639,9 @@
     </div></div>
     {% else %}
     <div style="font-size:0.72rem;color:var(--ink-3);margin:0 0 0.4rem">
-        Rent legend: <span class="imputed-flag">*</span> = <b>imputed</b> rent (home value ÷ 17 ÷ 12), not an observed ZORI series.
-        {{ rent_observed_pct }}% of the ZIPs below have observed rents. On a starred row the cap rate is 5.88% by construction — it is
-        restating the home value, so read the house-hack and durable columns on those rows as arithmetic, not as measured income.
+        Rents: {% set mix = [] %}{% for k in ('zori', 'safmr', 'fmr', 'acs') if rent_mix.get(k) %}{% set _ = mix.append(k) %}{% endfor %}{% for k in mix %}<b>{{ rent_tiers[k].label }}</b> on {{ rent_mix[k] }} row{{ 's' if rent_mix[k] != 1 }}{% if k != 'zori' %} (marked <span class="rent-tag">{{ 'HUD' if k in ('safmr', 'fmr') else 'ACS' }}</span>){% endif %}{{ '; ' if not loop.last else '.' }}{% endfor %}
+        {% if 'safmr' in mix or 'fmr' in mix %}HUD's figure is the 2-bedroom Fair Market Rent — the rent HUD sets for housing vouchers, near the 40th percentile of local rents and including utilities. It is a benchmark, not an asking rent: check it against real listings before you underwrite a building on it.{% endif %}
+        {% if rent_observed_pct < 100 %}<span class="imputed-flag">*</span> = an old imputed rent (home value ÷ 17 ÷ 12) — its cap rate is 5.88% by construction.{% endif %}
     </div>
     <div class="mf-tablewrap">
         <div class="mf-scroll">
@@ -660,7 +663,7 @@
                         <th data-col="degree" data-numeric="1" title="Adults 25+ with a bachelor's degree or higher (Census ACS)">Degree<span class="arrow"></span></th>
                         <th data-col="climate" data-numeric="1" title="Winter average low / summer average high / snowfall a year — NOAA 1991–2020 normals at the nearest station. Sorts by winter low.">Climate<span class="arrow"></span></th>
                         <th data-col="hazard" data-numeric="1" title="FEMA's expected damage a year from flood, wildfire, hurricane & tornado and earthquake together, in dollars per $100k of building.{% if hz_median.total is defined and hz_median.total is not none %} Typical U.S. ZIP: {{ usd(hz_median.total) }}.{% endif %} Hover a cell for each hazard.">Hazards $/yr<span class="arrow"></span></th>
-                        <th data-col="rent" data-numeric="1" title="* = imputed (home value ÷ 17 ÷ 12), not an observed ZORI rent">Rent/mo<span class="arrow"></span></th>
+                        <th data-col="rent" data-numeric="1" title="Zillow's observed rent index where it covers the ZIP; otherwise HUD's 2-bedroom Fair Market Rent, marked HUD">Rent/mo<span class="arrow"></span></th>
                         <th data-col="hv" data-numeric="1">Home value<span class="arrow"></span></th>
                         {% if has_mf_data %}
                         <th data-col="renter" data-numeric="1">% Renter<span class="arrow"></span></th>
@@ -722,7 +725,7 @@
                         {% set hz = [('Flood', r.flood_rate), ('Wildfire', r.wildfire_rate), ('Hurricane & tornado', r.wind_rate), ('Earthquake', r.quake_rate)] %}
                         {% set hz_top = (hz|sort(attribute='1')|last) if r.hazard_total is not none else none %}
                         <td data-sort="{{ r.hazard_total if r.hazard_total is not none else -1 }}">{% if r.hazard_total is not none %}<span title="Expected damage a year per $100k of building (FEMA): {% for label, rate in hz %}{{ label }} {{ usd(rate) }}{% if not loop.last %} · {% endif %}{% endfor %}. On this row's ${{ '{:,.0f}'.format(r.building_price) }} price, at most about ${{ '{:,.0f}'.format(r.hazard_total * r.building_price / 100000) }}/yr — the price includes land, which FEMA doesn't count." class="{{ 'cash-bad' if r.hazard_total >= 500 else ('cash-warn' if r.hazard_total >= 250 else '') }}">{{ usd(r.hazard_total) }}{% if r.hazard_total >= 250 %} <span style="color:var(--ink-3);font-size:0.9em">{{ hz_top[0]|lower }}</span>{% endif %}</span>{% else %}—{% endif %}</td>
-                        <td data-sort="{{ r.median_rent_monthly }}">${{ '{:,}'.format(r.median_rent_monthly) }}{% if not r.rent_observed %}<span class="imputed-flag" title="Imputed, not observed: this ZIP has no ZORI rent series, so rent = home value ÷ 17 ÷ 12. Cap rate on an imputed rent is 5.88% by construction — it restates the home value, it does not measure income.">*</span>{% endif %}</td>
+                        <td data-sort="{{ r.median_rent_monthly }}">${{ '{:,}'.format(r.median_rent_monthly) }}{% if not r.rent_observed %}<span class="imputed-flag" title="Imputed, not observed: this ZIP has no ZORI rent series, so rent = home value ÷ 17 ÷ 12. Cap rate on an imputed rent is 5.88% by construction — it restates the home value, it does not measure income.">*</span>{% elif r.rent_tier in ('safmr', 'fmr', 'acs') %}{% set t = rent_tiers[r.rent_tier] %}<span class="rent-tag" title="{{ t.label }}{% if r.rent_tier != 'acs' %}, 2-bedroom{% endif %}: {{ t.measures }}. {{ t.caveat }}">{{ 'HUD' if r.rent_tier != 'acs' else 'ACS' }}</span>{% endif %}</td>
                         <td data-sort="{{ r.median_home_value }}">${{ '{:,}'.format(r.median_home_value) }}</td>
                         {% if has_mf_data %}
                         <td data-sort="{{ r.pct_renter_occupied if r.pct_renter_occupied is not none else -1 }}">{% if r.pct_renter_occupied is not none %}{{ '%.0f'|format(r.pct_renter_occupied) }}%{% else %}—{% endif %}</td>

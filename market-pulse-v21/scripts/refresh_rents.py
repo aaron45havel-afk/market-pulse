@@ -145,10 +145,20 @@ def parse_hud_fmr_json(payload) -> dict:
     if basic is None:
         raise ValueError("HUD response has no 'basicdata'")
     if isinstance(basic, list):
-        basic = basic[0] if basic else {}
+        # A Small Area metro lists one record per ZIP plus one labelled
+        # "MSA level" — the metro-wide figure, which is this area's FMR.
+        # Picked by that label, never by position: taking the first record
+        # of a list that happened to start with a ZIP would file one ZIP's
+        # rent as the whole county's.
+        area = [r for r in basic if isinstance(r, dict)
+                and str(r.get("zip_code") or "").strip().lower() in ("msa level", "")]
+        if not area:
+            raise ValueError("HUD 'basicdata' list has no area-level record")
+        basic = area[0]
     if not isinstance(basic, dict):
         raise ValueError("HUD 'basicdata' is neither an object nor a list")
-    return {"bedrooms": _hud_bedrooms(basic), "year": data.get("year")}
+    return {"bedrooms": _hud_bedrooms(basic),
+            "year": data.get("year") or basic.get("year")}
 
 
 def parse_hud_safmr_json(payload) -> dict[str, dict]:
@@ -169,8 +179,14 @@ def parse_hud_safmr_json(payload) -> dict[str, dict]:
     for rec in basic:
         if not isinstance(rec, dict):
             continue
-        z = str(rec.get("zip_code") or "").strip().zfill(5)
-        if len(z) != 5 or not z.isdigit():
+        # A record with no ZIP is an area-level figure. Padded blindly, ""
+        # would become "00000" and every non-metro county would file its
+        # FMR as a SAFMR for a ZIP that does not exist.
+        raw = str(rec.get("zip_code") or "").strip()
+        if not raw.isdigit():
+            continue
+        z = raw.zfill(5)
+        if len(z) != 5:
             continue
         beds = _hud_bedrooms(rec)
         if beds:
@@ -316,45 +332,164 @@ def fetch_acs(vintage: int) -> dict[str, int]:
     return parse_acs_zcta(json.loads(_get(url)))
 
 
-def fetch_hud(states: list[str], token: str, pause: float = 0.4) -> tuple[dict, dict]:
-    """(safmr_by_zip, fmr_by_county). One request per county, rate-limited.
+def _get_json(url: str, headers: dict, attempts: int = 3):
+    last = None
+    for i in range(attempts):
+        try:
+            return json.loads(_get(url, headers=headers))
+        except urllib.error.HTTPError as e:
+            if e.code == 404:          # "No data found for the entityid" — an answer
+                raise
+            last = e
+        except Exception as e:                               # noqa: BLE001
+            last = e
+        time.sleep(2 * (i + 1))
+    raise last
 
-    Returns whatever it managed to collect. A failure on one county logs
-    and continues — losing Ohio should not cost the other forty-nine.
+
+def fetch_hud(states: list[str], token: str, pause: float = 0.4) -> dict:
+    """One request per county, rate-limited and retried.
+
+    Returns {"safmr": {zip: rec}, "fmr": {county_fips5: rec},
+             "counties": [(state, county_name, fips5)], "failed": {fips5},
+             "requested": n}.
+    A county that fails after retries is RECORDED, not silently skipped,
+    so the caller can keep that county's stored rents instead of treating
+    the gap as HUD saying the county has none.
     """
     safmr: dict[str, dict] = {}
     fmr: dict[str, dict] = {}
+    counties_out: list = []
+    failed: set = set()
+    requested = 0
     hdr = {"Authorization": f"Bearer {token}"}
     for st in states:
         try:
-            counties = json.loads(_get(f"{HUD_BASE}/listCounties/{st}", headers=hdr))
-        except Exception as e:
+            counties = _get_json(f"{HUD_BASE}/listCounties/{st}", hdr)
+        except Exception as e:                               # noqa: BLE001
             log.warning("HUD county list failed for %s: %s", st, e)
+            failed.add(f"state:{st}")
             continue
         if not isinstance(counties, list):
+            failed.add(f"state:{st}")
             continue
         for c in counties:
             fips = str((c or {}).get("fips_code") or "").strip()
             if not fips:
                 continue
+            counties_out.append((st, str(c.get("county_name") or ""), fips[:5]))
+            requested += 1
             try:
-                payload = json.loads(_get(f"{HUD_BASE}/data/{fips}", headers=hdr))
-            except Exception as e:
-                log.debug("HUD data failed for %s: %s", fips, e)
+                payload = _get_json(f"{HUD_BASE}/data/{fips}", hdr)
+            except Exception as e:                           # noqa: BLE001
+                log.warning("HUD data failed for %s (%s): %s", fips, c.get("county_name"), e)
+                failed.add(fips[:5])
                 continue
             # SAFMR ZIP records ride in the same payload for metro areas.
             try:
-                z = parse_hud_safmr_json(payload)
-                safmr.update(z)
+                safmr.update(parse_hud_safmr_json(payload))
             except ValueError:
                 pass
             try:
                 fmr[fips[:5]] = parse_hud_fmr_json(payload)
             except ValueError as e:
-                log.debug("HUD county parse failed for %s: %s", fips, e)
+                log.warning("HUD county parse failed for %s: %s", fips, e)
+                failed.add(fips[:5])
             time.sleep(pause)
         log.info("HUD %s: %d SAFMR ZIPs, %d counties so far", st, len(safmr), len(fmr))
-    return safmr, fmr
+    return {"safmr": safmr, "fmr": fmr, "counties": counties_out,
+            "failed": failed, "requested": requested}
+
+
+# ─── ZIP → county, by name ───────────────────────────────────────────
+def _norm_county(name: str) -> str:
+    """Spelling-only normalisation: accents, case, periods, apostrophes,
+    hyphens and spacing. Never the words — "Richmond city" and "Richmond
+    County" are different places in Virginia and stay different here."""
+    import unicodedata
+    n = unicodedata.normalize("NFKD", name or "")
+    n = "".join(ch for ch in n if not unicodedata.combining(ch)).casefold()
+    for ch in ".'’":
+        n = n.replace(ch, "")
+    return " ".join(n.replace("-", " ").split())
+
+
+def county_fips_by_name(zip_rows, hud_counties) -> tuple[dict, dict]:
+    """({zip: county_fips5}, {(state, county): n_zips unmatched}).
+
+    zip_rows:     [(zip, state, county_name)] from zips.db
+    hud_counties: [(state, county_name, fips5)] from HUD's listCounties
+
+    Matched on STATE plus the county's name, which is unique within a
+    state. A name that maps to two FIPS codes within one state is dropped
+    as ambiguous rather than resolved by a guess; a name with no match is
+    reported, not approximated.
+    """
+    index: dict = {}
+    for st, name, fips in hud_counties:
+        index.setdefault((st, _norm_county(name)), set()).add(fips)
+    out: dict = {}
+    unmatched: dict = {}
+    for z, st, name in zip_rows:
+        hits = index.get((st, _norm_county(name)))
+        if hits and len(hits) == 1:
+            out[z] = next(iter(hits))
+        else:
+            key = (st, name or "")
+            unmatched[key] = unmatched.get(key, 0) + 1
+    return out, unmatched
+
+
+MAX_HUD_FAILURE = 0.05      # share of counties that may fail before HUD is discarded
+
+
+def merge_hud(hud: dict, c_safmr: dict, c_fmr: dict, zip_rows: list,
+              pulled_states: set | None):
+    """Turn one HUD pull into per-ZIP SAFMR and FMR, keeping what it didn't reach.
+
+    Returns (safmr_by_zip, fmr_by_zip, report), or None when too many
+    counties failed for the pull to be trusted at all — the caller then
+    treats HUD as not fetched and carries every stored value.
+
+    A fetched source is authoritative, silences included — but only where
+    it actually asked. ZIPs in a state the run was not asked to pull
+    (--states), in a state whose county list failed, or in a county whose
+    request failed keep their stored HUD figures. Without that, a run
+    limited to Ohio would erase every other state's HUD rents, and one
+    timed-out county would read as HUD saying it has no rents.
+    """
+    requested = hud.get("requested") or 0
+    failed = hud.get("failed") or set()
+    n_county_fail = len([f for f in failed if not str(f).startswith("state:")])
+    if requested and n_county_fail / requested > MAX_HUD_FAILURE:
+        return None
+    failed_states = {str(f)[6:] for f in failed if str(f).startswith("state:")}
+
+    fips_of, unmatched = county_fips_by_name(zip_rows, hud.get("counties") or [])
+    county_fmr = hud.get("fmr") or {}
+    safmr = dict(hud.get("safmr") or {})
+    fmr = {z: county_fmr[f] for z, f in fips_of.items() if f in county_fmr}
+
+    carried_s = carried_f = 0
+    for z, st, _name in zip_rows:
+        not_asked = ((pulled_states is not None and st not in pulled_states)
+                     or st in failed_states or fips_of.get(z) in failed)
+        if not not_asked:
+            continue
+        if z not in safmr and z in c_safmr:
+            safmr[z] = c_safmr[z]
+            carried_s += 1
+        if z not in fmr and z in c_fmr:
+            fmr[z] = c_fmr[z]
+            carried_f += 1
+    top = sorted(unmatched.items(), key=lambda kv: -kv[1])
+    return safmr, fmr, {
+        "counties_matched_zips": len(fips_of),
+        "unmatched_zips": sum(unmatched.values()),
+        "unmatched_top": top[:15],
+        "failed_counties": n_county_fail, "failed_states": sorted(failed_states),
+        "carried_safmr": carried_s, "carried_fmr": carried_f,
+    }
 
 
 # ─── DB ──────────────────────────────────────────────────────────────
@@ -366,22 +501,13 @@ def ensure_columns(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def county_fips_map(conn: sqlite3.Connection) -> dict[str, str]:
-    """{zip: county_fips} — only if the DB carries one. Empty otherwise.
-
-    The county FMR tier needs a ZIP-to-county mapping. `zips` stores a
-    county NAME, not a FIPS code, so without a real crosswalk this tier
-    stays empty rather than guessing from a name that is ambiguous
-    across states.
-    """
-    cols = {r[1] for r in conn.execute("PRAGMA table_info(zips)")}
-    if "county_fips" not in cols:
-        return {}
-    return {r[0]: r[1] for r in
-            conn.execute("SELECT zip, county_fips FROM zips WHERE county_fips IS NOT NULL")}
+def zip_counties(conn: sqlite3.Connection) -> list:
+    """[(zip, state, county_name)] for the county-name join."""
+    return list(conn.execute(
+        "SELECT zip, state, county FROM zips WHERE state IS NOT NULL AND county IS NOT NULL"))
 
 
-def carry_stored(conn: sqlite3.Connection) -> tuple[dict, dict, dict]:
+def carry_stored(conn: sqlite3.Connection) -> tuple[dict, dict, dict, dict]:
     """Stored per-tier values, for sources that did NOT fetch this run.
 
     THIS IS THE DIFFERENCE BETWEEN A PARTIAL RUN AND A DESTRUCTIVE ONE.
@@ -392,6 +518,11 @@ def carry_stored(conn: sqlite3.Connection) -> tuple[dict, dict, dict]:
     unfetched sources means a partial run can only improve a row or
     leave it alone.
 
+    Returns (zori, safmr, fmr, acs), each keyed by ZIP. The bedroom split
+    is stored once, under `rent_bedroom_tier`, so it is carried back to
+    THAT tier only: county FMR bedrooms carried as SAFMR would relabel a
+    county-wide figure as a ZIP-level one on the first HUD-less run.
+
     A source that DID fetch is authoritative, including its silences: a
     ZIP that ZORI dropped this month should lose its ZORI value. So the
     caller carries only for sources it did not successfully reach.
@@ -401,19 +532,26 @@ def carry_stored(conn: sqlite3.Connection) -> tuple[dict, dict, dict]:
     a = {r[0]: r[1] for r in conn.execute(
         "SELECT zip, rent_acs FROM zips WHERE rent_acs IS NOT NULL")}
     s: dict[str, dict] = {}
-    for zip_, br0, br1, br2, br3, br4, two in conn.execute(
+    f: dict[str, dict] = {}
+    for zip_, br0, br1, br2, br3, br4, btier, safmr2, fmr2 in conn.execute(
             "SELECT zip, rent_br0, rent_br1, rent_br2, rent_br3, rent_br4, "
-            "rent_safmr FROM zips WHERE rent_safmr IS NOT NULL "
-            "OR rent_br2 IS NOT NULL"):
+            "rent_bedroom_tier, rent_safmr, rent_fmr FROM zips "
+            "WHERE rent_safmr IS NOT NULL OR rent_fmr IS NOT NULL "
+            "OR rent_bedroom_tier IS NOT NULL"):
         beds = {b: v for b, v in zip(RL.BEDROOMS, (br0, br1, br2, br3, br4))
                 if v is not None}
-        if beds or two is not None:
-            s[zip_] = {"bedrooms": beds or {"2": two}, "year": None}
-    return z, s, a
+        # Rows written before rent_bedroom_tier existed carried SAFMR only.
+        if btier is None and safmr2 is not None:
+            btier = "safmr"
+        for tier, two, out in (("safmr", safmr2, s), ("fmr", fmr2, f)):
+            b = beds if btier == tier and beds else ({"2": two} if two is not None else None)
+            if b:
+                out[zip_] = {"bedrooms": b, "year": None}
+    return z, s, f, a
 
 
-def apply(conn: sqlite3.Connection, zori, safmr, fmr_by_county, acs,
-          fips_of, as_of: str, dry_run: bool) -> dict:
+def apply(conn: sqlite3.Connection, zori, safmr, fmr, acs,
+          as_of: str, dry_run: bool) -> dict:
     """Resolve every ZIP through the ladder and write the result.
 
     The persona composites are recomputed too, because cap_rate is one
@@ -444,7 +582,7 @@ def apply(conn: sqlite3.Connection, zori, safmr, fmr_by_county, acs,
     rescores = []
     for z, hv, crime, bach, inc, walk, rest in rows:
         s = safmr.get(z) or {}
-        f = fmr_by_county.get(fips_of.get(z, "")) or {}
+        f = fmr.get(z) or {}
         s_beds, f_beds = s.get("bedrooms"), f.get("bedrooms")
         res = RL.resolve(
             zori=zori.get(z),
@@ -530,6 +668,7 @@ def main(argv=None) -> int:
     except Exception as e:
         log.warning("  ZORI FAILED (%s)", e)
 
+    c_zori, c_safmr, c_fmr, c_acs = carry_stored(conn)
     safmr: dict = {}
     fmr: dict = {}
     if not args.skip_hud:
@@ -539,6 +678,7 @@ def main(argv=None) -> int:
                         if not args.safmr_csv.startswith("http")
                         else _get(args.safmr_csv))
                 safmr = parse_hud_safmr_csv(text)
+                fmr = c_fmr            # the CSV is SAFMR only; county FMR is not re-fetched
                 got_hud = True
                 log.info("  SAFMR (csv): %d ZIPs", len(safmr))
             except Exception as e:
@@ -549,13 +689,29 @@ def main(argv=None) -> int:
                 log.warning("  HUD_API_TOKEN unset — skipping the HUD tiers. "
                             "Get one free at huduser.gov/hudapi.")
             else:
-                states = ([s.strip().upper() for s in args.states.split(",") if s.strip()]
-                          or sorted({r[0] for r in conn.execute(
-                              "SELECT DISTINCT state FROM zips WHERE state IS NOT NULL")}))
+                limited = [s.strip().upper() for s in args.states.split(",") if s.strip()]
+                states = limited or sorted({r[0] for r in conn.execute(
+                    "SELECT DISTINCT state FROM zips WHERE state IS NOT NULL")})
                 try:
-                    safmr, fmr = fetch_hud(states, token)
-                    got_hud = True
-                    log.info("  SAFMR: %d ZIPs, FMR: %d counties", len(safmr), len(fmr))
+                    hud = fetch_hud(states, token)
+                    merged = merge_hud(hud, c_safmr, c_fmr, zip_counties(conn),
+                                       set(limited) if limited else None)
+                    if merged is None:
+                        log.warning("  HUD: %d of %d counties failed — too many to trust; "
+                                    "keeping every stored HUD rent", len(hud["failed"]),
+                                    hud["requested"])
+                    else:
+                        safmr, fmr, rep = merged
+                        got_hud = True
+                        log.info("  SAFMR: %d ZIPs; county FMR: %d counties → %d ZIPs",
+                                 len(safmr), len(hud["fmr"]), len(fmr))
+                        log.info("  county match: %d ZIPs matched, %d unmatched; "
+                                 "%d counties failed; carried %d SAFMR / %d FMR",
+                                 rep["counties_matched_zips"], rep["unmatched_zips"],
+                                 rep["failed_counties"], rep["carried_safmr"],
+                                 rep["carried_fmr"])
+                        for (st, name), n in rep["unmatched_top"]:
+                            log.info("    unmatched county: %s, %s (%d ZIPs)", name, st, n)
                 except Exception as e:
                     log.warning("  HUD FAILED (%s)", e)
 
@@ -579,19 +735,18 @@ def main(argv=None) -> int:
     # SAFMR — destroying good data on a run that was never asked to
     # touch HUD. A source that DID fetch stays authoritative, silences
     # included, so a ZIP that ZORI genuinely dropped still loses it.
-    c_zori, c_safmr, c_acs = carry_stored(conn)
     if not got_zori:
         zori = c_zori
         log.info("  ZORI not fetched — carried %d stored values", len(zori))
     if not got_hud:
-        safmr = c_safmr
-        log.info("  HUD not fetched — carried %d stored ZIP records", len(safmr))
+        safmr, fmr = c_safmr, c_fmr
+        log.info("  HUD not fetched — carried %d SAFMR and %d FMR ZIP records",
+                 len(safmr), len(fmr))
     if not got_acs:
         acs = c_acs
         log.info("  ACS not fetched — carried %d stored values", len(acs))
 
-    cov = apply(conn, zori, safmr, fmr, acs, county_fips_map(conn), as_of,
-                args.dry_run)
+    cov = apply(conn, zori, safmr, fmr, acs, as_of, args.dry_run)
     conn.close()
 
     print(f"\n{'DRY RUN — nothing written' if args.dry_run else f'Wrote {DB_PATH}'}")

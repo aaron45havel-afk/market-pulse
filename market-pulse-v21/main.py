@@ -4016,6 +4016,7 @@ async def multifamily_page(
     from data_providers import MORTGAGE_30Y_RATE
     import safety as SF
     import househack as HH
+    import rent_ladder as RL
     import zip_finder as ZF
     safetier = SF.valid_tier(safetier)
     allow_unknown_safety = _qnum(unknown) > 0
@@ -4081,6 +4082,7 @@ async def multifamily_page(
             "funnel": None, "emptied_by": None, "offered": [], "n_total": 0,
             "score_info": None, "national": national, "place": place,
             "climate_meta": None, "hazards_meta": None,
+            "rent_tiers": RL.TIER_BY_KEY, "rent_mix": {},
             **finder_ctx,
         })
     conn = sqlite3.connect(str(db_path))
@@ -4103,7 +4105,7 @@ async def multifamily_page(
             "population_density", "median_home_value", "median_rent_monthly",
             "cap_rate_pct", "median_household_income", "pct_bachelors",
             "pct_renter_occupied", "pct_multi_unit", "pct_rent_burdened",
-            "history_zhvi")
+            "history_zhvi", "rent_tier")
     select_cols = ", ".join(c if c in cols else f"NULL as {c}" for c in want)
     # EVERY row in scope, deliberately. The filters that used to live in
     # this WHERE clause now run through the funnel so each one is counted.
@@ -4158,7 +4160,7 @@ async def multifamily_page(
     funnel.step("population", "fewer than 1,500 residents — too small to price reliably",
                 keep=lambda r: (r["population"] or 0) >= 1500,
                 no_data=lambda r: r["population"] is None)
-    funnel.step("rent", "no measured rent (Zillow ZORI), so it can't be underwritten",
+    funnel.step("rent", "no measured rent (Zillow or HUD), so it can't be underwritten",
                 keep=lambda r: (r["median_home_value"] is not None
                                 and r["median_rent_monthly"] is not None
                                 and r["cap_rate_pct"] is not None),
@@ -4351,13 +4353,20 @@ async def multifamily_page(
     rent_source = {
         "input": "your input",
         "observed": (f"median of {len(observed)} ZIP{'s' if len(observed) != 1 else ''} "
-                     f"with OBSERVED (ZORI) rents, of {len(all_rents)} shown"
+                     f"with measured rents (Zillow or HUD), of {len(all_rents)} shown"
                      + (" — a thin sample, treat as indicative" if rent_thin else "")),
         "imputed": (f"median of {len(all_rents)} shown ZIPs — every one IMPUTED "
                     "(value÷17÷12), so this restates home values, not market rent"),
         "none": None,
     }[rent_basis]
     rent_observed_pct = round(len(observed) / len(all_rents) * 100) if all_rents else 0
+    # Which source answered each row's rent, for the legend. A board that
+    # mixes Zillow asking rents with HUD's voucher benchmark says so.
+    rent_mix: dict = {}
+    for r in shown:
+        if r["median_rent_monthly"]:
+            k = r.get("rent_tier")
+            rent_mix[k] = rent_mix.get(k, 0) + 1
 
     hh_scenario = house_hack_scenario(sample_piti, units, eff_rent) if sample_piti else None
     piti_m = sample_piti["piti"] if sample_piti else 0.0
@@ -4416,6 +4425,7 @@ async def multifamily_page(
         "funnel": funnel, "emptied_by": emptied_by, "offered": offered,
         "score_info": score_info, "national": national, "place": place,
         "climate_meta": climate.get("_meta"), "hazards_meta": hazards.get("_meta"),
+        "rent_tiers": RL.TIER_BY_KEY, "rent_mix": rent_mix,
         **finder_ctx,
     })
 

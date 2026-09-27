@@ -1,8 +1,8 @@
-name: TEMPORARY — dry-run the HUD rent tiers on the working branch
+name: TEMPORARY — first HUD rent run on the working branch
 
-# Proves the HUD parsers (written without network access) against the real
-# API before a full refresh writes zips.db. Dry run: fetches and reports,
-# writes and commits nothing. Deleted before the branch merges.
+# Runs the rent refresh with HUD on the working branch and commits zips.db
+# there, so the page can be checked against real HUD rents before merge.
+# Deleted before the branch merges; the permanent job is refresh-rents.yml.
 on:
   push:
     branches: [claude/legal-rep-invoice-tracking-9j1i9r]
@@ -10,12 +10,12 @@ on:
       - '.github/workflows/probe-hud.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 170
     defaults:
       run:
         working-directory: market-pulse-v21
@@ -29,45 +29,37 @@ jobs:
           HUD_API_TOKEN: ${{ secrets.HUD_API_TOKEN }}
         run: |
           if [ -n "$HUD_API_TOKEN" ]; then echo "HUD_API_TOKEN is set (${#HUD_API_TOKEN} chars)"; else echo "::error::HUD_API_TOKEN is empty"; exit 1; fi
-      - name: Raw shape of one metro and one non-metro county (no token in output)
-        continue-on-error: true
+      - name: Prove the rules before an hour of HUD requests
+        run: |
+          python tests/test_rent_ladder.py
+          python tests/test_rents_build.py
+      - name: The real script, every state
         env:
           HUD_API_TOKEN: ${{ secrets.HUD_API_TOKEN }}
+        run: python scripts/refresh_rents.py
+      - name: How HUD's 2-bedroom compares with Zillow where both exist
         run: |
           python - <<'PY'
-          import json, os, urllib.request
-          tok = os.environ["HUD_API_TOKEN"]
-          def get(path):
-              req = urllib.request.Request("https://www.huduser.gov/hudapi/public/fmr/" + path,
-                                           headers={"Authorization": "Bearer " + tok,
-                                                    "User-Agent": "market-pulse/1"})
-              try:
-                  with urllib.request.urlopen(req, timeout=60) as r:
-                      return r.status, r.read().decode()
-              except urllib.error.HTTPError as e:
-                  return e.code, e.read().decode()[:500]
-          for path in ("listStates", "listCounties/OH", "data/3903599999", "data/3900199999", "data/METRO17460M17460"):
-              st, body = get(path)
-              print(f"== {path}: HTTP {st}, {len(body)} bytes")
-              try:
-                  j = json.loads(body)
-              except ValueError:
-                  print(body[:400]); continue
-              d = j.get("data", j) if isinstance(j, dict) else j
-              if isinstance(d, list):
-                  print(json.dumps(d[:2])[:900])
-              else:
-                  print("keys:", list(d)[:20] if isinstance(d, dict) else type(d))
-                  for k in ("metroareas", "counties", "basicdata"):
-                      v = d.get(k) if isinstance(d, dict) else None
-                      if isinstance(v, list):
-                          print(f"  {k}: {len(v)} items; first: {json.dumps(v[:2])[:900]}")
-                      elif isinstance(v, dict):
-                          print(f"  {k}: dict {json.dumps(v)[:600]}")
-                  if isinstance(d, dict):
-                      print("  other:", {k: v for k, v in d.items() if not isinstance(v, (list, dict))})
+          import sqlite3, statistics as S
+          c = sqlite3.connect("data/zips.db")
+          print(c.execute("select rent_tier, count(*) from zips group by 1 order by 2 desc").fetchall())
+          for col in ("rent_safmr", "rent_fmr"):
+              pairs = c.execute(f"select {col}*1.0/rent_zori from zips where {col} and rent_zori").fetchall()
+              r = sorted(p[0] for p in pairs)
+              if r:
+                  q = lambda f: round(r[int(f * (len(r) - 1))], 3)
+                  print(f"{col}/zori over {len(r)} ZIPs: p10 {q(.1)} p25 {q(.25)} median {q(.5)} p75 {q(.75)} p90 {q(.9)}")
+          for st in ("OH", "IN", "TX", "FL", "CA"):
+              print(st, c.execute("select count(*), sum(median_rent_monthly is null), sum(rent_tier='zori'), sum(rent_tier='safmr'), sum(rent_tier='fmr') from zips where state=?", (st,)).fetchone())
           PY
-      - name: The real script, dry run, Ohio only
-        env:
-          HUD_API_TOKEN: ${{ secrets.HUD_API_TOKEN }}
-        run: python scripts/refresh_rents.py --dry-run --states OH
+      - name: Commit zips.db to the working branch
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add market-pulse-v21/data/zips.db
+          git diff --staged --quiet && { echo "no change"; exit 0; }
+          git commit -m "chore: rent ladder with HUD SAFMR + county FMR (first run)"
+          for i in 1 2 3 4; do git push origin HEAD:claude/legal-rep-invoice-tracking-9j1i9r && exit 0; sleep $((i * 5)); git pull --rebase origin claude/legal-rep-invoice-tracking-9j1i9r || true; done
+          exit 1

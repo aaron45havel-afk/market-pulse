@@ -47,7 +47,7 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 170    # ~3,200 county requests, retried
     defaults:
       run:
         working-directory: market-pulse-v21
