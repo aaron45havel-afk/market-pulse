@@ -1,121 +1,160 @@
-"""TEMPORARY probe — print the real shape of the weather and hazard sources.
+"""TEMPORARY probe, round 2 — edge cases in NOAA, and a route to FEMA's data.
 
-The dev sandbox cannot reach NOAA, FEMA or the Census, and a parser written
-against remembered column names is how a job ends up green while reading
-nothing (see the CENSUS_API_KEY entry in BACKLOG.md). This runs once in
-Actions, prints listings, headers and sample rows, and is deleted before
-anything merges.
+Round 1 established the NOAA and Census formats and that hazards.fema.gov
+and www.fema.gov answer 403 to GitHub's runners. This round (a) reads the
+whole NOAA annual/seasonal archive to count how missing and provisional
+values are actually encoded, and (b) tries FEMA's official ArcGIS feature
+service and a browser-like request. Deleted before anything merges.
 """
-import csv
+import collections
 import io
+import csv
+import json
 import re
 import sys
+import tarfile
+import time
+import urllib.parse
 import urllib.request
-import zipfile
 
 UA = {"User-Agent": "MarketPulse/1.0 (probe; invoice@archfms.com)"}
+BROWSER = {"User-Agent": ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                          "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"),
+           "Accept": "text/html,application/xhtml+xml,application/zip,*/*;q=0.8",
+           "Accept-Language": "en-US,en;q=0.9"}
 
 
-def get(url, limit=None, timeout=120):
-    req = urllib.request.Request(url, headers=UA)
+def get(url, headers=UA, limit=None, timeout=180):
+    req = urllib.request.Request(url, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
-            body = r.read(limit) if limit else r.read()
-            return r.status, dict(r.headers), body
+            return r.status, dict(r.headers), (r.read(limit) if limit else r.read())
     except Exception as e:                                   # noqa: BLE001
-        return getattr(e, "code", None) or repr(e)[:200], {}, b""
-
-
-def hrefs(body):
-    return re.findall(r'href="([^"]+)"', body.decode("utf-8", "replace"))
+        body = b""
+        try:
+            body = e.read()[:300]                            # type: ignore[attr-defined]
+        except Exception:                                    # noqa: BLE001
+            pass
+        return getattr(e, "code", None) or repr(e)[:200], {}, body
 
 
 def section(t):
     print("\n" + "=" * 78 + f"\n{t}\n" + "=" * 78, flush=True)
 
 
-# ── NOAA annual/seasonal + monthly normals ──────────────────────────
-for kind in ("normals-annualseasonal", "normals-monthly"):
-    base = f"https://www.ncei.noaa.gov/data/{kind}/1991-2020/"
-    section(f"NOAA {kind}: {base}")
-    st, hd, body = get(base)
-    print("status", st, "| links:", [h for h in hrefs(body) if not h.startswith("?")][:30])
-    for sub in ("archive/", "doc/"):
-        st, hd, body = get(base + sub)
-        links = [h for h in hrefs(body) if not h.startswith("?")]
-        print(f"  {sub} status {st} | {len(links)} links:", links[:25])
-    st, hd, body = get(base + "access/")
-    csvs = [h for h in hrefs(body) if h.endswith(".csv")]
-    print(f"  access/ status {st} | {len(csvs)} station CSVs; first:", csvs[:5])
-    for sid in ("USW00014820.csv", "USW00014821.csv", csvs[0] if csvs else None):
-        if not sid:
-            continue
-        st, hd, body = get(base + "access/" + sid)
-        print(f"\n  --- {sid}: status {st}, {len(body)} bytes")
-        if body:
-            rows = list(csv.reader(io.StringIO(body.decode("utf-8", "replace"))))
-            print("  HEADER (%d cols):" % len(rows[0]), rows[0])
-            for r in rows[1:3]:
-                print("  ROW:", dict(zip(rows[0], r)))
-            print(f"  total data rows: {len(rows) - 1}")
-        break_after = kind == "normals-monthly"
-        if break_after:
-            break
+# ── (a) NOAA: the whole annual/seasonal archive ─────────────────────
+section("NOAA annual/seasonal archive — encoding census")
+url = ("https://www.ncei.noaa.gov/data/normals-annualseasonal/1991-2020/archive/"
+       "us-climate-normals_1991-2020_v1.0.1_annualseasonal_multivariate_by-station_c20230404.tar.gz")
+t0 = time.time()
+st, hd, body = get(url, timeout=900)
+print(f"status {st} | {len(body):,} bytes | {time.time() - t0:.0f}s")
+FIELDS = ("DJF-TMIN-NORMAL", "JJA-TMAX-NORMAL", "ANN-TMAX-AVGNDS-GRTH090",
+          "ANN-TMIN-AVGNDS-LSTH032", "ANN-SNOW-NORMAL", "ANN-PRCP-NORMAL")
+present = collections.Counter()
+nonnum = collections.Counter()
+comp = collections.defaultdict(collections.Counter)
+meas = collections.defaultdict(collections.Counter)
+extreme = collections.defaultdict(list)
+n_files = n_rows = 0
+countries = collections.Counter()
+if body:
+    tf = tarfile.open(fileobj=io.BytesIO(body), mode="r:gz")
+    names = [m for m in tf.getmembers() if m.isfile() and m.name.endswith(".csv")]
+    print("members:", len(names), "| sample:", [m.name for m in names[:3]])
+    for m in names:
+        n_files += 1
+        rows = list(csv.DictReader(io.TextIOWrapper(tf.extractfile(m), encoding="utf-8", errors="replace")))
+        for r in rows:
+            n_rows += 1
+            countries[(r.get("STATION") or "??")[:2]] += 1
+            for f in FIELDS:
+                if f not in r:
+                    continue
+                v = (r.get(f) or "").strip()
+                present[f] += 1
+                try:
+                    x = float(v)
+                    if x <= -555 or x >= 9000:
+                        extreme[f].append((r["STATION"], v))
+                except ValueError:
+                    nonnum[(f, v)] += 1
+                comp[f][(r.get("comp_flag_" + f) or "").strip() or "<blank>"] += 1
+                meas[f][(r.get("meas_flag_" + f) or "").strip() or "<blank>"] += 1
+    print(f"files {n_files:,} | rows {n_rows:,} | rows per file max 1? {n_rows == n_files}")
+    print("station prefixes (first 2 chars) top:", countries.most_common(12))
+    for f in FIELDS:
+        print(f"\n  {f}: present in {present[f]:,} stations")
+        print("    comp flags:", dict(comp[f]))
+        print("    meas flags:", dict(meas[f]))
+        print("    non-numeric values:", {k[1]: c for k, c in nonnum.items() if k[0] == f})
+        print("    sentinel-looking values (<=-555 or >=9000):", len(extreme[f]), extreme[f][:6])
 
-# ── FEMA National Risk Index ────────────────────────────────────────
-section("FEMA NRI — locate downloads")
-for page in ("https://hazards.fema.gov/nri/data-resources",
-             "https://www.fema.gov/about/openfema/data-sets/national-risk-index-data"):
-    st, hd, body = get(page)
-    links = [h for h in hrefs(body) if re.search(r"\.(zip|csv|xlsx|pdf)(\?|$)", h, re.I)
-             or "Table" in h or "DataDownload" in h]
-    print(f"{page}\n  status {st} | candidate links ({len(links)}):")
-    for h in links[:40]:
-        print("   ", h)
+# ── (b) FEMA NRI: other routes ──────────────────────────────────────
+section("FEMA NRI — browser-like request to the static download")
+for u in ("https://hazards.fema.gov/nri/Content/StaticDocuments/DataDownload//NRI_Table_CensusTracts/NRI_Table_CensusTracts.zip",
+          "https://hazards.fema.gov/nri/data-resources"):
+    st, hd, body = get(u, headers=BROWSER, limit=2_000_000)
+    print(f"{u}\n  status {st} | bytes {len(body):,} | first bytes {body[:60]!r}")
 
-candidates = [
-    "https://hazards.fema.gov/nri/Content/StaticDocuments/DataDownload//NRI_Table_CensusTracts/NRI_Table_CensusTracts.zip",
-    "https://hazards.fema.gov/nri/Content/StaticDocuments/DataDownload/NRI_Table_CensusTracts/NRI_Table_CensusTracts.zip",
-]
-for url in candidates:
-    section(f"FEMA NRI tract table: {url}")
-    st, hd, body = get(url, timeout=600)
-    print("status", st, "| bytes", len(body), "| type", hd.get("Content-Type"),
-          "| last-modified", hd.get("Last-Modified"))
-    if body[:2] == b"PK":
-        z = zipfile.ZipFile(io.BytesIO(body))
-        for info in z.infolist():
-            print(f"  member {info.filename}  {info.file_size:,} bytes")
-        member = next((i.filename for i in z.infolist() if i.filename.lower().endswith(".csv")), None)
-        if member:
-            with z.open(member) as fh:
-                text = io.TextIOWrapper(fh, encoding="utf-8-sig", errors="replace")
-                rdr = csv.reader(text)
-                header = next(rdr)
-                print(f"\n  HEADER ({len(header)} cols):")
-                print("  ", header)
-                wanted = [c for c in header if re.match(
-                    r"(TRACTFIPS|STCOFIPS|STATEABBRV|COUNTY|NRI_VER|RISK_SCORE|RISK_RATNG|"
-                    r"(CFLD|RFLD|IFLD|WFIR|HRCN|TRND|HWAV|CWAV|WNTW|ERQK)_(RISKS|RISKR|AFREQ|EXPB))$", c)]
-                for i, r in enumerate(rdr):
-                    rec = dict(zip(header, r))
-                    print("  ROW:", {k: rec.get(k) for k in wanted})
-                    if i >= 2:
-                        break
-                n = 3 + sum(1 for _ in rdr)
-                print(f"  total data rows: {n:,}")
-        break
+section("ArcGIS Online — find FEMA's NRI tract item")
+q = urllib.parse.urlencode({"q": 'title:"National Risk Index" AND owner:FEMA_NRI OR title:"National Risk Index Census Tracts"',
+                            "f": "json", "num": 20})
+st, hd, body = get("https://www.arcgis.com/sharing/rest/search?" + q)
+print("search status", st)
+items = []
+try:
+    items = json.loads(body).get("results", [])
+except Exception as e:                                       # noqa: BLE001
+    print("  unparsable:", body[:200])
+for it in items:
+    print(f"  {it.get('id')} | {it.get('type'):24} | owner {it.get('owner'):18} | "
+          f"modified {time.strftime('%Y-%m-%d', time.gmtime((it.get('modified') or 0) / 1000))} | "
+          f"{it.get('title')} | {it.get('url')}")
 
-# ── Census ZCTA <-> tract relationship ──────────────────────────────
-section("Census 2020 ZCTA relationship files")
-base = "https://www2.census.gov/geo/docs/maps-data/data/rel2020/zcta520/"
-st, hd, body = get(base)
-print("status", st, "| files:", [h for h in hrefs(body) if h.endswith((".txt", ".csv", ".pdf"))])
-for f in ("tab20_zcta520_tract20_natl.txt", "tab20_zcta520_county20_natl.txt"):
-    st, hd, body = get(base + f, limit=4000)
-    print(f"\n  --- {f}: status {st}, content-length {hd.get('Content-Length')}")
-    for line in body.decode("utf-8-sig", "replace").splitlines()[:3]:
-        print("   ", line)
+section("ArcGIS FeatureServer — NRI census tracts")
+fs = "https://services.arcgis.com/XG15cJAlne2vxtgt/arcgis/rest/services/National_Risk_Index_Census_Tracts/FeatureServer/0"
+st, hd, body = get(fs + "?f=json")
+print("layer status", st)
+try:
+    meta = json.loads(body)
+    fields = [f["name"] for f in meta.get("fields", [])]
+    print(f"  name {meta.get('name')!r} | maxRecordCount {meta.get('maxRecordCount')} | "
+          f"{len(fields)} fields | editingInfo {meta.get('editingInfo')}")
+    print("  description:", (meta.get("description") or "")[:400].replace("\n", " "))
+    keep = [f for f in fields if re.match(
+        r"(OBJECTID|TRACTFIPS|STCOFIPS|STATEABBRV|COUNTY|NRI_VER|RISK_SCORE|RISK_RATNG|"
+        r"(CFLD|RFLD|IFLD|WFIR|HRCN|TRND|HWAV|CWAV|WNTW|ERQK)_(RISKS|RISKR))$", f)]
+    print("  fields of interest:", keep)
+    print("  ALL fields:", fields)
+    qs = urllib.parse.urlencode({"where": "1=1", "returnCountOnly": "true", "f": "json"})
+    st, hd, body = get(fs + "/query?" + qs)
+    print("  count:", st, body[:200])
+    qs = urllib.parse.urlencode({"where": "STATEABBRV='OH'", "outFields": ",".join(keep),
+                                 "returnGeometry": "false", "resultRecordCount": 3, "f": "json"})
+    st, hd, body = get(fs + "/query?" + qs)
+    print("  sample status", st)
+    for feat in json.loads(body).get("features", [])[:3]:
+        print("   ", feat.get("attributes"))
+    # How "not applicable" and "insufficient data" are encoded, for flood and wildfire
+    for fld in [f for f in keep if f.endswith("_RISKR")][:6]:
+        qs = urllib.parse.urlencode({"where": "1=1", "groupByFieldsForStatistics": fld,
+                                     "outStatistics": json.dumps([{"statisticType": "count",
+                                                                   "onStatisticField": "OBJECTID",
+                                                                   "outStatisticFieldName": "n"}]),
+                                     "f": "json"})
+        st, hd, body = get(fs + "/query?" + qs)
+        try:
+            groups = {f["attributes"][fld]: f["attributes"]["n"] for f in json.loads(body).get("features", [])}
+        except Exception:                                    # noqa: BLE001
+            groups = body[:200]
+        print(f"  {fld} values:", groups)
+    for fld in [f for f in keep if f.endswith("_RISKS")][:6]:
+        qs = urllib.parse.urlencode({"where": f"{fld} IS NULL", "returnCountOnly": "true", "f": "json"})
+        st, hd, body = get(fs + "/query?" + qs)
+        print(f"  {fld} IS NULL count:", body[:120])
+except Exception as e:                                       # noqa: BLE001
+    print("  unparsable layer:", repr(e)[:200], body[:300])
 
 print("\nPROBE DONE", flush=True)
 sys.exit(0)
