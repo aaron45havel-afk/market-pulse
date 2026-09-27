@@ -15,8 +15,8 @@ Three sources, in the precedence rent_ladder.py defines:
   + FMR  free token from huduser.gov/hudapi. County FMR covers the
          non-metro remainder.
 
-  ACS    Census B25064 median gross rent by ZCTA. Uses the same
-         CENSUS_API_KEY the state ACS refresh already runs on.
+  ACS    Census B25064 median gross rent by ZCTA, from the Bureau's
+         keyless bulk files (acs_bulk.py).
 
 FAIL-SOFT, PER SOURCE. If HUD is down, ZORI and ACS still land and the
 run reports reduced coverage. A source that fails NEVER blanks a column
@@ -26,7 +26,7 @@ different direction.
 
 The parsers below are pure and covered by tests/test_rents_build.py.
 The fetch functions do nothing but assemble a URL and hand the body to a
-parser, because huduser.gov and api.census.gov are unreachable from the
+parser, because huduser.gov and census.gov are unreachable from the
 sandbox this was written in — so anything that can be wrong had to be
 provable against a fixture.
 
@@ -60,7 +60,6 @@ DB_PATH = Path(__file__).resolve().parent.parent / "data" / "zips.db"
 ZORI_URL = ("https://files.zillowstatic.com/research/public_csvs/zori/"
             "Zip_zori_uc_sfrcondomfr_sm_month.csv")
 HUD_BASE = "https://www.huduser.gov/hudapi/public/fmr"
-ACS_VINTAGE_DEFAULT = 2023
 UA = {"User-Agent": "market-pulse/1"}
 
 # The columns this script owns. Everything else in `zips` is left alone.
@@ -271,39 +270,16 @@ def parse_hud_safmr_csv(csv_text: str) -> dict[str, dict]:
     return out
 
 
-def parse_acs_zcta(rows) -> dict[str, int]:
-    """Census ACS response → {zcta: median gross rent}.
+def acs_rents(raw: dict) -> dict[str, int]:
+    """acs_bulk.fetch(("b25064",), ...) → {zcta: median gross rent}.
 
-    Census encodes "no data" as large negative sentinels
-    (-666666666 and friends). Those become an ABSENCE, never a rent —
-    passed through they would read as a negative rent, and clamped to
-    zero they would read as free housing.
+    Suppressed estimates already arrive as None (acs_bulk turns Census's
+    negative sentinels into absences); an implausible value is dropped
+    here, so neither becomes a rent.
     """
-    if not isinstance(rows, list) or len(rows) < 2:
-        return {}
-    header = rows[0]
-    try:
-        val_i = header.index("B25064_001E")
-    except ValueError:
-        raise SystemExit("ACS response missing B25064_001E — schema changed.")
-    zcta_i = next((i for i, h in enumerate(header)
-                   if "zip code tabulation area" in h.lower() or h == "zip"), None)
-    if zcta_i is None:
-        raise SystemExit("ACS response has no ZCTA column.")
-
     out: dict[str, int] = {}
-    for r in rows[1:]:
-        if val_i >= len(r) or zcta_i >= len(r):
-            continue
-        z = str(r[zcta_i]).strip().zfill(5)
-        if len(z) != 5 or not z.isdigit():
-            continue
-        try:
-            v = float(r[val_i])
-        except (TypeError, ValueError):
-            continue
-        if v < 0:                      # Census null sentinel
-            continue
+    for z, rec in (raw or {}).items():
+        v = (rec or {}).get("B25064_001E")
         if RL.is_plausible(v):
             out[z] = round(v)
     return out
@@ -321,15 +297,15 @@ def fetch_zori() -> dict[str, int]:
     return parse_zori_csv(_get(ZORI_URL))
 
 
-def fetch_acs(vintage: int) -> dict[str, int]:
-    key = os.environ.get("CENSUS_API_KEY", "").strip()
-    if not key:
-        log.warning("CENSUS_API_KEY unset — skipping the ACS tier.")
-        return {}
-    url = (f"https://api.census.gov/data/{vintage}/acs/acs5"
-           f"?get=B25064_001E&for=zip%20code%20tabulation%20area:*&key={key}")
-    log.info("Fetching ACS %d B25064 for all ZCTAs …", vintage)
-    return parse_acs_zcta(json.loads(_get(url)))
+def fetch_acs(vintage: int | None = None) -> dict[str, int]:
+    """ACS B25064 median gross rent by ZCTA, from the Census Bureau's keyless
+    bulk files (acs_bulk.py) — the data API needs a key this repo couldn't
+    activate. `vintage` None means the newest 5-year release on the server."""
+    import acs_bulk as AB
+    from datetime import date
+    year = vintage or AB.latest_year(date.today().year)
+    log.info("Fetching ACS %d B25064 (bulk file) …", year)
+    return acs_rents(AB.fetch(("b25064",), year, {"B25064_001E"}))
 
 
 def _get_json(url: str, headers: dict, attempts: int = 3):
@@ -647,7 +623,8 @@ def main(argv=None) -> int:
                     help="fetch and report coverage without writing")
     ap.add_argument("--skip-hud", action="store_true")
     ap.add_argument("--skip-acs", action="store_true")
-    ap.add_argument("--acs-vintage", type=int, default=ACS_VINTAGE_DEFAULT)
+    ap.add_argument("--acs-vintage", type=int, default=None,
+                    help="ACS 5-year vintage (default: the newest on the Census server)")
     ap.add_argument("--safmr-csv", default="",
                     help="path or URL to HUD's published SAFMR CSV, used "
                          "instead of the API")

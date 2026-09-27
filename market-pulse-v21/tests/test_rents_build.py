@@ -258,27 +258,16 @@ check(raises(SystemExit, R.parse_hud_safmr_csv, "a,b\n1,2\n"),
       "a CSV with no ZIP column fails loudly")
 
 
-# ── Census ACS ──
-ACS = [["B25064_001E", "zip code tabulation area"],
-       ["1180", "44107"],
-       ["-666666666", "44126"],     # Census null sentinel
-       ["980", "07030"],
-       ["3", "99999"]]              # implausible
-_a = R.parse_acs_zcta(ACS)
-check(_a["44107"] == 1180, "an ordinary ZCTA rent is read")
-check("44126" not in _a,
-      "CENSUS NULL SENTINELS BECOME AN ABSENCE. -666666666 passed through "
-      "would be a negative rent, and clamped to zero it would read as free "
-      "housing — both worse than an empty cell")
-check(_a["07030"] == 980, "leading-zero ZCTAs survive")
-check("99999" not in _a, "and an implausible value is dropped")
-check(R.parse_acs_zcta([]) == {} and R.parse_acs_zcta(None) == {}
-      and R.parse_acs_zcta([["B25064_001E"]]) == {},
-      "empty or header-only responses yield nothing rather than raising")
-check(raises(SystemExit, R.parse_acs_zcta, [["NAME", "state"], ["Ohio", "39"]]),
-      "a response missing B25064_001E fails loudly rather than returning {} "
-      "— Census renames variables between vintages and a silent empty would "
-      "read as 'no ZCTA has a rent'")
+# ── Census ACS (keyless bulk file, parsed by acs_bulk) ──
+_a = R.acs_rents({"44107": {"B25064_001E": 1180}, "44126": {"B25064_001E": None},
+                  "07030": {"B25064_001E": 980}, "99999": {"B25064_001E": 3},
+                  "11111": {}})
+check(_a == {"44107": 1180, "07030": 980},
+      "an ordinary ZCTA rent is read; a suppressed one (None — acs_bulk turns "
+      "Census's -666666666 into an absence) and an implausible $3 are dropped "
+      "rather than read as free housing; leading-zero ZCTAs survive")
+check(R.acs_rents({}) == {} and R.acs_rents(None) == {},
+      "empty input yields nothing rather than raising")
 
 
 # ── the columns the script owns ──
