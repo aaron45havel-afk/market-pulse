@@ -4213,7 +4213,13 @@ async def multifamily_page(
         r["density_sqmi"] = ZF.per_sq_mi(r["population_density"])
         r["building_price"] = round(min(hv * unit_factor, max_price))
         r["safety"] = SF.zip_safety(r["name"], st)
-        r["rent_observed"] = HH.rent_is_observed(rent, hv)
+        # A rent the ladder wrote carries its source, and that is proof it
+        # was measured. The value/17/12 arithmetic test is only for rows
+        # written before rent_tier existed: applied to measured rents it
+        # starred 392 real Zillow figures as "imputed" because they
+        # happened to land within 2% of home value ÷ 204.
+        r["rent_observed"] = (r.get("rent_tier") in RL.TIER_BY_KEY
+                              or HH.rent_is_observed(rent, hv))
 
         # Price and insure the row exactly as the scenario card and the
         # deal checker do. When only the card applied the unit factors,
@@ -4338,8 +4344,7 @@ async def multifamily_page(
     # median built from those would quote circular arithmetic back at the
     # user as "market rent". Use observed rents whenever any exist, and
     # name whichever basis is used.
-    observed = [r["median_rent_monthly"] for r in shown
-                if HH.rent_is_observed(r["median_rent_monthly"], r["median_home_value"])]
+    observed = [r["median_rent_monthly"] for r in shown if r["rent_observed"]]
     all_rents = [r["median_rent_monthly"] for r in shown if r["median_rent_monthly"]]
     THIN_RENT_SAMPLE = 5
     obs_rent = statistics.median(observed) if observed else None

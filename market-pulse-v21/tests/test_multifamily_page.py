@@ -135,9 +135,22 @@ try:
           f"AND THE NUMBERS THE PAGE PRINTS ADD UP: {start} − {sum(removed)} "
           f"should be {end}. The module's funnel balancing is not enough on "
           f"its own; a template that hid a non-zero stage would break it here")
-    check("no measured rent (Zillow ZORI)" in page,
-          "the rent gap — two thirds of Ohio — is named on the page instead "
-          "of vanishing silently as it used to")
+    tiers = dict(sqlite3.connect(DB).execute("select zip, rent_tier from zips").fetchall())
+    starred, seen = [], 0
+    for q in ("state=OH&unknown=1&max_price=900000", "state=ALL&unknown=1&max_price=900000&preset=cashflow"):
+        _, pg = get(f"/multifamily?{q}")
+        cz, cr = col(pg, "zip"), col(pg, "rent")
+        for r in table_rows(pg):
+            seen += 1
+            if r["cells"][cr].endswith("*") and tiers.get(r["cells"][cz]):
+                starred.append(r["cells"][cz])
+    check(seen > 100 and not starred,
+          f"A RENT WITH A SOURCE IS NEVER STARRED AS IMPUTED — the value÷204 "
+          f"arithmetic test starred 392 real Zillow rents that happened to land "
+          f"near it ({starred[:5]})")
+    check("no measured rent (Zillow or HUD)" in page,
+          "the rent gap is named on the page, with the sources it was looked "
+          "for in, instead of vanishing silently as it used to")
     check(len(table_rows(page)) == end or (end > 100 and len(table_rows(page)) == 100),
           "the table shows what the funnel says is on the board (top 100)")
 

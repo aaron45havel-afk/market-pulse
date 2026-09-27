@@ -16,10 +16,10 @@ name: Refresh rent ladder
 # 1st — this job only ever UPDATEs the rent columns of rows that already
 # exist, so it has to follow the rebuild rather than race it.
 #
-# KEYS. CENSUS_API_KEY already exists for the state ACS job. HUD_API_TOKEN
-# is free from https://www.huduser.gov/portal/dataset/fmr-api.html — the
-# HUD tiers are skipped with a warning if it is unset, and ZORI + ACS
-# still land, so the job is useful before the token is ever added.
+# KEYS. HUD_API_TOKEN (free from https://www.huduser.gov/portal/dataset/fmr-api.html)
+# feeds the SAFMR and county FMR tiers; CENSUS_API_KEY feeds the ACS tier.
+# Either missing skips its tiers with a warning and KEEPS the stored values
+# for them, so a missing key never blanks rents another run wrote.
 
 on:
   schedule:
