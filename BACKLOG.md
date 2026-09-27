@@ -80,3 +80,25 @@ Format: `- [PHASE-SEEN] item — why it matters`
   `refresh_hundred` already carry and `refresh_screener`, `refresh_quiet_value`,
   `refresh_catalysts` and `refresh_aristocrats` do not. A fetcher that comes back with an
   empty or halved result currently publishes it.
+- [MF-FINDER] `CENSUS_API_KEY` is invalid. Every `refresh-national-zips` run gets an HTML
+  page titled "Invalid Key" from the Census API, retries three times, "carries forward"
+  ACS values that were already empty, and goes green. That is why `pct_renter_occupied`,
+  `pct_multi_unit`, `pct_rent_burdened`, `pct_pre_1960` and `median_year_built` are 0%
+  populated in all 25,769 ZIPs. Replace the secret, or delete it — keyless requests work
+  at this volume, an invalid key is rejected outright. The job should also FAIL on an
+  auth error rather than carry forward, and it is still pinned to the 2022 ACS vintage.
+  The renter-share and multi-unit filters on /multifamily light up by themselves once the
+  columns have data.
+- [MF-FINDER] Crime coverage is the binding constraint on /multifamily, not the filters.
+  Toledo, Dayton and Cleveland have no entry in `data/headroom/crime.json`, so 241 of the
+  270 Ohio ZIPs that fit the default budget are removed as unverified, and no Ohio ZIP is
+  both verified-safe and cash-flowing at the default settings. FBI Crime Data Explorer
+  (agency level) would take this from 394 hand-researched cities to thousands.
+- [MF-FINDER] The finder's pending filters need data: age 25–34 and a true 2–4 unit count
+  (ACS B01001, B25024_004+005 — the current `pct_multi_unit` sums 2 through 50+), NOAA
+  1991–2020 climate normals for weather, FEMA National Risk Index for hazards.
+- [MF-FINDER] 67% of ZIPs have no measured rent (Zillow ZORI) and cannot be underwritten
+  at all — 558 of Ohio's 1,017. HUD Small Area FMR would cover every ZIP; it needs the
+  `HUD_API_TOKEN` secret.
+- [MF-FINDER] The scenario card prints negative dollar figures as `$-5,543` (per year,
+  and "if you move out") — pre-existing, the sign belongs before the dollar sign.

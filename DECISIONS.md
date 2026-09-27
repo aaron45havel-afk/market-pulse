@@ -90,3 +90,37 @@ adequate well beyond this portfolio's volume.
 **Assumption.** Move-in photos decide deposit disputes and lead certificates carry
 statutory penalties; both need durability and tamper evidence that a container volume
 does not provide. Signed expiring URLs only, SHA-256 recorded at upload.
+
+## 2026-09-27 — /multifamily ranks by the user's priorities, not one fixed blend
+**Assumption.** The owner asked for a board that filters to their wants ("young
+professional", "weather", "low crime") rather than ranking by one formula. Filters are
+hard yes/no; five priorities (cash flow, rental yield, 3-yr price growth, neighborhood
+income, degree share) are weighted 0–3; four presets set them. Scores are percentiles
+among the ZIPs that survived the filters, not the whole state — "best of what you'd
+consider". This replaces the old fixed weights, including the fallback that ranked 10%
+on `walk_score`, which is a curve on density and not a walk score.
+
+## 2026-09-27 — Area type cut points: 500 and 3,000 people per square mile
+**Assumption.** Rural & small town under 500, suburban 500–3,000, urban 3,000+, on
+ZIP-average density. 500 is the Census Bureau's urban-fringe threshold; 3,000 is where a
+ZIP reads as city blocks. Among the ~8,500 ZIPs the board can underwrite this splits
+roughly a quarter / two-fifths / a third. Judgement, not a standard — change the
+constants in `zip_finder.AREA_TYPES` if they read wrong.
+
+## 2026-09-27 — Verified-safe rows outrank unverified ones regardless of score
+**Assumption.** When the user chooses to show cities with no FBI figure, they appear
+after every verified row. Within the verified group rows now sort by score alone; the old
+board sorted very-safe before safe regardless of score. The safety tier is already a
+filter the user sets, so a second ordering by tier would override their priorities.
+
+## 2026-09-27 — The unverified-safety default stays "Hide"
+**Assumption.** Under the default Safe tier only 3 Ohio ZIPs survive, because 241 of the
+270 that fit the budget are in cities with no FBI figure. Defaulting to "Show, flagged"
+would make the board look far more useful and would put unmeasured places on a page
+that says "where you would live". Left fail-closed; the funnel now says exactly how many
+the gate removed for lack of data, and the fix is more crime coverage, not a looser default.
+
+## 2026-09-27 — Zillow's 12-month forecast is not offered as a filter or priority
+**Assumption.** Price growth uses the ZIP's own measured 36-month trend. The forecast
+column is 100% populated but is a model output; offering a measured and a modelled growth
+signal side by side invites double-counting. Can be added later as its own labelled filter.

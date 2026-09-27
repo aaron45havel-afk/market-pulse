@@ -3,7 +3,7 @@ import asyncio, hmac, json, math, os, logging, sqlite3
 from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse, RedirectResponse, Response
@@ -3929,41 +3929,50 @@ async def multifamily_page(
     check_rent: str = "",
     check_income: str = "",
     check_debts: str = "",
+    # ── finder: filters (hard) ──
+    area: list[str] | None = Query(None),
+    min_income: str = "",
+    min_degree: str = "",
+    max_cost: str = "",
+    min_cap: str = "",
+    min_trend: str = "",
+    min_renter: str = "",
+    min_multi: str = "",
+    # ── finder: priorities (soft) ──
+    use_preset: str = "",
+    w_cashflow: str = "",
+    w_yield: str = "",
+    w_growth: str = "",
+    w_income: str = "",
+    w_education: str = "",
 ):
-    """Multifamily ZIP scout, tuned for first-time FHA owner-occupants.
+    """Multifamily ZIP finder, tuned for first-time FHA owner-occupants.
 
-    SAFETY: this board ranks where a family would LIVE, so it runs the
-    same real-FBI safety gate as the strict screen (safety.py) — never
-    the zips.db crime_index, which is density+income+education and
-    correlates -0.76 with median income. Ranking on yield alone sorts
-    *toward* the crime discount: the highest cap rates in a metro are
-    frequently its most distressed tracts. Unverified cities are shown
-    but flagged, and excluded from the ranked board unless opted in.
+    YOU STATE WHAT YOU WANT; THE PAGE SHOWS WHICH ZIPS HAVE IT. Filters are
+    hard yes/no (income, degree share, area type, cost after rent, cap rate,
+    price trend), priorities are soft weights among what survives. The logic
+    lives in zip_finder.py, which is pure and tested; this route fetches the
+    rows, does the FHA underwriting, and wires the two together.
 
-    Default frame: a small-and-mighty investor with ~3.5% FHA cash
-    buying a 2-4 unit under $550k and house-hacking (lives in one
-    unit, rents the others). The page ranks ZIPs by signals that
-    matter for THAT deal: cap rate (cash flow), house-hack net
-    monthly cost (PITI minus rented-unit income), and — once ACS
-    data lands — renter density, 2-4 unit stock share, and rent
-    burden.
+    EVERY REMOVAL IS ACCOUNTED FOR. The old query applied population, rent
+    and budget filters in one WHERE clause, so a state fell from 1,017 ZIPs
+    to 280 before the page said anything — two thirds of Ohio vanished for
+    having no measured Zillow rent, and the page never mentioned it. Each of
+    those is now a named step in the funnel.
 
-    Query params let users stress-test their own deal:
-      state      — 2-letter code (default OH)
-      max_price  — affordability cap in dollars (default 550000)
-      down_pct   — FHA min is 3.5; conventional 5%+ for invest, 25%+
-                   for non-owner-occupant
-      units      — 2 / 3 / 4. Affects expected rent (n-1 units rented).
+    SAFETY: this board ranks where a family would LIVE, so it runs the same
+    real-FBI safety gate as the strict screen (safety.py) — never the
+    zips.db crime_index, which is density+income+education and correlates
+    -0.76 with median income. An unmeasured city never passes as safe.
 
-    The Census ACS multifamily columns (pct_renter_occupied,
-    pct_multi_unit, pct_rent_burdened) populate on each monthly
-    refresh-national-zips workflow run; before that lands, the
-    page falls back to a 3-signal blend that's still useful."""
+    Default frame: ~3.5% FHA cash, a 2-4 unit under $550k, house-hacking
+    (live in one unit, rent the others).
+    """
     import sqlite3
-    from bisect import bisect_left
     from data_providers import MORTGAGE_30Y_RATE
     import safety as SF
     import househack as HH
+    import zip_finder as ZF
     safetier = SF.valid_tier(safetier)
     allow_unknown_safety = _qnum(unknown) > 0
     state = (state or "OH").upper()
@@ -3982,6 +3991,24 @@ async def multifamily_page(
     chk_rent = max(0.0, min(50_000.0, _qnum(check_rent)))
     chk_income = max(0.0, min(10_000_000.0, _qnum(check_income)))
     chk_debts = max(0.0, min(50_000.0, _qnum(check_debts)))
+
+    filters = ZF.parse_filters({
+        "area": area or [], "min_income": min_income, "min_degree": min_degree,
+        "max_cost": max_cost, "min_cap": min_cap, "min_trend": min_trend,
+        "min_renter": min_renter, "min_multi": min_multi})
+    weights, preset = ZF.parse_priorities(use_preset, {
+        "w_cashflow": w_cashflow, "w_yield": w_yield, "w_growth": w_growth,
+        "w_income": w_income, "w_education": w_education})
+
+    # Everything the form needs to re-render the user's choices, and every
+    # param the deal-checker form must carry so running a listing does not
+    # silently reset the filters above it.
+    finder_ctx = {
+        "zf": ZF, "filters": filters, "weights": weights, "preset": preset,
+        "carry": ([("area", a) for a in filters["area"]]
+                  + [(f["key"], f"{filters[f['key']]:g}") for f in ZF.active_filters(filters)]
+                  + [(f"w_{k}", str(weights[k])) for k in ZF.PRIORITY_KEYS]),
+    }
 
     db_path = Path(__file__).resolve().parent / "data" / "zips.db"
     if not db_path.exists():
@@ -4002,6 +4029,9 @@ async def multifamily_page(
             "check_debts": "", "state_struct": None, "has_history": False,
             "suggest": None, "unit_factor": 1.0, "hv_ceiling": 0,
             "mortgage_rate": MORTGAGE_30Y_RATE,
+            "funnel": None, "emptied_by": None, "offered": [], "n_total": 0,
+            "score_info": None,
+            **finder_ctx,
         })
     conn = sqlite3.connect(str(db_path))
     cur = conn.cursor()
@@ -4009,80 +4039,92 @@ async def multifamily_page(
         "select distinct state from zips where state is not null and state != '' order by state"
     ).fetchall()]
     cols = {r[1] for r in cur.execute("PRAGMA table_info(zips)").fetchall()}
-    has_mf_data = {"pct_renter_occupied", "pct_multi_unit", "pct_rent_burdened"} <= cols
-    if has_mf_data:
-        cur.execute("select count(*) from zips where pct_renter_occupied is not null")
-        has_mf_data = cur.fetchone()[0] > 0
 
-    # Affordability filter. The user's cap is what they'd pay for the
-    # BUILDING, and a 2-4 unit does not cost the single-family median —
-    # so the SFR ceiling is the cap divided by the unit price factor,
-    # not the cap itself. Filtering on the raw SFR median let a $426k-
-    # median ZIP onto a $550k board when the triplex there is ~$661k.
-    # The 20% headroom stays: a median is a midpoint, so there is cheaper
-    # stock in the ZIP and the user may stretch a little.
+    # Census columns that actually carry data IN THIS STATE. A filter over
+    # an empty column would mark every row NO DATA and empty the board while
+    # looking like a strict choice, so those filters are offered only here.
+    census_cols = ("pct_renter_occupied", "pct_multi_unit", "pct_rent_burdened")
+    with_data = set()
+    for c in census_cols:
+        if c in cols and cur.execute(
+                f"select count({c}) from zips where state = ?", (state,)).fetchone()[0]:
+            with_data.add(c)
+    has_mf_data = "pct_renter_occupied" in with_data
+    offered = [f for f in ZF.FILTERS if ZF.available(f, with_data)]
+    # A filter that is not offered cannot be active, even if a URL asks.
+    for f in ZF.FILTERS:
+        if f not in offered:
+            filters[f["key"]] = None
+
+    # Affordability. The user's cap is what they'd pay for the BUILDING,
+    # and a 2-4 unit does not cost the single-family median — so the SFR
+    # ceiling is the cap divided by the unit price factor, not the cap
+    # itself. The 20% headroom stays: a median is a midpoint, so there is
+    # cheaper stock in the ZIP and the user may stretch a little.
     unit_factor = HH.UNIT_PRICE_FACTOR.get(units, 1.55)
     hv_ceiling = int(max_price * 1.2 / unit_factor)
 
     has_history = "history_zhvi" in cols
-    hist_col = "history_zhvi" if has_history else "NULL"
-    if has_mf_data:
-        select_cols = f"""zip, name, neighborhood, lat, lng, population, population_density,
-                   median_home_value, median_rent_monthly, cap_rate_pct,
-                   pct_renter_occupied, pct_multi_unit, pct_rent_burdened,
-                   walk_score, {hist_col}"""
-    else:
-        select_cols = f"""zip, name, neighborhood, lat, lng, population, population_density,
-                   median_home_value, median_rent_monthly, cap_rate_pct,
-                   NULL, NULL, NULL,
-                   walk_score, {hist_col}"""
-    rows_raw = cur.execute(f"""
-        select {select_cols}
-        from zips
-        where state = ?
-          and population >= 1500
-          and median_home_value is not null
-          and median_home_value <= ?
-          and median_rent_monthly is not null
-          and cap_rate_pct is not null
-    """, (state, hv_ceiling)).fetchall()
+    want = ("zip", "name", "neighborhood", "lat", "lng", "population",
+            "population_density", "median_home_value", "median_rent_monthly",
+            "cap_rate_pct", "median_household_income", "pct_bachelors",
+            "pct_renter_occupied", "pct_multi_unit", "pct_rent_burdened",
+            "history_zhvi")
+    select_cols = ", ".join(c if c in cols else f"NULL as {c}" for c in want)
+    # EVERY row in the state, deliberately. The filters that used to live in
+    # this WHERE clause now run through the funnel so each one is counted.
+    all_rows = [dict(zip(want, r)) for r in cur.execute(
+        f"select {select_cols} from zips where state = ?", (state,)).fetchall()]
     conn.close()
 
-    # ── Per-row FHA house-hack math ───────────────────────────────
-    # Purchase price = min(median home value, user's cap). This
-    # assumes "I'll buy at or below the local median for a 2-4 unit
-    # in this ZIP." Use the cap if median exceeds it (user stretches
-    # to the cap); else use the median (cheaper than user's budget).
-    # Expected rent = (units - 1) × median rent. Conservative
-    # (assumes user rents one unit; we don't have per-unit-count rent
-    # in our data, so this is a reasonable approximation).
-    # Net cost = PITI - expected rent. Negative means the renters
-    # pay more than your full housing cost — you live free + cash flow.
+    # ── The funnel: every step from "ZIPs in the state" to "on the board" ──
+    funnel = ZF.Funnel(f"{state} ZIPs", all_rows)
+    funnel.step("population", "fewer than 1,500 residents — too small to price reliably",
+                keep=lambda r: (r["population"] or 0) >= 1500,
+                no_data=lambda r: r["population"] is None)
+    funnel.step("rent", "no measured rent (Zillow ZORI), so it can't be underwritten",
+                keep=lambda r: (r["median_home_value"] is not None
+                                and r["median_rent_monthly"] is not None
+                                and r["cap_rate_pct"] is not None),
+                # Every removal here is a gap in the data, not a finding.
+                no_data=lambda r: True)
+    funnel.step("budget",
+                f"over your budget — single-family median above ${hv_ceiling:,} "
+                f"(a {units}-unit runs ~{unit_factor}× that)",
+                keep=lambda r: r["median_home_value"] <= hv_ceiling)
+
+    # ── Per-row FHA house-hack math, for the ZIPs still in play ──────
+    # Purchase = min(single-family median × the unit factor, your cap).
+    # Net cost = PITI − (units − 1) × median rent. Negative means the
+    # renters pay more than your full housing cost — you live free + cash.
     from structural import (trajectory_from_history, durable_cap_rate,
                             state_structural, apply_trajectory_veto,
                             TRAJECTORY_BADGES)
     state_struct = state_structural(state)
     n_state_flags = len(state_struct["flags"])
 
-    house_hack_costs = []
-    stressed_costs = []   # rents −10%, insurance +30%, 1 month vacancy/yr
-    fha_passes = []  # only meaningful for units>=3 per FHA rules
-    trajectories = []
-    durable_caps = []
-    for r in rows_raw:
-        hv, rent = r[7], r[8]
+    for r in funnel.rows:
+        hv, rent = r["median_home_value"], r["median_rent_monthly"]
         # Value trajectory from the ZIP's 60-month ZHVI history — the
         # structural lens: a great level score with a declining series
         # gets vetoed below, not averaged away.
         traj = None
-        if r[14]:
+        if r["history_zhvi"]:
             try:
-                traj = trajectory_from_history(json.loads(r[14]))
+                traj = trajectory_from_history(json.loads(r["history_zhvi"]))
             except (ValueError, TypeError):
                 traj = None
-        trajectories.append(traj)
-        durable = durable_cap_rate(r[9], hv, state)
-        durable_caps.append(durable)
+        r["traj"] = traj
+        r["traj_badge"] = TRAJECTORY_BADGES.get(traj["label"]) if traj else None
+        r["trend_3yr"] = traj["cagr_3yr_pct"] if traj else None
+        durable = durable_cap_rate(r["cap_rate_pct"], hv, state)
+        r["durable_detail"] = durable
+        r["durable_cap_pct"] = durable["durable_cap_pct"] if durable else None
+        r["area_type"] = ZF.area_type(r["population_density"])
+        r["density_sqmi"] = ZF.per_sq_mi(r["population_density"])
+        r["building_price"] = round(min(hv * unit_factor, max_price))
+        r["safety"] = SF.zip_safety(r["name"], state)
+        r["rent_observed"] = HH.rent_is_observed(rent, hv)
 
         # Price and insure the row exactly as the scenario card and the
         # deal checker do. When only the card applied the unit factors,
@@ -4093,162 +4135,67 @@ async def multifamily_page(
         piti = HH.apply_unit_insurance(
             _fha_piti(purchase, state, MORTGAGE_30Y_RATE, down_pct=down_pct), units)
         if not piti:
-            house_hack_costs.append(None)
-            stressed_costs.append(None)
-            fha_passes.append(None)
+            r["house_hack_net"] = r["house_hack_stressed"] = r["fha_self_suff"] = None
             continue
         expected_rent = (units - 1) * rent
-        net = piti["piti"] - expected_rent
-        house_hack_costs.append(round(net))
+        r["house_hack_net"] = round(piti["piti"] - expected_rent)
         # Stress test: same deal if rents come in 10% light, insurance
         # reprices +30%, and you eat one vacant month per year. If THIS
         # number still cash-flows, the deal survives a structural shift.
         stressed_piti = piti["piti"] + 0.30 * piti["monthly_ins"]
         stressed_rent = expected_rent * 0.90 * (11 / 12)
-        stressed_costs.append(round(stressed_piti - stressed_rent))
+        r["house_hack_stressed"] = round(stressed_piti - stressed_rent)
         # FHA self-sufficiency test (3-4 unit only): 75% of *total*
         # rents (all units, including owner-occupied) must cover PITI.
-        if units >= 3:
-            qualifying_rent = 0.75 * units * rent
-            fha_passes.append(qualifying_rent >= piti["piti"])
-        else:
-            fha_passes.append(None)
+        r["fha_self_suff"] = (0.75 * units * rent >= piti["piti"]) if units >= 3 else None
 
-    def rank_pct(values, invert=False):
-        """Return per-row rank → percentile 0–100. invert=True flips
-        so lower input values get higher percentiles (used for
-        cost-style metrics where 'lower is better')."""
-        valid = [v for v in values if v is not None]
-        if not valid:
-            return [None] * len(values)
-        sorted_vals = sorted(valid)
-        n = len(sorted_vals)
-        out = []
-        for v in values:
-            if v is None:
-                out.append(None); continue
-            i = bisect_left(sorted_vals, v)
-            pct = i / max(1, n - 1) * 100
-            out.append(round(100 - pct, 1) if invert else round(pct, 1))
-        return out
+    funnel.step("priced", "couldn't be priced (no tax or insurance rate for the state)",
+                keep=lambda r: r["house_hack_net"] is not None,
+                no_data=lambda r: True)
 
-    cap_pcts  = rank_pct([r[9] for r in rows_raw])
-    dens_pcts = rank_pct([r[6] for r in rows_raw])
-    # House-hack net cost is inverted: lower monthly burn = higher
-    # score. This is the single most important signal for a small,
-    # cash-constrained investor — weighted at 35-40% below.
-    hh_pcts = rank_pct(house_hack_costs, invert=True)
+    # Safety gate: the same gate and the same fail-closed rule the strict
+    # screen uses. A yield ranking with no safety gate is a ranking of
+    # distress. "We measured it and it isn't safe" and "nobody published a
+    # figure" are different problems, and only the second is ours to fix —
+    # so the funnel counts them apart, the same way it does for every filter.
+    # SF.TIERS rows are (key, lo, hi, LABEL, description).
+    tier_row = next((t for t in SF.TIERS if t[0] == safetier), None)
+    tier_label = (f"{tier_row[3].lower()}, under {tier_row[2]:,.0f} per 100k"
+                  if tier_row and math.isfinite(tier_row[2]) else "none set")
+    funnel.step(
+        "safety", f"violent crime above your bar ({tier_label})",
+        keep=lambda r: SF.passes(r["safety"], safetier, allow_unknown_safety),
+        no_data=lambda r: r["safety"]["tier"] == "unknown", kind="safety")
+    s = funnel.stages[-1]
+    gate = {"before": s["before"], "after": s["after"],
+            "unverified": s["no_data"], "above_tier": s["removed"] - s["no_data"]}
 
-    if has_mf_data:
-        renter_pcts = rank_pct([r[10] for r in rows_raw])
-        multi_pcts  = rank_pct([r[11] for r in rows_raw])
-        burden_inv  = rank_pct([r[12] for r in rows_raw], invert=True)
-        # FHA-tuned weights: cap rate + house-hack cost dominate
-        # because that's what the small-mighty owner-occupant cares
-        # about. Renter % and multi-unit % matter but secondary.
-        weights = (
-            ("cap",    0.25),
-            ("hh",     0.35),
-            ("renter", 0.20),
-            ("multi",  0.10),
-            ("burden", 0.10),
-        )
-    else:
-        renter_pcts = [None] * len(rows_raw)
-        multi_pcts  = [None] * len(rows_raw)
-        burden_inv  = [None] * len(rows_raw)
-        walk_pcts = rank_pct([r[13] for r in rows_raw])
-        # Fallback (no ACS yet): cap + house-hack still get the
-        # bulk of the weight; density and walk fill in.
-        weights = (
-            ("cap",    0.35),
-            ("hh",     0.40),
-            ("density",0.15),
-            ("walk",   0.10),
-        )
+    # Your filters, one funnel step each.
+    rows = ZF.apply_filters(funnel, filters)
+    emptied_by = funnel.emptied_by()
 
-    rows = []
-    for i, r in enumerate(rows_raw):
-        (zip_code, name, neigh, lat, lng, pop, dens, hv, rent, cap,
-         pct_rent, pct_mu, pct_rb, walk, _hist) = r
-        if hh_pcts[i] is None or cap_pcts[i] is None:
-            continue
-        if has_mf_data:
-            inputs = {
-                "cap":    cap_pcts[i],
-                "hh":     hh_pcts[i],
-                "renter": renter_pcts[i],
-                "multi":  multi_pcts[i],
-                "burden": burden_inv[i],
-            }
-        else:
-            inputs = {
-                "cap":     cap_pcts[i],
-                "hh":      hh_pcts[i],
-                "density": dens_pcts[i],
-                "walk":    walk_pcts[i],
-            }
-        if any(inputs[k] is None for k, _ in weights):
-            continue
-        score = round(sum(inputs[k] * w for k, w in weights), 1)
-        # Trajectory veto: a declining/decelerating ZIP can't ride a
-        # cheap-level score to the top of the table. Vetoed rows are
-        # marked so the UI shows *why* the score is capped.
-        traj = trajectories[i]
-        score, vetoed = apply_trajectory_veto(
-            score, traj["label"] if traj else None, n_state_flags)
-        durable = durable_caps[i]
-        rows.append({
-            "zip": zip_code, "name": name, "neighborhood": neigh or "",
-            "lat": lat, "lng": lng, "population": pop,
-            "median_home_value": hv, "median_rent_monthly": rent,
-            "building_price": round(min(hv * unit_factor, max_price)),
-            "cap_rate_pct": cap,
-            "pct_renter_occupied": pct_rent,
-            "pct_multi_unit": pct_mu,
-            "pct_rent_burdened": pct_rb,
-            "house_hack_net": house_hack_costs[i],
-            "house_hack_stressed": stressed_costs[i],
-            "fha_self_suff": fha_passes[i],
-            "mf_score": score,
-            "vetoed": vetoed,
-            "traj": traj,
-            "traj_badge": TRAJECTORY_BADGES.get(traj["label"]) if traj else None,
-            "durable_cap_pct": durable["durable_cap_pct"] if durable else None,
-            "durable_detail": durable,
-            "safety": SF.zip_safety(name, state),
-            "rent_observed": HH.rent_is_observed(rent, hv),
-        })
-    # Safety gate: drop rows above the bar. A yield ranking with no
-    # safety gate is a ranking of distress; this is the same gate and the
-    # same fail-closed rule the strict screen uses.
-    #
-    # Account for what it removed, because a board that silently falls
-    # from 835 rows to 3 reads as broken while the same board showing its
-    # arithmetic reads as strict. The distinction that matters to the
-    # user is "we measured it and it isn't safe" vs "nobody published a
-    # figure" — different problems, and only the second is ours to fix.
-    gate = {"before": len(rows), "unverified": 0, "above_tier": 0}
-    kept = []
+    # ── Rank what survived by what you said matters ─────────────────
+    score_info = ZF.score(rows, weights)
     for r in rows:
-        if SF.passes(r["safety"], safetier, allow_unknown_safety):
-            kept.append(r)
-        elif r["safety"]["tier"] == "unknown":
-            gate["unverified"] += 1
-        else:
-            gate["above_tier"] += 1
-    rows = kept
-    gate["after"] = len(rows)
+        r["vetoed"] = False
+        if r["mf_score"] is not None:
+            # Trajectory veto: a declining/decelerating ZIP can't ride a
+            # cheap-level score to the top of the table. Vetoed rows are
+            # marked so the UI shows *why* the score is capped.
+            r["mf_score"], r["vetoed"] = apply_trajectory_veto(
+                r["mf_score"], r["traj"]["label"] if r["traj"] else None, n_state_flags)
+    # Verified-safe rows by score, then rows whose safety nobody measured —
+    # shown only when asked for, and never ranked above a measured one.
+    rows = ZF.board_order(rows)
 
     # An empty board should name the binding constraint instead of just
-    # being empty. Applying the cap to the BUILDING (correctly) means a
-    # $550k cap on a 4-unit needs a ZIP whose single-family median is
-    # under ~$357k, and in a state where the safe cities are the
-    # expensive ones that can be nothing. Find the cheapest ZIP that DOES
-    # clear the safety bar and quote the cap it would take, so the user
-    # can tell "too strict" apart from "nothing exists".
+    # being empty. When it is the budget or the safety bar, find the
+    # cheapest ZIP that DOES clear the safety bar and quote the cap it would
+    # take — so the user can tell "too strict" apart from "nothing exists".
+    # When it is one of their own filters, raising the budget would not
+    # help, so no budget suggestion is made.
     suggest = None
-    if not rows:
+    if not rows and emptied_by and emptied_by["key"] in ("budget", "safety"):
         c2 = sqlite3.connect(str(db_path))
         cand = c2.execute(
             "select zip, name, median_home_value from zips "
@@ -4266,7 +4213,6 @@ async def multifamily_page(
                            "building": round(bp),
                            "cap_needed": int(math.ceil(bp / 1.2 / 10_000) * 10_000)}
                 break
-    rows.sort(key=lambda r: (SF.TIER_ORDER[r["safety"]["tier"]], -r["mf_score"]))
 
     # ── Scenario: price the PROPERTIES RETURNED, not the filter cap ──
     # The cap is a filter. Pricing the scenario AT the cap described a
@@ -4295,18 +4241,13 @@ async def multifamily_page(
         if scenario_price else None)
 
     # ── Rent basis: OBSERVED rents only ──
-    # ~69% of ZIP rents nationally (73% in OH) are the imputed
-    # value/17/12 placeholder. A median built from those is largely a
-    # restatement of home values, so the scenario would be quoting
-    # circular arithmetic back at the user as "market rent".
+    # A rent imputed as value/17/12 is a restatement of home value, so a
+    # median built from those would quote circular arithmetic back at the
+    # user as "market rent". Use observed rents whenever any exist, and
+    # name whichever basis is used.
     observed = [r["median_rent_monthly"] for r in shown
                 if HH.rent_is_observed(r["median_rent_monthly"], r["median_home_value"])]
     all_rents = [r["median_rent_monthly"] for r in shown if r["median_rent_monthly"]]
-    # Use observed rents whenever ANY exist. The old rule needed 5 before
-    # it would use them, so with 3 observed ZIPs the median silently
-    # included imputed placeholders while the card claimed they were
-    # "excluded from this median" — and the header read "mostly IMPUTED"
-    # directly above "100% observed". Whichever basis we use, name it.
     THIN_RENT_SAMPLE = 5
     obs_rent = statistics.median(observed) if observed else None
     eff_rent = (rent_unit_n if rent_unit_n > 0
@@ -4355,7 +4296,7 @@ async def multifamily_page(
 
     return templates.TemplateResponse("multifamily.html", {
         "request": request,
-        "rows": shown,
+        "rows": shown, "n_total": len(rows),
         "state": state, "states": states,
         "max_price": max_price, "down_pct": down_pct, "units": units,
         "rent_unit": (int(rent_unit_n) if rent_unit_n > 0 else ""),
@@ -4381,6 +4322,9 @@ async def multifamily_page(
         "data_pending": not has_mf_data,
         "state_struct": state_struct,
         "has_history": has_history,
+        "funnel": funnel, "emptied_by": emptied_by, "offered": offered,
+        "score_info": score_info,
+        **finder_ctx,
     })
 
 
