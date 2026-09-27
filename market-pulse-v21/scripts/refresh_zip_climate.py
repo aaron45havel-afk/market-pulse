@@ -186,9 +186,11 @@ def main() -> int:
     print(f"  stations   {m['stations']['temperature']:,} temperature, {m['stations']['snow']:,} snow")
     print(f"  coverage   {m['coverage']['temperature']:.1%} temperature, "
           f"{m['coverage']['snow']:.1%} snow, of {m['zips']:,} ZIPs (within {m['max_station_km']:g} km)")
-    for z in ("44113", "43215", "94110", "33101", "80202", "99501"):
+    known = {z for z, _, _ in zips}
+    for z in ("44113", "43215", "94110", "33130", "80202", "99501"):
         r = payload["zips"].get(z)
-        print(f"  {z}  {r}" if r else f"  {z}  (no station in range)")
+        print(f"  {z}  {r}" if r else f"  {z}  " + ("(no station in range)" if z in known
+                                                    else "(not in zips.db)"))
     return 0
 
 

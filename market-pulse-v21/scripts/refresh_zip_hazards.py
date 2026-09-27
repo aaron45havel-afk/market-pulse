@@ -4,8 +4,12 @@
 
 Writes data/zip_hazards.json: for every ZIP in zips.db, FEMA's EXPECTED
 ANNUAL BUILDING LOSS from flooding, wildfire, wind (hurricane + tornado) and
-earthquake — as dollars a year per $100,000 of building value — and where
-that ZIP ranks nationally.
+earthquake — as dollars a year per $100,000 of building value.
+
+DOLLARS, NOT RANKS. Most of these distributions are piled up near zero —
+the median ZIP's expected wildfire loss is 13 cents a year per $100k — so a
+national rank turns a dollar a year into "worse than 80% of the country".
+The page filters and displays the dollars themselves.
 
 WHY LOSS PER DOLLAR, NOT FEMA'S RATINGS. The NRI's headline risk ratings
 multiply expected loss by the local population's social vulnerability, so
@@ -33,6 +37,7 @@ import csv
 import io
 import json
 import sqlite3
+import statistics
 import sys
 import time
 import urllib.parse
@@ -58,10 +63,8 @@ MIN_TRACTS = 80_000           # the December 2025 release has 85,154
 MIN_FLOOD_COVERAGE = 0.85
 MAX_COVERAGE_DROP = 0.05
 
-# Short keys in the output, one pair per hazard group: loss per $100k/yr,
-# and national percentile (higher = worse).
-KEYS = {"flood": ("fl", "flp"), "wildfire": ("wf", "wfp"),
-        "wind": ("wd", "wdp"), "quake": ("eq", "eqp")}
+# Short key in the output per hazard group: expected loss $/yr per $100k.
+KEYS = {"flood": "fl", "wildfire": "wf", "wind": "wd", "quake": "eq"}
 
 
 class Refuse(Exception):
@@ -150,19 +153,22 @@ def build(tract_rows: list, parts: dict, zips: list, min_tracts: int = MIN_TRACT
             shares[g][z] = share
 
     out = {z: {} for z in zips}
-    coverage = {}
-    for g, (k_rate, k_pct) in KEYS.items():
-        pct = E.national_percentile(rates[g])
-        n_ok = 0
+    coverage, median = {}, {}
+    for g, key in KEYS.items():
+        known = []
         for z in zips:
             r = rates[g][z]
             if r is None:
                 continue
-            n_ok += 1
-            out[z][k_rate] = round(r * 100_000, 2)
-            out[z][k_pct] = pct[z]
-        coverage[g] = round(n_ok / (len(zips) or 1), 4)
+            out[z][key] = round(r * 100_000, 2)
+            known.append(out[z][key])
+        coverage[g] = round(len(known) / (len(zips) or 1), 4)
+        median[g] = round(statistics.median(known), 2) if known else None
     out = {z: v for z, v in out.items() if v}
+    # The typical ZIP's all-hazards figure, for the page's "typical" line.
+    # Over ZIPs with all four scored; a sum of medians is not a median.
+    totals = [sum(v.values()) for v in out.values() if len(v) == len(KEYS)]
+    median["total"] = round(statistics.median(totals), 2) if totals else None
 
     # States where the join mostly failed are named, not averaged away. A
     # tract-ID scheme change (Connecticut's 2022 planning regions are the
@@ -190,9 +196,9 @@ def build(tract_rows: list, parts: dict, zips: list, min_tracts: int = MIN_TRACT
             "groups": {g: list(c) for g, c in E.HAZARD_GROUPS.items()},
             "min_scored_share": E.MIN_SCORED_SHARE,
             "coverage": coverage,
+            "median": median,
             "weak_states": weak,
-            "fields": {k: f"{g} loss $/yr per $100k" for g, (k, _) in KEYS.items()}
-                      | {p: f"{g} national percentile (100 = worst)" for g, (_, p) in KEYS.items()},
+            "fields": {k: f"{g} loss $/yr per $100k" for g, k in KEYS.items()},
         },
         "zips": out,
     }
@@ -238,6 +244,7 @@ def main() -> int:
     OUT.write_text(json.dumps(payload, separators=(",", ":"), sort_keys=True))
     print(f"wrote {OUT} ({OUT.stat().st_size:,} bytes) — NRI {m['nri_version']}")
     print("  coverage  " + "  ".join(f"{g} {c:.1%}" for g, c in m["coverage"].items()))
+    print("  median    " + "  ".join(f"{g} ${v}" for g, v in m["median"].items()))
     print(f"  weak states (<80% flood coverage): {m['weak_states'] or 'none'}")
     for z in ("44113", "43215", "45202", "70112", "33139", "94110", "80202"):
         print(f"  {z}  {payload['zips'].get(z)}")

@@ -124,3 +124,60 @@ the gate removed for lack of data, and the fix is more crime coverage, not a loo
 **Assumption.** Price growth uses the ZIP's own measured 36-month trend. The forecast
 column is 100% populated but is a model output; offering a measured and a modelled growth
 signal side by side invites double-counting. Can be added later as its own labelled filter.
+
+## 2026-09-27 — Weather is the nearest station that measures it, within 40 km
+**Assumption.** Each ZIP takes NOAA's 1991–2020 normals from the nearest station that
+measures the thing asked about — temperature and snow are matched separately, because
+most stations measure only precipitation. "Winter average low" is the Dec–Feb mean daily
+minimum and "summer average high" the Jun–Aug mean daily maximum. Stations whose normals
+NOAA flagged "E" (estimated from neighbours) are skipped: an estimate beside a measured
+station would win on distance alone. Beyond 40 km a ZIP has no weather rather than a
+distant city's. No elevation correction, so a hill town matched to a valley station
+reads a little warm; the Climate cell's hover gives the station distance. 99.9% of ZIPs
+get temperatures, 98.4% snow.
+
+## 2026-09-27 — Hazards are FEMA's expected building loss per dollar, not its ratings
+**Decided.** The National Risk Index's headline ratings multiply expected loss by the
+local population's social vulnerability, so the same flood rates riskier in a poorer
+tract — the income correlation `crime_index` was thrown out for — and they are relative.
+The board uses expected annual building loss ÷ building value per tract, apportioned to
+ZIPs by land area (Census 2020 ZCTA–tract file). "Not Applicable" reads as $0 (no coast,
+no coastal flooding); "Insufficient Data" is missing; a rating the code has never seen
+stops the refresh. A ZIP with under half its land in scored tracts has no figure.
+
+## 2026-09-27 — Hazard filters are in dollars, not national ranks
+**Decided.** The first cut ranked every ZIP nationally ("avoid the worst 10%"). Most of
+these distributions sit near zero — the median ZIP's wildfire loss is 13 cents a year per
+$100k — so a rank turned $1 a year of earthquake loss into "82/100". Filters and the
+Hazards column now read dollars a year per $100k of building. Thresholds, with the share
+of the 25,511 scored ZIPs each removes:
+
+| Filter | Choices ($/yr per $100k) | Removes |
+|---|---|---|
+| Flood | 200 / 150 / 100 | 6% / 14% / 35% |
+| Wildfire | 50 / 10 / 2 | 4% / 11% / 22% |
+| Hurricane & tornado | 100 / 50 / 25 | 4% / 8% / 17% |
+| Earthquake | 50 / 25 / 10 | 9% / 13% / 19% |
+
+The column sums all four and turns amber at $250 and red at $500 — roughly the national
+90th and 99th percentiles of the total — naming the biggest hazard only then, because
+flood is the baseline almost everywhere. The page shows each hazard's national median
+from the data file, so "typical" moves when FEMA's figures do. Dollars are per $100k of
+BUILDING; the hover applies them to the row's purchase price as an upper bound, since
+the price includes land.
+
+## 2026-09-27 — "All states" prices each row with its own state; hides the scenario card
+**Decided.** The national board computes every row with that row's state — tax and
+insurance in the PITI, durable cap rate, FBI safety, and the structural flags behind the
+trajectory veto — so a ZIP's row matches its own state's board; the test samples one ZIP
+per state and compares. The scenario card and the listing checker are hidden nationally:
+both need one state's tax and insurance rates, and `_fha_piti("ALL")` silently falls back
+to defaults. Each row's state links to that state's board with the filters kept.
+
+## 2026-09-27 — Weather and hazards are separate JSON layers, refreshed quarterly
+**Assumption.** `data/zip_climate.json` and `data/zip_hazards.json` are joined by ZIP at
+request time rather than written into `zips.db`, which `build_national_zips` rebuilds
+monthly from other sources. Separate files keep each source's refusal guards and
+coverage history independent. Both change slowly (normals once a decade, the NRI about
+yearly), so the jobs run quarterly; a filter is offered only for places its file has
+figures for.

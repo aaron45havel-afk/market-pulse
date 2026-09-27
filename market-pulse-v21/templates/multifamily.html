@@ -203,6 +203,9 @@
 </style>
 {% endblock %}
 {% block content %}
+{# Hazard dollars: expected yearly building damage per $100k of building. #}
+{% macro usd(v) %}{% if v is none %}—{% elif v < 1 %}under $1{% else %}${{ '{:,.0f}'.format(v) }}{% endif %}{% endmacro %}
+{% set hz_median = (hazards_meta.median if hazards_meta and hazards_meta.median else {}) %}
 <div class="mf-page">
     <div class="mf-head">
         <div>
@@ -225,6 +228,7 @@
                     <div class="field">
                         <label for="stateSel">State</label>
                         <select name="state" id="stateSel">
+                            <option value="ALL" {% if national %}selected{% endif %}>All states (national)</option>
                             {% for s in states %}
                             <option value="{{ s }}" {% if s == state %}selected{% endif %}>{{ s }}</option>
                             {% endfor %}
@@ -284,13 +288,18 @@
                 </div>
             </fieldset>
 
-            {% for group, legend in (('neighborhood', 'Neighborhood'), ('money', 'The numbers')) %}
+            {% for group, legend, hint in (
+                ('neighborhood', 'Neighborhood', ''),
+                ('money', 'The numbers', ''),
+                ('weather', 'Weather', 'NOAA 30-year averages (1991–2020) at the nearest weather station that measures each one, within 25 miles.'),
+                ('hazards', 'Natural hazards', "FEMA's estimate of the damage a year to buildings, in dollars per $100k of building value." ~ (" The typical U.S. ZIP: flood " ~ usd(hz_median.flood) ~ ", hurricane & tornado " ~ usd(hz_median.wind) ~ ", earthquake " ~ usd(hz_median.quake) ~ ", wildfire " ~ usd(hz_median.wildfire) ~ "." if hz_median else "") ~ " An area average — check the parcel's flood zone before you buy.")) %}
+            {% if offered|selectattr('group', 'equalto', group)|list %}
             <fieldset>
                 <legend>{{ legend }}</legend>
                 <div class="row">
                     {% for f in offered if f.group == group %}
                     <div class="field">
-                        <label for="f_{{ f.key }}" title="{{ f.why }}">{{ f.label }}</label>
+                        <label for="f_{{ f.key }}" title="{{ f.why }}{% if f.hazard and hz_median.get(f.hazard) is not none %} Typical U.S. ZIP: {{ usd(hz_median[f.hazard]) }}.{% endif %}">{{ f.label }}</label>
                         <select name="{{ f.key }}" id="f_{{ f.key }}">
                             <option value="">Any</option>
                             {% for c in f.choices %}
@@ -300,7 +309,9 @@
                     </div>
                     {% endfor %}
                 </div>
+                {% if hint %}<div class="hint">{{ hint }}</div>{% endif %}
             </fieldset>
+            {% endif %}
             {% endfor %}
 
             <fieldset>
@@ -338,7 +349,7 @@
             <span class="pending-chip" title="Needs {{ p.needs }}">{{ p.label }}</span>
             {% endfor %}
             {% for f in zf.FILTERS if f not in offered %}
-            <span class="pending-chip" title="Needs Census data that isn't loaded for {{ state }} yet">{{ f.label }}</span>
+            <span class="pending-chip" title="{% if f.needs == 'zip_hazards' %}No FEMA hazard figures for {{ place }}{% elif f.needs == 'zip_climate' %}No NOAA weather figures for {{ place }}{% else %}Needs Census data that isn't loaded for {{ place }} yet{% endif %}">{{ f.label }}</span>
             {% endfor %}
         </div>
     </form>
@@ -346,7 +357,7 @@
     <div style="font-size:0.75rem;color:var(--ink-3);margin:-0.4rem 0 0.9rem">
         <b>Safety uses real FBI figures</b> — never the database's <code>crime_index</code>, which is density + income + education.
         {{ safety_coverage.usable }} cities can clear this gate; a city with no verified figure is never counted as safe.
-        <a href="/headroom?mode=hh&hstate={{ state }}&units={{ units }}&maxprice={{ max_price|int }}">Max-offer view for a specific building →</a>
+        {% if not national %}<a href="/headroom?mode=hh&hstate={{ state }}&units={{ units }}&maxprice={{ max_price|int }}">Max-offer view for a specific building →</a>{% endif %}
     </div>
 
     {# ── The funnel. Every removal between the state and the board. ── #}
@@ -367,6 +378,16 @@
     </div>
     {% endif %}
 
+    {% if national %}
+    <div class="piti-card" role="note">
+        <div class="piti-card-head">Pick a state for the scenario and the listing checker</div>
+        <div style="font-size:0.8rem;color:var(--ink-3)">
+            Each row below is priced with <b>its own</b> state's property tax and insurance rates, safety record and structural flags, so the national board is comparable across states.
+            The scenario card and the listing checker price <b>one</b> building, and averaging tax and insurance across states would price a building that exists nowhere — so they need a state.
+            Click a ZIP's state in the table, or choose one above.
+        </div>
+    </div>
+    {% endif %}
     {% if sample_piti %}
     <div class="piti-card">
         <div class="piti-card-head">Your scenario: ${{ '{:,.0f}'.format(scenario_price) }} {{ units }}-unit building, {{ down_pct }}% down, 30-yr at {{ '%.2f'|format(mortgage_rate) }}% (FHA)</div>
@@ -440,6 +461,7 @@
        that is imputed in ~69% of ZIPs. Both of those disappear the
        moment the user has a real listing in front of them, so this is
        where the page stops estimating and starts underwriting. #}
+    {% if not national %}
     <details class="deal-check" {% if deal %}open{% endif %}>
         <summary>🔎 Check a specific listing — real ask, real rents</summary>
         <div class="body">
@@ -501,6 +523,7 @@
             {% endif %}
         </div>
     </details>
+    {% endif %}
 
     {% if state_struct is defined and state_struct and state_struct.chips %}
     <div class="struct-chips" role="note">
@@ -525,7 +548,7 @@
         <a href="https://www.greatschools.org/search/search.zipcode" target="_blank" rel="noopener">GreatSchools by ZIP</a> ·
         <a href="https://nces.ed.gov/ccd/schoolsearch/" target="_blank" rel="noopener">NCES school search</a> ·
         <a href="https://www.niche.com/k12/search/best-school-districts/" target="_blank" rel="noopener">Niche districts</a>.
-        <b>Also absent:</b> flood/wildfire exposure at the parcel, actual 2–4 unit inventory (we estimate building price from the single-family median),
+        <b>Also absent:</b> flood/wildfire exposure at the parcel (the hazard filters are ZIP averages — <a href="https://msc.fema.gov/portal/search" target="_blank" rel="noopener">check the flood map</a> for a specific address), actual 2–4 unit inventory (we estimate building price from the single-family median),
         condition and deferred maintenance, rent control and local landlord ordinances, and the specific parcel's tax assessment — the tax line uses a state rate.
     </div>
 
@@ -545,6 +568,20 @@
             </ul>
             <p style="margin-top:0.4rem">A row missing one signal is scored on the rest and marked, rather than dropped or scored as zero.
             Rows whose safety nobody measured, when you choose to show them, are listed after every verified row regardless of score.</p>
+            <p style="margin-top:0.6rem"><strong>Weather</strong> is NOAA's 1991–2020 normals — thirty-year averages — from the nearest weather station that actually measures each thing, within 25 miles.
+            Temperatures and snow are matched separately, because most stations only measure rain and snow. Stations whose figures NOAA estimated from their neighbours are skipped.
+            Hover a Climate cell to see how far away the station is. A hill town matched to a valley station will read a little warm.{% if climate_meta %} <span style="color:var(--ink-3)">({{ '{:,}'.format(climate_meta.stations.temperature) }} temperature stations; figures as of {{ climate_meta.as_of }}.)</span>{% endif %}</p>
+            <p style="margin-top:0.6rem"><strong>Natural hazards</strong> are FEMA's National Risk Index — but not its headline risk ratings.
+            Those multiply expected damage by the local population's social vulnerability, so the same flood rates "riskier" in a poorer area, and they are relative: a wildfire score of 64 is labelled "Very Low".
+            This board uses FEMA's <b>expected damage a year to buildings, in dollars per $100k of building value</b>, spread from census tracts to ZIPs by land area.
+            It shows dollars, not national ranks, on purpose: most ZIPs expect almost no wildfire or earthquake damage, so a rank would call $1 a year "worse than 80% of the country".
+            {% if hz_median.total is defined and hz_median.total is not none %}The typical U.S. ZIP expects about {{ usd(hz_median.total) }} a year per $100k from all four together. {% endif %}
+            The Hazards column adds the four up — amber from $250, red from $500, with the biggest of the four named.
+            Hover a cell to see it on the row's purchase price — an overstatement, because the price includes land and FEMA counts only the building.
+            <b>It is FEMA's model, and it can surprise:</b> levee-protected central New Orleans (70112) expects about $27 a year of flood damage per $100k but $337 from hurricanes, and FEMA's inland-flood estimate sets a baseline almost everywhere — downtown Phoenix (85004, $148) comes out above Miami Beach (33139, $88). Near a coast, read flood and hurricane together; the Hazards column already does.
+            It is an area average; a specific building's flood zone matters more than any ZIP figure, so check it on <a href="https://msc.fema.gov/portal/search" target="_blank" rel="noopener">FEMA's flood maps</a> before you buy.
+            Connecticut has no hazard figures: FEMA's tracts use the state's 2022 renumbering and the Census ZIP-to-tract file doesn't.{% if hazards_meta %} <span style="color:var(--ink-3)">(NRI {{ hazards_meta.nri_version }}; built {{ hazards_meta.as_of }}.)</span>{% endif %}</p>
+            <p style="margin-top:0.6rem"><strong>All states.</strong> The national board prices every ZIP with its own state's tax and insurance rates, safety record and structural flags, so a ZIP's row is identical to its row on its own state's board — only its score differs, because scores are relative to the other ZIPs on the board.</p>
             <p style="margin-top:0.6rem"><strong>What isn't here, and why.</strong> The database has columns called <code>walk_score</code>, <code>restaurant_score</code> and <code>crime_index</code>.
             None is a measurement: the first two are curves on population density and the third is density + income + education.
             Density is offered once, honestly, as <em>Area type</em>; the other two are not offered, because filtering on them would be filtering on density three times.</p>
@@ -567,18 +604,18 @@
 
     {% if not rows %}
     <div class="mf-explain"><div class="body">
-        <strong>Nothing in {{ state }} clears these filters.</strong>
+        <strong>Nothing in {{ place }} clears these filters.</strong>
         {% if emptied_by %}
         The step that emptied the board: <b>{{ emptied_by.label }}</b> ({{ emptied_by.before }} → 0).
         {% if emptied_by.kind == 'filter' %}
         That is one of your filters — loosen it, or set it back to <i>Any</i>, to see what's closest.
         {% elif emptied_by.key == 'rent' %}
-        No ZIP in {{ state }} big enough to price has a measured Zillow rent series, so none can be underwritten here. That is a gap in the data, not a verdict on {{ state }} — try a neighbouring state, or use the listing checker below with a rent you've actually seen.
+        No ZIP in {{ place }} big enough to price has a measured Zillow rent series, so none can be underwritten here. That is a gap in the data, not a verdict on {{ place }} — try a neighbouring state, or use the listing checker with a rent you've actually seen.
         {% elif emptied_by.key == 'budget' %}
         Your ${{ '{:,.0f}'.format(max_price) }} cap is a <b>building</b> cap, and a {{ units }}-unit runs about {{ unit_factor }}× the single-family median — so it only admits ZIPs whose single-family median is under ${{ '{:,.0f}'.format(hv_ceiling) }}.
         {% elif emptied_by.key == 'safety' %}
         {% if gate.unverified > gate.above_tier %}
-        <b>That is mostly a coverage problem, not a verdict on {{ state }}.</b> The FBI publishes by police agency, so small towns and unincorporated areas often have no figure at all — and this board refuses to call an unmeasured place safe.
+        <b>That is mostly a coverage problem, not a verdict on {{ place }}.</b> The FBI publishes by police agency, so small towns and unincorporated areas often have no figure at all — and this board refuses to call an unmeasured place safe.
         Set <b>No FBI figure → Show</b> to see them flagged rather than hidden, or loosen the tier.
         {% else %}
         Loosen the safety tier, or raise your max price.
@@ -586,7 +623,7 @@
         {% endif %}
         {% if suggest %}
         <div style="margin-top:0.5rem">
-            <b>What it would take:</b> the cheapest {{ state }} ZIP that clears this safety bar is
+            <b>What it would take:</b> the cheapest ZIP in {{ place }} that clears this safety bar is
             <a href="/zip/{{ suggest.zip }}">{{ suggest.zip }}</a> ({{ suggest.name }}), single-family median
             ${{ '{:,.0f}'.format(suggest.sfr) }} — which puts a {{ units }}-unit at roughly
             <b>${{ '{:,.0f}'.format(suggest.building) }}</b> at the {{ unit_factor }}× unit factor.
@@ -611,6 +648,7 @@
                         <th data-col="rank" data-numeric="1" class="sorted">#<span class="arrow">▲</span></th>
                         <th data-col="zip">ZIP<span class="arrow"></span></th>
                         <th data-col="name">Area<span class="arrow"></span></th>
+                        {% if national %}<th data-col="state" title="Open this state's board with the same filters">State<span class="arrow"></span></th>{% endif %}
                         <th data-col="type" data-numeric="1" title="Area type from ZIP-average population density">Type<span class="arrow"></span></th>
                         <th data-col="safety">Safety (FBI)<span class="arrow"></span></th><th data-col="score" data-numeric="1">Score<span class="arrow"></span></th>
                         <th data-col="hh" data-numeric="1">House-hack<span class="arrow"></span></th>
@@ -620,6 +658,8 @@
                         <th data-col="traj" data-numeric="1" title="Annualized change over the ZIP's last 36 months of home values, with acceleration/deceleration">3-yr trend<span class="arrow"></span></th>
                         <th data-col="income" data-numeric="1" title="Median household income (Census ACS)">Income<span class="arrow"></span></th>
                         <th data-col="degree" data-numeric="1" title="Adults 25+ with a bachelor's degree or higher (Census ACS)">Degree<span class="arrow"></span></th>
+                        <th data-col="climate" data-numeric="1" title="Winter average low / summer average high / snowfall a year — NOAA 1991–2020 normals at the nearest station. Sorts by winter low.">Climate<span class="arrow"></span></th>
+                        <th data-col="hazard" data-numeric="1" title="FEMA's expected damage a year from flood, wildfire, hurricane & tornado and earthquake together, in dollars per $100k of building.{% if hz_median.total is defined and hz_median.total is not none %} Typical U.S. ZIP: {{ usd(hz_median.total) }}.{% endif %} Hover a cell for each hazard.">Hazards $/yr<span class="arrow"></span></th>
                         <th data-col="rent" data-numeric="1" title="* = imputed (home value ÷ 17 ÷ 12), not an observed ZORI rent">Rent/mo<span class="arrow"></span></th>
                         <th data-col="hv" data-numeric="1">Home value<span class="arrow"></span></th>
                         {% if has_mf_data %}
@@ -658,6 +698,7 @@
                         <td class="rank" data-sort="{{ loop.index }}">{{ loop.index }}</td>
                         <td class="zip-cell" data-sort="{{ r.zip }}"><a href="/zip/{{ r.zip }}">{{ r.zip }}</a></td>
                         <td data-sort="{{ r.name }}">{% if r.neighborhood %}{{ r.neighborhood }} · {% endif %}{{ r.name }}</td>
+                        {% if national %}<td data-sort="{{ r.state }}"><a href="/multifamily?state={{ r.state }}&amp;max_price={{ max_price }}&amp;down_pct={{ down_pct }}&amp;units={{ units }}&amp;safetier={{ safetier }}&amp;unknown={{ 1 if allow_unknown_safety else 0 }}{% for name, value in carry %}&amp;{{ name }}={{ value|urlencode }}{% endfor %}" title="Open the {{ r.state }} board with these filters — scenario card and listing checker included">{{ r.state }}</a></td>{% endif %}
                         <td data-sort="{{ r.density_sqmi if r.density_sqmi is not none else -1 }}"><span class="type-pill" title="{% if r.density_sqmi is not none %}{{ '{:,.0f}'.format(r.density_sqmi) }} people per sq mi (ZIP average){% else %}no density figure{% endif %}">{{ zf.AREA_LABEL[r.area_type] if r.area_type else '—' }}</span></td>
                         <td data-sort="{{ 9 - (0 if r.safety.tier == 'very_safe' else 1 if r.safety.tier == 'safe' else 2 if r.safety.tier == 'average' else 3 if r.safety.tier == 'elevated' else 4 if r.safety.tier == 'high' else 9) }}">
                           {% set sf = r.safety %}
@@ -669,7 +710,7 @@
                           {% else %}<span style="color:var(--ink-3)" title="{{ sf.note or 'no verified FBI figure for this city' }}">unverified</span>{% endif %}
                           {% if sf.violent %}<span style="color:var(--ink-3);font-size:0.9em" title="{{ sf.source }} ({{ sf.year }})"> {{ sf.violent }}{% if sf.vs_us %}·{{ sf.vs_us }}×{% endif %}</span>{% endif %}
                         </td>
-                        <td class="score-cell" data-sort="{{ r.mf_score if r.mf_score is not none else -1 }}" title="{% for key, label, field, lower in zf.PRIORITIES %}{% if key in r.score_parts %}{{ label }} {{ '%.0f'|format(r.score_parts[key]) if r.score_parts[key] is not none else 'no data' }} (weight {{ weights[key] if not score_info.defaulted else zf.PRESETS['balanced'].weights[key] }}){% if not loop.last %} · {% endif %}{% endif %}{% endfor %}">{{ '%.0f'|format(r.mf_score) if r.mf_score is not none else '—' }}{% if not r.score_complete %}<span class="imputed-flag" title="Scored on {{ r.score_basis }} priorities — one had no figure for this ZIP, so the rest were reweighted">†</span>{% endif %}{% if r.vetoed %}<span class="veto-pill" title="Trajectory veto: this ZIP's own home-value history is {{ r.traj.label if r.traj else 'weak' }}{% if state_struct and state_struct.flags %}, and {{ state }} has {{ state_struct.flags|length }} state-level structural flag(s){% endif %} — the level score can't ride to the top of the table.">capped</span>{% endif %}</td>
+                        <td class="score-cell" data-sort="{{ r.mf_score if r.mf_score is not none else -1 }}" title="{% for key, label, field, lower in zf.PRIORITIES %}{% if key in r.score_parts %}{{ label }} {{ '%.0f'|format(r.score_parts[key]) if r.score_parts[key] is not none else 'no data' }} (weight {{ weights[key] if not score_info.defaulted else zf.PRESETS['balanced'].weights[key] }}){% if not loop.last %} · {% endif %}{% endif %}{% endfor %}">{{ '%.0f'|format(r.mf_score) if r.mf_score is not none else '—' }}{% if not r.score_complete %}<span class="imputed-flag" title="Scored on {{ r.score_basis }} priorities — one had no figure for this ZIP, so the rest were reweighted">†</span>{% endif %}{% if r.vetoed %}<span class="veto-pill" title="Trajectory veto: this ZIP's own home-value history is {{ r.traj.label if r.traj else 'weak' }}{% if r.state_flags %}, and {{ r.state }} has {{ r.state_flags }} state-level structural flag(s){% endif %} — the level score can't ride to the top of the table.">capped</span>{% endif %}</td>
                         <td class="{{ hh_class }}" data-sort="{{ r.house_hack_net if r.house_hack_net is not none else 99999 }}">{{ hh_text }}{% if r.fha_self_suff is not none %}{% if r.fha_self_suff %}<span class="fha-pill ok" title="FHA self-sufficiency test passes at {{ units }} units">FHA</span>{% else %}<span class="fha-pill bad" title="FHA self-sufficiency requires 75% × {{ units }} units × rent ≥ PITI">FHA ✗</span>{% endif %}{% endif %}</td>
                         <td data-sort="{{ r.house_hack_stressed if r.house_hack_stressed is not none else 99999 }}">{% if r.house_hack_stressed is none %}—{% elif r.house_hack_stressed <= 0 %}<span class="cash-positive">+${{ '%.0f'|format(-r.house_hack_stressed|float) }}</span>{% else %}<span class="{% if r.house_hack_stressed >= 1500 %}cash-bad{% elif r.house_hack_stressed >= 500 %}cash-warn{% endif %}">-${{ '%.0f'|format(r.house_hack_stressed|float) }}</span>{% endif %}</td>
                         <td data-sort="{{ r.cap_rate_pct }}">{{ '%.2f'|format(r.cap_rate_pct) }}%</td>
@@ -677,6 +718,10 @@
                         <td data-sort="{{ r.traj.cagr_3yr_pct if r.traj else -99 }}">{% if r.traj %}<span class="{{ r.traj_badge.cls }}" title="{{ r.traj_badge.label }} — 1yr {{ r.traj.chg_1yr_pct }}% vs prior-2yr {{ r.traj.prior_2yr_pct }}%/yr ({{ '%+.1f'|format(r.traj.decel_pct) }} pts)">{{ r.traj_badge.glyph }} {{ '%+.1f'|format(r.traj.cagr_3yr_pct) }}%</span>{% else %}—{% endif %}</td>
                         <td data-sort="{{ r.median_household_income or -1 }}">{% if r.median_household_income %}${{ '{:,.0f}'.format(r.median_household_income / 1000) }}k{% else %}—{% endif %}</td>
                         <td data-sort="{{ r.pct_bachelors if r.pct_bachelors is not none else -1 }}">{% if r.pct_bachelors is not none %}{{ '%.0f'|format(r.pct_bachelors) }}%{% else %}—{% endif %}</td>
+                        <td data-sort="{{ r.winter_low if r.winter_low is not none else -99 }}">{% if r.winter_low is not none %}<span title="Dec–Feb avg low {{ r.winter_low }}°F · Jun–Aug avg high {{ r.summer_high }}°F · {{ r.days_90 }} days/yr at 90°F+{% if r.days_32 is not none %} · {{ r.days_32 }} nights at/below freezing{% endif %} · station {{ r.temp_km }} km away{% if r.snow_in is not none %} · snow {{ r.snow_in }} in/yr (station {{ r.snow_km }} km){% endif %}">{{ '%.0f'|format(r.winter_low) }}° / {{ '%.0f'|format(r.summer_high) }}°{% if r.snow_in is not none %} · {{ '%.0f'|format(r.snow_in) }}″{% endif %}</span>{% else %}—{% endif %}</td>
+                        {% set hz = [('Flood', r.flood_rate), ('Wildfire', r.wildfire_rate), ('Hurricane & tornado', r.wind_rate), ('Earthquake', r.quake_rate)] %}
+                        {% set hz_top = (hz|sort(attribute='1')|last) if r.hazard_total is not none else none %}
+                        <td data-sort="{{ r.hazard_total if r.hazard_total is not none else -1 }}">{% if r.hazard_total is not none %}<span title="Expected damage a year per $100k of building (FEMA): {% for label, rate in hz %}{{ label }} {{ usd(rate) }}{% if not loop.last %} · {% endif %}{% endfor %}. On this row's ${{ '{:,.0f}'.format(r.building_price) }} price, at most about ${{ '{:,.0f}'.format(r.hazard_total * r.building_price / 100000) }}/yr — the price includes land, which FEMA doesn't count." class="{{ 'cash-bad' if r.hazard_total >= 500 else ('cash-warn' if r.hazard_total >= 250 else '') }}">{{ usd(r.hazard_total) }}{% if r.hazard_total >= 250 %} <span style="color:var(--ink-3);font-size:0.9em">{{ hz_top[0]|lower }}</span>{% endif %}</span>{% else %}—{% endif %}</td>
                         <td data-sort="{{ r.median_rent_monthly }}">${{ '{:,}'.format(r.median_rent_monthly) }}{% if not r.rent_observed %}<span class="imputed-flag" title="Imputed, not observed: this ZIP has no ZORI rent series, so rent = home value ÷ 17 ÷ 12. Cap rate on an imputed rent is 5.88% by construction — it restates the home value, it does not measure income.">*</span>{% endif %}</td>
                         <td data-sort="{{ r.median_home_value }}">${{ '{:,}'.format(r.median_home_value) }}</td>
                         {% if has_mf_data %}

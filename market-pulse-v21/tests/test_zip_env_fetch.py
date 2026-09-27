@@ -159,13 +159,30 @@ check("wf" in z and z["wf"] == 0.0,
       "wildfire: half the ZIP's land is in a tract FEMA couldn't score, which "
       "is exactly the 50% floor, so it is scored on the half that was — zero")
 check(z["wd"] == 0.0, "wind: 'Not Applicable' hurricane reads as zero, not missing")
-check(out["zips"]["43215"]["fl"] == 0.0 and out["zips"]["43215"]["flp"] < z["flp"],
-      "a ZIP with no expected flood loss ranks better than one with some")
+check(out["zips"]["43215"]["fl"] == 0.0,
+      "a ZIP whose tracts expect no flood loss reads $0, not missing")
 check("00000" not in out["zips"], "a ZIP with no tracts is absent, not zero")
 check(out["_meta"]["coverage"]["flood"] == round(2 / 3, 4) and out["_meta"]["nri_version"] == "December 2025",
       "coverage and the NRI release are recorded")
-check(set(z) == {"fl", "flp", "wf", "wfp", "wd", "wdp", "eq", "eqp"},
-      "the output keys are the ones the page reads")
+check(out["_meta"]["median"]["flood"] == round((0.0 + z["fl"]) / 2, 2),
+      "the national median is over the ZIPs that have a figure — the ZIP "
+      "with no tracts does not drag it toward zero")
+# Three ZIPs, one whole tract each, $100k of building apiece: A floods, B
+# blows down, C gets a little of both. The typical ZIP's all-hazards total is
+# B's or A's $100; adding up the typical flood ($10) and typical wind ($10)
+# figures would claim $20, a total no ZIP has.
+_p3 = {z: [(t, 1.0, 1.0)] for z, t in (("A", "39000000001"), ("B", "39000000002"),
+                                       ("C", "39000000003"))}
+_r3 = [tract("39000000001", 100_000, IFLD=(100.0, "Very High"), CFLD=(None, "Not Applicable")),
+       tract("39000000002", 100_000, HRCN=(100.0, "Very High"), CFLD=(None, "Not Applicable")),
+       tract("39000000003", 100_000, IFLD=(10.0, "Very Low"), HRCN=(10.0, "Very Low"),
+             CFLD=(None, "Not Applicable"))]
+_m3 = H.build(_r3, _p3, ["A", "B", "C"], min_tracts=1)["_meta"]["median"]
+check(_m3["total"] == 100.0 and _m3["flood"] == 10.0 and _m3["wind"] == 10.0,
+      f"THE ALL-HAZARDS MEDIAN IS A MEDIAN OF TOTALS, NOT A SUM OF MEDIANS "
+      f"($100, not $20 — got {_m3})")
+check(set(z) == {"fl", "wf", "wd", "eq"},
+      "the output keys are the ones the page reads — dollars only, no ranks")
 
 for bad_rows, why in (
         (rows + [dict(rows[0])], "DUPLICATE TRACTS ARE REFUSED"),

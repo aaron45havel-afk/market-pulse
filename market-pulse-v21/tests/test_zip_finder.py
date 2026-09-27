@@ -15,7 +15,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import zip_finder as Z
+import zip_env as E                                          # noqa: E402
+import zip_finder as Z                                       # noqa: E402
 
 _COUNT = 0
 _FAILS = []
@@ -185,10 +186,48 @@ check(Z.available(_renter, {"pct_renter_occupied"}),
       "deploy needed when the fetch is fixed")
 check(Z.available(Z.FILTER_BY_KEY["min_income"], set()),
       "filters on always-present columns are always available")
-check({p["key"] for p in Z.PENDING} >= {"young_pro", "weather", "hazards"},
-      "young professional, weather and hazards are listed as PENDING — "
+check({p["key"] for p in Z.PENDING} >= {"young_pro", "stock_2_4", "schools"},
+      "young professional, 2–4 unit stock and schools are listed as PENDING — "
       "visible as unavailable rather than silently missing")
-check(all(f.get("group") in ("neighborhood", "money") for f in Z.FILTERS),
+check(not {p["key"] for p in Z.PENDING} & {"weather", "hazards"},
+      "weather and hazards are real filters now, not pending")
+_wx = [f for f in Z.FILTERS if f["group"] in ("weather", "hazards")]
+check(len(_wx) == 7 and all(f.get("needs") in ("zip_climate", "zip_hazards") for f in _wx),
+      "the seven weather and hazard filters each name the file they need")
+check(not any(Z.available(f, set()) for f in _wx)
+      and all(Z.available(f, {"zip_climate", "zip_hazards"}) for f in _wx),
+      "AND ARE OFFERED ONLY WHEN THAT FILE HAS DATA FOR THE STATE — a winter "
+      "filter over a missing file would mark every ZIP no-data and empty the board")
+_fl = Z.FILTER_BY_KEY["max_flood"]
+_fun = Z.Funnel("x", [_row(zip="typical", flood_rate=83.65), _row(zip="edge", flood_rate=100.0),
+                      _row(zip="bad", flood_rate=167.69), _row(zip="unk", flood_rate=None)])
+_kept = Z.apply_filters(_fun, {"max_flood": 100, "area": []})
+check([r["zip"] for r in _kept] == ["typical", "edge"] and _fun.stages[-1]["no_data"] == 1,
+      "'flood damage at most $100/yr per $100k' keeps the typical ZIP and one at "
+      "exactly $100, drops $168, and counts the ZIP with no flood figure as a data gap")
+check(_fun.stages[-1]["label"] == "flood damage above $100/yr per $100k",
+      f"and the funnel says so in dollars (got {_fun.stages[-1]['label']!r})")
+_haz = [f for f in Z.FILTERS if f["group"] == "hazards"]
+check(len(_haz) == 4 and all(f["unit"] == "$/100k" and f["op"] == "max"
+                             and f["field"] == f"{f['hazard']}_rate" for f in _haz),
+      "HAZARD FILTERS ARE DOLLARS, NOT RANKS. Most ZIPs expect almost no wildfire "
+      "or earthquake damage, so a national rank turns $1 a year into 'worse than "
+      "80% of the country'; every hazard filter reads the dollar rate")
+check({f["hazard"] for f in _haz} == set(E.HAZARD_GROUPS),
+      "one filter per hazard group the data file carries, each naming its group "
+      "so the page can show that group's national median beside it")
+check(all(list(f["choices"]) == sorted(f["choices"], reverse=True) for f in _haz),
+      "hazard choices run loosest to strictest, like the other max filters")
+_fun = Z.Funnel("x", [_row(zip="typ", wildfire_rate=0.13), _row(zip="dry", wildfire_rate=11.35)])
+check([r["zip"] for r in Z.apply_filters(_fun, {"max_fire": 2, "area": []})] == ["typ"],
+      "the strictest wildfire choice keeps the typical ZIP's 13 cents and drops $11")
+_fun = Z.Funnel("x", [_row(zip="mild", winter_low=24.8), _row(zip="cold", winter_low=9.0)])
+check([r["zip"] for r in Z.apply_filters(_fun, {"min_winter": 20, "area": []})] == ["mild"],
+      "'winter low 20°F or milder' keeps Cleveland's 24.8 and drops a 9°F winter")
+check(Z.choice_label(Z.FILTER_BY_KEY["max_snow"], 30) == "at most 30 in"
+      and Z.choice_label(_fl, 150) == "at most $150/yr per $100k",
+      "weather and hazard choices read as plain English")
+check(all(f.get("group") in ("neighborhood", "money", "weather", "hazards") for f in Z.FILTERS),
       "every filter declares which panel group it belongs in")
 check(Z.choice_label(Z.FILTER_BY_KEY["max_cost"], 0) == "Tenants cover it ($0 or less)"
       and Z.choice_label(Z.FILTER_BY_KEY["min_cap"], 6) == "at least 6%"

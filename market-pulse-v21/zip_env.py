@@ -44,7 +44,6 @@ the ZIP has no data.
 """
 from __future__ import annotations
 
-import bisect
 import math
 
 EARTH_KM = 6371.0088
@@ -274,23 +273,3 @@ def zcta_loss_rate(parts: list, tracts: dict, min_share: float = MIN_SCORED_SHAR
         return None, round(share, 3)
     return loss / build, round(share, 3)
 
-
-def national_percentile(values: dict) -> dict:
-    """{key: value} -> {key: percentile 0–100}, ties sharing the midpoint.
-
-    Higher value, higher percentile. None stays None and does not move the
-    others. Used to say "this ZIP is in the worst 10% nationally for flood
-    loss", where the national set is every ZIP the board could show.
-    """
-    known = sorted(v for v in values.values() if _finite(v))
-    n = len(known)
-    out = {}
-    for k, v in values.items():
-        if not _finite(v):
-            out[k] = None
-        elif n == 1:
-            out[k] = 50.0
-        else:
-            lo, hi = bisect.bisect_left(known, v), bisect.bisect_right(known, v) - 1
-            out[k] = round((lo + hi) / 2 / (n - 1) * 100, 1)
-    return out

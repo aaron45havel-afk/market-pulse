@@ -80,14 +80,14 @@ Format: `- [PHASE-SEEN] item — why it matters`
   `refresh_hundred` already carry and `refresh_screener`, `refresh_quiet_value`,
   `refresh_catalysts` and `refresh_aristocrats` do not. A fetcher that comes back with an
   empty or halved result currently publishes it.
-- [MF-FINDER] `CENSUS_API_KEY` is invalid. Every `refresh-national-zips` run gets an HTML
-  page titled "Invalid Key" from the Census API, retries three times, "carries forward"
-  ACS values that were already empty, and goes green. That is why `pct_renter_occupied`,
-  `pct_multi_unit`, `pct_rent_burdened`, `pct_pre_1960` and `median_year_built` are 0%
-  populated in all 25,769 ZIPs. Replace the secret, or delete it — keyless requests work
-  at this volume, an invalid key is rejected outright. The job should also FAIL on an
-  auth error rather than carry forward, and it is still pinned to the 2022 ACS vintage.
-  The renter-share and multi-unit filters on /multifamily light up by themselves once the
+- [MF-FINDER] The Census ACS columns (`pct_renter_occupied`, `pct_multi_unit`,
+  `pct_rent_burdened`, `pct_pre_1960`, `median_year_built`) are 0% populated in all 25,769
+  ZIPs. The old `CENSUS_API_KEY` was invalid and has been deleted; the Census API now
+  REQUIRES a key (keyless requests get a "Missing Key" page — an earlier note here said
+  otherwise, and was wrong). Needs a new, activated key in the `CENSUS_API_KEY` secret,
+  then a `refresh-national-zips` run. The job should also FAIL on an auth error rather
+  than carry forward empty values and go green, and it is still pinned to the 2022 ACS
+  vintage. The renter-share and multi-unit filters light up by themselves once the
   columns have data.
 - [MF-FINDER] Crime coverage is the binding constraint on /multifamily, not the filters.
   Toledo, Dayton and Cleveland have no entry in `data/headroom/crime.json`, so 241 of the
@@ -95,8 +95,25 @@ Format: `- [PHASE-SEEN] item — why it matters`
   both verified-safe and cash-flowing at the default settings. FBI Crime Data Explorer
   (agency level) would take this from 394 hand-researched cities to thousands.
 - [MF-FINDER] The finder's pending filters need data: age 25–34 and a true 2–4 unit count
-  (ACS B01001, B25024_004+005 — the current `pct_multi_unit` sums 2 through 50+), NOAA
-  1991–2020 climate normals for weather, FEMA National Risk Index for hazards.
+  (ACS B01001, B25024_004+005 — the current `pct_multi_unit` sums 2 through 50+). Both
+  wait on the Census key above.
+- [MF-HAZARDS] Connecticut has no hazard figures. FEMA's NRI uses CT's 2022 planning-region
+  tract IDs; the Census 2020 ZCTA–tract file uses the old county-based ones, so no CT tract
+  joins. The Census Bureau publishes a CT 2020→2022 tract crosswalk; applying it in
+  `refresh_zip_hazards.parse_relationship` would restore the state. The build already
+  reports it under `weak_states`.
+- [MF-HAZARDS] FEMA's inland-flood model (IFLD) sets a baseline nearly everywhere, so
+  downtown Phoenix ($148/yr per $100k) comes out above Miami Beach ($88) and levee-protected
+  New Orleans below the national median. The page says so. A second flood source — NFIP
+  claims per policy by ZIP (OpenFEMA), or FEMA flood-zone share of each ZIP — would let the
+  board show where the model and history disagree.
+- [MF-HAZARDS] Hazard dollars are per $100k of building value, and the purchase price
+  includes land. A land-share estimate per ZIP (e.g. from the NRI's own BUILDVALUE against
+  home values) would let the page state the yearly figure on the user's actual building
+  instead of an upper bound.
+- [MF-WEATHER] No elevation correction: a ZIP matched to a station a few hundred metres
+  lower reads warm by roughly 2°F per 300 m. The station's elevation is in
+  `zip_climate.json`; the ZIP's is not in `zips.db`.
 - [MF-FINDER] 67% of ZIPs have no measured rent (Zillow ZORI) and cannot be underwritten
   at all — 558 of Ohio's 1,017. HUD Small Area FMR would cover every ZIP; it needs the
   `HUD_API_TOKEN` secret.

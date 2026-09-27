@@ -233,11 +233,6 @@ zero_bv = {"Z0": {"build": 0.0, "loss": 0.0}}
 check(E.zcta_loss_rate([("Z0", 100, 100)], zero_bv)[0] is None,
       "a tract with no buildings has no loss RATE — 0/0 is not zero risk")
 
-pct = E.national_percentile({"a": 0.0, "b": 0.0, "c": 1.0, "d": None, "e": 2.0})
-check(pct["d"] is None and pct["e"] == 100.0 and pct["a"] == pct["b"] == 16.7,
-      "national percentiles: ties share the midpoint, missing stays missing, "
-      "and a ZIP with zero expected loss is not ranked worse than another zero")
-
 
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

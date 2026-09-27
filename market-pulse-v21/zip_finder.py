@@ -122,27 +122,80 @@ FILTERS = (
      "label": "Renter share", "unit": "%", "group": "neighborhood",
      "choices": (30, 40, 50),
      "why": "Share of occupied homes that are rented (Census ACS).",
-     "needs_column": "pct_renter_occupied"},
+     "needs": "pct_renter_occupied"},
     {"key": "min_multi", "field": "pct_multi_unit", "op": "min",
      "label": "Multi-unit housing (2+ units)", "unit": "%", "group": "neighborhood",
      "choices": (15, 25, 35),
      "why": "Share of homes in buildings of 2 or more units — includes large "
             "apartment blocks, so it is broader than 2–4 unit stock (Census ACS).",
-     "needs_column": "pct_multi_unit"},
+     "needs": "pct_multi_unit"},
+
+    # ── Weather: NOAA 1991–2020 normals at the nearest station that measures
+    # each thing, within 40 km (zip_env.py). Offered once data/zip_climate.json
+    # has figures for the state.
+    {"key": "min_winter", "field": "winter_low", "op": "min",
+     "label": "Winter average low", "unit": "°F", "group": "weather",
+     "choices": (10, 20, 30),
+     "choice_labels": {10: "10°F or milder", 20: "20°F or milder", 30: "30°F or milder"},
+     "why": "Average daily low, December–February, 1991–2020 (NOAA).",
+     "needs": "zip_climate"},
+    {"key": "max_summer", "field": "summer_high", "op": "max",
+     "label": "Summer average high", "unit": "°F", "group": "weather",
+     "choices": (95, 90, 85),
+     "choice_labels": {95: "95°F or cooler", 90: "90°F or cooler", 85: "85°F or cooler"},
+     "why": "Average daily high, June–August, 1991–2020 (NOAA).",
+     "needs": "zip_climate"},
+    {"key": "max_snow", "field": "snow_in", "op": "max",
+     "label": "Snowfall a year", "unit": "in", "group": "weather",
+     "choices": (60, 30, 12, 3),
+     "choice_labels": {3: "Hardly any (3 in or less)"},
+     "why": "Average snowfall a year, 1991–2020, at the nearest snow station (NOAA).",
+     "needs": "zip_climate"},
+
+    # ── Hazards: FEMA's expected yearly building damage, in dollars per
+    # $100,000 of building value (National Risk Index, zip_env.py). Dollars,
+    # not national ranks: most hazards are piled up near zero, so a rank turns
+    # $1 a year of earthquake loss into "worse than 80% of the country". Not
+    # FEMA's risk ratings either, which fold in social vulnerability.
+    # Thresholds are set against the national spread; DECISIONS.md has the
+    # share of ZIPs each one removes. `hazard` names the group whose national
+    # median the page shows beside the filter (zip_hazards.json _meta).
+    {"key": "max_flood", "field": "flood_rate", "op": "max",
+     "label": "Flood damage", "unit": "$/100k", "group": "hazards",
+     "choices": (200, 150, 100),
+     "why": "Inland + coastal flood damage FEMA expects a year, per $100k of building.",
+     "hazard": "flood", "needs": "zip_hazards"},
+    {"key": "max_fire", "field": "wildfire_rate", "op": "max",
+     "label": "Wildfire damage", "unit": "$/100k", "group": "hazards",
+     "choices": (50, 10, 2),
+     "why": "Wildfire damage FEMA expects a year, per $100k of building.",
+     "hazard": "wildfire", "needs": "zip_hazards"},
+    {"key": "max_wind", "field": "wind_rate", "op": "max",
+     "label": "Hurricane & tornado damage", "unit": "$/100k", "group": "hazards",
+     "choices": (100, 50, 25),
+     "why": "Hurricane + tornado damage FEMA expects a year, per $100k of building.",
+     "hazard": "wind", "needs": "zip_hazards"},
+    {"key": "max_quake", "field": "quake_rate", "op": "max",
+     "label": "Earthquake damage", "unit": "$/100k", "group": "hazards",
+     "choices": (50, 25, 10),
+     "why": "Earthquake damage FEMA expects a year, per $100k of building.",
+     "hazard": "quake", "needs": "zip_hazards"},
 )
 FILTER_BY_KEY = {f["key"]: f for f in FILTERS}
 
 
-def available(filt: dict, columns_with_data: set) -> bool:
+def available(filt: dict, sources_with_data: set) -> bool:
     """Is this filter backed by data right now?
 
-    The two Census filters light up on their own the first month the ACS
-    fetch succeeds, with no deploy — and until then they are listed as
-    pending instead of being offered over an empty column, where every row
-    would read as NO DATA and the filter would silently empty the board.
+    `needs` names a source — a Census column, or the zip_climate /
+    zip_hazards file — that must carry figures for the state being shown.
+    Such filters light up on their own once the data lands, with no deploy,
+    and until then are listed as unavailable instead of being offered over
+    nothing, where every row would read as NO DATA and the filter would
+    silently empty the board.
     """
-    need = filt.get("needs_column")
-    return need is None or need in columns_with_data
+    need = filt.get("needs")
+    return need is None or need in sources_with_data
 
 
 # Filters that need data the database does not have. Shown on the page so the
@@ -153,10 +206,6 @@ PENDING = (
      "needs": "age 25–34 and renter share from the Census"},
     {"key": "stock_2_4", "label": "2–4 unit buildings",
      "needs": "a count of 2–4 unit buildings from the Census"},
-    {"key": "weather", "label": "Weather",
-     "needs": "NOAA climate normals — winter lows, summer highs, snow"},
-    {"key": "hazards", "label": "Flood & wildfire",
-     "needs": "the FEMA National Risk Index"},
     {"key": "schools", "label": "Schools",
      "needs": "a free, honest school-quality measure — none exists"},
 )
@@ -293,6 +342,12 @@ def choice_label(f: dict, t: float) -> str:
 
 
 def fmt_threshold(f: dict, t: float) -> str:
+    if f["unit"] == "°F":
+        return f"{t:g}°F"
+    if f["unit"] == "in":
+        return f"{t:g} in"
+    if f["unit"] == "$/100k":
+        return f"${t:,.0f}/yr per $100k"
     if f["unit"] == "$":
         return f"${t:,.0f}"
     if f["unit"] == "$/mo":
