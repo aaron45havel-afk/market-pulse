@@ -1,26 +1,44 @@
-name: TEMPORARY probe — climate + hazard source formats
+name: TEMPORARY — build ZIP climate + hazards on the working branch
 
-# Runs only on the working branch, only when the probe itself changes, and is
-# deleted before the branch merges. It fetches nothing into the repo.
+# Runs the two real refresh scripts on the working branch and commits their
+# output there, so the page can be checked against real data before merge.
+# Deleted before the branch merges; the permanent jobs are
+# refresh-zip-climate.yml and refresh-zip-hazards.yml.
 on:
   push:
     branches: [claude/legal-rep-invoice-tracking-9j1i9r]
     paths:
       - '.github/workflows/probe-climate-hazards.yml'
-      - 'market-pulse-v21/scripts/probe_climate_hazards.py'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  probe:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Probe
+      - name: Prove the rules
         working-directory: market-pulse-v21
-        run: python scripts/probe_climate_hazards.py
+        run: |
+          python tests/test_zip_env.py
+          python tests/test_zip_env_fetch.py
+      - name: Climate
+        working-directory: market-pulse-v21
+        run: python scripts/refresh_zip_climate.py
+      - name: Hazards
+        working-directory: market-pulse-v21
+        run: python scripts/refresh_zip_hazards.py
+      - name: Commit to the working branch
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add market-pulse-v21/data/zip_climate.json market-pulse-v21/data/zip_hazards.json
+          git diff --cached --quiet && { echo "no change"; exit 0; }
+          git commit -m "chore: first build of zip_climate.json and zip_hazards.json"
+          git push origin HEAD:claude/legal-rep-invoice-tracking-9j1i9r
