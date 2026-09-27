@@ -126,6 +126,22 @@ check(R.resolve(safmr=1180, safmr_bedrooms={"2": 1433},
       "and SAFMR's bedrooms beat the county's when both exist")
 
 
+# ── a HUD rent that local incomes can't carry is flagged ──
+check(R.hud_rent_strains_income(1003, "fmr", 30_000)
+      and not R.hud_rent_strains_income(1003, "fmr", 31_000),
+      "a $1,003 county FMR is flagged in a ZIP whose median income is $30,000 "
+      "(40.1%) and not at $31,000 (38.8%) — the line is 40% of income")
+check(R.hud_rent_strains_income(1000, "safmr", 30_000),
+      "exactly 40% is flagged, and SAFMR is held to the same line")
+check(not R.hud_rent_strains_income(1003, "zori", 20_000),
+      "ZILLOW'S RENT IS NEVER FLAGGED: it is the ZIP's own market, so a high "
+      "rent-to-income there describes the ZIP, it doesn't doubt the rent")
+check(not R.hud_rent_strains_income(1003, "fmr", None)
+      and not R.hud_rent_strains_income(1003, "fmr", 0)
+      and not R.hud_rent_strains_income(None, "fmr", 20_000),
+      "no income or no rent is no flag, not a division error")
+
+
 # ── the spread between tiers is itself the signal ──
 _tight = R.resolve(zori=1800, safmr=1200)
 check(_tight["spread"]["ratio"] == 1.5 and "tight" in _tight["spread"]["reading"],

@@ -4220,6 +4220,8 @@ async def multifamily_page(
         # happened to land within 2% of home value ÷ 204.
         r["rent_observed"] = (r.get("rent_tier") in RL.TIER_BY_KEY
                               or HH.rent_is_observed(rent, hv))
+        r["rent_strains_income"] = RL.hud_rent_strains_income(
+            rent, r.get("rent_tier"), r["median_household_income"])
 
         # Price and insure the row exactly as the scenario card and the
         # deal checker do. When only the card applied the unit factors,
