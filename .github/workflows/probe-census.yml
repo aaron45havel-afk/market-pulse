@@ -1,6 +1,7 @@
 name: TEMPORARY — does CENSUS_API_KEY work?
 
-# One request with the new key; prints only whether Census answered with
+# One request with the new key (re-run after the secret was corrected);
+# prints only whether Census answered with
 # data. Deleted before the branch merges.
 on:
   push:
