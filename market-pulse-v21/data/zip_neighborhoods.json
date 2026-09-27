@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "as_of": "2026-09-20",
-    "count": 6744,
+    "as_of": "2026-09-27",
+    "count": 6749,
     "source": "Photon (komoot.io OSM reverse-geocoder), neighbourhood/suburb/district tags"
   },
   "neighborhoods": {
@@ -4351,6 +4351,7 @@
     "44067": "Northfield Center",
     "44072": "Russell Center",
     "44074": "Robin Park",
+    "44081": "Dugan Farms",
     "44095": "Lakeline",
     "44099": "Windsor Mills",
     "44102": "Detroit - Shoreway",
@@ -4412,6 +4413,7 @@
     "44444": "South Canal",
     "44471": "Nebo",
     "44473": "The Four Seasons",
+    "44484": "Howland Center",
     "44485": "Parkwood",
     "44502": "East Side",
     "44504": "North Side",
@@ -5442,6 +5444,7 @@
     "64157": "Brentwood Hills",
     "64158": "Davidson Farms",
     "64161": "Minaville",
+    "64165": "Nashua",
     "64459": "Helena",
     "64484": "Armour",
     "64505": "Country Club Village",
@@ -5591,6 +5594,7 @@
     "70517": "Patin",
     "70533": "Boston",
     "70582": "Isle Labbe",
+    "70601": "Downtown Lake Charles",
     "70611": "Belfield",
     "70648": "Stanley",
     "70657": "Edith",
@@ -6006,6 +6010,7 @@
     "79927": "Aldama Estates Colonia",
     "79928": "Dairyland Colonia",
     "79932": "Upper Valley",
+    "79935": "East El Paso",
     "79936": "Sandy Creek",
     "79938": "Loma Linda Estates",
     "80002": "Clarabelle on Grandview",
