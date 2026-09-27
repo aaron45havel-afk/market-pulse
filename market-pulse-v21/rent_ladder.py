@@ -99,7 +99,7 @@ TIERS = (
         "measures": "the same 40th-percentile gross-rent voucher standard, "
                     "set for the whole county (or metro) rather than the ZIP",
         "caveat": "County-wide, so a good and a bad ZIP in the same county "
-                  "carry the same number. Against Zillow (8,145 ZIPs, "
+                  "carry the same number. Against Zillow (8,268 ZIPs, "
                   "FY2027) the 2-bedroom figure is 0.93x at the median, and "
                   "a quarter of ZIPs sit 19% or more below it.",
         "by_bedroom": True,
@@ -219,7 +219,7 @@ def resolve(zori=None, safmr=None, fmr=None, acs=None,
 #     under 25%                0.70–0.89              0–4%
 #     30–35%                   1.00                   13%
 #     40–50%                   1.10                   28%
-#     50%+                     1.12                   32%
+#     50%+                     1.13                   32%
 #
 # So from 40% of income a HUD figure is as likely as not to overstate what
 # the ZIP's own market pays — though a landlord renting to voucher holders
