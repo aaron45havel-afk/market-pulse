@@ -107,7 +107,9 @@ def table_rows(page):
     for tr in re.findall(r"<tr>(.*?)</tr>", body, re.S):
         tds = re.findall(r"<td[^>]*>(.*?)</td>", tr, re.S)
         sorts = re.findall(r'<td[^>]*data-sort="([^"]*)"', tr)
-        out.append({"cells": [_clean(t) for t in tds], "sorts": sorts})
+        flags = re.search(r"has (\d+) state-level structural flag", tr)
+        out.append({"cells": [_clean(t) for t in tds], "sorts": sorts,
+                    "flags": flags.group(1) if flags else None})
     return out
 
 
@@ -279,6 +281,142 @@ try:
           "and running a listing with those carried params still serves a verdict")
     check("household income below $75,000" in page,
           "with the income filter still applied to the board")
+
+    # ── national ────────────────────────────────────────────────────
+    import json as _json
+    n_all = sqlite3.connect(DB).execute(
+        "select count(*) from zips where state is not null and state != ''").fetchone()[0]
+    st, page = get("/multifamily?state=ALL&unknown=1")
+    check(st == 200, f"the national board serves (got {st})")
+    start, removed, end = funnel_numbers(page)
+    check(start == n_all and start - sum(removed) == end,
+          f"THE NATIONAL FUNNEL STARTS FROM EVERY ZIP IN THE COUNTRY ({n_all:,}) "
+          f"AND ADDS UP (got {start} − {sum(removed)} vs {end})")
+    check('value="ALL" selected' in page, "'All states' stays selected")
+    rows = table_rows(page)
+    cst = col(page, "state")
+    states_seen = {r["cells"][cst] for r in rows} if cst is not None else set()
+    check(cst is not None and len(states_seen) >= 5,
+          f"the national table has a State column and spans many states ({len(states_seen)})")
+    check("Your scenario:" not in page,
+          "NO SCENARIO CARD NATIONALLY — _fha_piti('ALL') quietly returns default "
+          "rates instead of failing, so nothing else stops a card priced for a "
+          "state that doesn't exist")
+    check("Pick a state for the scenario" in page and 'class="deal-form"' not in page,
+          "THE SCENARIO CARD AND LISTING CHECKER ASK FOR A STATE instead of pricing "
+          "one building with a blend of states' tax and insurance rates")
+
+    verified_states = {r["cells"][cst] for r in rows
+                       if "unverified" not in r["cells"][col(page, "safety")].lower()}
+    check(len(verified_states) >= 3,
+          f"VERIFIED-SAFE ROWS COME FROM SEVERAL STATES ({sorted(verified_states)}). "
+          f"Look up every row's safety under one state and only that state's "
+          f"cities verify — every other row turns 'unverified' and sinks, which "
+          f"a row-by-row comparison can miss when it samples the genuinely "
+          f"unverified ones")
+
+    # The invariant: a ZIP's numbers on the national board are exactly its
+    # numbers on its own state's board. Anything else means a row was priced
+    # with another state's tax, insurance or safety record.
+    chh, csc = col(page, "hh"), col(page, "safety")
+    czip = col(page, "zip")
+    # ONE ROW FROM EACH OF SEVERAL STATES. Sampling the top rows alone let a
+    # bug through: price every row as one state and the other states' rows
+    # sink as "unverified", so the top of the board was all one state and
+    # agreed with itself. Capped rows are preferred, since the veto depends
+    # on each state's structural flags (Ohio has none, Florida three).
+    by_state = {}
+    for r in sorted(rows, key=lambda r: "capped" not in r["cells"][col(page, "score")]):
+        by_state.setdefault(r["cells"][cst], r)
+    sample = list(by_state.values())[:8]
+    mismatches = []
+    for r in sample:
+        z, stt = r["cells"][czip], r["cells"][cst]
+        st2, p2 = get(f"/multifamily?state={stt}&unknown=1")
+        match = [x for x in table_rows(p2) if x["cells"][czip] == z]
+        if not match:
+            mismatches.append((z, stt, "absent from its state board"))
+            continue
+        m2 = match[0]
+        c2hh, c2sc = col(p2, "hh"), col(p2, "safety")
+        cscore, c2score = col(page, "score"), col(p2, "score")
+        capped1 = "capped" in r["cells"][cscore]
+        capped2 = "capped" in m2["cells"][c2score]
+        if (r["sorts"][chh] != m2["sorts"][c2hh]
+                or r["cells"][csc] != m2["cells"][c2sc] or capped1 != capped2
+                or r["flags"] != m2["flags"]):
+            mismatches.append((z, stt, r["sorts"][chh], m2["sorts"][c2hh]))
+    check(not mismatches,
+          f"EVERY SAMPLED ZIP HAS THE SAME COST AFTER RENT, THE SAME SAFETY "
+          f"RECORD AND THE SAME TRAJECTORY VETO NATIONALLY AS ON ITS OWN STATE'S "
+          f"BOARD — each row is priced and flagged with its own state's rates "
+          f"({mismatches})")
+    link = re.search(r'<a href="(/multifamily\?state=[A-Z]{2}[^"]*)"[^>]*title="Open the', page)
+    check(link and "unknown=1" in html.unescape(link.group(1)),
+          "and a row's state links to that state's board with the filters kept")
+
+    # ── weather and hazards ─────────────────────────────────────────
+    hz_file = _json.load(open(os.path.join(ROOT, "data", "zip_hazards.json")))
+    hz, hz_med = hz_file["zips"], hz_file["_meta"]["median"]
+    cl = _json.load(open(os.path.join(ROOT, "data", "zip_climate.json")))["zips"]
+    st, page = get("/multifamily?state=ALL&unknown=1&min_winter=20&max_summer=90"
+                   "&max_snow=30&max_flood=150&max_quake=50")
+    rows = table_rows(page)
+    zips_shown = [r["cells"][col(page, "zip")] for r in rows]
+    check(rows and all(cl[z]["wl"] >= 20 and cl[z]["sh"] <= 90 and cl[z].get("sn", 99) <= 30
+                       for z in zips_shown),
+          "EVERY ROW MEETS THE WEATHER FILTERS — checked against the NOAA file, "
+          "not the page's own rendering")
+    check(rows and all(hz[z]["fl"] <= 150 and hz[z]["eq"] <= 50 for z in zips_shown),
+          "and the hazard filters, in dollars, checked against the FEMA file")
+    for label in ("winter average low below 20°F", "summer average high above 90°F",
+                  "flood damage above $150/yr per $100k"):
+        check(label in page, f"the funnel names '{label}'")
+    ch = col(page, "hazard")
+    bad_total = [z for r, z in zip(rows, zips_shown)
+                 if abs(float(r["sorts"][ch]) - sum(hz[z].values())) > 0.02]
+    check(rows and not bad_total,
+          f"THE HAZARDS COLUMN IS THE FOUR FEMA DOLLAR FIGURES ADDED UP, for every "
+          f"row — not a rank, not the worst one alone ({bad_total[:3]})")
+    check(rows and all(r["cells"][ch].startswith("$") or r["cells"][ch].startswith("under $1")
+                       for r in rows) and "/100<" not in page,
+          "and it reads in dollars, with no x/100 score anywhere")
+    typical = "The typical U.S. ZIP: flood ${:,.0f}".format(hz_med["flood"])
+    check(typical in page and "wildfire under $1" in page,
+          "THE HAZARD FILTERS SAY WHAT A TYPICAL ZIP EXPECTS, from the data file's "
+          "own national medians — a threshold means nothing without it")
+    names = {"fl": "flood", "wf": "wildfire", "wd": "hurricane & tornado", "eq": "earthquake"}
+    flagged, plain = [], []
+    for stt in ("LA", "OH"):             # hurricane country, and not
+        st, page = get(f"/multifamily?state={stt}&unknown=1")
+        ch, cz = col(page, "hazard"), col(page, "zip")
+        for r in table_rows(page):
+            r["hz"], r["hzcell"] = hz[r["cells"][cz]], r["cells"][ch]
+            (flagged if sum(r["hz"].values()) >= 250 else plain).append(r)
+    check(flagged and all(r["hzcell"].endswith(names[max(r["hz"], key=r["hz"].get)])
+                          for r in flagged),
+          f"A FLAGGED ROW ($250+) NAMES ITS BIGGEST HAZARD, from the FEMA file "
+          f"({len(flagged)} flagged in LA and OH)")
+    check(plain and all(re.fullmatch(r"(\$[\d,]+|under \$1)", r["hzcell"]) for r in plain),
+          "and an ordinary row shows just the dollars — flood is the baseline "
+          "almost everywhere, so naming it on every row would be noise")
+    check('name="max_flood"' in page and 'name="min_winter"' in page,
+          "weather and hazard filters are offered nationally")
+
+    st, page = get("/multifamily?state=CT&unknown=1")
+    check("<legend>Natural hazards</legend>" not in page,
+          "and no empty 'Natural hazards' heading with nothing under it")
+    check('name="max_flood"' not in page and 'name="min_winter"' in page,
+          "CONNECTICUT GETS WEATHER FILTERS BUT NO HAZARD FILTERS — FEMA's tracts "
+          "use CT's 2022 renumbering, the ZIP file the old one, so there are no "
+          "hazard figures to filter on")
+    check("Flood damage" in page and "No FEMA hazard figures for CT" in page,
+          "and says so: the hazard filters show as unavailable for CT")
+    e_plain = funnel_numbers(page)[2]
+    st, page = get("/multifamily?state=CT&unknown=1&max_flood=100")
+    check(funnel_numbers(page)[2] == e_plain,
+          "A URL ASKING FOR A FLOOD FILTER IN CT IS IGNORED — it cannot empty "
+          "the board by marking every row no-data")
 
     # ── nothing else broke ──────────────────────────────────────────
     for path in ("/map", "/norcal", "/fcf-quality"):

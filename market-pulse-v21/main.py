@@ -3915,6 +3915,32 @@ def _fha_piti(home_value: float, state_code: str, rate_pct: float,
     }
 
 
+_ZIP_LAYER_CACHE: dict = {}
+
+
+def _zip_layer(name: str) -> dict:
+    """data/<name>.json (zip_climate, zip_hazards), cached until the file changes.
+
+    Returns {} when the file is absent or unreadable, which the finder reads
+    as "this source has no data" — the filters that need it are then listed
+    as unavailable rather than offered over nothing.
+    """
+    p = Path(__file__).resolve().parent / "data" / f"{name}.json"
+    try:
+        mtime = p.stat().st_mtime
+    except OSError:
+        return {}
+    hit = _ZIP_LAYER_CACHE.get(name)
+    if hit and hit[0] == mtime:
+        return hit[1]
+    try:
+        payload = json.loads(p.read_text())
+    except (OSError, ValueError):
+        payload = {}
+    _ZIP_LAYER_CACHE[name] = (mtime, payload)
+    return payload
+
+
 @app.get("/multifamily")
 async def multifamily_page(
     request: Request,
@@ -3938,6 +3964,13 @@ async def multifamily_page(
     min_trend: str = "",
     min_renter: str = "",
     min_multi: str = "",
+    min_winter: str = "",
+    max_summer: str = "",
+    max_snow: str = "",
+    max_flood: str = "",
+    max_fire: str = "",
+    max_wind: str = "",
+    max_quake: str = "",
     # ── finder: priorities (soft) ──
     use_preset: str = "",
     w_cashflow: str = "",
@@ -3965,6 +3998,17 @@ async def multifamily_page(
     zips.db crime_index, which is density+income+education and correlates
     -0.76 with median income. An unmeasured city never passes as safe.
 
+    NATIONAL OR ONE STATE. state=ALL runs the same funnel over every ZIP in
+    the country, pricing each row with ITS OWN state's tax and insurance
+    rates, safety record and structural flags. The scenario card and the
+    listing checker price one building with one state's rates, so in the
+    national view they ask for a state instead of guessing one.
+
+    WEATHER AND HAZARDS come from data/zip_climate.json (NOAA normals) and
+    data/zip_hazards.json (FEMA expected building loss), joined by ZIP. Their
+    filters are offered only where those files have figures — see zip_env.py
+    and the two refresh scripts for how the figures are made.
+
     Default frame: ~3.5% FHA cash, a 2-4 unit under $550k, house-hacking
     (live in one unit, rent the others).
     """
@@ -3976,6 +4020,8 @@ async def multifamily_page(
     safetier = SF.valid_tier(safetier)
     allow_unknown_safety = _qnum(unknown) > 0
     state = (state or "OH").upper()
+    national = state == "ALL"
+    place = "the U.S." if national else state
     # Clamp inputs so a wonky URL param can't blow up the math. Parsed
     # tolerantly (_qnum) — an emptied number field submits "" and must
     # fall back to the default, never 422.
@@ -3995,7 +4041,10 @@ async def multifamily_page(
     filters = ZF.parse_filters({
         "area": area or [], "min_income": min_income, "min_degree": min_degree,
         "max_cost": max_cost, "min_cap": min_cap, "min_trend": min_trend,
-        "min_renter": min_renter, "min_multi": min_multi})
+        "min_renter": min_renter, "min_multi": min_multi,
+        "min_winter": min_winter, "max_summer": max_summer, "max_snow": max_snow,
+        "max_flood": max_flood, "max_fire": max_fire, "max_wind": max_wind,
+        "max_quake": max_quake})
     weights, preset = ZF.parse_priorities(use_preset, {
         "w_cashflow": w_cashflow, "w_yield": w_yield, "w_growth": w_growth,
         "w_income": w_income, "w_education": w_education})
@@ -4030,7 +4079,8 @@ async def multifamily_page(
             "suggest": None, "unit_factor": 1.0, "hv_ceiling": 0,
             "mortgage_rate": MORTGAGE_30Y_RATE,
             "funnel": None, "emptied_by": None, "offered": [], "n_total": 0,
-            "score_info": None,
+            "score_info": None, "national": national, "place": place,
+            "climate_meta": None, "hazards_meta": None,
             **finder_ctx,
         })
     conn = sqlite3.connect(str(db_path))
@@ -4039,22 +4089,6 @@ async def multifamily_page(
         "select distinct state from zips where state is not null and state != '' order by state"
     ).fetchall()]
     cols = {r[1] for r in cur.execute("PRAGMA table_info(zips)").fetchall()}
-
-    # Census columns that actually carry data IN THIS STATE. A filter over
-    # an empty column would mark every row NO DATA and empty the board while
-    # looking like a strict choice, so those filters are offered only here.
-    census_cols = ("pct_renter_occupied", "pct_multi_unit", "pct_rent_burdened")
-    with_data = set()
-    for c in census_cols:
-        if c in cols and cur.execute(
-                f"select count({c}) from zips where state = ?", (state,)).fetchone()[0]:
-            with_data.add(c)
-    has_mf_data = "pct_renter_occupied" in with_data
-    offered = [f for f in ZF.FILTERS if ZF.available(f, with_data)]
-    # A filter that is not offered cannot be active, even if a URL asks.
-    for f in ZF.FILTERS:
-        if f not in offered:
-            filters[f["key"]] = None
 
     # Affordability. The user's cap is what they'd pay for the BUILDING,
     # and a 2-4 unit does not cost the single-family median — so the SFR
@@ -4065,20 +4099,62 @@ async def multifamily_page(
     hv_ceiling = int(max_price * 1.2 / unit_factor)
 
     has_history = "history_zhvi" in cols
-    want = ("zip", "name", "neighborhood", "lat", "lng", "population",
+    want = ("zip", "state", "name", "neighborhood", "lat", "lng", "population",
             "population_density", "median_home_value", "median_rent_monthly",
             "cap_rate_pct", "median_household_income", "pct_bachelors",
             "pct_renter_occupied", "pct_multi_unit", "pct_rent_burdened",
             "history_zhvi")
     select_cols = ", ".join(c if c in cols else f"NULL as {c}" for c in want)
-    # EVERY row in the state, deliberately. The filters that used to live in
+    # EVERY row in scope, deliberately. The filters that used to live in
     # this WHERE clause now run through the funnel so each one is counted.
-    all_rows = [dict(zip(want, r)) for r in cur.execute(
-        f"select {select_cols} from zips where state = ?", (state,)).fetchall()]
+    if national:
+        all_rows = [dict(zip(want, r)) for r in cur.execute(
+            f"select {select_cols} from zips where state is not null and state != ''").fetchall()]
+    else:
+        all_rows = [dict(zip(want, r)) for r in cur.execute(
+            f"select {select_cols} from zips where state = ?", (state,)).fetchall()]
     conn.close()
 
-    # ── The funnel: every step from "ZIPs in the state" to "on the board" ──
-    funnel = ZF.Funnel(f"{state} ZIPs", all_rows)
+    # Weather and hazards, joined by ZIP. Missing stays missing (None), which
+    # no filter lets pass.
+    climate, hazards = _zip_layer("zip_climate"), _zip_layer("zip_hazards")
+    c_zips, h_zips = climate.get("zips") or {}, hazards.get("zips") or {}
+    for r in all_rows:
+        c = c_zips.get(r["zip"]) or {}
+        r["winter_low"], r["summer_high"], r["snow_in"] = c.get("wl"), c.get("sh"), c.get("sn")
+        r["days_90"], r["days_32"] = c.get("d90"), c.get("d32")
+        r["temp_km"], r["snow_km"] = c.get("tk"), c.get("sk")
+        # Hazards: expected yearly building damage, $ per $100k of building.
+        # The total needs all four; a partial sum would read as a whole one.
+        h = h_zips.get(r["zip"]) or {}
+        for group, key in (("flood", "fl"), ("wildfire", "wf"), ("wind", "wd"), ("quake", "eq")):
+            r[f"{group}_rate"] = h.get(key)
+        parts = [h.get(k) for k in ("fl", "wf", "wd", "eq")]
+        r["hazard_total"] = round(sum(parts), 2) if None not in parts else None
+
+    # Sources that actually carry data FOR THE ROWS IN SCOPE. A filter over an
+    # empty source would mark every row NO DATA and empty the board while
+    # looking like a strict choice, so filters are offered only where their
+    # source has figures — which is also how Connecticut, whose 2022 tract
+    # renumbering FEMA's tracts no longer match, gets no hazard filters rather
+    # than a board emptied by them.
+    with_data = set()
+    for c in ("pct_renter_occupied", "pct_multi_unit", "pct_rent_burdened"):
+        if any(r.get(c) is not None for r in all_rows):
+            with_data.add(c)
+    if any(r["winter_low"] is not None for r in all_rows):
+        with_data.add("zip_climate")
+    if any(r["flood_rate"] is not None for r in all_rows):
+        with_data.add("zip_hazards")
+    has_mf_data = "pct_renter_occupied" in with_data
+    offered = [f for f in ZF.FILTERS if ZF.available(f, with_data)]
+    # A filter that is not offered cannot be active, even if a URL asks.
+    for f in ZF.FILTERS:
+        if f not in offered:
+            filters[f["key"]] = None
+
+    # ── The funnel: every step from "ZIPs in scope" to "on the board" ──
+    funnel = ZF.Funnel("U.S. ZIPs" if national else f"{state} ZIPs", all_rows)
     funnel.step("population", "fewer than 1,500 residents — too small to price reliably",
                 keep=lambda r: (r["population"] or 0) >= 1500,
                 no_data=lambda r: r["population"] is None)
@@ -4100,8 +4176,15 @@ async def multifamily_page(
     from structural import (trajectory_from_history, durable_cap_rate,
                             state_structural, apply_trajectory_veto,
                             TRAJECTORY_BADGES)
-    state_struct = state_structural(state)
-    n_state_flags = len(state_struct["flags"])
+    # Structural flags are per STATE. One lookup per state in scope, not per row.
+    _struct: dict = {}
+
+    def struct_for(st):
+        if st not in _struct:
+            _struct[st] = state_structural(st)
+        return _struct[st]
+
+    state_struct = None if national else struct_for(state)
 
     for r in funnel.rows:
         hv, rent = r["median_home_value"], r["median_rent_monthly"]
@@ -4117,13 +4200,17 @@ async def multifamily_page(
         r["traj"] = traj
         r["traj_badge"] = TRAJECTORY_BADGES.get(traj["label"]) if traj else None
         r["trend_3yr"] = traj["cagr_3yr_pct"] if traj else None
-        durable = durable_cap_rate(r["cap_rate_pct"], hv, state)
+        st = r["state"]
+        # One source for the row's state flags: the veto uses it and the page
+        # shows it, so a wrong state's flags are visible rather than silent.
+        r["state_flags"] = len(struct_for(st)["flags"])
+        durable = durable_cap_rate(r["cap_rate_pct"], hv, st)
         r["durable_detail"] = durable
         r["durable_cap_pct"] = durable["durable_cap_pct"] if durable else None
         r["area_type"] = ZF.area_type(r["population_density"])
         r["density_sqmi"] = ZF.per_sq_mi(r["population_density"])
         r["building_price"] = round(min(hv * unit_factor, max_price))
-        r["safety"] = SF.zip_safety(r["name"], state)
+        r["safety"] = SF.zip_safety(r["name"], st)
         r["rent_observed"] = HH.rent_is_observed(rent, hv)
 
         # Price and insure the row exactly as the scenario card and the
@@ -4133,7 +4220,7 @@ async def multifamily_page(
         # failed the funding gate — a $1,900/mo swing on one screen.
         purchase = min(hv * unit_factor, max_price)
         piti = HH.apply_unit_insurance(
-            _fha_piti(purchase, state, MORTGAGE_30Y_RATE, down_pct=down_pct), units)
+            _fha_piti(purchase, st, MORTGAGE_30Y_RATE, down_pct=down_pct), units)
         if not piti:
             r["house_hack_net"] = r["house_hack_stressed"] = r["fha_self_suff"] = None
             continue
@@ -4183,7 +4270,7 @@ async def multifamily_page(
             # cheap-level score to the top of the table. Vetoed rows are
             # marked so the UI shows *why* the score is capped.
             r["mf_score"], r["vetoed"] = apply_trajectory_veto(
-                r["mf_score"], r["traj"]["label"] if r["traj"] else None, n_state_flags)
+                r["mf_score"], r["traj"]["label"] if r["traj"] else None, r["state_flags"])
     # Verified-safe rows by score, then rows whose safety nobody measured —
     # shown only when asked for, and never ranked above a measured one.
     rows = ZF.board_order(rows)
@@ -4197,14 +4284,15 @@ async def multifamily_page(
     suggest = None
     if not rows and emptied_by and emptied_by["key"] in ("budget", "safety"):
         c2 = sqlite3.connect(str(db_path))
+        scope_sql, scope_args = ("", ()) if national else ("state = ? and ", (state,))
         cand = c2.execute(
-            "select zip, name, median_home_value from zips "
-            "where state = ? and population >= 1500 "
+            "select zip, name, median_home_value, state from zips "
+            f"where {scope_sql}population >= 1500 "
             "and median_home_value is not null and median_rent_monthly is not null "
-            "order by median_home_value asc limit 4000", (state,)).fetchall()
+            "order by median_home_value asc limit 4000", scope_args).fetchall()
         c2.close()
-        for z2, n2, hv2 in cand:
-            if hv2 and SF.passes(SF.zip_safety(n2, state), safetier, allow_unknown_safety):
+        for z2, n2, hv2, st2 in cand:
+            if hv2 and SF.passes(SF.zip_safety(n2, st2), safetier, allow_unknown_safety):
                 bp = hv2 * unit_factor
                 # Round the suggested cap UP: rounding to the nearest
                 # $10k can land just under the threshold, producing a
@@ -4231,7 +4319,10 @@ async def multifamily_page(
     # priced from "the ZIPs actually listed below".
     sfr_anchor = statistics.median(sfr_medians) if sfr_medians else None
     bld = HH.est_building_price(sfr_anchor, units) if sfr_anchor else None
-    scenario_price = min(bld["estimated_price"], max_price) if bld else None
+    # One building, one state's tax and insurance rates — so no scenario in
+    # the national view. Averaging rates across states would price a
+    # building that exists nowhere; the page asks for a state instead.
+    scenario_price = min(bld["estimated_price"], max_price) if bld and not national else None
     price_capped = bool(bld and bld["estimated_price"] > max_price)
 
     # An owner-occupied 2-4 unit is not an SFR risk: more units, more
@@ -4283,7 +4374,7 @@ async def multifamily_page(
     # the answer stops depending on our SFR-to-building price factor or
     # on whether this ZIP happens to have an observed rent series.
     deal = None
-    if chk_price > 0 and chk_rent > 0:
+    if chk_price > 0 and chk_rent > 0 and not national:
         dp = _fha_piti(chk_price, state, MORTGAGE_30Y_RATE, down_pct=down_pct)
         if dp:
             HH.apply_unit_insurance(dp, units)
@@ -4323,7 +4414,8 @@ async def multifamily_page(
         "state_struct": state_struct,
         "has_history": has_history,
         "funnel": funnel, "emptied_by": emptied_by, "offered": offered,
-        "score_info": score_info,
+        "score_info": score_info, "national": national, "place": place,
+        "climate_meta": climate.get("_meta"), "hazards_meta": hazards.get("_meta"),
         **finder_ctx,
     })
 
