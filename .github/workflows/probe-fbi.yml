@@ -17,40 +17,50 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Reachability and the download keys the CDE web app knows about
+      - name: Round 2 — downloads, keyless backend, summarized shape
         run: |
           python3 - <<'PY'
           import re, json, urllib.request, urllib.error
           UA = {"User-Agent": "Mozilla/5.0 (market-pulse research)"}
-          def get(url, n=None):
+          def get(url):
               try:
-                  with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60) as r:
-                      b = r.read() if n is None else r.read(n)
-                      return r.status, r.headers.get("content-type"), b
+                  with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=90) as r:
+                      return r.status, r.headers.get("content-type"), r.read()
               except urllib.error.HTTPError as e:
-                  return e.code, e.headers.get("content-type"), e.read()[:300]
+                  return e.code, e.headers.get("content-type"), e.read()[:400]
               except Exception as e:
                   return None, None, repr(e).encode()
-          for u in ("https://cde.ucr.cjis.gov/LATEST/webapp/",
-                    "https://api.usa.gov/crime/fbi/cde/agency/byStateAbbr/OH?API_KEY=DEMO_KEY",
-                    "https://ucr.fbi.gov/crime-in-the-u.s/2019/crime-in-the-u.s.-2019/tables/table-8/table-8.xls/view"):
+          # 1. download keys in the web app bundle, case-insensitive, with context
+          st, ct, js = get("https://cde.ucr.cjis.gov/LATEST/webapp/main.520fe72a764b9260.js")
+          js = js.decode("utf-8", "replace")
+          seen = 0
+          for pat in (r"signed", r"s3", r"cius", r"xlsx", r"\.zip", r"table.?8", r"offenses.?known", r"download"):
+              hits = [m.start() for m in re.finditer(pat, js, re.I)]
+              print(f"== /{pat}/: {len(hits)} hits")
+              for h in hits[:6]:
+                  print("   …" + js[max(0, h - 140):h + 160].replace("\n", " ") + "…")
+          # 2. keyless backend + summarized shape, for one Ohio city agency
+          st, ct, b = get("https://cde.ucr.cjis.gov/LATEST/agency/byStateAbbr/OH")
+          print(f"== keyless agency list: HTTP {st} {ct} {len(b)} bytes")
+          ags = json.loads(b) if st == 200 else json.loads(get("https://api.usa.gov/crime/fbi/cde/agency/byStateAbbr/OH?API_KEY=DEMO_KEY")[2])
+          flat = [a for v in ags.values() for a in v]
+          from collections import Counter
+          print("agency types:", Counter(a.get("agency_type_name") for a in flat))
+          print("keys:", sorted(flat[0].keys()))
+          city = [a for a in flat if a.get("agency_type_name") == "City"]
+          print("city agencies:", len(city), "e.g.", [(a["agency_name"], a["ori"]) for a in city[:4]])
+          akron = next((a for a in city if "Akron" in a["agency_name"]), city[0])
+          print("using", akron["agency_name"], akron["ori"])
+          for base, key in (("https://cde.ucr.cjis.gov/LATEST", ""), ("https://api.usa.gov/crime/fbi/cde", "&API_KEY=DEMO_KEY")):
+              for off in ("violent-crime", "V"):
+                  for yr in (2024, 2025):
+                      u = f"{base}/summarized/agency/{akron['ori']}/{off}?from=01-{yr}&to=12-{yr}{key}"
+                      st, ct, b = get(u)
+                      print(f"== {u.replace('DEMO_KEY','…')}\n   HTTP {st} {len(b)} bytes: {b[:1400]!r}")
+          # 3. other bulk-ish endpoints worth knowing about
+          for u in ("https://cde.ucr.cjis.gov/LATEST/refresh-date",
+                    "https://cde.ucr.cjis.gov/LATEST/participation/dl/",
+                    f"https://cde.ucr.cjis.gov/LATEST/participation/agency/{akron['ori']}"):
               st, ct, b = get(u)
-              print(f"== {u}\n   HTTP {st} {ct} {len(b)} bytes: {b[:300]!r}")
-          st, ct, html = get("https://cde.ucr.cjis.gov/LATEST/webapp/")
-          html = html.decode("utf-8", "replace")
-          srcs = re.findall(r'src="([^"]+\.js)"', html)
-          print("scripts:", srcs)
-          keys = set()
-          for s in srcs:
-              st, ct, js = get("https://cde.ucr.cjis.gov/LATEST/webapp/" + s)
-              js = js.decode("utf-8", "replace")
-              print(f"  {s}: HTTP {st}, {len(js)} chars")
-              for m in re.finditer(r'signedurl[^"\'`]{0,80}', js):
-                  keys.add("SIGNED: " + m.group(0))
-              for m in re.finditer(r'["\'`]([\w\-./]*?(?:cius|table|return|offense|additional|nibrs|summar|download)[\w\-./]*?\.(?:zip|xlsx|xls|csv))["\'`]', js, re.I):
-                  keys.add(m.group(1))
-              for m in re.finditer(r'["\'`](/?LATEST/[\w\-./]+)["\'`]', js):
-                  keys.add(m.group(1))
-          for k in sorted(keys)[:200]:
-              print("   ", k)
+              print(f"== {u}\n   HTTP {st} {len(b)} bytes: {b[:700]!r}")
           PY
