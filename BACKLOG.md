@@ -89,11 +89,12 @@ Format: `- [PHASE-SEEN] item — why it matters`
   than carry forward empty values and go green, and it is still pinned to the 2022 ACS
   vintage. The renter-share and multi-unit filters light up by themselves once the
   columns have data.
-- [MF-FINDER] Crime coverage is the binding constraint on /multifamily, not the filters.
-  Toledo, Dayton and Cleveland have no entry in `data/headroom/crime.json`, so 241 of the
-  270 Ohio ZIPs that fit the default budget are removed as unverified, and no Ohio ZIP is
-  both verified-safe and cash-flowing at the default settings. FBI Crime Data Explorer
-  (agency level) would take this from 394 hand-researched cities to thousands.
+- [MF-FINDER] Crime coverage is the binding constraint on /multifamily, and with HUD rents
+  filling the rent gap it is now the ONLY big one. At the defaults Ohio keeps 3 ZIPs: the
+  safety gate removes 820, and 790 of those only because their city has no FBI figure
+  (Toledo, Dayton and Cleveland have no entry in `data/headroom/crime.json`). Nationally the verified
+  board is 102 ZIPs; showing unverified cities, 15,231. FBI Crime Data Explorer (agency
+  level) would take coverage from 394 hand-researched cities to thousands.
 - [MF-FINDER] The finder's pending filters need data: age 25–34 and a true 2–4 unit count
   (ACS B01001, B25024_004+005 — the current `pct_multi_unit` sums 2 through 50+). Both
   wait on the Census key above.
@@ -114,8 +115,18 @@ Format: `- [PHASE-SEEN] item — why it matters`
 - [MF-WEATHER] No elevation correction: a ZIP matched to a station a few hundred metres
   lower reads warm by roughly 2°F per 300 m. The station's elevation is in
   `zip_climate.json`; the ZIP's is not in `zips.db`.
-- [MF-FINDER] 67% of ZIPs have no measured rent (Zillow ZORI) and cannot be underwritten
-  at all — 558 of Ohio's 1,017. HUD Small Area FMR would cover every ZIP; it needs the
-  `HUD_API_TOKEN` secret.
+- [MF-RENTS] Connecticut's HUD county rents don't join: HUD's FY2027 FMRs use CT's 2022
+  planning regions, `zips.db` the old counties (the same renumbering that blocks CT
+  hazards). ~140 CT ZIPs have no rent. The Census CT county→planning-region crosswalk
+  would fix both. A handful of Alaska ZIPs miss for the same kind of reason ("Anchorage
+  Borough" vs HUD's "Anchorage Municipality").
+- [MF-RENTS] `rent_ladder.spread()` reads ZORI above SAFMR as a "tight market" on the
+  premise that SAFMR is a floor. The first national run showed SAFMR at 1.01× ZORI at the
+  median, so about half of ZIPs would read "soft". Nothing displays the reading today;
+  re-derive the cut points from the measured distribution before anything does.
+- [MF-RENTS] The monthly rent refresh now makes ~3,200 HUD requests (~70 min). HUD's
+  statedata endpoint or the published SAFMR/FMR files could cut that to ~50 requests.
+- [MF-RENTS] HUD's FMR year (FY2027) is parsed but not stored; `rent_as_of` is the run
+  date. Storing the fiscal year would let the page say which year's HUD rents it shows.
 - [MF-FINDER] The scenario card prints negative dollar figures as `$-5,543` (per year,
   and "if you move out") — pre-existing, the sign belongs before the dollar sign.

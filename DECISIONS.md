@@ -181,3 +181,34 @@ monthly from other sources. Separate files keep each source's refusal guards and
 coverage history independent. Both change slowly (normals once a decade, the NRI about
 yearly), so the jobs run quarterly; a filter is offered only for places its file has
 figures for.
+
+## 2026-09-27 — ZIPs join HUD counties by state + county name
+**Assumption.** HUD's county FMR is keyed by FIPS code; `zips.db` stores the county's
+NAME. Rather than add a crosswalk, ZIPs join HUD's own county list on state plus name —
+unique within a state — after spelling-only normalisation: accents, case, periods,
+apostrophes, spacing, and Saint/St. The words themselves are never touched, so
+"Richmond city" and "Richmond County" stay two places. A name matching two counties, or
+none, gets no FMR and is logged. The first national run matched 25,346 of 25,769 ZIPs;
+the misses were spelling, which the Saint/St. and spacing rules now cover (a re-pull of
+the 14 affected states gave 209 more ZIPs a rent and changed nothing elsewhere). What
+remains is Connecticut (HUD now publishes planning regions) and a few Alaska boroughs
+whose names differ in substance — 278 ZIPs.
+
+## 2026-09-27 — HUD rents are labelled, not adjusted; strained ones are flagged
+**Decided.** HUD's 2-bedroom Fair Market Rent now answers for 17,223 ZIPs Zillow doesn't
+cover (measured-rent coverage 33% → 99.4%; 148 ZIPs have none). Checked against Zillow where both exist
+(FY2027): SAFMR is 1.01× Zillow's at the median (a quarter ≤0.89×, a quarter ≥1.12×);
+county FMR 0.93×. So it is not the "floor below market" the ladder's caveat claimed —
+FMR is GROSS rent, and utilities offset the 40th percentile — and the caveat now says
+what the data showed. The ratio climbs as local incomes fall: where HUD's rent is 40%+
+of the ZIP's median household income, county FMR runs 1.11× Zillow and 3 in 10 are 20%+
+high (588 HUD-rent ZIPs are in that band). Those rents are flagged (amber "HUD !") rather than scaled down, because a scaled
+number has no source you can name, and a landlord renting to voucher holders can in fact
+be paid HUD's figure. Every HUD rent carries a tag whose hover says what it is.
+
+## 2026-09-27 — A HUD run is authoritative only where it asked
+**Decided.** A limited run (`--states OH`), a state whose county list failed, or a county
+whose request failed keeps its stored HUD rents instead of blanking them; more than 5%
+of counties failing discards the pull entirely. Stored county FMR is carried back as
+FMR, never promoted to SAFMR. Same principle the ladder already applied to whole
+sources, now applied per state and per county.

@@ -18,13 +18,14 @@ one answers "what would this actually rent for today":
            that exists for free. ~33% of ZIPs.
 
     SAFMR  HUD Small Area Fair Market Rent. Set per ZIP, BY BEDROOM, for
-           voucher purposes at roughly the 40th percentile of standard-
-           quality units. Near-total coverage in metro areas. Runs BELOW
-           a market median — it is a floor, not a market rent.
+           voucher purposes: the 40th-percentile GROSS rent (utilities
+           included) of standard-quality units, in the metros HUD has
+           designated. Against Zillow it lands near the median on average
+           (1.01x) but wide for any one ZIP — see the tier's caveat.
 
-    FMR    HUD Fair Market Rent at county level, by bedroom. Same 40th-
-           percentile basis, coarser geography. Covers the non-metro
-           remainder.
+    FMR    HUD Fair Market Rent at county (or metro) level, by bedroom.
+           Same basis, coarser geography. Covers everything SAFMR does
+           not — about 14,000 ZIPs.
 
     ACS    Census B25064 median GROSS rent for the ZCTA. A real
            measurement of occupied stock, but it includes utilities, it
@@ -79,23 +80,28 @@ TIERS = (
         "key": "safmr",
         "label": "HUD Small Area FMR",
         "basis": "voucher-floor",
-        "measures": "HUD's per-ZIP voucher standard, set near the 40th "
-                    "percentile of standard-quality units, by bedroom",
-        "caveat": "A FLOOR, NOT A MARKET RENT. At the 40th percentile it "
-                  "sits below a market median by design, and further "
-                  "below in a tight market. Read it as the bottom of the "
-                  "range, never as the middle.",
+        "measures": "HUD's per-ZIP voucher standard: the 40th-percentile "
+                    "GROSS rent (utilities included) of standard-quality "
+                    "units, by bedroom",
+        "caveat": "A voucher benchmark, not an asking rent. Checked against "
+                  "Zillow where both exist (4,073 ZIPs, FY2027) the "
+                  "2-bedroom figure is 1.01x Zillow's at the median, but a "
+                  "quarter of ZIPs sit 11% or more below and a quarter 12% "
+                  "or more above — close on average, loose for any one ZIP. "
+                  "Not a floor: including utilities offsets the 40th "
+                  "percentile.",
         "by_bedroom": True,
     },
     {
         "key": "fmr",
         "label": "HUD FMR (county)",
         "basis": "voucher-floor",
-        "measures": "the same 40th-percentile voucher standard, set for "
-                    "the whole county rather than the ZIP",
-        "caveat": "A floor like SAFMR, and county-wide — it cannot tell "
-                  "one ZIP from another, so a good and a bad ZIP in the "
-                  "same county carry the same number.",
+        "measures": "the same 40th-percentile gross-rent voucher standard, "
+                    "set for the whole county (or metro) rather than the ZIP",
+        "caveat": "County-wide, so a good and a bad ZIP in the same county "
+                  "carry the same number. Against Zillow (8,268 ZIPs, "
+                  "FY2027) the 2-bedroom figure is 0.93x at the median, and "
+                  "a quarter of ZIPs sit 19% or more below it.",
         "by_bedroom": True,
     },
     {
@@ -202,6 +208,35 @@ def resolve(zori=None, safmr=None, fmr=None, acs=None,
         "alternatives": alternatives, "spread": spread(alternatives),
         "note": None,
     }
+
+
+# A HUD rent that would take this share of the ZIP's median household
+# income is flagged, not adjusted. HUD sets FMR for a whole county or metro,
+# and the first national run showed it drifting ABOVE Zillow exactly where
+# local incomes are low. Where Zillow also has a figure (FY2027):
+#
+#     HUD rent / ZIP income    county FMR ÷ Zillow    share 20%+ above Zillow
+#     under 25%                0.70–0.89              0–4%
+#     30–35%                   1.00                   13%
+#     40–50%                   1.10                   28%
+#     50%+                     1.13                   32%
+#
+# So from 40% of income a HUD figure is as likely as not to overstate what
+# the ZIP's own market pays — though a landlord renting to voucher holders
+# can still be paid it.
+HUD_RENT_STRAIN = 0.40
+
+
+def hud_rent_strains_income(rent, tier, median_household_income) -> bool:
+    """True when a HUD-tier rent is at least HUD_RENT_STRAIN of the ZIP's
+    median household income. Only HUD tiers: Zillow's figure is the ZIP's
+    own market, so a high share there is a finding about the ZIP, not a
+    doubt about the rent."""
+    if tier not in ("safmr", "fmr") or not rent or not median_household_income:
+        return False
+    if median_household_income <= 0:
+        return False
+    return rent * 12 / median_household_income >= HUD_RENT_STRAIN
 
 
 def spread(alternatives: dict) -> dict | None:

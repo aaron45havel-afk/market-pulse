@@ -135,9 +135,67 @@ try:
           f"AND THE NUMBERS THE PAGE PRINTS ADD UP: {start} − {sum(removed)} "
           f"should be {end}. The module's funnel balancing is not enough on "
           f"its own; a template that hid a non-zero stage would break it here")
-    check("no measured rent (Zillow ZORI)" in page,
-          "the rent gap — two thirds of Ohio — is named on the page instead "
-          "of vanishing silently as it used to")
+    tiers = dict(sqlite3.connect(DB).execute("select zip, rent_tier from zips").fetchall())
+    starred, seen = [], 0
+    for q in ("state=OH&unknown=1&max_price=900000", "state=ALL&unknown=1&max_price=900000&preset=cashflow"):
+        _, pg = get(f"/multifamily?{q}")
+        cz, cr = col(pg, "zip"), col(pg, "rent")
+        for r in table_rows(pg):
+            seen += 1
+            if r["cells"][cr].endswith("*") and tiers.get(r["cells"][cz]):
+                starred.append(r["cells"][cz])
+    check(seen > 100 and not starred,
+          f"A RENT WITH A SOURCE IS NEVER STARRED AS IMPUTED — the value÷204 "
+          f"arithmetic test starred 392 real Zillow rents that happened to land "
+          f"near it ({starred[:5]})")
+    # ── rent sources on the page ──
+    _, hpage = get("/multifamily?state=OH&unknown=1&max_price=900000")
+    cz, cr = col(hpage, "zip"), col(hpage, "rent")
+    hrows = table_rows(hpage)
+    inc = dict(sqlite3.connect(DB).execute(
+        "select zip, median_household_income from zips").fetchall())
+    by_tier = {}
+    wrong, strain_wrong, n_strain = [], [], 0
+    for r in hrows:
+        z, cell = r["cells"][cz], r["cells"][cr]
+        t = tiers.get(z)
+        by_tier[t] = by_tier.get(t, 0) + 1
+        tagged = cell.endswith("HUD") or cell.endswith("HUD !")
+        if tagged != (t in ("safmr", "fmr")):
+            wrong.append((z, t, cell))
+        rent = int(re.sub(r"[^0-9]", "", cell.split("HUD")[0]) or 0)
+        should = (t in ("safmr", "fmr") and bool(inc.get(z))
+                  and rent * 12 / inc[z] >= 0.40)
+        n_strain += should
+        if cell.endswith("HUD !") != should:
+            strain_wrong.append((z, rent, inc.get(z), cell))
+    check(by_tier.get("safmr") and by_tier.get("fmr") and by_tier.get("zori") and not wrong,
+          f"EVERY HUD-BASED RENT IS TAGGED HUD AND NO ZILLOW RENT IS — checked "
+          f"row by row against zips.db ({by_tier}; wrong: {wrong[:3]})")
+    check(n_strain and not strain_wrong,
+          f"A HUD RENT AT 40%+ OF THE ZIP'S MEDIAN INCOME IS FLAGGED, and no "
+          f"other is — checked against zips.db ({n_strain} flagged; wrong: "
+          f"{strain_wrong[:3]})")
+    for t, label in (("zori", "Zillow ZORI"), ("safmr", "HUD Small Area FMR"),
+                     ("fmr", "HUD FMR (county)")):
+        n = by_tier.get(t, 0)
+        check(f"<b>{label}</b> on {n} row" in hpage,
+              f"the legend counts {label} rows the way the table shows them ({n})")
+    check("not an asking rent" in hpage and "1.01x" in hpage,
+          "and a HUD tag's hover says what the figure is and how it compared "
+          "with Zillow's")
+    gaps = dict(sqlite3.connect(DB).execute(
+        "select state, sum(median_rent_monthly is null) from zips "
+        "where population >= 1500 group by state").fetchall())
+    check(("no measured rent (Zillow or HUD)" in page) == bool(gaps.get("OH")),
+          f"Ohio's rent step shows exactly when it removes something "
+          f"({gaps.get('OH')} Ohio ZIPs without a rent)")
+    gap_st = max(gaps, key=lambda k: gaps[k] or 0)
+    _, gpage = get(f"/multifamily?state={gap_st}")
+    check(gaps[gap_st] and "no measured rent (Zillow or HUD)" in gpage,
+          f"and where ZIPs still have no rent ({gaps[gap_st]} in {gap_st}) the "
+          f"gap is named, with the sources it was looked for in, instead of "
+          f"vanishing silently as it used to")
     check(len(table_rows(page)) == end or (end > 100 and len(table_rows(page)) == 100),
           "the table shows what the funnel says is on the board (top 100)")
 

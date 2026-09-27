@@ -83,9 +83,15 @@ check(R.resolve(zori=1467)["basis"] == "asking"
       and R.resolve(acs=980)["basis"] == "occupied-gross",
       "and the BASIS is named — $1,467 of asking-rent index and $1,180 of "
       "voucher floor are not the same claim about the same thing")
-check("FLOOR, NOT A MARKET RENT" in R.resolve(safmr=1180)["caveat"],
-      "the 40th-percentile problem is stated in the SAFMR caveat rather "
-      "than left for the reader to know")
+_sc = R.resolve(safmr=1180)["caveat"]
+check("not an asking rent" in _sc and "1.01x" in _sc and "Not a floor" in _sc
+      and "utilities" in R.resolve(safmr=1180)["measures"],
+      "THE SAFMR CAVEAT SAYS WHAT THE DATA SHOWED, not what the 40th "
+      "percentile suggested: the first national run found it 1.01x Zillow at "
+      "the median (it is GROSS rent, so utilities offset the percentile) — "
+      "the old 'floor, below market by design' was wrong")
+check("0.93x" in R.resolve(fmr=1100)["caveat"],
+      "and the county FMR caveat carries its own measured comparison")
 check("includes utilities" in R.resolve(acs=980)["caveat"]
       and "lags" in R.resolve(acs=980)["caveat"],
       "and the ACS caveat names both of its distortions")
@@ -118,6 +124,22 @@ check(R.resolve(fmr=1100, fmr_bedrooms={"2": 1150})["by_bedroom_tier"] == "fmr",
 check(R.resolve(safmr=1180, safmr_bedrooms={"2": 1433},
                 fmr_bedrooms={"2": 1150})["by_bedroom"]["2"] == 1433,
       "and SAFMR's bedrooms beat the county's when both exist")
+
+
+# ── a HUD rent that local incomes can't carry is flagged ──
+check(R.hud_rent_strains_income(1003, "fmr", 30_000)
+      and not R.hud_rent_strains_income(1003, "fmr", 31_000),
+      "a $1,003 county FMR is flagged in a ZIP whose median income is $30,000 "
+      "(40.1%) and not at $31,000 (38.8%) — the line is 40% of income")
+check(R.hud_rent_strains_income(1000, "safmr", 30_000),
+      "exactly 40% is flagged, and SAFMR is held to the same line")
+check(not R.hud_rent_strains_income(1003, "zori", 20_000),
+      "ZILLOW'S RENT IS NEVER FLAGGED: it is the ZIP's own market, so a high "
+      "rent-to-income there describes the ZIP, it doesn't doubt the rent")
+check(not R.hud_rent_strains_income(1003, "fmr", None)
+      and not R.hud_rent_strains_income(1003, "fmr", 0)
+      and not R.hud_rent_strains_income(None, "fmr", 20_000),
+      "no income or no rent is no flag, not a division error")
 
 
 # ── the spread between tiers is itself the signal ──

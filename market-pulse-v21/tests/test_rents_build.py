@@ -121,6 +121,122 @@ check(raises(ValueError, R.parse_hud_safmr_json, {"data": {"basicdata": 5}}),
       "and a shape nobody expected raises")
 
 
+# ── The shapes HUD's API actually returned, FY2027 (probed 2026-09-27) ──
+# A Small Area metro county (Cuyahoga): a list whose FIRST record is the
+# metro-wide figure labelled "MSA level", then one record per ZIP.
+CUYAHOGA = {"data": {
+    "county_name": "Cuyahoga County, OH", "metro_status": "1.0", "smallarea_status": "1",
+    "metro_name": "Cleveland, OH", "year": "2027", "basicdata": [
+        {"zip_code": "MSA level", "Efficiency": 924, "One-Bedroom": 1050,
+         "Two-Bedroom": 1274, "Three-Bedroom": 1628, "Four-Bedroom": 1756},
+        {"zip_code": "44001", "Efficiency": 860, "One-Bedroom": 980,
+         "Two-Bedroom": 1190, "Three-Bedroom": 1520, "Four-Bedroom": 1640},
+        {"zip_code": "44107", "Two-Bedroom": 1433}]}}
+# A non-metro county (Adams): one object, with the year INSIDE it.
+ADAMS = {"data": {"county_name": "Adams County, OH", "metro_status": "0",
+                  "basicdata": {"Efficiency": 758, "One-Bedroom": 849, "Two-Bedroom": 1003,
+                                "Three-Bedroom": 1251, "Four-Bedroom": 1318, "year": "2027"}}}
+_cz = R.parse_hud_safmr_json(CUYAHOGA)
+check(set(_cz) == {"44001", "44107"} and _cz["44001"]["bedrooms"]["2"] == 1190,
+      "the real metro payload yields one SAFMR per ZIP, and the 'MSA level' "
+      "record is not mistaken for a ZIP")
+check(R.parse_hud_fmr_json(CUYAHOGA)["bedrooms"]["2"] == 1274,
+      "and the county's FMR is the 'MSA level' record — the metro-wide figure")
+_flip = {"data": dict(CUYAHOGA["data"], basicdata=CUYAHOGA["data"]["basicdata"][::-1])}
+check(R.parse_hud_fmr_json(_flip)["bedrooms"]["2"] == 1274,
+      "PICKED BY ITS LABEL, NOT ITS POSITION: reversed, the list starts with a "
+      "ZIP, and taking the first record would file that ZIP's rent as the county's")
+check(raises(ValueError, R.parse_hud_fmr_json,
+             {"data": {"basicdata": CUYAHOGA["data"]["basicdata"][1:]}}),
+      "a list of ZIPs with no area-level record raises rather than guessing one")
+_ad = R.parse_hud_fmr_json(ADAMS)
+check(_ad["bedrooms"] == {"0": 758, "1": 849, "2": 1003, "3": 1251, "4": 1318}
+      and _ad["year"] == "2027",
+      "the real non-metro payload yields all five bedrooms, and the year that "
+      "HUD tucks inside basicdata for these")
+check(R.parse_hud_safmr_json(ADAMS) == {},
+      "and it has no ZIP-level rents — a non-metro county never claims SAFMR")
+
+
+# ── ZIP → county by state + name ──
+HUD_COUNTIES = [("OH", "Adams County", "39001"), ("OH", "Cuyahoga County", "39035"),
+                ("VA", "Richmond city", "51760"), ("VA", "Richmond County", "51159"),
+                ("NM", "Doña Ana County", "35013"), ("MO", "St. Louis County", "29189"),
+                ("MD", "Prince George's County", "24033"),
+                ("IN", "Adams County", "18001"),
+                ("AL", "DeKalb County", "01049"), ("IA", "O'Brien County", "19141"),
+                ("MO", "Ste. Genevieve County", "29186"), ("MO", "St. Louis city", "29510"),
+                ("IN", "LaPorte County", "18091"),
+                ("XX", "Twin County", "99001"), ("XX", "twin county", "99002")]
+ZIP_ROWS = [("45693", "OH", "Adams County"), ("44107", "OH", "Cuyahoga County"),
+            ("46711", "IN", "Adams County"),
+            ("23219", "VA", "Richmond city"), ("22572", "VA", "Richmond County"),
+            ("88001", "NM", "Dona Ana County"), ("63105", "MO", "St Louis County"),
+            ("20706", "MD", "Prince Georges County"),
+            ("99999", "XX", "Twin County"), ("44999", "OH", "Nowhere County"),
+            ("35967", "AL", "De Kalb County"), ("51201", "IA", "O Brien County"),
+            ("63670", "MO", "Sainte Genevieve County"), ("63101", "MO", "Saint Louis City"),
+            ("63122", "MO", "Saint Louis County"), ("46350", "IN", "La Porte County")]
+_f, _un = R.county_fips_by_name(ZIP_ROWS, HUD_COUNTIES)
+check(_f["45693"] == "39001" and _f["46711"] == "18001",
+      "SAME NAME, DIFFERENT STATE, DIFFERENT COUNTY: Adams County, Ohio and "
+      "Adams County, Indiana each get their own FMR")
+check(_f["23219"] == "51760" and _f["22572"] == "51159",
+      "Richmond city and Richmond County, Virginia stay two places — "
+      "normalising spelling never touches the words")
+check(_f["88001"] == "35013" and _f["63105"] == "29189" and _f["20706"] == "24033",
+      "spelling differences match: an accent, a period, an apostrophe")
+check(_f["35967"] == "01049" and _f["51201"] == "19141" and _f["46350"] == "18091"
+      and _f["63670"] == "29186",
+      "THE SPELLINGS THE FIRST NATIONAL RUN MISSED NOW MATCH: De Kalb/DeKalb, "
+      "O Brien/O'Brien, La Porte/LaPorte, Sainte/Ste. — 423 ZIPs were left "
+      "without a county rent on nothing but spelling")
+check(_f["63101"] == "29510" and _f["63122"] == "29189",
+      "and Saint/St. matches without merging St. Louis city into St. Louis "
+      "County — two places, two FMRs")
+check("99999" not in _f and "44999" not in _f,
+      "A NAME THAT MAPS TO TWO COUNTIES, OR TO NONE, GETS NO FMR — "
+      "ambiguity is dropped, not resolved by a guess")
+check(_un.get(("OH", "Nowhere County")) == 1 and _un.get(("XX", "Twin County")) == 1,
+      "and both are reported, so a naming mismatch is visible in the log")
+
+
+# ── Merging a HUD pull: authoritative only where it asked ──
+_hud = {"safmr": {"44107": {"bedrooms": {"2": 1433}}},
+        "fmr": {"39035": {"bedrooms": {"2": 1274}}, "39001": {"bedrooms": {"2": 1003}}},
+        "counties": [("OH", "Adams County", "39001"), ("OH", "Cuyahoga County", "39035"),
+                     ("OH", "Butler County", "39017")],
+        "failed": {"39017"}, "requested": 88}
+_rows = [("44107", "OH", "Cuyahoga County"), ("44001", "OH", "Cuyahoga County"),
+         ("45693", "OH", "Adams County"), ("45011", "OH", "Butler County"),
+         ("46711", "IN", "Adams County")]
+_cs = {"44001": {"bedrooms": {"2": 1111}}, "46711": {"bedrooms": {"2": 999}}}
+_cf = {"45011": {"bedrooms": {"2": 1500}}, "46711": {"bedrooms": {"2": 950}},
+       "45693": {"bedrooms": {"2": 1}}}
+_ms, _mf, _rep = R.merge_hud(_hud, _cs, _cf, _rows, {"OH"})
+check(_mf["44001"]["bedrooms"]["2"] == 1274 and _mf["45693"]["bedrooms"]["2"] == 1003,
+      "THE COUNTY TIER FILLS: a ZIP gets its county's FMR through the name "
+      "join — the tier that matched nothing while zips.db held only names")
+check("44001" not in _ms,
+      "a ZIP HUD's pull covered but gave no SAFMR loses its stored SAFMR — "
+      "a source that asked is authoritative, silences included")
+check(_mf["45011"]["bedrooms"]["2"] == 1500,
+      "a ZIP in a county whose request FAILED keeps its stored FMR, rather "
+      "than a timeout reading as HUD saying the county has none")
+check(_ms["46711"]["bedrooms"]["2"] == 999 and _mf["46711"]["bedrooms"]["2"] == 950,
+      "A RUN LIMITED TO OHIO LEAVES INDIANA'S HUD RENTS ALONE — without the "
+      "carry, --states OH would erase every other state's")
+check(_rep["failed_counties"] == 1 and _rep["carried_fmr"] == 2,
+      "and the report counts what failed and what was carried")
+check(R.merge_hud(dict(_hud, failed={f"c{i}" for i in range(5)}), {}, {}, _rows, None) is None,
+      "MORE THAN 5% OF COUNTIES FAILING DISCARDS THE PULL — five of 88 is a "
+      "broken run, not five counties with no rents")
+_ms2, _mf2, _ = R.merge_hud(dict(_hud, failed=set()), _cs, _cf, _rows, None)
+check("46711" not in _ms2 and "46711" not in _mf2,
+      "an unlimited run that reached everything carries nothing: Indiana's "
+      "Adams County is not in this pull, so its ZIP has no HUD rent")
+
+
 # ── HUD's published SAFMR CSV, the second way in ──
 SAFMR_CSV = (
     "ZIP Code,HUD Metro Area,SAFMR 0BR,SAFMR 1BR,SAFMR 2BR,SAFMR 3BR,SAFMR 4BR\n"
@@ -209,7 +325,7 @@ check(True, "and running it twice is harmless — ALTER is guarded on what exist
 R.apply(_c, {"44126": 1426},
         {"44107": {"bedrooms": {"0": 905, "1": 1030, "2": 1433}},
          "44116": {"bedrooms": {"2": 1577}}},
-        {}, {"44107": 1100, "44116": 1200, "44126": 1000}, {},
+        {}, {"44107": 1100, "44116": 1200, "44126": 1000},
         "2026-08-24", dry_run=False)
 
 
@@ -229,11 +345,12 @@ check(_row("44107")[4] == 3.43,
 
 _before = {z: _row(z) for z in ("44107", "44116", "44126")}
 _carried = R.carry_stored(_c)
-check(len(_carried[0]) == 1 and len(_carried[1]) == 2 and len(_carried[2]) == 3,
+check(len(_carried[0]) == 1 and len(_carried[1]) == 2 and len(_carried[2]) == 0
+      and len(_carried[3]) == 3,
       "carry_stored reads back exactly what each source contributed")
 
 # The partial run: ZORI fetched, HUD and ACS skipped.
-R.apply(_c, {"44126": 1426}, _carried[1], {}, _carried[2], {},
+R.apply(_c, {"44126": 1426}, _carried[1], _carried[2], _carried[3],
         "2026-09-01", dry_run=False)
 check({z: _row(z) for z in ("44107", "44116", "44126")} == _before,
       "A PARTIAL RUN CHANGES NOTHING IT DID NOT FETCH. Carrying the stored "
@@ -242,7 +359,7 @@ check({z: _row(z) for z in ("44107", "44116", "44126")} == _before,
       "SAFMR-tier row, 16,752 of them on the real database, silently")
 
 # Without the carry, the damage is visible — this is the bug, pinned.
-R.apply(_c, {"44126": 1426}, {}, {}, {}, {}, "2026-09-01", dry_run=False)
+R.apply(_c, {"44126": 1426}, {}, {}, {}, "2026-09-01", dry_run=False)
 check(_row("44107") == (None, None, None, None, None),
       "and dropping the carry reproduces it exactly, so the fix cannot be "
       "removed without this failing")
@@ -250,7 +367,7 @@ check(_row("44126")[0] == 1426,
       "while the ZIP the fetched source did cover is untouched")
 
 # A source that DID fetch is authoritative, silences included.
-R.apply(_c, {}, {"44107": {"bedrooms": {"2": 1433}}}, {}, {}, {},
+R.apply(_c, {}, {"44107": {"bedrooms": {"2": 1433}}}, {}, {},
         "2026-09-01", dry_run=False)
 check(_row("44126")[0] is None,
       "a ZIP the fetched source no longer lists loses its value rather than "
@@ -259,8 +376,22 @@ check(_row("44126")[0] is None,
 
 # dry_run writes nothing at all.
 _snap = _row("44107")
-R.apply(_c, {"44107": 9999}, {}, {}, {}, {}, "2099-01-01", dry_run=True)
+R.apply(_c, {"44107": 9999}, {}, {}, {}, "2099-01-01", dry_run=True)
 check(_row("44107") == _snap, "--dry-run writes nothing")
+
+# County FMR carried back as COUNTY FMR. The bedroom split is stored once,
+# under rent_bedroom_tier; carrying it as SAFMR would relabel a county-wide
+# figure as a ZIP-level one on the first run that couldn't reach HUD.
+R.apply(_c, {}, {}, {"44116": {"bedrooms": {"1": 890, "2": 1100}}}, {},
+        "2026-10-02", dry_run=False)
+check(_row("44116")[:3] == (1100, "fmr", "voucher-floor"),
+      "county FMR answers a ZIP with no ZORI and no SAFMR")
+_c2 = R.carry_stored(_c)
+check("44116" not in _c2[1] and _c2[2]["44116"]["bedrooms"] == {"1": 890, "2": 1100},
+      "AND IS CARRIED BACK AS FMR, bedrooms and all — not promoted to SAFMR")
+R.apply(_c, {}, _c2[1], _c2[2], _c2[3], "2026-11-02", dry_run=False)
+check(_row("44116")[:2] == (1100, "fmr"),
+      "so a HUD-less run leaves the row exactly as it was, tier included")
 _c.close()
 
 
