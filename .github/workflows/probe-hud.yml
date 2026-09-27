@@ -1,0 +1,72 @@
+name: TEMPORARY — dry-run the HUD rent tiers on the working branch
+
+# Proves the HUD parsers (written without network access) against the real
+# API before a full refresh writes zips.db. Dry run: fetches and reports,
+# writes and commits nothing. Deleted before the branch merges.
+on:
+  push:
+    branches: [claude/legal-rep-invoice-tracking-9j1i9r]
+    paths:
+      - '.github/workflows/probe-hud.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: market-pulse-v21
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Token present?
+        env:
+          HUD_API_TOKEN: ${{ secrets.HUD_API_TOKEN }}
+        run: |
+          if [ -n "$HUD_API_TOKEN" ]; then echo "HUD_API_TOKEN is set (${#HUD_API_TOKEN} chars)"; else echo "::error::HUD_API_TOKEN is empty"; exit 1; fi
+      - name: Raw shape of one metro and one non-metro county (no token in output)
+        env:
+          HUD_API_TOKEN: ${{ secrets.HUD_API_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request
+          tok = os.environ["HUD_API_TOKEN"]
+          def get(path):
+              req = urllib.request.Request("https://www.huduser.gov/hudapi/public/fmr/" + path,
+                                           headers={"Authorization": "Bearer " + tok,
+                                                    "User-Agent": "market-pulse/1"})
+              try:
+                  with urllib.request.urlopen(req, timeout=60) as r:
+                      return r.status, r.read().decode()
+              except urllib.error.HTTPError as e:
+                  return e.code, e.read().decode()[:500]
+          for path in ("listStates", "statedata/OH", "data/3903599999", "data/3900199999"):
+              st, body = get(path)
+              print(f"== {path}: HTTP {st}, {len(body)} bytes")
+              try:
+                  j = json.loads(body)
+              except ValueError:
+                  print(body[:400]); continue
+              d = j.get("data", j)
+              if isinstance(d, list):
+                  print(json.dumps(d[:2])[:900])
+              else:
+                  print("keys:", list(d)[:20] if isinstance(d, dict) else type(d))
+                  for k in ("metroareas", "counties", "basicdata"):
+                      v = d.get(k) if isinstance(d, dict) else None
+                      if isinstance(v, list):
+                          print(f"  {k}: {len(v)} items; first: {json.dumps(v[:2])[:900]}")
+                      elif isinstance(v, dict):
+                          print(f"  {k}: dict {json.dumps(v)[:600]}")
+                  if isinstance(d, dict):
+                      print("  other:", {k: v for k, v in d.items() if not isinstance(v, (list, dict))})
+          PY
+      - name: The real script, dry run, Ohio only
+        env:
+          HUD_API_TOKEN: ${{ secrets.HUD_API_TOKEN }}
+        run: python scripts/refresh_rents.py --dry-run --states OH
