@@ -53,6 +53,7 @@ jobs:
         run: |
           python tests/test_compounders_series.py
           python tests/test_compounders_score.py
+          python tests/test_compounders_market.py
 
       - name: Run compounders refresh
         run: |
