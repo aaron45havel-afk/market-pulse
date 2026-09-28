@@ -226,8 +226,8 @@ CITIES = {("OH", "springfield"): {"key": "Springfield, OH", "lat": 39.92, "lng":
           ("IN", "akron"): {"key": "Akron, IN", "lat": 41.04, "lng": -86.03}}
 AGS = [
     {"ori": "OH1", "name": "Springfield Police Department", "state": "OH", "lat": 39.92, "lng": -83.80},
-    {"ori": "OH2", "name": "Springfield Township Police Department, Hamilton County",
-     "state": "OH", "lat": 39.26, "lng": -84.52},
+    {"ori": "OH2", "name": "Springfield Township Police Department, Clark County",
+     "state": "OH", "lat": 39.90, "lng": -83.86},             # next door, same name
     {"ori": "OH3", "name": "Akron Police Department", "state": "OH", "lat": 41.08, "lng": -81.52},
     {"ori": "OH4", "name": "Franklin Police Department", "state": "OH", "lat": 41.90, "lng": -80.80},
     {"ori": "OH5", "name": "Twinsburg Police Department", "state": "OH", "lat": 41.31, "lng": -81.44},
@@ -250,11 +250,15 @@ check("Twinsburg, OH" not in _m and _rep["ambiguous"] == 1,
 # MERGING — the researched table meets the FBI
 # ══════════════════════════════════════════════════════════════════
 EXIST = {"Marion, IN": {"violent_per_100k": 106.9, "confidence": "suspect", "note": "implausibly low"},
+         "Columbus, OH": {"violent_per_100k": None, "confidence": "suspect", "note": "partial NIBRS"},
+         "Savannah, GA": {"violent_per_100k": None, "confidence": "suspect", "note": "partial NIBRS"},
          "Warsaw, IN": {"violent_per_100k": 413.7, "confidence": "medium", "note": "aggregator"},
          "Peru, IN": {"violent_per_100k": 300.0, "confidence": "high", "note": "researched"}}
-FBI = {"Marion, IN": {"violent_per_100k": 95.0, "confidence": "high"},
-       "Warsaw, IN": {"violent_per_100k": 390.0, "confidence": "high"},
-       "Akron, OH": {"violent_per_100k": 700.0, "confidence": "high"}}
+FBI = {"Marion, IN": {"violent_per_100k": 95.0, "confidence": "high", "ori": "IN2"},
+       "Columbus, OH": {"violent_per_100k": 380.3, "confidence": "high", "ori": "OH2"},
+       "Savannah, GA": {"violent_per_100k": 85.8, "confidence": "high", "ori": "GA1"},
+       "Warsaw, IN": {"violent_per_100k": 390.0, "confidence": "high", "ori": "IN1"},
+       "Akron, OH": {"violent_per_100k": 700.0, "confidence": "high", "ori": "OH1"}}
 _t, _cnt = C.merge(EXIST, FBI)
 check(_t["Marion, IN"]["confidence"] == "suspect" and _t["Marion, IN"]["violent_per_100k"] == 106.9
       and _t["Marion, IN"]["fbi"]["violent_per_100k"] == 95.0,
@@ -264,8 +268,38 @@ check(_t["Warsaw, IN"]["violent_per_100k"] == 390.0 and _t["Warsaw, IN"]["prior_
       "an FBI figure replaces an aggregator one, keeping the old note")
 check(_t["Peru, IN"] == EXIST["Peru, IN"] and "Akron, OH" in _t,
       "a researched city the FBI didn't match is kept; a new city is added")
-check(_cnt == {"fbi": 2, "kept_suspect": 1, "replaced": 1, "kept_research": 1},
+check(_t["Columbus, OH"]["violent_per_100k"] == 380.3 and _t["Columbus, OH"]["prior_note"] == "partial NIBRS",
+      "A RESEARCHER'S DOUBT IS LIFTED BY A COMPLETE FBI FIGURE THAT PASSES EVERY "
+      "CHECK AND ISN'T IMPLAUSIBLY LOW — Columbus, flagged for partial NIBRS "
+      "reporting, now has a full year at 380 per 100k")
+check(_t["Savannah, GA"]["confidence"] == "suspect" and _t["Savannah, GA"]["fbi"]["violent_per_100k"] == 85.8,
+      "BUT NOT BY ONE UNDER 100: a city of 242,000 at 86 per 100k is exactly the "
+      "under-reporting the doubt was about, and stays unverified")
+check(_cnt == {"fbi": 3, "kept_suspect": 2, "lifted": 1, "replaced": 1, "kept_research": 1,
+               "dropped_fbi": 0},
       f"and the merge counts what it did ({_cnt})")
+# Next year's run starts from this year's table.
+_t2, _c2 = C.merge(_t, {"Warsaw, IN": {"violent_per_100k": 400.0, "confidence": "high", "ori": "IN1"}})
+check(_t2["Warsaw, IN"]["prior_note"] == "aggregator",
+      "THE RESEARCHER'S NOTE SURVIVES A SECOND RUN — carried forward, not "
+      "overwritten by last year's FBI entry")
+check("Peru, IN" in _t2 and "Akron, OH" not in _t2 and _c2["dropped_fbi"] >= 1,
+      "a researched-only city stays; last year's FBI-only city that this run "
+      "didn't cover is dropped")
+_t4, _c4 = C.merge(_t, FBI)
+check(_t4 == _t,
+      "RE-RUNNING ON ITS OWN OUTPUT CHANGES NOTHING — the yearly refresh starts "
+      "from last year's table, so the merge must be stable")
+_auto = {"Dropville, OH": {"violent_per_100k": 30.0, "confidence": "suspect", "ori": "OH7",
+                           "note": "Not used: violent offenses fell"}}
+_t5, _ = C.merge(_auto, {"Dropville, OH": {"violent_per_100k": 60.0, "confidence": "high", "ori": "OH7"}})
+check(_t5["Dropville, OH"]["confidence"] == "high" and _t5["Dropville, OH"]["violent_per_100k"] == 60.0,
+      "THE BUILD'S OWN SUSPECT FLAG DOESN'T STICK: next year's figures are "
+      "re-judged, and a recovered reporting record is used")
+_t3, _c3 = C.merge({"Gone, OH": {"violent_per_100k": 90.0, "confidence": "high", "ori": "OH9"}}, {})
+check("Gone, OH" not in _t3 and _c3["dropped_fbi"] == 1,
+      "A CITY ONLY THE FBI VOUCHED FOR, NOT MATCHED THIS YEAR, IS DROPPED — "
+      "not kept on last year's figure forever")
 _e = C.entry_for({"ori": "OH9", "name": "X Police Department"},
                  {"violent": 30.0, "property": 400.0, "basis": "latest", "years": ["2025"],
                   "population": 20_000, "suspect": "violent offenses fell"}, [2023, 2024, 2025])

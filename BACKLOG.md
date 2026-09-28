@@ -84,12 +84,16 @@ Format: `- [PHASE-SEEN] item — why it matters`
   income, so the first keyless rebuild skipped 486 Zillow ZIPs (median population ~485;
   20 with 1,500+). Keeping them with a null income would need `crime_proxy` and the
   composites to tolerate it.
-- [MF-FINDER] Crime coverage is the binding constraint on /multifamily, and with HUD rents
-  filling the rent gap it is now the ONLY big one. At the defaults Ohio keeps 3 ZIPs: the
-  safety gate removes 820, and 790 of those only because their city has no FBI figure
-  (Toledo, Dayton and Cleveland have no entry in `data/headroom/crime.json`). Nationally the verified
-  board is 102 ZIPs; showing unverified cities, 15,231. FBI Crime Data Explorer (agency
-  level) would take coverage from 394 hand-researched cities to thousands.
+- [MF-CRIME] At the defaults Ohio's safety gate still removes 401 ZIPs for no FBI figure.
+  Mostly ZIPs whose postal city isn't a police jurisdiction (townships, unincorporated
+  areas policed by a sheriff) and the 1,067 matched agencies with no complete year.
+  A sheriff's figure covers the whole unincorporated county, so using it would need its
+  own rule and label rather than being treated as a city rate.
+- [MF-CRIME] Rates are city-wide. A ZIP-level signal (e.g. agency incident locations, or
+  the Census tract of each NIBRS incident where published) would separate a big city's
+  safe and rough neighborhoods; nothing free publishes it nationally today.
+- [MF-CRIME] 27 researcher-flagged cities stay unverified because their FBI figure is
+  under 100 per 100k — a human pass could clear the genuinely safe ones.
 - [MF-HAZARDS] Connecticut has no hazard figures. FEMA's NRI uses CT's 2022 planning-region
   tract IDs; the Census 2020 ZCTA–tract file uses the old county-based ones, so no CT tract
   joins. The Census Bureau publishes a CT 2020→2022 tract crosswalk; applying it in

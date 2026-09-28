@@ -40,6 +40,7 @@ DROP_RATIO = 0.40            # latest year under 40% of the prior average → su
 DROP_MIN_PRIOR = 10          # ...when the prior average is at least this many offenses
 ZERO_POP = 5_000             # zero violent crime across every complete year → suspect
 MAX_KM = 40.0                # agency to the centroid of its city's ZIPs
+LIFT_MIN = 100.0             # violent per 100k an FBI figure needs to lift a researcher's doubt
 
 
 # ─── names ───────────────────────────────────────────────────────────
@@ -197,26 +198,52 @@ def entry_for(agency: dict, rate: dict, as_of_years: list) -> dict:
 def merge(existing: dict, fbi: dict) -> tuple[dict, dict]:
     """Existing hand-researched table + FBI entries → new table.
 
-    - A researcher's "suspect" stays suspect; the FBI figure is attached
-      under "fbi" for review, never promoted to a label.
+    - A researcher's "suspect" is lifted only by an FBI figure that passed
+      every rule AND is at least LIFT_MIN per 100k. Most of those doubts were
+      "no complete FBI year yet", which the FBI has since answered (Chicago,
+      Columbus). The rest were figures too low to believe — and below 100 an
+      under-reporting department and a genuinely safe one look the same, so
+      there the doubt stands and the FBI figure rides along under "fbi".
     - Otherwise an FBI figure replaces the researched one (a primary source
       over aggregators); the old note is kept as "prior_note".
-    - A researched city the FBI didn't match is kept as it was.
+    - A researched city the FBI didn't match is kept as it was; a city
+      that only ever had an FBI figure and wasn't matched this time is
+      dropped, not kept on last year's number.
     """
     table = {}
-    counts = {"fbi": 0, "kept_suspect": 0, "replaced": 0, "kept_research": 0}
+    counts = {"fbi": 0, "kept_suspect": 0, "lifted": 0, "replaced": 0,
+              "kept_research": 0, "dropped_fbi": 0}
     for key, rec in existing.items():
-        if key not in fbi:
-            table[key] = rec
-            counts["kept_research"] += 1
+        if key in fbi:
+            continue
+        if rec.get("ori"):
+            # Last run's FBI figure for a city this run didn't match: the
+            # FBI no longer vouches for it, so it goes rather than lingering.
+            counts["dropped_fbi"] += 1
+            continue
+        table[key] = rec
+        counts["kept_research"] += 1
     for key, rec in fbi.items():
         old = existing.get(key)
-        if old and old.get("confidence") == "suspect":
-            table[key] = dict(old, fbi=rec)
-            counts["kept_suspect"] += 1
+        # A researcher's doubt: an entry with no ORI (hand-researched) marked
+        # suspect. The build's own suspect flags carry an ORI and are simply
+        # re-judged from this year's figures below — a flag never outlives
+        # the data that raised it.
+        if old and not old.get("ori") and old.get("confidence") == "suspect":
+            v = rec.get("violent_per_100k")
+            if rec.get("confidence") == "high" and v is not None and v >= LIFT_MIN:
+                table[key] = dict(rec, prior_note=old.get("note"))
+                counts["lifted"] += 1
+                counts["fbi"] += 1
+            else:
+                table[key] = dict(old, fbi=rec)
+                counts["kept_suspect"] += 1
             continue
         if old:
-            rec = dict(rec, prior_note=old.get("note"))
+            # The researcher's note survives every later run: an FBI entry
+            # carries it forward as prior_note, never overwrites it.
+            prior = old.get("prior_note") if old.get("ori") else old.get("note")
+            rec = dict(rec, prior_note=prior) if prior else rec
             counts["replaced"] += 1
         table[key] = rec
         counts["fbi"] += 1

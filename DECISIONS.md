@@ -241,3 +241,33 @@ rather than a composite with invented weights. 2–4 unit buildings = share of h
 units in 2- and 3–4-unit structures (B25024_004 + _005), thresholds 5 / 10 / 15% (the
 typical ZIP is 4%). Both are offered only where the column has data, like the other
 Census filters.
+
+## 2026-09-28 — The safety gate uses every city police department's FBI reports
+**Decided.** `crime.json` was 394 hand-researched cities, 128 of them flagged suspect —
+about 213 usable nationally, so the safe filter emptied most boards. It is now built
+from the FBI Crime Data Explorer's own backend (no key) for every city agency that
+matches a ZIP city: 8,440 agencies, 2023–2025, 6,977 usable cities. Rules
+(`crime_build.py`, all tested and mutation-checked):
+- A year counts only if BOTH violent and property crime were reported all 12 months;
+  nothing is scaled up from a partial year.
+- Cities of 10,000+ use their latest complete year; smaller towns pool their complete
+  years so one incident can't move a tier.
+- A latest year under 40% of the agency's own prior average (on a base of 10+), or zero
+  violent crime across every complete year in a town of 5,000+, is suspect — a reporting
+  change, never a safe label.
+- Agencies tie to ZIP cities by state + spelling-normalised name, within 40 km of the
+  city's ZIPs; a city agency beats a township of the same name; ambiguity gets nothing.
+- A researcher's "suspect" is lifted only by an FBI figure that passes every rule and is
+  at least 100 per 100k (75 lifted, e.g. Chicago, Columbus). Below 100, under-reporting
+  and genuine safety look the same, so those doubts stand (27, e.g. Savannah at 86,
+  Cheshire CT at 6).
+- Each yearly run starts from the last table and is stable on its own output; an FBI-only
+  city not matched in a later run is dropped rather than kept on an old figure.
+
+## 2026-09-28 — The FBI pull runs on ten runners at once
+**Decided.** The CDE answers a request in ~0.3s, but one runner making every request
+crawled: a 90-minute run never finished. Two causes, both measured: a fresh connection
+per request met connect hangs (~1 in 25), fixed with one persistent connection per
+worker; and sustained volume from one runner slowed further, fixed by splitting the
+agencies ten ways (`--shard i/10`) and merging with checks for a missing or duplicated
+shard. The national pull now takes about four minutes.
