@@ -1,4 +1,4 @@
-name: TEMPORARY — first national FBI city crime pull
+name: TEMPORARY — FBI city crime pull (timed Ohio test)
 
 # Runs the real fetch on the working branch and commits the raw per-agency
 # file there, so the trust rules can be built and tuned against real data
@@ -11,12 +11,12 @@ on:
       - '.github/workflows/probe-fbi.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   pull:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: market-pulse-v21
@@ -27,16 +27,18 @@ jobs:
           python-version: '3.11'
       - name: Prove the parsers
         run: python tests/test_crime_build.py
-      - name: Fetch every city agency, 2023–2025
-        run: python scripts/fetch_fbi_crime.py --end-year 2025
-      - name: Commit the raw pull to the working branch
+      - name: Fetch Ohio only, timed, with progress
+        run: python -u scripts/fetch_fbi_crime.py --end-year 2025 --states OH
+      - name: What came back
         run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add market-pulse-v21/data/headroom/fbi_agencies.json
-          git diff --staged --quiet && { echo "no change"; exit 0; }
-          git commit -m "chore: first national FBI city crime pull (raw, 2023-2025)"
-          for i in 1 2 3 4; do git push origin HEAD:claude/legal-rep-invoice-tracking-9j1i9r && exit 0; sleep $((i * 5)); git pull --rebase origin claude/legal-rep-invoice-tracking-9j1i9r || true; done
-          exit 1
+          python - <<'PY'
+          import json, collections
+          d = json.load(open("data/headroom/fbi_agencies.json"))
+          ags = d["agencies"]
+          print(len(ags), "agencies;", d["_meta"]["failed_requests"], "failed")
+          m = collections.Counter(tuple(a["v"][y]["m"] for y in ("2023", "2024", "2025")) if a.get("v") else None for a in ags)
+          print("violent months reported (2023, 2024, 2025):", m.most_common(8))
+          for a in ags:
+              if a["name"].split(" Police")[0] in ("Akron", "Cleveland", "Columbus", "Toledo", "Dayton", "Cincinnati", "Dublin", "Westerville"):
+                  print(" ", a["name"], {y: (a["v"][y], a["p"][y]) for y in ("2024", "2025")} if a.get("v") else None)
+          PY

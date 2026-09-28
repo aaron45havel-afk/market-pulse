@@ -13,8 +13,9 @@ NO KEY. The Crime Data Explorer's own web backend (cde.ucr.cjis.gov/LATEST)
 answers without the api.data.gov key the public API gateway asks for, and
 returns the same figures (checked side by side for Akron, 2024 and 2025).
 
-ONE REQUEST PER AGENCY PER OFFENSE. There is no bulk file: ~11,800 city
-agencies x 2 offenses, six at a time, is about twenty minutes.
+ONE REQUEST PER AGENCY PER OFFENSE. There is no bulk file, so only the
+agencies that match a ZIP city on the board are fetched (the build's own
+matching rules) — the rest are villages with no ZIP here.
 
 A BLANK MONTH IS NOT A ZERO. The FBI returns null for a month an agency
 did not report; summing it as zero is how a department that sent four
@@ -29,7 +30,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -38,7 +41,9 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 OUT = ROOT / "data" / "headroom" / "fbi_agencies.json"
+ZIPS_DB = ROOT / "data" / "zips.db"
 BASE = "https://cde.ucr.cjis.gov/LATEST"
 UA = {"User-Agent": "MarketPulse/1.0 (city crime layer; invoice@archfms.com)"}
 STATES = ("AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS "
@@ -47,7 +52,7 @@ OFFENSES = {"v": "violent-crime", "p": "property-crime"}
 YEARS = 3
 THREADS = 6
 
-MIN_AGENCIES = 10_000          # the FBI listed 11,784 city agencies in Sept 2026
+MIN_AGENCIES = 5_000           # that match a ZIP city; the FBI lists 11,784 city agencies
 MAX_STATE_LIST_FAILURES = 2
 MAX_REQUEST_FAILURE = 0.02
 
@@ -56,12 +61,12 @@ class Refuse(Exception):
     """A pull that must not publish."""
 
 
-def _get(path: str, attempts: int = 4):
+def _get(path: str, attempts: int = 3):
     last = None
     for i in range(attempts):
         try:
             req = urllib.request.Request(BASE + path, headers=UA)
-            with urllib.request.urlopen(req, timeout=90) as r:
+            with urllib.request.urlopen(req, timeout=30) as r:
                 return json.loads(r.read())
         except urllib.error.HTTPError as e:
             if e.code == 404:
@@ -125,6 +130,22 @@ def yearly(payload: dict, years: list) -> dict:
 
 
 # ─── fetch ───────────────────────────────────────────────────────────
+def matchable(agencies: list) -> list:
+    """Only the agencies that tie to a ZIP city on the board — the same
+    name, distance and ambiguity rules the build applies (crime_build.py).
+    The rest are villages with no ZIP here; fetching them is wasted work."""
+    import crime_build as C
+    from build_crime import zip_cities
+    conn = sqlite3.connect(str(ZIPS_DB))
+    try:
+        cities = zip_cities(conn)
+    finally:
+        conn.close()
+    matched, _ = C.match_agencies(agencies, cities)
+    keep = {a["ori"] for a in matched.values()}
+    return [a for a in agencies if a["ori"] in keep]
+
+
 def fetch(states: list, end_year: int) -> dict:
     years = list(range(end_year - YEARS + 1, end_year + 1))
     agencies, list_failures = [], []
@@ -132,9 +153,12 @@ def fetch(states: list, end_year: int) -> dict:
         try:
             agencies += city_agencies(_get(f"/agency/byStateAbbr/{st}") or {}, st)
         except Exception as e:                               # noqa: BLE001
-            print(f"  agency list failed for {st}: {e}")
+            print(f"  agency list failed for {st}: {e}", flush=True)
             list_failures.append(st)
-    print(f"{len(agencies):,} city agencies in {len(states) - len(list_failures)} states")
+    listed = len(agencies)
+    agencies = matchable(agencies)
+    print(f"{listed:,} city agencies in {len(states) - len(list_failures)} states; "
+          f"{len(agencies):,} match a ZIP city and will be fetched", flush=True)
 
     window = f"from=01-{years[0]}&to=12-{years[-1]}"
     failed = []
@@ -151,11 +175,25 @@ def fetch(states: list, end_year: int) -> dict:
         return rec
 
     t0 = time.time()
+    done = [0]
+    lock = threading.Lock()
+
+    def tracked(a):
+        rec = one(a)
+        with lock:
+            done[0] += 1
+            if done[0] % 250 == 0 or done[0] == len(agencies):
+                el = time.time() - t0
+                print(f"  {done[0]:,}/{len(agencies):,} agencies · {el:.0f}s · "
+                      f"{done[0] * len(OFFENSES) / el:.1f} req/s · {len(failed)} failed",
+                      flush=True)
+        return rec
+
     with ThreadPoolExecutor(THREADS) as ex:
-        rows = list(ex.map(one, agencies))
-    print(f"fetched in {time.time() - t0:.0f}s; {len(failed)} failed requests")
+        rows = list(ex.map(tracked, agencies))
+    print(f"fetched in {time.time() - t0:.0f}s; {len(failed)} failed requests", flush=True)
     return {"agencies": rows, "years": years, "list_failures": list_failures,
-            "failed": failed, "requests": len(agencies) * len(OFFENSES)}
+            "failed": failed, "requests": len(agencies) * len(OFFENSES), "listed": listed}
 
 
 def guard(pull: dict, limited: bool) -> None:
