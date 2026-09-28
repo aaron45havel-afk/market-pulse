@@ -40,7 +40,7 @@ jobs:
         with:
           script: |
             const body = `These research layers are past their refresh window:\n\n${{ toJSON(steps.fresh.outputs.body) }}\n\n` +
-              `**Crime** can be refreshed automatically — run the *Refresh crime layer (FBI CDE)* workflow (needs the \`CDE_API_KEY\` secret).\n` +
+              `**Crime** refreshes itself from the FBI each October and January (the *Refresh crime layer (FBI CDE)* workflow, no key needed); run it by hand if a release slipped.\n` +
               `**Climate / hazards / calibration** need a research re-run; they have no free bulk API.\n\n` +
               `Until refreshed, /norcal and /headroom flag these columns as stale rather than presenting them as current.`;
             const title = 'Research layers need a refresh';

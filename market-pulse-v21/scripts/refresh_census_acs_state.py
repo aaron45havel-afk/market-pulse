@@ -1,8 +1,8 @@
 """Refresh state-level Census ACS demographics annually.
 
 Pulls median household income, % adults 25+ with a bachelor's+ degree,
-and median age for all 50 states + DC from the Census ACS 5-year API.
-Single bulk call, no API key required for this volume.
+and median age for all 50 states + DC from the Census ACS 5-year bulk
+files (acs_bulk.py) — no API key.
 
 Output: ``data/census_acs_state_overrides.json``. ``data_providers``
 patches CHOROPLETH_STATES on import — refreshes the median_income +
@@ -22,10 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import sys
-import urllib.error
-import urllib.request
 from datetime import date
 from pathlib import Path
 
@@ -63,96 +60,60 @@ ACS_VARS = (
 )
 
 
-def fetch_state_acs(vintage: int) -> dict[str, dict]:
-    """Single bulk API call → 51 state rows. Returns
-    {state_code: {median_income, pct_bachelors, median_age}}.
-    Census null markers (negative ints) become None."""
-    api_key = os.environ.get("CENSUS_API_KEY", "").strip()
-    if not api_key:
-        raise SystemExit(
-            "CENSUS_API_KEY is not set. Get one free at "
-            "https://api.census.gov/data/key_signup.html and add it as a "
-            "GitHub repo secret + workflow env var."
-        )
-    url = (
-        f"https://api.census.gov/data/{vintage}/acs/acs5"
-        f"?get={ACS_VARS}&for=state:*&key={api_key}"
-    )
-    log.info("Fetching ACS %d 5-year for all states …", vintage)
-    req = urllib.request.Request(url, headers={"User-Agent": "market-pulse/1"})
-    try:
-        with urllib.request.urlopen(req, timeout=60) as r:
-            rows = json.loads(r.read())
-    except urllib.error.HTTPError as e:
-        raise SystemExit(f"Census ACS HTTP {e.code} — vintage {vintage} may not be released yet")
-    except urllib.error.URLError as e:
-        raise SystemExit(f"Network error: {e.reason}")
-
-    if not isinstance(rows, list) or not rows:
-        raise SystemExit(
-            f"Census ACS returned no rows for vintage {vintage} — it may not be released yet")
-    headers = rows[0]
-    try:
-        inc_idx       = headers.index("B19013_001E")
-        edu_total_idx = headers.index("B15003_001E")
-        ba_idx        = headers.index("B15003_022E")
-        ma_idx        = headers.index("B15003_023E")
-        prof_idx      = headers.index("B15003_024E")
-        doc_idx       = headers.index("B15003_025E")
-        age_idx       = headers.index("B01002_001E")
-        state_idx     = headers.index("state")
-    except ValueError as e:
-        raise SystemExit(
-            f"Census ACS response missing an expected column ({e}) — "
-            f"vintage {vintage} schema may have changed")
-
-    def _int(v):
-        try:
-            n = int(float(v))
-        except (ValueError, TypeError):
-            return None
-        return n if n >= 0 else None
-
-    def _float(v):
-        try:
-            n = float(v)
-        except (ValueError, TypeError):
-            return None
-        return n if n >= 0 else None
-
+def derive_state(fips_rows: dict) -> dict[str, dict]:
+    """{state_fips: {var: value}} → {state_code: {median_income,
+    pct_bachelors_state, median_age}}. Pure."""
     out: dict[str, dict] = {}
-    for row in rows[1:]:
-        fips = row[state_idx].strip().zfill(2)
-        code = STATE_FIPS.get(fips)
+    for fips, v in fips_rows.items():
+        code = STATE_FIPS.get(fips.zfill(2))
         if not code:
             continue
-        income = _int(row[inc_idx])
-        edu_total = _int(row[edu_total_idx])
-        ba_count = sum((_int(row[i]) or 0) for i in (ba_idx, ma_idx, prof_idx, doc_idx))
-        pct_bach = (ba_count / edu_total * 100) if (edu_total and edu_total > 0) else None
-        age = _float(row[age_idx])
+        income = v.get("B19013_001E")
+        edu_total = v.get("B15003_001E")
+        ba = sum((v.get(k) or 0) for k in ("B15003_022E", "B15003_023E",
+                                           "B15003_024E", "B15003_025E"))
+        age = v.get("B01002_001E")
         entry: dict = {}
-        if income is not None:        entry["median_income"]     = income
-        if pct_bach is not None:      entry["pct_bachelors_state"] = round(pct_bach, 1)
-        if age is not None:           entry["median_age"]        = round(age, 1)
+        if income is not None:
+            entry["median_income"] = int(income)
+        if edu_total:
+            entry["pct_bachelors_state"] = round(ba / edu_total * 100, 1)
+        if age is not None:
+            entry["median_age"] = round(float(age), 1)
         if entry:
             out[code] = entry
-    log.info("  → %d states with ACS data", len(out))
     return out
+
+
+def fetch_state_acs(vintage: int | None) -> tuple[int, dict[str, dict]]:
+    """51 state rows from the Census Bureau's keyless bulk files (acs_bulk.py)
+    — the data API needs a key this repo couldn't activate. `vintage` None
+    means the newest 5-year release on the server."""
+    sys.path.insert(0, str(REPO_ROOT))
+    import acs_bulk as AB
+    year = vintage or AB.latest_year(date.today().year)
+    log.info("Fetching ACS %d 5-year for all states (bulk files) …", year)
+    try:
+        raw = AB.fetch(("b19013", "b15003", "b01002"), year,
+                       set(ACS_VARS.split(",")), prefix=AB.STATE_PREFIX, min_rows=51)
+    except AB.AcsUnavailable as e:
+        raise SystemExit(f"Census ACS bulk files unavailable: {e}")
+    out = derive_state(raw)
+    log.info("  → %d states with ACS data", len(out))
+    return year, out
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     parser.add_argument(
-        "--vintage", type=int, default=2024,
-        help="ACS 5-year vintage year (default: 2024, released Dec 2025). "
-             "Update annually after each December release.",
+        "--vintage", type=int, default=None,
+        help="ACS 5-year vintage year (default: the newest on the Census server).",
     )
     parser.add_argument("--dry-run", action="store_true",
                         help="Fetch + parse but don't write the JSON file.")
     args = parser.parse_args(argv)
 
-    overrides = fetch_state_acs(args.vintage)
+    vintage, overrides = fetch_state_acs(args.vintage)
     if not overrides:
         log.error("No state data returned — aborting.")
         return 1
@@ -160,8 +121,8 @@ def main(argv: list[str] | None = None) -> int:
     payload = {
         "_meta": {
             "as_of": date.today().isoformat(),
-            "vintage": args.vintage,
-            "source": f"Census ACS {args.vintage} 5-year API (state-level)",
+            "vintage": vintage,
+            "source": f"Census ACS {vintage} 5-year, state level (keyless bulk files)",
             "states_covered": len(overrides),
         },
         "overrides": overrides,

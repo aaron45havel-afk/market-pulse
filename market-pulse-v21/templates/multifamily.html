@@ -361,6 +361,8 @@
     <div style="font-size:0.75rem;color:var(--ink-3);margin:-0.4rem 0 0.9rem">
         <b>Safety uses real FBI figures</b> — never the database's <code>crime_index</code>, which is density + income + education.
         {{ safety_coverage.usable }} cities can clear this gate; a city with no verified figure is never counted as safe.
+        {% set fm = safety_coverage.meta or {} %}{% if fm.fbi_rules %}Figures are each police department's own reports to the FBI ({{ fm.fbi_years[0] }}–{{ fm.fbi_years[-1] }}): a city counts only with a complete year, towns under {{ '{:,}'.format(fm.fbi_rules.pool_below) }} people pool their years, and a sudden collapse or years of zero violent crime is read as a reporting gap, never as safe.{% endif %}
+        The rate is city-wide: a big city's safest and roughest neighborhoods get the same number.
         {% if not national %}<a href="/headroom?mode=hh&hstate={{ state }}&units={{ units }}&maxprice={{ max_price|int }}">Max-offer view for a specific building →</a>{% endif %}
     </div>
 

@@ -75,7 +75,6 @@ GAZETTEER_URL = (
 # Note: state + city come from the Zillow ZHVI CSV directly (it has
 # State and City columns) so we don't need a separate Census ZCTA→state
 # crosswalk. Saves one external dependency and one network call.
-ACS_API = "https://api.census.gov/data/2022/acs/acs5"
 ACS_VARS = (
     "B19013_001E,"   # Median household income
     "B15003_001E,"   # Pop 25+ (denominator for bachelor's %)
@@ -107,6 +106,12 @@ ACS_VARS = (
     "B25034_011E,"   # Year built 1939 or earlier
     "B25035_001E"    # Median year structure built
 )
+# Age 25–34 (young professional) — B01001, male and female 25–29 / 30–34.
+ACS_AGE_VARS = ("B01001_001E", "B01001_011E", "B01001_012E", "B01001_035E", "B01001_036E")
+# One keyless bulk file per table (acs_bulk.py). The vintage is the newest
+# on the Census server, not a pinned year.
+ACS_TABLES = ("b01003", "b19013", "b15003", "b25003", "b25024", "b25070",
+              "b25034", "b25035", "b01001")
 
 # State FIPS → 2-letter code. Covers 50 + DC + the 5 territories that
 # may show up in Census files. Anything else gets dropped.
@@ -364,6 +369,8 @@ def _load_acs_from_prior_db() -> dict[str, dict]:
         "pct_rent_burdened",
         "pct_pre_1960",
         "median_year_built",
+        "pct_age_25_34",
+        "pct_2_4_units",
     ]
     out: dict[str, dict] = {}
     try:
@@ -386,146 +393,68 @@ def _load_acs_from_prior_db() -> dict[str, dict]:
     return out
 
 
+def derive_acs(v: dict) -> dict:
+    """One ZCTA's ACS estimates (API spelling, e.g. "B25003_003E") → the
+    zips.db columns. Missing or suppressed estimates are None and yield
+    None, never zero."""
+    def g(k):
+        return v.get(k)
+
+    def share(num, den):
+        return round(num / den * 100, 1) if (den and den > 0 and num is not None) else None
+
+    edu_total = g("B15003_001E")
+    ba = sum((g(k) or 0) for k in ("B15003_022E", "B15003_023E", "B15003_024E", "B15003_025E"))
+    units_tot = g("B25024_001E")
+    multi = sum((g(k) or 0) for k in ("B25024_004E", "B25024_005E", "B25024_006E",
+                                      "B25024_007E", "B25024_008E", "B25024_009E"))
+    two_four = sum((g(k) or 0) for k in ("B25024_004E", "B25024_005E"))
+    # Rent burden: share of renters WITH a computable burden paying 30%+ —
+    # "not computed" households come out of the denominator.
+    rb_denom = (g("B25070_001E") or 0) - (g("B25070_011E") or 0)
+    rb_30 = sum((g(k) or 0) for k in ("B25070_007E", "B25070_008E", "B25070_009E", "B25070_010E"))
+    pre60 = sum((g(k) or 0) for k in ("B25034_009E", "B25034_010E", "B25034_011E"))
+    yb_med = g("B25035_001E")
+    age = sum((g(k) or 0) for k in ACS_AGE_VARS[1:])
+    ten_rent = g("B25003_003E")
+    return {
+        "median_household_income": g("B19013_001E") or None,
+        "pct_bachelors": share(ba, edu_total),
+        "population": g("B01003_001E"),
+        "pct_renter_occupied": share(ten_rent, g("B25003_001E")),
+        "pct_multi_unit": share(multi, units_tot),
+        "pct_2_4_units": share(two_four, units_tot),
+        "pct_rent_burdened": share(rb_30, rb_denom),
+        "pct_pre_1960": share(pre60, g("B25034_001E")),
+        # Census uses 0 / 18xx sentinels for suppressed medians.
+        "median_year_built": yb_med if yb_med and yb_med >= 1900 else None,
+        "pct_age_25_34": share(age, g("B01001_001E")),
+    }
+
+
 def fetch_acs_zcta() -> dict[str, dict]:
-    """Census ACS 2022 5-year API call — one bulk request returns all
-    ~33K ZCTAs. Keys: median_household_income, pct_bachelors, population.
-    Census null markers (negative values) become None.
+    """Census ACS 5-year, every ZCTA, from the Bureau's keyless bulk files
+    (acs_bulk.py) — the newest vintage on the server.
 
-    Census now requires an API key for ACS bulk queries (used to be
-    optional). Set CENSUS_API_KEY as a GitHub repo secret + workflow
-    env var. Free signup: https://api.census.gov/data/key_signup.html
-
-    Census occasionally returns a non-JSON body (HTML throttle page or
-    a truncated empty body) with a 2xx status. Retry up to 3× on JSON
-    parse failure with linear backoff before giving up.
-
-    Graceful fallback: if the key is missing/invalid OR Census keeps
-    returning non-JSON after retries, carry forward the prior ACS
-    values from the existing zips.db so the rest of the refresh still
-    runs. ACS is annual, so a month of staleness costs nothing."""
-    api_key = os.environ.get("CENSUS_API_KEY", "").strip()
-    if not api_key:
-        log.warning(
-            "CENSUS_API_KEY not set — carrying forward prior ACS values "
-            "from zips.db. Sign up at https://api.census.gov/data/key_signup.html"
-        )
+    The data API now requires a key, and a missing or invalid one made
+    this step "carry forward" values that were already empty, month after
+    month, while the job went green. The bulk files need no key. If they
+    can't be read, the prior values are still carried so the rest of the
+    refresh runs — but as a visible GitHub warning, not a quiet log line."""
+    import acs_bulk as AB
+    wanted = set(ACS_VARS.split(",")) | set(ACS_AGE_VARS)
+    try:
+        year = AB.latest_year(date.today().year)
+        log.info("Fetching Census ACS %d 5-year (bulk files, %d tables) …", year, len(ACS_TABLES))
+        raw = AB.fetch(ACS_TABLES, year, wanted)
+    except AB.AcsUnavailable as e:
+        print(f"::warning::Census ACS bulk files unavailable ({e}) — carrying "
+              f"forward the prior zips.db values")
         prior = _load_acs_from_prior_db()
         log.info("  → %d ZCTAs carried forward from prior zips.db", len(prior))
         return prior
-    url = (
-        f"{ACS_API}?get={ACS_VARS}"
-        f"&for=zip%20code%20tabulation%20area:*"
-        f"&key={api_key}"
-    )
-    log.info("Fetching Census ACS 2022 5-year ZCTA data …")
-    rows = None
-    last_err: str | None = None
-    for attempt in range(3):
-        raw = _http_get(url)
-        try:
-            rows = json.loads(raw)
-            break
-        except json.JSONDecodeError as e:
-            preview = raw[:120].decode("utf-8", errors="replace").replace("\n", " ")
-            last_err = f"{e}; body starts with: {preview!r}"
-            log.warning("Census ACS returned non-JSON on attempt %d/3: %s", attempt + 1, last_err)
-            if attempt < 2:
-                time.sleep(5 * (attempt + 1))
-    if rows is None:
-        log.warning(
-            "Census ACS API kept returning non-JSON after 3 attempts (%s) — "
-            "carrying forward prior ACS values from zips.db.", last_err
-        )
-        prior = _load_acs_from_prior_db()
-        log.info("  → %d ZCTAs carried forward from prior zips.db", len(prior))
-        return prior
-    headers = rows[0]
-    zcta_idx = headers.index("zip code tabulation area")
-    inc_idx = headers.index("B19013_001E")
-    edu_total_idx = headers.index("B15003_001E")
-    ba_idx = headers.index("B15003_022E")
-    ma_idx = headers.index("B15003_023E")
-    prof_idx = headers.index("B15003_024E")
-    doc_idx = headers.index("B15003_025E")
-    pop_idx = headers.index("B01003_001E")
-    # Multifamily signal indices (B25003 tenure, B25024 units in
-    # structure, B25070 gross rent as % of income).
-    ten_tot_idx   = headers.index("B25003_001E")
-    ten_rent_idx  = headers.index("B25003_003E")
-    units_tot_idx = headers.index("B25024_001E")
-    units_2_idx   = headers.index("B25024_004E")
-    units_34_idx  = headers.index("B25024_005E")
-    units_59_idx  = headers.index("B25024_006E")
-    units_1019_idx= headers.index("B25024_007E")
-    units_2049_idx= headers.index("B25024_008E")
-    units_50p_idx = headers.index("B25024_009E")
-    rb_tot_idx     = headers.index("B25070_001E")
-    rb_30_idx      = headers.index("B25070_007E")
-    rb_35_idx      = headers.index("B25070_008E")
-    rb_40_idx      = headers.index("B25070_009E")
-    rb_50_idx      = headers.index("B25070_010E")
-    rb_notcomp_idx = headers.index("B25070_011E")
-    yb_tot_idx   = headers.index("B25034_001E")
-    yb_50s_idx   = headers.index("B25034_009E")
-    yb_40s_idx   = headers.index("B25034_010E")
-    yb_pre40_idx = headers.index("B25034_011E")
-    yb_med_idx   = headers.index("B25035_001E")
-
-    def _int(v):
-        try:
-            n = int(v)
-        except (ValueError, TypeError):
-            return None
-        return n if n >= 0 else None
-
-    out: dict[str, dict] = {}
-    for row in rows[1:]:
-        zcode = row[zcta_idx].strip().zfill(5)
-        income = _int(row[inc_idx])
-        edu_total = _int(row[edu_total_idx])
-        ba_count = sum((_int(row[i]) or 0) for i in (ba_idx, ma_idx, prof_idx, doc_idx))
-        pct_bach = (ba_count / edu_total * 100) if (edu_total and edu_total > 0) else None
-
-        # ── Multifamily signals ─────────────────────────────────────
-        ten_tot = _int(row[ten_tot_idx])
-        ten_rent = _int(row[ten_rent_idx])
-        pct_renter = (ten_rent / ten_tot * 100) if (ten_tot and ten_rent is not None) else None
-
-        units_tot = _int(row[units_tot_idx])
-        multi_count = sum((_int(row[i]) or 0) for i in
-                          (units_2_idx, units_34_idx, units_59_idx,
-                           units_1019_idx, units_2049_idx, units_50p_idx))
-        pct_multi = (multi_count / units_tot * 100) if (units_tot and units_tot > 0) else None
-
-        # Rent burden denominator excludes "not computed" households so the
-        # percentage reflects share of *renters with computable burden* that
-        # are paying 30%+. Matches how HUD/Census typically report it.
-        rb_tot = _int(row[rb_tot_idx]) or 0
-        rb_notcomp = _int(row[rb_notcomp_idx]) or 0
-        rb_denom = rb_tot - rb_notcomp
-        rb_30plus = sum((_int(row[i]) or 0) for i in
-                        (rb_30_idx, rb_35_idx, rb_40_idx, rb_50_idx))
-        pct_rent_burdened = (rb_30plus / rb_denom * 100) if rb_denom > 0 else None
-
-        # Age of stock — value-add / deferred-maintenance signal.
-        yb_tot = _int(row[yb_tot_idx])
-        pre60 = sum((_int(row[i]) or 0) for i in (yb_50s_idx, yb_40s_idx, yb_pre40_idx))
-        pct_pre_1960 = (pre60 / yb_tot * 100) if (yb_tot and yb_tot > 0) else None
-        yb_med = _int(row[yb_med_idx])
-        # Census uses 0/18xx sentinels for suppressed medians.
-        median_year_built = yb_med if yb_med and yb_med >= 1900 else None
-
-        out[zcode] = {
-            "median_household_income": income,
-            "pct_bachelors": round(pct_bach, 1) if pct_bach is not None else None,
-            "population": _int(row[pop_idx]),
-            "pct_renter_occupied": round(pct_renter, 1) if pct_renter is not None else None,
-            "pct_multi_unit": round(pct_multi, 1) if pct_multi is not None else None,
-            "pct_rent_burdened": round(pct_rent_burdened, 1) if pct_rent_burdened is not None else None,
-            "pct_pre_1960": round(pct_pre_1960, 1) if pct_pre_1960 is not None else None,
-            "median_year_built": median_year_built,
-        }
-    log.info("  → %d ZCTAs with ACS data", len(out))
+    out = {z: derive_acs(v) for z, v in raw.items()}
+    log.info("  → %d ZCTAs with ACS %d data", len(out), year)
     return out
 
 
@@ -631,8 +560,8 @@ CREATE TABLE zips (
     rent_source              TEXT,    -- 'zori' or 'imputed'
     median_household_income  INTEGER,
     pct_bachelors            REAL,
-    -- Multifamily-investor signals (Census ACS 2022 5-yr). Populated
-    -- on the next refresh-national-zips run; NULL on older DBs.
+    -- Multifamily-investor signals (Census ACS 5-yr, newest vintage,
+    -- from the keyless bulk files — acs_bulk.py).
     --   pct_renter_occupied:    share of occupied units that are
     --                           rented (high = tenant pool already
     --                           exists).
@@ -645,6 +574,10 @@ CREATE TABLE zips (
     pct_rent_burdened        REAL,
     pct_pre_1960             REAL,
     median_year_built        INTEGER,
+    --   pct_age_25_34:          residents aged 25–34 (young professional)
+    --   pct_2_4_units:          housing units in 2–4 unit buildings
+    pct_age_25_34            REAL,
+    pct_2_4_units            REAL,
     walk_score               REAL,
     crime_index              REAL,
     restaurant_score         REAL,
@@ -684,7 +617,52 @@ CREATE INDEX idx_zips_composite ON zips(composite_balanced DESC);
 """
 
 
-def build_db(rows: list[dict], dry_run: bool) -> None:
+def snapshot_rent_ladder(path: Path) -> dict:
+    """{zip: {column: value}} for the rent-ladder columns refresh_rents.py
+    adds, read from the database about to be replaced.
+
+    This build deletes zips.db and lays the rows down again, and those
+    columns aren't part of its schema — so without this, every ZIP whose
+    rent came from HUD lost it on the 1st of the month until the rent
+    refresh on the 2nd, and lost it for a month if HUD failed that day."""
+    import refresh_rents as R
+    if not path.exists():
+        return {}
+    conn = sqlite3.connect(path)
+    try:
+        have = {r[1] for r in conn.execute("PRAGMA table_info(zips)")}
+        cols = [c for c, _ in R.RENT_COLUMNS if c in have]
+        if not cols:
+            return {}
+        return {r[0]: dict(zip(cols, r[1:])) for r in
+                conn.execute(f"SELECT zip, {', '.join(cols)} FROM zips")}
+    finally:
+        conn.close()
+
+
+def restore_rent_ladder(conn, snapshot: dict, zori: dict) -> dict | None:
+    """Put the stored per-source rents back and re-resolve every ZIP.
+
+    The stored HUD and ACS figures are carried; ZORI is this build's fresh
+    pull, authoritative as always. Resolution is refresh_rents.apply —
+    the same ladder, precedence and cap-rate arithmetic — so a rebuilt
+    database reads exactly as the rent refresh left it, with this month's
+    Zillow figures."""
+    import refresh_rents as R
+    if not snapshot:
+        return None
+    R.ensure_columns(conn)
+    cols = sorted({c for rec in snapshot.values() for c in rec})
+    have = {r[0] for r in conn.execute("SELECT zip FROM zips")}
+    conn.executemany(
+        f"UPDATE zips SET {', '.join(f'{c}=?' for c in cols)} WHERE zip=?",
+        [[rec.get(c) for c in cols] + [z] for z, rec in snapshot.items() if z in have])
+    conn.commit()
+    _z, safmr, fmr, acs = R.carry_stored(conn)
+    return R.apply(conn, zori, safmr, fmr, acs, date.today().isoformat(), dry_run=False)
+
+
+def build_db(rows: list[dict], dry_run: bool, zori: dict | None = None) -> None:
     if dry_run:
         log.info("--dry-run: would write %d rows to %s", len(rows), DB_PATH)
         for r in rows[:3]:
@@ -696,6 +674,7 @@ def build_db(rows: list[dict], dry_run: bool) -> None:
             )
         return
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    ladder = snapshot_rent_ladder(DB_PATH)
     if DB_PATH.exists():
         DB_PATH.unlink()
     conn = sqlite3.connect(DB_PATH)
@@ -705,6 +684,10 @@ def build_db(rows: list[dict], dry_run: bool) -> None:
     sql = f"INSERT INTO zips ({','.join(cols)}) VALUES ({placeholders})"
     conn.executemany(sql, [[r.get(c) for c in cols] for r in rows])
     conn.commit()
+    cov = restore_rent_ladder(conn, ladder, zori or {})
+    if cov:
+        log.info("Rent ladder carried across the rebuild: %s measured (%s)",
+                 f"{cov['real_pct']}%", cov["by_tier"])
     # VACUUM must run outside a transaction. Compacts + reclaims space
     # so the committed file stays as small as possible (the GitHub
     # Action commits zips.db on each monthly refresh).
@@ -834,6 +817,8 @@ def main(argv: list[str] | None = None) -> int:
             "pct_rent_burdened": a.get("pct_rent_burdened"),
             "pct_pre_1960": a.get("pct_pre_1960"),
             "median_year_built": a.get("median_year_built"),
+            "pct_age_25_34": a.get("pct_age_25_34"),
+            "pct_2_4_units": a.get("pct_2_4_units"),
             "walk_score": round(walk, 1),
             "crime_index": crime,
             "restaurant_score": round(rest, 1),
@@ -880,7 +865,7 @@ def main(argv: list[str] | None = None) -> int:
         state_counts[r["state"]] = state_counts.get(r["state"], 0) + 1
     log.info("Rent source: %s", rs_counts)
     log.info("States covered: %d", len([s for s in state_counts if s]))
-    build_db(rows, args.dry_run)
+    build_db(rows, args.dry_run, zori)
     return 0
 
 

@@ -30,9 +30,14 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Prove the Census parser and the rent carry before rebuilding
+        run: python tests/test_acs_bulk.py
+
+      # Census ACS comes from the Bureau's keyless bulk files (acs_bulk.py);
+      # no CENSUS_API_KEY is needed. The rent-ladder columns refresh-rents.yml
+      # writes are carried across the rebuild rather than dropped with the
+      # old database.
       - name: Build national ZIPs database
-        env:
-          CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
         run: python scripts/build_national_zips.py
 
       - name: Commit + push if changed

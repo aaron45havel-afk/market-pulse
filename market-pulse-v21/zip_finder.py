@@ -129,6 +129,18 @@ FILTERS = (
      "why": "Share of homes in buildings of 2 or more units — includes large "
             "apartment blocks, so it is broader than 2–4 unit stock (Census ACS).",
      "needs": "pct_multi_unit"},
+    {"key": "min_young", "field": "pct_age_25_34", "op": "min",
+     "label": "Young adults (25–34)", "unit": "%", "group": "neighborhood",
+     "choices": (12, 15, 18),
+     "why": "Share of residents aged 25–34 (Census ACS). The typical ZIP is about 12%. "
+            "For young professionals, pair it with renter share and degree.",
+     "needs": "pct_age_25_34"},
+    {"key": "min_2_4", "field": "pct_2_4_units", "op": "min",
+     "label": "2–4 unit buildings", "unit": "%", "group": "neighborhood",
+     "choices": (5, 10, 15),
+     "why": "Share of homes in buildings of 2–4 units — the house-hack stock itself "
+            "(Census ACS). The typical ZIP is about 4%.",
+     "needs": "pct_2_4_units"},
 
     # ── Weather: NOAA 1991–2020 normals at the nearest station that measures
     # each thing, within 40 km (zip_env.py). Offered once data/zip_climate.json
@@ -202,10 +214,6 @@ def available(filt: dict, sources_with_data: set) -> bool:
 # absence is visible, never approximated. The wording is for a public page —
 # what is missing, not why an operator has not loaded it.
 PENDING = (
-    {"key": "young_pro", "label": "Young professional",
-     "needs": "age 25–34 and renter share from the Census"},
-    {"key": "stock_2_4", "label": "2–4 unit buildings",
-     "needs": "a count of 2–4 unit buildings from the Census"},
     {"key": "schools", "label": "Schools",
      "needs": "a free, honest school-quality measure — none exists"},
 )

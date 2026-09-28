@@ -186,9 +186,21 @@ check(Z.available(_renter, {"pct_renter_occupied"}),
       "deploy needed when the fetch is fixed")
 check(Z.available(Z.FILTER_BY_KEY["min_income"], set()),
       "filters on always-present columns are always available")
-check({p["key"] for p in Z.PENDING} >= {"young_pro", "stock_2_4", "schools"},
-      "young professional, 2–4 unit stock and schools are listed as PENDING — "
-      "visible as unavailable rather than silently missing")
+check({p["key"] for p in Z.PENDING} == {"schools"},
+      "schools is still listed as PENDING — visible as unavailable rather than "
+      "silently missing")
+_yp, _24 = Z.FILTER_BY_KEY["min_young"], Z.FILTER_BY_KEY["min_2_4"]
+check(_yp["field"] == "pct_age_25_34" and _24["field"] == "pct_2_4_units"
+      and not Z.available(_yp, set()) and Z.available(_yp, {"pct_age_25_34"})
+      and Z.available(_24, {"pct_2_4_units"}),
+      "YOUNG ADULTS AND 2–4 UNIT STOCK ARE REAL FILTERS NOW, on the Census "
+      "columns the keyless ACS pull fills — and like the other Census filters "
+      "they are offered only where their column has data")
+_fun = Z.Funnel("x", [_row(zip="young", pct_age_25_34=19.0), _row(zip="old", pct_age_25_34=8.0),
+                      _row(zip="unk", pct_age_25_34=None)])
+check([r["zip"] for r in Z.apply_filters(_fun, {"min_young": 15, "area": []})] == ["young"]
+      and _fun.stages[-1]["label"] == "young adults (25–34) below 15%",
+      "'young adults at least 15%' keeps 19%, drops 8% and the ZIP with no figure")
 check(not {p["key"] for p in Z.PENDING} & {"weather", "hazards"},
       "weather and hazards are real filters now, not pending")
 _wx = [f for f in Z.FILTERS if f["group"] in ("weather", "hazards")]

@@ -17,9 +17,9 @@ name: Refresh rent ladder
 # exist, so it has to follow the rebuild rather than race it.
 #
 # KEYS. HUD_API_TOKEN (free from https://www.huduser.gov/portal/dataset/fmr-api.html)
-# feeds the SAFMR and county FMR tiers; CENSUS_API_KEY feeds the ACS tier.
-# Either missing skips its tiers with a warning and KEEPS the stored values
-# for them, so a missing key never blanks rents another run wrote.
+# feeds the SAFMR and county FMR tiers; without it they are skipped with a
+# warning and their stored values KEPT. The ACS tier reads the Census
+# Bureau's keyless bulk files and needs no key.
 
 on:
   schedule:
@@ -68,7 +68,6 @@ jobs:
 
       - name: Refresh rents
         env:
-          CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
           HUD_API_TOKEN: ${{ secrets.HUD_API_TOKEN }}
         run: |
           set -euo pipefail

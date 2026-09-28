@@ -148,6 +148,15 @@ try:
           f"A RENT WITH A SOURCE IS NEVER STARRED AS IMPUTED — the value÷204 "
           f"arithmetic test starred 392 real Zillow rents that happened to land "
           f"near it ({starred[:5]})")
+    # ── the safety note says what an FBI figure had to pass ──
+    import safety as _SF
+    _fm = _SF.coverage()["meta"]
+    check(f"reports to the FBI ({_fm['fbi_years'][0]}–{_fm['fbi_years'][-1]})" in page
+          and "a city counts only with a complete year" in page
+          and "The rate is city-wide" in page,
+          "THE SAFETY NOTE SAYS WHAT A FIGURE HAD TO PASS — complete years, "
+          "pooled small towns, collapses read as gaps — and that a big city's "
+          "rate covers every neighborhood, read from crime.json's own rules")
     # ── rent sources on the page ──
     _, hpage = get("/multifamily?state=OH&unknown=1&max_price=900000")
     cz, cr = col(hpage, "zip"), col(hpage, "rent")
@@ -156,19 +165,27 @@ try:
         "select zip, median_household_income from zips").fetchall())
     by_tier = {}
     wrong, strain_wrong, n_strain = [], [], 0
-    for r in hrows:
-        z, cell = r["cells"][cz], r["cells"][cr]
-        t = tiers.get(z)
-        by_tier[t] = by_tier.get(t, 0) + 1
-        tagged = cell.endswith("HUD") or cell.endswith("HUD !")
-        if tagged != (t in ("safmr", "fmr")):
-            wrong.append((z, t, cell))
-        rent = int(re.sub(r"[^0-9]", "", cell.split("HUD")[0]) or 0)
-        should = (t in ("safmr", "fmr") and bool(inc.get(z))
-                  and rent * 12 / inc[z] >= 0.40)
-        n_strain += should
-        if cell.endswith("HUD !") != should:
-            strain_wrong.append((z, rent, inc.get(z), cell))
+    # The strain flag is checked on every row of the Ohio page and of a
+    # California one — strained HUD rents on the board are rare (California
+    # has the most), and a check that only passes when a flagged row happens
+    # to rank in Ohio's top 100 would test the ranking, not the flag.
+    _, capage = get("/multifamily?state=CA&unknown=1&max_price=2000000&preset=cashflow")
+    for pg, is_oh in ((hpage, True), (capage, False)):
+        pz, pr = col(pg, "zip"), col(pg, "rent")
+        for r in table_rows(pg):
+            z, cell = r["cells"][pz], r["cells"][pr]
+            t = tiers.get(z)
+            if is_oh:
+                by_tier[t] = by_tier.get(t, 0) + 1
+            tagged = cell.endswith("HUD") or cell.endswith("HUD !")
+            if tagged != (t in ("safmr", "fmr")):
+                wrong.append((z, t, cell))
+            rent = int(re.sub(r"[^0-9]", "", cell.split("HUD")[0]) or 0)
+            should = (t in ("safmr", "fmr") and bool(inc.get(z))
+                      and rent * 12 / inc[z] >= 0.40)
+            n_strain += should
+            if cell.endswith("HUD !") != should:
+                strain_wrong.append((z, rent, inc.get(z), cell))
     check(by_tier.get("safmr") and by_tier.get("fmr") and by_tier.get("zori") and not wrong,
           f"EVERY HUD-BASED RENT IS TAGGED HUD AND NO ZILLOW RENT IS — checked "
           f"row by row against zips.db ({by_tier}; wrong: {wrong[:3]})")
@@ -216,6 +233,22 @@ try:
     for p in Z.PENDING:
         check(html.escape(p["label"], quote=False) in page,
           f"'{p['label']}' is visible as not available yet")
+    if has_renter:
+        check(all(f'name="{k}"' in page for k in ("min_renter", "min_multi", "min_young", "min_2_4")),
+              "WITH THE CENSUS COLUMNS FILLED, renter share, multi-unit, young adults "
+              "and 2–4 unit stock are offered as filters")
+        _, fpage = get("/multifamily?state=OH&unknown=1&max_price=900000"
+                       "&min_renter=30&min_young=15&min_2_4=5")
+        acs = {r[0]: r[1:] for r in sqlite3.connect(DB).execute(
+            "select zip, pct_renter_occupied, pct_age_25_34, pct_2_4_units from zips")}
+        cz = col(fpage, "zip")
+        frows = [r["cells"][cz] for r in table_rows(fpage)]
+        check(frows and all(acs[z][0] >= 30 and acs[z][1] >= 15 and acs[z][2] >= 5 for z in frows),
+              f"AND EVERY ROW MEETS THEM — renter ≥30%, aged 25–34 ≥15%, 2–4 unit "
+              f"homes ≥5%, checked against zips.db ({len(frows)} rows)")
+        for label in ("renter share below 30%", "young adults (25–34) below 15%",
+                      "2–4 unit buildings below 5%"):
+            check(label in fpage, f"the funnel names '{label}'")
 
     # Implicit submission: pressing Enter submits the FIRST submit button in
     # the form. If that were a preset, Enter would switch presets.

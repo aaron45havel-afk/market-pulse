@@ -10,8 +10,8 @@ name: Refresh state ACS demographics (Census 5-year)
 # data → Dec 2024). Cron is January 10th — gives Census time to
 # stabilize after release.
 #
-# Census now requires CENSUS_API_KEY for ACS bulk queries
-# (https://api.census.gov/data/key_signup.html — free).
+# No key: reads the Census Bureau's bulk table files (acs_bulk.py), and
+# picks the newest 5-year vintage on the server unless one is given.
 
 on:
   schedule:
@@ -19,9 +19,9 @@ on:
   workflow_dispatch:
     inputs:
       vintage:
-        description: 'ACS 5-year vintage year'
+        description: 'ACS 5-year vintage year (blank = newest published)'
         required: false
-        default: '2024'
+        default: ''
 
 permissions:
   contents: write
@@ -40,11 +40,9 @@ jobs:
           python-version: '3.11'
 
       - name: Run Census ACS state refresh
-        env:
-          CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
         run: |
-          # Use the workflow_dispatch input if provided, else default
-          # to the year set in the script (which is bumped manually).
+          # Use the workflow_dispatch input if provided, else the newest
+          # vintage the Census server has published.
           if [ -n "${{ inputs.vintage }}" ]; then
             python scripts/refresh_census_acs_state.py --vintage ${{ inputs.vintage }}
           else
