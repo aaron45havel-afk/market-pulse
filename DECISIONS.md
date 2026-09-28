@@ -402,3 +402,34 @@ Branch runs against main (compounders and FCF quality rebuilt with `--force`; Ly
   probe.
 - **100-bagger:** two banks priced at 75x and 67x earnings on a quarter's net income read
   as a year (First Community, Colony) now read 18x and 16x.
+
+## 2026-09-28 — What a screen could not measure is its own answer, never a failure
+**Decided.** Audit item #2: on four boards, "we could not read it" was shown as "the company
+failed", "dormant" or "did not file". Each board now keeps three answers apart — passed,
+failed, and could not be measured — and words the third as a limit of the reading:
+- **Compounders.** Gates answer pass, fail or not measured. A company that fails nothing
+  that could be checked but has a gate that could not be (ROIC on negative invested capital
+  — Domino's, VeriSign; unknown debt — NVR; no readable capex — Waters, Rio Tinto) is
+  UNMEASURED, not GATED: 17 rows. A measured failure outranks an unmeasured gate, and a
+  missing debt ratio beside an operating loss is still a failure. Computed on page load, so
+  no rebuild.
+- **Lynch.** IFRS filers read "files its statements under IFRS, which this screen does not
+  read yet" instead of "stockholders' equity not filed" (343 → 61 left as no_equity; 223
+  IFRS, 90 funds with no company statements). The units and SEC-returned-nothing labels say
+  what failed on our side. All count as could-not-measure.
+- **100-bagger.** "Dormant" is kept for dollar filers whose figures stopped: 501 → 32. IFRS
+  filers (369), funds with no statements (108), US-GAAP filers reporting in another
+  currency (49), missing quotes and empty SEC answers move to the funnel's could-not-measure
+  bucket, renamed from "too thin to judge": rejected 3,207 → 2,306. The page now says banks
+  mostly land there — they file interest income, not revenue, and no gross margin or
+  capital employed.
+- **Every screen built on the shared universe.** One ticker per company, the first that is
+  common stock: the map kept the last, so ~250 companies were screened under a preferred
+  line or unit (Boeing as BA-PA, reading "no market cap"). A warrant is a `-WT`/`.WS`/`-W`
+  suffix or Nasdaq's fifth-letter W; "ends in W" had dropped Lowe's, ServiceNow,
+  Sherwin-Williams, Edwards, Snowflake and CDW (and T. Rowe Price, for boards without the
+  sector cut) from every screen, uncounted. Lynch screened 3,321 → 3,550, the 100-bagger
+  5,182 → 5,525; neither list changed in size (Lynch's five; the 100-bagger's 33, one swap).
+
+Not done here (BACKLOG): actually reading IFRS statements and bank revenue on these boards,
+partnership equity, and telling a fund's 404 from a failed request.
