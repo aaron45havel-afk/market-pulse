@@ -62,6 +62,11 @@
   .flag { display:inline-block; padding:0 5px; border-radius:999px; font-size:0.57rem; font-weight:700;
     margin-left:0.25rem; cursor:help; background:rgba(217,119,6,0.14); color:#b45309;
     border:1px solid rgba(217,119,6,0.35); }
+  .fq-held { margin-top:0.9rem; font-size:0.78rem; line-height:1.6; color:var(--text-dim); }
+  .fq-held strong { color:var(--text); }
+  .fq-held .held { display:inline-block; padding:0 6px; margin:0.2rem 0.25rem 0 0; border-radius:4px;
+    border:1px dashed var(--border); background:var(--surface2); color:var(--text); cursor:help;
+    font-size:0.72rem; white-space:nowrap; }
 
   .fq-warn { background:rgba(217,119,6,0.10); border:1px solid rgba(217,119,6,0.38);
     border-radius:10px; padding:0.75rem 1rem; margin:1rem 0; font-size:0.8rem; line-height:1.65; }
@@ -144,6 +149,7 @@
       <tbody id="fqBody"><tr><td colspan="12" class="empty">Loading…</td></tr></tbody>
     </table>
   </div>
+  <div class="fq-held" id="fqHeld" style="display:none;"></div>
 </div>
 
 <details class="fq-explain">
@@ -176,7 +182,9 @@
         prices by share counts filed before the split — Booking Holdings, after its 25-for-1 split in
         2026, printed 0.7x P/FCF and would have taken the top of the board; on market cap it is 16.0x.
         That is now corrected at the source, and rows are still run through the same fault test the
-        HOLT board uses, and flagged, not dropped.</li>
+        HOLT board uses. A row that fails it — under 2x, or under a fifth of its own fifteen-year
+        median — is held out of the ranking and listed under the table with the reason, because a
+        badge on a board sorted by yield still left those rows at the top.</li>
     <li><strong>Not here:</strong> sector caps, position weighting, or a 4% holding limit. VFLO is a
         fund and has to be investable; this is a screen and stops at selection. Their published final
         stage lifts yield again by weighting holdings by free cash flow — there is no fourth stage
@@ -289,7 +297,6 @@ function renderTable() {
     const g = r.growth_components || {};
     const flags = [];
     if (r.leverage_note) flags.push(`<span class="flag" title="${r.leverage_note}">levered</span>`);
-    if (r.multiple_fault) flags.push(`<span class="flag" title="${r.multiple_fault}">check price</span>`);
     if (r.cyclical) flags.push(`<span class="flag" title="Flagged cyclical — a trend through a commodity cycle is not compounding.">cyclical</span>`);
     return `<tr>
       <td class="tick">${r.ticker}</td>
@@ -306,6 +313,20 @@ function renderTable() {
       <td>${num(r.roic_med, 0, '%')}</td>
     </tr>`;
   }).join('');
+}
+
+function renderHeld() {
+  const held = SNAP.held_out || [], box = document.getElementById('fqHeld');
+  if (!held.length) { box.style.display = 'none'; return; }
+  const esc = s => (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  box.innerHTML = `<strong>Held out of the ranking — ${held.length}.</strong>
+    Their price-to-free-cash-flow multiple failed the fault test the HOLT board uses. A multiple
+    that low is far more often a bad price or share count in the data than a bargain, and on a
+    board sorted by yield it would sort first. Hover a name for the reason.<br>`
+    + held.map(h => `<span class="held" title="${esc(h.name)} — ${esc(h.fault)}">${h.ticker} ${
+        h.pfcf == null ? '—' : h.pfcf.toFixed(1) + 'x'}${
+        h.pfcf_med ? ` <span class="dim">vs ${h.pfcf_med.toFixed(1)}x median</span>` : ''}</span>`).join('');
+  box.style.display = '';
 }
 
 function renderAll() {
@@ -328,7 +349,7 @@ function renderAll() {
   if (!m.forward_looking) bits.push(`<strong>No forward estimates.</strong> ${m.forward_note}`);
   if (bits.length) { warn.innerHTML = bits.join('<br><br>'); warn.style.display = ''; }
 
-  renderTiles(); renderFunnels(); renderTable();
+  renderTiles(); renderFunnels(); renderTable(); renderHeld();
   document.getElementById('fqTableDesc').textContent =
     `Sorted by ${SORT.key.replace('_', ' ')}. Every rejection in this snapshot names its `
     + `reason; ${m.census.unmeasurable.toLocaleString()} companies were read and could not be measured.`;

@@ -461,3 +461,18 @@ Branch refresh: payout measured for 79 of 92 names, leverage for 73. BUY is now 
 Brown, a BUY with no figures, is gated at 3.8x after its acquisition borrowing. Becton
 Dickinson (3.7x) and Stanley Black & Decker (3.9x) gate on GAAP EBITDA, which runs below the
 adjusted EBITDA most published leverage figures use — the page says which basis it measured.
+
+## 2026-09-28 — FCF Quality: a broken multiple is held out of the ranking, not badged
+**Decided.** Audit item #4. The build ran holt.py's P/FCF fault test on the finished board and
+only drew a "check price" badge, so the board's top two — Fiverr at 49.8% (3.2x against its own
+38.5x median) and Shutterstock at 38.0% (1.8x, under the 2x floor) — ranked first while
+flagged. The badge also misdirected: the fault is usually the share count or the cash-flow
+figure, not the price. The test now runs inside `fcf_quality.measure()`: a row that fails it is
+seen, counted as not rankable, kept out of the growth-rank cohort, and listed under the table
+with the reason. Only the flattering side is refused — holt's 2,000x ceiling is a yield under
+0.05% here, sorts last on its own, and is more often a real company with little free cash flow
+that year (Teleflex, Fabrinet) than a bad input. `holt.py` joins the build's logic hash, since
+it can now change the board.
+
+Branch rebuild: 17 held out (10 had passed both stages), 132 pass (was 134). The top of the
+board is now G-III 34.0%, Weibo 31.8%, Collegium 29.6%.
