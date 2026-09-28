@@ -475,6 +475,26 @@ def rescale_net_income(ni_by_year: dict, eps_by_year: dict,
     return out, sorted(fixed)
 
 
+def statements_basis(facts: dict) -> str:
+    """Which standard a filer's financial statements are tagged in, as far
+    as this module can read them: "us-gaap", "ifrs", or "none" (a fund or
+    trust that files no company statements in XBRL — SEC answers with only
+    the `cef`/`ffd` fund taxonomies, or nothing).
+
+    US GAAP wins where it has a balance-sheet or income-statement anchor,
+    because some IFRS filers also carry a stray us-gaap fact and some
+    US-GAAP filers a stray IFRS one.
+    """
+    tax = (facts or {}).get("facts") or {}
+    gaap = tax.get("us-gaap") or {}
+    if any(k in gaap for k in ("Assets", "StockholdersEquity", "NetIncomeLoss",
+                                "Revenues", "Liabilities")):
+        return "us-gaap"
+    if tax.get("ifrs-full"):
+        return "ifrs"
+    return "us-gaap" if gaap else "none"
+
+
 def first_filing_end(facts: dict) -> str | None:
     """Most recent annual period end across the high-coverage concepts —
     used to tell a live filer from a dormant registrant."""
@@ -867,13 +887,15 @@ REASONS = {
     "no_cap": "no market capitalisation",
     "too_small": "below the market-cap floor",
     "penny": "share price under the delisting-risk floor",
-    "no_equity": "stockholders' equity not filed",
+    "no_equity": "no stockholders' equity figure among the tags this screen reads",
+    "ifrs_filer": "files its statements under IFRS, which this screen does not read yet",
+    "no_statements": "files no company financial statements in XBRL (a fund or trust)",
     "negative_equity": "negative stockholders' equity",
     "no_revenue": "no revenue concept filed",
     "tiny_revenue": "revenue below the operating-business floor",
     "dormant": "no annual figures filed recently",
     "cap_implausible": "market cap and total assets differ by orders of magnitude",
-    "units_unverified": "EPS x shares does not reconstruct net income",
+    "units_unverified": "our EPS, share count and net income do not reconcile — a data problem, not a verdict",
     "no_earnings": "no net income filed",
     "unprofitable": "net income not positive",
     "pe_suspect": "earnings multiple below the plausible floor",
@@ -890,7 +912,7 @@ REASONS = {
     "capex_unknown": "capex or operating cash flow not filed",
     "capex_high": "capex above the reinvestment ceiling",
     "screen_error": "the screener raised on this filer — not a fact about it",
-    "facts_unavailable": "SEC did not return filings — a network fact, not a company one",
+    "facts_unavailable": "SEC returned nothing for this filer — a failed request, or no XBRL filings at all",
     "pass": "passes every filter",
 }
 
@@ -904,7 +926,8 @@ BALANCE_SHEET_LAG_DAYS = 550
 # without the other being obviously incomplete — and named once, because
 # the census partitions on it and the page reads the partition as a funnel.
 UNMEASURED_CODES = (
-    "no_price", "no_cap", "no_equity", "no_revenue", "no_earnings",
+    "no_price", "no_cap", "no_equity", "ifrs_filer", "no_statements",
+    "no_revenue", "no_earnings",
     "cap_implausible", "units_unverified", "debt_unknown", "capex_unknown",
     "stale_balance_sheet", "screen_error", "facts_unavailable",
 )
@@ -961,6 +984,15 @@ def evaluate(f: dict) -> dict:
         if not (CAP_TO_ASSETS_SANE[0] <= ratio <= CAP_TO_ASSETS_SANE[1]):
             return done("cap_implausible")
 
+    # WHAT THE SCREEN CANNOT READ IS NOT WHAT THE COMPANY DID NOT FILE.
+    # TotalEnergies, Spotify and Ferrari file their equity — under IFRS,
+    # which this screen reads none of — and 343 such rows were labelled
+    # "stockholders' equity not filed".
+    basis = f.get("statements")
+    if basis == "ifrs":
+        return done("ifrs_filer")
+    if basis == "none":
+        return done("no_statements")
     equity = _num(f.get("equity"))
     r["equity"] = equity
     if equity is None:

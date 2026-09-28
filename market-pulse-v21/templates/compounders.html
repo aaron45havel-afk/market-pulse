@@ -66,6 +66,7 @@
   .st-CYCLE-WAIT { background:rgba(217,119,6,0.14); color:#b45309; }
   .st-WATCH      { background:var(--surface-2); color:var(--ink-3); border:1px solid var(--line); }
   .st-GATED      { background:var(--coral-soft);   color:var(--coral-ink); }
+  .st-UNMEASURED { background:transparent; color:var(--ink-3); border:1px dashed var(--line); }
 
   .cp-badge { display:inline-block; padding:0 6px; border-radius:999px; font-size:0.56rem; font-weight:600;
     margin-left:0.28rem; cursor:help; background:rgba(217,119,6,0.13); color:#b45309;
@@ -94,6 +95,9 @@
   trailing growth <em>haircut</em>, because past growth fades while high return-on-capital persists.
   <strong>COMPOUNDER</strong> = gates + expected ≥ {{ target|int }}%. Cyclicals are valued mid-cycle: at peak margins
   they can only be CYCLE-WAIT, at trough margins with the engine intact they're flagged as buy-the-low setups.
+  <strong>UNMEASURED</strong> = failed no gate we could check, but at least one could not be checked — a figure
+  the filings don't give us, or a ratio with no meaning (ROIC on negative capital). It is not a failure, and it
+  is not a pass.
 </p>
 
 {% if not rows %}
@@ -148,7 +152,8 @@
 <div class="cp-table-card">
   <h2>Full screen</h2>
   <p class="desc">{{ summary.total }} companies · {{ summary.compounder or 0 }} compounder · {{ summary.quality or 0 }} quality ·
-    {{ summary.cycle_wait or 0 }} cycle-wait · {{ summary.watch or 0 }} watch · {{ summary.gated or 0 }} gated.
+    {{ summary.cycle_wait or 0 }} cycle-wait · {{ summary.watch or 0 }} watch · {{ summary.unmeasured or 0 }} unmeasured ·
+    {{ summary.gated or 0 }} gated.
     Click headers to sort. E[r] columns: G growth · B buyback · D dividend · M valuation drift.</p>
   <div class="cp-scroll">
   <table class="cp-table" id="cpTable">
@@ -194,7 +199,7 @@
         <td data-sort="{{ r.reinvest if r.reinvest is not none else 999 }}"
             title="{% if r.reinvest is none %}No capex figure filed in at least three of the last five years — reinvestment could not be measured.{% elif r.reinvest_ocf is not none %}Total reinvestment: PP&amp;E plus capitalised software, content and spectrum.{% else %}PP&amp;E only — capitalised intangibles are not in this figure.{% endif %}">{% if r.reinvest is not none %}{{ r.reinvest|int }}%{% else %}<span class="cp-dim">unfiled</span>{% endif %}</td>
         <td data-sort="{{ r.pfcf_now if r.pfcf_now else 999 }}">{% if r.pfcf_now %}{{ r.pfcf_now }}<span class="cp-dim">/{{ r.pfcf_med or '—' }}</span>{% elif r.currency and r.currency != 'USD' %}<span class="cp-fx" title="This company files in {{ r.currency }}. P/FCF would divide {{ r.currency }} cash flow by a USD ADR price, so it is withheld rather than computed. Growth, margins, ROIC and conversion are ratios within one currency and remain valid.">{{ r.currency }}</span>{% else %}—{% endif %}</td>
-        <td data-sort="{{ r.status }}"><span class="st-pill st-{{ r.status }}" title="{% if not r.gates_pass %}Failed gates: {% for k, ok in r.gates.items() %}{% if not ok %}{{ k }} {% endif %}{% endfor %}{% else %}All quality gates pass.{% endif %}">{{ r.status }}</span></td>
+        <td data-sort="{{ r.status }}"><span class="st-pill st-{{ r.status }}" title="{% if r.gates_pass %}All quality gates pass.{% else %}{% if r.gates_failed %}Failed: {{ r.gates_failed|join(', ') }}.{% if r.gates_unmeasured %} {% endif %}{% endif %}{% if r.gates_unmeasured %}Not measured: {{ r.gates_unmeasured|join(', ') }}.{% endif %}{% endif %}">{{ r.status }}</span></td>
       </tr>
       {% endfor %}
     </tbody>

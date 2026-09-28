@@ -356,7 +356,7 @@ function renderKey() {
   }
   const bands = [
     ['Great', 'Great'], ['Good', 'Good'], ['Meh', 'Meh'], ['Yikes', 'Yikes'],
-    ['unmeasured', 'not measured — the company did not file it'],
+    ['unmeasured', 'not measured — not among the filings this page reads'],
     ['never', 'never scoreable — no free source exists'],
     ['quiet', 'quiet — a veto with nothing visible to say, which is not a pass'],
     ['hand', 'read by hand — your number, from a named document, never counted'],
@@ -643,15 +643,17 @@ function renderFunnel() {
   const parts = (c.listed||0) + (c.thin||0) + (c.rejected||0);
   const ok = parts === c.screened;
   document.getElementById('hbFunnelDesc').innerHTML = ok
-    ? `The three counts <strong>partition</strong> the universe: screened = listed + too-thin-to-judge + `
-      + `rejected. <em>Thin</em> is its own bucket rather than part of <em>rejected</em>, because a `
-      + `company we could not measure enough of is a different fact from one that failed a gate.`
+    ? `The three counts <strong>partition</strong> the universe: screened = listed + could-not-measure + `
+      + `rejected. <em>Could not measure</em> is its own bucket rather than part of <em>rejected</em>: `
+      + `too few criteria readable, statements filed under IFRS or in another currency (this page reads `
+      + `US-GAAP dollar figures only), no quote, or SEC returned nothing. Each is a fact about what this `
+      + `page could see, not about the company.`
     : `<strong>These counts do not add up.</strong> ${parts.toLocaleString()} against `
       + `${(c.screened||0).toLocaleString()} screened — read the per-reason counts, not the tiles.`;
   document.getElementById('hbSteps').innerHTML = [
     ['Screened', c.screened, ''],
     ['On the reading list', c.listed, 'list'],
-    ['Too thin to judge', c.thin, 'thin'],
+    ['Could not measure', c.thin, 'thin'],
     ['Rejected', c.rejected, ''],
   ].map(([k,v,cls]) => `<div class="hb-step ${cls}"><div class="n">${(v||0).toLocaleString()}</div><div class="k">${k}</div></div>`).join('');
 
@@ -677,7 +679,9 @@ function renderFunnel() {
             + `appear here, which is Lynch's rule and not this checklist's.`
           : `The sector filter is <strong>OFF</strong>: financials, REITs and pharma are judged on `
             + `the same thirteen criteria as everyone else, and the three vetoes may still reject `
-            + `them. Being a bank is not itself a finding.`);
+            + `them. Being a bank is not itself a finding — but banks report interest income, not `
+            + `revenue, and file no gross margin or capital employed, so three of the six scoreable `
+            + `criteria cannot be read for them and most land in <em>could not measure</em>.`);
   }
 
   const names = RULES.criterion_names || {}, why = RULES.not_scored_because || {};

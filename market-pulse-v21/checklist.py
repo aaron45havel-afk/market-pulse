@@ -276,10 +276,16 @@ def band_for(cid: int, value: float | None) -> str | None:
     return "Great"
 
 
+# Banks report interest and fee income, not a revenue line; the checklist
+# reads the revenue concepts only. Said as a limit of the reading, because
+# "revenue not filed" was false for every bank on the board.
+NO_REVENUE_TAG = "no revenue tag this checklist reads (banks report interest income instead)"
+
+
 def _measure(cid: int, value, basis: str) -> Measure:
     v = _num(value)
     if v is None:
-        return unmeasured("not filed", basis)
+        return unmeasured("not among the tags this reads", basis)
     return Measure(v, True, "", band_for(cid, v), basis)
 
 
@@ -299,7 +305,7 @@ def sales_growth(revenue_by_year: dict) -> Measure:
     pts = sorted((y, v) for y, v in (revenue_by_year or {}).items()
                  if _num(v) is not None)
     if not pts:
-        return unmeasured("revenue not filed")
+        return unmeasured(NO_REVENUE_TAG)
     spans = min(MAX_SPANS, len(pts) - 1)
     if spans < MIN_SPANS_REVENUE:
         return unmeasured(f"only {len(pts)} annual periods, need "
@@ -332,7 +338,7 @@ def gross_margin(revenue, gross_profit=None, cost_of_revenue=None) -> Measure:
     """
     rev = _num(revenue)
     if rev is None or rev <= 0:
-        return unmeasured("revenue not filed")
+        return unmeasured(NO_REVENUE_TAG)
     gp, cost = _num(gross_profit), _num(cost_of_revenue)
     derived = rev - cost if cost is not None else None
     if gp is not None and derived is not None:

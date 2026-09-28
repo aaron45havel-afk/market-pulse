@@ -235,12 +235,13 @@ check(full["country"] == "United States",
 # capital-hungry businesses on earth scoring as the most capital-light,
 # and clearing the capex gate on it. BP's FCF conversion read 1,322%.
 blind = one(capex_ocf=None)
-check(blind["gates"]["capex"] is False,
-      "no capex figure FAILS the gate — it cannot be waved through")
+check(blind["gates"]["capex"] is None and blind["gates_pass"] is False,
+      "no capex figure is NOT MEASURED — never waved through, never called a failure")
 check(any(b["key"] == "nocapex" for b in blind["badges"]),
       "and a badge says the company was gated for being unmeasurable, not "
       "for spending heavily — those look identical without it")
-check(blind["status"] == "GATED", "so it lands in GATED")
+check(blind["status"] == "UNMEASURED" and blind["gates_unmeasured"] == ["capex"],
+      "so, failing nothing it could be measured on, it lands in UNMEASURED — not GATED")
 check(blind["expected"] is not None,
       "but it is still scored and shown — not deleted from the board")
 
@@ -269,7 +270,7 @@ zero = one(capex_ocf=0.0)
 check(zero["reinvest"] is None,
       "a flat 0.0% reinvestment is refused as a measurement — no operating "
       "company spends literally nothing on plant for five straight years")
-check(zero["gates"]["capex"] is False, "so it does not clear the gate at 0%")
+check(zero["gates"]["capex"] is None, "so it does not clear the gate at 0%")
 check(any(b["key"] == "nocapex" for b in zero["badges"]), "and is badged as unfiled")
 
 # Shell's real EDGAR business address is Washington DC — its US agent.
@@ -326,10 +327,42 @@ weak = one(fcf_conv=40.0)
 check(weak["gates"]["cash"] is False,
       "and a genuinely poor conversion still fails — the cap is an upper "
       "bound, it does nothing at the bottom")
-check(one(fcf_conv=None)["gates"]["cash"] is False,
+check(one(fcf_conv=None)["gates"]["cash"] is None
+      and one(fcf_conv=None)["gates_pass"] is False,
       "no conversion figure is not a pass")
 check(one(fcf_conv=None)["fcf_conv_raw"] is None, "and nothing is invented")
 
+
+
+# ── NOT MEASURED IS NOT FAILED ──────────────────────────────────────
+# Domino's and VeriSign have negative invested capital, so ROIC has no
+# value; NVR's debt is unknown; Waters' capex could not be found. Each
+# failed nothing that could be checked and was shown as GATED.
+dpz = one(roic_med=None)
+check(dpz["gates"]["roic"] is None and dpz["status"] == "UNMEASURED"
+      and dpz["gates_failed"] == [] and dpz["gates_unmeasured"] == ["roic"],
+      f"ROIC WITH NO VALUE IS UNMEASURED, NOT A FAILED GATE (got {dpz['status']}, "
+      f"{dpz['gates']})")
+nvr = one(nd_ebit=None, op_margin_now=18.0)
+check(nvr["gates"]["debt"] is None and nvr["status"] == "UNMEASURED",
+      "debt we could not read, beside a profitable operation, is unmeasured")
+loss = one(nd_ebit=None, op_margin_now=-4.0)
+check(loss["gates"]["debt"] is False and loss["status"] == "GATED",
+      "but no ratio because EBIT is negative is an operating loss carrying debt — a failure")
+check(one(nd_ebit=None, op_margin_now=0.0)["gates"]["debt"] is False,
+      "and so is EBIT of exactly zero — there is still nothing to carry the debt")
+both = one(roic_med=9.0, capex_ocf=None)
+check(both["status"] == "GATED" and both["gates_failed"] == ["roic"]
+      and both["gates_unmeasured"] == ["capex"],
+      "A MEASURED FAILURE OUTRANKS AN UNMEASURED GATE, and the row lists each separately")
+check(one()["status"] != "UNMEASURED" and one()["gates_pass"] is True
+      and one()["gates_unmeasured"] == [],
+      "a fully measured company is untouched")
+_board = C.score({"tickers": {"G": {**BASE, "roic_med": 9.0}, "U": {**BASE, "roic_med": None},
+                              "W": {**BASE, "pfcf_now": 60.0, "rev_cagr5": 4.5, "rev_cagr10": 4.5}}})
+check([r["ticker"] for r in _board][-2:] == ["U", "G"],
+      f"UNMEASURED sorts after WATCH and before GATED (got {[(r['ticker'], r['status']) for r in _board]})")
+check(C.summary(_board).get("unmeasured") == 1, "and the page summary counts it")
 
 # ── report ──
 if _FAILS:

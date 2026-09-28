@@ -56,10 +56,27 @@ Format: `- [PHASE-SEEN] item — why it matters`
   2023, Estée Lauder after 2020), the units check compares this year's EPS with an older
   year's net income and rejects the row as `units_unverified`. The P/E would have been
   built on that stale figure too. A net-income fallback tag
-  (`NetIncomeLossAvailableToCommonStockholdersBasic`) would recover them.
+  (`NetIncomeLossAvailableToCommonStockholdersBasic`) would recover them — and checking the
+  units identity against income available to common, not `NetIncomeLoss`, would stop
+  preferred dividends failing it (Occidental, HPE; newly visible once screened under their
+  common tickers, as are Ford and Dow).
 - [P2] Lynch has no staleness gate on the EPS series itself: Cheetah Mobile's and Solaris'
   last EPS is 2018, Riskified's 2022, while their net income is current. `dormant` looks
   at revenue/net income/assets only.
+- [P2] Lynch and the 100-bagger read US-GAAP tags only. IFRS filers (TotalEnergies, Spotify,
+  AstraZeneca, UBS — ~340 on Lynch, ~470 on the 100-bagger) are now labelled "files under
+  IFRS, not read" instead of "equity not filed"/"dormant", but they are still not measured.
+  The compounders build already reads `ifrs-full` for revenue, debt and cash; the same
+  ladder would bring them onto both boards.
+- [P2] 100-bagger banks: sales growth, gross margin and return on capital are undefined for
+  them in the tags read, so most banks land in could-not-measure. A bank revenue measure
+  (net interest income + noninterest income) would restore criterion 1; the other two have
+  no bank equivalent and should say so per criterion.
+- [P2] Lynch reads no partnership equity (`PartnersCapital`), so MLPs such as Alliance
+  Resource Partners are `no_equity` (could-not-measure). One tag on the equity ladder.
+- [P2] A fund that companyfacts answers with a 404 (Nuveen NAD, NVG) still reads as
+  `facts_unavailable`, whose label now says "a failed request, or no XBRL filings at all".
+  Telling the two apart needs the HTTP status carried out of `_get`.
 - [P2] Lynch: an EPS rounded to the cent on a tiny figure (-0.01 against a true -0.006)
   fails the 35% units identity (YSG). Harmless — a one-cent EPS is not a Lynch candidate —
   but it is counted as a units problem.

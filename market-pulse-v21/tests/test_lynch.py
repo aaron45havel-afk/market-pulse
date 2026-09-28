@@ -860,6 +860,76 @@ check(all(isinstance(v["exchange"], str) for v in _parsed.values()),
 check(SE.parse_exchanges({}) == {} and SE.parse_exchanges(None) == {},
       "a failed fetch yields an empty map, not a crash")
 
+# ── what the screen could not see is not what the company did wrong ──
+for _t in ("LOW", "NOW", "SHW", "EW", "TROW", "SNOW", "CDW"):
+    check(not SE._is_warrant(_t),
+          f"{_t} IS A COMMON STOCK — 'ends in W' dropped Lowe's, ServiceNow, Sherwin-Williams, "
+          f"Edwards, T. Rowe, Snowflake and CDW from every screen, uncounted")
+for _t in ("ACMEW", "ACME-WT", "ACME.WS", "ACME-W"):
+    check(SE._is_warrant(_t), f"{_t} is a warrant")
+_w = build_universe({"1": {"ticker": "LOW", "name": "Lowe's Companies"},
+                     "2": {"ticker": "ACMEW", "name": "Acme Holdings"}},
+                    {"1": {"exchange": "NYSE"}, "2": {"exchange": "Nasdaq"}},
+                    {"1": {"sic": "5211"}, "2": {"sic": "3559"}})
+check([r["ticker"] for r in _w] == ["LOW"]
+      and build_universe.last_cuts["dropped_not_operating_company"] == 1,
+      "Lowe's is screened, and the warrant that is dropped is counted")
+_tick = SE.parse_tickers({
+    "0": {"cik_str": 12927, "ticker": "BA", "title": "BOEING CO"},
+    "7": {"cik_str": 12927, "ticker": "BA-PA", "title": "BOEING CO"},
+    "3": {"cik_str": 1628063, "ticker": "SRG-PA", "title": "Seritage"},
+    "4": {"cik_str": 1628063, "ticker": "SRG", "title": "Seritage"},
+    "5": {"cik_str": 1067983, "ticker": "BRK-B", "title": "BERKSHIRE"},
+    "6": {"cik_str": 1067983, "ticker": "BRK-A", "title": "BERKSHIRE"},
+    "8": {"cik_str": 2102713, "ticker": "KCAC-UN", "title": "Kestrel"},
+    "9": {"cik_str": 2102713, "ticker": "KCAC-WT", "title": "Kestrel"}})
+check(_tick["12927"]["ticker"] == "BA",
+      "BOEING IS SCREENED AS BA — the map kept the last ticker, BA-PA, and read no market cap "
+      "for a preferred line")
+check(_tick["1628063"]["ticker"] == "SRG",
+      "a preferred line listed first gives way to the common stock after it")
+check(_tick["1067983"]["ticker"] == "BRK-B",
+      "a share class is common stock: the first listed stays")
+check(_tick["2102713"]["ticker"] == "KCAC-UN",
+      "and a company with no common line at all keeps its first, rather than vanishing")
+_saved = (SE._rc, SE._get, SE._wc)
+SE._rc = lambda *a, **k: None
+SE._wc = lambda *a, **k: None
+SE._get = lambda url: {"0": {"cik_str": 12927, "ticker": "BA", "title": "BOEING CO"},
+                       "7": {"cik_str": 12927, "ticker": "BA-PA", "title": "BOEING CO"}}
+try:
+    check(SE.get_tickers()["12927"]["ticker"] == "BA",
+          "and the live loader uses that choice, not a last-one-wins dict")
+finally:
+    SE._rc, SE._get, SE._wc = _saved
+
+_ifrs_facts = {"facts": {"ifrs-full": {"Equity": {}}, "dei": {}}}
+_fund_facts = {"facts": {"cef": {"NetAssets": {}}, "ffd": {}}}
+_gaap_facts = {"facts": {"us-gaap": {"Assets": {}}, "ifrs-full": {"Revenue": {}}}}
+check(L.statements_basis(_ifrs_facts) == "ifrs" and L.statements_basis(_fund_facts) == "none"
+      and L.statements_basis(_gaap_facts) == "us-gaap" and L.statements_basis({}) == "none",
+      "statements are read as US GAAP, IFRS, or none (a fund's cef/ffd taxonomies), and a "
+      "stray IFRS fact does not outvote a US-GAAP balance sheet")
+check(L.statements_basis({"facts": {"us-gaap": {"InvestmentOwnedAtFairValue": {}}}}) == "us-gaap",
+      "any us-gaap facts at all are not 'no statements'")
+_ifrs_row = L.evaluate({**GOOD, "equity": None, "statements": "ifrs"})
+check(_ifrs_row["reason"] == "ifrs_filer" and "ifrs_filer" in L.UNMEASURED_CODES,
+      "AN IFRS FILER IS 'NOT READ', NOT 'EQUITY NOT FILED' — 343 rows (TotalEnergies, Spotify, "
+      "Ferrari) carried a false statement about the company")
+check(L.evaluate({**GOOD, "equity": None, "statements": "none"})["reason"] == "no_statements"
+      and "no_statements" in L.UNMEASURED_CODES,
+      "a fund with no company statements says so")
+check(L.evaluate({**GOOD, "equity": None, "statements": "us-gaap"})["reason"] == "no_equity",
+      "a US-GAAP filer with no equity tag read is still no_equity")
+check(L.evaluate({**GOOD, "statements": "ifrs", "price": 0.5})["reason"] == "penny",
+      "the size and price floors are facts about the quote and still come first")
+_cen = L.census([_ifrs_row, L.evaluate({**GOOD, "equity": None, "statements": "none"}),
+                 L.evaluate(GOOD)])
+check(_cen["unmeasured"] == 2 and _cen["rejected"] + _cen["unmeasured"] + _cen["passing"] == 3,
+      "and the funnel counts them as could-not-measure, never as rejected")
+check("IFRS" in L.REASONS["ifrs_filer"] and "not a verdict" in L.REASONS["units_unverified"],
+      "the labels say what the screen could not do, not what the company did")
+
 
 # ══════════════════════════════════════════════════════════════════
 # THE UNITS CHECK'S INPUTS — real filings that failed it for our reasons
@@ -992,7 +1062,8 @@ _rec = LS.facts_to_record({"ticker": "FDX", "name": "FedEx"}, {"price": 322.5, "
                           _fdx, "2026-09-04")
 check(_rec["net_income"] == 4.433e9 and _rec["ni_rescaled"] == ["2026-05-31"]
       and _rec["shares"] == 236.58e6 and _rec["eps_shares_by_year"]["2026-05-31"] == 239.0e6
-      and _rec["basic_shares_by_year"] == {"2026-05-31": 237.6e6},
+      and _rec["basic_shares_by_year"] == {"2026-05-31": 237.6e6}
+      and _rec["statements"] == "us-gaap",
       f"THE LYNCH RECORD CARRIES FEDEX'S NET INCOME AS $4.43bn, says it was rescaled, and "
       f"has both share counts (got {_rec['net_income']}, {_rec['ni_rescaled']})")
 
