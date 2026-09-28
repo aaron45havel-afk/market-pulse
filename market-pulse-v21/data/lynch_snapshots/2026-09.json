@@ -7,24 +7,24 @@
     "census": {
       "screened": 3321,
       "passing": 5,
-      "rejected": 2342,
-      "unmeasured": 974,
+      "rejected": 2373,
+      "unmeasured": 943,
       "by_reason": {
-        "pe_high": 1045,
-        "unprofitable": 481,
+        "pe_high": 1062,
+        "unprofitable": 490,
         "no_equity": 343,
         "too_small": 258,
         "penny": 196,
         "negative_equity": 164,
         "no_cap": 150,
-        "units_unverified": 136,
         "facts_unavailable": 127,
+        "units_unverified": 105,
         "no_revenue": 96,
         "no_price": 92,
         "tiny_revenue": 83,
         "no_growth": 39,
-        "pe_suspect": 17,
-        "trough_base": 16,
+        "pe_suspect": 21,
+        "trough_base": 17,
         "no_earnings": 15,
         "debt_high": 11,
         "loss_window": 11,
@@ -120,7 +120,9 @@
       "units": {
         "ok": true,
         "ratio": 0.01,
-        "implied": 149468732.29999998
+        "implied": 149468732.29999998,
+        "basis": "weighted",
+        "scale": 1
       },
       "pe_ratio": 5.65,
       "pe_raw": 5.65,
@@ -211,7 +213,9 @@
       "units": {
         "ok": true,
         "ratio": 0.0,
-        "implied": 3597839.9999999995
+        "implied": 3597839.9999999995,
+        "basis": "weighted",
+        "scale": 1
       },
       "pe_ratio": 9.25,
       "pe_raw": 9.25,
@@ -302,7 +306,9 @@
       "units": {
         "ok": true,
         "ratio": 0.0,
-        "implied": 1578841680.0
+        "implied": 1578841680.0,
+        "basis": "weighted",
+        "scale": 1
       },
       "pe_ratio": 6.8,
       "pe_raw": 6.8,
@@ -393,7 +399,9 @@
       "units": {
         "ok": true,
         "ratio": 0.0,
-        "implied": 337956584.7
+        "implied": 337956584.7,
+        "basis": "weighted",
+        "scale": 1
       },
       "pe_ratio": 9.84,
       "pe_raw": 9.84,
@@ -484,7 +492,9 @@
       "units": {
         "ok": true,
         "ratio": 0.0,
-        "implied": 728936000.0
+        "implied": 728936000.0,
+        "basis": "weighted",
+        "scale": 1
       },
       "pe_ratio": 8.35,
       "pe_raw": 8.35,
@@ -1395,7 +1405,7 @@
     {
       "ticker": "AIRO",
       "name": "AIRO Group Holdings, Inc.",
-      "reason": "units_unverified",
+      "reason": "unprofitable",
       "market_cap": 227518162.0,
       "size_band": "MICRO"
     },
@@ -3803,7 +3813,7 @@
     {
       "ticker": "BUDA",
       "name": "BUDA JUICE, INC.",
-      "reason": "units_unverified",
+      "reason": "pe_high",
       "market_cap": 94249995.0,
       "size_band": "MICRO"
     },
@@ -4076,7 +4086,7 @@
     {
       "ticker": "CAMT",
       "name": "CAMTEK LTD",
-      "reason": "units_unverified",
+      "reason": "pe_high",
       "market_cap": 6755133848.0,
       "size_band": "MID"
     },
@@ -6232,7 +6242,7 @@
     {
       "ticker": "DDT",
       "name": "DILLARD'S, INC.",
-      "reason": "units_unverified",
+      "reason": "pe_suspect",
       "market_cap": 409735686.0,
       "size_band": "SMALL"
     },
@@ -6750,7 +6760,7 @@
     {
       "ticker": "DSP",
       "name": "Viant Technology Inc.",
-      "reason": "units_unverified",
+      "reason": "pe_high",
       "market_cap": 820595402.0,
       "size_band": "SMALL"
     },
@@ -6771,7 +6781,7 @@
     {
       "ticker": "DSWL",
       "name": "DESWELL INDUSTRIES INC",
-      "reason": "units_unverified",
+      "reason": "trough_base",
       "market_cap": 49752569.0,
       "size_band": "NANO"
     },
@@ -7219,7 +7229,7 @@
     {
       "ticker": "EH",
       "name": "EHang Holdings Ltd",
-      "reason": "units_unverified",
+      "reason": "unprofitable",
       "market_cap": 344337943.0,
       "size_band": "SMALL"
     },
@@ -7912,7 +7922,7 @@
     {
       "ticker": "EVI",
       "name": "EVI INDUSTRIES, INC.",
-      "reason": "units_unverified",
+      "reason": "pe_high",
       "market_cap": 252676798.0,
       "size_band": "MICRO"
     },
@@ -8045,7 +8055,7 @@
     {
       "ticker": "EYPT",
       "name": "EyePoint, Inc.",
-      "reason": "units_unverified",
+      "reason": "unprofitable",
       "market_cap": 314674304.0,
       "size_band": "SMALL"
     },
@@ -8451,7 +8461,7 @@
     {
       "ticker": "FLOC",
       "name": "Flowco Holdings Inc.",
-      "reason": "units_unverified",
+      "reason": "pe_high",
       "market_cap": 1761887946.0,
       "size_band": "SMALL"
     },
@@ -9655,7 +9665,7 @@
     {
       "ticker": "GOGO",
       "name": "Gogo Inc.",
-      "reason": "units_unverified",
+      "reason": "pe_high",
       "market_cap": 308957925.0,
       "size_band": "SMALL"
     },
@@ -10544,7 +10554,7 @@
     {
       "ticker": "HPK",
       "name": "HighPeak Energy, Inc.",
-      "reason": "units_unverified",
+      "reason": "pe_suspect",
       "market_cap": 967363951.0,
       "size_band": "SMALL"
     },
@@ -10705,7 +10715,7 @@
     {
       "ticker": "HUBG",
       "name": "Hub Group, Inc.",
-      "reason": "units_unverified",
+      "reason": "pe_high",
       "market_cap": 1836439905.0,
       "size_band": "SMALL"
     },
@@ -11104,7 +11114,7 @@
     {
       "ticker": "IIIV",
       "name": "i3 Verticals, Inc.",
-      "reason": "units_unverified",
+      "reason": "pe_high",
       "market_cap": 398251996.0,
       "size_band": "SMALL"
     },
@@ -11286,7 +11296,7 @@
     {
       "ticker": "INR",
       "name": "INFINITY NATURAL RESOURCES, INC.",
-      "reason": "units_unverified",
+      "reason": "pe_high",
       "market_cap": 848589812.0,
       "size_band": "SMALL"
     },
@@ -11629,7 +11639,7 @@
     {
       "ticker": "JAKK",
       "name": "JAKKS PACIFIC INC",
-      "reason": "units_unverified",
+      "reason": "pe_suspect",
       "market_cap": 280860594.0,
       "size_band": "MICRO"
     },
@@ -12812,7 +12822,7 @@
     {
       "ticker": "LINC",
       "name": "LINCOLN EDUCATIONAL SERVICES CORP",
-      "reason": "units_unverified",
+      "reason": "pe_high",
       "market_cap": 757508919.0,
       "size_band": "SMALL"
     },
@@ -13848,7 +13858,7 @@
     {
       "ticker": "MIND",
       "name": "MIND TECHNOLOGY, INC",
-      "reason": "units_unverified",
+      "reason": "pe_high",
       "market_cap": 41173419.0,
       "size_band": "NANO"
     },
@@ -14884,7 +14894,7 @@
     {
       "ticker": "NEGG",
       "name": "Newegg Commerce, Inc.",
-      "reason": "units_unverified",
+      "reason": "unprofitable",
       "market_cap": 296354467.0,
       "size_band": "MICRO"
     },
@@ -15206,7 +15216,7 @@
     {
       "ticker": "NNDM",
       "name": "Nano Dimension Ltd.",
-      "reason": "units_unverified",
+      "reason": "unprofitable",
       "market_cap": 333125637.0,
       "size_band": "SMALL"
     },
@@ -15465,7 +15475,7 @@
     {
       "ticker": "NTNX",
       "name": "Nutanix, Inc.",
-      "reason": "units_unverified",
+      "reason": "pe_high",
       "market_cap": 18558408578.0,
       "size_band": "LARGE"
     },
@@ -15577,7 +15587,7 @@
     {
       "ticker": "NVMI",
       "name": "NOVA LTD.",
-      "reason": "units_unverified",
+      "reason": "pe_high",
       "market_cap": 11657994130.0,
       "size_band": "LARGE"
     },
@@ -15997,7 +16007,7 @@
     {
       "ticker": "OM",
       "name": "Outset Medical, Inc.",
-      "reason": "units_unverified",
+      "reason": "unprofitable",
       "market_cap": 58835123.0,
       "size_band": "MICRO"
     },
@@ -16046,7 +16056,7 @@
     {
       "ticker": "ONDS",
       "name": "Ondas Inc.",
-      "reason": "units_unverified",
+      "reason": "unprofitable",
       "market_cap": 4425500512.0,
       "size_band": "MID"
     },
@@ -18545,7 +18555,7 @@
     {
       "ticker": "RSI",
       "name": "Rush Street Interactive, Inc.",
-      "reason": "units_unverified",
+      "reason": "pe_high",
       "market_cap": 4528851415.0,
       "size_band": "MID"
     },
@@ -19028,7 +19038,7 @@
     {
       "ticker": "SEI",
       "name": "Solaris Energy Infrastructure, Inc.",
-      "reason": "units_unverified",
+      "reason": "pe_high",
       "market_cap": 5367304079.0,
       "size_band": "MID"
     },
@@ -20316,7 +20326,7 @@
     {
       "ticker": "SWBI",
       "name": "SMITH & WESSON BRANDS, INC.",
-      "reason": "units_unverified",
+      "reason": "pe_high",
       "market_cap": 631342694.0,
       "size_band": "SMALL"
     },
@@ -20638,7 +20648,7 @@
     {
       "ticker": "TEM",
       "name": "Tempus AI, Inc.",
-      "reason": "units_unverified",
+      "reason": "unprofitable",
       "market_cap": 14931178187.0,
       "size_band": "LARGE"
     },
@@ -22178,7 +22188,7 @@
     {
       "ticker": "VHI",
       "name": "VALHI INC /DE/",
-      "reason": "units_unverified",
+      "reason": "unprofitable",
       "market_cap": 454555148.0,
       "size_band": "SMALL"
     },
@@ -22353,7 +22363,7 @@
     {
       "ticker": "VNCE",
       "name": "VINCE HOLDING CORP.",
-      "reason": "units_unverified",
+      "reason": "pe_suspect",
       "market_cap": 144204504.0,
       "size_band": "MICRO"
     },
@@ -22542,7 +22552,7 @@
     {
       "ticker": "VTEX",
       "name": "VTEX",
-      "reason": "units_unverified",
+      "reason": "pe_high",
       "market_cap": 622776524.0,
       "size_band": "SMALL"
     },
