@@ -331,17 +331,33 @@ def score(data: dict | None = None) -> list[dict]:
         growth = _blend_growth(m.get("rev_cagr5"), m.get("rev_cagr10"),
                                m.get("rev_trend"))
         up, tot = m.get("rev_up_years") or 0, m.get("rev_up_total") or 0
+
+        def gate(value, ok):
+            # THREE ANSWERS, NOT TWO. None is "could not be measured": a
+            # figure the build could not find, or a ratio with no meaning
+            # (ROIC on negative invested capital — Domino's, VeriSign). It
+            # never passes, and it is never reported as a failure either.
+            return None if value is None else bool(ok(value))
+
+        nd = m.get("nd_ebit")
+        om = m.get("op_margin_now")
         gates = {
-            "roic":   m.get("roic_med") is not None and m["roic_med"] >= ROIC_MIN,
-            "growth": growth is not None and growth >= GROWTH_MIN
-                      and tot >= 6 and up / max(tot, 1) >= UP_YEARS_FRAC,
+            "roic":   gate(m.get("roic_med"), lambda v: v >= ROIC_MIN),
+            "growth": gate(growth, lambda v: v >= GROWTH_MIN
+                           and tot >= 6 and up / max(tot, 1) >= UP_YEARS_FRAC),
             "profit": (m.get("ni_pos_years") or 0) >= NI_POS_MIN,
-            "cash":   conv is not None and conv >= FCF_CONV_MIN,
-            "debt":   m.get("nd_ebit") is not None and m["nd_ebit"] <= ND_EBIT_MAX,
-            "capex":  reinvest is not None and reinvest <= CAPEX_OCF_MAX,
+            "cash":   gate(conv, lambda v: v >= FCF_CONV_MIN),
+            # No ratio when EBIT is not positive: that is an operating loss
+            # with nothing to carry debt, a failure. No ratio for any other
+            # reason is a debt figure we could not read.
+            "debt":   (False if nd is None and om is not None and om <= 0
+                       else gate(nd, lambda v: v <= ND_EBIT_MAX)),
+            "capex":  gate(reinvest, lambda v: v <= CAPEX_OCF_MAX),
             "country": investable,
         }
-        gates_pass = all(gates.values())
+        gates_failed = [k for k, v in gates.items() if v is False]
+        gates_unmeasured = [k for k, v in gates.items() if v is None]
+        gates_pass = not gates_failed and not gates_unmeasured
 
         # ── Expected-return decomposition ──
         g = None
@@ -433,10 +449,10 @@ def score(data: dict | None = None) -> list[dict]:
             badges.append({"key": "nocapex", "label": "capex unfiled", "title":
                            "No capital-expenditure figure could be found in at least three "
                            "of the last five years, so reinvestment — and therefore free "
-                           "cash flow — could not be measured. The company is GATED "
-                           "because we could not verify it, not because it failed. "
-                           "Common for IFRS filers and extractive industries, whose cash "
-                           "flow statements use tags this build may not yet read."})
+                           "cash flow — could not be measured. That gate reads NOT "
+                           "MEASURED, not failed; the company cannot clear the screen "
+                           "until it is. Common for IFRS filers and extractive industries, "
+                           "whose cash flow statements use tags this build may not yet read."})
         elif m.get("reinvest_ocf") is None:
             badges.append({"key": "capexppe", "label": "PP&E only", "title":
                            "Reinvestment here counts property, plant and equipment only. "
@@ -456,8 +472,13 @@ def score(data: dict | None = None) -> list[dict]:
                            f"cannot carry a label its record does not support."})
 
         # ── Status ──
-        if not gates_pass:
+        # A measured failure outranks an unmeasured gate: GATED means the
+        # company failed something we could see. UNMEASURED means it failed
+        # nothing we could see, and something could not be seen.
+        if gates_failed:
             status = "GATED"
+        elif gates_unmeasured:
+            status = "UNMEASURED"
         elif cycle_wait:
             status = "CYCLE-WAIT"
         elif expected is not None and expected >= TARGET and proven:
@@ -501,11 +522,14 @@ def score(data: dict | None = None) -> list[dict]:
             "expected": expected,
             "gates": gates,
             "gates_pass": gates_pass,
+            "gates_failed": gates_failed,
+            "gates_unmeasured": gates_unmeasured,
             "badges": badges,
             "status": status,
         })
 
-    order = {"COMPOUNDER": 0, "QUALITY": 1, "CYCLE-WAIT": 2, "WATCH": 3, "GATED": 4}
+    order = {"COMPOUNDER": 0, "QUALITY": 1, "CYCLE-WAIT": 2, "WATCH": 3, "UNMEASURED": 4,
+             "GATED": 5}
     rows.sort(key=lambda r: (order[r["status"]],
                              -(r["expected"] if r["expected"] is not None else -99)))
     return rows
