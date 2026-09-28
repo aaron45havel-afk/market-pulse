@@ -2,7 +2,7 @@ name: TEMPORARY — rebuild compounders, FCF quality and Lynch on the branch
 
 # Branch data run for the tag-reading fixes. Commits the rebuilt data to
 # this branch for review. Deleted before the branch merges.
-# Run 4: one-kind totals take the largest and must cover the debt due this year.
+# Run 5: every route is a floor; the largest stands.
 on:
   push:
     branches: [claude/legal-rep-invoice-tracking-9j1i9r]

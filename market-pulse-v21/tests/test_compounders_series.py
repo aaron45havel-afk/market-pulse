@@ -674,11 +674,39 @@ check(_nvgs["total_debt"] == 0.594e9
       and not any("LongTermDebt" in n for n in _nvgs["notes"]),
       f"NAVIGATOR FILES TWO KINDS: THE LARGER STANDS ($594m of loans), not whichever the "
       f"list names first ($138m of bonds) (got {_nvgs['total_debt']}, {_nvgs['notes']})")
-check(R.balance_sheet(merge(dated("LongTermDebtNoncurrent", "2025-12-31", 4_000.0),
-                            dated("LongTermDebtCurrent", "2025-12-31", 500.0),
-                            dated("UnsecuredDebt", "2025-12-31", 4_600.0),
-                            dated("StockholdersEquity", "2025-12-31", 1.0)))["total_debt"] == 4_500.0,
-      "a one-kind total never competes with a filed main line")
+_csv = R.balance_sheet(merge(dated("LongTermDebtNoncurrent", "2025-12-31", 6e6),
+                             dated("LongTermDebtCurrent", "2025-12-31", 1e6),
+                             dated("SeniorNotes", "2025-12-31", 397e6),
+                             dated("StockholdersEquity", "2025-12-31", 1.0)))
+check(_csv["total_debt"] == 397e6,
+      f"A ONE-KIND TOTAL LARGER THAN THE MAIN LINE IS A FLOOR THE LINE MISSED — Carriage "
+      f"Services' $397m of senior notes, not its $7m noncurrent line (got {_csv['total_debt']})")
+check(R.balance_sheet(merge(dated("LongTermDebtNoncurrent", "2025-12-31", 6e6),
+                            dated("SeniorNotes", "2025-12-31", 397e6),
+                            dated("ShortTermBorrowings", "2025-12-31", 50e6),
+                            dated("StockholdersEquity", "2025-12-31", 1.0)))["total_debt"] == 447e6,
+      "and short-term borrowings, which no long-term total holds, are added to it")
+# Every route is a floor; the combined tag is one of them, not an override.
+_on = R.balance_sheet(merge(dated("DebtLongtermAndShorttermCombinedAmount", "2025-12-31", 0.9e6),
+                            dated("LongTermDebt", "2025-12-31", 2.9805e9),
+                            dated("LongTermDebtNoncurrent", "2025-12-31", 2.9805e9),
+                            dated("StockholdersEquity", "2025-12-31", 8e9)))
+check(_on["total_debt"] == 2.9805e9 and "single combined debt tag" not in _on["notes"],
+      f"ON SEMICONDUCTOR'S $0.9m COMBINED TAG DOES NOT OVERRIDE ITS $2.98bn OF LongTermDebt "
+      f"(got {_on['total_debt']})")
+_skm = R.balance_sheet(merge(ifrs("Borrowings", "2024-12-31", 305e6),
+                             ifrs("CurrentPortionOfLongtermBorrowings", "2024-12-31", 2.46e12),
+                             ifrs("LongtermBorrowings", "2019-12-31", 5e12),
+                             ifrs("Equity", "2024-12-31", 12e12)))
+check(_skm["total_debt"] is None and any("combined" in n for n in _skm["notes"]),
+      f"SK TELECOM'S 305m 'Borrowings' BESIDE 2.46tn DUE THIS YEAR IS NOT A TOTAL — ignored, and "
+      f"what is left is a current portion alone: unknown (got {_skm['total_debt']}, {_skm['notes']})")
+_sgrp = R.balance_sheet(merge(dated("LongTermDebtNoncurrent", "2025-12-31", 1e6),
+                              dated("LongTermDebtCurrent", "2025-12-31", 0.0),
+                              dated("DebtCurrent", "2025-12-31", 20e6),
+                              dated("StockholdersEquity", "2025-12-31", 1.0)))
+check(_sgrp["total_debt"] == 21e6,
+      f"a zero current portion does not hide $20m of DebtCurrent (got {_sgrp['total_debt']})")
 check(R.balance_sheet(merge(dated("SeniorNotes", "2019-12-31", 2e9),
                             dated("ShortTermBorrowings", "2025-12-31", 100.0),
                             dated("StockholdersEquity", "2025-12-31", 1.0)))["total_debt"] is None,

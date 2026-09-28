@@ -1,4 +1,4 @@
-name: TEMPORARY — measured debt too small for the interest paid
+name: TEMPORARY — debt under the new assembly vs the file
 
 # Read-only. Deleted before the branch merges.
 on:
@@ -40,43 +40,31 @@ jobs:
           rows = json.load(open("data/compounders.json"))["tickers"]
           PAT = re.compile(r"Debt|Borrowing|Notes|Loan|Obligation|Payable|Bond|Credit", re.I)
           SKIP = re.compile(r"Payments|Proceeds|Repayments|Interest|Receivable|Accounts|Accrued|Taxes|Dividend|Lease|Fair|Amortization|Issuance|Gain|Loss|Extinguish|Increase|Decrease|Maturit|Weighted|Percent|Rate|Covenant|Securities|Purchase|Performance|Benefit|Retirement|Capacity|Guarantee|Contractual|Excise|Trade", re.I)
-          flagged = []
+          changed = []
+          implied_hi = []
           n = 0
           for t in sorted(rows):
               r = rows[t]
-              d = r.get("total_debt")
-              if d is None or r.get("bs_as_of") is None:
+              if r.get("bs_unit") is None:
                   continue
-              if t not in ("ON", "SKM"):
-                  pass
               try:
                   f = get(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{int(r['cik']):010d}.json")["facts"]
-              except Exception as e:
+              except Exception:
                   print(t, "fetch failed"); continue
               n += 1
               time.sleep(0.11)
-              unit, ref = r["bs_unit"], r["bs_as_of"]
-              ie = R._duration_at(f, R.INTEREST_SLOTS, ref, unit)
-              if ie is None:
-                  continue
-              ie = abs(ie)
               rev = r.get("revenue_last") or 0
-              implied = ie / d if d else float("inf")
-              if (implied > 0.20 and rev and ie >= R.DEBT_FREE_INTEREST_MAX * rev) or t in ("ON", "SKM"):
-                  at = []
-                  for tax, tags in f.items():
-                      for tag, node in tags.items():
-                          if not PAT.search(tag) or SKIP.search(tag):
-                              continue
-                          hits = [v for v in (node.get("units") or {}).get(unit, [])
-                                  if v.get("end") == ref and not v.get("start") and v.get("form") in R.ANNUAL_FORMS]
-                          if hits:
-                              val = max(hits, key=lambda v: v.get("filed") or "")["val"]
-                              at.append(f"{'' if tax == 'us-gaap' else tax + ':'}{tag}={val/1e6:,.0f}m")
-                  bs = R.balance_sheet(f, want_unit=unit, revenue=rev)
-                  flagged.append(t)
-                  print(f"== {t} debt={d/1e6:,.0f}m interest={ie/1e6:,.1f}m ({implied if d else 0:.0%} implied) rev={rev/1e6:,.0f}m {unit} ref={ref} notes={bs['notes']}")
-                  print("     ", "; ".join(at[:18]))
-          print("\nchecked", n, "flagged", len(flagged))
-          print(" ".join(flagged))
+              bs = R.balance_sheet(f, want_unit=r["currency"], revenue=rev)
+              if bs["unit"] != r["currency"]:
+                  continue
+              old, new = r.get("total_debt"), bs["total_debt"]
+              if old != new:
+                  changed.append(t)
+                  fm = lambda v: "None" if v is None else f"{v/1e6:,.1f}m"
+                  print(f"== {t} {fm(old)} -> {fm(new)} {bs['unit']} notes={bs['notes']}")
+              ie = R._duration_at(f, R.INTEREST_SLOTS, bs["as_of"], bs["unit"]) if bs["as_of"] else None
+              if new and ie and abs(ie) > new and rev and abs(ie) >= R.DEBT_FREE_INTEREST_MAX * rev:
+                  implied_hi.append(f"{t}({abs(ie)/new:.0%})")
+          print("\nchecked", n, "changed", len(changed))
+          print("interest above the measured debt:", len(implied_hi), " ".join(implied_hi))
           PY
