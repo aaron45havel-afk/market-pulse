@@ -271,3 +271,12 @@ per request met connect hangs (~1 in 25), fixed with one persistent connection p
 worker; and sustained volume from one runner slowed further, fixed by splitting the
 agencies ten ways (`--shard i/10`) and merging with checks for a missing or duplicated
 shard. The national pull now takes about four minutes.
+
+## 2026-09-28 — Every suite runs on every pull request, database halves included
+**Decided.** `.github/workflows/test.yml` gained an `all-suites` job: install
+`requirements.txt`, start a throwaway Postgres 16 service, run `tests/run_all.py`. Eight
+suites have a database half that skips without `DATABASE_URL`; the runner gives each its
+own fresh database (they migrate down and up, so they can't share) and fails a suite that
+still reports "no DATABASE_URL" when one was provided — a skip that reads as a pass is
+the failure mode being closed. The existing `household-engine` job is left as it was in
+case it is a required status check; it is now redundant.
