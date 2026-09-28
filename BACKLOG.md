@@ -28,6 +28,10 @@ Format: `- [PHASE-SEEN] item — why it matters`
   prior years, would give the split factor without Yahoo.
 - [P2] When Yahoo has no chart for a name, its `shares_cagr5` stays as filed (no split
   history to restate it with). The row already has no valuation term in that case.
+- [P2] `fix_share_scale` needs a break to anchor on. A company whose WHOLE share series
+  is in the wrong unit (Nutanix reads 0.0x P/FCF) is left as filed; the `/holt` and
+  compounders guards refuse it. The cover-page count (`dei:EntityCommonStockSharesOutstanding`)
+  would be an anchor for those.
 - [P0] `CRON_SECRET` was exposed in an earlier session and has not been rotated.
 - [P1] `mf_audit_log` has the immutability trigger ARCHITECTURE.md §5.4 asks for but not
   the insert-only grant. A grant is meaningless while the app connects as the table's
