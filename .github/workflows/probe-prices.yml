@@ -1,0 +1,64 @@
+name: TEMPORARY — check stock splits against SEC share counts
+
+# Read-only. Confirms whether the "wrong prices" are really split-adjusted
+# prices divided by pre-split SEC share counts: Yahoo split events, a second
+# quote source, Yahoo dividend amounts around splits, and Booking's SEC share
+# counts with their filing dates. Deleted before the branch merges.
+on:
+  push:
+    branches: [claude/legal-rep-invoice-tracking-9j1i9r]
+    paths:
+      - '.github/workflows/probe-prices.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - run: |
+          python3 -u - <<'PY'
+          import gzip, json, time, urllib.request, urllib.error
+          from datetime import datetime, timezone
+          YH = {"User-Agent": "Mozilla/5.0 (market-pulse-refresh/1.0)"}
+          SEC = {"User-Agent": "market-pulse-research admin@focusedops.io", "Accept-Encoding": "gzip, deflate"}
+          def get(url, h):
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=60) as r:
+                      b = r.read()
+                      if r.headers.get("Content-Encoding") == "gzip":
+                          b = gzip.decompress(b)
+                      return r.status, b
+              except urllib.error.HTTPError as e:
+                  return e.code, e.read()[:200]
+              except Exception as e:
+                  return None, repr(e).encode()
+          d = lambda ts: datetime.fromtimestamp(int(ts), tz=timezone.utc).date().isoformat()
+          for t in ("BKNG", "TTD", "CMG", "NVDA", "AVGO", "ORLY", "CTAS", "AAPL"):
+              st, b = get(f"https://query1.finance.yahoo.com/v8/finance/chart/{t}?range=10y&interval=1mo&events=div%7Csplit", YH)
+              try:
+                  res = json.loads(b)["chart"]["result"][0]
+              except Exception as e:
+                  print(t, st, repr(e), b[:200]); continue
+              m = res.get("meta", {})
+              closes = [c for c in res["indicators"]["quote"][0]["close"] if c]
+              ev = res.get("events") or {}
+              splits = sorted((d(s["date"]), s.get("numerator"), s.get("denominator"), s.get("splitRatio")) for s in (ev.get("splits") or {}).values())
+              divs = sorted((d(v["date"]), v["amount"]) for v in (ev.get("dividends") or {}).values())
+              print(f"== {t}: yahoo {st} regularMarketPrice={m.get('regularMarketPrice')} last monthly close={closes[-1]:.2f} first ts={d(res['timestamp'][0])} splits={splits}")
+              for sd, *_ in splits:
+                  near = [x for x in divs if abs((datetime.fromisoformat(x[0]) - datetime.fromisoformat(sd)).days) < 400]
+                  print(f"     dividends within a year of the {sd} split: {near}")
+              st2, b2 = get(f"https://stooq.com/q/l/?s={t.lower()}.us&f=sd2t2ohlcv&h&e=csv", {"User-Agent": "Mozilla/5.0"})
+              print(f"     stooq {st2}: {b2.decode('utf-8', 'replace').strip().splitlines()[-1] if st2 == 200 else b2[:120]}")
+              time.sleep(0.5)
+          st, b = get("https://data.sec.gov/api/xbrl/companyfacts/CIK0001075531.json", SEC)
+          f = json.loads(b)["facts"]
+          for tax, tag in (("us-gaap", "WeightedAverageNumberOfDilutedSharesOutstanding"), ("dei", "EntityCommonStockSharesOutstanding")):
+              rows = f.get(tax, {}).get(tag, {}).get("units", {}).get("shares", [])
+              print(f"== BKNG {tag}: {len(rows)} facts; latest by filed:")
+              for r in sorted(rows, key=lambda r: r["filed"])[-10:]:
+                  print("    ", {k: r.get(k) for k in ("fy", "fp", "form", "start", "end", "filed", "val")})
+          PY
