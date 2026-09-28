@@ -303,6 +303,23 @@ _eur = R.compute_metrics(co({"IncomeLossFromContinuingOperationsBeforeIncomeTaxe
                              {"units": {"EUR": [fyv(y, 1.3e9, f"{y + 1}-02-10") for y in range(2016, 2026)]}}}))
 check(_eur["nd_ebit"] is None, "a filler in another currency is not spliced into dollars")
 
+
+# Debt last filed as zero in 2020; the interest bill is checked against REVENUE.
+def _zero_then(interest):
+    return co({"LongTermDebtNoncurrent": {"units": {"USD": [
+                   dict(fyv(y, 3e9 if y < 2020 else 0.0, f"{y + 1}-02-10"), start=None)
+                   for y in range(2016, 2021)]}},
+               "StockholdersEquity": {"units": {"USD": [
+                   dict(fyv(y, 5e9, f"{y + 1}-02-10"), start=None) for y in range(2016, 2026)]}},
+               "InterestExpense": usd(range(2016, 2026), interest)})
+
+
+check(R.compute_metrics(_zero_then(1e8))["total_debt"] is None
+      and R.compute_metrics(_zero_then(1e6))["total_debt"] == 0.0
+      and R.compute_metrics(_zero_then(1e6))["debt_zero_as_of"] == "2020-12-31",
+      "compute_metrics hands revenue to the balance sheet: 1% of revenue in interest keeps a "
+      "reported zero from standing, 0.01% does not")
+
 _amend = {"us-gaap": {"WeightedAverageNumberOfDilutedSharesOutstanding": {"units": {"shares": [
     fyv(2023, 5.0, "2024-02-01"), fyv(2024, 5.0, "2025-02-01"), fyv(2025, 5.0, "2026-02-01"),
     dict(fyv(2025, 6.0, "2026-05-01"), form="10-K/A")]}}}}

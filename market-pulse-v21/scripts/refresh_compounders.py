@@ -629,13 +629,26 @@ BALANCE_TAGS: dict[str, list[tuple[str, str]]] = {
         ("us-gaap", "LongTermNotesPayable"),
         ("us-gaap", "SeniorLongTermNotes"),
         ("us-gaap", "OtherLongTermDebtNoncurrent"),
+        ("us-gaap", "ConvertibleLongTermNotesPayable"),
     ],
     # The TOTAL of long-term debt, current portion included. Used as the
     # long-term figure when no line above was filed, and never added to a
     # current portion it contains.
+    #
+    # After the first two, totals of ONE KIND of debt — the only long-term
+    # figure some filers tag (Teva's senior notes, Avista's secured bonds).
+    # First with a value wins, so a filer tagging two kinds is undercounted
+    # rather than double-counted when the two overlap.
     "debt_longterm_total": [
         ("us-gaap", "LongTermDebt"),
         ("us-gaap", "LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities"),
+        ("us-gaap", "SeniorNotes"),
+        ("us-gaap", "ConvertibleNotesPayable"),
+        ("us-gaap", "SecuredDebt"),
+        ("us-gaap", "UnsecuredDebt"),
+        ("us-gaap", "UnsecuredLongTermDebt"),
+        ("us-gaap", "SecuredLongTermDebt"),
+        ("us-gaap", "LongTermLoansPayable"),
     ],
     "debt_current": [
         ("us-gaap", "LongTermDebtCurrent"),
@@ -660,6 +673,8 @@ BALANCE_TAGS: dict[str, list[tuple[str, str]]] = {
         ("us-gaap", "CommercialPaper"),
         ("ifrs-full", "ShorttermBorrowings"),
         ("us-gaap", "NotesPayableCurrent"),
+        ("us-gaap", "LoansPayableCurrent"),
+        ("us-gaap", "ShortTermBankLoansAndNotesPayable"),
     ],
     "preferred": [
         ("us-gaap", "PreferredStockValue"),
@@ -744,11 +759,68 @@ def _instant_at(facts: dict, slots: list[tuple[str, str]], end: str,
     return None
 
 
+def _last_filed(facts: dict, slots: list[tuple[str, str]],
+                unit: str) -> tuple[str | None, list[float]]:
+    """(date, [each slot's value on it]) for the latest date any slot has
+    an annual balance-sheet value in `unit`; (None, []) if none ever."""
+    ends = [v["end"] for taxonomy, tag in slots
+            for v in (((facts.get(taxonomy) or {}).get(tag) or {}).get("units") or {}).get(unit) or []
+            if v.get("form") in ANNUAL_FORMS and not v.get("start") and v.get("end")
+            and isinstance(v.get("val"), (int, float))]
+    if not ends:
+        return None, []
+    end = max(ends)
+    return end, [x for x in (_instant_at(facts, [slot], end, unit) for slot in slots)
+                 if x is not None]
+
+
+def _duration_at(facts: dict, slots: list[tuple[str, str]], end: str,
+                 unit: str) -> float | None:
+    """The first slot's value for the fiscal YEAR ending `end`, from an
+    annual filing (latest-filed wins). None if no slot has one."""
+    for taxonomy, tag in slots:
+        rows = (((facts.get(taxonomy) or {}).get(tag) or {}).get("units") or {}).get(unit) or []
+        hits = []
+        for v in rows:
+            if (v.get("form") not in ANNUAL_FORMS or v.get("end") != end or not v.get("start")
+                    or not isinstance(v.get("val"), (int, float))):
+                continue
+            try:
+                span = (date.fromisoformat(end) - date.fromisoformat(v["start"])).days
+            except ValueError:
+                continue
+            if ANNUAL_DAYS[0] <= span <= ANNUAL_DAYS[1]:
+                hits.append(v)
+        if hits:
+            return float(max(hits, key=lambda v: v.get("filed") or "")["val"])
+    return None
+
+
 DEBT_KEYS = ("debt_total", "debt_noncurrent", "debt_longterm_total",
              "debt_current", "debt_current_all", "debt_short")
 
+# What a company paid in interest over the year to its latest balance
+# sheet. Evidence only — never an EV component.
+INTEREST_SLOTS = [
+    ("us-gaap", "InterestExpense"),
+    ("us-gaap", "InterestExpenseNonoperating"),
+    ("us-gaap", "InterestExpenseDebt"),
+    ("us-gaap", "InterestPaidNet"),
+    ("ifrs-full", "InterestExpense"),
+    ("ifrs-full", "FinanceCosts"),
+]
 
-def balance_sheet(facts: dict, want_unit: str = "USD") -> dict:
+# A zero read from what a company did NOT file stands only if its interest
+# bill agrees. At a 5% coupon, 0.25% of revenue is debt of 5% of a year's
+# sales. The first branch run's unknowns split on it: debt-free companies
+# paying facility fees and lease interest reached 0.32% (Teekay), Vertex
+# and Signet 0.11%; Caleres, whose revolver is tagged under a name this
+# list does not read, 0.64%, and Babcock & Wilcox 6.4%.
+DEBT_FREE_INTEREST_MAX = 0.0025
+
+
+def balance_sheet(facts: dict, want_unit: str = "USD",
+                  revenue: float | None = None) -> dict:
     """The enterprise-value inputs, or an explicit absence.
 
     Returns total_debt, cash, preferred and minority in ONE unit, as of the
@@ -780,9 +852,16 @@ def balance_sheet(facts: dict, want_unit: str = "USD") -> dict:
     company files no debt tag, and treating that as unmeasurable would
     throw away exactly the balance sheets this screen most wants. So if the
     company filed a balance sheet and has NEVER filed a debt tag, debt is
-    read as zero and FLAGGED as inferred. A company that filed debt tags in
-    the past but none on its latest balance sheet has moved them to one
-    this list does not read — that is unknown, not zero.
+    read as zero and FLAGGED as inferred. A company whose last debt figures
+    were all ZERO and that has filed none since repaid it and stopped
+    tagging an empty line — Copart, Lululemon, Vertex, Signet — and reads
+    as zero too, with the date it last said so. A company whose last debt
+    figure was NOT zero and files none now has moved it to a tag this list
+    does not read: unknown, not zero.
+
+    Either zero needs `revenue` to agree: interest of DEBT_FREE_INTEREST_MAX
+    of revenue or more over the year means there is debt somewhere, and
+    the answer is unknown.
     """
     anchors = BALANCE_TAGS["equity"] + BALANCE_TAGS["liabilities"] + BALANCE_TAGS["cash"]
     debt_slots = [s for k in DEBT_KEYS for s in BALANCE_TAGS[k]]
@@ -799,7 +878,8 @@ def balance_sheet(facts: dict, want_unit: str = "USD") -> dict:
             ref = end
             break
     if ref is None:
-        return {"total_debt": None, "debt_inferred_zero": False, "cash": None,
+        return {"total_debt": None, "debt_inferred_zero": False, "debt_zero_as_of": None,
+                "cash": None,
                 "preferred": None, "minority": None, "unit": None, "as_of": None,
                 "filed_balance_sheet": False, "notes": ["no balance sheet filed"]}
 
@@ -844,32 +924,46 @@ def balance_sheet(facts: dict, want_unit: str = "USD") -> dict:
             # own tag, and its $13.8bn current debt alone read as its total.
             longterm = (BALANCE_TAGS["debt_noncurrent"] + BALANCE_TAGS["debt_longterm_total"]
                         + BALANCE_TAGS["debt_total"])
-            if _latest_instant(facts, longterm, unit)[0] is not None:
+            if _latest_instant(facts, longterm, unit)[0] is None:
+                debt = near
+            elif near:
                 partial = True
                 notes.append("only short-term debt on the latest balance sheet, but long-term "
                              "debt was filed before under a tag no longer used — unknown, "
                              "not the short-term part alone")
-            else:
-                debt = near
+            # A zero here is a reported zero: left to the rule below.
 
     filed_a_balance_sheet = (at("equity") is not None or at("liabilities") is not None
                              or cash is not None)
     debt_inferred_zero = False
+    zero_as_of = None
     if debt is None and filed_a_balance_sheet and not partial:
-        ever = _latest_instant(facts, debt_slots, unit)[0] is not None
-        if ever:
+        last_end, last_vals = _last_filed(facts, debt_slots, unit)
+        interest = _duration_at(facts, INTEREST_SLOTS, ref, unit)
+        owes = (interest is not None and revenue is not None and revenue > 0
+                and abs(interest) >= DEBT_FREE_INTEREST_MAX * revenue)
+        if any(last_vals):
             notes.append("debt tags were filed before but none on the latest balance "
                          "sheet — moved to a tag this list does not read; unknown, not zero")
-        else:
+        elif owes:
+            notes.append(f"no debt figure to read, but interest of {abs(interest) / revenue:.2%} "
+                         f"of revenue says there is debt — unknown, not zero")
+        elif last_end is None:
             debt = 0.0
             debt_inferred_zero = True
             notes.append("no debt tag on a filed balance sheet — read as zero "
                          "debt rather than unknown, because a debt-free "
                          "company files nothing here")
+        else:
+            debt = 0.0
+            zero_as_of = last_end
+            notes.append(f"debt last reported as zero ({last_end}) and none filed since "
+                         f"— read as zero")
 
     return {
         "total_debt": debt,
         "debt_inferred_zero": debt_inferred_zero,
+        "debt_zero_as_of": zero_as_of,
         "cash": cash,
         "preferred": at("preferred"),
         "minority": at("minority"),
@@ -1265,7 +1359,7 @@ def compute_metrics(facts: dict) -> dict | None:
     # series (revenue is the anchor); a balance sheet in any other unit is
     # dropped rather than mixed, because the market capitalisation it will
     # be combined with is in dollars.
-    bs = balance_sheet(facts, want_unit=currency)
+    bs = balance_sheet(facts, want_unit=currency, revenue=rev[last])
     bs_usable = bs["unit"] == currency
     return {
         "fy_last": last,
@@ -1277,6 +1371,7 @@ def compute_metrics(facts: dict) -> dict | None:
         "minority": bs["minority"] if bs_usable else None,
         "bs_as_of": bs["as_of"] if bs_usable else None,
         "debt_inferred_zero": bs["debt_inferred_zero"] if bs_usable else None,
+        "debt_zero_as_of": bs["debt_zero_as_of"] if bs_usable else None,
         "bs_unit": bs["unit"],
         "revenue_last": rev[last],
         "rev_cagr5": _cagr(rev, 5), "rev_cagr10": _cagr(rev, 10),

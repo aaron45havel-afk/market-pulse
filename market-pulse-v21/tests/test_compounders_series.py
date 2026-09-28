@@ -650,6 +650,87 @@ _late = R.balance_sheet(merge(dated("StockholdersEquity", "2025-12-31", 1.0),
 check(_late["total_debt"] == 4_000.0 and _late["as_of"] == "2025-12-31",
       "the date is the balance sheet's: a footnote figure dated after it doesn't move it")
 
+# The third probe: what 304 unknown-debt rows filed ($bn, latest 10-Ks).
+_zs = R.balance_sheet(merge(dated("ConvertibleLongTermNotesPayable", "2026-07-31", 1.696e9),
+                            dated("ConvertibleNotesPayableCurrent", "2025-07-31", 0.0),
+                            dated("StockholdersEquity", "2026-07-31", 2e9)))
+check(_zs["total_debt"] == 1.696e9, "Zscaler's converts are read from ConvertibleLongTermNotesPayable")
+_teva = R.balance_sheet(merge(dated("SeniorNotes", "2025-12-31", 16.85e9),
+                              dated("LongTermDebtCurrent", "2025-12-31", 1.798e9),
+                              dated("StockholdersEquity", "2025-12-31", 7e9)))
+check(_teva["total_debt"] == 16.85e9,
+      f"TEVA'S SENIOR NOTES ARE ITS TOTAL, current portion inside — $16.85bn, not the $1.8bn "
+      f"current portion read as partial (got {_teva['total_debt']})")
+_ava = R.balance_sheet(merge(dated("SecuredDebt", "2025-12-31", 2.759e9),
+                             dated("ShortTermBorrowings", "2025-12-31", 0.388e9),
+                             dated("StockholdersEquity", "2025-12-31", 2.6e9)))
+check(abs(_ava["total_debt"] - 3.147e9) < 1e3,
+      "Avista: its secured bonds plus short-term borrowings")
+
+
+def dur(tag, end, val):
+    y = int(end[:4])
+    return inst("us-gaap", tag, [{"start": f"{y - 1}{end[4:]}", "end": end, "val": val, "fy": y,
+                                  "fp": "FY", "form": "10-K", "filed": end}])
+
+
+# Copart: paid off its notes, filed the line at zero in 2024, and stopped.
+CPRT = merge(dated("LongTermDebtAndCapitalLeaseObligations", "2022-07-31", 376.5e6),
+             dated("LongTermDebtAndCapitalLeaseObligations", "2024-07-31", 0.0),
+             dated("StockholdersEquity", "2025-07-31", 8e9),
+             dur("InterestPaidNet", "2025-07-31", 2.0e6))
+_cprt = R.balance_sheet(CPRT, revenue=4.647e9)
+check(_cprt["total_debt"] == 0.0 and not _cprt["debt_inferred_zero"]
+      and _cprt["debt_zero_as_of"] == "2024-07-31",
+      f"COPART LAST REPORTED ITS DEBT AS ZERO AND HAS FILED NONE SINCE: debt-free, with the "
+      f"date it said so — not unknown (got {_cprt['total_debt']}, {_cprt['notes']})")
+# Caleres: LongTermDebt at zero in 2022, then a revolver under a tag not read.
+CAL = merge(dated("LongTermDebt", "2022-01-29", 0.0),
+            dated("StockholdersEquity", "2026-01-31", 0.6e9),
+            dur("InterestPaidNet", "2026-01-31", 17.7e6))
+_cal = R.balance_sheet(CAL, revenue=2.76e9)
+check(_cal["total_debt"] is None and _cal["debt_zero_as_of"] is None
+      and any("0.64%" in n for n in _cal["notes"]),
+      f"BUT NOT WHEN THE INTEREST BILL SAYS OTHERWISE: Caleres paid 0.64% of revenue in "
+      f"interest — unknown (got {_cal['total_debt']}, {_cal['notes']})")
+check(R.balance_sheet(CAL, revenue=17.7e6 / 0.002)["total_debt"] == 0.0,
+      "interest under DEBT_FREE_INTEREST_MAX of revenue does not block the zero")
+_q4 = merge(dated("LongTermDebt", "2022-01-29", 0.0), dated("StockholdersEquity", "2026-01-31", 0.6e9),
+            inst("us-gaap", "InterestExpense", [{"start": "2025-11-01", "end": "2026-01-31", "val": 17.7e6,
+                                                 "fy": 2025, "fp": "FY", "form": "10-K"}]))
+check(R.balance_sheet(_q4, revenue=2.76e9)["total_debt"] == 0.0,
+      "a quarter's interest inside a 10-K is not the year's — only a year-long figure is evidence")
+check(R.balance_sheet(merge(dated("LongTermDebtNoncurrent", "2023-12-31", 0.0),
+                            dated("ShortTermBorrowings", "2023-12-31", 200.0),
+                            dated("StockholdersEquity", "2025-12-31", 1.0)))["total_debt"] is None,
+      "nor a zero line beside nonzero short-term borrowings")
+# Each one-kind total and short-term fallback is read when it is all a filer tags.
+for _tag, _key in (("ConvertibleNotesPayable", "lt"), ("UnsecuredDebt", "lt"),
+                   ("UnsecuredLongTermDebt", "lt"), ("SecuredLongTermDebt", "lt"),
+                   ("LongTermLoansPayable", "lt"), ("LoansPayableCurrent", "st"),
+                   ("ShortTermBankLoansAndNotesPayable", "st")):
+    check(R.balance_sheet(merge(dated(_tag, "2025-12-31", 700.0),
+                                dated("StockholdersEquity", "2025-12-31", 1.0)))["total_debt"] == 700.0,
+          f"{_tag} is read ({_key})")
+check(R.balance_sheet(merge(dated("LongTermDebtNoncurrent", "2022-12-31", 1.488e9),
+                            dated("LongTermDebtCurrent", "2022-12-31", 0.0),
+                            dated("StockholdersEquity", "2025-12-31", 9e9)))["total_debt"] is None,
+      "A ZERO CURRENT PORTION BESIDE A NONZERO LINE IS NOT A REPORTED ZERO — every figure "
+      "on the last date must be")
+_shop = R.balance_sheet(merge(dated("ConvertibleDebtNoncurrent", "2024-12-31", 0.92e9),
+                              dated("ConvertibleDebtCurrent", "2025-12-31", 0.0),
+                              dated("StockholdersEquity", "2025-12-31", 12e9)), revenue=11.6e9)
+check(_shop["total_debt"] == 0.0 and _shop["debt_zero_as_of"] == "2025-12-31",
+      f"Shopify's converts matured: a zero current line on the latest balance sheet is a "
+      f"reported zero, not a partial figure (got {_shop['total_debt']}, {_shop['notes']})")
+_owes = R.balance_sheet(merge(dated("StockholdersEquity", "2025-12-31", 1e9),
+                              dur("InterestExpense", "2025-12-31", 40e6)), revenue=1e9)
+check(_owes["total_debt"] is None and not _owes["debt_inferred_zero"],
+      "A COMPANY THAT NEVER TAGGED DEBT BUT PAYS 4% OF REVENUE IN INTEREST IS NOT DEBT-FREE")
+check(R.balance_sheet(merge(dated("StockholdersEquity", "2025-12-31", 1e9),
+                            dur("InterestExpense", "2025-12-31", 1e6)), revenue=1e9)["debt_inferred_zero"],
+      "one paying 0.1% still reads as inferred zero")
+
 lone = R.balance_sheet(bs(LongTermDebt=4_500,
                           CashAndCashEquivalentsAtCarryingValue=900))
 check(lone["total_debt"] == 4_500,
