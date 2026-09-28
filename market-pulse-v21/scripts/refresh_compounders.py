@@ -500,9 +500,13 @@ def fetch_profile(cik: int) -> dict:
 
 # ── Stage B: fundamentals ────────────────────────────────────────────
 
-def _rows_for(node: dict, unit: str) -> dict[int, float]:
+def _rows_for(node: dict, unit: str, filed_out: dict | None = None) -> dict[int, float]:
     """{fiscal_year: value} for ONE tag in ONE unit. Annual = FY frame
-    from an annual form; amended filings dedupe by keeping the last."""
+    from an annual form; amended filings dedupe by keeping the last.
+
+    `filed_out`, when given, receives {fiscal_year: filing date} for the
+    value kept — a share count needs it, because a stock split after that
+    date is not in the number (see restate_shares)."""
     series: dict[int, float] = {}
     for v in (node.get("units") or {}).get(unit, []):
         if v.get("form") not in ANNUAL_FORMS:
@@ -541,6 +545,8 @@ def _rows_for(node: dict, unit: str) -> dict[int, float]:
             if not (ANNUAL_DAYS[0] <= span <= ANNUAL_DAYS[1]):
                 continue
         series[int(fy)] = float(val)
+        if filed_out is not None:
+            filed_out[int(fy)] = v.get("filed")
     return series
 
 
@@ -758,9 +764,10 @@ def balance_sheet(facts: dict, want_unit: str = "USD") -> dict:
 
 
 def _annual_series(facts: dict, slots: list[tuple[str, str]],
-                   want_unit: str = "USD") -> tuple[dict[int, float], str]:
+                   want_unit: str = "USD",
+                   filed_out: dict | None = None) -> tuple[dict[int, float], str]:
     """{fiscal_year: value} merged across every tag reporting in ONE unit,
-    plus the unit used.
+    plus the unit used. `filed_out` receives each kept value's filing date.
 
     TWO BUGS THIS REPLACES, both caused by taking the first thing found.
 
@@ -808,6 +815,7 @@ def _annual_series(facts: dict, slots: list[tuple[str, str]],
     # reporting unit — within a year of the best coverage available — and
     # otherwise take whichever unit actually holds the history.
     by_unit: dict[str, dict[int, float]] = {}
+    filed_by_unit: dict[str, dict[int, str]] = {}
     for unit in available:
         # PRIMARY TAG FIRST, not slot order. Slot-order-wins mixes two
         # accounting bases inside one series: a company tagging `Revenues`
@@ -819,24 +827,29 @@ def _annual_series(facts: dict, slots: list[tuple[str, str]],
         #
         # The tag with the most coverage IS the company's reporting basis.
         # Take it whole and let the others fill only the years it lacks.
-        per_tag: list[dict[int, float]] = []
+        per_tag: list[tuple[dict[int, float], dict[int, str]]] = []
         for taxonomy, tag in slots:
             node = (facts.get(taxonomy) or {}).get(tag)
             if node:
-                got = _rows_for(node, unit)
+                filed: dict[int, str] = {}
+                got = _rows_for(node, unit, filed)
                 if got:
-                    per_tag.append(got)
+                    per_tag.append((got, filed))
         if not per_tag:
             continue
         # Stable: most years wins, and slot order still breaks ties, so
         # the existing preference survives wherever coverage is equal.
-        per_tag.sort(key=lambda d: -len(d))
+        per_tag.sort(key=lambda d: -len(d[0]))
         merged: dict[int, float] = {}
-        for got in per_tag:
+        merged_filed: dict[int, str] = {}
+        for got, filed in per_tag:
             for fy, val in got.items():
-                merged.setdefault(fy, val)
+                if fy not in merged:
+                    merged[fy] = val
+                    merged_filed[fy] = filed.get(fy)
         if merged:
             by_unit[unit] = merged
+            filed_by_unit[unit] = merged_filed
     if not by_unit:
         return {}, ""
 
@@ -849,7 +862,11 @@ def _annual_series(facts: dict, slots: list[tuple[str, str]],
         # the SEC reordered a JSON object.
         unit = sorted(by_unit, key=lambda u: (-len(by_unit[u]), u != want_unit, u))[0]
     series = by_unit[unit]
-    return (series, unit) if len(series) >= 3 else ({}, unit)
+    if len(series) < 3:
+        return {}, unit
+    if filed_out is not None:
+        filed_out.update(filed_by_unit[unit])
+    return series, unit
 
 
 # 2020 is not an economic base year, and 2021 is only half of one. A
@@ -954,8 +971,55 @@ def _up_years(series: dict[int, float], window: int = LOOKBACK) -> tuple[int, in
 WANT_UNIT = {"shares_diluted": "shares"}
 
 
+# ── share counts filed at the wrong scale ────────────────────────────
+#
+# Some filers tag a count kept "in millions" or "in thousands" as if it
+# were shares. From the SEC's own companyfacts:
+#
+#     McDonald's      FY2022  741,300,000    FY2023  732.3        (millions)
+#     ConocoPhillips  FY2021    1,328,151    FY2022  1,278,163,000 (thousands before)
+#     Dillard's       FY2021   20,592,000    FY2022  17,549       (thousands)
+#     Ultra Clean     FY2018   38,919,000    FY2019  39.5 … FY2024 45,300,000
+#
+# McDonald's came out at 0.0x P/FCF; ConocoPhillips' share count "grew"
+# 222% a year. A company's share count does not move a thousandfold in a
+# year, so a jump within SCALE_TOL of 1,000 or 1,000,000 is read as a
+# change of unit and the series is put back on one scale — the one that
+# gives the LATEST count a size a listed company can have (LISTED_MIN).
+SCALE_TOL = 3.0
+LISTED_MIN = 1e6      # no exchange-listed company has fewer shares than this
+
+
+def fix_share_scale(series: dict[int, float]) -> tuple[dict[int, float], bool]:
+    """(series on one scale, whether anything was rescaled).
+
+    Consecutive years whose ratio is within SCALE_TOL of 1,000^k (k = ±1,
+    ±2) are a unit change; anything else, however large, is left as a real
+    change. A series with no such break is returned as it is, whatever its
+    size — a whole series in the wrong unit has nothing to be anchored to.
+    """
+    ys = sorted(y for y, v in series.items() if v and v > 0)
+    if len(ys) < 2:
+        return dict(series), False
+    exp = {ys[0]: 0}
+    for a, b in zip(ys, ys[1:]):
+        r = series[b] / series[a]
+        k = next((k for k in (1, 2, -1, -2)
+                  if 1000.0 ** k / SCALE_TOL <= r <= 1000.0 ** k * SCALE_TOL), 0)
+        exp[b] = exp[a] + k
+    if len(set(exp.values())) == 1:
+        return dict(series), False
+    last = ys[-1]
+    ref = exp[last]
+    while series[last] * 1000.0 ** (ref - exp[last]) < LISTED_MIN and ref - exp[last] < 2:
+        ref += 1
+    return {y: series[y] * 1000.0 ** (ref - exp[y]) for y in ys}, True
+
+
 def compute_metrics(facts: dict) -> dict | None:
-    pulled = {k: _annual_series(facts, slots, WANT_UNIT.get(k, "USD"))
+    shares_filed: dict[int, str] = {}
+    pulled = {k: _annual_series(facts, slots, WANT_UNIT.get(k, "USD"),
+                                shares_filed if k == "shares_diluted" else None)
               for k, slots in TAGS.items()}
     s = {k: v[0] for k, v in pulled.items()}
 
@@ -1036,8 +1100,10 @@ def compute_metrics(facts: dict) -> dict | None:
         nd = lt.get(last, 0.0) + st.get(last, 0.0) - cash.get(last, 0.0)
         nd_ebit = round(nd / op[last], 2)
 
-    # Buybacks: 5-yr share-count CAGR (negative = shrinking count).
-    shares_cagr5 = _cagr(shares, 5)
+    # Buybacks: 5-yr share-count CAGR (negative = shrinking count). Split
+    # history isn't known yet, so a split reads as dilution here; Stage C
+    # restates it (market_metrics) wherever it can.
+    shares_cagr5 = _cagr(fix_share_scale(shares)[0], 5)
 
     op_m_vals = [op_m[y] for y in sorted(op_m)][-LOOKBACK:]
     op_m_now = op_m_vals[-1] if op_m_vals else None
@@ -1065,9 +1131,6 @@ def compute_metrics(facts: dict) -> dict | None:
 
     ni_pos_years = sum(1 for y in sorted(ni)[-LOOKBACK:] if ni[y] > 0)
     ni_years_seen = len(sorted(ni)[-LOOKBACK:])
-
-    fcf_ps_by_year = {y: fcf[y] / shares[y] for y in fcf
-                      if y in shares and shares[y] > 0}
 
     # ── enterprise-value inputs ──
     # Read here rather than in the consumer so the currency check happens
@@ -1110,8 +1173,12 @@ def compute_metrics(facts: dict) -> dict | None:
         "margin_slope": margin_slope,
         "cycle_pos": cycle_pos,
         "cyclical": cyclical,
-        "fcf_ps": {str(y): round(v, 4) for y, v in fcf_ps_by_year.items()},
         "fcf_last": fcf.get(last),
+        # Working data for Stage C, popped before output: FCF per share is
+        # built there, once the split history is known.
+        "_fcf": dict(fcf),
+        "_shares": dict(shares),
+        "_shares_filed": dict(shares_filed),
     }
 
 
@@ -1125,15 +1192,107 @@ def fetch_fundamentals(cik: int) -> dict | None:
 
 
 # ── Stage C: market data ─────────────────────────────────────────────
+#
+# STOCK SPLITS. Yahoo's prices are split-adjusted to today's share basis.
+# The SEC's share counts are as filed, and a filing never restates for a
+# split that came after it. Divide one by the other and a split reads as
+# the stock getting that many times cheaper: Booking Holdings split 25-for-1
+# in April 2026, two months after its FY2025 10-K reported 32.6M diluted
+# shares, so its $164 post-split price came out at 0.6x free cash flow and
+# sorted to the top of every board that ranks by cheapness. Chipotle's
+# 50-for-1 split gave it a 1.2x "historical median" and a share count that
+# grew 90% a year — the maximum dilution penalty for a company that buys
+# back stock. So each share count is restated to today's basis by the
+# splits after the date it was filed, and FCF per share and the share-count
+# trend are built from the restated counts.
+CHART_RANGE = "10y"   # split history reaching past the oldest share count used
+PFCF_YEARS = 7        # the P/FCF history window (the 7-year chart it used before)
 
-def fetch_market(ticker: str, fcf_ps: dict[str, float]) -> dict | None:
+
+def parse_splits(res: dict) -> list[tuple[str, float]]:
+    """Yahoo chart events → [(ex-date 'YYYY-MM-DD', ratio)], oldest first.
+
+    ratio is new shares per old: 25.0 for 25-for-1, 0.1 for a 1-for-10
+    reverse split. A malformed or 1:1 event is skipped, never read as zero.
+    """
+    out = []
+    events = (res or {}).get("events") or {}
+    for s in (events.get("splits") or {}).values() if isinstance(events, dict) else ():
+        try:
+            num, den = float(s["numerator"]), float(s["denominator"])
+            day = datetime.fromtimestamp(int(s["date"]), tz=timezone.utc).date().isoformat()
+        except (KeyError, TypeError, ValueError, OverflowError, OSError, AttributeError):
+            continue
+        if num > 0 and den > 0 and num != den:
+            out.append((day, num / den))
+    return sorted(out)
+
+
+def restate_shares(shares: dict[int, float], filed: dict[int, str],
+                   splits: list[tuple[str, float]], since: str) -> dict[int, float]:
+    """Share counts on today's basis: each multiplied by every split after
+    the date it was filed. A split on or before that date is already in the
+    number — a filing restates per-share figures for a split made before
+    it is issued, and every later filing restates its comparatives.
+
+    A count with no filing date, or filed before `since` (where the split
+    history in hand begins), is DROPPED: a split before the window could be
+    missing, and an unrestated count is the fault this exists to remove.
+    """
+    out: dict[int, float] = {}
+    for y, n in shares.items():
+        f = filed.get(y)
+        if not f or f < since:
+            continue
+        factor = 1.0
+        for day, ratio in splits:
+            if day > f:
+                factor *= ratio
+        out[y] = n * factor
+    return out
+
+
+def market_inputs(metrics: dict, profile: dict) -> tuple[dict, dict, dict, bool]:
+    """(fcf, shares, filed, apply_splits) for fetch_market.
+
+    A non-USD reporter's FCF and shares are withheld (its P/FCF would divide
+    yen by an ADR's dollars). Splits are applied for domestic filers only:
+    an ADR's splits and ratio changes are not its ordinary shares' splits.
+    """
+    usd = (metrics.get("currency") or "USD") == "USD"
+    return ((metrics.get("_fcf") or {}) if usd else {},
+            (metrics.get("_shares") or {}) if usd else {},
+            metrics.get("_shares_filed") or {},
+            not (profile or {}).get("foreign_filer"))
+
+
+def fetch_chart(ticker: str) -> dict | None:
     url = ("https://query1.finance.yahoo.com/v8/finance/chart/"
-           f"{urllib.parse.quote(ticker, safe='')}?range=7y&interval=1mo&events=div")
+           f"{urllib.parse.quote(ticker, safe='')}?range={CHART_RANGE}"
+           f"&interval=1mo&events=div%7Csplit")
     try:
-        res = _get(url, headers=HEADERS_YAHOO)["chart"]["result"][0]
+        return _get(url, headers=HEADERS_YAHOO)["chart"]["result"][0]
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError,
             OSError, ValueError, KeyError, IndexError, TypeError):
         return None
+
+
+def fetch_market(ticker: str, fcf: dict[int, float], shares: dict[int, float],
+                 filed: dict[int, str], apply_splits: bool = True) -> dict | None:
+    res = fetch_chart(ticker)
+    return market_metrics(res, fcf, shares, filed, apply_splits) if res else None
+
+
+def market_metrics(res: dict, fcf: dict[int, float], shares: dict[int, float],
+                   filed: dict[int, str], apply_splits: bool = True) -> dict | None:
+    """Price, dividends and the P/FCF terms from one Yahoo chart response.
+
+    fcf / shares / filed are by fiscal year; pass them empty to withhold the
+    valuation (a non-USD reporter). apply_splits=False keeps the counts as
+    filed — for foreign filers, whose ADR splits are not their ordinary
+    shares' splits. With splits applied the result also carries the
+    restated `shares_cagr5`, which replaces the as-filed one.
+    """
     ts = res.get("timestamp") or []
     closes = (res.get("indicators", {}).get("quote") or [{}])[0].get("close") or []
     pts = [(t, c) for t, c in zip(ts, closes) if c]
@@ -1157,22 +1316,37 @@ def fetch_market(ticker: str, fcf_ps: dict[str, float]) -> dict | None:
         if then > 0 and yrs >= 2:
             div_cagr = round(((ttm_div / then) ** (1 / yrs) - 1) * 100, 1)
 
+    # FCF per share on today's share basis (see STOCK SPLITS above).
+    splits = parse_splits(res) if apply_splits else []
+    since = datetime.fromtimestamp(ts[0], tz=timezone.utc).date().isoformat()
+    counts = restate_shares(shares, filed, splits, since) if apply_splits else dict(shares)
+    # Splits first: a 1-for-1,000 reverse split must be restated, not
+    # mistaken for a change of unit.
+    counts, rescaled = fix_share_scale(counts)
+    fcf_ps = {y: fcf[y] / counts[y] for y in fcf if y in counts and counts[y] > 0}
+
     # P/FCF now + historical median: year-average price ÷ that FY's FCF/share.
     from collections import defaultdict
     year_prices: dict[int, list[float]] = defaultdict(list)
+    window_start = now_ts - PFCF_YEARS * 365.25 * 24 * 3600
     for t, c in pts:
-        year_prices[datetime.fromtimestamp(t, tz=timezone.utc).year].append(c)
+        if t > window_start:
+            year_prices[datetime.fromtimestamp(t, tz=timezone.utc).year].append(c)
     mults = []
-    for fy_str, f in fcf_ps.items():
-        fy = int(fy_str)
+    for fy, f in fcf_ps.items():
         if f and f > 0 and year_prices.get(fy):
             mults.append(statistics.fmean(year_prices[fy]) / f)
     pfcf_med = round(statistics.median(mults), 1) if len(mults) >= 4 else None
-    fcf_now = fcf_ps.get(max(fcf_ps.keys(), key=int)) if fcf_ps else None
+    fcf_now = fcf_ps.get(max(fcf_ps)) if fcf_ps else None
     pfcf_now = round(price / fcf_now, 1) if fcf_now and fcf_now > 0 else None
 
-    return {"price": round(price, 2), "div_yield": div_yield,
-            "div_cagr5": div_cagr, "pfcf_now": pfcf_now, "pfcf_med": pfcf_med}
+    out = {"price": round(price, 2), "div_yield": div_yield,
+           "div_cagr5": div_cagr, "pfcf_now": pfcf_now, "pfcf_med": pfcf_med,
+           "_rescaled": rescaled}
+    if apply_splits and shares:
+        out["shares_cagr5"] = _cagr(counts, 5)
+        out["_restated"] = any(day > (filed.get(y) or "") for y in counts for day, _ in splits)
+    return out
 
 
 # ── Main ─────────────────────────────────────────────────────────────
@@ -1320,22 +1494,21 @@ def main() -> int:
     out: dict[str, dict] = {}
     with_market = 0
     non_usd = 0
+    restated = rescaled = 0
     for i, (cik, info, profile, metrics) in enumerate(scored, 1):
         # THE VALUATION TERM IS THE ONLY CURRENCY-UNSAFE NUMBER HERE.
         # Growth, margins, ROIC, FCF conversion, capex/OCF and net
         # debt/EBIT are all ratios WITHIN one currency, so they are
         # correct whatever the filer reports in. P/FCF is not: it divides
         # a native-currency FCF per share by a USD ADR price. Withholding
-        # fcf_ps blanks P/FCF and its history, which makes compounders.py
-        # drop the valuation-drift term for that name — the row stays, its
-        # quality and growth stay, and the one figure we cannot compute
-        # honestly is absent rather than wrong.
-        usd = (metrics.get("currency") or "USD") == "USD"
-        if not usd:
+        # FCF and shares blanks P/FCF and its history, which makes
+        # compounders.py drop the valuation-drift term for that name — the
+        # row stays, its quality and growth stay, and the one figure we
+        # cannot compute honestly is absent rather than wrong.
+        if (metrics.get("currency") or "USD") != "USD":
             non_usd += 1
         try:
-            market = fetch_market(info["ticker"],
-                                  (metrics.get("fcf_ps") or {}) if usd else {})
+            market = fetch_market(info["ticker"], *market_inputs(metrics, profile))
         except Exception:                                   # noqa: BLE001
             market = None
         time.sleep(YAHOO_SLEEP)
@@ -1344,6 +1517,8 @@ def main() -> int:
             market = {}
         else:
             with_market += 1
+            restated += bool(market.pop("_restated", False))
+            rescaled += bool(market.pop("_rescaled", False))
         row = {**metrics, **market,
                "name": info["name"], "cik": cik,
                "exchange": info["exchange"],
@@ -1351,7 +1526,8 @@ def main() -> int:
                "country": profile.get("country_desc") or "United States",
                "incorporation": profile.get("incorporation") or "",
                "foreign": bool(profile.get("foreign_filer"))}
-        row.pop("fcf_ps", None)   # working data — not needed in output
+        for k in ("_fcf", "_shares", "_shares_filed"):
+            row.pop(k, None)      # working data — not needed in output
         out[info["ticker"]] = row
         if i % 250 == 0:
             print(f"[compounders] market {i}/{len(scored)} · {with_market} with prices")
@@ -1359,7 +1535,9 @@ def main() -> int:
     coverage = with_market / len(scored) if scored else 0.0
     print(f"[compounders] Done: kept {len(out)}, market coverage "
           f"{coverage:.0%}, {non_usd} reporting in a non-USD currency "
-          f"(valuation term withheld for those), skipped {skipped}")
+          f"(valuation term withheld for those), {restated} with share counts "
+          f"restated for a stock split, {rescaled} with a share count filed at "
+          f"the wrong scale, skipped {skipped}")
 
     # A board with no valuation term is not a smaller board, it is a
     # different and much weaker screen wearing the same name.
@@ -1381,6 +1559,8 @@ def main() -> int:
         "min_revenue": args.min_revenue,
         "market_coverage_pct": round(coverage * 100, 1),
         "non_usd_reporters": non_usd,
+        "split_restated": restated,
+        "share_scale_fixed": rescaled,
         "foreign_filers": sum(1 for r in out.values() if r.get("foreign")),
         "discovery": origin,
         "skipped": skipped,

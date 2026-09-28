@@ -171,11 +171,12 @@
         enterprise-value yield in one ranking compares two different quantities and hands an
         advantage to whichever rows are missing data. The cohort picks one basis; rows that cannot
         supply it are listed, not blended in.</li>
-    <li><strong>A broken price is a bargain.</strong> Every multiple here is computed from market
-        capitalisation rather than share price, because the share price in the source file is wrong
-        for some tickers — Booking Holdings arrives at $193 against a real ~$4,500, which would print
-        a 0.7x P/FCF and take the top of the board. On market cap it is 16.0x. Rows are additionally
-        run through the same fault test the HOLT board uses, and flagged, not dropped.</li>
+    <li><strong>A broken multiple is a bargain.</strong> Every multiple here is computed from market
+        capitalisation, which needs no share count. The source file once divided split-adjusted
+        prices by share counts filed before the split — Booking Holdings, after its 25-for-1 split in
+        2026, printed 0.7x P/FCF and would have taken the top of the board; on market cap it is 16.0x.
+        That is now corrected at the source, and rows are still run through the same fault test the
+        HOLT board uses, and flagged, not dropped.</li>
     <li><strong>Not here:</strong> sector caps, position weighting, or a 4% holding limit. VFLO is a
         fund and has to be investable; this is a screen and stops at selection. Their published final
         stage lifts yield again by weighting holdings by free cash flow — there is no fourth stage

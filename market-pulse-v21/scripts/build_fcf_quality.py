@@ -12,13 +12,14 @@ Actions that already handle SEC's rate limits, its tag ladders and its
 foreign filers; a third fetcher doing the same work differently is a
 third set of parsing bugs and a third thing to keep in step.
 
-WHY MARKET CAP AND NOT PRICE. BACKLOG.md records that
-refresh_compounders.py writes a wrong `price` for some tickers — Booking
-Holdings comes through at $193 against a real ~$4,500. The schloss file's
-`market_cap` for the same company is $145bn, which at ~32m shares is
-right. So the market cap is sound where the price is not, and every
-multiple here is computed from it. Booking's P/FCF goes from a
-nonsensical 0.7x to 16.0x on that one change.
+WHY MARKET CAP AND NOT PRICE. Booking Holdings once came through
+compounders.json at 0.7x P/FCF. That was first read as a wrong price ($193
+against ~$4,500), but the price was right: Booking split 25-for-1 in April
+2026, and the P/FCF divided that post-split price by the pre-split share
+count in its 10-K. refresh_compounders now restates share counts for
+splits (see STOCK SPLITS there). Market cap is still the denominator here
+because it needs no share count at all — on it Booking read 16.0x
+throughout.
 
 THE BASIS IS DECIDED BY THE DATA, not by this script. refresh_compounders
 now extracts total debt, cash, preferred stock and minority interest, so

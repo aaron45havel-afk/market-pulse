@@ -315,3 +315,27 @@ to Boston's $3,008. Four ZIPs lost their FMR (three straddle rent areas; one is 
 VT, which keeps its Zillow rent), and two small ones — populations 838 and 1,531 — now
 have no rent. The same run filled the ACS tier for the first time since the keyless
 switch (23,238 ZIPs), so ZIPs with no measured rent nationally fell from 394 to 171.
+
+## 2026-09-28 — The compounders' "wrong prices" were share counts; restated at source
+**Decided.** The P0 read "`refresh_compounders` writes a wrong price" (Booking at 0.8x
+P/FCF). The prices were right — Yahoo's live quote. The share counts under them weren't,
+for two reasons, both fixed in `refresh_compounders.py` and tested against the SEC's own
+figures:
+- **Stock splits.** Yahoo's prices are split-adjusted; SEC counts are as filed, and a
+  filing never restates for a later split. Booking split 25-for-1 on 2026-04-06, after
+  its 10-K reported 32.6M shares, so its $164 price read 0.6x. Each count now carries its
+  filing date, the 10-year chart supplies the split history, and every split after the
+  filing is applied. Domestic filers only — an ADR's splits aren't its ordinary shares'.
+  A count filed before the split history begins is dropped, not used unrestated.
+- **Counts filed at the wrong scale.** McDonald's tagged its FY2023–25 count as 732.3
+  (millions); ConocoPhillips filed 2015–21 in thousands. A year-over-year jump within 3x
+  of 1,000 or 1,000,000 is read as a change of unit, and the series is anchored on the
+  latest count being a size a listed company can have (1M+ shares). Run after the split
+  restatement, so a 1-for-1,000 reverse split is never mistaken for one.
+
+First run: 300 companies restated for a split, 73 rescaled. Booking 0.6x → 14.7x,
+McDonald's 0.0x → 23.6x, Chipotle's historical median 1.2x → 52.7x. Companies whose
+share count appeared to shrink 20%+ a year — and so took the full buyback bonus in the
+score — fell from 72 to 8; P/FCF medians under 2x from 19 to 6; current P/FCF under 2x
+from 29 to 21. The `/holt` and FCF-quality guards stay: they now catch what's left
+rather than the bulk of it.

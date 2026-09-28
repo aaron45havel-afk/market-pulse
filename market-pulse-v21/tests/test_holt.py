@@ -7,9 +7,10 @@ them rather than about arithmetic.
 
 The first is the multiple guard. This board ranks by cheapness, so a
 multiple that is wrong-LOW does not sit harmlessly mid-list — it sorts to
-number one. The shipped compounders file has Booking Holdings at 0.8x
-P/FCF and 31 names under 2x. Without the guard those data faults are the
-entire top of the board, dressed as the best ideas on it.
+number one. The compounders file once had Booking Holdings at 0.8x P/FCF
+and 31 names under 2x — mostly stock splits read against pre-split share
+counts, since restated at source. Without the guard faults like those are
+the entire top of the board, dressed as the best ideas on it.
 
 The second is the column axis. It is forward growth — growth that has not
 happened. Any code path that lets it be read as a fact rather than a
@@ -49,8 +50,9 @@ check(all(v < 0 for v in H.GRID["negative"]),
 # ── refusing a multiple that cannot be true ──
 check(H.multiple_fault(18.7) is None, "an ordinary multiple is usable")
 check(H.multiple_fault(0.8) is not None and "sort first" in H.multiple_fault(0.8),
-      "0.8x IS REFUSED — Booking Holdings carries that in the shipped file, "
-      "and on a board that ranks by cheapness it would be the top row")
+      "0.8x IS REFUSED — Booking Holdings once carried that (a stock split read "
+      "against pre-split shares), and on a board that ranks by cheapness it "
+      "would be the top row")
 check(H.multiple_fault(0.1) is not None, "and 0.1x, which three names carry")
 check("data fault" in H.multiple_fault(1.5),
       "the refusal says it is a data fault rather than implying the "

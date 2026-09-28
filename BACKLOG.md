@@ -21,9 +21,17 @@ Format: `- [PHASE-SEEN] item — why it matters`
 - [P0] The existing analysis app stores money as `DOUBLE PRECISION` and gates access
   per-route. Acceptable for public-filing analysis, out of scope to retrofit, but it
   means two conventions live in one process — see ARCHITECTURE.md §2.
-- [P0] `refresh_compounders.py` writes a wrong `price` for some tickers (Booking
-  Holdings at 0.8x P/FCF, Trade Desk at $13.80). Guarded on `/holt`, unfixed at source,
-  and every board reading `pfcf_now` is affected.
+- [P2] Compounders share counts are split-restated for domestic filers only. A foreign
+  filer's ADR splits and ratio changes aren't its ordinary shares' splits, so its counts
+  stay as filed and a split still reads as dilution in `shares_cagr5` (Toyota's 5-for-1
+  in 2021 shows as +73% a year). The filer's own later 20-F comparatives, which restate
+  prior years, would give the split factor without Yahoo.
+- [P2] When Yahoo has no chart for a name, its `shares_cagr5` stays as filed (no split
+  history to restate it with). The row already has no valuation term in that case.
+- [P2] `fix_share_scale` needs a break to anchor on. A company whose WHOLE share series
+  is in the wrong unit (Nutanix reads 0.0x P/FCF) is left as filed; the `/holt` and
+  compounders guards refuse it. The cover-page count (`dei:EntityCommonStockSharesOutstanding`)
+  would be an anchor for those.
 - [P0] `CRON_SECRET` was exposed in an earlier session and has not been rotated.
 - [P1] `mf_audit_log` has the immutability trigger ARCHITECTURE.md §5.4 asks for but not
   the insert-only grant. A grant is meaningless while the app connects as the table's
