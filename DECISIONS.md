@@ -5,6 +5,22 @@ expensive to reverse. Newest first. Every entry carries a date.
 
 ---
 
+## 2026-09-28 — "Make site data stay up to date, weekly" reads as the freshness audit, not the per-source crons
+**Assumption.** A scheduled task asked, with no room to ask back, to "make sure the site
+data is up to date" on a weekly cadence. The repo already refreshes every source on its
+own schedule (`.github/workflows/refresh-*.yml`), each tuned to how often that upstream
+actually publishes — monthly for Zillow/BLS/Census, weekdays for catalysts, Fridays for
+rates, Saturdays for quiet-value, Sundays for neighborhoods. Forcing those to weekly
+would hit APIs with no new data behind them and override cadences that are already
+correct, so none of them changed.
+
+What the request maps onto is `check-layer-freshness.yml` — the audit whose entire job
+is "say so if anything is stale" for the layers that don't refresh themselves (crime,
+climate, hazards, financing calibration). It ran on the 3rd of each month; moved to
+Mondays 07:00 UTC. It only opens/comments on a tracking issue when a layer is past its
+TTL, so a weekly run that finds nothing stale is a no-op, not noise. Reversible by
+editing the one cron line if a monthly cadence turns out to be what was actually wanted.
+
 ## 2026-08-27 — Auth is standard library, not a dependency
 **Assumption.** `hashlib.scrypt` for passwords and hand-written RFC 6238 TOTP, rather
 than passlib/argon2/pyotp. Three new packages in the security-critical path of an app
