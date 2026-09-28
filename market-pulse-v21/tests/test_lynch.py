@@ -943,6 +943,42 @@ check(L.evaluate(_lag)["units"]["ok"] is True,
       "EPS IS CHECKED AGAINST ITS OWN YEAR'S NET INCOME, not a later year the EPS tag "
       "hasn't reached")
 
+# Every count on file is tried; the check fires only when none reconciles.
+# Real FY2025 filings, from the first branch run's newly rejected rows.
+_nvmi = L.units_verdict(7.96, 259.223e6, [("weighted", 32_800), ("basic", 30_108),
+                                          ("current", 31_780_111)])
+check(_nvmi["ok"] is True and _nvmi["basis"] == "weighted" and _nvmi["scale"] == 1e3,
+      f"NOVA'S WEIGHTED COUNT FILED IN THOUSANDS (32,800) RECONCILES AT x1,000 and passes, "
+      f"with the scale on the row (got {_nvmi})")
+_vhi = L.units_verdict(-2.02, -57.6e6, [("weighted", 28.5), ("basic", 28.5), ("current", None)])
+check(_vhi["ok"] is True and _vhi["scale"] == 1e6,
+      f"Vishay Precision's, filed in millions (28.5), at x1,000,000 (got {_vhi})")
+_inr = L.units_verdict(0.89, 13.836e6, [("weighted", 60_954_639), ("basic", 15_382_681),
+                                        ("current", None)])
+check(_inr["ok"] is True and _inr["basis"] == "basic",
+      f"INSPIRATO'S DILUTED COUNT INCLUDES ITS UP-C UNITS (61m); the basic 15m reconciles "
+      f"(got {_inr})")
+_buda = [("weighted", 14_000), ("basic", 10_000)]
+check(L.units_verdict(0.2, 3.533e6, _buda)["ok"] is False,
+      "A COUNT RESCALED BY 1,000 MUST RECONCILE WITHIN NI_RESCALE_TOL — 21% off fails, "
+      "though 21% at the filed scale would pass")
+check(L.units_verdict(0.2, 3.533e6, _buda + [("current", 12_566_666)])["basis"] == "current",
+      "and today's count still gets its turn")
+_wse = L.units_verdict(48.43, 498.7e6, [("weighted", 1_029.7e6), ("basic", 1_019.5e6),
+                                        ("current", None)])
+check(_wse["ok"] is False and _wse["ratio"] == 99.0 and _wse["basis"] == "weighted",
+      f"WISE'S EPS IS IN PENCE (48.43 on £499m) — 100x is no share-count scale, so it still "
+      f"fails, reported on the first count tried (got {_wse})")
+check(L.units_verdict(-1.36, 16.246e6, [("weighted", 114.998e6)])["ok"] is False,
+      "an EPS and net income of opposite sign reconcile at no scale")
+check(L.units_verdict(1.0, 1e6, [("weighted", None), ("current", None)])["ok"] is None,
+      "no count on file: abstains, never passes")
+_up_c = {**_W, "eps_shares_by_year": {"2026-01-31": 32.1e9},
+         "basic_shares_by_year": {"2026-01-31": 8.02e9}}
+check(L.evaluate(_up_c)["units"]["basis"] == "basic"
+      and L.evaluate(_up_c)["reason"] != "units_unverified",
+      "evaluate() hands the basic count to the check")
+
 # Through the screener's record builder, on FedEx-shaped filings.
 import lynch_screener as LS
 _fdx = _multi(**{
@@ -950,11 +986,13 @@ _fdx = _multi(**{
     "us-gaap:EarningsPerShareDiluted": ("USD/shares", [_yr("2025-05-31", 16.81), _yr("2026-05-31", 18.55)]),
     "us-gaap:WeightedAverageNumberOfDilutedSharesOutstanding": ("shares", [
         _yr("2025-05-31", 243.3e6), _yr("2026-05-31", 239.0e6)]),
+    "us-gaap:WeightedAverageNumberOfSharesOutstandingBasic": ("shares", [_yr("2026-05-31", 237.6e6)]),
     "dei:EntityCommonStockSharesOutstanding": ("shares", [{"end": "2026-07-16", "val": 236.58e6}])})
 _rec = LS.facts_to_record({"ticker": "FDX", "name": "FedEx"}, {"price": 322.5, "market_cap": 76.3e9},
                           _fdx, "2026-09-04")
 check(_rec["net_income"] == 4.433e9 and _rec["ni_rescaled"] == ["2026-05-31"]
-      and _rec["shares"] == 236.58e6 and _rec["eps_shares_by_year"]["2026-05-31"] == 239.0e6,
+      and _rec["shares"] == 236.58e6 and _rec["eps_shares_by_year"]["2026-05-31"] == 239.0e6
+      and _rec["basic_shares_by_year"] == {"2026-05-31": 237.6e6},
       f"THE LYNCH RECORD CARRIES FEDEX'S NET INCOME AS $4.43bn, says it was rescaled, and "
       f"has both share counts (got {_rec['net_income']}, {_rec['ni_rescaled']})")
 

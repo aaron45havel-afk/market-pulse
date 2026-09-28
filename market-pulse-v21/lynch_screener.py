@@ -319,9 +319,10 @@ def facts_to_record(row: dict, quote: dict, facts: dict, as_of: str) -> dict:
 
     # The newest count from either tag — never the first tag's newest,
     # which for Walmart was 2012 — and none at all if every count on file
-    # is stale. The units check uses the weighted count EPS was divided by.
+    # is stale. The units check tries the weighted counts first.
     shares = L.current_shares(facts, as_of)
     eps_shares_by_year = L.weighted_shares(facts)
+    basic_shares_by_year = L.basic_shares(facts)
     ni_by_year, ni_rescaled = L.rescale_net_income(ni_by_year, eps_by_year,
                                                    eps_shares_by_year)
 
@@ -357,6 +358,7 @@ def facts_to_record(row: dict, quote: dict, facts: dict, as_of: str) -> dict:
         "eps_by_year": eps_by_year,
         "eps_unit": eps_unit,
         "eps_shares_by_year": eps_shares_by_year,
+        "basic_shares_by_year": basic_shares_by_year,
         "ni_rescaled": ni_rescaled,
         "net_income_by_year": ni_by_year,
         "equity_by_year": equity_by_year,
