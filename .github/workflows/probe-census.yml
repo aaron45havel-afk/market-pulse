@@ -1,8 +1,9 @@
-name: TEMPORARY — find the keyless Census ACS files
+name: TEMPORARY — national ZIP rebuild with keyless Census ACS
 
-# Checks which ACS 5-year table-based summary files exist on www2.census.gov
-# (no key), their size, header, and what a ZIP (ZCTA) row looks like.
-# Read-only. Deleted before the branch merges.
+# Runs the real monthly rebuild on the working branch: Census ACS from the
+# Bureau's bulk files (no key), and the rent-ladder columns carried across
+# the new database. Commits zips.db to the working branch so the page can be
+# checked before merge. Deleted before the branch merges.
 on:
   push:
     branches: [claude/legal-rep-invoice-tracking-9j1i9r]
@@ -10,60 +11,55 @@ on:
       - '.github/workflows/probe-census.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  probe:
+  rebuild:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: market-pulse-v21
     steps:
-      - name: Vintages, sizes, headers, a ZCTA row
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Before — rent tiers and ACS coverage in the committed zips.db
         run: |
-          python3 - <<'PY'
-          import re, time, urllib.request, urllib.error
-          UA = {"User-Agent": "MarketPulse/1.0 (acs bulk probe)"}
-          def head(url):
-              try:
-                  req = urllib.request.Request(url, headers=UA, method="HEAD")
-                  with urllib.request.urlopen(req, timeout=60) as r:
-                      return r.status, r.headers.get("content-length"), r.headers.get("last-modified")
-              except urllib.error.HTTPError as e:
-                  return e.code, None, None
-              except Exception as e:
-                  return repr(e)[:80], None, None
-          root = "https://www2.census.gov/programs-surveys/acs/summary_file"
-          for y in (2022, 2023, 2024, 2025):
-              st, n, lm = head(f"{root}/{y}/table-based-SF/data/5YRData/acsdt5y{y}-b25003.dat")
-              print(f"{y} b25003: {st} {n} bytes, modified {lm}")
-          # directory listing for the newest vintage that exists
-          for y in (2025, 2024, 2023):
-              try:
-                  with urllib.request.urlopen(urllib.request.Request(f"{root}/{y}/table-based-SF/data/5YRData/", headers=UA), timeout=60) as r:
-                      html = r.read().decode("utf-8", "replace")
-                  names = re.findall(r'href="(acsdt5y\d+-[a-z0-9]+\.dat)"', html)
-                  print(f"{y}: {len(names)} table files; ours:",
-                        [n for n in names if any(t in n for t in ("b19013.", "b15003.", "b01003.", "b01001.", "b25003.", "b25024.", "b25070.", "b25034.", "b25035."))])
-                  docs = f"{root}/{y}/table-based-SF/documentation/"
-                  with urllib.request.urlopen(urllib.request.Request(docs, headers=UA), timeout=60) as r:
-                      print("  docs:", re.findall(r'href="([^"?/][^"]*)"', r.read().decode("utf-8", "replace"))[:20])
-                  break
-              except Exception as e:
-                  print(f"{y}: no listing ({e!r:.80})")
-          # stream one table until a few ZCTA rows appear; time the full read
-          for tbl in ("b25003", "b01001"):
-              url = f"{root}/{y}/table-based-SF/data/5YRData/acsdt5y{y}-{tbl}.dat"
-              t = time.time(); n = zc = 0; sample = []
-              with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=300) as r:
-                  header = r.readline().decode().rstrip("\n")
-                  for raw in r:
-                      n += 1
-                      line = raw.decode("utf-8", "replace")
-                      if line.startswith("860Z200US"):
-                          zc += 1
-                          if len(sample) < 2:
-                              sample.append(line[:220].rstrip())
-              print(f"{tbl}: {n:,} rows, {zc:,} ZCTA rows, {time.time()-t:.0f}s")
-              print("  header:", header[:260])
-              print("  sample:", sample)
-              prefixes = {}
+          python - <<'PY'
+          import sqlite3
+          c = sqlite3.connect("data/zips.db")
+          print(c.execute("select rent_tier, count(*) from zips group by 1").fetchall())
+          print(c.execute("select count(*), sum(pct_renter_occupied is not null), sum(median_household_income is not null) from zips").fetchone())
           PY
+      - name: Prove the Census parser and the rent carry
+        run: python tests/test_acs_bulk.py
+      - name: Rebuild
+        run: python -u scripts/build_national_zips.py
+      - name: After
+        run: |
+          python - <<'PY'
+          import sqlite3
+          c = sqlite3.connect("data/zips.db")
+          print("rent tiers:", c.execute("select rent_tier, count(*) from zips group by 1").fetchall())
+          cols = ("median_household_income", "pct_bachelors", "pct_renter_occupied", "pct_multi_unit",
+                  "pct_2_4_units", "pct_rent_burdened", "pct_pre_1960", "median_year_built", "pct_age_25_34")
+          n = c.execute("select count(*) from zips").fetchone()[0]
+          for col in cols:
+              k = c.execute(f"select count({col}) from zips").fetchone()[0]
+              print(f"  {col:<26} {k:>6,} / {n:,}  ({k / n:.1%})")
+          for z in ("44107", "43215", "45202", "10025", "94110", "73301"):
+              print(" ", z, c.execute("select name, median_household_income, pct_renter_occupied, pct_2_4_units, pct_age_25_34, median_rent_monthly, rent_tier from zips where zip=?", (z,)).fetchone())
+          PY
+      - name: Commit zips.db to the working branch
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add market-pulse-v21/data/zips.db
+          git diff --staged --quiet && { echo "no change"; exit 0; }
+          git commit -m "chore: national ZIP rebuild with keyless Census ACS (2020-2024)"
+          for i in 1 2 3 4; do git push origin HEAD:claude/legal-rep-invoice-tracking-9j1i9r && exit 0; sleep $((i * 5)); git pull --rebase origin claude/legal-rep-invoice-tracking-9j1i9r || true; done
+          exit 1
