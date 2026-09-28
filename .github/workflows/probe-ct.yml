@@ -1,8 +1,9 @@
 name: TEMPORARY — find the Connecticut crosswalk
 
-# Finds the Census file mapping CT's 2020 tracts to the 2022 planning-region
-# tracts, and checks what FEMA and HUD now use for CT. Read-only. Deleted
-# before the branch merges.
+# Tests the CT joins before any code is written: FEMA's 2022 tract IDs
+# against the 2020 ZCTA-tract file (by tract code, and via towns), and what
+# HUD's data endpoint answers for a CT town code. Read-only. Deleted before
+# the branch merges.
 on:
   push:
     branches: [claude/legal-rep-invoice-tracking-9j1i9r]
@@ -17,50 +18,91 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Census CT change files, FEMA CT tracts, HUD CT areas
+      - name: CT tract and town joins, HUD town responses
         env:
           HUD_API_TOKEN: ${{ secrets.HUD_API_TOKEN }}
         run: |
           python3 -u - <<'PY'
-          import json, os, re, urllib.request, urllib.error, urllib.parse
+          import collections, csv, io, json, os, urllib.request, urllib.error, urllib.parse
           UA = {"User-Agent": "MarketPulse/1.0 (ct probe)"}
-          def get(url, headers=None, n=None):
+          def get(url, headers=None):
               try:
-                  with urllib.request.urlopen(urllib.request.Request(url, headers={**UA, **(headers or {})}), timeout=60) as r:
-                      b = r.read() if n is None else r.read(n)
-                      return r.status, b
+                  with urllib.request.urlopen(urllib.request.Request(url, headers={**UA, **(headers or {})}), timeout=300) as r:
+                      return r.status, r.read()
               except urllib.error.HTTPError as e:
-                  return e.code, e.read()[:200]
-              except Exception as e:
-                  return None, repr(e).encode()
-          for d in ("https://www2.census.gov/geo/docs/reference/ct_change/",
-                    "https://www2.census.gov/geo/docs/maps-data/data/rel2022/",
-                    "https://www2.census.gov/geo/docs/maps-data/data/rel2022/tract22/"):
-              st, b = get(d)
-              names = re.findall(r'href="([^"?/][^"]*)"', b.decode("utf-8", "replace")) if st == 200 else []
-              print(f"== {d}: {st}", [n for n in names if not n.startswith("http")][:40], flush=True)
-          # candidate crosswalk files: print head of any txt/csv in ct_change
-          st, b = get("https://www2.census.gov/geo/docs/reference/ct_change/")
-          for n in re.findall(r'href="([^"?/][^"]*\.(?:txt|csv))"', b.decode("utf-8", "replace")) if st == 200 else []:
-              st2, body = get("https://www2.census.gov/geo/docs/reference/ct_change/" + n)
-              lines = body.decode("utf-8", "replace").splitlines()
-              print(f"-- {n}: {st2}, {len(lines)} lines")
-              for ln in lines[:4]:
-                  print("     ", ln[:220])
-          # FEMA NRI CT tracts
-          q = urllib.parse.urlencode({"where": "STATEABBRV='CT'", "outFields": "TRACTFIPS,COUNTY,COUNTYFIPS",
-                                      "returnGeometry": "false", "resultRecordCount": 5, "f": "json"})
-          st, b = get("https://services.arcgis.com/XG15cJAlne2vxtgt/arcgis/rest/services/National_Risk_Index_Census_Tracts/FeatureServer/0/query?" + q)
-          print("== FEMA CT sample:", st, b[:600])
-          q = urllib.parse.urlencode({"where": "STATEABBRV='CT'", "returnCountOnly": "true", "f": "json"})
-          print("   FEMA CT tract count:", get("https://services.arcgis.com/XG15cJAlne2vxtgt/arcgis/rest/services/National_Risk_Index_Census_Tracts/FeatureServer/0/query?" + q)[1][:200])
-          # HUD CT areas
+                  return e.code, e.read()[:300]
+          def pipe(url):
+              st, b = get(url)
+              text = b.decode("utf-8-sig", "replace")
+              rows = list(csv.DictReader(io.StringIO(text), delimiter="|"))
+              print(f"== {url.rsplit('/', 1)[-1]}: {st}, {len(rows)} rows")
+              if rows:
+                  print("   columns:", [k.replace(chr(10), ' ') for k in rows[0].keys()])
+                  for r in rows[:3]:
+                      print("   ", {k.replace(chr(10), ' '): v for k, v in r.items()})
+              return [{k.replace("\n", " ").replace('"', ''): v for k, v in r.items()} for r in rows]
+
+          # 1. Census town crosswalk and the 2022 relationship files
+          xw = pipe("https://www2.census.gov/geo/docs/reference/ct_change/ct_cou_to_cousub_crosswalk.txt")
+          ct = pipe("https://www2.census.gov/geo/docs/maps-data/data/rel2022/acs22_cousub22_tract22_st09.txt")
+          cz = pipe("https://www2.census.gov/geo/docs/maps-data/data/rel2022/acs22_cousub22_zcta520_st09.txt")
+
+          # 2. FEMA's CT tract IDs
+          q = urllib.parse.urlencode({"where": "STATEABBRV='CT'", "outFields": "TRACTFIPS,COUNTYFIPS",
+                                      "returnGeometry": "false", "resultRecordCount": 2000, "f": "json"})
+          fema = [f["attributes"] for f in json.loads(get("https://services.arcgis.com/XG15cJAlne2vxtgt/arcgis/rest/services/National_Risk_Index_Census_Tracts/FeatureServer/0/query?" + q)[1])["features"]]
+          f_ids = [r["TRACTFIPS"] for r in fema]
+          print("== FEMA CT:", len(f_ids), "sample", f_ids[:4], "county prefixes", sorted(collections.Counter(t[:5] for t in f_ids).items()))
+
+          # 3. The 2020 ZCTA-tract file's CT tracts
+          st, b = get("https://www2.census.gov/geo/docs/maps-data/data/rel2020/zcta520/tab20_zcta520_tract20_natl.txt")
+          t20 = set()
+          for r in csv.DictReader(io.StringIO(b.decode("utf-8-sig", "replace")), delimiter="|"):
+              t = (r.get("GEOID_TRACT_20") or "").strip()
+              if t.startswith("09") and (r.get("GEOID_ZCTA5_20") or "").strip():
+                  t20.add(t)
+          print("== 2020 file CT tracts (with a ZCTA):", len(t20), "county prefixes", sorted(collections.Counter(t[:5] for t in t20).items()))
+          by6 = collections.defaultdict(set)
+          for t in t20:
+              by6[t[5:]].add(t)
+          print("   6-digit tract codes shared by two 2020 counties:", sum(len(v) > 1 for v in by6.values()))
+          hit = collections.Counter(len(by6.get(t[5:], ())) for t in f_ids)
+          print("   FEMA tracts by number of 2020 tracts with the same 6-digit code:", dict(hit))
+          print("   FEMA 6-digit codes with no 2020 match:", [t for t in f_ids if not by6.get(t[5:])][:20])
+          print("   2020 tracts no FEMA tract shares a code with:", sorted(t for t in t20 if t[5:] not in {x[5:] for x in f_ids})[:20])
+
+          # 4. Via towns: tract22 -> new town -> old county
+          def col(r, *names):
+              for n in names:
+                  for k in r:
+                      if k.strip().upper().startswith(n):
+                          return (r[k] or "").strip()
+              return ""
+          if xw:
+              new_to_oldcty = {col(r, "NEW_COUSUB_GEOID"): "09" + col(r, "OLD_COUNTYFP") for r in xw}
+              print("   town crosswalk sample:", list(new_to_oldcty.items())[:3])
+          if ct:
+              print("   tract22 file keys:", list(ct[0].keys()))
+
+          # 5. HUD data endpoint for CT towns: old code, and new code from the crosswalk
           tok = os.environ.get("HUD_API_TOKEN", "")
-          st, b = get("https://www.huduser.gov/hudapi/public/fmr/listCounties/CT", {"Authorization": "Bearer " + tok})
-          print("== HUD listCounties/CT:", st)
-          try:
-              for c in json.loads(b):
-                  print("    ", c.get("fips_code"), c.get("county_name"), c.get("town_name"))
-          except Exception as e:
-              print("   ", b[:300])
+          hdr = {"Authorization": "Bearer " + tok}
+          old_new = {}
+          for r in xw:
+              old_new[col(r, "OLD_COUSUB_GEOID")] = col(r, "NEW_COUSUB_GEOID")
+          for code in ("0900302060", "0900173070", "0901301080"):
+              for c in (code, old_new.get(code, "")):
+                  if not c:
+                      continue
+                  st, b = get("https://www.huduser.gov/hudapi/public/fmr/data/" + c, hdr)
+                  print(f"== HUD data/{c}: {st}")
+                  try:
+                      d = json.loads(b).get("data", {})
+                      bd = d.get("basicdata")
+                      print("    keys", [k for k in d if k != "basicdata"],
+                            {k: d[k] for k in ("year", "area_name", "metro_name", "county_name", "town_name", "smallarea_status", "metro_code") if k in d})
+                      print("    basicdata", type(bd).__name__, len(bd) if isinstance(bd, list) else "",
+                            (bd[:2] if isinstance(bd, list) else bd))
+                  except Exception as e:
+                      print("    ", repr(e), b[:300])
           PY
