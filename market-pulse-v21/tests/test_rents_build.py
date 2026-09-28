@@ -17,6 +17,7 @@ care less about happy-path extraction than about what happens when the
 shape is wrong.
 """
 import json
+import urllib.error
 import os
 import sys
 
@@ -228,6 +229,9 @@ check(_ms["46711"]["bedrooms"]["2"] == 999 and _mf["46711"]["bedrooms"]["2"] == 
       "carry, --states OH would erase every other state's")
 check(_rep["failed_counties"] == 1 and _rep["carried_fmr"] == 2,
       "and the report counts what failed and what was carried")
+check(_rep["unmatched_zips"] == 0,
+      "a run limited to Ohio doesn't report Indiana's counties as unmatched — the "
+      "first New England run listed Los Angeles County among its misses")
 check(R.merge_hud(dict(_hud, failed={f"c{i}" for i in range(5)}), {}, {}, _rows, None) is None,
       "MORE THAN 5% OF COUNTIES FAILING DISCARDS THE PULL — five of 88 is a "
       "broken run, not five counties with no rents")
@@ -235,6 +239,143 @@ _ms2, _mf2, _ = R.merge_hud(dict(_hud, failed=set()), _cs, _cf, _rows, None)
 check("46711" not in _ms2 and "46711" not in _mf2,
       "an unlimited run that reached everything carries nothing: Indiana's "
       "Adams County is not in this pull, so its ZIP has no HUD rent")
+
+
+# ── New England: HUD sets rents by town ──
+# Figures from the live API (FY2027). listCounties/CT still returns the
+# pre-2022 codes, which /fmr/data answers 404; the crosswalk carries the
+# 2022 planning-region codes, which work.
+check(R.town_key("0900302060") == R.town_key("0911002060") == "0902060"
+      and R.town_key("09003") == "",
+      "a town is its state + town code: Avon's old and new CT codes are one town")
+check(R.is_town({"fips_code": "0900302060", "town_name": "Avon town"})
+      and not R.is_town({"fips_code": "3600199999", "county_name": "Albany County", "town_name": ""})
+      and not R.is_town({"fips_code": "2500199999", "town_name": "x"}),
+      "listCounties entries are told apart: a town, versus a county ('…99999', no town name)")
+
+_xw = {"data": {"year": "2026", "quarter": "2", "crosswalk_type": "zip-countysub", "results": [
+    {"zip": "06001", "geoid": "0911027600", "res_ratio": 0.0244, "tot_ratio": 0.0211},
+    {"zip": "06001", "geoid": "0911068940", "res_ratio": 0.00045, "tot_ratio": 0.0004},
+    {"zip": "06001", "geoid": "0911002060", "res_ratio": 0.9741, "tot_ratio": 0.9759},
+    {"zip": "06902", "geoid": "0919073070", "res_ratio": 0.9993, "tot_ratio": 0.9994},
+    {"zip": "06902", "geoid": "0919033620", "res_ratio": 0.0007, "tot_ratio": 0.0006},
+    {"zip": "06199", "geoid": "0911037070", "res_ratio": 0, "tot_ratio": 0.7},
+    {"zip": "06199", "geoid": "0911082590", "res_ratio": 0, "tot_ratio": 0.3},
+    {"zip": "06355", "geoid": "0918000000", "res_ratio": 1, "tot_ratio": 1}]}}
+_zt, _code = R.parse_zip_towns(_xw)
+check(_zt["06001"][0] == ("0902060", 0.9741) and len(_zt["06001"]) == 3
+      and _code["0902060"] == "0911002060",
+      "the crosswalk parses: each ZIP's towns largest first, and each town's current code")
+check(_zt["06199"][0] == ("0937070", 0.7),
+      "a ZIP with no homes (a business or PO-box ZIP) is placed by all its addresses")
+check("06355" not in _zt and "0900000" not in _code,
+      "'county subdivision not defined' (…00000, open water) is not a town")
+for _bad in ({}, {"data": {}}, {"data": {"results": "x"}}, None):
+    try:
+        R.parse_zip_towns(_bad)
+        check(False, f"a crosswalk response without results must raise ({_bad!r})")
+    except ValueError:
+        check(True, "a crosswalk response without a results list raises, never reads as empty")
+
+_listing = [{"fips_code": "0900302060", "county_name": "Hartford County", "town_name": "Avon town"},
+            {"fips_code": "0900173070", "county_name": "Fairfield County", "town_name": "Stamford town"},
+            {"fips_code": "0901301080", "county_name": "Tolland County", "town_name": "Andover town"},
+            {"fips_code": "0900302060", "county_name": "Hartford County", "town_name": "Avon town"}]
+_todo, _skip = R.town_requests(_listing, {"0902060": "0911002060", "0973070": "0919073070"})
+check(_todo == [("0902060", "0911002060", "Avon town"), ("0973070", "0919073070", "Stamford town")],
+      "CONNECTICUT IS ASKED FOR BY ITS 2022 CODES: listCounties' 0900302060 is requested "
+      "as 0911002060 — the old codes are what made every CT request a 404")
+check(_skip == 1, "a town the crosswalk puts no ZIP in is not requested; a repeat is asked once")
+
+# Worcester County, MA: four HUD rent areas in one county.
+_fmr = {k: {"bedrooms": {"2": v}} for k, v in (
+    ("2513875", 2043),    # Clinton town → Worcester HMFA
+    ("2530840", 2499),    # Hopedale town → Eastern Worcester County
+    ("2544245", 1659),    # New Braintree → Western Worcester County
+    ("2558405", 1659),    # Royalston → Western Worcester County
+    ("2502130", 1900))}   # Ashburnham → Fitchburg-Leominster
+_zt2 = {"01510": [("2513875", 0.93), ("2530840", 0.07)],
+        "01005": [("2544245", 0.45), ("2558405", 0.40), ("2544999", 0.0)],
+        "01430": [("2502130", 0.45), ("2513875", 0.45), ("2530840", 0.10)],
+        "01999": [("2599999", 0.8)],
+        "01002": [("2530840", 0.3), ("2502130", 0.7)]}
+_trows = [(z, "MA", "Worcester County") for z in ("01510", "01005", "01430", "01999", "01002", "01003")]
+_tf, _deps, _trep = R.town_fmr_by_zip(_trows, _zt2, _fmr)
+check(_tf["01510"]["bedrooms"]["2"] == 2043,
+      "A ZIP TAKES ITS OWN TOWN'S FMR: Clinton's $2,043 (Worcester area), not whichever "
+      "Worcester County town HUD happened to list last — up to $840 a month apart")
+check(_tf["01005"]["bedrooms"]["2"] == 1659,
+      "a ZIP split between towns in the SAME rent area gets that area's FMR")
+check("01430" not in _tf and _trep["split"] == 1,
+      "A ZIP STRADDLING TWO RENT AREAS GETS NO FMR, rather than a coin flip between them")
+check("01999" not in _tf and _trep["no_rent"] == 1 and _deps["01999"] == {"2599999"},
+      "a ZIP whose town has no rent gets none, and remembers which town it waited on")
+check(_tf["01002"]["bedrooms"]["2"] == 1900 and "01003" not in _tf and _trep["no_town"] == 1,
+      "the largest town wins when it holds most homes; a ZIP the crosswalk lacks is counted")
+check(_deps["01430"] == {"2502130", "2513875", "2530840"} and _deps["01510"] == {"2513875"},
+      "a split ZIP depends on every town it touches; a clear one only on its own")
+
+# merge_hud: New England ZIPs go through towns, never the county-name join.
+_hudt = {"safmr": {}, "fmr": {"25027": {"bedrooms": {"2": 2499}}, "39001": {"bedrooms": {"2": 1003}}},
+         "counties": [("MA", "Worcester County", "25027"), ("OH", "Adams County", "39001")],
+         "town_fmr": {"2513875": {"bedrooms": {"2": 2043}}},
+         "zip_towns": {"01510": [("2513875", 0.93)], "01520": [("2530840", 1.0)],
+                       "06001": [("0902060", 0.97)]},
+         "town_states": {"MA"}, "failed": {"2530840", "state:CT"}, "requested": 100}
+_trows2 = [("01510", "MA", "Worcester County"), ("01520", "MA", "Worcester County"),
+           ("06001", "CT", "Hartford County"), ("45693", "OH", "Adams County")]
+_mst, _mft, _rept = R.merge_hud(_hudt, {}, {"01520": {"bedrooms": {"2": 1234}},
+                                            "06001": {"bedrooms": {"2": 1500}}}, _trows2, None)
+check(_mft["01510"]["bedrooms"]["2"] == 2043 and _mft["45693"]["bedrooms"]["2"] == 1003,
+      "NEW ENGLAND ZIPS TAKE THEIR TOWN'S FMR, NOT THE COUNTY'S — and the rest of the "
+      "country still joins by county")
+check(_mft["01520"]["bedrooms"]["2"] == 1234,
+      "a ZIP whose town request FAILED keeps its stored FMR")
+check(_mft["06001"]["bedrooms"]["2"] == 1500,
+      "a state whose crosswalk failed keeps every stored FMR")
+check(_rept["towns"]["matched"] == 1 and _rept["town_states"] == ["MA"],
+      "the report counts the town matches")
+
+# fetch_hud end to end against a stub HUD: the wiring is where CT broke.
+_calls = []
+_pages = {
+    f"{R.HUD_BASE}/listCounties/CT": _listing[:2],
+    f"{R.HUD_USPS}?type=11&query=CT": _xw,
+    f"{R.HUD_BASE}/data/0911002060": {"data": {"year": "2027", "basicdata": [
+        {"zip_code": "MSA level", "Two-Bedroom": 1933}, {"zip_code": "06001", "Two-Bedroom": 2320}]}},
+    f"{R.HUD_BASE}/data/0919073070": {"data": {"basicdata": {"Two-Bedroom": 2399}}},
+    f"{R.HUD_BASE}/listCounties/NY": [{"fips_code": "3600199999", "county_name": "Albany County",
+                                       "town_name": ""}],
+    f"{R.HUD_BASE}/data/3600199999": {"data": {"basicdata": {"Two-Bedroom": 1450}}},
+    f"{R.HUD_BASE}/listCounties/RI": [{"fips_code": "4400105140", "county_name": "Bristol County",
+                                       "town_name": "Barrington town"}],
+}
+
+
+def _stub(url, headers, attempts=3):
+    _calls.append(url)
+    if url not in _pages:
+        raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
+    return _pages[url]
+
+
+_real = R._get_json
+R._get_json = _stub
+try:
+    _h = R.fetch_hud(["CT", "NY", "RI"], "t", pause=0)
+finally:
+    R._get_json = _real
+check(f"{R.HUD_BASE}/data/0900302060" not in _calls and f"{R.HUD_BASE}/data/0911002060" in _calls,
+      "FETCH_HUD ASKS FOR CONNECTICUT BY ITS 2022 CODES — never the stale ones that 404")
+check(_h["town_fmr"] == {"0902060": {"bedrooms": {"2": 1933}, "year": "2027"},
+                         "0973070": {"bedrooms": {"2": 2399}, "year": None}}
+      and _h["safmr"]["06001"]["bedrooms"]["2"] == 2320,
+      "town FMRs are stored by town, and Hartford's small-area ZIPs still land as SAFMR")
+check(_h["fmr"] == {"36001": {"bedrooms": {"2": 1450}, "year": None}}
+      and _h["counties"] == [("NY", "Albany County", "36001")],
+      "a county-level state (New York) goes through the county path unchanged")
+check(_h["town_states"] == {"CT"} and "state:RI" in _h["failed"] and _h["requested"] == 3,
+      "a town state whose crosswalk fails is marked failed, and none of its towns is asked for")
 
 
 # ── HUD's published SAFMR CSV, the second way in ──

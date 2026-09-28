@@ -200,6 +200,46 @@ try:
     check(False, "three tracts must be refused at the real floor")
 except H.Refuse:
     check(True, "a pull with far too few tracts is refused")
+# ── Connecticut: FEMA's 2022 planning-region tract IDs → 2020 IDs ──
+# 2020: Hartford County (003) and Fairfield County (001). FEMA 2022: the same
+# tracts under Capitol (110) and Western (190) planning regions.
+_ctp = {"06103": [("09003500100", 1.0, 1.0)], "06902": [("09001021400", 1.0, 1.0)],
+        "44113": [("39035107101", 1.0, 1.0)]}
+_ct = [dict(tract("09110500100", 100_000, IFLD=(50.0, "Relatively Low"), CFLD=(None, "Not Applicable")), STATEABBRV="CT"),
+       dict(tract("09190021400", 100_000, IFLD=(20.0, "Relatively Low"), CFLD=(None, "Not Applicable")), STATEABBRV="CT"),
+       tract("39035107101", 100_000, IFLD=(10.0, "Relatively Low"), CFLD=(None, "Not Applicable"))]
+_ctout = H.build(_ct, _ctp, ["06103", "06902", "44113"], min_tracts=1)
+check(_ctout["zips"].get("06103", {}).get("fl") == 50.0 and _ctout["zips"].get("06902", {}).get("fl") == 20.0,
+      f"CONNECTICUT JOINS: FEMA's 2022 tract IDs are renumbered to the 2020 IDs the "
+      f"relationship file uses (got {_ctout['zips'].get('06103')}, {_ctout['zips'].get('06902')})")
+check(_ctout["_meta"]["recoded_tracts"] == {"recoded": 2, "unmatched": 0}
+      and "CT" not in _ctout["_meta"]["weak_states"],
+      "the run reports how many CT tracts it renumbered")
+_rows, _rep = H.recode_tracts(_ct, _ctp)
+check(_rows[0]["TRACTFIPS"] == "09003500100" and _rows[0]["TRACTFIPS_NRI"] == "09110500100"
+      and _rows[2] is _ct[2], "the FEMA ID is kept beside the 2020 one; other states' rows are untouched")
+# A 6-digit code two 2020 counties share is not guessed between.
+_amb = dict(_ctp, x=[("09005500100", 1.0, 1.0)])
+_rows, _rep = H.recode_tracts(_ct, _amb)
+check(_rows[0]["TRACTFIPS"] == "09110500100" and _rep == {"recoded": 1, "unmatched": 1},
+      "A TRACT CODE TWO 2020 CT COUNTIES SHARE IS LEFT UNJOINED, not guessed")
+# Two FEMA tracts claiming one 2020 tract: neither is renumbered.
+_two = _ct + [dict(_ct[0], TRACTFIPS="09120500100")]
+_rows, _rep = H.recode_tracts(_two, _ctp)
+check(_rows[0]["TRACTFIPS"] == "09110500100" and _rows[3]["TRACTFIPS"] == "09120500100"
+      and _rep == {"recoded": 1, "unmatched": 2},
+      "TWO FEMA TRACTS CLAIMING ONE 2020 TRACT: NEITHER IS RENUMBERED")
+# Only Connecticut: elsewhere a tract code repeats across counties, so an
+# unknown ID is never matched by its code alone.
+_oh = [tract("39099107101", 100_000)]
+_rows, _rep = H.recode_tracts(_oh, _ctp)
+check(_rows[0]["TRACTFIPS"] == "39099107101" and _rep == {"recoded": 0, "unmatched": 0},
+      "AN UNKNOWN TRACT OUTSIDE CONNECTICUT IS NEVER MATCHED BY CODE")
+# A CT tract already in 2020 form is left alone.
+_rows, _rep = H.recode_tracts([dict(_ct[0], TRACTFIPS="09003500100")], _ctp)
+check(_rows[0]["TRACTFIPS"] == "09003500100" and "TRACTFIPS_NRI" not in _rows[0]
+      and _rep["recoded"] == 0, "a CT tract that already joins is not renumbered")
+
 try:
     H.guard({"_meta": {"coverage": {"flood": 0.90}}}, {"_meta": {"coverage": {"flood": 0.97}}}, False)
     check(False, "a coverage drop must be refused")

@@ -192,7 +192,8 @@ none, gets no FMR and is logged. The first national run matched 25,346 of 25,769
 the misses were spelling, which the Saint/St. and spacing rules now cover (a re-pull of
 the 14 affected states gave 209 more ZIPs a rent and changed nothing elsewhere). What
 remains is Connecticut (HUD now publishes planning regions) and a few Alaska boroughs
-whose names differ in substance — 278 ZIPs.
+whose names differ in substance — 278 ZIPs. (Connecticut and the rest of New England
+now join by town instead — 2026-09-28, below.)
 
 ## 2026-09-27 — HUD rents are labelled, not adjusted; strained ones are flagged
 **Decided.** HUD's 2-bedroom Fair Market Rent now answers for 17,223 ZIPs Zillow doesn't
@@ -280,3 +281,37 @@ own fresh database (they migrate down and up, so they can't share) and fails a s
 still reports "no DATABASE_URL" when one was provided — a skip that reads as a pass is
 the failure mode being closed. The existing `household-engine` job is left as it was in
 case it is a required status check; it is now redundant.
+
+## 2026-09-28 — Connecticut's tracts join by their unchanged tract code
+**Decided.** FEMA's NRI carries Connecticut's 2022 planning-region tract IDs (county part
+110–190); the Census 2020 ZCTA-to-tract file the hazard join uses carries the old county
+ones (001–015), so no CT ZIP had a hazard figure. The renumbering changed only the county
+part, and the 6-digit tract codes are unique statewide — checked against the live data
+before any code: all 879 of FEMA's CT tracts matched exactly one 2020 tract, and every
+2020 CT tract was matched. `recode_tracts` renumbers by that code, in Connecticut only
+(elsewhere a tract code repeats across counties), and leaves anything ambiguous unjoined
+rather than guessed. Result: 256 of 256 CT ZIPs have hazard figures (was 0); no other
+ZIP's figures changed.
+
+## 2026-09-28 — New England ZIPs take HUD's rent for their town, not their county
+**Decided.** In CT, MA, ME, NH, RI and VT, HUD sets Fair Market Rents by town, and one
+county can hold several rent areas: Worcester County, MA spans four ($1,659–$2,499 for a
+two-bedroom); in Middlesex County, Boston's is $3,008 and Lowell's $2,383. The refresh
+keyed each town's figure by its county, so every ZIP in a county took whichever town HUD
+listed last. Connecticut got nothing at all: HUD's town list still returns pre-2022
+codes, and its data endpoint answers 404 to every one of them.
+
+HUD's own ZIP-to-town crosswalk (`/usps?type=11`, same token, one request per state)
+now places each ZIP, by its share of residential addresses, and supplies each town's
+current code. A ZIP takes its main town's FMR when that town holds at least half its
+homes; a ZIP split more evenly takes one only if every town it touches has the same
+figure — straddling two rent areas, it gets none rather than a coin flip. Towns the
+crosswalk puts no ZIP in aren't requested (34).
+
+First run (FY2027): Connecticut went from 139 ZIPs without a rent to none — all 256 have
+an FMR and 90 a SAFMR (Hartford is a small-area metro). The FMR changed for 119 MA, 47
+ME, 47 NH, 13 RI and 7 VT ZIPs; Lynn, Salem and Peabody, for example, moved from $2,367
+to Boston's $3,008. Four ZIPs lost their FMR (three straddle rent areas; one is Essex,
+VT, which keeps its Zillow rent), and two small ones — populations 838 and 1,531 — now
+have no rent. The same run filled the ACS tier for the first time since the keyless
+switch (23,238 ZIPs), so ZIPs with no measured rent nationally fell from 394 to 171.
