@@ -694,6 +694,22 @@ _on = R.balance_sheet(merge(dated("DebtLongtermAndShorttermCombinedAmount", "202
 check(_on["total_debt"] == 2.9805e9 and "single combined debt tag" not in _on["notes"],
       f"ON SEMICONDUCTOR'S $0.9m COMBINED TAG DOES NOT OVERRIDE ITS $2.98bn OF LongTermDebt "
       f"(got {_on['total_debt']})")
+_lite = R.balance_sheet(merge(dated("DebtLongtermAndShorttermCombinedAmount", "2026-06-27", 1.637e9),
+                              dated("LongTermDebtNoncurrent", "2026-06-27", 0.040e9),
+                              dated("LongTermDebtCurrent", "2026-06-27", 1.597e9),
+                              dated("ShortTermBorrowings", "2026-06-27", 1.597e9),
+                              dated("StockholdersEquity", "2026-06-27", 1e9)))
+check(_lite["total_debt"] == 1.637e9,
+      f"LUMENTUM TAGS ITS $1.6bn OF CURRENT CONVERTS TWICE — its own $1.64bn total stands, not "
+      f"the $3.23bn the parts add to (got {_lite['total_debt']})")
+_cve = R.balance_sheet(merge(ifrs("Borrowings", "2025-12-31", 11.000e9),
+                             ifrs("LongtermBorrowings", "2025-12-31", 11.032e9),
+                             ifrs("CurrentPortionOfLongtermBorrowings", "2025-12-31", 0.0),
+                             ifrs("CurrentBorrowingsAndCurrentPortionOfNoncurrentBorrowings", "2025-12-31", 11.032e9),
+                             ifrs("Equity", "2025-12-31", 30e9)))
+check(_cve["total_debt"] == 11.0e9,
+      f"Cenovus's current-borrowings figure repeats its long-term one: its C$11bn total stands "
+      f"(got {_cve['total_debt']})")
 _skm = R.balance_sheet(merge(ifrs("Borrowings", "2024-12-31", 305e6),
                              ifrs("CurrentPortionOfLongtermBorrowings", "2024-12-31", 2.46e12),
                              ifrs("LongtermBorrowings", "2019-12-31", 5e12),

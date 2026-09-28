@@ -603,7 +603,7 @@ BALANCE_TAGS: dict[str, list[tuple[str, str]]] = {
     # abruptly more levered than the index it is being compared against.
     # A single figure for ALL debt. Air Products and Hertz file theirs as
     # DebtAndCapitalLeaseObligations; IFRS filers as Borrowings (Petrobras,
-    # Anheuser-Busch). A floor like the rest, not an override.
+    # Anheuser-Busch). Stands over the parts unless plainly broken.
     "debt_total": [
         ("us-gaap", "DebtLongtermAndShorttermCombinedAmount"),
         ("us-gaap", "DebtAndCapitalLeaseObligations"),
@@ -813,6 +813,10 @@ INTEREST_SLOTS = [
     ("ifrs-full", "FinanceCosts"),
 ]
 
+# See balance_sheet: a combined total under this share of the debt due this
+# year, or of what the other routes add to, is not a total.
+COMBINED_MIN_SHARE = 0.25
+
 # A zero read from what a company did NOT file stands only if its interest
 # bill agrees. At a 5% coupon, 0.25% of revenue is debt of 5% of a year's
 # sales. The first branch run's unknowns split on it: debt-free companies
@@ -837,11 +841,12 @@ def balance_sheet(facts: dict, want_unit: str = "USD",
     the newest equity, liabilities or cash figure in an annual filing —
     and a component with no value on that date is simply not filed.
 
-    TOTAL DEBT IS ASSEMBLED, NOT READ. Almost nobody files a single
-    total-debt tag, so, on that one date, each of these is a FLOOR and the
-    largest stands:
+    TOTAL DEBT IS ASSEMBLED, NOT READ. A combined total tag (US GAAP, or
+    IFRS `Borrowings`) is the filer's own figure and stands — unless it is
+    plainly not a total (under COMBINED_MIN_SHARE of the debt due this
+    year or of the parts: ON Semiconductor's $0.9m). Otherwise,
+    on that one date, each of these is a FLOOR and the largest stands:
 
-        a combined total tag (US GAAP or IFRS `Borrowings`)
         noncurrent line + debt due within a year
         LongTermDebt (current included) + short-term borrowings
         the largest one-kind total (senior notes, secured debt) + short-term
@@ -849,11 +854,9 @@ def balance_sheet(facts: dict, want_unit: str = "USD",
     where "debt due within a year" is the larger of current portion +
     short-term borrowings and DebtCurrent. None of them adds two figures
     that overlap, so none overstates; a figure that is only part of the
-    debt cannot beat a fuller one. A combined tag smaller than the debt due
-    within a year is not a total and is ignored (SK Telecom's). The old
-    rule threw `LongTermDebt` away whenever a current portion was filed
-    (Union Pacific read $1.5bn against $31.8bn, AbbVie $8.6bn against
-    $64.5bn) and took a combined tag alone (ON Semiconductor, $0.9m).
+    debt cannot beat a fuller one. The old rule threw `LongTermDebt` away
+    whenever a current portion was filed (Union Pacific read $1.5bn
+    against $31.8bn, AbbVie $8.6bn against $64.5bn).
 
     NO DEBT TAG IS NOT AUTOMATICALLY UNKNOWN. A genuinely debt-free
     company files no debt tag, and treating that as unmeasurable would
@@ -909,14 +912,8 @@ def balance_sheet(facts: dict, want_unit: str = "USD",
         notes.append("DebtCurrent stands in for current portion and short-term borrowings")
     # EVERY ROUTE IS A FLOOR, and the largest stands. Each adds figures that
     # cannot overlap, so none overstates; a tag that is only part of the
-    # debt (one note, the converts, a stray combined figure) must not beat
-    # a fuller one. The combined tag used to be taken alone, and ON
-    # Semiconductor's $0.9m of it stood in for $2.98bn of LongTermDebt.
+    # debt (one note, the converts) must not beat a fuller one.
     routes = []
-    if combined is not None and combined >= (near or 0.0):
-        routes.append(combined)
-    elif combined is not None:
-        notes.append("the combined debt tag is smaller than the debt due this year — ignored")
     if noncur is not None:
         routes.append(noncur + (near or 0.0))
     if lt_total is not None:
@@ -940,9 +937,23 @@ def balance_sheet(facts: dict, want_unit: str = "USD",
             partial = True
             notes.append("the only long-term figure is one kind of debt, smaller than "
                          "the debt due this year — part of the total; unknown")
+    # THE FILER'S OWN TOTAL stands over the parts — some filers tag one
+    # amount twice (Lumentum's current converts as both current portion and
+    # short-term borrowings; Cenovus's current borrowings equal to its
+    # long-term), and the parts then double it. Unless it is plainly not a
+    # total: under COMBINED_MIN_SHARE of the debt due this year (SK
+    # Telecom's 305m KRW beside 2.5tn) or of what the parts add to (ON
+    # Semiconductor's $0.9m beside $2.98bn of LongTermDebt). A double count
+    # makes the parts twice the total, far from that line.
+    if combined is not None:
+        if combined >= COMBINED_MIN_SHARE * max(routes + [near or 0.0]):
+            routes, partial = [combined], False
+            notes = [n for n in notes if "one kind" not in n]
+        else:
+            notes.append("the combined debt tag is smaller than the other figures say — ignored")
     if routes:
         debt = max(routes)
-        if debt == combined:
+        if routes == [combined]:
             notes.append("single combined debt tag")
         elif noncur is None and lt_total is not None:
             notes.append("LongTermDebt used as the total (current portion included)")
