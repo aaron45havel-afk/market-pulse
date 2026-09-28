@@ -595,6 +595,55 @@ _amend = R.balance_sheet(merge(
         {"end": "2025-12-31", "val": 3_000.0, "fy": 2025, "fp": "FY", "form": "10-K", "filed": "2026-02-01"}]),
     dated("StockholdersEquity", "2025-12-31", 1.0)))
 check(_amend["total_debt"] == 4_000.0, "a restated figure (10-K/A, filed later) wins")
+# The second probe's cases (latest balance sheets, $bn).
+def ifrs(tag, end, val):
+    return inst("ifrs-full", tag, [{"end": end, "val": val, "fy": int(end[:4]), "fp": "FY",
+                                    "form": "20-F", "filed": end}])
+
+
+_apd = R.balance_sheet(merge(dated("DebtAndCapitalLeaseObligations", "2025-09-30", 17.698e9),
+                             dated("LongTermDebtAndCapitalLeaseObligationsCurrent", "2025-09-30", 0.716e9),
+                             dated("ShortTermBorrowings", "2025-09-30", 0.035e9),
+                             dated("StockholdersEquity", "2025-09-30", 17e9)))
+check(abs(_apd["total_debt"] - 17.698e9) < 1e6,
+      f"AIR PRODUCTS' $17.7bn IS READ FROM ITS TOTAL TAG — not its $0.75bn of current debt "
+      f"(got {_apd['total_debt'] / 1e9:.2f}bn)")
+_pbr = R.balance_sheet(merge(ifrs("LongtermBorrowings", "2024-12-31", 20.596e9),
+                             ifrs("CurrentBorrowingsAndCurrentPortionOfNoncurrentBorrowings", "2024-12-31", 2.566e9),
+                             ifrs("ShorttermBorrowings", "2024-12-31", 0.010e9),
+                             ifrs("Equity", "2024-12-31", 70e9)))
+check(abs(_pbr["total_debt"] - 23.162e9) < 1e6,
+      f"PETROBRAS (IFRS): long-term borrowings plus current borrowings, $23.2bn — its short-term "
+      f"$0.01bn alone had been read as all its debt (got {_pbr['total_debt'] / 1e9:.3f}bn)")
+_bud = R.balance_sheet(merge(ifrs("Borrowings", "2025-12-31", 73.013e9), ifrs("Equity", "2025-12-31", 80e9)))
+check(_bud["total_debt"] == 73.013e9, "Anheuser-Busch (IFRS): the Borrowings total")
+_de = R.balance_sheet(merge(dated("LongTermDebtNoncurrent", "2019-11-03", 30e9),
+                            dated("DebtCurrent", "2025-11-02", 13.796e9),
+                            dated("StockholdersEquity", "2025-11-02", 25e9)))
+check(_de["total_debt"] is None and not _de["debt_inferred_zero"],
+      "DEERE: ONLY ITS CURRENT DEBT IS ON A READ TAG, AND IT FILED A LONG-TERM LINE BEFORE — "
+      "unknown, not $13.8bn read as the whole")
+check(sum("unknown" in n for n in _de["notes"]) == 1 and any("short-term" in n for n in _de["notes"]),
+      "and the row gives that one reason, not a second, contradictory one")
+check(R.balance_sheet(merge(dated("ShortTermBorrowings", "2025-12-31", 250.0),
+                            dated("StockholdersEquity", "2025-12-31", 1.0)))["total_debt"] == 250.0,
+      "a company that only ever had short-term debt is measured on it")
+_panw = R.balance_sheet(merge(dated("ConvertibleDebtNoncurrent", "2026-07-31", 1.774e9),
+                              dated("StockholdersEquity", "2026-07-31", 7e9)))
+check(_panw["total_debt"] == 1.774e9, "Palo Alto: its converts are its long-term debt")
+_both = R.balance_sheet(merge(dated("LongTermDebtNoncurrent", "2025-12-31", 5_000.0),
+                              dated("ConvertibleDebtNoncurrent", "2025-12-31", 1_000.0),
+                              dated("StockholdersEquity", "2025-12-31", 1.0)))
+check(_both["total_debt"] == 5_000.0,
+      "A FALLBACK LINE IS NEVER ADDED BESIDE THE MAIN ONE — the converts inside a filed "
+      "LongTermDebtNoncurrent are not counted twice")
+_part = R.balance_sheet(merge(dated("LongTermDebtNoncurrent", "2025-12-31", 1_000.0),
+                              dated("LongTermDebt", "2025-12-31", 9_000.0),
+                              dated("LongTermDebtCurrent", "2025-12-31", 500.0),
+                              dated("StockholdersEquity", "2025-12-31", 1.0)))
+check(_part["total_debt"] == 9_000.0,
+      "WHEN THE LINE TAG IS ONLY PART OF THE DEBT, THE FILER'S OWN TOTAL STANDS — the larger route")
+
 _late = R.balance_sheet(merge(dated("StockholdersEquity", "2025-12-31", 1.0),
                               dated("LongTermDebtNoncurrent", "2025-12-31", 4_000.0),
                               dated("ShortTermBorrowings", "2026-02-15", 999.0)))

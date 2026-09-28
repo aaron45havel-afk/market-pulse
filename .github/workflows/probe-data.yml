@@ -2,6 +2,7 @@ name: TEMPORARY — rebuild compounders, FCF quality and Lynch on the branch
 
 # Branch data run for the tag-reading fixes. Commits the rebuilt data to
 # this branch for review. Deleted before the branch merges.
+# Run 2: second-round debt tags; Lynch already rebuilt.
 on:
   push:
     branches: [claude/legal-rep-invoice-tracking-9j1i9r]
@@ -33,7 +34,7 @@ jobs:
       - name: Compounders
         run: python -u scripts/refresh_compounders.py
       - name: FCF quality from the new compounders file
-        run: python -u scripts/build_fcf_quality.py
+        run: python -u scripts/build_fcf_quality.py --force
       - name: Commit to this branch
         run: |
           set -euo pipefail
@@ -45,32 +46,3 @@ jobs:
           git commit -m "chore: compounders + FCF quality rebuild (branch data run)"
           for i in 1 2 3 4; do git push origin HEAD:claude/legal-rep-invoice-tracking-9j1i9r && exit 0; sleep $((i*5)); git pull --rebase origin claude/legal-rep-invoice-tracking-9j1i9r; done; exit 1
 
-  lynch:
-    runs-on: ubuntu-latest
-    timeout-minutes: 150
-    defaults:
-      run:
-        working-directory: market-pulse-v21
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - run: pip install -r requirements.txt
-      - name: Suites first
-        run: |
-          python tests/test_lynch.py
-          python tests/test_pricefeed.py
-          python tests/test_schloss.py
-      - name: Lynch
-        run: python -u scripts/refresh_lynch_screener.py
-      - name: Commit to this branch
-        run: |
-          set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add market-pulse-v21/data/lynch_snapshots
-          if git diff --staged --quiet; then echo "no change"; exit 0; fi
-          git commit -m "chore: Lynch rebuild (branch data run)"
-          for i in 1 2 3 4; do git push origin HEAD:claude/legal-rep-invoice-tracking-9j1i9r && exit 0; sleep $((i*5)); git pull --rebase origin claude/legal-rep-invoice-tracking-9j1i9r; done; exit 1

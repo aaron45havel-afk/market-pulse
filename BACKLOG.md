@@ -32,6 +32,17 @@ Format: `- [PHASE-SEEN] item — why it matters`
   is in the wrong unit (Nutanix reads 0.0x P/FCF) is left as filed; the `/holt` and
   compounders guards refuse it. The cover-page count (`dei:EntityCommonStockSharesOutstanding`)
   would be an anchor for those.
+- [P2] Compounders' net debt/EBIT (the debt GATE) still reads debt through `_annual_series`,
+  which keys balance-sheet instants on the filing's fiscal year — a 10-K's prior-year
+  comparative competes for the slot — and can add `LongTermDebt` (a total) to `DebtCurrent`
+  (AT&T: ~$144bn vs ~$136bn). Both err toward stricter. `balance_sheet()` now does this
+  properly for enterprise value; moving the gate onto it would need the FCF-quality
+  cross-check, which compares the two paths, to be rethought.
+- [P2] Capex filed under company-specific tags (ConocoPhillips since 2023, NextEra) is not
+  read, so those rows have no free cash flow. Only us-gaap tags are on the list.
+- [P2] The EBIT fill (pre-tax income + interest) splices into an operating-income series
+  for the years it covers; for a company with large non-operating items it will differ
+  from the operating line it replaces.
 - [P0] `CRON_SECRET` was exposed in an earlier session and has not been rotated.
 - [P1] `mf_audit_log` has the immutability trigger ARCHITECTURE.md §5.4 asks for but not
   the insert-only grant. A grant is meaningless while the app connects as the table's
