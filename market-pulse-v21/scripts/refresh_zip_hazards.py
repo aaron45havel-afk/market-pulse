@@ -24,6 +24,7 @@ answer 403 to GitHub's runners; FEMA's own ArcGIS feature service (owner
 FEMA_NationalRiskIndex) does not, and serves the same December 2025 release
 tract by tract. Tracts become ZIPs through the Census Bureau's 2020
 ZCTA-to-tract relationship file, apportioned by land area (zip_env.py).
+Connecticut's tracts are renumbered to their 2020 IDs first (recode_tracts).
 
 IT REFUSES TO PUBLISH A BROKEN FILE: too few tracts, more than one NRI
 release mixed together, a rating it has never seen, or a coverage collapse
@@ -120,6 +121,52 @@ def parse_relationship(text: str) -> dict:
     return parts
 
 
+# Connecticut replaced its eight counties with nine planning regions in 2022.
+# FEMA's NRI carries the 2022 tract IDs (county part 110–190); the 2020
+# relationship file carries the 2020 ones (001–015), so without this no CT
+# tract joins. Only the county part changed: the tracts and their 6-digit
+# codes did not, and the codes are unique statewide. Checked against the
+# live data before this was written — all 879 of FEMA's CT tracts matched
+# exactly one 2020 tract by code, and every 2020 CT tract was matched.
+RECODED_STATES = {"09": "Connecticut's 2022 planning regions"}
+
+
+def recode_tracts(tract_rows: list, parts: dict) -> tuple[list, dict]:
+    """FEMA rows with each recoded state's tract IDs turned back into the 2020
+    IDs the relationship file uses. Returns (rows, {"recoded", "unmatched"}).
+
+    Matched on state + 6-digit tract code, and only where exactly one 2020
+    tract of that state has the code and no other FEMA tract claims it — an
+    ambiguous one is left as it was, and so unjoined, rather than guessed.
+    Other states are never touched: a tract code repeats across counties
+    almost everywhere else.
+    """
+    known = {t for p in parts.values() for t, _, _ in p}
+    by_code = collections.defaultdict(set)          # recoded states only
+    for t in known:
+        if t[:2] in RECODED_STATES:
+            by_code[(t[:2], t[5:])].add(t)
+    target = {}
+    for r in tract_rows:
+        t = r.get("TRACTFIPS") or ""
+        hits = by_code.get((t[:2], t[5:]), ()) if t not in known else ()
+        if len(hits) == 1:
+            target[t] = next(iter(hits))
+    claims = collections.Counter(target.values())
+    out, report = [], {"recoded": 0, "unmatched": 0}
+    for r in tract_rows:
+        t = r.get("TRACTFIPS") or ""
+        if t[:2] not in RECODED_STATES or t in known:
+            out.append(r)
+        elif t in target and claims[target[t]] == 1:
+            out.append(dict(r, TRACTFIPS=target[t], TRACTFIPS_NRI=t))
+            report["recoded"] += 1
+        else:
+            out.append(r)
+            report["unmatched"] += 1
+    return out, report
+
+
 def build(tract_rows: list, parts: dict, zips: list, min_tracts: int = MIN_TRACTS) -> dict:
     """tract_rows: NRI attribute dicts. parts: parse_relationship(). zips: [zip, ...]."""
     if len(tract_rows) < min_tracts:
@@ -130,6 +177,7 @@ def build(tract_rows: list, parts: dict, zips: list, min_tracts: int = MIN_TRACT
     ids = [r.get("TRACTFIPS") for r in tract_rows]
     if len(set(ids)) != len(ids):
         raise Refuse("duplicate TRACTFIPS in the pull")
+    tract_rows, recoded = recode_tracts(tract_rows, parts)
 
     by_group = {}
     for group, codes in E.HAZARD_GROUPS.items():
@@ -171,8 +219,9 @@ def build(tract_rows: list, parts: dict, zips: list, min_tracts: int = MIN_TRACT
     median["total"] = round(statistics.median(totals), 2) if totals else None
 
     # States where the join mostly failed are named, not averaged away. A
-    # tract-ID scheme change (Connecticut's 2022 planning regions are the
-    # known candidate) shows up here rather than as a quietly empty state.
+    # tract-ID scheme change like Connecticut's 2022 planning regions (now
+    # handled by recode_tracts) shows up here rather than as a quietly
+    # empty state.
     state_of = {r["TRACTFIPS"][:2]: r.get("STATEABBRV") for r in tract_rows if r.get("TRACTFIPS")}
     per_state = collections.defaultdict(lambda: [0, 0])
     for z in zips:
@@ -198,6 +247,7 @@ def build(tract_rows: list, parts: dict, zips: list, min_tracts: int = MIN_TRACT
             "coverage": coverage,
             "median": median,
             "weak_states": weak,
+            "recoded_tracts": recoded,
             "fields": {k: f"{g} loss $/yr per $100k" for g, k in KEYS.items()},
         },
         "zips": out,
@@ -246,7 +296,8 @@ def main() -> int:
     print("  coverage  " + "  ".join(f"{g} {c:.1%}" for g, c in m["coverage"].items()))
     print("  median    " + "  ".join(f"{g} ${v}" for g, v in m["median"].items()))
     print(f"  weak states (<80% flood coverage): {m['weak_states'] or 'none'}")
-    for z in ("44113", "43215", "45202", "70112", "33139", "94110", "80202"):
+    print(f"  Connecticut tracts renumbered to 2020 IDs: {m['recoded_tracts']}")
+    for z in ("44113", "43215", "45202", "70112", "33139", "94110", "80202", "06103", "06902"):
         print(f"  {z}  {payload['zips'].get(z)}")
     return 0
 

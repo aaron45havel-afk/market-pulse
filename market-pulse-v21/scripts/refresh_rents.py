@@ -13,7 +13,8 @@ Three sources, in the precedence rent_ladder.py defines:
 
   SAFMR  HUD Small Area Fair Market Rents, per ZIP, by bedroom. Needs a
   + FMR  free token from huduser.gov/hudapi. County FMR covers the
-         non-metro remainder.
+         non-metro remainder — town FMR in New England, where HUD sets
+         rents by town and HUD's own ZIP-to-town crosswalk places each ZIP.
 
   ACS    Census B25064 median gross rent by ZCTA, from the Bureau's
          keyless bulk files (acs_bulk.py).
@@ -60,6 +61,7 @@ DB_PATH = Path(__file__).resolve().parent.parent / "data" / "zips.db"
 ZORI_URL = ("https://files.zillowstatic.com/research/public_csvs/zori/"
             "Zip_zori_uc_sfrcondomfr_sm_month.csv")
 HUD_BASE = "https://www.huduser.gov/hudapi/public/fmr"
+HUD_USPS = "https://www.huduser.gov/hudapi/public/usps"   # type=11: ZIP → county subdivision
 UA = {"User-Agent": "market-pulse/1"}
 
 # The columns this script owns. Everything else in `zips` is left alone.
@@ -323,58 +325,210 @@ def _get_json(url: str, headers: dict, attempts: int = 3):
     raise last
 
 
+# ─── New England: HUD sets rents by town ─────────────────────────────
+# In CT, MA, ME, NH, RI and VT, HUD's listCounties returns TOWNS (10-digit
+# county-subdivision codes), and towns in one county sit in different rent
+# areas: Worcester County, MA runs from $1,659 to $2,499 for a two-bedroom
+# across four HUD areas. Keyed by county, every Worcester ZIP got whichever
+# town HUD listed last. Connecticut got nothing: listCounties still returns
+# the pre-2022 county codes, and /fmr/data answers 404 to every one of them
+# — only the 2022 planning-region codes work. HUD's own ZIP-to-town
+# crosswalk carries the current codes, so it fixes both: it says which town
+# each ZIP is in, and which code to ask HUD for.
+MIN_TOWN_SHARE = 0.5        # a ZIP takes its main town's FMR if that town holds half its homes
+
+
+def town_key(code: str) -> str:
+    """State + town FIPS, without the county: '0900302060' and '0911002060'
+    are both Avon, CT ('0902060'). Town codes are unique within a state and
+    Connecticut's 2022 renumbering changed only the county part."""
+    code = str(code or "").strip()
+    return code[:2] + code[5:] if len(code) == 10 else ""
+
+
+def is_town(entry: dict) -> bool:
+    """A listCounties entry for a town, not a county. Counties come back as
+    'SSCCC99999' with no town name (New York: '3600199999', 'Albany County')."""
+    code = str((entry or {}).get("fips_code") or "").strip()
+    return bool((entry or {}).get("town_name")) and len(code) == 10 and not code.endswith("99999")
+
+
+def parse_zip_towns(payload) -> tuple[dict, dict]:
+    """HUD USPS crosswalk (type 11, ZIP → county subdivision) response →
+    ({zip: [(town_key, share), ...] largest first}, {town_key: current code}).
+
+    The share is the town's portion of the ZIP's residential addresses — or
+    of all its addresses for a ZIP with no homes (PO boxes, a campus).
+    Raises ValueError on an unrecognised shape: a silent {} would read as
+    "no ZIP is in any town" and drop the whole state.
+    """
+    data = (payload or {}).get("data") if isinstance(payload, dict) else None
+    rows = (data or {}).get("results") if isinstance(data, dict) else None
+    if not isinstance(rows, list):
+        raise ValueError("HUD crosswalk response has no data.results list")
+    by_zip: dict = {}
+    code_of: dict = {}
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        z = str(r.get("zip") or "").strip().zfill(5)
+        geoid = str(r.get("geoid") or "").strip()
+        key = town_key(geoid)
+        # '…00000' is "county subdivision not defined": water, not a town.
+        if len(z) != 5 or not z.isdigit() or not key or geoid.endswith("00000"):
+            continue
+        code_of[key] = geoid
+        by_zip.setdefault(z, []).append(
+            (key, float(r.get("res_ratio") or 0), float(r.get("tot_ratio") or 0)))
+    out = {}
+    for z, towns in by_zip.items():
+        use_res = any(res > 0 for _, res, _ in towns)
+        shares = [(k, res if use_res else tot) for k, res, tot in towns]
+        out[z] = sorted(shares, key=lambda kv: (-kv[1], kv[0]))
+    return out, code_of
+
+
+def town_requests(listing: list, code_of: dict) -> tuple[list, int]:
+    """([(town_key, code to request, town_name)], n_skipped) for one state.
+
+    Asks HUD only for towns the crosswalk puts a ZIP in, and with the
+    crosswalk's code — Connecticut's current one, not listCounties' stale
+    one. A town with no ZIP addresses has no ZIP to give a rent to.
+    """
+    out, seen, skipped = [], set(), 0
+    for c in listing:
+        if not is_town(c):
+            continue
+        key = town_key(c.get("fips_code"))
+        if key in seen:
+            continue
+        seen.add(key)
+        if key in code_of:
+            out.append((key, code_of[key], str(c.get("town_name") or "")))
+        else:
+            skipped += 1
+    return out, skipped
+
+
+def town_fmr_by_zip(zip_rows, zip_towns: dict, town_fmr: dict) -> tuple[dict, dict, dict]:
+    """({zip: FMR record}, {zip: {town_keys it depends on}}, report).
+
+    zip_rows: [(zip, state, county)] for the town-level states only.
+    A ZIP takes its main town's FMR when that town holds at least
+    MIN_TOWN_SHARE of its homes. A ZIP split more evenly takes an FMR only
+    if every town it touches has the same one — straddling two rent areas,
+    it gets none rather than a coin flip between them.
+    """
+    out, deps = {}, {}
+    rep = {"matched": 0, "split": 0, "no_town": 0, "no_rent": 0}
+    for z, _st, _county in zip_rows:
+        towns = sorted(((k, s) for k, s in zip_towns.get(z, []) if s > 0),
+                       key=lambda kv: (-kv[1], kv[0]))
+        if not towns:
+            rep["no_town"] += 1
+            continue
+        top, share = towns[0]
+        if share >= MIN_TOWN_SHARE:
+            deps[z] = {top}
+            rec = town_fmr.get(top)
+        else:
+            deps[z] = {k for k, _ in towns}
+            recs = [town_fmr.get(k) for k, _ in towns]
+            rec = recs[0] if all(r is not None and r == recs[0] for r in recs) else None
+            if rec is None and all(r is not None for r in recs):
+                rep["split"] += 1
+                continue
+        if rec is None:
+            rep["no_rent"] += 1
+            continue
+        out[z] = rec
+        rep["matched"] += 1
+    return out, deps, rep
+
+
 def fetch_hud(states: list[str], token: str, pause: float = 0.4) -> dict:
-    """One request per county, rate-limited and retried.
+    """One request per county — per town in New England — rate-limited and
+    retried.
 
     Returns {"safmr": {zip: rec}, "fmr": {county_fips5: rec},
-             "counties": [(state, county_name, fips5)], "failed": {fips5},
-             "requested": n}.
-    A county that fails after retries is RECORDED, not silently skipped,
-    so the caller can keep that county's stored rents instead of treating
-    the gap as HUD saying the county has none.
+             "counties": [(state, county_name, fips5)],
+             "town_fmr": {town_key: rec}, "zip_towns": {zip: [(town_key, share)]},
+             "town_states": {state}, "failed": {fips5 | town_key | "state:XX"},
+             "requested": n, "towns_skipped": n}.
+    An area that fails after retries is RECORDED, not silently skipped, so
+    the caller can keep its stored rents instead of treating the gap as HUD
+    saying the area has none.
     """
     safmr: dict[str, dict] = {}
     fmr: dict[str, dict] = {}
+    town_fmr: dict[str, dict] = {}
+    zip_towns: dict = {}
+    town_states: set = set()
     counties_out: list = []
     failed: set = set()
-    requested = 0
+    requested = skipped = 0
     hdr = {"Authorization": f"Bearer {token}"}
+
+    def area(code: str, label: str, key: str, store: dict) -> None:
+        nonlocal requested
+        requested += 1
+        try:
+            payload = _get_json(f"{HUD_BASE}/data/{code}", hdr)
+        except Exception as e:                               # noqa: BLE001
+            log.warning("HUD data failed for %s (%s): %s", code, label, e)
+            failed.add(key)
+            return
+        # SAFMR ZIP records ride in the same payload for metro areas.
+        try:
+            safmr.update(parse_hud_safmr_json(payload))
+        except ValueError:
+            pass
+        try:
+            store[key] = parse_hud_fmr_json(payload)
+        except ValueError as e:
+            log.warning("HUD area parse failed for %s: %s", code, e)
+            failed.add(key)
+        time.sleep(pause)
+
     for st in states:
         try:
-            counties = _get_json(f"{HUD_BASE}/listCounties/{st}", hdr)
+            listing = _get_json(f"{HUD_BASE}/listCounties/{st}", hdr)
         except Exception as e:                               # noqa: BLE001
             log.warning("HUD county list failed for %s: %s", st, e)
             failed.add(f"state:{st}")
             continue
-        if not isinstance(counties, list):
+        if not isinstance(listing, list):
             failed.add(f"state:{st}")
             continue
-        for c in counties:
+        if any(is_town(c) for c in listing):
+            try:
+                zt, code_of = parse_zip_towns(
+                    _get_json(f"{HUD_USPS}?type=11&query={st}", hdr))
+            except Exception as e:                           # noqa: BLE001
+                # Without the crosswalk no ZIP can be placed in a town, and
+                # Connecticut's codes can't even be asked for: keep the state.
+                log.warning("HUD ZIP-to-town crosswalk failed for %s: %s", st, e)
+                failed.add(f"state:{st}")
+                continue
+            zip_towns.update(zt)
+            town_states.add(st)
+            todo, n_skip = town_requests(listing, code_of)
+            skipped += n_skip
+            for key, code, name in todo:
+                area(code, name, key, town_fmr)
+        for c in listing:
+            if is_town(c):
+                continue
             fips = str((c or {}).get("fips_code") or "").strip()
             if not fips:
                 continue
             counties_out.append((st, str(c.get("county_name") or ""), fips[:5]))
-            requested += 1
-            try:
-                payload = _get_json(f"{HUD_BASE}/data/{fips}", hdr)
-            except Exception as e:                           # noqa: BLE001
-                log.warning("HUD data failed for %s (%s): %s", fips, c.get("county_name"), e)
-                failed.add(fips[:5])
-                continue
-            # SAFMR ZIP records ride in the same payload for metro areas.
-            try:
-                safmr.update(parse_hud_safmr_json(payload))
-            except ValueError:
-                pass
-            try:
-                fmr[fips[:5]] = parse_hud_fmr_json(payload)
-            except ValueError as e:
-                log.warning("HUD county parse failed for %s: %s", fips, e)
-                failed.add(fips[:5])
-            time.sleep(pause)
-        log.info("HUD %s: %d SAFMR ZIPs, %d counties so far", st, len(safmr), len(fmr))
+            area(fips, str(c.get("county_name") or ""), fips[:5], fmr)
+        log.info("HUD %s: %d SAFMR ZIPs, %d counties, %d towns so far",
+                 st, len(safmr), len(fmr), len(town_fmr))
     return {"safmr": safmr, "fmr": fmr, "counties": counties_out,
-            "failed": failed, "requested": requested}
+            "town_fmr": town_fmr, "zip_towns": zip_towns, "town_states": town_states,
+            "failed": failed, "requested": requested, "towns_skipped": skipped}
 
 
 # ─── ZIP → county, by name ───────────────────────────────────────────
@@ -441,6 +595,9 @@ def merge_hud(hud: dict, c_safmr: dict, c_fmr: dict, zip_rows: list,
     request failed keep their stored HUD figures. Without that, a run
     limited to Ohio would erase every other state's HUD rents, and one
     timed-out county would read as HUD saying it has no rents.
+
+    ZIPs in a town-level state (New England) take their FMR from their
+    town (town_fmr_by_zip), never from the county-name join.
     """
     requested = hud.get("requested") or 0
     failed = hud.get("failed") or set()
@@ -449,15 +606,22 @@ def merge_hud(hud: dict, c_safmr: dict, c_fmr: dict, zip_rows: list,
         return None
     failed_states = {str(f)[6:] for f in failed if str(f).startswith("state:")}
 
-    fips_of, unmatched = county_fips_by_name(zip_rows, hud.get("counties") or [])
+    town_states = hud.get("town_states") or set()
+    by_town = [r for r in zip_rows if r[1] in town_states]
+    fips_of, unmatched = county_fips_by_name(
+        [r for r in zip_rows if r[1] not in town_states], hud.get("counties") or [])
     county_fmr = hud.get("fmr") or {}
     safmr = dict(hud.get("safmr") or {})
     fmr = {z: county_fmr[f] for z, f in fips_of.items() if f in county_fmr}
+    t_fmr, deps, t_rep = town_fmr_by_zip(by_town, hud.get("zip_towns") or {},
+                                         hud.get("town_fmr") or {})
+    fmr.update(t_fmr)
+    deps.update({z: {f} for z, f in fips_of.items()})
 
     carried_s = carried_f = 0
     for z, st, _name in zip_rows:
         not_asked = ((pulled_states is not None and st not in pulled_states)
-                     or st in failed_states or fips_of.get(z) in failed)
+                     or st in failed_states or bool(deps.get(z, set()) & failed))
         if not not_asked:
             continue
         if z not in safmr and z in c_safmr:
@@ -473,6 +637,7 @@ def merge_hud(hud: dict, c_safmr: dict, c_fmr: dict, zip_rows: list,
         "unmatched_top": top[:15],
         "failed_counties": n_county_fail, "failed_states": sorted(failed_states),
         "carried_safmr": carried_s, "carried_fmr": carried_f,
+        "towns": t_rep, "town_states": sorted(town_states),
     }
 
 
@@ -697,6 +862,14 @@ def main(argv=None) -> int:
                                  rep["carried_fmr"])
                         for (st, name), n in rep["unmatched_top"]:
                             log.info("    unmatched county: %s, %s (%d ZIPs)", name, st, n)
+                        if rep["town_states"]:
+                            t = rep["towns"]
+                            log.info("  towns (%s): %d towns fetched, %d skipped (no ZIPs); "
+                                     "%d ZIPs matched, %d split across rent areas, "
+                                     "%d in no town, %d town without a rent",
+                                     ",".join(rep["town_states"]), len(hud["town_fmr"]),
+                                     hud["towns_skipped"], t["matched"], t["split"],
+                                     t["no_town"], t["no_rent"])
                 except Exception as e:
                     log.warning("  HUD FAILED (%s)", e)
 
