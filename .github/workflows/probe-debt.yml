@@ -1,4 +1,4 @@
-name: TEMPORARY — what the unknown-debt rows file on their latest balance sheet
+name: TEMPORARY — measured debt too small for the interest paid
 
 # Read-only. Deleted before the branch merges.
 on:
@@ -13,7 +13,7 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: market-pulse-v21
@@ -29,70 +29,54 @@ jobs:
           import refresh_compounders as R
           SEC = {"User-Agent": "market-pulse-research admin@focusedops.io", "Accept-Encoding": "gzip, deflate"}
           def get(url):
-              with urllib.request.urlopen(urllib.request.Request(url, headers=SEC), timeout=60) as r:
-                  b = r.read()
-                  return json.loads(gzip.decompress(b) if r.headers.get("Content-Encoding") == "gzip" else b)
+              for i in range(3):
+                  try:
+                      with urllib.request.urlopen(urllib.request.Request(url, headers=SEC), timeout=60) as r:
+                          b = r.read()
+                          return json.loads(gzip.decompress(b) if r.headers.get("Content-Encoding") == "gzip" else b)
+                  except Exception:
+                      time.sleep(2)
+              raise RuntimeError(url)
           rows = json.load(open("data/compounders.json"))["tickers"]
-          unk = sorted(t for t, r in rows.items() if r.get("total_debt") is None)
-          print("unknown rows:", len(unk))
-          PAT = re.compile(r"Debt|Borrowing|Notes|Loan|Obligation|Payable", re.I)
-          SKIP = re.compile(r"Payments|Proceeds|Repayments|Interest|Receivable|Accounts|Accrued|Taxes|Dividend|Lease|Fair|Amortization|Issuance|Gain|Loss|Extinguish|Increase|Decrease|Maturit|Weighted|Percent|Rate|Covenant|Term$", re.I)
-          debt_slots = [s for k in R.DEBT_KEYS for s in R.BALANCE_TAGS[k]]
-          tag_count = collections.Counter()
-          cats = collections.Counter()
-          for t in unk:
+          PAT = re.compile(r"Debt|Borrowing|Notes|Loan|Obligation|Payable|Bond|Credit", re.I)
+          SKIP = re.compile(r"Payments|Proceeds|Repayments|Interest|Receivable|Accounts|Accrued|Taxes|Dividend|Lease|Fair|Amortization|Issuance|Gain|Loss|Extinguish|Increase|Decrease|Maturit|Weighted|Percent|Rate|Covenant|Securities|Purchase|Performance|Benefit|Retirement|Capacity|Guarantee|Contractual|Excise|Trade", re.I)
+          flagged = []
+          n = 0
+          for t in sorted(rows):
               r = rows[t]
+              d = r.get("total_debt")
+              if d is None or r.get("bs_as_of") is None:
+                  continue
+              if t not in ("ON", "SKM"):
+                  pass
               try:
                   f = get(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{int(r['cik']):010d}.json")["facts"]
               except Exception as e:
-                  print(t, "fetch failed", e); continue
-              time.sleep(0.12)
-              bs = R.balance_sheet(f)
-              ref, unit = bs["as_of"], bs["unit"]
-              # the newest debt-slot fact of all
-              last = None
-              for tax, tag in debt_slots:
-                  for v in (((f.get(tax) or {}).get(tag) or {}).get("units") or {}).get(unit, []):
-                      if v.get("form") in R.ANNUAL_FORMS and not v.get("start") and isinstance(v.get("val"), (int, float)):
-                          k = (v["end"], v.get("filed") or "")
-                          if last is None or k > last[0]:
-                              last = (k, tag, v["val"])
-              # the filing carrying the latest balance sheet: does it still tag the old line for the prior year?
-              filed_ref = max((v.get("filed") or "" for tax, tag in R.BALANCE_TAGS["equity"] + R.BALANCE_TAGS["liabilities"]
-                               for v in (((f.get(tax) or {}).get(tag) or {}).get("units") or {}).get(unit, [])
-                               if v.get("end") == ref and v.get("form") in R.ANNUAL_FORMS), default="")
-              compar = []
-              for tax, tag in debt_slots:
-                  for v in (((f.get(tax) or {}).get(tag) or {}).get("units") or {}).get(unit, []):
-                      if v.get("filed") == filed_ref and not v.get("start") and v.get("end") != ref:
-                          compar.append(f"{tag}@{v['end']}={v['val']/1e6:.0f}m")
-              ie = None
-              for tag in ("InterestExpense", "InterestExpenseNonoperating", "InterestExpenseDebt", "InterestPaidNet", "InterestExpenseBorrowings"):
-                  for tax in ("us-gaap", "ifrs-full"):
-                      for v in (((f.get(tax) or {}).get(tag) or {}).get("units") or {}).get(unit, []):
-                          if v.get("start") and v.get("end") == ref and v.get("form") in R.ANNUAL_FORMS:
-                              ie = (tag, v["val"])
-                  if ie: break
-              at_ref = []
-              for tax in ("us-gaap", "ifrs-full") + tuple(k for k in f if k not in ("us-gaap", "ifrs-full", "dei", "srt", "invest")):
-                  for tag, node in (f.get(tax) or {}).items():
-                      if not PAT.search(tag) or SKIP.search(tag):
-                          continue
-                      hits = [v for v in (node.get("units") or {}).get(unit, [])
-                              if v.get("end") == ref and not v.get("start") and v.get("form") in R.ANNUAL_FORMS]
-                      if hits:
-                          val = max(hits, key=lambda v: v.get("filed") or "")["val"]
-                          at_ref.append(f"{tax if tax not in ('us-gaap',) else ''}:{tag}={val/1e6:.0f}m")
-                          tag_count[(tax, tag)] += 1
-              cat = "partial" if any("only short-term" in n for n in bs["notes"]) else "moved"
-              cat += "+ie" if ie and ie[1] else "+noie"
-              cat += "+tags" if at_ref else "+notags"
-              cats[cat] += 1
-              lastd = f"{last[1]}@{last[0][0]} filed {last[0][1]} = {last[2]/1e6:.0f}m" if last else None
-              print(f"== {t} ref={ref} {unit} [{cat}] last={lastd} ie={ie} compar={compar[:3]}")
-              if at_ref: print("     at ref:", "; ".join(at_ref[:12]))
-          print("\nCATEGORIES", dict(cats))
-          print("\nTAGS AT REF ACROSS UNKNOWNS")
-          for (tax, tag), n in tag_count.most_common(60):
-              print(f"  {n:4d} {tax}:{tag}")
+                  print(t, "fetch failed"); continue
+              n += 1
+              time.sleep(0.11)
+              unit, ref = r["bs_unit"], r["bs_as_of"]
+              ie = R._duration_at(f, R.INTEREST_SLOTS, ref, unit)
+              if ie is None:
+                  continue
+              ie = abs(ie)
+              rev = r.get("revenue_last") or 0
+              implied = ie / d if d else float("inf")
+              if (implied > 0.20 and rev and ie >= R.DEBT_FREE_INTEREST_MAX * rev) or t in ("ON", "SKM"):
+                  at = []
+                  for tax, tags in f.items():
+                      for tag, node in tags.items():
+                          if not PAT.search(tag) or SKIP.search(tag):
+                              continue
+                          hits = [v for v in (node.get("units") or {}).get(unit, [])
+                                  if v.get("end") == ref and not v.get("start") and v.get("form") in R.ANNUAL_FORMS]
+                          if hits:
+                              val = max(hits, key=lambda v: v.get("filed") or "")["val"]
+                              at.append(f"{'' if tax == 'us-gaap' else tax + ':'}{tag}={val/1e6:,.0f}m")
+                  bs = R.balance_sheet(f, want_unit=unit, revenue=rev)
+                  flagged.append(t)
+                  print(f"== {t} debt={d/1e6:,.0f}m interest={ie/1e6:,.1f}m ({implied if d else 0:.0%} implied) rev={rev/1e6:,.0f}m {unit} ref={ref} notes={bs['notes']}")
+                  print("     ", "; ".join(at[:18]))
+          print("\nchecked", n, "flagged", len(flagged))
+          print(" ".join(flagged))
           PY
