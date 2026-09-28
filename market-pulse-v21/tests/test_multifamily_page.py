@@ -216,6 +216,22 @@ try:
     for p in Z.PENDING:
         check(html.escape(p["label"], quote=False) in page,
           f"'{p['label']}' is visible as not available yet")
+    if has_renter:
+        check(all(f'name="{k}"' in page for k in ("min_renter", "min_multi", "min_young", "min_2_4")),
+              "WITH THE CENSUS COLUMNS FILLED, renter share, multi-unit, young adults "
+              "and 2–4 unit stock are offered as filters")
+        _, fpage = get("/multifamily?state=OH&unknown=1&max_price=900000"
+                       "&min_renter=30&min_young=15&min_2_4=5")
+        acs = {r[0]: r[1:] for r in sqlite3.connect(DB).execute(
+            "select zip, pct_renter_occupied, pct_age_25_34, pct_2_4_units from zips")}
+        cz = col(fpage, "zip")
+        frows = [r["cells"][cz] for r in table_rows(fpage)]
+        check(frows and all(acs[z][0] >= 30 and acs[z][1] >= 15 and acs[z][2] >= 5 for z in frows),
+              f"AND EVERY ROW MEETS THEM — renter ≥30%, aged 25–34 ≥15%, 2–4 unit "
+              f"homes ≥5%, checked against zips.db ({len(frows)} rows)")
+        for label in ("renter share below 30%", "young adults (25–34) below 15%",
+                      "2–4 unit buildings below 5%"):
+            check(label in fpage, f"the funnel names '{label}'")
 
     # Implicit submission: pressing Enter submits the FIRST submit button in
     # the form. If that were a preset, Enter would switch presets.

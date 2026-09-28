@@ -3964,6 +3964,8 @@ async def multifamily_page(
     min_trend: str = "",
     min_renter: str = "",
     min_multi: str = "",
+    min_young: str = "",
+    min_2_4: str = "",
     min_winter: str = "",
     max_summer: str = "",
     max_snow: str = "",
@@ -4043,6 +4045,7 @@ async def multifamily_page(
         "area": area or [], "min_income": min_income, "min_degree": min_degree,
         "max_cost": max_cost, "min_cap": min_cap, "min_trend": min_trend,
         "min_renter": min_renter, "min_multi": min_multi,
+        "min_young": min_young, "min_2_4": min_2_4,
         "min_winter": min_winter, "max_summer": max_summer, "max_snow": max_snow,
         "max_flood": max_flood, "max_fire": max_fire, "max_wind": max_wind,
         "max_quake": max_quake})
@@ -4105,7 +4108,7 @@ async def multifamily_page(
             "population_density", "median_home_value", "median_rent_monthly",
             "cap_rate_pct", "median_household_income", "pct_bachelors",
             "pct_renter_occupied", "pct_multi_unit", "pct_rent_burdened",
-            "history_zhvi", "rent_tier")
+            "pct_age_25_34", "pct_2_4_units", "history_zhvi", "rent_tier")
     select_cols = ", ".join(c if c in cols else f"NULL as {c}" for c in want)
     # EVERY row in scope, deliberately. The filters that used to live in
     # this WHERE clause now run through the funnel so each one is counted.
@@ -4141,7 +4144,8 @@ async def multifamily_page(
     # renumbering FEMA's tracts no longer match, gets no hazard filters rather
     # than a board emptied by them.
     with_data = set()
-    for c in ("pct_renter_occupied", "pct_multi_unit", "pct_rent_burdened"):
+    for c in ("pct_renter_occupied", "pct_multi_unit", "pct_rent_burdened",
+              "pct_age_25_34", "pct_2_4_units"):
         if any(r.get(c) is not None for r in all_rows):
             with_data.add(c)
     if any(r["winter_low"] is not None for r in all_rows):
