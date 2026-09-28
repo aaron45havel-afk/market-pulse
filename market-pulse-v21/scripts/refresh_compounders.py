@@ -971,6 +971,51 @@ def _up_years(series: dict[int, float], window: int = LOOKBACK) -> tuple[int, in
 WANT_UNIT = {"shares_diluted": "shares"}
 
 
+# ── share counts filed at the wrong scale ────────────────────────────
+#
+# Some filers tag a count kept "in millions" or "in thousands" as if it
+# were shares. From the SEC's own companyfacts:
+#
+#     McDonald's      FY2022  741,300,000    FY2023  732.3        (millions)
+#     ConocoPhillips  FY2021    1,328,151    FY2022  1,278,163,000 (thousands before)
+#     Dillard's       FY2021   20,592,000    FY2022  17,549       (thousands)
+#     Ultra Clean     FY2018   38,919,000    FY2019  39.5 … FY2024 45,300,000
+#
+# McDonald's came out at 0.0x P/FCF; ConocoPhillips' share count "grew"
+# 222% a year. A company's share count does not move a thousandfold in a
+# year, so a jump within SCALE_TOL of 1,000 or 1,000,000 is read as a
+# change of unit and the series is put back on one scale — the one that
+# gives the LATEST count a size a listed company can have (LISTED_MIN).
+SCALE_TOL = 3.0
+LISTED_MIN = 1e6      # no exchange-listed company has fewer shares than this
+
+
+def fix_share_scale(series: dict[int, float]) -> tuple[dict[int, float], bool]:
+    """(series on one scale, whether anything was rescaled).
+
+    Consecutive years whose ratio is within SCALE_TOL of 1,000^k (k = ±1,
+    ±2) are a unit change; anything else, however large, is left as a real
+    change. A series with no such break is returned as it is, whatever its
+    size — a whole series in the wrong unit has nothing to be anchored to.
+    """
+    ys = sorted(y for y, v in series.items() if v and v > 0)
+    if len(ys) < 2:
+        return dict(series), False
+    exp = {ys[0]: 0}
+    for a, b in zip(ys, ys[1:]):
+        r = series[b] / series[a]
+        k = next((k for k in (1, 2, -1, -2)
+                  if 1000.0 ** k / SCALE_TOL <= r <= 1000.0 ** k * SCALE_TOL), 0)
+        exp[b] = exp[a] + k
+    if len(set(exp.values())) == 1:
+        return dict(series), False
+    last = ys[-1]
+    ref = exp[last]
+    while series[last] * 1000.0 ** (ref - exp[last]) < LISTED_MIN and ref - exp[last] < 2:
+        ref += 1
+    return {y: series[y] * 1000.0 ** (ref - exp[y]) for y in ys}, True
+
+
 def compute_metrics(facts: dict) -> dict | None:
     shares_filed: dict[int, str] = {}
     pulled = {k: _annual_series(facts, slots, WANT_UNIT.get(k, "USD"),
@@ -1055,10 +1100,10 @@ def compute_metrics(facts: dict) -> dict | None:
         nd = lt.get(last, 0.0) + st.get(last, 0.0) - cash.get(last, 0.0)
         nd_ebit = round(nd / op[last], 2)
 
-    # Buybacks: 5-yr share-count CAGR (negative = shrinking count). As
-    # filed, so a stock split reads as dilution; Stage C restates it from
-    # the split history (market_metrics) wherever it can.
-    shares_cagr5 = _cagr(shares, 5)
+    # Buybacks: 5-yr share-count CAGR (negative = shrinking count). Split
+    # history isn't known yet, so a split reads as dilution here; Stage C
+    # restates it (market_metrics) wherever it can.
+    shares_cagr5 = _cagr(fix_share_scale(shares)[0], 5)
 
     op_m_vals = [op_m[y] for y in sorted(op_m)][-LOOKBACK:]
     op_m_now = op_m_vals[-1] if op_m_vals else None
@@ -1275,6 +1320,9 @@ def market_metrics(res: dict, fcf: dict[int, float], shares: dict[int, float],
     splits = parse_splits(res) if apply_splits else []
     since = datetime.fromtimestamp(ts[0], tz=timezone.utc).date().isoformat()
     counts = restate_shares(shares, filed, splits, since) if apply_splits else dict(shares)
+    # Splits first: a 1-for-1,000 reverse split must be restated, not
+    # mistaken for a change of unit.
+    counts, rescaled = fix_share_scale(counts)
     fcf_ps = {y: fcf[y] / counts[y] for y in fcf if y in counts and counts[y] > 0}
 
     # P/FCF now + historical median: year-average price ÷ that FY's FCF/share.
@@ -1293,7 +1341,8 @@ def market_metrics(res: dict, fcf: dict[int, float], shares: dict[int, float],
     pfcf_now = round(price / fcf_now, 1) if fcf_now and fcf_now > 0 else None
 
     out = {"price": round(price, 2), "div_yield": div_yield,
-           "div_cagr5": div_cagr, "pfcf_now": pfcf_now, "pfcf_med": pfcf_med}
+           "div_cagr5": div_cagr, "pfcf_now": pfcf_now, "pfcf_med": pfcf_med,
+           "_rescaled": rescaled}
     if apply_splits and shares:
         out["shares_cagr5"] = _cagr(counts, 5)
         out["_restated"] = any(day > (filed.get(y) or "") for y in counts for day, _ in splits)
@@ -1445,7 +1494,7 @@ def main() -> int:
     out: dict[str, dict] = {}
     with_market = 0
     non_usd = 0
-    restated = 0
+    restated = rescaled = 0
     for i, (cik, info, profile, metrics) in enumerate(scored, 1):
         # THE VALUATION TERM IS THE ONLY CURRENCY-UNSAFE NUMBER HERE.
         # Growth, margins, ROIC, FCF conversion, capex/OCF and net
@@ -1469,6 +1518,7 @@ def main() -> int:
         else:
             with_market += 1
             restated += bool(market.pop("_restated", False))
+            rescaled += bool(market.pop("_rescaled", False))
         row = {**metrics, **market,
                "name": info["name"], "cik": cik,
                "exchange": info["exchange"],
@@ -1486,7 +1536,8 @@ def main() -> int:
     print(f"[compounders] Done: kept {len(out)}, market coverage "
           f"{coverage:.0%}, {non_usd} reporting in a non-USD currency "
           f"(valuation term withheld for those), {restated} with share counts "
-          f"restated for a stock split, skipped {skipped}")
+          f"restated for a stock split, {rescaled} with a share count filed at "
+          f"the wrong scale, skipped {skipped}")
 
     # A board with no valuation term is not a smaller board, it is a
     # different and much weaker screen wearing the same name.
@@ -1509,6 +1560,7 @@ def main() -> int:
         "market_coverage_pct": round(coverage * 100, 1),
         "non_usd_reporters": non_usd,
         "split_restated": restated,
+        "share_scale_fixed": rescaled,
         "foreign_filers": sum(1 for r in out.values() if r.get("foreign")),
         "discovery": origin,
         "skipped": skipped,

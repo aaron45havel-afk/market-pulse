@@ -1,0 +1,42 @@
+name: TEMPORARY — compounders rebuild (splits + share scale)
+
+# Runs the compounders refresh on this branch and commits compounders.json
+# to the branch for review. Deleted before the branch merges.
+on:
+  push:
+    branches: [claude/legal-rep-invoice-tracking-9j1i9r]
+    paths:
+      - '.github/workflows/probe-compounders.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    defaults:
+      run:
+        working-directory: market-pulse-v21
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Suites first
+        run: |
+          python tests/test_compounders_series.py
+          python tests/test_compounders_score.py
+          python tests/test_compounders_market.py
+      - name: Refresh
+        run: python -u scripts/refresh_compounders.py
+      - name: Commit the data to this branch
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add market-pulse-v21/data/compounders.json
+          if git diff --staged --quiet; then echo "no change"; exit 0; fi
+          git commit -m "chore: compounders rebuild with split-restated, rescaled share counts (branch data run)"
+          git push origin HEAD:claude/legal-rep-invoice-tracking-9j1i9r

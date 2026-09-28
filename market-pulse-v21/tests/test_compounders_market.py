@@ -59,6 +59,11 @@ def chart(price_of, splits=(), divs=(), start=(2016, 10), end=(2026, 9)):
     return {"timestamp": stamps, "indicators": {"quote": [{"close": closes}]}, "events": events}
 
 
+def fyv(year, val, filed):
+    return {"fy": year, "fp": "FY", "form": "10-K", "start": f"{year}-01-01",
+            "end": f"{year}-12-31", "val": val, "filed": filed}
+
+
 # ── parse_splits ──
 BKNG_SPLIT = split("2026-04-06", 25, 1)
 check(R.parse_splits({"events": {"splits": BKNG_SPLIT}}) == [("2026-04-06", 25.0)],
@@ -167,12 +172,69 @@ check(R.market_inputs(dict(_mi, currency="JPY"), {})[:2] == ({}, {}),
 check(R.PFCF_YEARS == 7 and R.CHART_RANGE == "10y",
       "the chart reaches ten years back for splits; the multiple history stays at seven")
 
+# ── share counts filed at the wrong scale (the SEC's own figures) ──
+MCD = {2015: 919_900_000, 2016: 829_700_000, 2017: 803_000_000, 2018: 776_600_000,
+       2019: 755_600_000, 2020: 750_100_000, 2021: 751_800_000, 2022: 741_300_000,
+       2023: 732.3, 2024: 721.9, 2025: 716.4}
+_f, _did = R.fix_share_scale(MCD)
+check(_did and abs(_f[2025] - 716.4e6) < 1 and _f[2022] == 741_300_000,
+      f"MCDONALD'S 732.3 / 721.9 / 716.4 ARE MILLIONS: put back on the scale of the rest "
+      f"(got {_f[2025]:,.0f}) — the fault behind its 0.0x P/FCF")
+COP = {2015: 1_241_919, 2016: 1_245_440, 2017: 1_221_038, 2018: 1_175_538, 2019: 1_123_536,
+       2020: 1_078_030, 2021: 1_328_151, 2022: 1_278_163_000, 2023: 1_205_675_000,
+       2024: 1_180_871_000, 2025: 1_253_446_000}
+_f, _ = R.fix_share_scale(COP)
+check(_f[2015] == 1_241_919_000 and _f[2025] == 1_253_446_000 and -2 < R._cagr(_f, 5) < 5,
+      f"CONOCOPHILLIPS' 2015–21 COUNTS WERE THOUSANDS: rescaled, its share count no longer "
+      f"'grows' {R._cagr(COP, 5)}% a year (now {R._cagr(_f, 5)}%)")
+DDS = {2019: 25_364_000, 2020: 22_697_000, 2021: 20_592_000, 2022: 17_549, 2023: 16_517,
+       2024: 16_120, 2025: 15_655}
+_f, _ = R.fix_share_scale(DDS)
+check(_f[2025] == 15_655_000 and _f[2019] == 25_364_000,
+      "Dillard's switch to thousands in FY2022 is undone, anchored on a listable latest count")
+UCTT = {2016: 33_150_000, 2017: 34_303_000, 2018: 38_919_000, 2019: 39.5, 2020: 44.4,
+        2022: 45.7, 2023: 44.7, 2024: 45_300_000, 2025: 45_300_000}
+_f, _ = R.fix_share_scale(UCTT)
+check(abs(_f[2020] - 44.4e6) < 1 and _f[2025] == 45_300_000 and _f[2016] == 33_150_000,
+      "a run of millions in the MIDDLE of a series (Ultra Clean 2019–23) is rescaled, both "
+      "breaks read")
+_steady = {y: 1e8 * (0.97 ** i) for i, y in enumerate(range(2015, 2026))}
+check(R.fix_share_scale(_steady) == (_steady, False), "an ordinary buyback series is untouched")
+_dilute = {2019: 1e6, 2020: 5e6, 2021: 4e7, 2022: 3e8, 2023: 2.5e9}
+check(R.fix_share_scale(_dilute) == (_dilute, False),
+      "HEAVY BUT REAL DILUTION (5–8x A YEAR) IS NOT MISTAKEN FOR A CHANGE OF UNIT")
+_merger = {2020: 2e6, 2021: 2.1e6, 2022: 3.15e8, 2023: 3.2e8}
+check(R.fix_share_scale(_merger) == (_merger, False),
+      "a 150x jump in one year (a merger issuance) is real: only within 3x of a thousand "
+      "is a jump read as a change of unit")
+_tiny = {2021: 900.0, 2022: 850.0, 2023: 800.0}
+check(R.fix_share_scale(_tiny) == (_tiny, False),
+      "a series with no break is left alone whatever its size: nothing to anchor it to")
+check(R.fix_share_scale({2025: 5.0}) == ({2025: 5.0}, False) and R.fix_share_scale({}) == ({}, False),
+      "one year or none: nothing to compare")
+_m_mc = R.market_metrics(chart(lambda y, m: 236.5), {y: 7e9 for y in MCD}, MCD,
+                         {y: f"{y + 1}-02-25" for y in MCD})
+check(10 < _m_mc["pfcf_now"] < 40 and _m_mc["_rescaled"] is True,
+      f"McDonald's P/FCF comes out as a real multiple ({_m_mc['pfcf_now']}x, was 0.0x)")
+_rs = R.market_metrics(chart(lambda y, m: 5.0, splits=[split("2024-03-01", 1, 1000)]),
+                       {2021: 1e6, 2022: 1e6, 2023: 1e6, 2024: 1e6},
+                       {2021: 5e9, 2022: 5e9, 2023: 5e9, 2024: 5e6},
+                       {2021: "2022-02-01", 2022: "2023-02-01", 2023: "2024-02-01", 2024: "2025-02-01"})
+check(_rs["_rescaled"] is False and _rs["pfcf_now"] == 25.0,
+      "A 1-FOR-1,000 REVERSE SPLIT IS RESTATED BEFORE THE SCALE CHECK, so it is never "
+      "mistaken for a change of unit")
+_mf = R.compute_metrics({"us-gaap": {
+    "Revenues": {"units": {"USD": [fyv(y, 1e9, f"{y + 1}-02-10") for y in MCD]}},
+    "NetIncomeLoss": {"units": {"USD": [fyv(y, 2e8, f"{y + 1}-02-10") for y in MCD]}},
+    "NetCashProvidedByUsedInOperatingActivities": {"units": {"USD": [fyv(y, 3e8, f"{y + 1}-02-10") for y in MCD]}},
+    "PaymentsToAcquirePropertyPlantAndEquipment": {"units": {"USD": [fyv(y, 1e8, f"{y + 1}-02-10") for y in MCD]}},
+    "WeightedAverageNumberOfDilutedSharesOutstanding": {"units": {"shares": [
+        fyv(y, v, f"{y + 1}-02-10") for y, v in MCD.items()]}}}})
+check(-3 < _mf["shares_cagr5"] < 0 and _mf["_shares"][2025] == 716.4,
+      f"Stage B's own share trend (used when there is no price) is rescaled too "
+      f"({_mf['shares_cagr5']}%), while Stage C still gets the counts as filed")
+
 # ── compute_metrics hands Stage C the as-filed counts and their filing dates ──
-def fyv(year, val, filed):
-    return {"fy": year, "fp": "FY", "form": "10-K", "start": f"{year}-01-01",
-            "end": f"{year}-12-31", "val": val, "filed": filed}
-
-
 YEARS = range(2016, 2026)
 facts = {"us-gaap": {
     "Revenues": {"units": {"USD": [fyv(y, 1e9 + y, f"{y + 1}-02-10") for y in YEARS]}},
