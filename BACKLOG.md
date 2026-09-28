@@ -43,6 +43,26 @@ Format: `- [PHASE-SEEN] item — why it matters`
 - [P2] The EBIT fill (pre-tax income + interest) splices into an operating-income series
   for the years it covers; for a company with large non-operating items it will differ
   from the operating line it replaces.
+- [P2] Debt filed only under a company's own taxonomy (Deere, Ford, NVR, Vale) stays
+  unknown on compounders and so off the FCF-quality board. `LineOfCredit` is left unread
+  on purpose — Abercrombie tags its undrawn $500m facility under it — as is
+  `DebtInstrumentCarryingAmount`, which is often one instrument, not the total.
+- [P2] A measured debt figure smaller than the year's interest bill is still published: Ball
+  ($2m measured, $314m of interest — its notes are under a tag not read), Telefónica,
+  Televisa, Carriage Services' revolver. About 20 rows. The same interest-vs-revenue evidence
+  that now guards a zero could guard these, but IFRS `FinanceCosts` runs well above debt
+  interest (Ambev's reads 130% of its debt), so it needs a narrower interest tag first.
+- [P2] Lynch: when `NetIncomeLoss` stops being filed but EPS continues (Bloom Energy after
+  2023, Estée Lauder after 2020), the units check compares this year's EPS with an older
+  year's net income and rejects the row as `units_unverified`. The P/E would have been
+  built on that stale figure too. A net-income fallback tag
+  (`NetIncomeLossAvailableToCommonStockholdersBasic`) would recover them.
+- [P2] Lynch has no staleness gate on the EPS series itself: Cheetah Mobile's and Solaris'
+  last EPS is 2018, Riskified's 2022, while their net income is current. `dormant` looks
+  at revenue/net income/assets only.
+- [P2] Lynch: an EPS rounded to the cent on a tiny figure (-0.01 against a true -0.006)
+  fails the 35% units identity (YSG). Harmless — a one-cent EPS is not a Lynch candidate —
+  but it is counted as a units problem.
 - [P0] `CRON_SECRET` was exposed in an earlier session and has not been rotated.
 - [P1] `mf_audit_log` has the immutability trigger ARCHITECTURE.md §5.4 asks for but not
   the insert-only grant. A grant is meaningless while the app connects as the table's
@@ -73,17 +93,24 @@ Format: `- [PHASE-SEEN] item — why it matters`
 - [P1] `jobs.run_forever` has no test — a loop that never returns cannot have one. All
   the logic is in `run_one`, which is tested; the shell is kept thin for that reason,
   and it is still untested code running as a production process.
-- [FCFQ] The IFRS debt tag ladder in `refresh_compounders.BALANCE_TAGS` is too narrow.
-  Foreign filers whose borrowings sit under element names it does not carry come through
-  with a fraction of their real debt — Korea Electric, Ecopetrol, Toyota, POSCO, Takeda
-  and Wipro all did. `fcf_quality.debt_cross_check` refuses those rows rather than ranking
-  them, so nothing wrong reaches the board, but the fix is more `ifrs-full` borrowing tags,
-  not more guards. 48 rows are currently refused this way.
-- [FCFQ] `inferred_zero_fault` cannot tell a genuinely debt-free large cap from an unmapped
-  debt tag, so it refuses both above $10bn. Vertex, Intuitive Surgical, Shopify and Datadog
-  are really debt-light and are really excluded — 34 rows. Widening the tag ladder is what
-  shrinks this; raising the threshold alone would let General Motors back in at a market-cap
-  denominator and an inflated yield.
+- [FCFQ] IFRS filers that tag borrowings only by instrument — notes and debentures, bonds,
+  secured bank loans (`NotesAndDebenturesIssued`, `NoncurrentPortionOfNoncurrentBondsIssued`,
+  `…SecuredBankLoansReceived`) — are read at a fraction of their debt or not at all:
+  Telefónica, Televisa, SK Telecom, Grifols. Summing those parts would fix them; they are
+  disjoint by instrument, but a filer that also tags `LoansReceived` would double count.
+  `fcf_quality.debt_cross_check` now refuses 4 rows (was 48 before the tag-reading fixes).
+- [FCFQ] `inferred_zero_fault` refuses an inferred debt-free company above $10bn: 10 rows
+  (was 34), among them Intuitive Surgical, Garmin and Logitech, which really are debt-free.
+  A company that last REPORTED zero debt is no longer flagged as inferred, which is what
+  cleared Vertex, Shopify and the rest; the ten left never tagged debt at all.
+- [P2] A combined debt tag that leaves something out stands over parts that would catch it:
+  Home Depot's `DebtLongtermAndShorttermCombinedAmount` ($51.3bn) omits $4.5bn of commercial
+  paper. The rule trusts filer totals because summing parts doubles filers who tag one
+  amount twice (Lumentum, Cenovus); telling the two apart needs the parts to be checked for
+  duplicates, not a bigger threshold.
+- [P2] `us-gaap:CashEquivalentsAtCarryingValue` (Hovnanian, Inter Parfums) is cash
+  equivalents only, so it is not read as cash; those rows have no enterprise value. Paccar
+  files no undimensioned cash total at all.
 - [FCFQ] `snapshot_screens` declares its inputs by CONTENT HASH, so it can see that one
   moved but never that one rolled BACKWARD — `freshness.verdict`'s fault branch is
   unreachable for it. None of its three inputs offers a usable date: `zips.db` is SQLite
