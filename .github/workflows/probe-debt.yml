@@ -1,4 +1,4 @@
-name: TEMPORARY — debt under the final assembly vs the file
+name: TEMPORARY — cash tags on the latest balance sheet
 
 # Read-only. Deleted before the branch merges.
 on:
@@ -40,25 +40,22 @@ jobs:
           rows = json.load(open("data/compounders.json"))["tickers"]
           PAT = re.compile(r"Debt|Borrowing|Notes|Loan|Obligation|Payable|Bond|Credit", re.I)
           SKIP = re.compile(r"Payments|Proceeds|Repayments|Interest|Receivable|Accounts|Accrued|Taxes|Dividend|Lease|Fair|Amortization|Issuance|Gain|Loss|Extinguish|Increase|Decrease|Maturit|Weighted|Percent|Rate|Covenant|Securities|Purchase|Performance|Benefit|Retirement|Capacity|Guarantee|Contractual|Excise|Trade", re.I)
-          changed = []
-          n = 0
-          for t in sorted(rows):
+          for t in "ADUS BMI CVGI EVI FTLF HOV IPAR JACK PCAR PFGC SLB SMP TRAK TWIN".split():
               r = rows[t]
-              if r.get("bs_unit") is None:
-                  continue
-              try:
-                  f = get(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{int(r['cik']):010d}.json")["facts"]
-              except Exception:
-                  print(t, "fetch failed"); continue
-              n += 1
-              time.sleep(0.11)
-              bs = R.balance_sheet(f, want_unit=r["currency"], revenue=r.get("revenue_last") or 0)
-              if bs["unit"] != r["currency"]:
-                  continue
-              old, new = r.get("total_debt"), bs["total_debt"]
-              if old != new and not (old and new and abs(new - old) <= 0.02 * old):
-                  changed.append(t)
-                  fm = lambda v: "None" if v is None else f"{v/1e6:,.1f}m"
-                  print(f"== {t} {fm(old)} -> {fm(new)} {bs['unit']} notes={bs['notes']}")
-          print("\nchecked", n, "changed >2%", len(changed))
+              f = get(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{int(r['cik']):010d}.json")["facts"]
+              time.sleep(0.15)
+              bs = R.balance_sheet(f, want_unit=r["currency"], revenue=r.get("revenue_last"))
+              ref, unit = bs["as_of"], bs["unit"]
+              anchors = {k: R._instant_at(f, R.BALANCE_TAGS[k], ref, unit) for k in ("equity", "liabilities", "cash")}
+              last_cash = R._latest_instant(f, R.BALANCE_TAGS["cash"], unit)
+              at = []
+              for tax, tags in f.items():
+                  for tag, node in tags.items():
+                      if not re.search(r"Cash", tag) or re.search(r"Flow|Paid|Received|Proceeds|Payments|Dividend|Increase|Decrease|Period|Settled|Collateral|Surrender|Transfer|Acquired|Restricted", tag):
+                          continue
+                      hits = [v for v in (node.get("units") or {}).get(unit, []) if v.get("end") == ref and not v.get("start") and v.get("form") in R.ANNUAL_FORMS]
+                      if hits:
+                          at.append(f"{tag}={max(hits, key=lambda v: v.get('filed') or '')['val']/1e6:,.0f}m")
+              print(f"== {t} ref={ref} {unit} anchors={anchors} latest cash slot={last_cash}")
+              print("     ", "; ".join(at[:10]))
           PY
