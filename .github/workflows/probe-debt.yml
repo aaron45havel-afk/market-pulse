@@ -1,4 +1,4 @@
-name: TEMPORARY — debt tags for three rows
+name: TEMPORARY — debt under the final assembly vs the file
 
 # Read-only. Deleted before the branch merges.
 on:
@@ -40,16 +40,25 @@ jobs:
           rows = json.load(open("data/compounders.json"))["tickers"]
           PAT = re.compile(r"Debt|Borrowing|Notes|Loan|Obligation|Payable|Bond|Credit", re.I)
           SKIP = re.compile(r"Payments|Proceeds|Repayments|Interest|Receivable|Accounts|Accrued|Taxes|Dividend|Lease|Fair|Amortization|Issuance|Gain|Loss|Extinguish|Increase|Decrease|Maturit|Weighted|Percent|Rate|Covenant|Securities|Purchase|Performance|Benefit|Retirement|Capacity|Guarantee|Contractual|Excise|Trade", re.I)
-          for t in ("CVE", "CVX", "SONY", "CSCO", "LITE"):
+          changed = []
+          n = 0
+          for t in sorted(rows):
               r = rows[t]
-              f = get(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{int(r['cik']):010d}.json")["facts"]
-              time.sleep(0.2)
-              bs = R.balance_sheet(f, want_unit=r["currency"], revenue=r.get("revenue_last"))
-              ref, unit = bs["as_of"], bs["unit"]
-              print(f"== {t} {unit} ref={ref} debt={bs['total_debt']} notes={bs['notes']}")
-              for key in R.DEBT_KEYS:
-                  for tax, tag in R.BALANCE_TAGS[key]:
-                      v = R._instant_at(f, [(tax, tag)], ref, unit)
-                      if v is not None:
-                          print(f"     {key:20s} {tag} = {v/1e6:,.0f}m")
+              if r.get("bs_unit") is None:
+                  continue
+              try:
+                  f = get(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{int(r['cik']):010d}.json")["facts"]
+              except Exception:
+                  print(t, "fetch failed"); continue
+              n += 1
+              time.sleep(0.11)
+              bs = R.balance_sheet(f, want_unit=r["currency"], revenue=r.get("revenue_last") or 0)
+              if bs["unit"] != r["currency"]:
+                  continue
+              old, new = r.get("total_debt"), bs["total_debt"]
+              if old != new and not (old and new and abs(new - old) <= 0.02 * old):
+                  changed.append(t)
+                  fm = lambda v: "None" if v is None else f"{v/1e6:,.1f}m"
+                  print(f"== {t} {fm(old)} -> {fm(new)} {bs['unit']} notes={bs['notes']}")
+          print("\nchecked", n, "changed >2%", len(changed))
           PY
