@@ -1,0 +1,36 @@
+name: TEMPORARY — rebuild the aristocrats overlay on the branch
+
+# Branch data run for #3. Deleted before the branch merges.
+on:
+  push:
+    branches: [claude/legal-rep-invoice-tracking-9j1i9r]
+    paths:
+      - '.github/workflows/probe-arist-rebuild.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: market-pulse-v21
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python tests/test_aristocrats.py
+      - run: python scripts/refresh_aristocrats.py
+      - name: Commit to this branch
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add market-pulse-v21/data/aristocrats.json
+          if git diff --staged --quiet; then echo "no change"; exit 0; fi
+          git commit -m "chore: aristocrats overlay rebuild (branch data run)"
+          for i in 1 2 3 4; do git push origin HEAD:claude/legal-rep-invoice-tracking-9j1i9r && exit 0; sleep $((i*5)); git pull --rebase origin claude/legal-rep-invoice-tracking-9j1i9r; done; exit 1
