@@ -634,14 +634,16 @@ BALANCE_TAGS: dict[str, list[tuple[str, str]]] = {
     # The TOTAL of long-term debt, current portion included. Used as the
     # long-term figure when no line above was filed, and never added to a
     # current portion it contains.
-    #
-    # After the first two, totals of ONE KIND of debt — the only long-term
-    # figure some filers tag (Teva's senior notes, Avista's secured bonds).
-    # First with a value wins, so a filer tagging two kinds is undercounted
-    # rather than double-counted when the two overlap.
     "debt_longterm_total": [
         ("us-gaap", "LongTermDebt"),
         ("us-gaap", "LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities"),
+    ],
+    # Totals of ONE KIND of debt, current portion included — the only
+    # long-term figure some filers tag (Teva's senior notes, Avista's
+    # secured bonds). Used only when nothing above was filed. The LARGEST
+    # stands, never a sum: kinds overlap (senior notes are unsecured
+    # debt), so two are undercounted rather than double-counted.
+    "debt_kind_total": [
         ("us-gaap", "SeniorNotes"),
         ("us-gaap", "ConvertibleNotesPayable"),
         ("us-gaap", "SecuredDebt"),
@@ -796,7 +798,7 @@ def _duration_at(facts: dict, slots: list[tuple[str, str]], end: str,
     return None
 
 
-DEBT_KEYS = ("debt_total", "debt_noncurrent", "debt_longterm_total",
+DEBT_KEYS = ("debt_total", "debt_noncurrent", "debt_longterm_total", "debt_kind_total",
              "debt_current", "debt_current_all", "debt_short")
 
 # What a company paid in interest over the year to its latest balance
@@ -913,17 +915,32 @@ def balance_sheet(facts: dict, want_unit: str = "USD",
             # A total already holding the current portion: add only what it
             # cannot contain — short-term borrowings.
             routes.append(max(lt_total, current or 0.0) + (short or 0.0))
+        kinds = [v for v in (_instant_at(facts, [slot], ref, unit)
+                             for slot in BALANCE_TAGS["debt_kind_total"]) if v is not None]
+        if not routes and kinds:
+            # One kind of debt, standing in for the total — unless it is
+            # smaller than what falls due this year, which a long-term total
+            # holds. Deere's $6.6bn of securitisation borrowings beside $13.8bn
+            # of current debt is one slice of ~$60bn, not the whole.
+            due = current if current is not None else current_all
+            if max(kinds) >= (due or 0.0):
+                routes.append(max(kinds) + (short or 0.0))
+                notes.append("one kind of debt is the only long-term figure filed")
+            else:
+                partial = True
+                notes.append("the only long-term figure is one kind of debt, smaller than "
+                             "the debt due this year — part of the total; unknown")
         if routes:
             debt = max(routes)
-            if noncur is None:
+            if noncur is None and lt_total is not None:
                 notes.append("LongTermDebt used as the total (current portion included)")
-        elif near is not None:
+        elif near is not None and not partial:
             # Only debt due within a year. For a company that has filed a
             # long-term figure before, that is the part this list can still
             # see, not the whole — Deere's long-term borrowings moved to its
             # own tag, and its $13.8bn current debt alone read as its total.
             longterm = (BALANCE_TAGS["debt_noncurrent"] + BALANCE_TAGS["debt_longterm_total"]
-                        + BALANCE_TAGS["debt_total"])
+                        + BALANCE_TAGS["debt_kind_total"] + BALANCE_TAGS["debt_total"])
             if _latest_instant(facts, longterm, unit)[0] is None:
                 debt = near
             elif near:

@@ -666,6 +666,34 @@ _ava = R.balance_sheet(merge(dated("SecuredDebt", "2025-12-31", 2.759e9),
                              dated("StockholdersEquity", "2025-12-31", 2.6e9)))
 check(abs(_ava["total_debt"] - 3.147e9) < 1e3,
       "Avista: its secured bonds plus short-term borrowings")
+_nvgs = R.balance_sheet(merge(dated("UnsecuredLongTermDebt", "2025-12-31", 0.138e9),
+                              dated("LongTermLoansPayable", "2025-12-31", 0.594e9),
+                              dated("LongTermDebtCurrent", "2025-12-31", 0.168e9),
+                              dated("StockholdersEquity", "2025-12-31", 1.2e9)))
+check(_nvgs["total_debt"] == 0.594e9
+      and not any("LongTermDebt" in n for n in _nvgs["notes"]),
+      f"NAVIGATOR FILES TWO KINDS: THE LARGER STANDS ($594m of loans), not whichever the "
+      f"list names first ($138m of bonds) (got {_nvgs['total_debt']}, {_nvgs['notes']})")
+check(R.balance_sheet(merge(dated("LongTermDebtNoncurrent", "2025-12-31", 4_000.0),
+                            dated("LongTermDebtCurrent", "2025-12-31", 500.0),
+                            dated("UnsecuredDebt", "2025-12-31", 4_600.0),
+                            dated("StockholdersEquity", "2025-12-31", 1.0)))["total_debt"] == 4_500.0,
+      "a one-kind total never competes with a filed main line")
+check(R.balance_sheet(merge(dated("SeniorNotes", "2019-12-31", 2e9),
+                            dated("ShortTermBorrowings", "2025-12-31", 100.0),
+                            dated("StockholdersEquity", "2025-12-31", 1.0)))["total_debt"] is None,
+      "senior notes filed before count as long-term debt filed before: short-term alone is partial")
+_de2 = R.balance_sheet(merge(dated("LongTermDebtNoncurrent", "2019-11-03", 30e9),
+                             dated("SecuredDebt", "2025-11-02", 6.596e9),
+                             dated("DebtCurrent", "2025-11-02", 13.796e9),
+                             dated("StockholdersEquity", "2025-11-02", 25e9)))
+check(_de2["total_debt"] is None and sum("unknown" in n for n in _de2["notes"]) == 1,
+      f"DEERE'S $6.6bn OF SECURITISATION DEBT, SMALLER THAN THE $13.8bn DUE THIS YEAR, IS ONE "
+      f"SLICE — unknown, not its total (got {_de2['total_debt']}, {_de2['notes']})")
+check(R.balance_sheet(merge(dated("SeniorNotes", "2025-12-31", 1e9),
+                            dated("CommercialPaper", "2025-12-31", 5e9),
+                            dated("StockholdersEquity", "2025-12-31", 1.0)))["total_debt"] == 6e9,
+      "commercial paper is not debt 'due this year' out of a long-term total — notes plus paper")
 
 
 def dur(tag, end, val):
