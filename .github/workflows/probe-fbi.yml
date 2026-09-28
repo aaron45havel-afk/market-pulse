@@ -1,9 +1,7 @@
-name: TEMPORARY — FBI city crime pull (timed Ohio test)
+name: TEMPORARY — why the FBI fetch stalls
 
-# Runs the real fetch on the working branch and commits the raw per-agency
-# file there, so the trust rules can be built and tuned against real data
-# before merge. Deleted before the branch merges; the permanent job is
-# refresh-crime.yml.
+# Times individual /summarized requests by User-Agent and concurrency to
+# find what slows the full fetch to a crawl. Read-only. Deleted before merge.
 on:
   push:
     branches: [claude/legal-rep-invoice-tracking-9j1i9r]
@@ -14,31 +12,47 @@ permissions:
   contents: read
 
 jobs:
-  pull:
+  probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    defaults:
-      run:
-        working-directory: market-pulse-v21
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Prove the parsers
-        run: python tests/test_crime_build.py
-      - name: Fetch Ohio only, timed, with progress
-        run: python -u scripts/fetch_fbi_crime.py --end-year 2025 --states OH
-      - name: What came back
+      - name: Per-request timings
         run: |
-          python - <<'PY'
-          import json, collections
-          d = json.load(open("data/headroom/fbi_agencies.json"))
-          ags = d["agencies"]
-          print(len(ags), "agencies;", d["_meta"]["failed_requests"], "failed")
-          m = collections.Counter(tuple(a["v"][y]["m"] for y in ("2023", "2024", "2025")) if a.get("v") else None for a in ags)
-          print("violent months reported (2023, 2024, 2025):", m.most_common(8))
-          for a in ags:
-              if a["name"].split(" Police")[0] in ("Akron", "Cleveland", "Columbus", "Toledo", "Dayton", "Cincinnati", "Dublin", "Westerville"):
-                  print(" ", a["name"], {y: (a["v"][y], a["p"][y]) for y in ("2024", "2025")} if a.get("v") else None)
+          python3 -u - <<'PY'
+          import json, time, urllib.request, urllib.error
+          from concurrent.futures import ThreadPoolExecutor
+          B = "https://cde.ucr.cjis.gov/LATEST"
+          UAS = {"browser": "Mozilla/5.0 (market-pulse research)",
+                 "bot": "MarketPulse/1.0 (city crime layer; invoice@archfms.com)",
+                 "none": None}
+          def get(path, ua, timeout=15):
+              h = {"User-Agent": ua} if ua else {}
+              t = time.time()
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(B + path, headers=h), timeout=timeout) as r:
+                      n = len(r.read()); return r.status, n, time.time() - t
+              except urllib.error.HTTPError as e:
+                  return e.code, 0, time.time() - t
+              except Exception as e:
+                  return type(e).__name__, 0, time.time() - t
+          st, n, dt = get("/agency/byStateAbbr/OH", UAS["browser"])
+          ags = json.loads(urllib.request.urlopen(urllib.request.Request(B + "/agency/byStateAbbr/OH", headers={"User-Agent": UAS["browser"]}), timeout=60).read())
+          oris = [a["ori"] for v in ags.values() for a in v if a.get("agency_type_name") == "City"]
+          print(f"{len(oris)} OH city agencies", flush=True)
+          i = 0
+          for label in ("browser", "bot", "none", "browser"):
+              print(f"-- {label}: 8 sequential, 36-month violent-crime", flush=True)
+              for _ in range(8):
+                  st, n, dt = get(f"/summarized/agency/{oris[i]}/violent-crime?from=01-2023&to=12-2025", UAS[label])
+                  print(f"   {oris[i]} {st} {n:>6}B {dt:5.2f}s", flush=True)
+                  i += 1
+          for label, threads in (("browser", 6), ("browser", 3)):
+              batch = oris[i:i + 30]; i += 30
+              t = time.time()
+              with ThreadPoolExecutor(threads) as ex:
+                  res = list(ex.map(lambda o: get(f"/summarized/agency/{o}/violent-crime?from=01-2023&to=12-2025", UAS[label]), batch))
+              slow = sorted(r[2] for r in res)
+              from collections import Counter
+              print(f"-- {label} x{threads}: 30 in {time.time()-t:.1f}s; statuses {Counter(r[0] for r in res)}; "
+                    f"median {slow[15]:.2f}s max {slow[-1]:.2f}s", flush=True)
           PY
