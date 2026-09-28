@@ -16,3 +16,41 @@ jobs:
       # Pure-stdlib engine tests — no pip install needed.
       - name: Household engine tests
         run: python market-pulse-v21/tests/test_household.py
+
+  # Every suite in market-pulse-v21/tests, on every pull request and every
+  # push to main. Until this job existed the suites ran only inside the
+  # data-refresh jobs, so a change to domain logic could merge without one
+  # of them running. A throwaway Postgres runs the database halves of the
+  # eight suites that have one; run_all.py gives each its own fresh database
+  # and FAILS a suite that skips its database half anyway.
+  all-suites:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    defaults:
+      run:
+        working-directory: market-pulse-v21
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: market-pulse-v21/requirements.txt
+      - name: Install the app's dependencies
+        run: pip install -r requirements.txt
+      - name: Run every suite
+        env:
+          TEST_PG: postgresql://postgres:postgres@localhost:5432
+        run: python tests/run_all.py
