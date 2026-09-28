@@ -13,12 +13,16 @@ Three filters, in order:
   2. RETURN  — Chowder rule: yield + 5-yr dividend CAGR ≥ 12
                (≥ 8 for utilities / REITs / midstream, per the
                standard rule). Encodes the +12% total-return target.
-  3. SAFETY  — hide likely cut candidates: payout ≥ 80% or net
-               debt/EBITDA ≥ 3.5×. Elevated-but-passing names keep a
-               warning badge instead (Altria stays visible).
+  3. SAFETY  — hide likely cut candidates on payout or net debt/EBITDA,
+               computed from SEC filings by the monthly refresh (see
+               refresh_aristocrats.sec_safety). Elevated-but-passing names
+               keep a warning badge instead (Altria stays visible).
 
-BUY = passes all three. The list is designed to be SHORT — usually a
-handful of names, occasionally zero. Zero is a signal too.
+BUY = passes all three, with BOTH safety figures actually measured. A
+name that is cheap and clears Chowder but whose payout or leverage could
+not be measured is UNMEASURED, never BUY: "unknown" used to read as safe,
+and four of five BUYs had neither figure. The list is designed to be
+SHORT — usually a handful of names, occasionally zero. Zero is a signal too.
 
 Data model (same pattern as country_data.py):
   • UNIVERSE below carries the slow-moving facts — ticker, streak,
@@ -52,10 +56,20 @@ CHOWDER_HURDLE_LOW = 8.0           # utilities / REITs / midstream
 # Value trigger: yield ≥ 20% above own 5-yr median.
 VALUE_PREMIUM_MIN = 20.0
 # Safety gates (hide) and badge thresholds (warn).
-PAYOUT_HIDE = 80.0
-PAYOUT_WARN = 65.0
+# Hand seeds are dividend.com's FORWARD, adjusted payouts; the refresh's
+# figures are trailing three-year GAAP/cash covers, which ran a median
+# ~9 points above the seeds on the 20 names that have both — so each
+# basis keeps its own line.
+PAYOUT_HIDE = 90.0
+PAYOUT_WARN = 75.0
+SEED_PAYOUT_HIDE = 80.0
+SEED_PAYOUT_WARN = 65.0
 ND_EBITDA_HIDE = 3.5
 ND_EBITDA_WARN = 2.5
+# Utilities, REITs and midstream run on regulated or contracted cash flow
+# and carry 5-6x as a matter of course; one 3.5x line gated every one.
+ND_EBITDA_HIDE_ASSET = 6.5
+ND_EBITDA_WARN_ASSET = 5.5
 
 # ── Universe ─────────────────────────────────────────────────────────
 # keys: t=ticker, n=name, sec=sector, c=country, yrs=streak,
@@ -95,7 +109,7 @@ UNIVERSE: list[dict] = [
     {"t": "GPC",  "n": "Genuine Parts",        "sec": "Discretionary","c": US, "yrs": 69},
     {"t": "PG",   "n": "Procter & Gamble",     "sec": "Staples",     "c": US, "yrs": 69},
     {"t": "EMR",  "n": "Emerson Electric",     "sec": "Industrials", "c": US, "yrs": 68},
-    {"t": "CINF", "n": "Cincinnati Financial", "sec": "Financials",  "c": US, "yrs": 65},
+    {"t": "CINF", "n": "Cincinnati Financial", "sec": "Financials",  "c": US, "yrs": 65, "insurer": True},
     {"t": "KO",   "n": "Coca-Cola",            "sec": "Staples",     "c": US, "yrs": 63},
     {"t": "JNJ",  "n": "Johnson & Johnson",    "sec": "Healthcare",  "c": US, "yrs": 63},
     {"t": "LOW",  "n": "Lowe's",               "sec": "Discretionary","c": US, "yrs": 63},
@@ -117,7 +131,7 @@ UNIVERSE: list[dict] = [
     {"t": "BEN",  "n": "Franklin Resources",   "sec": "Financials",  "c": US, "yrs": 45},
     {"t": "APD",  "n": "Air Products",         "sec": "Materials",   "c": US, "yrs": 43},
     {"t": "CTAS", "n": "Cintas",               "sec": "Industrials", "c": US, "yrs": 43},
-    {"t": "AFL",  "n": "Aflac",                "sec": "Financials",  "c": US, "yrs": 43},
+    {"t": "AFL",  "n": "Aflac",                "sec": "Financials",  "c": US, "yrs": 43, "insurer": True},
     {"t": "XOM",  "n": "Exxon Mobil",          "sec": "Energy",      "c": US, "yrs": 43},
     {"t": "ATO",  "n": "Atmos Energy",         "sec": "Utilities",   "c": US, "yrs": 41, "low_hurdle": True},
     {"t": "BF-B", "n": "Brown-Forman",         "sec": "Staples",     "c": US, "yrs": 41},
@@ -131,7 +145,7 @@ UNIVERSE: list[dict] = [
     {"t": "WST",  "n": "West Pharmaceutical",  "sec": "Healthcare",  "c": US, "yrs": 32},
     {"t": "AOS",  "n": "A.O. Smith",           "sec": "Industrials", "c": US, "yrs": 31},
     {"t": "CAT",  "n": "Caterpillar",          "sec": "Industrials", "c": US, "yrs": 31},
-    {"t": "CB",   "n": "Chubb",                "sec": "Financials",  "c": US, "yrs": 31},
+    {"t": "CB",   "n": "Chubb",                "sec": "Financials",  "c": US, "yrs": 31, "insurer": True},
     {"t": "ALB",  "n": "Albemarle",            "sec": "Materials",   "c": US, "yrs": 31},
     {"t": "ESS",  "n": "Essex Property",       "sec": "REIT",        "c": US, "yrs": 31, "low_hurdle": True},
     {"t": "O",    "n": "Realty Income",        "sec": "REIT",        "c": US, "yrs": 31, "low_hurdle": True},
@@ -189,49 +203,102 @@ def data_source_label() -> str:
     return f"seed snapshot ({SEED_AS_OF}) — partial; run the refresh workflow for full data"
 
 
-# Overlay fields allowed to override the seed (per-field merge; the
-# refresh script doesn't produce payout/debt, so seeds survive).
+# Overlay fields allowed to override the seed (per-field merge). Payout
+# and leverage now come from SEC filings; a seed survives only where the
+# refresh could not compute the figure, and is marked as a seed.
 _OVERLAY_FIELDS = ("y", "dg5", "median_y5", "price",
-                   "pct_off_52wk_high", "pct_above_52wk_low")
+                   "pct_off_52wk_high", "pct_above_52wk_low", "po", "nd")
+_OVERLAY_TEXT = ("po_basis", "po_years", "nd_basis", "safety_as_of", "safety_note")
 
 
 # Every optional field templates touch — normalized to None so Jinja
 # never sees an Undefined (which would pass `is not none` and crash
 # format filters).
 _OPTIONAL_FIELDS = ("y", "dg5", "median_y5", "po", "nd", "pe", "price",
-                    "pct_off_52wk_high", "pct_above_52wk_low", "note")
+                    "pct_off_52wk_high", "pct_above_52wk_low", "note") + _OVERLAY_TEXT
 
 
-def _merged_universe() -> list[dict]:
-    overlay = _load_overlay().get("tickers") or {}
+def _merged_universe(overlay: dict | None = None) -> list[dict]:
+    overlay = (_load_overlay() if overlay is None else overlay).get("tickers") or {}
     out = []
     for a in UNIVERSE:
         row = dict(a)
         for f in _OPTIONAL_FIELDS:
             row.setdefault(f, None)
+        row["po_src"] = "seed" if row["po"] is not None else None
+        row["nd_src"] = "seed" if row["nd"] is not None else None
         entry = overlay.get(a["t"])
         if isinstance(entry, dict):
             for f in _OVERLAY_FIELDS:
                 v = entry.get(f)
                 if isinstance(v, (int, float)):
                     row[f] = round(float(v), 2)
+                    if f in ("po", "nd"):
+                        row[f + "_src"] = "sec"
+            for f in _OVERLAY_TEXT:
+                if isinstance(entry.get(f), str):
+                    row[f] = entry[f]
+            # A basis that decides the answer without a number (net cash,
+            # not applicable, negative earnings) is SEC's answer too.
+            if entry.get("po_basis") == "negative":
+                row["po"], row["po_src"] = None, "sec"
+            if entry.get("nd_basis") in ("n/a", "net cash", "no positive EBITDA"):
+                row["nd_src"] = "sec"
+                if entry.get("nd_basis") != "net cash":
+                    row["nd"] = None
         out.append(row)
     return out
 
 
+def payout_state(a: dict) -> str:
+    """pass | warn | fail | unknown — on the line for the figure's basis."""
+    if a.get("po_src") == "sec" and a.get("po_basis") == "negative":
+        return "fail"
+    po = a.get("po")
+    if po is None:
+        return "unknown"
+    hide, warn = ((PAYOUT_HIDE, PAYOUT_WARN) if a.get("po_src") == "sec"
+                  else (SEED_PAYOUT_HIDE, SEED_PAYOUT_WARN))
+    return "fail" if po >= hide else "warn" if po >= warn else "pass"
+
+
+def leverage_state(a: dict) -> str:
+    """pass | warn | fail | unknown | n/a."""
+    basis = a.get("nd_basis") if a.get("nd_src") == "sec" else None
+    if basis == "n/a":
+        return "n/a"
+    if basis == "net cash":
+        return "pass"
+    if basis == "no positive EBITDA":
+        return "fail"
+    nd = a.get("nd")
+    if nd is None:
+        return "unknown"
+    hide, warn = ((ND_EBITDA_HIDE_ASSET, ND_EBITDA_WARN_ASSET) if a.get("low_hurdle")
+                  else (ND_EBITDA_HIDE, ND_EBITDA_WARN))
+    if nd >= hide:
+        return "fail"
+    if basis == "floor":
+        return "unknown"            # one kind of debt: proves a failure, never a pass
+    return "warn" if nd >= warn else "pass"
+
+
 # ── Scoring ──────────────────────────────────────────────────────────
 
-def score() -> list[dict]:
+def score(overlay: dict | None = None) -> list[dict]:
     """Merge overlay onto seeds, evaluate the three filters, classify.
 
-    status: BUY        value + chowder + gates all pass
+    status: BUY        value + chowder pass, and payout and leverage both
+                       measured and within their lines
+            UNMEASURED value + chowder pass, but payout or leverage could
+                       not be measured — never BUY on an unknown
             VALUE      cheap vs own history but misses the Chowder hurdle
             WATCH      full data, not currently cheap
-            GATED      hidden-quality: payout/debt beyond the hide line
-            AWAITING   not enough data yet (pre-first-refresh names)
+            GATED      a measured payout or leverage past its hide line
+            AWAITING   not enough market data yet
     """
     rows = []
-    for a in _merged_universe():
+    for a in _merged_universe(overlay):
         y = a.get("y")
         dg5 = a.get("dg5")
         med = a.get("median_y5")
@@ -248,13 +315,16 @@ def score() -> list[dict]:
             premium = round((y / med - 1) * 100, 1)
             value_flag = premium >= VALUE_PREMIUM_MIN
 
-        gated = (po is not None and po >= PAYOUT_HIDE) or \
-                (nd is not None and nd >= ND_EBITDA_HIDE)
+        ps, ls = payout_state(a), leverage_state(a)
+        gated = "fail" in (ps, ls)
+        safety_known = ps in ("pass", "warn") and ls in ("pass", "warn", "n/a")
+        basis_po = (f"{a['po_basis']} cover, {a['po_years']}" if a.get("po_src") == "sec"
+                    and a.get("po_years") else "dividend.com seed" if a.get("po_src") == "seed" else "")
         badges = []
-        if po is not None and PAYOUT_WARN <= po < PAYOUT_HIDE:
+        if ps == "warn":
             badges.append({"key": "payout", "label": f"payout {po:.0f}%",
-                           "title": "Elevated payout ratio — less room to keep raising through a bad year."})
-        if nd is not None and ND_EBITDA_WARN <= nd < ND_EBITDA_HIDE:
+                           "title": f"Elevated payout ({basis_po}) — less room to keep raising through a bad year."})
+        if ls == "warn":
             badges.append({"key": "debt", "label": f"debt {nd:.1f}×",
                            "title": "Elevated net debt/EBITDA — leverage eats dividend flexibility when rates move."})
         if a["c"] != US:
@@ -267,7 +337,7 @@ def score() -> list[dict]:
         elif incomplete:
             status = "AWAITING"
         elif value_flag and chowder_pass:
-            status = "BUY"
+            status = "BUY" if safety_known else "UNMEASURED"
         elif value_flag:
             status = "VALUE"
         else:
@@ -280,13 +350,17 @@ def score() -> list[dict]:
             "chowder_pass": chowder_pass,
             "yield_premium_pct": premium,
             "value_flag": value_flag,
+            "payout_state": ps,
+            "leverage_state": ls,
+            "safety_known": safety_known,
+            "payout_basis": basis_po,
             "badges": badges,
             "status": status,
         })
 
-    # Sort: BUY first by premium, then VALUE, then the rest by premium
-    # (unknown premiums last).
-    order = {"BUY": 0, "VALUE": 1, "WATCH": 2, "GATED": 3, "AWAITING": 4}
+    # Sort: BUY first by premium, then UNMEASURED (cheap, unverified),
+    # then VALUE, then the rest by premium (unknown premiums last).
+    order = {"BUY": 0, "UNMEASURED": 1, "VALUE": 2, "WATCH": 3, "GATED": 4, "AWAITING": 5}
     rows.sort(key=lambda r: (order[r["status"]],
                              -(r["yield_premium_pct"] if r["yield_premium_pct"] is not None else -999)))
     return rows
