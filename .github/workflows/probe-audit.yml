@@ -1,0 +1,53 @@
+name: TEMPORARY — debt tags on the latest balance sheet
+
+# Read-only. Deleted before the branch merges.
+on:
+  push:
+    branches: [claude/legal-rep-invoice-tracking-9j1i9r]
+    paths:
+      - '.github/workflows/probe-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: market-pulse-v21
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: |
+          python3 -u - <<'PY'
+          import gzip, json, sys, time, urllib.request, re
+          sys.path.insert(0, "."); sys.path.insert(0, "scripts")
+          import refresh_compounders as R
+          SEC = {"User-Agent": "market-pulse-research admin@focusedops.io", "Accept-Encoding": "gzip, deflate"}
+          def get(url):
+              with urllib.request.urlopen(urllib.request.Request(url, headers=SEC), timeout=60) as r:
+                  b = r.read()
+                  return json.loads(gzip.decompress(b) if r.headers.get("Content-Encoding") == "gzip" else b)
+          tick = get("https://www.sec.gov/files/company_tickers.json")
+          cik = {v["ticker"]: int(v["cik_str"]) for v in tick.values()}
+          PAT = re.compile(r"Debt|Borrowing|Notes|Loan|Lease.*Liabilit|Obligation", re.I)
+          for t in ("DE", "TRP", "APD", "WDC", "PBR", "VAL", "HTZ", "CNK", "NVR", "PANW", "SM", "ILMN", "BUD", "TSM", "B", "XYZ"):
+              if t not in cik: print("no cik", t); continue
+              f = get(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik[t]:010d}.json")["facts"]; time.sleep(0.2)
+              bs = R.balance_sheet(f)
+              ref, unit = bs["as_of"], bs["unit"]
+              print(f"== {t}: total_debt={bs['total_debt']} unit={unit} as_of={ref} notes={bs['notes']}")
+              for tax in ("us-gaap", "ifrs-full"):
+                  for tag, node in (f.get(tax) or {}).items():
+                      if not PAT.search(tag) or "Payments" in tag or "Proceeds" in tag or "Repayments" in tag or "Interest" in tag:
+                          continue
+                      rows = [r for r in (node.get("units") or {}).get(unit or "USD", []) if r.get("form") in R.ANNUAL_FORMS and not r.get("start")]
+                      at = [r for r in rows if r.get("end") == ref]
+                      if at:
+                          r = max(at, key=lambda r: r.get("filed") or "")
+                          print(f"    {tax}:{tag} = {r['val']/1e9:.3f}bn")
+          PY
