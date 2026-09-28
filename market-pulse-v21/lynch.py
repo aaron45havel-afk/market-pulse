@@ -248,6 +248,12 @@ def _spans(entries: list, want_unit: str | None = None) -> list[tuple[str, float
         start, end = e.get("start"), e.get("end")
         if val is None or not start or not end:
             continue
+        # A trailing twelve months inside a QUARTERLY report is a year long
+        # and is not a fiscal year. Amazon's 10-Qs carry one, so its "latest
+        # annual" net income was the twelve months to June — $135bn beside
+        # a full-year EPS — and the units check failed on the mismatch.
+        if str(e.get("form") or "").startswith("10-Q"):
+            continue
         try:
             days = (date.fromisoformat(end) - date.fromisoformat(start)).days
         except (ValueError, TypeError):
@@ -399,6 +405,76 @@ def eps_series(facts: dict) -> tuple[dict, str, str]:
     return {}, "", ""
 
 
+def weighted_shares(facts: dict) -> dict:
+    """{fy_end: weighted-average share count} — diluted, basic filling gaps.
+
+    THE COUNT EPS IS DIVIDED BY, for the same year, from the same filing.
+    The units check used to take a balance-sheet count instead, and from
+    whichever tag came first — so a tag retired years ago supplied it:
+    Walmart's from 2012 (before its 3-for-1 split), Mastercard's from 2010,
+    Nike's from 2015, RTX's from 2009. Each then "failed" EPS x shares =
+    net income, and was rejected as a units problem that was ours.
+    """
+    s, _ = annual_series(facts, ["WeightedAverageNumberOfDilutedSharesOutstanding",
+                                 "WeightedAverageNumberOfSharesOutstandingBasic"], unit="shares")
+    return s
+
+
+def basic_shares(facts: dict) -> dict:
+    """{fy_end: weighted-average BASIC count}. An Up-C's diluted count
+    includes the operating units its EPS is not divided by — Inspirato's
+    is 61m against a basic 15m — so the units check tries both."""
+    s, _ = annual_series(facts, ["WeightedAverageNumberOfSharesOutstandingBasic"], unit="shares")
+    return s
+
+
+def current_shares(facts: dict, as_of: str | None = None) -> float | None:
+    """The most recent share count on file, from either the balance sheet
+    or the cover page — or None when the newest is older than STALE_DAYS,
+    which means the company stopped filing it untagged (multi-class
+    issuers report per class) and any number on file describes another
+    era."""
+    best = None
+    for tax, concept in (("us-gaap", "CommonStockSharesOutstanding"),
+                         ("dei", "EntityCommonStockSharesOutstanding")):
+        entries = _units(facts, concept, tax).get("shares")
+        pts = _instant(entries) or _spans(entries)
+        if pts and (best is None or pts[-1][0] > best[0]):
+            best = pts[-1]
+    if best is None or _stale(best[0], as_of):
+        return None
+    return best[1]
+
+
+NI_RESCALE_TOL = 0.10
+
+
+def rescale_net_income(ni_by_year: dict, eps_by_year: dict,
+                       shares_by_year: dict) -> tuple[dict, list]:
+    """(net income with unit errors undone, [years rescaled]).
+
+    Some filers tag a figure kept in millions as dollars: FedEx's FY2026
+    net income is filed as 4,433 and Medtronic's as 4,801. Their own EPS
+    and share count say which: 18.55 x 239m is $4.43bn. A year whose net
+    income is off from EPS x weighted shares by a factor within
+    NI_RESCALE_TOL of 1,000 or 1,000,000 is rescaled by it. Two
+    independent filed figures agreeing on the size is the evidence; a year
+    either is missing for is left alone.
+    """
+    out, fixed = dict(ni_by_year or {}), []
+    for y, ni in (ni_by_year or {}).items():
+        e, s, n = _num((eps_by_year or {}).get(y)), _num((shares_by_year or {}).get(y)), _num(ni)
+        if e is None or s is None or not n or s <= 0:
+            continue
+        implied = e * s
+        for f in (1e3, 1e6):
+            if abs(implied - n * f) <= NI_RESCALE_TOL * abs(n * f):
+                out[y] = n * f
+                fixed.append(y)
+                break
+    return out, sorted(fixed)
+
+
 def first_filing_end(facts: dict) -> str | None:
     """Most recent annual period end across the high-coverage concepts —
     used to tell a live filer from a dormant registrant."""
@@ -436,6 +512,35 @@ def units_check(eps: float | None, shares: float | None,
     ratio = abs(implied - ni) / abs(ni)
     return {"ok": ratio <= UNITS_TOLERANCE, "ratio": round(ratio, 2),
             "implied": implied}
+
+
+def units_verdict(eps: float | None, net_income: float | None,
+                  counts: list) -> dict:
+    """units_check against every share count on file, in order — passes
+    on the first that reconciles, fails only if one could be tried and
+    none did, abstains if none could be tried.
+
+    A count filed at the wrong scale is a unit error in the COUNT, not a
+    currency or ADS mismatch: Nova's weighted count is tagged 32,800
+    (thousands), Vishay Precision's 28.5 (millions). A count that
+    reconciles at x1,000 or x1,000,000 to within NI_RESCALE_TOL — the
+    standard rescale_net_income holds a net income to — passes, with the
+    scale on the row. No ADS ratio is near 1,000, and the one currency
+    that is (the Chilean peso) would need a filing to state its EPS in
+    pesos and its net income in dollars.
+    """
+    first = None
+    for basis, count in counts:
+        n = _num(count)
+        for scale in (1, 1e3, 1e6):
+            u = units_check(eps, n * scale if n is not None else None, net_income)
+            if u["ok"] is None:
+                break
+            if first is None:
+                first = dict(u, basis=basis, scale=scale)
+            if u["ok"] and (scale == 1 or u["ratio"] <= NI_RESCALE_TOL):
+                return dict(u, basis=basis, scale=scale)
+    return first or {"ok": None, "ratio": None, "implied": None}
 
 
 def ads_ratio(market_cap: float | None, price: float | None,
@@ -886,8 +991,20 @@ def evaluate(f: dict) -> dict:
     r["shares_outstanding"] = shares
     r["net_income"] = ni
     r["ads"] = ads_ratio(cap, price, shares)
+    if f.get("ni_rescaled"):
+        r["ni_rescaled"] = f["ni_rescaled"]
 
-    u = units_check(latest_eps, shares, ni)
+    # SAME YEAR: EPS against that year's net income where it was filed,
+    # and against each count it could have been divided by — the weighted
+    # diluted and basic counts for that year, then today's count, which
+    # also stays the input to the ADS ratio above.
+    eps_year = max(eps_hist) if eps_hist else None
+    ni_same = (f.get("net_income_by_year") or {}).get(eps_year)
+    counts = [("weighted", (f.get("eps_shares_by_year") or {}).get(eps_year)),
+              ("basic", (f.get("basic_shares_by_year") or {}).get(eps_year)),
+              ("current", shares)]
+    u = units_verdict(latest_eps, ni_same if _num(ni_same) is not None else ni,
+                      counts)
     r["units"] = u
     if u["ok"] is False:
         return done("units_unverified")

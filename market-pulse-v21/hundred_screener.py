@@ -80,6 +80,10 @@ def facts_to_record(row: dict, quote: dict, facts: dict, as_of: str) -> dict:
     gp_by_year, _ = L.annual_series(facts, GROSS_PROFIT_TAGS)
     cost_by_year, _ = L.annual_series(facts, COST_TAGS)
     eps_by_year, eps_concept, eps_unit = L.eps_series(facts)
+    # Net income filed in the wrong unit (FedEx, Medtronic) is put right
+    # where the company's own EPS and share count agree on its size — the
+    # P/E and ROE below are built on it.
+    ni_by_year, _ = L.rescale_net_income(ni_by_year, eps_by_year, L.weighted_shares(facts))
 
     equity, _, _ = L.instant_value(facts, EQUITY_TAGS)
     assets, _, _ = L.instant_value(facts, "Assets")

@@ -339,3 +339,66 @@ share count appeared to shrink 20%+ a year — and so took the full buyback bonu
 score — fell from 72 to 8; P/FCF medians under 2x from 19 to 6; current P/FCF under 2x
 from 29 to 21. The `/holt` and FCF-quality guards stay: they now catch what's left
 rather than the bulk of it.
+
+## 2026-09-28 — SEC figures are read as companies file them today
+**Decided.** The audit of the five screener pages found one cause under most of their
+wrong numbers: a tag read the way a company filed it years ago, or not read at all. Fixed
+in `refresh_compounders.py` (Compounders, FCF Quality), `lynch.py`/`lynch_screener.py`
+(Lynch) and `hundred_screener.py` (100-bagger), each against the SEC's own figures:
+
+- **Debt is read on one date, the latest balance sheet**, and assembled. Each component
+  used to take its own latest value, so a retired tag supplied a 2011 figure beside this
+  year's cash (Home Depot $18.1bn → $51.3bn, AT&T $70.3bn → $136.1bn, Micron $3.3bn →
+  $14.6bn), and `LongTermDebt` was thrown away whenever a current portion was filed (Union
+  Pacific $1.5bn → $31.8bn, AbbVie $8.6bn → $65.0bn). A combined total tag (US GAAP, or
+  IFRS `Borrowings`) is the filer's own figure and stands — some filers tag one amount
+  twice, and adding their parts doubles it (Lumentum, Cenovus) — unless it is under a
+  quarter of the debt due this year or of the parts (ON Semiconductor's $0.9m beside
+  $2.98bn). The price is a filer whose total leaves something out: Home Depot's $51.3bn
+  omits its $4.5bn of commercial paper. Otherwise each route is a floor and the largest
+  stands: noncurrent line + debt
+  due within a year; `LongTermDebt` + short-term borrowings; the largest one-kind total
+  (senior notes, secured debt, converts) + short-term borrowings. The ladder now carries
+  the lines many filers use instead of the main ones — finance-lease lines, converts,
+  senior notes, secured/unsecured totals, IFRS `Borrowings` and its parts (Toyota, POSCO,
+  KEPCO and Anheuser-Busch had been read at a fraction of their debt; GM and BP at zero;
+  Ball at $2m against $7.0bn).
+- **Unknown is not zero, and zero is not unknown.** Only short-term debt on the latest
+  balance sheet, or a one-kind total smaller than the debt due this year, from a filer that
+  tagged long-term debt before, is unknown rather than read as the whole (Deere). A company
+  whose last debt figures were all zero and that has filed none since is debt-free
+  (Copart, Lululemon, Vertex, Signet), with the date it said so in `debt_zero_as_of`.
+  Either zero inferred from what was NOT filed stands only while the year's interest is
+  under 0.25% of revenue — Caleres, with a revolver under a tag this list doesn't read,
+  pays 0.64% and stays unknown. Cash is read on the same date, plain `Cash` included
+  (SLB's had come from 2014).
+- **Capex and EBIT fills.** `PaymentsToAcquireOther…` fills capex years the main tags
+  miss (Eli Lilly, Verizon since 2019); pre-tax income + interest fills operating income
+  where that line stopped (TJX since 2019). Fill-only, same currency only.
+- **Lynch.** The share count is the newest from either the balance sheet or the cover
+  page (Walmart's came from 2012, before a 3-for-1 split). A twelve-month figure inside a
+  10-Q is not a fiscal year (Amazon). Net income filed in millions as dollars is rescaled
+  when the company's own EPS × weighted shares says so (FedEx, Medtronic; also on the
+  100-bagger). The units check compares EPS with the same year's net income and passes
+  if any filed count reconciles — weighted diluted, weighted basic (an Up-C's diluted
+  count includes units EPS isn't divided by), or today's — at the filed scale, or at
+  x1,000 / x1,000,000 within 10% (Nova's count is tagged in thousands).
+
+Branch runs against main (compounders and FCF quality rebuilt with `--force`; Lynch and the
+100-bagger rebuilt four weeks after main's snapshot, so price moves are mixed in):
+- **Compounders:** rows with this year's free cash flow 1,753 → 1,787; with a net
+  debt/EBIT 1,344 → 1,455. Debt read as inferred zero 239 → 62; 93 rows read as zero
+  because that is what they last reported; 205 rows are unknown rather than read from a
+  stale or partial tag (main read every row, many of them wrong).
+- **FCF Quality:** measured 1,110 → 1,120; rows refused by the debt cross-check 48 → 4;
+  large caps refused as inferred debt-free 34 → 10; 87 refused for unknown debt, 3 for
+  unknown cash. The final board has 134 names (133 before), 22 of them different — mostly
+  companies whose enterprise value grew once their real debt was counted (Cardinal Health,
+  Sirius XM, Cable One), and GM, now priced with its $131.6bn of debt instead of refused.
+- **Lynch:** rows rejected as units problems 264 → 105; unmeasured 1,109 → 943; passing
+  3 → 5 (Yalla and Stride join Lululemon, Ingredion and BOS). The 21 newly failing the
+  units check are real EPS/net-income mismatches — a stale net-income tag (Bloom Energy,
+  Estée Lauder), Wise's EPS in pence, opposite signs (PTRN) — 19 of them confirmed in a
+  probe.
+- **100-bagger:** two banks priced at 75x and 67x earnings on a quarter's net income read
+  as a year (First Community, Colony) now read 18x and 16x.

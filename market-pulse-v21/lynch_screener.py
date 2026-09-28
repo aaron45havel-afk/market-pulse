@@ -317,16 +317,14 @@ def facts_to_record(row: dict, quote: dict, facts: dict, as_of: str) -> dict:
     # only as current as its stalest input.
     debt_as_of = min([d for d in (st_at, lt_at) if d], default="")
 
-    shares = None
-    for tax, concept in (("us-gaap", "CommonStockSharesOutstanding"),
-                         ("dei", "EntityCommonStockSharesOutstanding")):
-        node = ((facts or {}).get("facts") or {}).get(tax) or {}
-        entries = ((node.get(concept) or {}).get("units") or {}).get("shares")
-        if entries:
-            pts = L._instant(entries) or L._spans(entries)
-            if pts:
-                shares = pts[-1][1]
-                break
+    # The newest count from either tag — never the first tag's newest,
+    # which for Walmart was 2012 — and none at all if every count on file
+    # is stale. The units check tries the weighted counts first.
+    shares = L.current_shares(facts, as_of)
+    eps_shares_by_year = L.weighted_shares(facts)
+    basic_shares_by_year = L.basic_shares(facts)
+    ni_by_year, ni_rescaled = L.rescale_net_income(ni_by_year, eps_by_year,
+                                                   eps_shares_by_year)
 
     # Equity by year for the ROE series — instantaneous, so year-keyed on
     # the period end.
@@ -359,6 +357,9 @@ def facts_to_record(row: dict, quote: dict, facts: dict, as_of: str) -> dict:
         "ocf": _last(ocf),
         "eps_by_year": eps_by_year,
         "eps_unit": eps_unit,
+        "eps_shares_by_year": eps_shares_by_year,
+        "basic_shares_by_year": basic_shares_by_year,
+        "ni_rescaled": ni_rescaled,
         "net_income_by_year": ni_by_year,
         "equity_by_year": equity_by_year,
         "last_filing": L.first_filing_end(facts),
