@@ -164,6 +164,7 @@ def facts_to_record(row: dict, quote: dict, facts: dict, as_of: str) -> dict:
         "current_assets": cur_assets, "current_liabilities": cur_liabs,
         "total_assets": assets,
         "last_filing": L.first_filing_end(facts),
+        "statements": L.statements_basis(facts),
     }
 
 
@@ -212,8 +213,21 @@ def evaluate(rec: dict, medians: dict) -> dict:
     # Data sanity first. These are not checklist criteria — they are the
     # conditions under which the checklist can be applied at all, and a
     # company failing them is REJECTED rather than scored badly.
+    # COULD NOT MEASURE IS NOT REJECTED. These all land in `thin` — the
+    # funnel's could-not-measure bucket — because each is a fact about what
+    # this page could read, not about the company: 472 rows were "dormant"
+    # because they file under IFRS or in another currency (AstraZeneca,
+    # TotalEnergies, UBS, Spotify), and a missing quote is the feed's gap.
     if rec.get("price") is None or rec.get("market_cap") is None:
-        return {**out, "verdict": "reject", "reason": "no_quote", "ledger": C.ledger({})}
+        return {**out, "verdict": "thin", "reason": "no_quote", "ledger": C.ledger({})}
+    basis = rec.get("statements")
+    if basis in ("ifrs", "none"):
+        return {**out, "verdict": "thin",
+                "reason": "ifrs_filer" if basis == "ifrs" else "no_statements",
+                "ledger": C.ledger({})}
+    if rec.get("last_filing") is None:
+        return {**out, "verdict": "thin", "reason": "no_dollar_figures",
+                "ledger": C.ledger({})}
     if L._stale(rec.get("last_filing"), rec.get("as_of")):
         return {**out, "verdict": "reject", "reason": "dormant", "ledger": C.ledger({})}
     # THE SIZE PRECONDITION, before anything is scored. Not a criterion
@@ -382,7 +396,7 @@ def build(max_companyfacts: int | None = None,
 
     rows: list[dict] = [
         {"ticker": u["ticker"], "name": u["name"], "cik": u.get("cik"),
-         "sic": u.get("sic"), "verdict": "reject", "reason": "no_quote",
+         "sic": u.get("sic"), "verdict": "thin", "reason": "no_quote",
          "ledger": C.ledger({})}
         for u in universe if u["ticker"] not in quotes
     ]
@@ -407,7 +421,7 @@ def build(max_companyfacts: int | None = None,
         if not facts:
             rows.append({"ticker": row["ticker"], "name": row.get("name") or "",
                          "cik": row.get("cik"), "sic": row.get("sic"),
-                         "verdict": "reject", "reason": "facts_unavailable",
+                         "verdict": "thin", "reason": "facts_unavailable",
                          "ledger": C.ledger({})})
             continue
         try:
@@ -418,7 +432,7 @@ def build(max_companyfacts: int | None = None,
             log.warning("  record error for %s: %s", row["ticker"], e)
             rows.append({"ticker": row["ticker"], "name": row.get("name") or "",
                          "cik": row.get("cik"), "sic": row.get("sic"),
-                         "verdict": "reject", "reason": "screen_error",
+                         "verdict": "thin", "reason": "screen_error",
                          "ledger": C.ledger({})})
         if time.time() - last_log > 30:
             log.info("  %d/%d read", i, len(priced))
@@ -436,7 +450,7 @@ def build(max_companyfacts: int | None = None,
             log.warning("  score error for %s: %s", rec.get("ticker"), e)
             rows.append({"ticker": rec.get("ticker"), "name": rec.get("name") or "",
                          "cik": rec.get("cik"), "sic": rec.get("sic"),
-                         "verdict": "reject", "reason": "screen_error",
+                         "verdict": "thin", "reason": "screen_error",
                          "ledger": C.ledger({})})
 
     # SORTED BY HOW MANY OF THE SEVEN IT CLEARS, and that is all this is.

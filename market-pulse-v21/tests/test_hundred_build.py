@@ -144,6 +144,39 @@ check(_empty["invested_capital_by_year"] == {}
       "row — the company is unmeasured, not absent")
 
 
+
+# ── WHAT THIS PAGE CANNOT READ IS NOT "DORMANT" ──────────────────────
+# 472 rows were rejected as dormant because the page reads US-GAAP dollar
+# figures only: AstraZeneca, TotalEnergies, UBS and Spotify file under IFRS.
+_ifrs = H.facts_to_record(ROW, QUOTE, {"facts": {"ifrs-full": {"Revenue": {"units": {"USD": []}}}}},
+                          "2026-09-28")
+_ifrs_v = H.evaluate(_ifrs, {})
+check(_ifrs["statements"] == "ifrs" and _ifrs_v["verdict"] == "thin"
+      and _ifrs_v["reason"] == "ifrs_filer",
+      f"AN IFRS FILER IS COULD-NOT-MEASURE, NOT A DORMANT REJECT (got {_ifrs_v['verdict']}, "
+      f"{_ifrs_v['reason']})")
+_fund = H.evaluate(H.facts_to_record(ROW, QUOTE, {"facts": {"cef": {}}}, "2026-09-28"), {})
+check((_fund["verdict"], _fund["reason"]) == ("thin", "no_statements"),
+      "a fund with no company statements says so")
+_cny = {"facts": {"us-gaap": {"Revenues": {"units": {"CNY": _durations([9e9] * 6)}}}}}
+_cny_v = H.evaluate(H.facts_to_record(ROW, QUOTE, _cny, "2026-09-28"), {})
+check((_cny_v["verdict"], _cny_v["reason"]) == ("thin", "no_dollar_figures"),
+      f"a US-GAAP filer reporting in renminbi has no dollar figures to read — not dormant "
+      f"(got {_cny_v['reason']})")
+_live = H.facts_to_record(ROW, QUOTE, BUYBACK, "2025-06-30")
+check(H.evaluate(_live, {})["reason"] != "dormant",
+      "a dollar filer with a recent year is screened")
+_gone = H.facts_to_record(ROW, QUOTE, BUYBACK, "2030-06-30")
+check((H.evaluate(_gone, {})["verdict"], H.evaluate(_gone, {})["reason"]) == ("reject", "dormant"),
+      "and one whose dollar figures stopped years ago is still dormant — a fact about the company")
+_noq = H.evaluate({**_live, "price": None}, {})
+check((_noq["verdict"], _noq["reason"]) == ("thin", "no_quote"),
+      "a missing quote is the feed's gap: could-not-measure, not rejected")
+check(C.census([_ifrs_v, _fund, _cny_v, _noq, H.evaluate(_gone, {})])["thin"] == 4,
+      "and the funnel puts all four in the could-not-measure tile")
+check("banks" in C.NO_REVENUE_TAG and C.sales_growth({}).reason == C.NO_REVENUE_TAG,
+      "a bank's missing revenue line is a limit of the reading, not 'revenue not filed'")
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")
