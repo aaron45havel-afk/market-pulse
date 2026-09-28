@@ -4,13 +4,13 @@
   "basis_note": "Yield is free cash flow over enterprise value, VFLO's own denominator.",
   "built": "2026-09-28",
   "census": {
-   "fcf_cut": 201,
-   "final": 134,
+   "fcf_cut": 198,
+   "final": 132,
    "input": 1635,
-   "measured": 1120,
-   "scorable": 1072,
-   "seen_but_unrankable": 112,
-   "unmeasurable": 515,
+   "measured": 1103,
+   "scorable": 1055,
+   "seen_but_unrankable": 129,
+   "unmeasurable": 532,
    "unscorable": 48
   },
   "ev_inputs": {
@@ -30,7 +30,7 @@
     "compounders": "same",
     "schloss": "same"
    },
-   "reason": "--force (would otherwise skip: nothing to rebuild: both the inputs and the build's own code are unchanged since the last snapshot. If you expected a refresh to have landed, it has NOT \u2014 check the input dates against the job you dispatched.)",
+   "reason": "--force (would otherwise build: inputs unchanged but the build's own code changed)",
    "verified": true
   },
   "growth_components": [
@@ -49,10 +49,10 @@
     "not_in_schloss": 255
    }
   },
-  "logic": "ae372de7026e1098",
+  "logic": "102847b653822711",
   "min_market_cap": 50000000,
   "min_revenue": 10000000,
-  "multiple_flagged": 19,
+  "multiple_refused": 17,
   "vflo_components": [
    "sales trend",
    "EBITDA trend",
@@ -88,26 +88,20 @@
  "below_large_cap": [
   "NUTX",
   "REPX",
-  "TDOC",
   "MTDR",
   "ETSY",
-  "TTD",
   "BLDR",
   "PD",
   "PCRX",
-  "RPD",
-  "FVRR",
-  "UPWK",
   "WSC",
   "AHCO",
   "RPAY",
   "CHRD",
   "COLL",
-  "MGPI",
-  "TALO",
   "TCMD",
-  "ANIP",
+  "TALO",
   "EPAM",
+  "ANIP",
   "INVA",
   "AMPH",
   "VRRM",
@@ -131,8 +125,8 @@
   "KFY",
   "MMS",
   "IMMR",
-  "SAH",
   "NICE",
+  "SAH",
   "DBX",
   "QNST",
   "WB",
@@ -141,6 +135,7 @@
   "ESCA",
   "CENT",
   "CALM",
+  "YETI",
   "LRN",
   "RICK",
   "INMD",
@@ -151,6 +146,7 @@
   "PANL",
   "KBH",
   "BLBD",
+  "HSTM",
   "CRC",
   "ALK",
   "ZD",
@@ -158,26 +154,26 @@
   "STRT",
   "PERI",
   "G",
-  "SENEA",
   "SAIC",
-  "SSTK",
+  "SENEA",
   "RUSHA",
-  "TPC",
   "CRUS",
   "EFOR",
+  "TPC",
   "BAH",
   "UNFI",
   "BBW",
   "SIG",
   "TBCH",
-  "EBS",
   "GIII",
+  "TDW",
   "MLR",
   "COLM",
   "MUR",
   "DIT",
   "STRA",
   "SND",
+  "PRGS",
   "AZZ",
   "ROCK",
   "RMNI",
@@ -186,92 +182,13 @@
   "NATR",
   "FLO",
   "HOFT",
-  "CLNE",
   "HVT",
   "MTCH",
   "LZB",
-  "VATE",
-  "JOUT"
+  "JOUT",
+  "CVSA"
  ],
  "fcf_cut": [
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 1.7,
-   "cash": 125215000.0,
-   "country": "Israel",
-   "cyclical": false,
-   "debt_inferred_zero": false,
-   "ev": 207329234.0,
-   "exchange": "NYSE",
-   "fcf": 103281000.0,
-   "fcf_yield": 49.81,
-   "foreign": true,
-   "growth_components": {
-    "fcf_trend": 46.88,
-    "sales_trend": 23.11
-   },
-   "growth_ranks": {
-    "fcf_trend": 96.08,
-    "sales_trend": 90.97
-   },
-   "growth_score": 93.53,
-   "industry": "Services-Business Services, NEC",
-   "market_cap": 332544234.0,
-   "multiple_fault": "3.2x is under a fifth of its own 38.5x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
-   "name": "Fiverr International Ltd.",
-   "op_margin_now": -0.3,
-   "pfcf": 3.2,
-   "pfcf_med": 38.5,
-   "reason": "",
-   "rev_cagr5": 26.12,
-   "revenue": 430909000.0,
-   "roic_med": -11.4,
-   "size_band": "small",
-   "ticker": "FVRR",
-   "total_debt": 0.0,
-   "years": 7
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 28.8,
-   "cash": 178244000.0,
-   "country": "NY",
-   "cyclical": true,
-   "debt_inferred_zero": false,
-   "ev": 308584706.0,
-   "exchange": "NYSE",
-   "fcf": 117324000.0,
-   "fcf_conv": 157.5,
-   "fcf_yield": 38.02,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 9.13,
-    "sales_trend": 7.32
-   },
-   "growth_ranks": {
-    "fcf_trend": 50.42,
-    "sales_trend": 56.26
-   },
-   "growth_score": 53.34,
-   "industry": "Services-Computer Processing & Data Preparation",
-   "market_cap": 212079706.0,
-   "multiple_fault": "1.8x is below the 2x floor \u2014 no going concern trades there, so this is a data fault, and on a screen that ranks by cheapness it would sort first",
-   "name": "Shutterstock, Inc.",
-   "nd_ebit": -0.27,
-   "op_margin_now": 7.6,
-   "pfcf": 1.8,
-   "pfcf_med": 20.5,
-   "reason": "",
-   "rev_cagr5": 7.25,
-   "revenue": 989925000.0,
-   "roic_med": 49.3,
-   "size_band": "micro",
-   "ticker": "SSTK",
-   "total_debt": 274749000.0,
-   "years": 8
-  },
   {
    "basis": "ev",
    "bs_as_of": "2026-01-31",
@@ -291,10 +208,10 @@
     "sales_trend": 0.03
    },
    "growth_ranks": {
-    "fcf_trend": 82.46,
-    "sales_trend": 14.45
+    "fcf_trend": 83.03,
+    "sales_trend": 14.49
    },
-   "growth_score": 48.45,
+   "growth_score": 48.76,
    "industry": "Apparel & Other Finishd Prods of  Fabrics & Similar Matl",
    "market_cap": 1170366495.0,
    "name": "G III APPAREL GROUP LTD /DE/",
@@ -330,10 +247,10 @@
     "sales_trend": -1.15
    },
    "growth_ranks": {
-    "fcf_trend": 9.7,
-    "sales_trend": 10.24
+    "fcf_trend": 9.57,
+    "sales_trend": 10.22
    },
-   "growth_score": 9.97,
+   "growth_score": 9.89,
    "industry": "Retail-Department Stores",
    "market_cap": 2204495864.0,
    "name": "KOHLS Corp",
@@ -369,10 +286,10 @@
     "sales_trend": 15.01
    },
    "growth_ranks": {
-    "fcf_trend": 52.8,
-    "sales_trend": 80.86
+    "fcf_trend": 53.08,
+    "sales_trend": 81.47
    },
-   "growth_score": 66.83,
+   "growth_score": 67.28,
    "industry": "Services-Computer Programming, Data Processing, Etc.",
    "market_cap": 1650919684.0,
    "name": "WEIBO Corp",
@@ -407,10 +324,10 @@
     "sales_trend": 17.11
    },
    "growth_ranks": {
-    "fcf_trend": 96.27,
-    "sales_trend": 84.26
+    "fcf_trend": 96.59,
+    "sales_trend": 84.92
    },
-   "growth_score": 90.27,
+   "growth_score": 90.75,
    "industry": "Pharmaceutical Preparations",
    "market_cap": 766033574.0,
    "name": "COLLEGIUM PHARMACEUTICAL, INC",
@@ -447,7 +364,7 @@
    },
    "growth_ranks": {
     "fcf_trend": 23.6,
-    "sales_trend": 11.36
+    "sales_trend": 11.35
    },
    "growth_score": 17.48,
    "industry": "Retail-Shoe Stores",
@@ -485,10 +402,10 @@
     "sales_trend": 19.98
    },
    "growth_ranks": {
-    "fcf_trend": 81.44,
-    "sales_trend": 88.55
+    "fcf_trend": 81.99,
+    "sales_trend": 89.1
    },
-   "growth_score": 85.0,
+   "growth_score": 85.54,
    "industry": "Deep Sea Foreign Transportation of  Freight",
    "market_cap": 1666606522.0,
    "name": "Global Ship Lease, Inc.",
@@ -523,8 +440,8 @@
     "sales_trend": -8.02
    },
    "growth_ranks": {
-    "fcf_trend": 4.85,
-    "sales_trend": 1.61
+    "fcf_trend": 4.83,
+    "sales_trend": 1.63
    },
    "growth_score": 3.23,
    "industry": "Services-Computer Processing & Data Preparation",
@@ -561,10 +478,10 @@
     "sales_trend": 10.56
    },
    "growth_ranks": {
-    "fcf_trend": 83.77,
-    "sales_trend": 70.39
+    "fcf_trend": 84.36,
+    "sales_trend": 71.03
    },
-   "growth_score": 77.08,
+   "growth_score": 77.69,
    "industry": "Miscellaneous Primary Metal Products",
    "market_cap": 143170415.0,
    "name": "DMC Global Inc.",
@@ -598,10 +515,10 @@
     "sales_trend": 2.72
    },
    "growth_ranks": {
-    "fcf_trend": 6.9,
-    "sales_trend": 28.58
+    "fcf_trend": 6.92,
+    "sales_trend": 28.75
    },
-   "growth_score": 17.74,
+   "growth_score": 17.84,
    "industry": "Services-Business Services, NEC",
    "market_cap": 78502965.0,
    "name": "COMSCORE, INC.",
@@ -617,45 +534,6 @@
    "ticker": "SCOR",
    "total_debt": 41547000.0,
    "years": 13
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 47.5,
-   "cash": 205400000.0,
-   "country": "MD",
-   "cyclical": true,
-   "debt_inferred_zero": false,
-   "ev": 702707417.0,
-   "exchange": "NYSE",
-   "fcf": 156800000.0,
-   "fcf_yield": 22.31,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 1.98,
-    "sales_trend": 11.8
-   },
-   "growth_ranks": {
-    "fcf_trend": 23.97,
-    "sales_trend": 74.42
-   },
-   "growth_score": 49.2,
-   "industry": "Pharmaceutical Preparations",
-   "market_cap": 318407417.0,
-   "multiple_fault": "2.0x is under a fifth of its own 11.3x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
-   "name": "Emergent BioSolutions Inc.",
-   "nd_ebit": 3.66,
-   "op_margin_now": 13.5,
-   "pfcf": 2.0,
-   "pfcf_med": 11.3,
-   "reason": "",
-   "rev_cagr5": -6.42,
-   "revenue": 742900000.0,
-   "roic_med": 8.5,
-   "size_band": "small",
-   "ticker": "EBS",
-   "total_debt": 589700000.0,
-   "years": 15
   },
   {
    "basis": "ev",
@@ -676,10 +554,10 @@
     "sales_trend": 3.5
    },
    "growth_ranks": {
-    "fcf_trend": 67.21,
-    "sales_trend": 33.81
+    "fcf_trend": 67.63,
+    "sales_trend": 33.97
    },
-   "growth_score": 50.51,
+   "growth_score": 50.8,
    "industry": "Retail-Jewelry Stores",
    "market_cap": 3354830490.0,
    "name": "SIGNET JEWELERS LTD",
@@ -695,45 +573,6 @@
    "ticker": "SIG",
    "total_debt": 0.0,
    "years": 16
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 29.6,
-   "cash": 112100000.0,
-   "country": "NY",
-   "cyclical": false,
-   "debt_inferred_zero": false,
-   "ev": 690395483.0,
-   "exchange": "NYSE",
-   "fcf": 146100000.0,
-   "fcf_yield": 21.16,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": -10.65,
-    "sales_trend": 10.67
-   },
-   "growth_ranks": {
-    "fcf_trend": 4.2,
-    "sales_trend": 70.84
-   },
-   "growth_score": 37.52,
-   "industry": "Fabricated Structural Metal Products",
-   "market_cap": 101495483.0,
-   "multiple_fault": "0.7x is below the 2x floor \u2014 no going concern trades there, so this is a data fault, and on a screen that ranks by cheapness it would sort first",
-   "name": "INNOVATE Corp.",
-   "nd_ebit": 16.35,
-   "op_margin_now": 2.3,
-   "pfcf": 0.7,
-   "pfcf_med": 9.0,
-   "reason": "",
-   "rev_cagr5": -7.46,
-   "revenue": 1246000000.0,
-   "roic_med": -0.9,
-   "size_band": "micro",
-   "ticker": "VATE",
-   "total_debt": 687100000.0,
-   "years": 14
   },
   {
    "basis": "ev",
@@ -754,8 +593,8 @@
     "sales_trend": -1.53
    },
    "growth_ranks": {
-    "fcf_trend": 2.99,
-    "sales_trend": 9.12
+    "fcf_trend": 3.03,
+    "sales_trend": 9.08
    },
    "growth_score": 6.05,
    "industry": "Wholesale-Drugs, Proprietaries & Druggists' Sundries",
@@ -793,10 +632,10 @@
     "sales_trend": -11.36
    },
    "growth_ranks": {
-    "fcf_trend": 92.72,
-    "sales_trend": 0.72
+    "fcf_trend": 93.27,
+    "sales_trend": 0.73
    },
-   "growth_score": 46.72,
+   "growth_score": 47.0,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 5224808195.0,
    "name": "MURPHY OIL CORP",
@@ -831,10 +670,10 @@
     "sales_trend": 64.66
    },
    "growth_ranks": {
-    "fcf_trend": 99.35,
-    "sales_trend": 99.19
+    "fcf_trend": 99.34,
+    "sales_trend": 99.18
    },
-   "growth_score": 99.27,
+   "growth_score": 99.26,
    "industry": "Services-Business Services, NEC",
    "market_cap": 1323302303.0,
    "name": "Nutex Health Inc.",
@@ -849,84 +688,6 @@
    "ticker": "NUTX",
    "total_debt": 42510000.0,
    "years": 14
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 2.8,
-   "cash": 294356000.0,
-   "country": "CA",
-   "cyclical": false,
-   "debt_inferred_zero": false,
-   "ev": 1163314578.0,
-   "exchange": "Nasdaq",
-   "fcf": 223120000.0,
-   "fcf_conv": 219.3,
-   "fcf_yield": 19.18,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 69.49,
-    "sales_trend": 19.1
-   },
-   "growth_ranks": {
-    "fcf_trend": 98.69,
-    "sales_trend": 87.21
-   },
-   "growth_score": 92.95,
-   "industry": "Services-Computer Processing & Data Preparation",
-   "market_cap": 1097900578.0,
-   "multiple_fault": "4.9x is under a fifth of its own 114.5x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
-   "name": "UPWORK, INC",
-   "nd_ebit": 0.51,
-   "op_margin_now": 16.4,
-   "pfcf": 4.9,
-   "pfcf_med": 114.5,
-   "reason": "",
-   "rev_cagr5": 17.42,
-   "revenue": 787784000.0,
-   "roic_med": -4.8,
-   "size_band": "small",
-   "ticker": "UPWK",
-   "total_debt": 359770000.0,
-   "years": 8
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 4.3,
-   "cash": 781084000.0,
-   "country": "NY",
-   "cyclical": false,
-   "debt_inferred_zero": false,
-   "ev": 1354816652.0,
-   "exchange": "NYSE",
-   "fcf": 255895000.0,
-   "fcf_yield": 18.89,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 53.9,
-    "sales_trend": 46.0
-   },
-   "growth_ranks": {
-    "fcf_trend": 97.01,
-    "sales_trend": 98.12
-   },
-   "growth_score": 97.56,
-   "industry": "Services-Offices & Clinics of  Doctors of  Medicine",
-   "market_cap": 1140975652.0,
-   "multiple_fault": "4.5x is under a fifth of its own 25.5x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
-   "name": "Teladoc Health, Inc.",
-   "op_margin_now": -10.4,
-   "pfcf": 4.5,
-   "pfcf_med": 25.5,
-   "reason": "",
-   "rev_cagr5": 28.83,
-   "revenue": 2529977000.0,
-   "roic_med": -15.9,
-   "size_band": "small",
-   "ticker": "TDOC",
-   "total_debt": 994925000.0,
-   "years": 11
   },
   {
    "basis": "ev",
@@ -947,10 +708,10 @@
     "sales_trend": 2.08
    },
    "growth_ranks": {
-    "fcf_trend": 58.63,
-    "sales_trend": 24.15
+    "fcf_trend": 59.0,
+    "sales_trend": 24.25
    },
-   "growth_score": 41.39,
+   "growth_score": 41.62,
    "industry": "Pharmaceutical Preparations",
    "market_cap": 246689190.0,
    "name": "NATURES SUNSHINE PRODUCTS INC",
@@ -986,10 +747,10 @@
     "sales_trend": 1.41
    },
    "growth_ranks": {
-    "fcf_trend": 87.22,
-    "sales_trend": 20.13
+    "fcf_trend": 87.77,
+    "sales_trend": 20.16
    },
-   "growth_score": 53.67,
+   "growth_score": 53.96,
    "industry": "Canned, Fruits, Veg, Preserves, Jams & Jellies",
    "market_cap": 1325046139.0,
    "name": "Seneca Foods Corp",
@@ -1024,10 +785,10 @@
     "sales_trend": 3.8
    },
    "growth_ranks": {
-    "fcf_trend": 73.6,
-    "sales_trend": 35.06
+    "fcf_trend": 74.12,
+    "sales_trend": 35.24
    },
-   "growth_score": 54.33,
+   "growth_score": 54.68,
    "industry": "Motor Vehicle Parts & Accessories",
    "market_cap": 302223386.0,
    "name": "STRATTEC SECURITY CORP",
@@ -1063,10 +824,10 @@
     "sales_trend": -1.77
    },
    "growth_ranks": {
-    "fcf_trend": 62.31,
-    "sales_trend": 8.41
+    "fcf_trend": 62.65,
+    "sales_trend": 8.36
    },
-   "growth_score": 35.36,
+   "growth_score": 35.5,
    "industry": "Services-Help Supply Services",
    "market_cap": 585580559.0,
    "name": "KELLY SERVICES INC",
@@ -1101,10 +862,10 @@
     "sales_trend": 4.64
    },
    "growth_ranks": {
-    "fcf_trend": 95.24,
-    "sales_trend": 41.37
+    "fcf_trend": 95.73,
+    "sales_trend": 41.64
    },
-   "growth_score": 68.3,
+   "growth_score": 68.69,
    "industry": "Retail-Auto Dealers & Gasoline Stations",
    "market_cap": 2560798962.0,
    "name": "SONIC AUTOMOTIVE INC",
@@ -1140,10 +901,10 @@
     "sales_trend": 0.04
    },
    "growth_ranks": {
-    "fcf_trend": 54.1,
-    "sales_trend": 14.58
+    "fcf_trend": 54.41,
+    "sales_trend": 14.62
    },
-   "growth_score": 34.34,
+   "growth_score": 34.52,
    "industry": "Motor Vehicle Parts & Accessories",
    "market_cap": 131649890.0,
    "name": "Commercial Vehicle Group, Inc.",
@@ -1178,10 +939,10 @@
     "sales_trend": 28.0
    },
    "growth_ranks": {
-    "fcf_trend": 79.76,
-    "sales_trend": 94.19
+    "fcf_trend": 80.38,
+    "sales_trend": 94.46
    },
-   "growth_score": 86.97,
+   "growth_score": 87.42,
    "industry": "Pharmaceutical Preparations",
    "market_cap": 1540996195.0,
    "name": "Innoviva, Inc.",
@@ -1217,10 +978,10 @@
     "sales_trend": 16.21
    },
    "growth_ranks": {
-    "fcf_trend": 44.12,
-    "sales_trend": 83.36
+    "fcf_trend": 44.36,
+    "sales_trend": 84.01
    },
-   "growth_score": 63.74,
+   "growth_score": 64.19,
    "industry": "Electromedical & Electrotherapeutic Apparatus",
    "market_cap": 857038311.0,
    "name": "InMode Ltd.",
@@ -1236,46 +997,6 @@
    "ticker": "INMD",
    "total_debt": 0.0,
    "years": 7
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 16.5,
-   "cash": 502379000.0,
-   "country": "NY",
-   "cyclical": true,
-   "debt_inferred_zero": false,
-   "ev": 1796591638.0,
-   "exchange": "Nasdaq",
-   "fcf": 272367000.0,
-   "fcf_conv": 141.8,
-   "fcf_yield": 15.16,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": -4.15,
-    "sales_trend": 3.45
-   },
-   "growth_ranks": {
-    "fcf_trend": 9.61,
-    "sales_trend": 33.27
-   },
-   "growth_score": 21.44,
-   "industry": "Cable & Other Pay Television Services",
-   "market_cap": 514799638.0,
-   "multiple_fault": "1.9x is below the 2x floor \u2014 no going concern trades there, so this is a data fault, and on a screen that ranks by cheapness it would sort first",
-   "name": "AMC Global Media Inc.",
-   "nd_ebit": 9.38,
-   "op_margin_now": 5.8,
-   "pfcf": 1.9,
-   "pfcf_med": 3.9,
-   "reason": "made the yield cut but not the growth cut",
-   "rev_cagr5": -4.57,
-   "revenue": 2311801000.0,
-   "roic_med": 17.8,
-   "size_band": "small",
-   "ticker": "AMCX",
-   "total_debt": 1752293000.0,
-   "years": 14
   },
   {
    "basis": "ev",
@@ -1296,10 +1017,10 @@
     "sales_trend": 15.08
    },
    "growth_ranks": {
-    "fcf_trend": 10.17,
-    "sales_trend": 80.95
+    "fcf_trend": 10.05,
+    "sales_trend": 81.56
    },
-   "growth_score": 45.56,
+   "growth_score": 45.8,
    "industry": "Mining & Quarrying of  Nonmetallic Minerals (No Fuels)",
    "market_cap": 225563005.0,
    "name": "Smart Sand, Inc.",
@@ -1334,10 +1055,10 @@
     "sales_trend": -1.13
    },
    "growth_ranks": {
-    "fcf_trend": 13.62,
-    "sales_trend": 10.47
+    "fcf_trend": 13.55,
+    "sales_trend": 10.45
    },
-   "growth_score": 12.04,
+   "growth_score": 12.0,
    "industry": "Motorcycles, Bicycles & Parts",
    "market_cap": 2945251948.0,
    "name": "HARLEY-DAVIDSON, INC.",
@@ -1373,10 +1094,10 @@
     "sales_trend": -1.87
    },
    "growth_ranks": {
-    "fcf_trend": 7.0,
-    "sales_trend": 8.14
+    "fcf_trend": 7.01,
+    "sales_trend": 8.08
    },
-   "growth_score": 7.57,
+   "growth_score": 7.54,
    "industry": "Retail-Department Stores",
    "market_cap": 6063024840.0,
    "name": "Macy's, Inc.",
@@ -1411,10 +1132,10 @@
     "sales_trend": 3.36
    },
    "growth_ranks": {
-    "fcf_trend": 24.72,
-    "sales_trend": 32.96
+    "fcf_trend": 24.64,
+    "sales_trend": 33.2
    },
-   "growth_score": 28.84,
+   "growth_score": 28.92,
    "industry": "Telephone & Telegraph Apparatus",
    "market_cap": 578517990.0,
    "name": "ADTRAN Holdings, Inc.",
@@ -1448,10 +1169,10 @@
     "sales_trend": -11.47
    },
    "growth_ranks": {
-    "fcf_trend": 1.21,
-    "sales_trend": 0.63
+    "fcf_trend": 1.23,
+    "sales_trend": 0.64
    },
-   "growth_score": 0.92,
+   "growth_score": 0.94,
    "industry": "Oil & Gas Field Machinery & Equipment",
    "market_cap": 528426142.0,
    "name": "OIL STATES INTERNATIONAL, INC",
@@ -1486,10 +1207,10 @@
     "sales_trend": 4.3
    },
    "growth_ranks": {
-    "fcf_trend": 86.19,
-    "sales_trend": 38.95
+    "fcf_trend": 86.73,
+    "sales_trend": 39.19
    },
-   "growth_score": 62.57,
+   "growth_score": 62.96,
    "industry": "Pipe Lines (No Natural Gas)",
    "market_cap": 5519546018.0,
    "name": "PLAINS GP HOLDINGS LP",
@@ -1524,10 +1245,10 @@
     "sales_trend": 19.64
    },
    "growth_ranks": {
-    "fcf_trend": 20.57,
-    "sales_trend": 88.01
+    "fcf_trend": 20.52,
+    "sales_trend": 88.56
    },
-   "growth_score": 54.29,
+   "growth_score": 54.54,
    "industry": "Services-Computer Programming Services",
    "market_cap": 366165270.0,
    "name": "Perion Network Ltd.",
@@ -1561,10 +1282,10 @@
     "sales_trend": 19.38
    },
    "growth_ranks": {
-    "fcf_trend": 95.34,
-    "sales_trend": 87.66
+    "fcf_trend": 95.83,
+    "sales_trend": 88.19
    },
-   "growth_score": 91.5,
+   "growth_score": 92.01,
    "industry": "Services-Business Services, NEC",
    "market_cap": 348659310.0,
    "name": "Repay Holdings Corp",
@@ -1599,10 +1320,10 @@
     "sales_trend": 9.32
    },
    "growth_ranks": {
-    "fcf_trend": 62.78,
-    "sales_trend": 66.37
+    "fcf_trend": 63.13,
+    "sales_trend": 66.94
    },
-   "growth_score": 64.58,
+   "growth_score": 65.03,
    "industry": "Services-Educational Services",
    "market_cap": 3519287675.0,
    "name": "Stride, Inc.",
@@ -1638,10 +1359,10 @@
     "sales_trend": 7.81
    },
    "growth_ranks": {
-    "fcf_trend": 36.19,
-    "sales_trend": 59.26
+    "fcf_trend": 36.3,
+    "sales_trend": 59.72
    },
-   "growth_score": 47.72,
+   "growth_score": 48.01,
    "industry": "Truck & Bus Bodies",
    "market_cap": 636403435.0,
    "name": "MILLER INDUSTRIES INC /TN/",
@@ -1656,44 +1377,6 @@
    "size_band": "small",
    "ticker": "MLR",
    "total_debt": 33301000.0,
-   "years": 15
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 85.9,
-   "cash": 155584000.0,
-   "country": "CA",
-   "cyclical": false,
-   "debt_inferred_zero": false,
-   "ev": 440575275.0,
-   "exchange": "Nasdaq",
-   "fcf": 59850000.0,
-   "fcf_yield": 13.58,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 11.79,
-    "sales_trend": 1.05
-   },
-   "growth_ranks": {
-    "fcf_trend": 61.71,
-    "sales_trend": 19.14
-   },
-   "growth_score": 40.42,
-   "industry": "Gas & Other Services Combined",
-   "market_cap": 363734275.0,
-   "multiple_fault": "6.1x is under a fifth of its own 37.2x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
-   "name": "Clean Energy Fuels Corp.",
-   "op_margin_now": -37.6,
-   "pfcf": 6.1,
-   "pfcf_med": 37.2,
-   "reason": "",
-   "rev_cagr5": 3.58,
-   "revenue": 424833000.0,
-   "roic_med": -9.8,
-   "size_band": "small",
-   "ticker": "CLNE",
-   "total_debt": 226779000.0,
    "years": 15
   },
   {
@@ -1714,10 +1397,10 @@
     "sales_trend": 5.18
    },
    "growth_ranks": {
-    "fcf_trend": 38.9,
-    "sales_trend": 44.14
+    "fcf_trend": 39.05,
+    "sales_trend": 44.46
    },
-   "growth_score": 41.52,
+   "growth_score": 41.75,
    "industry": "Services-Computer Integrated Systems Design",
    "market_cap": 2706166153.0,
    "name": "NETSCOUT SYSTEMS INC",
@@ -1753,10 +1436,10 @@
     "sales_trend": 9.43
    },
    "growth_ranks": {
-    "fcf_trend": 21.88,
-    "sales_trend": 66.82
+    "fcf_trend": 21.85,
+    "sales_trend": 67.39
    },
-   "growth_score": 44.35,
+   "growth_score": 44.62,
    "industry": "Services-Business Services, NEC",
    "market_cap": 467713560.0,
    "name": "Rimini Street, Inc.",
@@ -1791,10 +1474,10 @@
     "sales_trend": 18.94
    },
    "growth_ranks": {
-    "fcf_trend": 79.94,
-    "sales_trend": 87.03
+    "fcf_trend": 80.57,
+    "sales_trend": 87.65
    },
-   "growth_score": 83.48,
+   "growth_score": 84.11,
    "industry": "Food and Kindred Products",
    "market_cap": 1012873240.0,
    "name": "Simply Good Foods Co",
@@ -1830,10 +1513,10 @@
     "sales_trend": 11.24
    },
    "growth_ranks": {
-    "fcf_trend": 37.36,
-    "sales_trend": 72.81
+    "fcf_trend": 37.49,
+    "sales_trend": 73.39
    },
-   "growth_score": 55.09,
+   "growth_score": 55.44,
    "industry": "Telegraph & Other Message Communications",
    "market_cap": 1909797486.0,
    "name": "ZIFF DAVIS, INC.",
@@ -1869,10 +1552,10 @@
     "sales_trend": 4.94
    },
    "growth_ranks": {
-    "fcf_trend": 8.02,
-    "sales_trend": 43.25
+    "fcf_trend": 8.06,
+    "sales_trend": 43.55
    },
-   "growth_score": 25.63,
+   "growth_score": 25.8,
    "industry": "Services-Computer Programming, Data Processing, Etc.",
    "market_cap": 1092883864.0,
    "name": "TripAdvisor, Inc.",
@@ -1908,10 +1591,10 @@
     "sales_trend": 7.08
    },
    "growth_ranks": {
-    "fcf_trend": 50.93,
-    "sales_trend": 55.1
+    "fcf_trend": 51.18,
+    "sales_trend": 55.59
    },
-   "growth_score": 53.02,
+   "growth_score": 53.39,
    "industry": "Semiconductors & Related Devices",
    "market_cap": 5673809081.0,
    "name": "CIRRUS LOGIC, INC.",
@@ -1947,10 +1630,10 @@
     "sales_trend": 4.26
    },
    "growth_ranks": {
-    "fcf_trend": 34.7,
-    "sales_trend": 38.69
+    "fcf_trend": 34.79,
+    "sales_trend": 38.92
    },
-   "growth_score": 36.7,
+   "growth_score": 36.86,
    "industry": "Sporting & Athletic Goods, NEC",
    "market_cap": 485208721.0,
    "name": "JOHNSON OUTDOORS INC",
@@ -1984,10 +1667,10 @@
     "sales_trend": 0.29
    },
    "growth_ranks": {
-    "fcf_trend": 90.86,
-    "sales_trend": 15.21
+    "fcf_trend": 91.37,
+    "sales_trend": 15.26
    },
-   "growth_score": 53.03,
+   "growth_score": 53.32,
    "industry": "General Bldg Contractors - Nonresidential Bldgs",
    "market_cap": 4637121811.0,
    "name": "TUTOR PERINI CORP",
@@ -2022,10 +1705,10 @@
     "sales_trend": 63.92
    },
    "growth_ranks": {
-    "fcf_trend": 0.56,
-    "sales_trend": 99.11
+    "fcf_trend": 0.57,
+    "sales_trend": 99.09
    },
-   "growth_score": 49.84,
+   "growth_score": 49.83,
    "industry": "Communications Equipment, NEC",
    "market_cap": 223513193.0,
    "name": "Turtle Beach Corp",
@@ -2041,45 +1724,6 @@
    "ticker": "TBCH",
    "total_debt": 55714000.0,
    "years": 15
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 54.6,
-   "cash": 18460000.0,
-   "country": "KS",
-   "cyclical": true,
-   "debt_inferred_zero": false,
-   "ev": 591138846.0,
-   "exchange": "Nasdaq",
-   "fcf": 76040000.0,
-   "fcf_conv": 54.8,
-   "fcf_yield": 12.86,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 23.83,
-    "sales_trend": 30.24
-   },
-   "growth_ranks": {
-    "fcf_trend": 85.07,
-    "sales_trend": 95.17
-   },
-   "growth_score": 90.12,
-   "industry": "Wholesale-Beer, Wine & Distilled Alcoholic Beverages",
-   "market_cap": 351190846.0,
-   "multiple_fault": "4.6x is under a fifth of its own 49.9x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
-   "name": "MGP INGREDIENTS INC",
-   "op_margin_now": -17.6,
-   "pfcf": 4.6,
-   "pfcf_med": 49.9,
-   "reason": "",
-   "rev_cagr5": 6.74,
-   "revenue": 536375000.0,
-   "roic_med": 11.7,
-   "size_band": "small",
-   "ticker": "MGPI",
-   "total_debt": 260050000.0,
-   "years": 13
   },
   {
    "basis": "ev",
@@ -2100,10 +1744,10 @@
     "sales_trend": 22.62
    },
    "growth_ranks": {
-    "fcf_trend": 85.91,
-    "sales_trend": 90.52
+    "fcf_trend": 86.45,
+    "sales_trend": 91.01
    },
-   "growth_score": 88.22,
+   "growth_score": 88.73,
    "industry": "Services-Computer Programming Services",
    "market_cap": 6037740256.0,
    "name": "EPAM Systems, Inc.",
@@ -2119,46 +1763,6 @@
    "ticker": "EPAM",
    "total_debt": 25034000.0,
    "years": 14
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 14.8,
-   "cash": 658175000.0,
-   "country": "CA",
-   "cyclical": false,
-   "debt_inferred_zero": true,
-   "ev": 6122196199.0,
-   "exchange": "Nasdaq",
-   "fcf": 782958000.0,
-   "fcf_conv": 187.8,
-   "fcf_yield": 12.79,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 50.51,
-    "sales_trend": 29.9
-   },
-   "growth_ranks": {
-    "fcf_trend": 96.64,
-    "sales_trend": 94.9
-   },
-   "growth_score": 95.77,
-   "industry": "Services-Computer Programming, Data Processing, Etc.",
-   "market_cap": 6780371199.0,
-   "multiple_fault": "8.7x is under a fifth of its own 68.8x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
-   "name": "Trade Desk, Inc.",
-   "nd_ebit": -1.12,
-   "op_margin_now": 20.3,
-   "pfcf": 8.7,
-   "pfcf_med": 68.8,
-   "reason": "",
-   "rev_cagr5": 27.92,
-   "revenue": 2896284000.0,
-   "roic_med": 20.1,
-   "size_band": "mid",
-   "ticker": "TTD",
-   "total_debt": 0.0,
-   "years": 8
   },
   {
    "basis": "ev",
@@ -2179,10 +1783,10 @@
     "sales_trend": -3.45
    },
    "growth_ranks": {
-    "fcf_trend": 19.03,
-    "sales_trend": 5.37
+    "fcf_trend": 18.96,
+    "sales_trend": 5.45
    },
-   "growth_score": 12.2,
+   "growth_score": 12.21,
    "industry": "Retail-Retail Stores, NEC",
    "market_cap": 3934100057.0,
    "name": "Bath & Body Works, Inc.",
@@ -2218,10 +1822,10 @@
     "sales_trend": 4.48
    },
    "growth_ranks": {
-    "fcf_trend": 35.17,
-    "sales_trend": 40.43
+    "fcf_trend": 35.26,
+    "sales_trend": 40.69
    },
-   "growth_score": 37.8,
+   "growth_score": 37.97,
    "industry": "Household Furniture",
    "market_cap": 1312128778.0,
    "name": "LA-Z-BOY INC",
@@ -2257,10 +1861,10 @@
     "sales_trend": 6.54
    },
    "growth_ranks": {
-    "fcf_trend": 56.72,
-    "sales_trend": 52.06
+    "fcf_trend": 57.06,
+    "sales_trend": 52.5
    },
-   "growth_score": 54.39,
+   "growth_score": 54.78,
    "industry": "Laboratory Apparatus & Furniture",
    "market_cap": 106176466.0,
    "name": "KEWAUNEE SCIENTIFIC CORP /DE/",
@@ -2295,10 +1899,10 @@
     "sales_trend": 14.85
    },
    "growth_ranks": {
-    "fcf_trend": 97.29,
-    "sales_trend": 80.59
+    "fcf_trend": 97.35,
+    "sales_trend": 81.2
    },
-   "growth_score": 88.94,
+   "growth_score": 89.28,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 2811698481.0,
    "name": "TALOS ENERGY INC.",
@@ -2333,10 +1937,10 @@
     "sales_trend": -2.3
    },
    "growth_ranks": {
-    "fcf_trend": 8.4,
-    "sales_trend": 7.69
+    "fcf_trend": 8.44,
+    "sales_trend": 7.72
    },
-   "growth_score": 8.04,
+   "growth_score": 8.08,
    "industry": "Services-Business Services, NEC",
    "market_cap": 2239291084.0,
    "name": "Western Union CO",
@@ -2372,10 +1976,10 @@
     "sales_trend": 2.18
    },
    "growth_ranks": {
-    "fcf_trend": 80.97,
-    "sales_trend": 25.0
+    "fcf_trend": 81.61,
+    "sales_trend": 25.11
    },
-   "growth_score": 52.98,
+   "growth_score": 53.36,
    "industry": "Services-Help Supply Services",
    "market_cap": 1334550000.0,
    "name": "Everforth Inc",
@@ -2411,10 +2015,10 @@
     "sales_trend": 18.54
    },
    "growth_ranks": {
-    "fcf_trend": 83.49,
-    "sales_trend": 86.23
+    "fcf_trend": 84.08,
+    "sales_trend": 86.83
    },
-   "growth_score": 84.86,
+   "growth_score": 85.45,
    "industry": "Services-Help Supply Services",
    "market_cap": 58986652.0,
    "name": "DLH Holdings Corp.",
@@ -2449,10 +2053,10 @@
     "sales_trend": 2.12
    },
    "growth_ranks": {
-    "fcf_trend": 16.04,
-    "sales_trend": 24.55
+    "fcf_trend": 15.92,
+    "sales_trend": 24.66
    },
-   "growth_score": 20.3,
+   "growth_score": 20.29,
    "industry": "Services-Computer Processing & Data Preparation",
    "market_cap": 627938735.0,
    "name": "Cars.com Inc.",
@@ -2488,10 +2092,10 @@
     "sales_trend": -0.17
    },
    "growth_ranks": {
-    "fcf_trend": 10.26,
-    "sales_trend": 13.24
+    "fcf_trend": 10.14,
+    "sales_trend": 13.26
    },
-   "growth_score": 11.75,
+   "growth_score": 11.7,
    "industry": "Retail-Family Clothing Stores",
    "market_cap": 7878989173.0,
    "name": "GAP INC",
@@ -2527,10 +2131,10 @@
     "sales_trend": -0.5
    },
    "growth_ranks": {
-    "fcf_trend": 7.74,
+    "fcf_trend": 7.77,
     "sales_trend": 11.94
    },
-   "growth_score": 9.84,
+   "growth_score": 9.86,
    "industry": "Retail-Shoe Stores",
    "market_cap": 267087436.0,
    "name": "Designer Brands Inc.",
@@ -2566,10 +2170,10 @@
     "sales_trend": 6.37
    },
    "growth_ranks": {
-    "fcf_trend": 44.64,
-    "sales_trend": 50.49
+    "fcf_trend": 44.88,
+    "sales_trend": 50.91
    },
-   "growth_score": 47.56,
+   "growth_score": 47.89,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 76156391063.0,
    "name": "EOG RESOURCES INC",
@@ -2605,10 +2209,10 @@
     "sales_trend": 6.96
    },
    "growth_ranks": {
-    "fcf_trend": 38.99,
-    "sales_trend": 54.29
+    "fcf_trend": 39.15,
+    "sales_trend": 54.77
    },
-   "growth_score": 46.64,
+   "growth_score": 46.96,
    "industry": "Wholesale-Groceries, General Line",
    "market_cap": 66018534.0,
    "name": "AMCON DISTRIBUTING CO",
@@ -2643,10 +2247,10 @@
     "sales_trend": 9.21
    },
    "growth_ranks": {
-    "fcf_trend": 68.1,
-    "sales_trend": 65.74
+    "fcf_trend": 68.53,
+    "sales_trend": 66.3
    },
-   "growth_score": 66.92,
+   "growth_score": 67.41,
    "industry": "Services-Business Services, NEC",
    "market_cap": 1069228441.0,
    "name": "QUINSTREET, INC",
@@ -2682,10 +2286,10 @@
     "sales_trend": 2.37
    },
    "growth_ranks": {
-    "fcf_trend": 77.24,
-    "sales_trend": 26.25
+    "fcf_trend": 77.82,
+    "sales_trend": 26.39
    },
-   "growth_score": 51.74,
+   "growth_score": 52.1,
    "industry": "Retail-Hobby, Toy & Game Shops",
    "market_cap": 368976947.0,
    "name": "BUILD-A-BEAR WORKSHOP INC",
@@ -2721,10 +2325,10 @@
     "sales_trend": 2.0
    },
    "growth_ranks": {
-    "fcf_trend": 31.16,
-    "sales_trend": 23.57
+    "fcf_trend": 31.18,
+    "sales_trend": 23.66
    },
-   "growth_score": 27.37,
+   "growth_score": 27.42,
    "industry": "Services-Personal Services",
    "market_cap": 6047426133.0,
    "name": "H&R BLOCK INC",
@@ -2760,10 +2364,10 @@
     "sales_trend": 11.86
    },
    "growth_ranks": {
-    "fcf_trend": 85.82,
-    "sales_trend": 74.55
+    "fcf_trend": 86.35,
+    "sales_trend": 75.07
    },
-   "growth_score": 80.19,
+   "growth_score": 80.71,
    "industry": "Services-Help Supply Services",
    "market_cap": 1309073696.0,
    "name": "AMN HEALTHCARE SERVICES INC",
@@ -2797,10 +2401,10 @@
     "sales_trend": -3.38
    },
    "growth_ranks": {
-    "fcf_trend": 13.06,
-    "sales_trend": 5.55
+    "fcf_trend": 12.99,
+    "sales_trend": 5.63
    },
-   "growth_score": 9.3,
+   "growth_score": 9.31,
    "industry": "Railroad Equipment",
    "market_cap": 232818088.0,
    "name": "FreightCar America, Inc.",
@@ -2835,10 +2439,10 @@
     "sales_trend": 14.26
    },
    "growth_ranks": {
-    "fcf_trend": 62.97,
-    "sales_trend": 79.43
+    "fcf_trend": 63.32,
+    "sales_trend": 80.02
    },
-   "growth_score": 71.2,
+   "growth_score": 71.67,
    "industry": "Services-Business Services, NEC",
    "market_cap": 47016129635.0,
    "name": "PayPal Holdings, Inc.",
@@ -2874,10 +2478,10 @@
     "sales_trend": 2.64
    },
    "growth_ranks": {
-    "fcf_trend": 9.24,
-    "sales_trend": 28.0
+    "fcf_trend": 9.19,
+    "sales_trend": 28.16
    },
-   "growth_score": 18.62,
+   "growth_score": 18.68,
    "industry": "Miscellaneous Transportation Equipment",
    "market_cap": 3557608320.0,
    "name": "Polaris Inc.",
@@ -2912,10 +2516,10 @@
     "sales_trend": 3.18
    },
    "growth_ranks": {
-    "fcf_trend": 37.5,
-    "sales_trend": 31.84
+    "fcf_trend": 37.63,
+    "sales_trend": 32.06
    },
-   "growth_score": 34.67,
+   "growth_score": 34.84,
    "industry": "Services-Equipment Rental & Leasing, NEC",
    "market_cap": 1106522707.0,
    "name": "UPBOUND GROUP, INC.",
@@ -2951,10 +2555,10 @@
     "sales_trend": 16.63
    },
    "growth_ranks": {
-    "fcf_trend": 80.22,
-    "sales_trend": 83.99
+    "fcf_trend": 80.85,
+    "sales_trend": 84.65
    },
-   "growth_score": 82.1,
+   "growth_score": 82.75,
    "industry": "Rubber & Plastics Footwear",
    "market_cap": 11705704819.0,
    "name": "DECKERS OUTDOOR CORP",
@@ -2989,10 +2593,10 @@
     "sales_trend": -7.19
    },
    "growth_ranks": {
-    "fcf_trend": 14.09,
-    "sales_trend": 2.06
+    "fcf_trend": 14.03,
+    "sales_trend": 2.09
    },
-   "growth_score": 8.07,
+   "growth_score": 8.06,
    "industry": "Oil & Gas Field Machinery & Equipment",
    "market_cap": 7625067094.0,
    "name": "NOV Inc.",
@@ -3028,10 +2632,10 @@
     "sales_trend": 8.92
    },
    "growth_ranks": {
-    "fcf_trend": 72.01,
-    "sales_trend": 64.31
+    "fcf_trend": 72.51,
+    "sales_trend": 64.85
    },
-   "growth_score": 68.16,
+   "growth_score": 68.68,
    "industry": "Services-Prepackaged Software",
    "market_cap": 7861454397.0,
    "name": "DROPBOX, INC.",
@@ -3066,10 +2670,10 @@
     "sales_trend": -3.51
    },
    "growth_ranks": {
-    "fcf_trend": 9.89,
-    "sales_trend": 5.28
+    "fcf_trend": 9.76,
+    "sales_trend": 5.36
    },
-   "growth_score": 7.59,
+   "growth_score": 7.56,
    "industry": "Services-Prepackaged Software",
    "market_cap": 2608650000.0,
    "name": "TERADATA CORP /DE/",
@@ -3105,10 +2709,10 @@
     "sales_trend": -0.46
    },
    "growth_ranks": {
-    "fcf_trend": 12.69,
-    "sales_trend": 12.16
+    "fcf_trend": 12.61,
+    "sales_trend": 12.17
    },
-   "growth_score": 12.43,
+   "growth_score": 12.39,
    "industry": "Agricultural Production-Crops",
    "market_cap": 1514336522.0,
    "name": "DEL MONTE CORP",
@@ -3144,10 +2748,10 @@
     "sales_trend": 0.49
    },
    "growth_ranks": {
-    "fcf_trend": 22.39,
-    "sales_trend": 16.1
+    "fcf_trend": 22.37,
+    "sales_trend": 16.17
    },
-   "growth_score": 19.25,
+   "growth_score": 19.27,
    "industry": "Services-Advertising Agencies",
    "market_cap": 22666463794.0,
    "name": "OMNICOM GROUP INC.",
@@ -3182,10 +2786,10 @@
     "sales_trend": 26.39
    },
    "growth_ranks": {
-    "fcf_trend": 95.06,
-    "sales_trend": 92.75
+    "fcf_trend": 95.55,
+    "sales_trend": 93.1
    },
-   "growth_score": 93.91,
+   "growth_score": 94.32,
    "industry": "Pharmaceutical Preparations",
    "market_cap": 1050360696.0,
    "name": "Pacira BioSciences, Inc.",
@@ -3221,10 +2825,10 @@
     "sales_trend": -1.38
    },
    "growth_ranks": {
-    "fcf_trend": 11.47,
-    "sales_trend": 9.75
+    "fcf_trend": 11.37,
+    "sales_trend": 9.72
    },
-   "growth_score": 10.61,
+   "growth_score": 10.54,
    "industry": "Textile Mill Products",
    "market_cap": 132352519.0,
    "name": "UNIFI INC",
@@ -3258,10 +2862,10 @@
     "sales_trend": 2.26
    },
    "growth_ranks": {
-    "fcf_trend": 37.59,
-    "sales_trend": 25.63
+    "fcf_trend": 37.73,
+    "sales_trend": 25.75
    },
-   "growth_score": 31.61,
+   "growth_score": 31.74,
    "industry": "Men's & Boys' Furnishgs, Work Clothg, & Allied Garments",
    "market_cap": 3429425127.0,
    "name": "PVH CORP. /DE/",
@@ -3297,10 +2901,10 @@
     "sales_trend": 77.14
    },
    "growth_ranks": {
-    "fcf_trend": 96.46,
+    "fcf_trend": 96.78,
     "sales_trend": 99.46
    },
-   "growth_score": 97.96,
+   "growth_score": 98.12,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 928908205.0,
    "name": "Riley Exploration Permian, Inc.",
@@ -3336,10 +2940,10 @@
     "sales_trend": 1.46
    },
    "growth_ranks": {
-    "fcf_trend": 60.77,
-    "sales_trend": 20.48
+    "fcf_trend": 61.18,
+    "sales_trend": 20.53
    },
-   "growth_score": 40.62,
+   "growth_score": 40.86,
    "industry": "Household Furniture",
    "market_cap": 140930448.0,
    "name": "HOOKER FURNISHINGS Corp",
@@ -3374,10 +2978,10 @@
     "sales_trend": 10.11
    },
    "growth_ranks": {
-    "fcf_trend": 67.54,
-    "sales_trend": 68.96
+    "fcf_trend": 67.96,
+    "sales_trend": 69.57
    },
-   "growth_score": 68.25,
+   "growth_score": 68.76,
    "industry": "Services-Prepackaged Software",
    "market_cap": 6267077690.0,
    "name": "NICE Ltd.",
@@ -3413,10 +3017,10 @@
     "sales_trend": 2.18
    },
    "growth_ranks": {
-    "fcf_trend": 20.34,
-    "sales_trend": 25.0
+    "fcf_trend": 20.28,
+    "sales_trend": 25.11
    },
-   "growth_score": 22.67,
+   "growth_score": 22.7,
    "industry": "Motor Vehicle Parts & Accessories",
    "market_cap": 18281840809.0,
    "name": "MAGNA INTERNATIONAL INC",
@@ -3452,10 +3056,10 @@
     "sales_trend": 36.64
    },
    "growth_ranks": {
-    "fcf_trend": 94.96,
-    "sales_trend": 96.78
+    "fcf_trend": 95.45,
+    "sales_trend": 96.91
    },
-   "growth_score": 95.87,
+   "growth_score": 96.18,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 19565332197.0,
    "name": "Permian Resources Corp",
@@ -3491,10 +3095,10 @@
     "sales_trend": 1.19
    },
    "growth_ranks": {
-    "fcf_trend": 29.85,
-    "sales_trend": 19.45
+    "fcf_trend": 29.86,
+    "sales_trend": 19.48
    },
-   "growth_score": 24.65,
+   "growth_score": 24.67,
    "industry": "Retail-Family Clothing Stores",
    "market_cap": 2223005411.0,
    "name": "BUCKLE INC",
@@ -3531,9 +3135,9 @@
    },
    "growth_ranks": {
     "fcf_trend": 5.88,
-    "sales_trend": 1.7
+    "sales_trend": 1.73
    },
-   "growth_score": 3.79,
+   "growth_score": 3.8,
    "industry": "Services-Hospitals",
    "market_cap": 2196275915.0,
    "name": "Pediatrix Medical Group, Inc.",
@@ -3569,10 +3173,10 @@
     "sales_trend": 8.32
    },
    "growth_ranks": {
-    "fcf_trend": 46.36,
-    "sales_trend": 61.58
+    "fcf_trend": 46.64,
+    "sales_trend": 62.08
    },
-   "growth_score": 53.97,
+   "growth_score": 54.36,
    "industry": "Services-Management Consulting Services",
    "market_cap": 6271044069.0,
    "name": "Genpact LTD",
@@ -3608,10 +3212,10 @@
     "sales_trend": 4.79
    },
    "growth_ranks": {
-    "fcf_trend": 40.02,
-    "sales_trend": 42.22
+    "fcf_trend": 40.19,
+    "sales_trend": 42.51
    },
-   "growth_score": 41.12,
+   "growth_score": 41.35,
    "industry": "Food and Kindred Products",
    "market_cap": 1329600011.0,
    "name": "FLOWERS FOODS INC",
@@ -3647,10 +3251,10 @@
     "sales_trend": 1.55
    },
    "growth_ranks": {
-    "fcf_trend": 57.37,
-    "sales_trend": 20.97
+    "fcf_trend": 57.73,
+    "sales_trend": 21.03
    },
-   "growth_score": 39.17,
+   "growth_score": 39.38,
    "industry": "Retail-Furniture Stores",
    "market_cap": 445353959.0,
    "name": "HAVERTY FURNITURE COMPANIES INC",
@@ -3685,10 +3289,10 @@
     "sales_trend": 22.25
    },
    "growth_ranks": {
-    "fcf_trend": 95.62,
-    "sales_trend": 90.25
+    "fcf_trend": 96.11,
+    "sales_trend": 90.74
    },
-   "growth_score": 92.94,
+   "growth_score": 93.42,
    "industry": "Services-Miscellaneous Equipment Rental & Leasing",
    "market_cap": 3620195341.0,
    "name": "WillScot Holdings Corp",
@@ -3724,10 +3328,10 @@
     "sales_trend": 0.54
    },
    "growth_ranks": {
-    "fcf_trend": 26.87,
-    "sales_trend": 16.28
+    "fcf_trend": 26.82,
+    "sales_trend": 16.35
    },
-   "growth_score": 21.58,
+   "growth_score": 21.59,
    "industry": "Bituminous Coal & Lignite Surface Mining",
    "market_cap": 3406885050.0,
    "name": "ALLIANCE RESOURCE PARTNERS LP",
@@ -3762,10 +3366,10 @@
     "sales_trend": 9.11
    },
    "growth_ranks": {
-    "fcf_trend": 70.99,
-    "sales_trend": 65.07
+    "fcf_trend": 71.47,
+    "sales_trend": 65.62
    },
-   "growth_score": 68.03,
+   "growth_score": 68.55,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 12116170990.0,
    "name": "ANTERO RESOURCES Corp",
@@ -3781,44 +3385,6 @@
    "ticker": "AR",
    "total_debt": 1397976000.0,
    "years": 13
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2026-06-30",
-   "capex_ocf": 40.5,
-   "cash": 58078000.0,
-   "country": "NJ",
-   "cyclical": true,
-   "debt_inferred_zero": false,
-   "ev": 567742580.0,
-   "exchange": "Nasdaq",
-   "fcf": 57656000.0,
-   "fcf_yield": 10.16,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": -4.72,
-    "sales_trend": -1.99
-   },
-   "growth_ranks": {
-    "fcf_trend": 8.77,
-    "sales_trend": 8.05
-   },
-   "growth_score": 8.41,
-   "industry": "Food and Kindred Products",
-   "market_cap": 67500580.0,
-   "multiple_fault": "1.2x is below the 2x floor \u2014 no going concern trades there, so this is a data fault, and on a screen that ranks by cheapness it would sort first",
-   "name": "HAIN CELESTIAL GROUP INC",
-   "op_margin_now": -15.0,
-   "pfcf": 1.2,
-   "pfcf_med": 32.5,
-   "reason": "made the yield cut but not the growth cut",
-   "rev_cagr5": -7.31,
-   "revenue": 1353429000.0,
-   "roic_med": 3.9,
-   "size_band": "micro",
-   "ticker": "HAIN",
-   "total_debt": 558320000.0,
-   "years": 16
   },
   {
    "basis": "ev",
@@ -3839,10 +3405,10 @@
     "sales_trend": 9.07
    },
    "growth_ranks": {
-    "fcf_trend": 78.82,
-    "sales_trend": 64.85
+    "fcf_trend": 79.43,
+    "sales_trend": 65.4
    },
-   "growth_score": 71.83,
+   "growth_score": 72.42,
    "industry": "Services-Computer Integrated Systems Design",
    "market_cap": 12830678892.0,
    "name": "GoDaddy Inc.",
@@ -3877,10 +3443,10 @@
     "sales_trend": -0.28
    },
    "growth_ranks": {
-    "fcf_trend": 34.05,
-    "sales_trend": 12.79
+    "fcf_trend": 34.12,
+    "sales_trend": 12.81
    },
-   "growth_score": 23.42,
+   "growth_score": 23.46,
    "industry": "Services-Nursing & Personal Care Facilities",
    "market_cap": 1497554648.0,
    "name": "HEALTHCARE SERVICES GROUP INC",
@@ -3916,10 +3482,10 @@
     "sales_trend": 19.18
    },
    "growth_ranks": {
-    "fcf_trend": 80.04,
-    "sales_trend": 87.39
+    "fcf_trend": 80.66,
+    "sales_trend": 87.92
    },
-   "growth_score": 83.72,
+   "growth_score": 84.29,
    "industry": "Apparel & Other Finishd Prods of  Fabrics & Similar Matl",
    "market_cap": 10909942854.0,
    "name": "lululemon athletica inc.",
@@ -3955,10 +3521,10 @@
     "sales_trend": 1.9
    },
    "growth_ranks": {
-    "fcf_trend": 34.51,
-    "sales_trend": 23.17
+    "fcf_trend": 34.6,
+    "sales_trend": 23.25
    },
-   "growth_score": 28.84,
+   "growth_score": 28.93,
    "industry": "Watches, Clocks, Clockwork Operated Devices/Parts",
    "market_cap": 757946963.0,
    "name": "MOVADO GROUP INC",
@@ -3994,10 +3560,10 @@
     "sales_trend": 7.53
    },
    "growth_ranks": {
-    "fcf_trend": 53.22,
-    "sales_trend": 57.74
+    "fcf_trend": 53.51,
+    "sales_trend": 58.17
    },
-   "growth_score": 55.48,
+   "growth_score": 55.84,
    "industry": "Air Transportation, Scheduled",
    "market_cap": 4691795165.0,
    "name": "ALASKA AIR GROUP, INC.",
@@ -4033,10 +3599,10 @@
     "sales_trend": 1.7
    },
    "growth_ranks": {
-    "fcf_trend": 67.07,
-    "sales_trend": 21.56
+    "fcf_trend": 67.49,
+    "sales_trend": 21.62
    },
-   "growth_score": 44.31,
+   "growth_score": 44.55,
    "industry": "Retail-Shoe Stores",
    "market_cap": 382018904.0,
    "name": "SHOE STATION GROUP INC",
@@ -4072,10 +3638,10 @@
     "sales_trend": 6.55
    },
    "growth_ranks": {
-    "fcf_trend": 78.45,
-    "sales_trend": 52.19
+    "fcf_trend": 79.05,
+    "sales_trend": 52.63
    },
-   "growth_score": 65.32,
+   "growth_score": 65.84,
    "industry": "Wholesale-Miscellaneous Nondurable Goods",
    "market_cap": 2610737263.0,
    "name": "CENTRAL GARDEN & PET CO",
@@ -4111,10 +3677,10 @@
     "sales_trend": 17.02
    },
    "growth_ranks": {
-    "fcf_trend": 85.54,
-    "sales_trend": 84.17
+    "fcf_trend": 86.07,
+    "sales_trend": 84.83
    },
-   "growth_score": 84.86,
+   "growth_score": 85.45,
    "industry": "Deep Sea Foreign Transportation of  Freight",
    "market_cap": 741383496.0,
    "name": "Ardmore Shipping Corp",
@@ -4150,10 +3716,10 @@
     "sales_trend": 8.55
    },
    "growth_ranks": {
-    "fcf_trend": 64.46,
-    "sales_trend": 62.92
+    "fcf_trend": 64.83,
+    "sales_trend": 63.44
    },
-   "growth_score": 63.69,
+   "growth_score": 64.13,
    "industry": "Semiconductors & Related Devices",
    "market_cap": 11137995324.0,
    "name": "SKYWORKS SOLUTIONS, INC.",
@@ -4189,10 +3755,10 @@
     "sales_trend": 11.67
    },
    "growth_ranks": {
-    "fcf_trend": 88.39,
-    "sales_trend": 74.24
+    "fcf_trend": 88.86,
+    "sales_trend": 74.84
    },
-   "growth_score": 81.31,
+   "growth_score": 81.85,
    "industry": "Rubber & Plastics Footwear",
    "market_cap": 5634984665.0,
    "name": "Crocs, Inc.",
@@ -4228,10 +3794,10 @@
     "sales_trend": 15.15
    },
    "growth_ranks": {
-    "fcf_trend": 96.55,
-    "sales_trend": 81.13
+    "fcf_trend": 96.87,
+    "sales_trend": 81.74
    },
-   "growth_score": 88.84,
+   "growth_score": 89.31,
    "industry": "Surgical & Medical Instruments & Apparatus",
    "market_cap": 495405495.0,
    "name": "TACTILE SYSTEMS TECHNOLOGY INC",
@@ -4267,10 +3833,10 @@
     "sales_trend": 0.88
    },
    "growth_ranks": {
-    "fcf_trend": 21.04,
-    "sales_trend": 18.52
+    "fcf_trend": 21.0,
+    "sales_trend": 18.62
    },
-   "growth_score": 19.78,
+   "growth_score": 19.81,
    "industry": "Wholesale-Petroleum & Petroleum Products (No Bulk Stations)",
    "market_cap": 1810767348.0,
    "name": "WORLD KINECT CORP",
@@ -4305,10 +3871,10 @@
     "sales_trend": 45.11
    },
    "growth_ranks": {
-    "fcf_trend": 95.52,
-    "sales_trend": 97.94
+    "fcf_trend": 96.02,
+    "sales_trend": 98.0
    },
-   "growth_score": 96.73,
+   "growth_score": 97.01,
    "industry": "Services-Business Services, NEC",
    "market_cap": 100296525205.0,
    "name": "MERCADOLIBRE INC",
@@ -4344,10 +3910,10 @@
     "sales_trend": 8.49
    },
    "growth_ranks": {
-    "fcf_trend": 46.46,
-    "sales_trend": 62.48
+    "fcf_trend": 46.73,
+    "sales_trend": 62.99
    },
-   "growth_score": 54.47,
+   "growth_score": 54.86,
    "industry": "Services-Computer Programming Services",
    "market_cap": 28067178663.0,
    "name": "COGNIZANT TECHNOLOGY SOLUTIONS CORP",
@@ -4383,10 +3949,10 @@
     "sales_trend": 5.98
    },
    "growth_ranks": {
-    "fcf_trend": 83.12,
-    "sales_trend": 48.21
+    "fcf_trend": 83.7,
+    "sales_trend": 48.59
    },
-   "growth_score": 65.67,
+   "growth_score": 66.15,
    "industry": "Sporting & Athletic Goods, NEC",
    "market_cap": 287297964.0,
    "name": "ESCALADE INC",
@@ -4422,10 +3988,10 @@
     "sales_trend": 7.1
    },
    "growth_ranks": {
-    "fcf_trend": 74.91,
-    "sales_trend": 55.23
+    "fcf_trend": 75.45,
+    "sales_trend": 55.72
    },
-   "growth_score": 65.07,
+   "growth_score": 65.59,
    "industry": "Agricultural Prod-Livestock & Animal Specialties",
    "market_cap": 3501333244.0,
    "name": "CAL-MAINE FOODS INC",
@@ -4461,10 +4027,10 @@
     "sales_trend": 12.07
    },
    "growth_ranks": {
-    "fcf_trend": 43.75,
-    "sales_trend": 75.13
+    "fcf_trend": 43.98,
+    "sales_trend": 75.66
    },
-   "growth_score": 59.44,
+   "growth_score": 59.82,
    "industry": "Operative Builders",
    "market_cap": 3203433288.0,
    "name": "KB HOME",
@@ -4499,10 +4065,10 @@
     "sales_trend": 6.64
    },
    "growth_ranks": {
-    "fcf_trend": 19.59,
-    "sales_trend": 52.42
+    "fcf_trend": 19.53,
+    "sales_trend": 52.86
    },
-   "growth_score": 36.01,
+   "growth_score": 36.2,
    "industry": "Motor Vehicle Parts & Accessories",
    "market_cap": 9956018221.0,
    "name": "Aptiv PLC",
@@ -4518,45 +4084,6 @@
    "ticker": "APTV",
    "total_debt": 7551000000.0,
    "years": 8
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 8.9,
-   "cash": 1023199000.0,
-   "country": "Hong Kong",
-   "cyclical": false,
-   "debt_inferred_zero": false,
-   "ev": 8117645702.0,
-   "exchange": "Nasdaq",
-   "fcf": 783353000.0,
-   "fcf_yield": 9.65,
-   "foreign": true,
-   "growth_components": {
-    "fcf_trend": -1.06,
-    "sales_trend": -2.67
-   },
-   "growth_ranks": {
-    "fcf_trend": 15.95,
-    "sales_trend": 6.53
-   },
-   "growth_score": 11.24,
-   "industry": "Hotels & Motels",
-   "market_cap": 2049953702.0,
-   "multiple_fault": "2.6x is under a fifth of its own 23.4x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
-   "name": "Melco Resorts & Entertainment LTD",
-   "nd_ebit": 9.53,
-   "op_margin_now": 11.6,
-   "pfcf": 2.6,
-   "pfcf_med": 23.4,
-   "reason": "made the yield cut but not the growth cut",
-   "rev_cagr5": -1.74,
-   "revenue": 5163299000.0,
-   "roic_med": 7.9,
-   "size_band": "mid",
-   "ticker": "MLCO",
-   "total_debt": 6747918000.0,
-   "years": 16
   },
   {
    "basis": "ev",
@@ -4577,10 +4104,10 @@
     "sales_trend": 2.28
    },
    "growth_ranks": {
-    "fcf_trend": 44.5,
-    "sales_trend": 25.85
+    "fcf_trend": 44.74,
+    "sales_trend": 25.98
    },
-   "growth_score": 35.17,
+   "growth_score": 35.36,
    "industry": "Services-Management Consulting Services",
    "market_cap": 278880956.0,
    "name": "HACKETT GROUP, INC.",
@@ -4617,9 +4144,9 @@
    },
    "growth_ranks": {
     "fcf_trend": 29.43,
-    "sales_trend": 18.96
+    "sales_trend": 19.07
    },
-   "growth_score": 24.2,
+   "growth_score": 24.25,
    "industry": "Retail-Retail Stores, NEC",
    "market_cap": 418014892.0,
    "name": "STAR GROUP, L.P.",
@@ -4654,10 +4181,10 @@
     "sales_trend": 0.55
    },
    "growth_ranks": {
-    "fcf_trend": 53.08,
-    "sales_trend": 16.37
+    "fcf_trend": 53.36,
+    "sales_trend": 16.44
    },
-   "growth_score": 34.73,
+   "growth_score": 34.9,
    "industry": "Wholesale-Computers & Peripheral Equipment & Software",
    "market_cap": 1177951646.0,
    "name": "SCANSOURCE, INC.",
@@ -4693,10 +4220,10 @@
     "sales_trend": 6.01
    },
    "growth_ranks": {
-    "fcf_trend": 83.68,
-    "sales_trend": 48.48
+    "fcf_trend": 84.27,
+    "sales_trend": 48.86
    },
-   "growth_score": 66.08,
+   "growth_score": 66.56,
    "industry": "Trucking (No Local)",
    "market_cap": 11716804440.0,
    "name": "Knight-Swift Transportation Holdings Inc.",
@@ -4732,10 +4259,10 @@
     "sales_trend": 7.74
    },
    "growth_ranks": {
-    "fcf_trend": 73.13,
-    "sales_trend": 58.99
+    "fcf_trend": 73.65,
+    "sales_trend": 59.45
    },
-   "growth_score": 66.06,
+   "growth_score": 66.55,
    "industry": "Retail-Miscellaneous Shopping Goods Stores",
    "market_cap": 50883905.0,
    "name": "SPORTSMAN'S WAREHOUSE HOLDINGS, INC.",
@@ -4769,10 +4296,10 @@
     "sales_trend": 6.36
    },
    "growth_ranks": {
-    "fcf_trend": 39.23,
-    "sales_trend": 50.27
+    "fcf_trend": 39.38,
+    "sales_trend": 50.68
    },
-   "growth_score": 44.75,
+   "growth_score": 45.03,
    "industry": "Coating, Engraving & Allied Services",
    "market_cap": 4207811170.0,
    "name": "AZZ INC",
@@ -4808,10 +4335,10 @@
     "sales_trend": 14.68
    },
    "growth_ranks": {
-    "fcf_trend": 89.83,
-    "sales_trend": 80.23
+    "fcf_trend": 90.33,
+    "sales_trend": 80.84
    },
-   "growth_score": 85.03,
+   "growth_score": 85.59,
    "industry": "Services-Computer Processing & Data Preparation",
    "market_cap": 3005339148.0,
    "name": "CarGurus, Inc.",
@@ -4827,44 +4354,6 @@
    "ticker": "CARG",
    "total_debt": 0.0,
    "years": 9
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 8.0,
-   "cash": 246664000.0,
-   "country": "MA",
-   "cyclical": false,
-   "debt_inferred_zero": false,
-   "ev": 1387027040.0,
-   "exchange": "Nasdaq",
-   "fcf": 130122000.0,
-   "fcf_yield": 9.38,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 47.12,
-    "sales_trend": 23.92
-   },
-   "growth_ranks": {
-    "fcf_trend": 96.18,
-    "sales_trend": 91.5
-   },
-   "growth_score": 93.84,
-   "industry": "Services-Prepackaged Software",
-   "market_cap": 741407040.0,
-   "multiple_fault": "5.7x is under a fifth of its own 35.3x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
-   "name": "Rapid7, Inc.",
-   "nd_ebit": -21.32,
-   "op_margin_now": 1.3,
-   "pfcf": 5.7,
-   "pfcf_med": 35.3,
-   "reason": "",
-   "rev_cagr5": 17.49,
-   "revenue": 859794000.0,
-   "size_band": "small",
-   "ticker": "RPD",
-   "total_debt": 892284000.0,
-   "years": 11
   },
   {
    "basis": "ev",
@@ -4885,10 +4374,10 @@
     "sales_trend": 4.04
    },
    "growth_ranks": {
-    "fcf_trend": 51.96,
-    "sales_trend": 37.48
+    "fcf_trend": 52.23,
+    "sales_trend": 37.69
    },
-   "growth_score": 44.72,
+   "growth_score": 44.96,
    "industry": "Steel Works, Blast Furnaces & Rolling & Finishing Mills",
    "market_cap": 1402563755.0,
    "name": "GIBRALTAR INDUSTRIES, INC.",
@@ -4924,10 +4413,10 @@
     "sales_trend": 19.71
    },
    "growth_ranks": {
-    "fcf_trend": 50.65,
-    "sales_trend": 88.1
+    "fcf_trend": 50.9,
+    "sales_trend": 88.65
    },
-   "growth_score": 69.38,
+   "growth_score": 69.78,
    "industry": "Computer Peripheral Equipment, NEC",
    "market_cap": 255909557.0,
    "name": "IMMERSION CORP",
@@ -4962,10 +4451,10 @@
     "sales_trend": 4.42
    },
    "growth_ranks": {
-    "fcf_trend": 59.61,
-    "sales_trend": 39.8
+    "fcf_trend": 60.0,
+    "sales_trend": 40.05
    },
-   "growth_score": 49.7,
+   "growth_score": 50.02,
    "industry": "Hotels & Motels",
    "market_cap": 10648079954.0,
    "name": "MGM Resorts International",
@@ -5000,10 +4489,10 @@
     "sales_trend": -5.66
    },
    "growth_ranks": {
-    "fcf_trend": 1.31,
-    "sales_trend": 3.31
+    "fcf_trend": 1.33,
+    "sales_trend": 3.36
    },
-   "growth_score": 2.31,
+   "growth_score": 2.34,
    "industry": "Services-Advertising",
    "market_cap": 92433351.0,
    "name": "Thryv Holdings, Inc.",
@@ -5039,10 +4528,10 @@
     "sales_trend": 16.3
    },
    "growth_ranks": {
-    "fcf_trend": 73.79,
-    "sales_trend": 83.54
+    "fcf_trend": 74.31,
+    "sales_trend": 84.2
    },
-   "growth_score": 78.67,
+   "growth_score": 79.25,
    "industry": "Glass Products, Made of  Purchased Glass",
    "market_cap": 834105711.0,
    "name": "APOGEE ENTERPRISES, INC.",
@@ -5078,10 +4567,10 @@
     "sales_trend": 0.72
    },
    "growth_ranks": {
-    "fcf_trend": 58.49,
-    "sales_trend": 17.26
+    "fcf_trend": 58.86,
+    "sales_trend": 17.35
    },
-   "growth_score": 37.88,
+   "growth_score": 38.11,
    "industry": "Motor Vehicles & Passenger Car Bodies",
    "market_cap": 77005147238.0,
    "name": "General Motors Co",
@@ -5117,8 +4606,8 @@
     "sales_trend": -9.42
    },
    "growth_ranks": {
-    "fcf_trend": 4.94,
-    "sales_trend": 0.89
+    "fcf_trend": 4.93,
+    "sales_trend": 0.91
    },
    "growth_score": 2.92,
    "industry": "Retail-Computer & Computer Software Stores",
@@ -5156,10 +4645,10 @@
     "sales_trend": 3.48
    },
    "growth_ranks": {
-    "fcf_trend": 15.21,
-    "sales_trend": 33.68
+    "fcf_trend": 15.17,
+    "sales_trend": 33.83
    },
-   "growth_score": 24.45,
+   "growth_score": 24.5,
    "industry": "Electric Housewares & Fans",
    "market_cap": 661494532.0,
    "name": "HELEN OF TROY LTD",
@@ -5194,10 +4683,10 @@
     "sales_trend": 15.69
    },
    "growth_ranks": {
-    "fcf_trend": 79.85,
-    "sales_trend": 82.38
+    "fcf_trend": 80.47,
+    "sales_trend": 83.02
    },
-   "growth_score": 81.11,
+   "growth_score": 81.75,
    "industry": "Services-Prepackaged Software",
    "market_cap": 105937725000.0,
    "name": "ADOBE INC.",
@@ -5233,10 +4722,10 @@
     "sales_trend": -1.43
    },
    "growth_ranks": {
-    "fcf_trend": 10.35,
-    "sales_trend": 9.48
+    "fcf_trend": 10.24,
+    "sales_trend": 9.45
    },
-   "growth_score": 9.91,
+   "growth_score": 9.84,
    "industry": "Dolls & Stuffed Toys",
    "market_cap": 4151221000.0,
    "name": "MATTEL INC /DE/",
@@ -5272,10 +4761,10 @@
     "sales_trend": 7.52
    },
    "growth_ranks": {
-    "fcf_trend": 35.54,
-    "sales_trend": 57.6
+    "fcf_trend": 35.64,
+    "sales_trend": 58.04
    },
-   "growth_score": 46.57,
+   "growth_score": 46.84,
    "industry": "Services-Educational Services",
    "market_cap": 1811914739.0,
    "name": "Strategic Education, Inc.",
@@ -5311,10 +4800,10 @@
     "sales_trend": 13.87
    },
    "growth_ranks": {
-    "fcf_trend": 74.21,
-    "sales_trend": 78.71
+    "fcf_trend": 74.74,
+    "sales_trend": 79.29
    },
-   "growth_score": 76.46,
+   "growth_score": 77.02,
    "industry": "Services-Prepackaged Software",
    "market_cap": 91005759900.0,
    "name": "INTUIT INC.",
@@ -5350,10 +4839,10 @@
     "sales_trend": 7.22
    },
    "growth_ranks": {
-    "fcf_trend": 56.25,
-    "sales_trend": 55.72
+    "fcf_trend": 56.59,
+    "sales_trend": 56.22
    },
-   "growth_score": 55.98,
+   "growth_score": 56.41,
    "industry": "Services-Business Services, NEC",
    "market_cap": 124637506411.0,
    "name": "Accenture plc",
@@ -5389,10 +4878,10 @@
     "sales_trend": 49.14
    },
    "growth_ranks": {
-    "fcf_trend": 78.36,
-    "sales_trend": 98.3
+    "fcf_trend": 78.96,
+    "sales_trend": 98.27
    },
-   "growth_score": 88.33,
+   "growth_score": 88.61,
    "industry": "Pharmaceutical Preparations",
    "market_cap": 1635404330.0,
    "name": "ANI PHARMACEUTICALS INC",
@@ -5427,10 +4916,10 @@
     "sales_trend": 1.89
    },
    "growth_ranks": {
-    "fcf_trend": 90.3,
-    "sales_trend": 23.08
+    "fcf_trend": 90.81,
+    "sales_trend": 23.16
    },
-   "growth_score": 56.69,
+   "growth_score": 56.98,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 4815814598.0,
    "name": "California Resources Corp",
@@ -5465,10 +4954,10 @@
     "sales_trend": 11.3
    },
    "growth_ranks": {
-    "fcf_trend": 98.41,
-    "sales_trend": 73.08
+    "fcf_trend": 98.48,
+    "sales_trend": 73.66
    },
-   "growth_score": 85.75,
+   "growth_score": 86.07,
    "industry": "Services-Computer Processing & Data Preparation",
    "market_cap": 644351363.0,
    "name": "Yext, Inc.",
@@ -5503,10 +4992,10 @@
     "sales_trend": 12.17
    },
    "growth_ranks": {
-    "fcf_trend": 72.67,
-    "sales_trend": 75.31
+    "fcf_trend": 73.18,
+    "sales_trend": 75.84
    },
-   "growth_score": 73.99,
+   "growth_score": 74.51,
    "industry": "Services-Management Services",
    "market_cap": 11772232106.0,
    "name": "GARTNER INC",
@@ -5542,10 +5031,10 @@
     "sales_trend": 9.4
    },
    "growth_ranks": {
-    "fcf_trend": 64.93,
-    "sales_trend": 66.73
+    "fcf_trend": 65.31,
+    "sales_trend": 67.3
    },
-   "growth_score": 65.83,
+   "growth_score": 66.31,
    "industry": "Transportation Services",
    "market_cap": 34124355354.0,
    "name": "Expedia Group, Inc.",
@@ -5580,10 +5069,10 @@
     "sales_trend": 20.62
    },
    "growth_ranks": {
-    "fcf_trend": 99.16,
-    "sales_trend": 89.18
+    "fcf_trend": 99.15,
+    "sales_trend": 89.74
    },
-   "growth_score": 94.17,
+   "growth_score": 94.44,
    "industry": "Services-Prepackaged Software",
    "market_cap": 1071211270.0,
    "name": "PagerDuty, Inc.",
@@ -5617,10 +5106,10 @@
     "sales_trend": 13.49
    },
    "growth_ranks": {
-    "fcf_trend": 80.78,
-    "sales_trend": 77.59
+    "fcf_trend": 81.42,
+    "sales_trend": 78.16
    },
-   "growth_score": 79.19,
+   "growth_score": 79.79,
    "industry": "Sporting & Athletic Goods, NEC",
    "market_cap": 2838317284.0,
    "name": "Callaway Golf Co",
@@ -5656,10 +5145,10 @@
     "sales_trend": 13.56
    },
    "growth_ranks": {
-    "fcf_trend": 61.57,
-    "sales_trend": 77.77
+    "fcf_trend": 61.99,
+    "sales_trend": 78.34
    },
-   "growth_score": 69.67,
+   "growth_score": 70.17,
    "industry": "Services-Business Services, NEC",
    "market_cap": 3018948615.0,
    "name": "MAXIMUS, INC.",
@@ -5696,9 +5185,9 @@
    },
    "growth_ranks": {
     "fcf_trend": 28.96,
-    "sales_trend": 16.59
+    "sales_trend": 16.67
    },
-   "growth_score": 22.77,
+   "growth_score": 22.82,
    "industry": "Fats & Oils",
    "market_cap": 40778600318.0,
    "name": "Archer-Daniels-Midland Co",
@@ -5733,10 +5222,10 @@
     "sales_trend": 32.87
    },
    "growth_ranks": {
-    "fcf_trend": 87.69,
-    "sales_trend": 96.15
+    "fcf_trend": 88.25,
+    "sales_trend": 96.28
    },
-   "growth_score": 91.92,
+   "growth_score": 92.27,
    "industry": "Services-Home Health Care Services",
    "market_cap": 884873832.0,
    "name": "AdaptHealth Corp.",
@@ -5771,10 +5260,10 @@
     "sales_trend": -4.04
    },
    "growth_ranks": {
-    "fcf_trend": 36.94,
-    "sales_trend": 4.74
+    "fcf_trend": 37.06,
+    "sales_trend": 4.81
    },
-   "growth_score": 20.84,
+   "growth_score": 20.94,
    "industry": "Services-Computer Processing & Data Preparation",
    "market_cap": 2295010571.0,
    "name": "LiveRamp Holdings, Inc.",
@@ -5810,10 +5299,10 @@
     "sales_trend": 8.57
    },
    "growth_ranks": {
-    "fcf_trend": 84.61,
-    "sales_trend": 63.28
+    "fcf_trend": 85.21,
+    "sales_trend": 63.81
    },
-   "growth_score": 73.94,
+   "growth_score": 74.51,
    "industry": "Motor Vehicle Parts & Accessories",
    "market_cap": 2494360618.0,
    "name": "LCI INDUSTRIES",
@@ -5849,10 +5338,10 @@
     "sales_trend": 16.27
    },
    "growth_ranks": {
-    "fcf_trend": 89.46,
-    "sales_trend": 83.45
+    "fcf_trend": 89.95,
+    "sales_trend": 84.11
    },
-   "growth_score": 86.45,
+   "growth_score": 87.03,
    "industry": "Transportation Services",
    "market_cap": 618570012.0,
    "name": "VERRA MOBILITY Corp",
@@ -5888,10 +5377,10 @@
     "sales_trend": 10.74
    },
    "growth_ranks": {
-    "fcf_trend": 80.5,
-    "sales_trend": 71.06
+    "fcf_trend": 81.14,
+    "sales_trend": 71.62
    },
-   "growth_score": 75.78,
+   "growth_score": 76.38,
    "industry": "Miscellaneous Electrical Machinery, Equipment & Supplies",
    "market_cap": 3166514288.0,
    "name": "Atkore Inc.",
@@ -5927,10 +5416,10 @@
     "sales_trend": 15.26
    },
    "growth_ranks": {
-    "fcf_trend": 85.45,
-    "sales_trend": 81.48
+    "fcf_trend": 85.97,
+    "sales_trend": 82.11
    },
-   "growth_score": 83.47,
+   "growth_score": 84.04,
    "industry": "Water, Sewer, Pipeline, Comm & Power Line Construction",
    "market_cap": 4006740099.0,
    "name": "Primoris Services Corp",
@@ -5966,10 +5455,10 @@
     "sales_trend": 3.58
    },
    "growth_ranks": {
-    "fcf_trend": 61.43,
-    "sales_trend": 33.94
+    "fcf_trend": 61.85,
+    "sales_trend": 34.11
    },
-   "growth_score": 47.69,
+   "growth_score": 47.98,
    "industry": "Apparel & Other Finishd Prods of  Fabrics & Similar Matl",
    "market_cap": 2954871158.0,
    "name": "COLUMBIA SPORTSWEAR CO",
@@ -6005,10 +5494,10 @@
     "sales_trend": 2.02
    },
    "growth_ranks": {
-    "fcf_trend": 7.37,
-    "sales_trend": 23.79
+    "fcf_trend": 7.39,
+    "sales_trend": 23.89
    },
-   "growth_score": 15.58,
+   "growth_score": 15.64,
    "industry": "Wholesale-Drugs, Proprietaries & Druggists' Sundries",
    "market_cap": 1297465844.0,
    "name": "HERBALIFE LTD.",
@@ -6044,10 +5533,10 @@
     "sales_trend": 10.42
    },
    "growth_ranks": {
-    "fcf_trend": 74.44,
-    "sales_trend": 69.77
+    "fcf_trend": 74.98,
+    "sales_trend": 70.39
    },
-   "growth_score": 72.1,
+   "growth_score": 72.69,
    "industry": "Wholesale-Motor Vehicles & Motor Vehicle Parts & Supplies",
    "market_cap": 6461673276.0,
    "name": "LKQ CORP",
@@ -6083,10 +5572,10 @@
     "sales_trend": 4.1
    },
    "growth_ranks": {
-    "fcf_trend": 18.0,
-    "sales_trend": 37.75
+    "fcf_trend": 17.91,
+    "sales_trend": 37.97
    },
-   "growth_score": 27.88,
+   "growth_score": 27.94,
    "industry": "Men's & Boys' Furnishgs, Work Clothg, & Allied Garments",
    "market_cap": 4021959896.0,
    "name": "Kontoor Brands, Inc.",
@@ -6122,10 +5611,10 @@
     "sales_trend": 4.13
    },
    "growth_ranks": {
-    "fcf_trend": 34.79,
-    "sales_trend": 38.19
+    "fcf_trend": 34.88,
+    "sales_trend": 38.42
    },
-   "growth_score": 36.49,
+   "growth_score": 36.65,
    "industry": "Services-Educational Services",
    "market_cap": 4360032454.0,
    "name": "Covista Inc.",
@@ -6133,7 +5622,7 @@
    "op_margin_now": 19.6,
    "pfcf": 11.1,
    "pfcf_med": 12.4,
-   "reason": "made the yield cut but not the growth cut",
+   "reason": "",
    "rev_cagr5": 6.72,
    "revenue": 1954085000.0,
    "roic_med": 10.4,
@@ -6161,10 +5650,10 @@
     "sales_trend": 3.73
    },
    "growth_ranks": {
-    "fcf_trend": 18.75,
-    "sales_trend": 34.97
+    "fcf_trend": 18.67,
+    "sales_trend": 35.15
    },
-   "growth_score": 26.86,
+   "growth_score": 26.91,
    "industry": "Services-Engineering, Accounting, Research, Management",
    "market_cap": 240843350.0,
    "name": "FORRESTER RESEARCH, INC.",
@@ -6199,10 +5688,10 @@
     "sales_trend": 24.43
    },
    "growth_ranks": {
-    "fcf_trend": 97.95,
-    "sales_trend": 91.95
+    "fcf_trend": 98.01,
+    "sales_trend": 92.28
    },
-   "growth_score": 94.95,
+   "growth_score": 95.15,
    "industry": "Services-Prepackaged Software",
    "market_cap": 13062520633.0,
    "name": "DOCUSIGN, INC.",
@@ -6237,8 +5726,8 @@
     "sales_trend": 0.42
    },
    "growth_ranks": {
-    "fcf_trend": 20.57,
-    "sales_trend": 15.97
+    "fcf_trend": 20.52,
+    "sales_trend": 16.03
    },
    "growth_score": 18.27,
    "industry": "Instruments For Meas & Testing of  Electricity & Elec Signals",
@@ -6275,10 +5764,10 @@
     "sales_trend": 0.66
    },
    "growth_ranks": {
-    "fcf_trend": 25.28,
-    "sales_trend": 16.99
+    "fcf_trend": 25.21,
+    "sales_trend": 17.08
    },
-   "growth_score": 21.13,
+   "growth_score": 21.14,
    "industry": "Services-Detective, Guard & Armored Car Services",
    "market_cap": 5449971990.0,
    "name": "ADT Inc.",
@@ -6313,10 +5802,10 @@
     "sales_trend": 12.84
    },
    "growth_ranks": {
-    "fcf_trend": 96.92,
-    "sales_trend": 76.65
+    "fcf_trend": 97.16,
+    "sales_trend": 77.2
    },
-   "growth_score": 86.78,
+   "growth_score": 87.18,
    "industry": "Pharmaceutical Preparations",
    "market_cap": 986029542.0,
    "name": "Amphastar Pharmaceuticals, Inc.",
@@ -6352,10 +5841,10 @@
     "sales_trend": -2.27
    },
    "growth_ranks": {
-    "fcf_trend": 41.14,
-    "sales_trend": 7.78
+    "fcf_trend": 41.33,
+    "sales_trend": 7.81
    },
-   "growth_score": 24.46,
+   "growth_score": 24.57,
    "industry": "Wood Household Furniture, (No Upholstered)",
    "market_cap": 572288164.0,
    "name": "ETHAN ALLEN INTERIORS INC",
@@ -6391,10 +5880,10 @@
     "sales_trend": 5.56
    },
    "growth_ranks": {
-    "fcf_trend": 27.99,
-    "sales_trend": 46.42
+    "fcf_trend": 27.96,
+    "sales_trend": 46.78
    },
-   "growth_score": 37.2,
+   "growth_score": 37.37,
    "industry": "Services-Prepackaged Software",
    "market_cap": 13992891890.0,
    "name": "CHECK POINT SOFTWARE TECHNOLOGIES LTD",
@@ -6430,10 +5919,10 @@
     "sales_trend": 10.47
    },
    "growth_ranks": {
-    "fcf_trend": 76.77,
-    "sales_trend": 70.13
+    "fcf_trend": 77.35,
+    "sales_trend": 70.75
    },
-   "growth_score": 73.45,
+   "growth_score": 74.05,
    "industry": "Services-Computer Processing & Data Preparation",
    "market_cap": 6142168745.0,
    "name": "PEGASYSTEMS INC",
@@ -6469,10 +5958,10 @@
     "sales_trend": 10.07
    },
    "growth_ranks": {
-    "fcf_trend": 83.86,
-    "sales_trend": 68.87
+    "fcf_trend": 84.45,
+    "sales_trend": 69.48
    },
-   "growth_score": 76.37,
+   "growth_score": 76.97,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 5122483661.0,
    "name": "Hess Midstream LP",
@@ -6507,10 +5996,10 @@
     "sales_trend": 10.28
    },
    "growth_ranks": {
-    "fcf_trend": 74.81,
-    "sales_trend": 69.32
+    "fcf_trend": 75.36,
+    "sales_trend": 69.94
    },
-   "growth_score": 72.06,
+   "growth_score": 72.65,
    "industry": "Services-Employment Agencies",
    "market_cap": 4649420851.0,
    "name": "KORN FERRY",
@@ -6546,10 +6035,10 @@
     "sales_trend": 3.11
    },
    "growth_ranks": {
-    "fcf_trend": 86.38,
-    "sales_trend": 30.99
+    "fcf_trend": 86.92,
+    "sales_trend": 31.2
    },
-   "growth_score": 58.68,
+   "growth_score": 59.06,
    "industry": "Truck & Bus Bodies",
    "market_cap": 2015546362.0,
    "name": "Blue Bird Corp",
@@ -6585,10 +6074,10 @@
     "sales_trend": 1.88
    },
    "growth_ranks": {
-    "fcf_trend": 54.85,
-    "sales_trend": 22.94
+    "fcf_trend": 55.17,
+    "sales_trend": 23.02
    },
-   "growth_score": 38.9,
+   "growth_score": 39.09,
    "industry": "Services-Computer Programming, Data Processing, Etc.",
    "market_cap": 9609004232.0,
    "name": "Match Group, Inc.",
@@ -6624,10 +6113,10 @@
     "sales_trend": 8.97
    },
    "growth_ranks": {
-    "fcf_trend": 63.06,
-    "sales_trend": 64.71
+    "fcf_trend": 63.41,
+    "sales_trend": 65.26
    },
-   "growth_score": 63.88,
+   "growth_score": 64.34,
    "industry": "Retail-Eating  Places",
    "market_cap": 224366075.0,
    "name": "RCI HOSPITALITY HOLDINGS, INC.",
@@ -6663,10 +6152,10 @@
     "sales_trend": 1.59
    },
    "growth_ranks": {
-    "fcf_trend": 33.58,
-    "sales_trend": 21.11
+    "fcf_trend": 33.65,
+    "sales_trend": 21.16
    },
-   "growth_score": 27.34,
+   "growth_score": 27.41,
    "industry": "Malt Beverages",
    "market_cap": 7551384287.0,
    "name": "MOLSON COORS BEVERAGE CO",
@@ -6701,10 +6190,10 @@
     "sales_trend": 0.94
    },
    "growth_ranks": {
-    "fcf_trend": 27.05,
-    "sales_trend": 18.69
+    "fcf_trend": 27.01,
+    "sales_trend": 18.8
    },
-   "growth_score": 22.87,
+   "growth_score": 22.91,
    "industry": "Farm Machinery & Equipment",
    "market_cap": 1254738720.0,
    "name": "LINDSAY CORP",
@@ -6740,10 +6229,10 @@
     "sales_trend": 7.53
    },
    "growth_ranks": {
-    "fcf_trend": 61.43,
-    "sales_trend": 57.74
+    "fcf_trend": 61.85,
+    "sales_trend": 58.17
    },
-   "growth_score": 59.59,
+   "growth_score": 60.01,
    "industry": "Deep Sea Foreign Transportation of  Freight",
    "market_cap": 559800751.0,
    "name": "Pangaea Logistics Solutions Ltd.",
@@ -6779,10 +6268,10 @@
     "sales_trend": 6.29
    },
    "growth_ranks": {
-    "fcf_trend": 63.71,
-    "sales_trend": 49.91
+    "fcf_trend": 64.08,
+    "sales_trend": 50.32
    },
-   "growth_score": 56.81,
+   "growth_score": 57.2,
    "industry": "Services-Computer Integrated Systems Design",
    "market_cap": 16696738407.0,
    "name": "Leidos Holdings, Inc.",
@@ -6818,10 +6307,10 @@
     "sales_trend": 27.53
    },
    "growth_ranks": {
-    "fcf_trend": 99.63,
-    "sales_trend": 93.56
+    "fcf_trend": 99.62,
+    "sales_trend": 93.82
    },
-   "growth_score": 96.59,
+   "growth_score": 96.72,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 7320061876.0,
    "name": "Matador Resources Co",
@@ -6857,10 +6346,10 @@
     "sales_trend": 10.56
    },
    "growth_ranks": {
-    "fcf_trend": 62.17,
-    "sales_trend": 70.39
+    "fcf_trend": 62.51,
+    "sales_trend": 71.03
    },
-   "growth_score": 66.28,
+   "growth_score": 66.77,
    "industry": "Refrigeration & Service Industry Machinery",
    "market_cap": 5053597501.0,
    "name": "MIDDLEBY Corp",
@@ -6896,10 +6385,10 @@
     "sales_trend": 8.67
    },
    "growth_ranks": {
-    "fcf_trend": 41.37,
-    "sales_trend": 63.6
+    "fcf_trend": 41.56,
+    "sales_trend": 64.12
    },
-   "growth_score": 52.48,
+   "growth_score": 52.84,
    "industry": "Services-Management Consulting Services",
    "market_cap": 8756746034.0,
    "name": "Booz Allen Hamilton Holding Corp",
@@ -6935,10 +6424,10 @@
     "sales_trend": -6.12
    },
    "growth_ranks": {
-    "fcf_trend": 6.81,
-    "sales_trend": 2.68
+    "fcf_trend": 6.82,
+    "sales_trend": 2.72
    },
-   "growth_score": 4.75,
+   "growth_score": 4.77,
    "industry": "Computer & office Equipment",
    "market_cap": 29434457228.0,
    "name": "HP INC",
@@ -6974,10 +6463,10 @@
     "sales_trend": 2.76
    },
    "growth_ranks": {
-    "fcf_trend": 81.25,
-    "sales_trend": 28.76
+    "fcf_trend": 81.9,
+    "sales_trend": 28.93
    },
-   "growth_score": 55.01,
+   "growth_score": 55.42,
    "industry": "Pipe Lines (No Natural Gas)",
    "market_cap": 18133058022.0,
    "name": "PLAINS ALL AMERICAN PIPELINE LP",
@@ -7012,10 +6501,10 @@
     "sales_trend": 18.58
    },
    "growth_ranks": {
-    "fcf_trend": 72.95,
-    "sales_trend": 86.4
+    "fcf_trend": 73.46,
+    "sales_trend": 87.01
    },
-   "growth_score": 79.68,
+   "growth_score": 80.23,
    "industry": "Services-Business Services, NEC",
    "market_cap": 25836805259.0,
    "name": "Trip.com Group Ltd",
@@ -7051,10 +6540,10 @@
     "sales_trend": 8.43
    },
    "growth_ranks": {
-    "fcf_trend": 57.74,
-    "sales_trend": 62.16
+    "fcf_trend": 58.1,
+    "sales_trend": 62.67
    },
-   "growth_score": 59.95,
+   "growth_score": 60.39,
    "industry": "Services-Computer Processing & Data Preparation",
    "market_cap": 1813489650.0,
    "name": "EVERTEC, Inc.",
@@ -7090,10 +6579,10 @@
     "sales_trend": -0.18
    },
    "growth_ranks": {
-    "fcf_trend": 26.59,
-    "sales_trend": 13.15
+    "fcf_trend": 26.54,
+    "sales_trend": 13.17
    },
-   "growth_score": 19.87,
+   "growth_score": 19.86,
    "industry": "Services-Automotive Repair, Services & Parking",
    "market_cap": 415499357.0,
    "name": "MONRO, INC.",
@@ -7129,10 +6618,10 @@
     "sales_trend": -4.73
    },
    "growth_ranks": {
-    "fcf_trend": 3.54,
-    "sales_trend": 4.03
+    "fcf_trend": 3.6,
+    "sales_trend": 4.09
    },
-   "growth_score": 3.79,
+   "growth_score": 3.84,
    "industry": "Office Machines, NEC",
    "market_cap": 2385369689.0,
    "name": "PITNEY BOWES INC /DE/",
@@ -7168,10 +6657,10 @@
     "sales_trend": 4.88
    },
    "growth_ranks": {
-    "fcf_trend": 60.77,
-    "sales_trend": 42.98
+    "fcf_trend": 61.18,
+    "sales_trend": 43.28
    },
-   "growth_score": 51.88,
+   "growth_score": 52.23,
    "industry": "Wholesale-Groceries, General Line",
    "market_cap": 2658605820.0,
    "name": "UNITED NATURAL FOODS INC",
@@ -7207,10 +6696,10 @@
     "sales_trend": -2.97
    },
    "growth_ranks": {
-    "fcf_trend": 58.07,
-    "sales_trend": 5.99
+    "fcf_trend": 58.44,
+    "sales_trend": 6.09
    },
-   "growth_score": 32.03,
+   "growth_score": 32.27,
    "industry": "Services-Miscellaneous Business Services",
    "market_cap": 1251887702.0,
    "name": "Donnelley Financial Solutions, Inc.",
@@ -7246,9 +6735,9 @@
    },
    "growth_ranks": {
     "fcf_trend": 0.47,
-    "sales_trend": 38.55
+    "sales_trend": 38.78
    },
-   "growth_score": 19.51,
+   "growth_score": 19.62,
    "industry": "Services-Educational Services",
    "market_cap": 524572052.0,
    "name": "Gaotu Techedu Inc.",
@@ -7283,10 +6772,10 @@
     "sales_trend": 2.17
    },
    "growth_ranks": {
-    "fcf_trend": 24.21,
-    "sales_trend": 24.87
+    "fcf_trend": 24.12,
+    "sales_trend": 24.98
    },
-   "growth_score": 24.54,
+   "growth_score": 24.55,
    "industry": "Chemicals & Allied Products",
    "market_cap": 2425018618.0,
    "name": "Ingevity Corp",
@@ -7322,10 +6811,10 @@
     "sales_trend": 7.16
    },
    "growth_ranks": {
-    "fcf_trend": 51.17,
-    "sales_trend": 55.5
+    "fcf_trend": 51.42,
+    "sales_trend": 55.99
    },
-   "growth_score": 53.34,
+   "growth_score": 53.7,
    "industry": "Retail-Auto Dealers & Gasoline Stations",
    "market_cap": 5947411689.0,
    "name": "RUSH ENTERPRISES INC \\TX\\",
@@ -7361,10 +6850,10 @@
     "sales_trend": 0.21
    },
    "growth_ranks": {
-    "fcf_trend": 53.73,
-    "sales_trend": 14.94
+    "fcf_trend": 54.03,
+    "sales_trend": 14.99
    },
-   "growth_score": 34.34,
+   "growth_score": 34.51,
    "industry": "Heavy Construction Other Than Bldg Const - Contractors",
    "market_cap": 4641814739.0,
    "name": "KBR, INC.",
@@ -7400,10 +6889,10 @@
     "sales_trend": 11.57
    },
    "growth_ranks": {
-    "fcf_trend": 66.14,
-    "sales_trend": 73.75
+    "fcf_trend": 66.54,
+    "sales_trend": 74.34
    },
-   "growth_score": 69.94,
+   "growth_score": 70.44,
    "industry": "Operative Builders",
    "market_cap": 23328468603.0,
    "name": "PULTEGROUP INC/MI/",
@@ -7436,10 +6925,10 @@
     "sales_trend": 14.56
    },
    "growth_ranks": {
-    "fcf_trend": 74.35,
-    "sales_trend": 79.87
+    "fcf_trend": 74.88,
+    "sales_trend": 80.47
    },
-   "growth_score": 77.11,
+   "growth_score": 77.67,
    "industry": "Services-Business Services, NEC",
    "market_cap": 28183636213.0,
    "name": "FISERV INC",
@@ -7474,10 +6963,10 @@
     "sales_trend": 0.8
    },
    "growth_ranks": {
-    "fcf_trend": 20.71,
-    "sales_trend": 17.84
+    "fcf_trend": 20.66,
+    "sales_trend": 17.94
    },
-   "growth_score": 19.27,
+   "growth_score": 19.3,
    "industry": "Radio & Tv Broadcasting & Communications Equipment",
    "market_cap": 1284802722.0,
    "name": "HARMONIC INC.",
@@ -7513,10 +7002,10 @@
     "sales_trend": 6.41
    },
    "growth_ranks": {
-    "fcf_trend": 47.2,
-    "sales_trend": 50.98
+    "fcf_trend": 47.49,
+    "sales_trend": 51.41
    },
-   "growth_score": 49.09,
+   "growth_score": 49.45,
    "industry": "Motor Vehicle Parts & Accessories",
    "market_cap": 13755625549.0,
    "name": "BORGWARNER INC",
@@ -7552,10 +7041,10 @@
     "sales_trend": -0.15
    },
    "growth_ranks": {
-    "fcf_trend": 19.31,
-    "sales_trend": 13.33
+    "fcf_trend": 19.24,
+    "sales_trend": 13.35
    },
-   "growth_score": 16.32,
+   "growth_score": 16.29,
    "industry": "Canned, Frozen & Preservd Fruit, Veg & Food Specialties",
    "market_cap": 29467720386.0,
    "name": "Kraft Heinz Co",
@@ -7590,10 +7079,10 @@
     "sales_trend": 6.49
    },
    "growth_ranks": {
-    "fcf_trend": 55.69,
-    "sales_trend": 51.65
+    "fcf_trend": 56.02,
+    "sales_trend": 52.09
    },
-   "growth_score": 53.67,
+   "growth_score": 54.06,
    "industry": "Services-Computer Integrated Systems Design",
    "market_cap": 5310525236.0,
    "name": "Science Applications International Corp",
@@ -7629,10 +7118,10 @@
     "sales_trend": 0.82
    },
    "growth_ranks": {
-    "fcf_trend": 82.37,
-    "sales_trend": 18.07
+    "fcf_trend": 82.94,
+    "sales_trend": 18.17
    },
-   "growth_score": 50.22,
+   "growth_score": 50.55,
    "industry": "Services-General Medical & Surgical Hospitals, NEC",
    "market_cap": 21341560950.0,
    "name": "TENET HEALTHCARE CORP",
@@ -7668,10 +7157,10 @@
     "sales_trend": 8.31
    },
    "growth_ranks": {
-    "fcf_trend": 87.45,
-    "sales_trend": 61.4
+    "fcf_trend": 88.01,
+    "sales_trend": 61.9
    },
-   "growth_score": 74.42,
+   "growth_score": 74.95,
    "industry": "Operative Builders",
    "market_cap": 13059994310.0,
    "name": "Toll Brothers, Inc.",
@@ -7707,10 +7196,10 @@
     "sales_trend": -0.56
    },
    "growth_ranks": {
-    "fcf_trend": 10.73,
+    "fcf_trend": 10.62,
     "sales_trend": 11.81
    },
-   "growth_score": 11.27,
+   "growth_score": 11.21,
    "industry": "Retail-Retail Stores, NEC",
    "market_cap": 1563492276.0,
    "name": "Sally Beauty Holdings, Inc.",
@@ -7746,10 +7235,10 @@
     "sales_trend": 26.47
    },
    "growth_ranks": {
-    "fcf_trend": 97.67,
-    "sales_trend": 93.02
+    "fcf_trend": 97.73,
+    "sales_trend": 93.28
    },
-   "growth_score": 95.34,
+   "growth_score": 95.5,
    "industry": "Retail-Lumber & Other Building Materials Dealers",
    "market_cap": 7078770906.0,
    "name": "Builders FirstSource, Inc.",
@@ -7785,10 +7274,10 @@
     "sales_trend": 1.66
    },
    "growth_ranks": {
-    "fcf_trend": 37.22,
-    "sales_trend": 21.42
+    "fcf_trend": 37.35,
+    "sales_trend": 21.48
    },
-   "growth_score": 29.32,
+   "growth_score": 29.41,
    "industry": "Miscellaneous Chemical Products",
    "market_cap": 4206894450.0,
    "name": "CABOT CORP",
@@ -7824,10 +7313,10 @@
     "sales_trend": 11.7
    },
    "growth_ranks": {
-    "fcf_trend": 47.67,
-    "sales_trend": 74.33
+    "fcf_trend": 47.96,
+    "sales_trend": 74.93
    },
-   "growth_score": 61.0,
+   "growth_score": 61.45,
    "industry": "Services-Computer Integrated Systems Design",
    "market_cap": 6001936509.0,
    "name": "OPEN TEXT CORP",
@@ -7863,10 +7352,10 @@
     "sales_trend": 16.15
    },
    "growth_ranks": {
-    "fcf_trend": 99.07,
-    "sales_trend": 83.18
+    "fcf_trend": 99.05,
+    "sales_trend": 83.83
    },
-   "growth_score": 91.12,
+   "growth_score": 91.44,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 8007221482.0,
    "name": "Chord Energy Corp",
@@ -7902,10 +7391,10 @@
     "sales_trend": 13.33
    },
    "growth_ranks": {
-    "fcf_trend": 45.43,
-    "sales_trend": 77.28
+    "fcf_trend": 45.69,
+    "sales_trend": 77.84
    },
-   "growth_score": 61.36,
+   "growth_score": 61.77,
    "industry": "Construction - Special Trade Contractors",
    "market_cap": 5864333658.0,
    "name": "ARGAN INC",
@@ -7941,10 +7430,10 @@
     "sales_trend": 30.6
    },
    "growth_ranks": {
-    "fcf_trend": 96.36,
-    "sales_trend": 95.62
+    "fcf_trend": 96.68,
+    "sales_trend": 95.73
    },
-   "growth_score": 95.99,
+   "growth_score": 96.21,
    "industry": "Services-Business Services, NEC",
    "market_cap": 7022221539.0,
    "name": "ETSY INC",
@@ -7960,6 +7449,395 @@
    "ticker": "ETSY",
    "total_debt": 2982238000.0,
    "years": 11
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2025-12-31",
+   "capex_ocf": 8.1,
+   "cash": 10209000000.0,
+   "country": "NJ",
+   "cyclical": true,
+   "debt_inferred_zero": false,
+   "ev": 173406193314.0,
+   "exchange": "NYSE",
+   "fcf": 12845000000.0,
+   "fcf_conv": 317.8,
+   "fcf_yield": 7.41,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 14.49,
+    "sales_trend": 9.73
+   },
+   "growth_ranks": {
+    "fcf_trend": 69.1,
+    "sales_trend": 68.62
+   },
+   "growth_score": 68.86,
+   "industry": "Pharmaceutical Preparations",
+   "market_cap": 136494193314.0,
+   "name": "BRISTOL MYERS SQUIBB CO",
+   "nd_ebit": 3.11,
+   "op_margin_now": 23.3,
+   "pfcf": 10.6,
+   "pfcf_med": 10.1,
+   "reason": "",
+   "rev_cagr5": 10.73,
+   "revenue": 48194000000.0,
+   "roic_med": 12.0,
+   "size_band": "large",
+   "ticker": "BMY",
+   "total_debt": 47088000000.0,
+   "years": 17
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2025-12-31",
+   "capex_ocf": 20.2,
+   "cash": 1982000000.0,
+   "country": "IL",
+   "cyclical": true,
+   "debt_inferred_zero": false,
+   "ev": 24350939636.0,
+   "exchange": "NYSE",
+   "fcf": 1802000000.0,
+   "fcf_conv": 86.6,
+   "fcf_yield": 7.4,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 3.56,
+    "sales_trend": 2.06
+   },
+   "growth_ranks": {
+    "fcf_trend": 30.81,
+    "sales_trend": 24.11
+   },
+   "growth_score": 27.46,
+   "industry": "Agricultural Chemicals",
+   "market_cap": 20180939636.0,
+   "name": "CF Industries Holdings, Inc.",
+   "nd_ebit": 0.54,
+   "op_margin_now": 32.5,
+   "pfcf": 11.2,
+   "pfcf_med": 7.5,
+   "reason": "made the yield cut but not the growth cut",
+   "rev_cagr5": 7.5,
+   "revenue": 7084000000.0,
+   "roic_med": 26.6,
+   "size_band": "large",
+   "ticker": "CF",
+   "total_debt": 3215000000.0,
+   "years": 14
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2025-12-31",
+   "capex_ocf": 13.6,
+   "cash": 578761000.0,
+   "country": "TX",
+   "cyclical": false,
+   "debt_inferred_zero": false,
+   "ev": 4777205334.0,
+   "exchange": "NYSE",
+   "fcf": 353347000.0,
+   "fcf_yield": 7.4,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 29.8,
+    "sales_trend": -2.56
+   },
+   "growth_ranks": {
+    "fcf_trend": 90.24,
+    "sales_trend": 6.99
+   },
+   "growth_score": 48.61,
+   "industry": "Water Transportation",
+   "market_cap": 4690022334.0,
+   "name": "TIDEWATER INC",
+   "nd_ebit": 0.27,
+   "op_margin_now": 20.9,
+   "pfcf": 13.3,
+   "pfcf_med": 41.1,
+   "reason": "",
+   "rev_cagr5": 18.58,
+   "revenue": 1352786000.0,
+   "roic_med": 2.4,
+   "size_band": "mid",
+   "ticker": "TDW",
+   "total_debt": 670078000.0,
+   "years": 15
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2026-01-03",
+   "capex_ocf": 22.6,
+   "cash": 188342000.0,
+   "country": "TX",
+   "cyclical": false,
+   "debt_inferred_zero": false,
+   "ev": 2864888653.0,
+   "exchange": "NYSE",
+   "fcf": 212070000.0,
+   "fcf_conv": 127.5,
+   "fcf_yield": 7.4,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 9.24,
+    "sales_trend": 13.96
+   },
+   "growth_ranks": {
+    "fcf_trend": 51.28,
+    "sales_trend": 79.56
+   },
+   "growth_score": 65.42,
+   "industry": "Sporting & Athletic Goods, NEC",
+   "market_cap": 2979402653.0,
+   "name": "YETI Holdings, Inc.",
+   "nd_ebit": -0.52,
+   "op_margin_now": 11.4,
+   "pfcf": 14.0,
+   "pfcf_med": 16.0,
+   "reason": "",
+   "rev_cagr5": 12.66,
+   "revenue": 1868494000.0,
+   "roic_med": 35.6,
+   "size_band": "mid",
+   "ticker": "YETI",
+   "total_debt": 73828000.0,
+   "years": 8
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2025-11-30",
+   "capex_ocf": 2.7,
+   "cash": 94807000.0,
+   "country": "MA",
+   "cyclical": true,
+   "debt_inferred_zero": false,
+   "ev": 3112162095.0,
+   "exchange": "Nasdaq",
+   "fcf": 229485000.0,
+   "fcf_conv": 255.4,
+   "fcf_yield": 7.37,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 6.66,
+    "sales_trend": 6.02
+   },
+   "growth_ranks": {
+    "fcf_trend": 41.8,
+    "sales_trend": 49.05
+   },
+   "growth_score": 45.42,
+   "industry": "Services-Prepackaged Software",
+   "market_cap": 1806620095.0,
+   "name": "PROGRESS SOFTWARE CORP /MA",
+   "nd_ebit": 8.52,
+   "op_margin_now": 15.7,
+   "pfcf": 7.9,
+   "pfcf_med": 12.6,
+   "reason": "",
+   "rev_cagr5": 15.43,
+   "revenue": 977831000.0,
+   "roic_med": 13.1,
+   "size_band": "small",
+   "ticker": "PRGS",
+   "total_debt": 1400349000.0,
+   "years": 16
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2026-06-30",
+   "capex_ocf": 14.9,
+   "cash": 4856000000.0,
+   "country": "OH",
+   "cyclical": true,
+   "debt_inferred_zero": false,
+   "ev": 61677068447.0,
+   "exchange": "NYSE",
+   "fcf": 4525000000.0,
+   "fcf_conv": 386.9,
+   "fcf_yield": 7.34,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 5.9,
+    "sales_trend": 7.35
+   },
+   "growth_ranks": {
+    "fcf_trend": 39.24,
+    "sales_trend": 56.86
+   },
+   "growth_score": 48.05,
+   "industry": "Wholesale-Drugs, Proprietaries & Druggists' Sundries",
+   "market_cap": 57488068447.0,
+   "name": "CARDINAL HEALTH INC",
+   "nd_ebit": -1.86,
+   "op_margin_now": 1.0,
+   "pfcf": 12.7,
+   "pfcf_med": 8.9,
+   "reason": "",
+   "rev_cagr5": 8.3,
+   "revenue": 254248000000.0,
+   "roic_med": 39.9,
+   "size_band": "large",
+   "ticker": "CAH",
+   "total_debt": 8886000000.0,
+   "years": 17
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2026-01-31",
+   "capex_ocf": 51.8,
+   "cash": 238923000.0,
+   "country": "PA",
+   "cyclical": true,
+   "debt_inferred_zero": false,
+   "ev": 2673458261.0,
+   "exchange": "NYSE",
+   "fcf": 195387000.0,
+   "fcf_conv": 104.5,
+   "fcf_yield": 7.31,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 1.08,
+    "sales_trend": 5.52
+   },
+   "growth_ranks": {
+    "fcf_trend": 21.0,
+    "sales_trend": 46.59
+   },
+   "growth_score": 33.8,
+   "industry": "Retail-Family Clothing Stores",
+   "market_cap": 2914100261.0,
+   "name": "AMERICAN EAGLE OUTFITTERS INC",
+   "nd_ebit": -1.06,
+   "op_margin_now": 4.1,
+   "pfcf": 14.9,
+   "pfcf_med": 16.5,
+   "reason": "made the yield cut but not the growth cut",
+   "rev_cagr5": 4.3,
+   "revenue": 5547236000.0,
+   "roic_med": 22.6,
+   "size_band": "mid",
+   "ticker": "AEO",
+   "total_debt": 0.0,
+   "years": 7
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2025-12-31",
+   "capex_ocf": 12.4,
+   "cash": 52000000.0,
+   "country": "FL",
+   "cyclical": true,
+   "debt_inferred_zero": false,
+   "ev": 12706159088.0,
+   "exchange": "NYSE",
+   "fcf": 928000000.0,
+   "fcf_conv": 844.2,
+   "fcf_yield": 7.3,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": -8.4,
+    "sales_trend": -8.88
+   },
+   "growth_ranks": {
+    "fcf_trend": 5.4,
+    "sales_trend": 1.18
+   },
+   "growth_score": 3.29,
+   "industry": "Services-Miscellaneous Equipment Rental & Leasing",
+   "market_cap": 4711159088.0,
+   "name": "HERC HOLDINGS INC",
+   "nd_ebit": -52.0,
+   "op_margin_now": 0.0,
+   "pfcf": 5.1,
+   "pfcf_med": 4.4,
+   "reason": "made the yield cut but not the growth cut",
+   "rev_cagr5": 13.95,
+   "revenue": 4376000000.0,
+   "roic_med": 17.1,
+   "size_band": "mid",
+   "ticker": "HRI",
+   "total_debt": 8047000000.0,
+   "years": 16
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2026-01-30",
+   "capex_ocf": 49.6,
+   "cash": 1138501000.0,
+   "country": "TN",
+   "cyclical": false,
+   "debt_inferred_zero": false,
+   "ev": 32830143596.0,
+   "exchange": "NYSE",
+   "fcf": 2393338000.0,
+   "fcf_conv": 83.4,
+   "fcf_yield": 7.29,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 6.8,
+    "sales_trend": 7.39
+   },
+   "growth_ranks": {
+    "fcf_trend": 42.46,
+    "sales_trend": 57.13
+   },
+   "growth_score": 49.8,
+   "industry": "Retail-Variety Stores",
+   "market_cap": 29388362596.0,
+   "name": "DOLLAR GENERAL CORP",
+   "nd_ebit": -0.52,
+   "op_margin_now": 5.2,
+   "pfcf": 12.3,
+   "pfcf_med": 28.0,
+   "reason": "",
+   "rev_cagr5": 7.45,
+   "revenue": 42724369000.0,
+   "roic_med": 27.3,
+   "size_band": "large",
+   "ticker": "DG",
+   "total_debt": 4580282000.0,
+   "years": 8
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2025-12-31",
+   "capex_ocf": 4.5,
+   "cash": 36161000.0,
+   "country": "TN",
+   "cyclical": true,
+   "debt_inferred_zero": true,
+   "ev": 817645686.0,
+   "exchange": "Nasdaq",
+   "fcf": 59634000.0,
+   "fcf_conv": 291.4,
+   "fcf_yield": 7.29,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 9.62,
+    "sales_trend": 8.06
+   },
+   "growth_ranks": {
+    "fcf_trend": 53.74,
+    "sales_trend": 60.81
+   },
+   "growth_score": 57.28,
+   "industry": "Services-Computer Programming, Data Processing, Etc.",
+   "market_cap": 853806686.0,
+   "name": "HEALTHSTREAM INC",
+   "nd_ebit": -1.79,
+   "op_margin_now": 6.7,
+   "pfcf": 14.3,
+   "pfcf_med": 15.5,
+   "reason": "",
+   "rev_cagr5": 3.04,
+   "revenue": 304064000.0,
+   "roic_med": 5.3,
+   "size_band": "small",
+   "ticker": "HSTM",
+   "total_debt": 0.0,
+   "years": 15
   }
  ],
  "final": [
@@ -7981,10 +7859,10 @@
     "sales_trend": 64.66
    },
    "growth_ranks": {
-    "fcf_trend": 99.35,
-    "sales_trend": 99.19
+    "fcf_trend": 99.34,
+    "sales_trend": 99.18
    },
-   "growth_score": 99.27,
+   "growth_score": 99.26,
    "industry": "Services-Business Services, NEC",
    "market_cap": 1323302303.0,
    "name": "Nutex Health Inc.",
@@ -8019,10 +7897,10 @@
     "sales_trend": 77.14
    },
    "growth_ranks": {
-    "fcf_trend": 96.46,
+    "fcf_trend": 96.78,
     "sales_trend": 99.46
    },
-   "growth_score": 97.96,
+   "growth_score": 98.12,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 928908205.0,
    "name": "Riley Exploration Permian, Inc.",
@@ -8037,44 +7915,6 @@
    "size_band": "small",
    "ticker": "REPX",
    "total_debt": 247855000.0,
-   "years": 11
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 4.3,
-   "cash": 781084000.0,
-   "country": "NY",
-   "cyclical": false,
-   "debt_inferred_zero": false,
-   "ev": 1354816652.0,
-   "exchange": "NYSE",
-   "fcf": 255895000.0,
-   "fcf_yield": 18.89,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 53.9,
-    "sales_trend": 46.0
-   },
-   "growth_ranks": {
-    "fcf_trend": 97.01,
-    "sales_trend": 98.12
-   },
-   "growth_score": 97.56,
-   "industry": "Services-Offices & Clinics of  Doctors of  Medicine",
-   "market_cap": 1140975652.0,
-   "multiple_fault": "4.5x is under a fifth of its own 25.5x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
-   "name": "Teladoc Health, Inc.",
-   "op_margin_now": -10.4,
-   "pfcf": 4.5,
-   "pfcf_med": 25.5,
-   "reason": "",
-   "rev_cagr5": 28.83,
-   "revenue": 2529977000.0,
-   "roic_med": -15.9,
-   "size_band": "small",
-   "ticker": "TDOC",
-   "total_debt": 994925000.0,
    "years": 11
   },
   {
@@ -8096,10 +7936,10 @@
     "sales_trend": 45.11
    },
    "growth_ranks": {
-    "fcf_trend": 95.52,
-    "sales_trend": 97.94
+    "fcf_trend": 96.02,
+    "sales_trend": 98.0
    },
-   "growth_score": 96.73,
+   "growth_score": 97.01,
    "industry": "Services-Business Services, NEC",
    "market_cap": 100296525205.0,
    "name": "MERCADOLIBRE INC",
@@ -8135,10 +7975,10 @@
     "sales_trend": 27.53
    },
    "growth_ranks": {
-    "fcf_trend": 99.63,
-    "sales_trend": 93.56
+    "fcf_trend": 99.62,
+    "sales_trend": 93.82
    },
-   "growth_score": 96.59,
+   "growth_score": 96.72,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 7320061876.0,
    "name": "Matador Resources Co",
@@ -8174,10 +8014,10 @@
     "sales_trend": 30.6
    },
    "growth_ranks": {
-    "fcf_trend": 96.36,
-    "sales_trend": 95.62
+    "fcf_trend": 96.68,
+    "sales_trend": 95.73
    },
-   "growth_score": 95.99,
+   "growth_score": 96.21,
    "industry": "Services-Business Services, NEC",
    "market_cap": 7022221539.0,
    "name": "ETSY INC",
@@ -8213,10 +8053,10 @@
     "sales_trend": 36.64
    },
    "growth_ranks": {
-    "fcf_trend": 94.96,
-    "sales_trend": 96.78
+    "fcf_trend": 95.45,
+    "sales_trend": 96.91
    },
-   "growth_score": 95.87,
+   "growth_score": 96.18,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 19565332197.0,
    "name": "Permian Resources Corp",
@@ -8232,46 +8072,6 @@
    "ticker": "PR",
    "total_debt": 3545598000.0,
    "years": 9
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 14.8,
-   "cash": 658175000.0,
-   "country": "CA",
-   "cyclical": false,
-   "debt_inferred_zero": true,
-   "ev": 6122196199.0,
-   "exchange": "Nasdaq",
-   "fcf": 782958000.0,
-   "fcf_conv": 187.8,
-   "fcf_yield": 12.79,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 50.51,
-    "sales_trend": 29.9
-   },
-   "growth_ranks": {
-    "fcf_trend": 96.64,
-    "sales_trend": 94.9
-   },
-   "growth_score": 95.77,
-   "industry": "Services-Computer Programming, Data Processing, Etc.",
-   "market_cap": 6780371199.0,
-   "multiple_fault": "8.7x is under a fifth of its own 68.8x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
-   "name": "Trade Desk, Inc.",
-   "nd_ebit": -1.12,
-   "op_margin_now": 20.3,
-   "pfcf": 8.7,
-   "pfcf_med": 68.8,
-   "reason": "",
-   "rev_cagr5": 27.92,
-   "revenue": 2896284000.0,
-   "roic_med": 20.1,
-   "size_band": "mid",
-   "ticker": "TTD",
-   "total_debt": 0.0,
-   "years": 8
   },
   {
    "basis": "ev",
@@ -8292,10 +8092,10 @@
     "sales_trend": 26.47
    },
    "growth_ranks": {
-    "fcf_trend": 97.67,
-    "sales_trend": 93.02
+    "fcf_trend": 97.73,
+    "sales_trend": 93.28
    },
-   "growth_score": 95.34,
+   "growth_score": 95.5,
    "industry": "Retail-Lumber & Other Building Materials Dealers",
    "market_cap": 7078770906.0,
    "name": "Builders FirstSource, Inc.",
@@ -8331,10 +8131,10 @@
     "sales_trend": 24.43
    },
    "growth_ranks": {
-    "fcf_trend": 97.95,
-    "sales_trend": 91.95
+    "fcf_trend": 98.01,
+    "sales_trend": 92.28
    },
-   "growth_score": 94.95,
+   "growth_score": 95.15,
    "industry": "Services-Prepackaged Software",
    "market_cap": 13062520633.0,
    "name": "DOCUSIGN, INC.",
@@ -8369,10 +8169,10 @@
     "sales_trend": 20.62
    },
    "growth_ranks": {
-    "fcf_trend": 99.16,
-    "sales_trend": 89.18
+    "fcf_trend": 99.15,
+    "sales_trend": 89.74
    },
-   "growth_score": 94.17,
+   "growth_score": 94.44,
    "industry": "Services-Prepackaged Software",
    "market_cap": 1071211270.0,
    "name": "PagerDuty, Inc.",
@@ -8406,10 +8206,10 @@
     "sales_trend": 26.39
    },
    "growth_ranks": {
-    "fcf_trend": 95.06,
-    "sales_trend": 92.75
+    "fcf_trend": 95.55,
+    "sales_trend": 93.1
    },
-   "growth_score": 93.91,
+   "growth_score": 94.32,
    "industry": "Pharmaceutical Preparations",
    "market_cap": 1050360696.0,
    "name": "Pacira BioSciences, Inc.",
@@ -8425,122 +8225,6 @@
    "ticker": "PCRX",
    "total_debt": 372189000.0,
    "years": 14
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 8.0,
-   "cash": 246664000.0,
-   "country": "MA",
-   "cyclical": false,
-   "debt_inferred_zero": false,
-   "ev": 1387027040.0,
-   "exchange": "Nasdaq",
-   "fcf": 130122000.0,
-   "fcf_yield": 9.38,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 47.12,
-    "sales_trend": 23.92
-   },
-   "growth_ranks": {
-    "fcf_trend": 96.18,
-    "sales_trend": 91.5
-   },
-   "growth_score": 93.84,
-   "industry": "Services-Prepackaged Software",
-   "market_cap": 741407040.0,
-   "multiple_fault": "5.7x is under a fifth of its own 35.3x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
-   "name": "Rapid7, Inc.",
-   "nd_ebit": -21.32,
-   "op_margin_now": 1.3,
-   "pfcf": 5.7,
-   "pfcf_med": 35.3,
-   "reason": "",
-   "rev_cagr5": 17.49,
-   "revenue": 859794000.0,
-   "size_band": "small",
-   "ticker": "RPD",
-   "total_debt": 892284000.0,
-   "years": 11
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 1.7,
-   "cash": 125215000.0,
-   "country": "Israel",
-   "cyclical": false,
-   "debt_inferred_zero": false,
-   "ev": 207329234.0,
-   "exchange": "NYSE",
-   "fcf": 103281000.0,
-   "fcf_yield": 49.81,
-   "foreign": true,
-   "growth_components": {
-    "fcf_trend": 46.88,
-    "sales_trend": 23.11
-   },
-   "growth_ranks": {
-    "fcf_trend": 96.08,
-    "sales_trend": 90.97
-   },
-   "growth_score": 93.53,
-   "industry": "Services-Business Services, NEC",
-   "market_cap": 332544234.0,
-   "multiple_fault": "3.2x is under a fifth of its own 38.5x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
-   "name": "Fiverr International Ltd.",
-   "op_margin_now": -0.3,
-   "pfcf": 3.2,
-   "pfcf_med": 38.5,
-   "reason": "",
-   "rev_cagr5": 26.12,
-   "revenue": 430909000.0,
-   "roic_med": -11.4,
-   "size_band": "small",
-   "ticker": "FVRR",
-   "total_debt": 0.0,
-   "years": 7
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 2.8,
-   "cash": 294356000.0,
-   "country": "CA",
-   "cyclical": false,
-   "debt_inferred_zero": false,
-   "ev": 1163314578.0,
-   "exchange": "Nasdaq",
-   "fcf": 223120000.0,
-   "fcf_conv": 219.3,
-   "fcf_yield": 19.18,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 69.49,
-    "sales_trend": 19.1
-   },
-   "growth_ranks": {
-    "fcf_trend": 98.69,
-    "sales_trend": 87.21
-   },
-   "growth_score": 92.95,
-   "industry": "Services-Computer Processing & Data Preparation",
-   "market_cap": 1097900578.0,
-   "multiple_fault": "4.9x is under a fifth of its own 114.5x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
-   "name": "UPWORK, INC",
-   "nd_ebit": 0.51,
-   "op_margin_now": 16.4,
-   "pfcf": 4.9,
-   "pfcf_med": 114.5,
-   "reason": "",
-   "rev_cagr5": 17.42,
-   "revenue": 787784000.0,
-   "roic_med": -4.8,
-   "size_band": "small",
-   "ticker": "UPWK",
-   "total_debt": 359770000.0,
-   "years": 8
   },
   {
    "basis": "ev",
@@ -8561,10 +8245,10 @@
     "sales_trend": 22.25
    },
    "growth_ranks": {
-    "fcf_trend": 95.62,
-    "sales_trend": 90.25
+    "fcf_trend": 96.11,
+    "sales_trend": 90.74
    },
-   "growth_score": 92.94,
+   "growth_score": 93.42,
    "industry": "Services-Miscellaneous Equipment Rental & Leasing",
    "market_cap": 3620195341.0,
    "name": "WillScot Holdings Corp",
@@ -8599,10 +8283,10 @@
     "sales_trend": 32.87
    },
    "growth_ranks": {
-    "fcf_trend": 87.69,
-    "sales_trend": 96.15
+    "fcf_trend": 88.25,
+    "sales_trend": 96.28
    },
-   "growth_score": 91.92,
+   "growth_score": 92.27,
    "industry": "Services-Home Health Care Services",
    "market_cap": 884873832.0,
    "name": "AdaptHealth Corp.",
@@ -8637,10 +8321,10 @@
     "sales_trend": 19.38
    },
    "growth_ranks": {
-    "fcf_trend": 95.34,
-    "sales_trend": 87.66
+    "fcf_trend": 95.83,
+    "sales_trend": 88.19
    },
-   "growth_score": 91.5,
+   "growth_score": 92.01,
    "industry": "Services-Business Services, NEC",
    "market_cap": 348659310.0,
    "name": "Repay Holdings Corp",
@@ -8675,10 +8359,10 @@
     "sales_trend": 16.15
    },
    "growth_ranks": {
-    "fcf_trend": 99.07,
-    "sales_trend": 83.18
+    "fcf_trend": 99.05,
+    "sales_trend": 83.83
    },
-   "growth_score": 91.12,
+   "growth_score": 91.44,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 8007221482.0,
    "name": "Chord Energy Corp",
@@ -8713,10 +8397,10 @@
     "sales_trend": 17.11
    },
    "growth_ranks": {
-    "fcf_trend": 96.27,
-    "sales_trend": 84.26
+    "fcf_trend": 96.59,
+    "sales_trend": 84.92
    },
-   "growth_score": 90.27,
+   "growth_score": 90.75,
    "industry": "Pharmaceutical Preparations",
    "market_cap": 766033574.0,
    "name": "COLLEGIUM PHARMACEUTICAL, INC",
@@ -8731,82 +8415,6 @@
    "size_band": "small",
    "ticker": "COLL",
    "total_debt": 571112000.0,
-   "years": 8
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 54.6,
-   "cash": 18460000.0,
-   "country": "KS",
-   "cyclical": true,
-   "debt_inferred_zero": false,
-   "ev": 591138846.0,
-   "exchange": "Nasdaq",
-   "fcf": 76040000.0,
-   "fcf_conv": 54.8,
-   "fcf_yield": 12.86,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 23.83,
-    "sales_trend": 30.24
-   },
-   "growth_ranks": {
-    "fcf_trend": 85.07,
-    "sales_trend": 95.17
-   },
-   "growth_score": 90.12,
-   "industry": "Wholesale-Beer, Wine & Distilled Alcoholic Beverages",
-   "market_cap": 351190846.0,
-   "multiple_fault": "4.6x is under a fifth of its own 49.9x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
-   "name": "MGP INGREDIENTS INC",
-   "op_margin_now": -17.6,
-   "pfcf": 4.6,
-   "pfcf_med": 49.9,
-   "reason": "",
-   "rev_cagr5": 6.74,
-   "revenue": 536375000.0,
-   "roic_med": 11.7,
-   "size_band": "small",
-   "ticker": "MGPI",
-   "total_debt": 260050000.0,
-   "years": 13
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 61.3,
-   "cash": 362809000.0,
-   "country": "TX",
-   "cyclical": true,
-   "debt_inferred_zero": false,
-   "ev": 3675217481.0,
-   "exchange": "NYSE",
-   "fcf": 453921000.0,
-   "fcf_yield": 12.35,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 56.09,
-    "sales_trend": 14.85
-   },
-   "growth_ranks": {
-    "fcf_trend": 97.29,
-    "sales_trend": 80.59
-   },
-   "growth_score": 88.94,
-   "industry": "Crude Petroleum & Natural Gas",
-   "market_cap": 2811698481.0,
-   "name": "TALOS ENERGY INC.",
-   "op_margin_now": -31.5,
-   "pfcf": 6.2,
-   "pfcf_med": 4.2,
-   "reason": "",
-   "rev_cagr5": 11.48,
-   "revenue": 1780070000.0,
-   "roic_med": 7.3,
-   "size_band": "mid",
-   "ticker": "TALO",
-   "total_debt": 1226189000.0,
    "years": 8
   },
   {
@@ -8828,10 +8436,10 @@
     "sales_trend": 15.15
    },
    "growth_ranks": {
-    "fcf_trend": 96.55,
-    "sales_trend": 81.13
+    "fcf_trend": 96.87,
+    "sales_trend": 81.74
    },
-   "growth_score": 88.84,
+   "growth_score": 89.31,
    "industry": "Surgical & Medical Instruments & Apparatus",
    "market_cap": 495405495.0,
    "name": "TACTILE SYSTEMS TECHNOLOGY INC",
@@ -8851,41 +8459,39 @@
   {
    "basis": "ev",
    "bs_as_of": "2025-12-31",
-   "capex_ocf": 11.2,
-   "cash": 285585000.0,
-   "country": "NJ",
-   "cyclical": false,
+   "capex_ocf": 61.3,
+   "cash": 362809000.0,
+   "country": "TX",
+   "cyclical": true,
    "debt_inferred_zero": false,
-   "ev": 1658927330.0,
-   "exchange": "Nasdaq",
-   "fcf": 150904000.0,
-   "fcf_conv": 77.4,
-   "fcf_yield": 9.1,
+   "ev": 3675217481.0,
+   "exchange": "NYSE",
+   "fcf": 453921000.0,
+   "fcf_yield": 12.35,
    "foreign": false,
    "growth_components": {
-    "fcf_trend": 18.68,
-    "sales_trend": 49.14
+    "fcf_trend": 56.09,
+    "sales_trend": 14.85
    },
    "growth_ranks": {
-    "fcf_trend": 78.36,
-    "sales_trend": 98.3
+    "fcf_trend": 97.35,
+    "sales_trend": 81.2
    },
-   "growth_score": 88.33,
-   "industry": "Pharmaceutical Preparations",
-   "market_cap": 1635404330.0,
-   "name": "ANI PHARMACEUTICALS INC",
-   "nd_ebit": 0.21,
-   "op_margin_now": 12.6,
-   "pfcf": 10.8,
-   "pfcf_med": 17.9,
+   "growth_score": 89.28,
+   "industry": "Crude Petroleum & Natural Gas",
+   "market_cap": 2811698481.0,
+   "name": "TALOS ENERGY INC.",
+   "op_margin_now": -31.5,
+   "pfcf": 6.2,
+   "pfcf_med": 4.2,
    "reason": "",
-   "rev_cagr5": 27.41,
-   "revenue": 883366000.0,
-   "roic_med": 5.9,
-   "size_band": "small",
-   "ticker": "ANIP",
-   "total_debt": 309108000.0,
-   "years": 15
+   "rev_cagr5": 11.48,
+   "revenue": 1780070000.0,
+   "roic_med": 7.3,
+   "size_band": "mid",
+   "ticker": "TALO",
+   "total_debt": 1226189000.0,
+   "years": 8
   },
   {
    "basis": "ev",
@@ -8906,10 +8512,10 @@
     "sales_trend": 22.62
    },
    "growth_ranks": {
-    "fcf_trend": 85.91,
-    "sales_trend": 90.52
+    "fcf_trend": 86.45,
+    "sales_trend": 91.01
    },
-   "growth_score": 88.22,
+   "growth_score": 88.73,
    "industry": "Services-Computer Programming Services",
    "market_cap": 6037740256.0,
    "name": "EPAM Systems, Inc.",
@@ -8925,6 +8531,45 @@
    "ticker": "EPAM",
    "total_debt": 25034000.0,
    "years": 14
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2025-12-31",
+   "capex_ocf": 11.2,
+   "cash": 285585000.0,
+   "country": "NJ",
+   "cyclical": false,
+   "debt_inferred_zero": false,
+   "ev": 1658927330.0,
+   "exchange": "Nasdaq",
+   "fcf": 150904000.0,
+   "fcf_conv": 77.4,
+   "fcf_yield": 9.1,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 18.68,
+    "sales_trend": 49.14
+   },
+   "growth_ranks": {
+    "fcf_trend": 78.96,
+    "sales_trend": 98.27
+   },
+   "growth_score": 88.61,
+   "industry": "Pharmaceutical Preparations",
+   "market_cap": 1635404330.0,
+   "name": "ANI PHARMACEUTICALS INC",
+   "nd_ebit": 0.21,
+   "op_margin_now": 12.6,
+   "pfcf": 10.8,
+   "pfcf_med": 17.9,
+   "reason": "",
+   "rev_cagr5": 27.41,
+   "revenue": 883366000.0,
+   "roic_med": 5.9,
+   "size_band": "small",
+   "ticker": "ANIP",
+   "total_debt": 309108000.0,
+   "years": 15
   },
   {
    "basis": "ev",
@@ -8945,10 +8590,10 @@
     "sales_trend": 28.0
    },
    "growth_ranks": {
-    "fcf_trend": 79.76,
-    "sales_trend": 94.19
+    "fcf_trend": 80.38,
+    "sales_trend": 94.46
    },
-   "growth_score": 86.97,
+   "growth_score": 87.42,
    "industry": "Pharmaceutical Preparations",
    "market_cap": 1540996195.0,
    "name": "Innoviva, Inc.",
@@ -8984,10 +8629,10 @@
     "sales_trend": 12.84
    },
    "growth_ranks": {
-    "fcf_trend": 96.92,
-    "sales_trend": 76.65
+    "fcf_trend": 97.16,
+    "sales_trend": 77.2
    },
-   "growth_score": 86.78,
+   "growth_score": 87.18,
    "industry": "Pharmaceutical Preparations",
    "market_cap": 986029542.0,
    "name": "Amphastar Pharmaceuticals, Inc.",
@@ -9023,10 +8668,10 @@
     "sales_trend": 16.27
    },
    "growth_ranks": {
-    "fcf_trend": 89.46,
-    "sales_trend": 83.45
+    "fcf_trend": 89.95,
+    "sales_trend": 84.11
    },
-   "growth_score": 86.45,
+   "growth_score": 87.03,
    "industry": "Transportation Services",
    "market_cap": 618570012.0,
    "name": "VERRA MOBILITY Corp",
@@ -9061,10 +8706,10 @@
     "sales_trend": 11.3
    },
    "growth_ranks": {
-    "fcf_trend": 98.41,
-    "sales_trend": 73.08
+    "fcf_trend": 98.48,
+    "sales_trend": 73.66
    },
-   "growth_score": 85.75,
+   "growth_score": 86.07,
    "industry": "Services-Computer Processing & Data Preparation",
    "market_cap": 644351363.0,
    "name": "Yext, Inc.",
@@ -9099,10 +8744,10 @@
     "sales_trend": 14.68
    },
    "growth_ranks": {
-    "fcf_trend": 89.83,
-    "sales_trend": 80.23
+    "fcf_trend": 90.33,
+    "sales_trend": 80.84
    },
-   "growth_score": 85.03,
+   "growth_score": 85.59,
    "industry": "Services-Computer Processing & Data Preparation",
    "market_cap": 3005339148.0,
    "name": "CarGurus, Inc.",
@@ -9138,10 +8783,10 @@
     "sales_trend": 19.98
    },
    "growth_ranks": {
-    "fcf_trend": 81.44,
-    "sales_trend": 88.55
+    "fcf_trend": 81.99,
+    "sales_trend": 89.1
    },
-   "growth_score": 85.0,
+   "growth_score": 85.54,
    "industry": "Deep Sea Foreign Transportation of  Freight",
    "market_cap": 1666606522.0,
    "name": "Global Ship Lease, Inc.",
@@ -9177,10 +8822,10 @@
     "sales_trend": 18.54
    },
    "growth_ranks": {
-    "fcf_trend": 83.49,
-    "sales_trend": 86.23
+    "fcf_trend": 84.08,
+    "sales_trend": 86.83
    },
-   "growth_score": 84.86,
+   "growth_score": 85.45,
    "industry": "Services-Help Supply Services",
    "market_cap": 58986652.0,
    "name": "DLH Holdings Corp.",
@@ -9216,10 +8861,10 @@
     "sales_trend": 17.02
    },
    "growth_ranks": {
-    "fcf_trend": 85.54,
-    "sales_trend": 84.17
+    "fcf_trend": 86.07,
+    "sales_trend": 84.83
    },
-   "growth_score": 84.86,
+   "growth_score": 85.45,
    "industry": "Deep Sea Foreign Transportation of  Freight",
    "market_cap": 741383496.0,
    "name": "Ardmore Shipping Corp",
@@ -9255,10 +8900,10 @@
     "sales_trend": 19.18
    },
    "growth_ranks": {
-    "fcf_trend": 80.04,
-    "sales_trend": 87.39
+    "fcf_trend": 80.66,
+    "sales_trend": 87.92
    },
-   "growth_score": 83.72,
+   "growth_score": 84.29,
    "industry": "Apparel & Other Finishd Prods of  Fabrics & Similar Matl",
    "market_cap": 10909942854.0,
    "name": "lululemon athletica inc.",
@@ -9294,10 +8939,10 @@
     "sales_trend": 18.94
    },
    "growth_ranks": {
-    "fcf_trend": 79.94,
-    "sales_trend": 87.03
+    "fcf_trend": 80.57,
+    "sales_trend": 87.65
    },
-   "growth_score": 83.48,
+   "growth_score": 84.11,
    "industry": "Food and Kindred Products",
    "market_cap": 1012873240.0,
    "name": "Simply Good Foods Co",
@@ -9333,10 +8978,10 @@
     "sales_trend": 15.26
    },
    "growth_ranks": {
-    "fcf_trend": 85.45,
-    "sales_trend": 81.48
+    "fcf_trend": 85.97,
+    "sales_trend": 82.11
    },
-   "growth_score": 83.47,
+   "growth_score": 84.04,
    "industry": "Water, Sewer, Pipeline, Comm & Power Line Construction",
    "market_cap": 4006740099.0,
    "name": "Primoris Services Corp",
@@ -9372,10 +9017,10 @@
     "sales_trend": 16.63
    },
    "growth_ranks": {
-    "fcf_trend": 80.22,
-    "sales_trend": 83.99
+    "fcf_trend": 80.85,
+    "sales_trend": 84.65
    },
-   "growth_score": 82.1,
+   "growth_score": 82.75,
    "industry": "Rubber & Plastics Footwear",
    "market_cap": 11705704819.0,
    "name": "DECKERS OUTDOOR CORP",
@@ -9411,10 +9056,10 @@
     "sales_trend": 11.67
    },
    "growth_ranks": {
-    "fcf_trend": 88.39,
-    "sales_trend": 74.24
+    "fcf_trend": 88.86,
+    "sales_trend": 74.84
    },
-   "growth_score": 81.31,
+   "growth_score": 81.85,
    "industry": "Rubber & Plastics Footwear",
    "market_cap": 5634984665.0,
    "name": "Crocs, Inc.",
@@ -9450,10 +9095,10 @@
     "sales_trend": 15.69
    },
    "growth_ranks": {
-    "fcf_trend": 79.85,
-    "sales_trend": 82.38
+    "fcf_trend": 80.47,
+    "sales_trend": 83.02
    },
-   "growth_score": 81.11,
+   "growth_score": 81.75,
    "industry": "Services-Prepackaged Software",
    "market_cap": 105937725000.0,
    "name": "ADOBE INC.",
@@ -9489,10 +9134,10 @@
     "sales_trend": 11.86
    },
    "growth_ranks": {
-    "fcf_trend": 85.82,
-    "sales_trend": 74.55
+    "fcf_trend": 86.35,
+    "sales_trend": 75.07
    },
-   "growth_score": 80.19,
+   "growth_score": 80.71,
    "industry": "Services-Help Supply Services",
    "market_cap": 1309073696.0,
    "name": "AMN HEALTHCARE SERVICES INC",
@@ -9527,10 +9172,10 @@
     "sales_trend": 18.58
    },
    "growth_ranks": {
-    "fcf_trend": 72.95,
-    "sales_trend": 86.4
+    "fcf_trend": 73.46,
+    "sales_trend": 87.01
    },
-   "growth_score": 79.68,
+   "growth_score": 80.23,
    "industry": "Services-Business Services, NEC",
    "market_cap": 25836805259.0,
    "name": "Trip.com Group Ltd",
@@ -9565,10 +9210,10 @@
     "sales_trend": 13.49
    },
    "growth_ranks": {
-    "fcf_trend": 80.78,
-    "sales_trend": 77.59
+    "fcf_trend": 81.42,
+    "sales_trend": 78.16
    },
-   "growth_score": 79.19,
+   "growth_score": 79.79,
    "industry": "Sporting & Athletic Goods, NEC",
    "market_cap": 2838317284.0,
    "name": "Callaway Golf Co",
@@ -9604,10 +9249,10 @@
     "sales_trend": 16.3
    },
    "growth_ranks": {
-    "fcf_trend": 73.79,
-    "sales_trend": 83.54
+    "fcf_trend": 74.31,
+    "sales_trend": 84.2
    },
-   "growth_score": 78.67,
+   "growth_score": 79.25,
    "industry": "Glass Products, Made of  Purchased Glass",
    "market_cap": 834105711.0,
    "name": "APOGEE ENTERPRISES, INC.",
@@ -9623,6 +9268,43 @@
    "ticker": "APOG",
    "total_debt": 232279000.0,
    "years": 14
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2025-12-31",
+   "capex_ocf": 32.4,
+   "cash": 31898000.0,
+   "country": "CO",
+   "cyclical": true,
+   "debt_inferred_zero": false,
+   "ev": 161916415.0,
+   "exchange": "Nasdaq",
+   "fcf": 37031000.0,
+   "fcf_yield": 22.87,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 22.59,
+    "sales_trend": 10.56
+   },
+   "growth_ranks": {
+    "fcf_trend": 84.36,
+    "sales_trend": 71.03
+   },
+   "growth_score": 77.69,
+   "industry": "Miscellaneous Primary Metal Products",
+   "market_cap": 143170415.0,
+   "name": "DMC Global Inc.",
+   "op_margin_now": -0.0,
+   "pfcf": 3.9,
+   "pfcf_med": 13.3,
+   "reason": "",
+   "rev_cagr5": 7.39,
+   "revenue": 609840000.0,
+   "roic_med": 3.5,
+   "size_band": "micro",
+   "ticker": "BOOM",
+   "total_debt": 50644000.0,
+   "years": 15
   },
   {
    "basis": "ev",
@@ -9643,10 +9325,10 @@
     "sales_trend": 14.56
    },
    "growth_ranks": {
-    "fcf_trend": 74.35,
-    "sales_trend": 79.87
+    "fcf_trend": 74.88,
+    "sales_trend": 80.47
    },
-   "growth_score": 77.11,
+   "growth_score": 77.67,
    "industry": "Services-Business Services, NEC",
    "market_cap": 28183636213.0,
    "name": "FISERV INC",
@@ -9662,43 +9344,6 @@
    "ticker": "FISV",
    "total_debt": 28997000000.0,
    "years": 17
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 32.4,
-   "cash": 31898000.0,
-   "country": "CO",
-   "cyclical": true,
-   "debt_inferred_zero": false,
-   "ev": 161916415.0,
-   "exchange": "Nasdaq",
-   "fcf": 37031000.0,
-   "fcf_yield": 22.87,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 22.59,
-    "sales_trend": 10.56
-   },
-   "growth_ranks": {
-    "fcf_trend": 83.77,
-    "sales_trend": 70.39
-   },
-   "growth_score": 77.08,
-   "industry": "Miscellaneous Primary Metal Products",
-   "market_cap": 143170415.0,
-   "name": "DMC Global Inc.",
-   "op_margin_now": -0.0,
-   "pfcf": 3.9,
-   "pfcf_med": 13.3,
-   "reason": "",
-   "rev_cagr5": 7.39,
-   "revenue": 609840000.0,
-   "roic_med": 3.5,
-   "size_band": "micro",
-   "ticker": "BOOM",
-   "total_debt": 50644000.0,
-   "years": 15
   },
   {
    "basis": "ev",
@@ -9719,10 +9364,10 @@
     "sales_trend": 13.87
    },
    "growth_ranks": {
-    "fcf_trend": 74.21,
-    "sales_trend": 78.71
+    "fcf_trend": 74.74,
+    "sales_trend": 79.29
    },
-   "growth_score": 76.46,
+   "growth_score": 77.02,
    "industry": "Services-Prepackaged Software",
    "market_cap": 91005759900.0,
    "name": "INTUIT INC.",
@@ -9758,10 +9403,10 @@
     "sales_trend": 10.07
    },
    "growth_ranks": {
-    "fcf_trend": 83.86,
-    "sales_trend": 68.87
+    "fcf_trend": 84.45,
+    "sales_trend": 69.48
    },
-   "growth_score": 76.37,
+   "growth_score": 76.97,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 5122483661.0,
    "name": "Hess Midstream LP",
@@ -9796,10 +9441,10 @@
     "sales_trend": 10.74
    },
    "growth_ranks": {
-    "fcf_trend": 80.5,
-    "sales_trend": 71.06
+    "fcf_trend": 81.14,
+    "sales_trend": 71.62
    },
-   "growth_score": 75.78,
+   "growth_score": 76.38,
    "industry": "Miscellaneous Electrical Machinery, Equipment & Supplies",
    "market_cap": 3166514288.0,
    "name": "Atkore Inc.",
@@ -9835,10 +9480,10 @@
     "sales_trend": 8.31
    },
    "growth_ranks": {
-    "fcf_trend": 87.45,
-    "sales_trend": 61.4
+    "fcf_trend": 88.01,
+    "sales_trend": 61.9
    },
-   "growth_score": 74.42,
+   "growth_score": 74.95,
    "industry": "Operative Builders",
    "market_cap": 13059994310.0,
    "name": "Toll Brothers, Inc.",
@@ -9874,10 +9519,10 @@
     "sales_trend": 12.17
    },
    "growth_ranks": {
-    "fcf_trend": 72.67,
-    "sales_trend": 75.31
+    "fcf_trend": 73.18,
+    "sales_trend": 75.84
    },
-   "growth_score": 73.99,
+   "growth_score": 74.51,
    "industry": "Services-Management Services",
    "market_cap": 11772232106.0,
    "name": "GARTNER INC",
@@ -9913,10 +9558,10 @@
     "sales_trend": 8.57
    },
    "growth_ranks": {
-    "fcf_trend": 84.61,
-    "sales_trend": 63.28
+    "fcf_trend": 85.21,
+    "sales_trend": 63.81
    },
-   "growth_score": 73.94,
+   "growth_score": 74.51,
    "industry": "Motor Vehicle Parts & Accessories",
    "market_cap": 2494360618.0,
    "name": "LCI INDUSTRIES",
@@ -9952,10 +9597,10 @@
     "sales_trend": 10.47
    },
    "growth_ranks": {
-    "fcf_trend": 76.77,
-    "sales_trend": 70.13
+    "fcf_trend": 77.35,
+    "sales_trend": 70.75
    },
-   "growth_score": 73.45,
+   "growth_score": 74.05,
    "industry": "Services-Computer Processing & Data Preparation",
    "market_cap": 6142168745.0,
    "name": "PEGASYSTEMS INC",
@@ -9991,10 +9636,10 @@
     "sales_trend": 10.42
    },
    "growth_ranks": {
-    "fcf_trend": 74.44,
-    "sales_trend": 69.77
+    "fcf_trend": 74.98,
+    "sales_trend": 70.39
    },
-   "growth_score": 72.1,
+   "growth_score": 72.69,
    "industry": "Wholesale-Motor Vehicles & Motor Vehicle Parts & Supplies",
    "market_cap": 6461673276.0,
    "name": "LKQ CORP",
@@ -10030,10 +9675,10 @@
     "sales_trend": 10.28
    },
    "growth_ranks": {
-    "fcf_trend": 74.81,
-    "sales_trend": 69.32
+    "fcf_trend": 75.36,
+    "sales_trend": 69.94
    },
-   "growth_score": 72.06,
+   "growth_score": 72.65,
    "industry": "Services-Employment Agencies",
    "market_cap": 4649420851.0,
    "name": "KORN FERRY",
@@ -10069,10 +9714,10 @@
     "sales_trend": 9.07
    },
    "growth_ranks": {
-    "fcf_trend": 78.82,
-    "sales_trend": 64.85
+    "fcf_trend": 79.43,
+    "sales_trend": 65.4
    },
-   "growth_score": 71.83,
+   "growth_score": 72.42,
    "industry": "Services-Computer Integrated Systems Design",
    "market_cap": 12830678892.0,
    "name": "GoDaddy Inc.",
@@ -10107,10 +9752,10 @@
     "sales_trend": 14.26
    },
    "growth_ranks": {
-    "fcf_trend": 62.97,
-    "sales_trend": 79.43
+    "fcf_trend": 63.32,
+    "sales_trend": 80.02
    },
-   "growth_score": 71.2,
+   "growth_score": 71.67,
    "industry": "Services-Business Services, NEC",
    "market_cap": 47016129635.0,
    "name": "PayPal Holdings, Inc.",
@@ -10146,10 +9791,10 @@
     "sales_trend": 11.57
    },
    "growth_ranks": {
-    "fcf_trend": 66.14,
-    "sales_trend": 73.75
+    "fcf_trend": 66.54,
+    "sales_trend": 74.34
    },
-   "growth_score": 69.94,
+   "growth_score": 70.44,
    "industry": "Operative Builders",
    "market_cap": 23328468603.0,
    "name": "PULTEGROUP INC/MI/",
@@ -10182,10 +9827,10 @@
     "sales_trend": 13.56
    },
    "growth_ranks": {
-    "fcf_trend": 61.57,
-    "sales_trend": 77.77
+    "fcf_trend": 61.99,
+    "sales_trend": 78.34
    },
-   "growth_score": 69.67,
+   "growth_score": 70.17,
    "industry": "Services-Business Services, NEC",
    "market_cap": 3018948615.0,
    "name": "MAXIMUS, INC.",
@@ -10221,10 +9866,10 @@
     "sales_trend": 19.71
    },
    "growth_ranks": {
-    "fcf_trend": 50.65,
-    "sales_trend": 88.1
+    "fcf_trend": 50.9,
+    "sales_trend": 88.65
    },
-   "growth_score": 69.38,
+   "growth_score": 69.78,
    "industry": "Computer Peripheral Equipment, NEC",
    "market_cap": 255909557.0,
    "name": "IMMERSION CORP",
@@ -10243,41 +9888,41 @@
   {
    "basis": "ev",
    "bs_as_of": "2025-12-31",
-   "capex_ocf": 13.5,
-   "cash": 6300000.0,
-   "country": "NC",
-   "cyclical": false,
+   "capex_ocf": 8.1,
+   "cash": 10209000000.0,
+   "country": "NJ",
+   "cyclical": true,
    "debt_inferred_zero": false,
-   "ev": 4169898962.0,
+   "ev": 173406193314.0,
    "exchange": "NYSE",
-   "fcf": 717300000.0,
-   "fcf_conv": 71.2,
-   "fcf_yield": 17.2,
+   "fcf": 12845000000.0,
+   "fcf_conv": 317.8,
+   "fcf_yield": 7.41,
    "foreign": false,
    "growth_components": {
-    "fcf_trend": 42.55,
-    "sales_trend": 4.64
+    "fcf_trend": 14.49,
+    "sales_trend": 9.73
    },
    "growth_ranks": {
-    "fcf_trend": 95.24,
-    "sales_trend": 41.37
+    "fcf_trend": 69.1,
+    "sales_trend": 68.62
    },
-   "growth_score": 68.3,
-   "industry": "Retail-Auto Dealers & Gasoline Stations",
-   "market_cap": 2560798962.0,
-   "name": "SONIC AUTOMOTIVE INC",
-   "nd_ebit": 4.38,
-   "op_margin_now": 2.4,
-   "pfcf": 3.6,
-   "pfcf_med": 9.6,
+   "growth_score": 68.86,
+   "industry": "Pharmaceutical Preparations",
+   "market_cap": 136494193314.0,
+   "name": "BRISTOL MYERS SQUIBB CO",
+   "nd_ebit": 3.11,
+   "op_margin_now": 23.3,
+   "pfcf": 10.6,
+   "pfcf_med": 10.1,
    "reason": "",
-   "rev_cagr5": 6.38,
-   "revenue": 15153600000.0,
-   "roic_med": 12.5,
-   "size_band": "mid",
-   "ticker": "SAH",
-   "total_debt": 1615400000.0,
-   "years": 15
+   "rev_cagr5": 10.73,
+   "revenue": 48194000000.0,
+   "roic_med": 12.0,
+   "size_band": "large",
+   "ticker": "BMY",
+   "total_debt": 47088000000.0,
+   "years": 17
   },
   {
    "basis": "ev",
@@ -10298,10 +9943,10 @@
     "sales_trend": 10.11
    },
    "growth_ranks": {
-    "fcf_trend": 67.54,
-    "sales_trend": 68.96
+    "fcf_trend": 67.96,
+    "sales_trend": 69.57
    },
-   "growth_score": 68.25,
+   "growth_score": 68.76,
    "industry": "Services-Prepackaged Software",
    "market_cap": 6267077690.0,
    "name": "NICE Ltd.",
@@ -10317,6 +9962,45 @@
    "ticker": "NICE",
    "total_debt": 0.0,
    "years": 16
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2025-12-31",
+   "capex_ocf": 13.5,
+   "cash": 6300000.0,
+   "country": "NC",
+   "cyclical": false,
+   "debt_inferred_zero": false,
+   "ev": 4169898962.0,
+   "exchange": "NYSE",
+   "fcf": 717300000.0,
+   "fcf_conv": 71.2,
+   "fcf_yield": 17.2,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 42.55,
+    "sales_trend": 4.64
+   },
+   "growth_ranks": {
+    "fcf_trend": 95.73,
+    "sales_trend": 41.64
+   },
+   "growth_score": 68.69,
+   "industry": "Retail-Auto Dealers & Gasoline Stations",
+   "market_cap": 2560798962.0,
+   "name": "SONIC AUTOMOTIVE INC",
+   "nd_ebit": 4.38,
+   "op_margin_now": 2.4,
+   "pfcf": 3.6,
+   "pfcf_med": 9.6,
+   "reason": "",
+   "rev_cagr5": 6.38,
+   "revenue": 15153600000.0,
+   "roic_med": 12.5,
+   "size_band": "mid",
+   "ticker": "SAH",
+   "total_debt": 1615400000.0,
+   "years": 15
   },
   {
    "basis": "ev",
@@ -10337,10 +10021,10 @@
     "sales_trend": 8.92
    },
    "growth_ranks": {
-    "fcf_trend": 72.01,
-    "sales_trend": 64.31
+    "fcf_trend": 72.51,
+    "sales_trend": 64.85
    },
-   "growth_score": 68.16,
+   "growth_score": 68.68,
    "industry": "Services-Prepackaged Software",
    "market_cap": 7861454397.0,
    "name": "DROPBOX, INC.",
@@ -10375,10 +10059,10 @@
     "sales_trend": 9.11
    },
    "growth_ranks": {
-    "fcf_trend": 70.99,
-    "sales_trend": 65.07
+    "fcf_trend": 71.47,
+    "sales_trend": 65.62
    },
-   "growth_score": 68.03,
+   "growth_score": 68.55,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 12116170990.0,
    "name": "ANTERO RESOURCES Corp",
@@ -10413,10 +10097,10 @@
     "sales_trend": 9.21
    },
    "growth_ranks": {
-    "fcf_trend": 68.1,
-    "sales_trend": 65.74
+    "fcf_trend": 68.53,
+    "sales_trend": 66.3
    },
-   "growth_score": 66.92,
+   "growth_score": 67.41,
    "industry": "Services-Business Services, NEC",
    "market_cap": 1069228441.0,
    "name": "QUINSTREET, INC",
@@ -10452,10 +10136,10 @@
     "sales_trend": 15.01
    },
    "growth_ranks": {
-    "fcf_trend": 52.8,
-    "sales_trend": 80.86
+    "fcf_trend": 53.08,
+    "sales_trend": 81.47
    },
-   "growth_score": 66.83,
+   "growth_score": 67.28,
    "industry": "Services-Computer Programming, Data Processing, Etc.",
    "market_cap": 1650919684.0,
    "name": "WEIBO Corp",
@@ -10491,10 +10175,10 @@
     "sales_trend": 10.56
    },
    "growth_ranks": {
-    "fcf_trend": 62.17,
-    "sales_trend": 70.39
+    "fcf_trend": 62.51,
+    "sales_trend": 71.03
    },
-   "growth_score": 66.28,
+   "growth_score": 66.77,
    "industry": "Refrigeration & Service Industry Machinery",
    "market_cap": 5053597501.0,
    "name": "MIDDLEBY Corp",
@@ -10530,10 +10214,10 @@
     "sales_trend": 6.01
    },
    "growth_ranks": {
-    "fcf_trend": 83.68,
-    "sales_trend": 48.48
+    "fcf_trend": 84.27,
+    "sales_trend": 48.86
    },
-   "growth_score": 66.08,
+   "growth_score": 66.56,
    "industry": "Trucking (No Local)",
    "market_cap": 11716804440.0,
    "name": "Knight-Swift Transportation Holdings Inc.",
@@ -10569,10 +10253,10 @@
     "sales_trend": 7.74
    },
    "growth_ranks": {
-    "fcf_trend": 73.13,
-    "sales_trend": 58.99
+    "fcf_trend": 73.65,
+    "sales_trend": 59.45
    },
-   "growth_score": 66.06,
+   "growth_score": 66.55,
    "industry": "Retail-Miscellaneous Shopping Goods Stores",
    "market_cap": 50883905.0,
    "name": "SPORTSMAN'S WAREHOUSE HOLDINGS, INC.",
@@ -10606,10 +10290,10 @@
     "sales_trend": 9.4
    },
    "growth_ranks": {
-    "fcf_trend": 64.93,
-    "sales_trend": 66.73
+    "fcf_trend": 65.31,
+    "sales_trend": 67.3
    },
-   "growth_score": 65.83,
+   "growth_score": 66.31,
    "industry": "Transportation Services",
    "market_cap": 34124355354.0,
    "name": "Expedia Group, Inc.",
@@ -10645,10 +10329,10 @@
     "sales_trend": 5.98
    },
    "growth_ranks": {
-    "fcf_trend": 83.12,
-    "sales_trend": 48.21
+    "fcf_trend": 83.7,
+    "sales_trend": 48.59
    },
-   "growth_score": 65.67,
+   "growth_score": 66.15,
    "industry": "Sporting & Athletic Goods, NEC",
    "market_cap": 287297964.0,
    "name": "ESCALADE INC",
@@ -10684,10 +10368,10 @@
     "sales_trend": 6.55
    },
    "growth_ranks": {
-    "fcf_trend": 78.45,
-    "sales_trend": 52.19
+    "fcf_trend": 79.05,
+    "sales_trend": 52.63
    },
-   "growth_score": 65.32,
+   "growth_score": 65.84,
    "industry": "Wholesale-Miscellaneous Nondurable Goods",
    "market_cap": 2610737263.0,
    "name": "CENTRAL GARDEN & PET CO",
@@ -10723,10 +10407,10 @@
     "sales_trend": 7.1
    },
    "growth_ranks": {
-    "fcf_trend": 74.91,
-    "sales_trend": 55.23
+    "fcf_trend": 75.45,
+    "sales_trend": 55.72
    },
-   "growth_score": 65.07,
+   "growth_score": 65.59,
    "industry": "Agricultural Prod-Livestock & Animal Specialties",
    "market_cap": 3501333244.0,
    "name": "CAL-MAINE FOODS INC",
@@ -10742,6 +10426,45 @@
    "ticker": "CALM",
    "total_debt": 0.0,
    "years": 15
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2026-01-03",
+   "capex_ocf": 22.6,
+   "cash": 188342000.0,
+   "country": "TX",
+   "cyclical": false,
+   "debt_inferred_zero": false,
+   "ev": 2864888653.0,
+   "exchange": "NYSE",
+   "fcf": 212070000.0,
+   "fcf_conv": 127.5,
+   "fcf_yield": 7.4,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 9.24,
+    "sales_trend": 13.96
+   },
+   "growth_ranks": {
+    "fcf_trend": 51.28,
+    "sales_trend": 79.56
+   },
+   "growth_score": 65.42,
+   "industry": "Sporting & Athletic Goods, NEC",
+   "market_cap": 2979402653.0,
+   "name": "YETI Holdings, Inc.",
+   "nd_ebit": -0.52,
+   "op_margin_now": 11.4,
+   "pfcf": 14.0,
+   "pfcf_med": 16.0,
+   "reason": "",
+   "rev_cagr5": 12.66,
+   "revenue": 1868494000.0,
+   "roic_med": 35.6,
+   "size_band": "mid",
+   "ticker": "YETI",
+   "total_debt": 73828000.0,
+   "years": 8
   },
   {
    "basis": "ev",
@@ -10762,10 +10485,10 @@
     "sales_trend": 9.32
    },
    "growth_ranks": {
-    "fcf_trend": 62.78,
-    "sales_trend": 66.37
+    "fcf_trend": 63.13,
+    "sales_trend": 66.94
    },
-   "growth_score": 64.58,
+   "growth_score": 65.03,
    "industry": "Services-Educational Services",
    "market_cap": 3519287675.0,
    "name": "Stride, Inc.",
@@ -10801,10 +10524,10 @@
     "sales_trend": 8.97
    },
    "growth_ranks": {
-    "fcf_trend": 63.06,
-    "sales_trend": 64.71
+    "fcf_trend": 63.41,
+    "sales_trend": 65.26
    },
-   "growth_score": 63.88,
+   "growth_score": 64.34,
    "industry": "Retail-Eating  Places",
    "market_cap": 224366075.0,
    "name": "RCI HOSPITALITY HOLDINGS, INC.",
@@ -10840,10 +10563,10 @@
     "sales_trend": 16.21
    },
    "growth_ranks": {
-    "fcf_trend": 44.12,
-    "sales_trend": 83.36
+    "fcf_trend": 44.36,
+    "sales_trend": 84.01
    },
-   "growth_score": 63.74,
+   "growth_score": 64.19,
    "industry": "Electromedical & Electrotherapeutic Apparatus",
    "market_cap": 857038311.0,
    "name": "InMode Ltd.",
@@ -10879,10 +10602,10 @@
     "sales_trend": 8.55
    },
    "growth_ranks": {
-    "fcf_trend": 64.46,
-    "sales_trend": 62.92
+    "fcf_trend": 64.83,
+    "sales_trend": 63.44
    },
-   "growth_score": 63.69,
+   "growth_score": 64.13,
    "industry": "Semiconductors & Related Devices",
    "market_cap": 11137995324.0,
    "name": "SKYWORKS SOLUTIONS, INC.",
@@ -10918,10 +10641,10 @@
     "sales_trend": 4.3
    },
    "growth_ranks": {
-    "fcf_trend": 86.19,
-    "sales_trend": 38.95
+    "fcf_trend": 86.73,
+    "sales_trend": 39.19
    },
-   "growth_score": 62.57,
+   "growth_score": 62.96,
    "industry": "Pipe Lines (No Natural Gas)",
    "market_cap": 5519546018.0,
    "name": "PLAINS GP HOLDINGS LP",
@@ -10956,10 +10679,10 @@
     "sales_trend": 13.33
    },
    "growth_ranks": {
-    "fcf_trend": 45.43,
-    "sales_trend": 77.28
+    "fcf_trend": 45.69,
+    "sales_trend": 77.84
    },
-   "growth_score": 61.36,
+   "growth_score": 61.77,
    "industry": "Construction - Special Trade Contractors",
    "market_cap": 5864333658.0,
    "name": "ARGAN INC",
@@ -10995,10 +10718,10 @@
     "sales_trend": 11.7
    },
    "growth_ranks": {
-    "fcf_trend": 47.67,
-    "sales_trend": 74.33
+    "fcf_trend": 47.96,
+    "sales_trend": 74.93
    },
-   "growth_score": 61.0,
+   "growth_score": 61.45,
    "industry": "Services-Computer Integrated Systems Design",
    "market_cap": 6001936509.0,
    "name": "OPEN TEXT CORP",
@@ -11034,10 +10757,10 @@
     "sales_trend": 8.43
    },
    "growth_ranks": {
-    "fcf_trend": 57.74,
-    "sales_trend": 62.16
+    "fcf_trend": 58.1,
+    "sales_trend": 62.67
    },
-   "growth_score": 59.95,
+   "growth_score": 60.39,
    "industry": "Services-Computer Processing & Data Preparation",
    "market_cap": 1813489650.0,
    "name": "EVERTEC, Inc.",
@@ -11073,10 +10796,10 @@
     "sales_trend": 7.53
    },
    "growth_ranks": {
-    "fcf_trend": 61.43,
-    "sales_trend": 57.74
+    "fcf_trend": 61.85,
+    "sales_trend": 58.17
    },
-   "growth_score": 59.59,
+   "growth_score": 60.01,
    "industry": "Deep Sea Foreign Transportation of  Freight",
    "market_cap": 559800751.0,
    "name": "Pangaea Logistics Solutions Ltd.",
@@ -11112,10 +10835,10 @@
     "sales_trend": 12.07
    },
    "growth_ranks": {
-    "fcf_trend": 43.75,
-    "sales_trend": 75.13
+    "fcf_trend": 43.98,
+    "sales_trend": 75.66
    },
-   "growth_score": 59.44,
+   "growth_score": 59.82,
    "industry": "Operative Builders",
    "market_cap": 3203433288.0,
    "name": "KB HOME",
@@ -11150,10 +10873,10 @@
     "sales_trend": 3.11
    },
    "growth_ranks": {
-    "fcf_trend": 86.38,
-    "sales_trend": 30.99
+    "fcf_trend": 86.92,
+    "sales_trend": 31.2
    },
-   "growth_score": 58.68,
+   "growth_score": 59.06,
    "industry": "Truck & Bus Bodies",
    "market_cap": 2015546362.0,
    "name": "Blue Bird Corp",
@@ -11169,6 +10892,45 @@
    "ticker": "BLBD",
    "total_debt": 90324000.0,
    "years": 11
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2025-12-31",
+   "capex_ocf": 4.5,
+   "cash": 36161000.0,
+   "country": "TN",
+   "cyclical": true,
+   "debt_inferred_zero": true,
+   "ev": 817645686.0,
+   "exchange": "Nasdaq",
+   "fcf": 59634000.0,
+   "fcf_conv": 291.4,
+   "fcf_yield": 7.29,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 9.62,
+    "sales_trend": 8.06
+   },
+   "growth_ranks": {
+    "fcf_trend": 53.74,
+    "sales_trend": 60.81
+   },
+   "growth_score": 57.28,
+   "industry": "Services-Computer Programming, Data Processing, Etc.",
+   "market_cap": 853806686.0,
+   "name": "HEALTHSTREAM INC",
+   "nd_ebit": -1.79,
+   "op_margin_now": 6.7,
+   "pfcf": 14.3,
+   "pfcf_med": 15.5,
+   "reason": "",
+   "rev_cagr5": 3.04,
+   "revenue": 304064000.0,
+   "roic_med": 5.3,
+   "size_band": "small",
+   "ticker": "HSTM",
+   "total_debt": 0.0,
+   "years": 15
   },
   {
    "basis": "ev",
@@ -11189,10 +10951,10 @@
     "sales_trend": 6.29
    },
    "growth_ranks": {
-    "fcf_trend": 63.71,
-    "sales_trend": 49.91
+    "fcf_trend": 64.08,
+    "sales_trend": 50.32
    },
-   "growth_score": 56.81,
+   "growth_score": 57.2,
    "industry": "Services-Computer Integrated Systems Design",
    "market_cap": 16696738407.0,
    "name": "Leidos Holdings, Inc.",
@@ -11227,10 +10989,10 @@
     "sales_trend": 1.89
    },
    "growth_ranks": {
-    "fcf_trend": 90.3,
-    "sales_trend": 23.08
+    "fcf_trend": 90.81,
+    "sales_trend": 23.16
    },
-   "growth_score": 56.69,
+   "growth_score": 56.98,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 4815814598.0,
    "name": "California Resources Corp",
@@ -11266,10 +11028,10 @@
     "sales_trend": 7.22
    },
    "growth_ranks": {
-    "fcf_trend": 56.25,
-    "sales_trend": 55.72
+    "fcf_trend": 56.59,
+    "sales_trend": 56.22
    },
-   "growth_score": 55.98,
+   "growth_score": 56.41,
    "industry": "Services-Business Services, NEC",
    "market_cap": 124637506411.0,
    "name": "Accenture plc",
@@ -11305,10 +11067,10 @@
     "sales_trend": 7.53
    },
    "growth_ranks": {
-    "fcf_trend": 53.22,
-    "sales_trend": 57.74
+    "fcf_trend": 53.51,
+    "sales_trend": 58.17
    },
-   "growth_score": 55.48,
+   "growth_score": 55.84,
    "industry": "Air Transportation, Scheduled",
    "market_cap": 4691795165.0,
    "name": "ALASKA AIR GROUP, INC.",
@@ -11344,10 +11106,10 @@
     "sales_trend": 11.24
    },
    "growth_ranks": {
-    "fcf_trend": 37.36,
-    "sales_trend": 72.81
+    "fcf_trend": 37.49,
+    "sales_trend": 73.39
    },
-   "growth_score": 55.09,
+   "growth_score": 55.44,
    "industry": "Telegraph & Other Message Communications",
    "market_cap": 1909797486.0,
    "name": "ZIFF DAVIS, INC.",
@@ -11383,10 +11145,10 @@
     "sales_trend": 2.76
    },
    "growth_ranks": {
-    "fcf_trend": 81.25,
-    "sales_trend": 28.76
+    "fcf_trend": 81.9,
+    "sales_trend": 28.93
    },
-   "growth_score": 55.01,
+   "growth_score": 55.42,
    "industry": "Pipe Lines (No Natural Gas)",
    "market_cap": 18133058022.0,
    "name": "PLAINS ALL AMERICAN PIPELINE LP",
@@ -11421,10 +11183,10 @@
     "sales_trend": 8.49
    },
    "growth_ranks": {
-    "fcf_trend": 46.46,
-    "sales_trend": 62.48
+    "fcf_trend": 46.73,
+    "sales_trend": 62.99
    },
-   "growth_score": 54.47,
+   "growth_score": 54.86,
    "industry": "Services-Computer Programming Services",
    "market_cap": 28067178663.0,
    "name": "COGNIZANT TECHNOLOGY SOLUTIONS CORP",
@@ -11460,10 +11222,10 @@
     "sales_trend": 6.54
    },
    "growth_ranks": {
-    "fcf_trend": 56.72,
-    "sales_trend": 52.06
+    "fcf_trend": 57.06,
+    "sales_trend": 52.5
    },
-   "growth_score": 54.39,
+   "growth_score": 54.78,
    "industry": "Laboratory Apparatus & Furniture",
    "market_cap": 106176466.0,
    "name": "KEWAUNEE SCIENTIFIC CORP /DE/",
@@ -11499,10 +11261,10 @@
     "sales_trend": 3.8
    },
    "growth_ranks": {
-    "fcf_trend": 73.6,
-    "sales_trend": 35.06
+    "fcf_trend": 74.12,
+    "sales_trend": 35.24
    },
-   "growth_score": 54.33,
+   "growth_score": 54.68,
    "industry": "Motor Vehicle Parts & Accessories",
    "market_cap": 302223386.0,
    "name": "STRATTEC SECURITY CORP",
@@ -11538,10 +11300,10 @@
     "sales_trend": 19.64
    },
    "growth_ranks": {
-    "fcf_trend": 20.57,
-    "sales_trend": 88.01
+    "fcf_trend": 20.52,
+    "sales_trend": 88.56
    },
-   "growth_score": 54.29,
+   "growth_score": 54.54,
    "industry": "Services-Computer Programming Services",
    "market_cap": 366165270.0,
    "name": "Perion Network Ltd.",
@@ -11576,10 +11338,10 @@
     "sales_trend": 8.32
    },
    "growth_ranks": {
-    "fcf_trend": 46.36,
-    "sales_trend": 61.58
+    "fcf_trend": 46.64,
+    "sales_trend": 62.08
    },
-   "growth_score": 53.97,
+   "growth_score": 54.36,
    "industry": "Services-Management Consulting Services",
    "market_cap": 6271044069.0,
    "name": "Genpact LTD",
@@ -11594,6 +11356,45 @@
    "size_band": "mid",
    "ticker": "G",
    "total_debt": 1542301000.0,
+   "years": 13
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2026-01-30",
+   "capex_ocf": 6.1,
+   "cash": 182000000.0,
+   "country": "VA",
+   "cyclical": false,
+   "debt_inferred_zero": false,
+   "ev": 7615525236.0,
+   "exchange": "Nasdaq",
+   "fcf": 577000000.0,
+   "fcf_conv": 156.9,
+   "fcf_yield": 7.58,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 10.08,
+    "sales_trend": 6.49
+   },
+   "growth_ranks": {
+    "fcf_trend": 56.02,
+    "sales_trend": 52.09
+   },
+   "growth_score": 54.06,
+   "industry": "Services-Computer Integrated Systems Design",
+   "market_cap": 5310525236.0,
+   "name": "Science Applications International Corp",
+   "nd_ebit": 4.42,
+   "op_margin_now": 7.2,
+   "pfcf": 9.2,
+   "pfcf_med": 11.5,
+   "reason": "",
+   "rev_cagr5": 6.55,
+   "revenue": 7262000000.0,
+   "roic_med": 11.6,
+   "size_band": "mid",
+   "ticker": "SAIC",
+   "total_debt": 2487000000.0,
    "years": 13
   },
   {
@@ -11615,10 +11416,10 @@
     "sales_trend": 1.41
    },
    "growth_ranks": {
-    "fcf_trend": 87.22,
-    "sales_trend": 20.13
+    "fcf_trend": 87.77,
+    "sales_trend": 20.16
    },
-   "growth_score": 53.67,
+   "growth_score": 53.96,
    "industry": "Canned, Fruits, Veg, Preserves, Jams & Jellies",
    "market_cap": 1325046139.0,
    "name": "Seneca Foods Corp",
@@ -11633,85 +11434,6 @@
    "ticker": "SENEA",
    "total_debt": 369878000.0,
    "years": 14
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2026-01-30",
-   "capex_ocf": 6.1,
-   "cash": 182000000.0,
-   "country": "VA",
-   "cyclical": false,
-   "debt_inferred_zero": false,
-   "ev": 7615525236.0,
-   "exchange": "Nasdaq",
-   "fcf": 577000000.0,
-   "fcf_conv": 156.9,
-   "fcf_yield": 7.58,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 10.08,
-    "sales_trend": 6.49
-   },
-   "growth_ranks": {
-    "fcf_trend": 55.69,
-    "sales_trend": 51.65
-   },
-   "growth_score": 53.67,
-   "industry": "Services-Computer Integrated Systems Design",
-   "market_cap": 5310525236.0,
-   "name": "Science Applications International Corp",
-   "nd_ebit": 4.42,
-   "op_margin_now": 7.2,
-   "pfcf": 9.2,
-   "pfcf_med": 11.5,
-   "reason": "",
-   "rev_cagr5": 6.55,
-   "revenue": 7262000000.0,
-   "roic_med": 11.6,
-   "size_band": "mid",
-   "ticker": "SAIC",
-   "total_debt": 2487000000.0,
-   "years": 13
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 28.8,
-   "cash": 178244000.0,
-   "country": "NY",
-   "cyclical": true,
-   "debt_inferred_zero": false,
-   "ev": 308584706.0,
-   "exchange": "NYSE",
-   "fcf": 117324000.0,
-   "fcf_conv": 157.5,
-   "fcf_yield": 38.02,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 9.13,
-    "sales_trend": 7.32
-   },
-   "growth_ranks": {
-    "fcf_trend": 50.42,
-    "sales_trend": 56.26
-   },
-   "growth_score": 53.34,
-   "industry": "Services-Computer Processing & Data Preparation",
-   "market_cap": 212079706.0,
-   "multiple_fault": "1.8x is below the 2x floor \u2014 no going concern trades there, so this is a data fault, and on a screen that ranks by cheapness it would sort first",
-   "name": "Shutterstock, Inc.",
-   "nd_ebit": -0.27,
-   "op_margin_now": 7.6,
-   "pfcf": 1.8,
-   "pfcf_med": 20.5,
-   "reason": "",
-   "rev_cagr5": 7.25,
-   "revenue": 989925000.0,
-   "roic_med": 49.3,
-   "size_band": "micro",
-   "ticker": "SSTK",
-   "total_debt": 274749000.0,
-   "years": 8
   },
   {
    "basis": "ev",
@@ -11732,10 +11454,10 @@
     "sales_trend": 7.16
    },
    "growth_ranks": {
-    "fcf_trend": 51.17,
-    "sales_trend": 55.5
+    "fcf_trend": 51.42,
+    "sales_trend": 55.99
    },
-   "growth_score": 53.34,
+   "growth_score": 53.7,
    "industry": "Retail-Auto Dealers & Gasoline Stations",
    "market_cap": 5947411689.0,
    "name": "RUSH ENTERPRISES INC \\TX\\",
@@ -11751,44 +11473,6 @@
    "ticker": "RUSHA",
    "total_debt": 274925000.0,
    "years": 15
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 18.7,
-   "cash": 734553000.0,
-   "country": "CA",
-   "cyclical": false,
-   "debt_inferred_zero": false,
-   "ev": 4353970811.0,
-   "exchange": "NYSE",
-   "fcf": 567211000.0,
-   "fcf_yield": 13.03,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 32.1,
-    "sales_trend": 0.29
-   },
-   "growth_ranks": {
-    "fcf_trend": 90.86,
-    "sales_trend": 15.21
-   },
-   "growth_score": 53.03,
-   "industry": "General Bldg Contractors - Nonresidential Bldgs",
-   "market_cap": 4637121811.0,
-   "name": "TUTOR PERINI CORP",
-   "nd_ebit": -1.41,
-   "op_margin_now": 4.2,
-   "pfcf": 8.2,
-   "pfcf_med": 3.7,
-   "reason": "",
-   "rev_cagr5": 3.73,
-   "revenue": 5543039000.0,
-   "roic_med": 6.1,
-   "size_band": "mid",
-   "ticker": "TPC",
-   "total_debt": 407374000.0,
-   "years": 8
   },
   {
    "basis": "ev",
@@ -11809,10 +11493,10 @@
     "sales_trend": 7.08
    },
    "growth_ranks": {
-    "fcf_trend": 50.93,
-    "sales_trend": 55.1
+    "fcf_trend": 51.18,
+    "sales_trend": 55.59
    },
-   "growth_score": 53.02,
+   "growth_score": 53.39,
    "industry": "Semiconductors & Related Devices",
    "market_cap": 5673809081.0,
    "name": "CIRRUS LOGIC, INC.",
@@ -11848,10 +11532,10 @@
     "sales_trend": 2.18
    },
    "growth_ranks": {
-    "fcf_trend": 80.97,
-    "sales_trend": 25.0
+    "fcf_trend": 81.61,
+    "sales_trend": 25.11
    },
-   "growth_score": 52.98,
+   "growth_score": 53.36,
    "industry": "Services-Help Supply Services",
    "market_cap": 1334550000.0,
    "name": "Everforth Inc",
@@ -11866,6 +11550,44 @@
    "size_band": "small",
    "ticker": "EFOR",
    "total_debt": 1169400000.0,
+   "years": 8
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2025-12-31",
+   "capex_ocf": 18.7,
+   "cash": 734553000.0,
+   "country": "CA",
+   "cyclical": false,
+   "debt_inferred_zero": false,
+   "ev": 4353970811.0,
+   "exchange": "NYSE",
+   "fcf": 567211000.0,
+   "fcf_yield": 13.03,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 32.1,
+    "sales_trend": 0.29
+   },
+   "growth_ranks": {
+    "fcf_trend": 91.37,
+    "sales_trend": 15.26
+   },
+   "growth_score": 53.32,
+   "industry": "General Bldg Contractors - Nonresidential Bldgs",
+   "market_cap": 4637121811.0,
+   "name": "TUTOR PERINI CORP",
+   "nd_ebit": -1.41,
+   "op_margin_now": 4.2,
+   "pfcf": 8.2,
+   "pfcf_med": 3.7,
+   "reason": "",
+   "rev_cagr5": 3.73,
+   "revenue": 5543039000.0,
+   "roic_med": 6.1,
+   "size_band": "mid",
+   "ticker": "TPC",
+   "total_debt": 407374000.0,
    "years": 8
   },
   {
@@ -11887,10 +11609,10 @@
     "sales_trend": 8.67
    },
    "growth_ranks": {
-    "fcf_trend": 41.37,
-    "sales_trend": 63.6
+    "fcf_trend": 41.56,
+    "sales_trend": 64.12
    },
-   "growth_score": 52.48,
+   "growth_score": 52.84,
    "industry": "Services-Management Consulting Services",
    "market_cap": 8756746034.0,
    "name": "Booz Allen Hamilton Holding Corp",
@@ -11926,10 +11648,10 @@
     "sales_trend": 4.88
    },
    "growth_ranks": {
-    "fcf_trend": 60.77,
-    "sales_trend": 42.98
+    "fcf_trend": 61.18,
+    "sales_trend": 43.28
    },
-   "growth_score": 51.88,
+   "growth_score": 52.23,
    "industry": "Wholesale-Groceries, General Line",
    "market_cap": 2658605820.0,
    "name": "UNITED NATURAL FOODS INC",
@@ -11965,10 +11687,10 @@
     "sales_trend": 2.37
    },
    "growth_ranks": {
-    "fcf_trend": 77.24,
-    "sales_trend": 26.25
+    "fcf_trend": 77.82,
+    "sales_trend": 26.39
    },
-   "growth_score": 51.74,
+   "growth_score": 52.1,
    "industry": "Retail-Hobby, Toy & Game Shops",
    "market_cap": 368976947.0,
    "name": "BUILD-A-BEAR WORKSHOP INC",
@@ -12004,10 +11726,10 @@
     "sales_trend": 3.5
    },
    "growth_ranks": {
-    "fcf_trend": 67.21,
-    "sales_trend": 33.81
+    "fcf_trend": 67.63,
+    "sales_trend": 33.97
    },
-   "growth_score": 50.51,
+   "growth_score": 50.8,
    "industry": "Retail-Jewelry Stores",
    "market_cap": 3354830490.0,
    "name": "SIGNET JEWELERS LTD",
@@ -12043,10 +11765,10 @@
     "sales_trend": 0.82
    },
    "growth_ranks": {
-    "fcf_trend": 82.37,
-    "sales_trend": 18.07
+    "fcf_trend": 82.94,
+    "sales_trend": 18.17
    },
-   "growth_score": 50.22,
+   "growth_score": 50.55,
    "industry": "Services-General Medical & Surgical Hospitals, NEC",
    "market_cap": 21341560950.0,
    "name": "TENET HEALTHCARE CORP",
@@ -12062,44 +11784,6 @@
    "ticker": "THC",
    "total_debt": 13171000000.0,
    "years": 8
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 12.4,
-   "cash": 16963000.0,
-   "country": "CA",
-   "cyclical": false,
-   "debt_inferred_zero": false,
-   "ev": 262264193.0,
-   "exchange": "Nasdaq",
-   "fcf": 34039000.0,
-   "fcf_yield": 12.98,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": -22.7,
-    "sales_trend": 63.92
-   },
-   "growth_ranks": {
-    "fcf_trend": 0.56,
-    "sales_trend": 99.11
-   },
-   "growth_score": 49.84,
-   "industry": "Communications Equipment, NEC",
-   "market_cap": 223513193.0,
-   "name": "Turtle Beach Corp",
-   "nd_ebit": 1.07,
-   "op_margin_now": 8.6,
-   "pfcf": 6.6,
-   "pfcf_med": 7.3,
-   "reason": "",
-   "rev_cagr5": 5.3,
-   "revenue": 319914000.0,
-   "roic_med": -8.2,
-   "size_band": "micro",
-   "ticker": "TBCH",
-   "total_debt": 55714000.0,
-   "years": 15
   },
   {
    "basis": "ev",
@@ -12120,10 +11804,10 @@
     "sales_trend": 4.42
    },
    "growth_ranks": {
-    "fcf_trend": 59.61,
-    "sales_trend": 39.8
+    "fcf_trend": 60.0,
+    "sales_trend": 40.05
    },
-   "growth_score": 49.7,
+   "growth_score": 50.02,
    "industry": "Hotels & Motels",
    "market_cap": 10648079954.0,
    "name": "MGM Resorts International",
@@ -12143,41 +11827,79 @@
   {
    "basis": "ev",
    "bs_as_of": "2025-12-31",
-   "capex_ocf": 47.5,
-   "cash": 205400000.0,
-   "country": "MD",
-   "cyclical": true,
+   "capex_ocf": 12.4,
+   "cash": 16963000.0,
+   "country": "CA",
+   "cyclical": false,
    "debt_inferred_zero": false,
-   "ev": 702707417.0,
-   "exchange": "NYSE",
-   "fcf": 156800000.0,
-   "fcf_yield": 22.31,
+   "ev": 262264193.0,
+   "exchange": "Nasdaq",
+   "fcf": 34039000.0,
+   "fcf_yield": 12.98,
    "foreign": false,
    "growth_components": {
-    "fcf_trend": 1.98,
-    "sales_trend": 11.8
+    "fcf_trend": -22.7,
+    "sales_trend": 63.92
    },
    "growth_ranks": {
-    "fcf_trend": 23.97,
-    "sales_trend": 74.42
+    "fcf_trend": 0.57,
+    "sales_trend": 99.09
    },
-   "growth_score": 49.2,
-   "industry": "Pharmaceutical Preparations",
-   "market_cap": 318407417.0,
-   "multiple_fault": "2.0x is under a fifth of its own 11.3x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
-   "name": "Emergent BioSolutions Inc.",
-   "nd_ebit": 3.66,
-   "op_margin_now": 13.5,
-   "pfcf": 2.0,
-   "pfcf_med": 11.3,
+   "growth_score": 49.83,
+   "industry": "Communications Equipment, NEC",
+   "market_cap": 223513193.0,
+   "name": "Turtle Beach Corp",
+   "nd_ebit": 1.07,
+   "op_margin_now": 8.6,
+   "pfcf": 6.6,
+   "pfcf_med": 7.3,
    "reason": "",
-   "rev_cagr5": -6.42,
-   "revenue": 742900000.0,
-   "roic_med": 8.5,
-   "size_band": "small",
-   "ticker": "EBS",
-   "total_debt": 589700000.0,
+   "rev_cagr5": 5.3,
+   "revenue": 319914000.0,
+   "roic_med": -8.2,
+   "size_band": "micro",
+   "ticker": "TBCH",
+   "total_debt": 55714000.0,
    "years": 15
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2026-01-30",
+   "capex_ocf": 49.6,
+   "cash": 1138501000.0,
+   "country": "TN",
+   "cyclical": false,
+   "debt_inferred_zero": false,
+   "ev": 32830143596.0,
+   "exchange": "NYSE",
+   "fcf": 2393338000.0,
+   "fcf_conv": 83.4,
+   "fcf_yield": 7.29,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 6.8,
+    "sales_trend": 7.39
+   },
+   "growth_ranks": {
+    "fcf_trend": 42.46,
+    "sales_trend": 57.13
+   },
+   "growth_score": 49.8,
+   "industry": "Retail-Variety Stores",
+   "market_cap": 29388362596.0,
+   "name": "DOLLAR GENERAL CORP",
+   "nd_ebit": -0.52,
+   "op_margin_now": 5.2,
+   "pfcf": 12.3,
+   "pfcf_med": 28.0,
+   "reason": "",
+   "rev_cagr5": 7.45,
+   "revenue": 42724369000.0,
+   "roic_med": 27.3,
+   "size_band": "large",
+   "ticker": "DG",
+   "total_debt": 4580282000.0,
+   "years": 8
   },
   {
    "basis": "ev",
@@ -12198,10 +11920,10 @@
     "sales_trend": 6.41
    },
    "growth_ranks": {
-    "fcf_trend": 47.2,
-    "sales_trend": 50.98
+    "fcf_trend": 47.49,
+    "sales_trend": 51.41
    },
-   "growth_score": 49.09,
+   "growth_score": 49.45,
    "industry": "Motor Vehicle Parts & Accessories",
    "market_cap": 13755625549.0,
    "name": "BORGWARNER INC",
@@ -12237,10 +11959,10 @@
     "sales_trend": 0.03
    },
    "growth_ranks": {
-    "fcf_trend": 82.46,
-    "sales_trend": 14.45
+    "fcf_trend": 83.03,
+    "sales_trend": 14.49
    },
-   "growth_score": 48.45,
+   "growth_score": 48.76,
    "industry": "Apparel & Other Finishd Prods of  Fabrics & Similar Matl",
    "market_cap": 1170366495.0,
    "name": "G III APPAREL GROUP LTD /DE/",
@@ -12256,6 +11978,83 @@
    "ticker": "GIII",
    "total_debt": 11742000.0,
    "years": 7
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2025-12-31",
+   "capex_ocf": 13.6,
+   "cash": 578761000.0,
+   "country": "TX",
+   "cyclical": false,
+   "debt_inferred_zero": false,
+   "ev": 4777205334.0,
+   "exchange": "NYSE",
+   "fcf": 353347000.0,
+   "fcf_yield": 7.4,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 29.8,
+    "sales_trend": -2.56
+   },
+   "growth_ranks": {
+    "fcf_trend": 90.24,
+    "sales_trend": 6.99
+   },
+   "growth_score": 48.61,
+   "industry": "Water Transportation",
+   "market_cap": 4690022334.0,
+   "name": "TIDEWATER INC",
+   "nd_ebit": 0.27,
+   "op_margin_now": 20.9,
+   "pfcf": 13.3,
+   "pfcf_med": 41.1,
+   "reason": "",
+   "rev_cagr5": 18.58,
+   "revenue": 1352786000.0,
+   "roic_med": 2.4,
+   "size_band": "mid",
+   "ticker": "TDW",
+   "total_debt": 670078000.0,
+   "years": 15
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2026-06-30",
+   "capex_ocf": 14.9,
+   "cash": 4856000000.0,
+   "country": "OH",
+   "cyclical": true,
+   "debt_inferred_zero": false,
+   "ev": 61677068447.0,
+   "exchange": "NYSE",
+   "fcf": 4525000000.0,
+   "fcf_conv": 386.9,
+   "fcf_yield": 7.34,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 5.9,
+    "sales_trend": 7.35
+   },
+   "growth_ranks": {
+    "fcf_trend": 39.24,
+    "sales_trend": 56.86
+   },
+   "growth_score": 48.05,
+   "industry": "Wholesale-Drugs, Proprietaries & Druggists' Sundries",
+   "market_cap": 57488068447.0,
+   "name": "CARDINAL HEALTH INC",
+   "nd_ebit": -1.86,
+   "op_margin_now": 1.0,
+   "pfcf": 12.7,
+   "pfcf_med": 8.9,
+   "reason": "",
+   "rev_cagr5": 8.3,
+   "revenue": 254248000000.0,
+   "roic_med": 39.9,
+   "size_band": "large",
+   "ticker": "CAH",
+   "total_debt": 8886000000.0,
+   "years": 17
   },
   {
    "basis": "ev",
@@ -12276,10 +12075,10 @@
     "sales_trend": 7.81
    },
    "growth_ranks": {
-    "fcf_trend": 36.19,
-    "sales_trend": 59.26
+    "fcf_trend": 36.3,
+    "sales_trend": 59.72
    },
-   "growth_score": 47.72,
+   "growth_score": 48.01,
    "industry": "Truck & Bus Bodies",
    "market_cap": 636403435.0,
    "name": "MILLER INDUSTRIES INC /TN/",
@@ -12315,10 +12114,10 @@
     "sales_trend": 3.58
    },
    "growth_ranks": {
-    "fcf_trend": 61.43,
-    "sales_trend": 33.94
+    "fcf_trend": 61.85,
+    "sales_trend": 34.11
    },
-   "growth_score": 47.69,
+   "growth_score": 47.98,
    "industry": "Apparel & Other Finishd Prods of  Fabrics & Similar Matl",
    "market_cap": 2954871158.0,
    "name": "COLUMBIA SPORTSWEAR CO",
@@ -12354,10 +12153,10 @@
     "sales_trend": 6.37
    },
    "growth_ranks": {
-    "fcf_trend": 44.64,
-    "sales_trend": 50.49
+    "fcf_trend": 44.88,
+    "sales_trend": 50.91
    },
-   "growth_score": 47.56,
+   "growth_score": 47.89,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 76156391063.0,
    "name": "EOG RESOURCES INC",
@@ -12393,10 +12192,10 @@
     "sales_trend": -11.36
    },
    "growth_ranks": {
-    "fcf_trend": 92.72,
-    "sales_trend": 0.72
+    "fcf_trend": 93.27,
+    "sales_trend": 0.73
    },
-   "growth_score": 46.72,
+   "growth_score": 47.0,
    "industry": "Crude Petroleum & Natural Gas",
    "market_cap": 5224808195.0,
    "name": "MURPHY OIL CORP",
@@ -12432,10 +12231,10 @@
     "sales_trend": 6.96
    },
    "growth_ranks": {
-    "fcf_trend": 38.99,
-    "sales_trend": 54.29
+    "fcf_trend": 39.15,
+    "sales_trend": 54.77
    },
-   "growth_score": 46.64,
+   "growth_score": 46.96,
    "industry": "Wholesale-Groceries, General Line",
    "market_cap": 66018534.0,
    "name": "AMCON DISTRIBUTING CO",
@@ -12471,10 +12270,10 @@
     "sales_trend": 7.52
    },
    "growth_ranks": {
-    "fcf_trend": 35.54,
-    "sales_trend": 57.6
+    "fcf_trend": 35.64,
+    "sales_trend": 58.04
    },
-   "growth_score": 46.57,
+   "growth_score": 46.84,
    "industry": "Services-Educational Services",
    "market_cap": 1811914739.0,
    "name": "Strategic Education, Inc.",
@@ -12510,10 +12309,10 @@
     "sales_trend": 15.08
    },
    "growth_ranks": {
-    "fcf_trend": 10.17,
-    "sales_trend": 80.95
+    "fcf_trend": 10.05,
+    "sales_trend": 81.56
    },
-   "growth_score": 45.56,
+   "growth_score": 45.8,
    "industry": "Mining & Quarrying of  Nonmetallic Minerals (No Fuels)",
    "market_cap": 225563005.0,
    "name": "Smart Sand, Inc.",
@@ -12528,6 +12327,45 @@
    "ticker": "SND",
    "total_debt": 14993000.0,
    "years": 10
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2025-11-30",
+   "capex_ocf": 2.7,
+   "cash": 94807000.0,
+   "country": "MA",
+   "cyclical": true,
+   "debt_inferred_zero": false,
+   "ev": 3112162095.0,
+   "exchange": "Nasdaq",
+   "fcf": 229485000.0,
+   "fcf_conv": 255.4,
+   "fcf_yield": 7.37,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 6.66,
+    "sales_trend": 6.02
+   },
+   "growth_ranks": {
+    "fcf_trend": 41.8,
+    "sales_trend": 49.05
+   },
+   "growth_score": 45.42,
+   "industry": "Services-Prepackaged Software",
+   "market_cap": 1806620095.0,
+   "name": "PROGRESS SOFTWARE CORP /MA",
+   "nd_ebit": 8.52,
+   "op_margin_now": 15.7,
+   "pfcf": 7.9,
+   "pfcf_med": 12.6,
+   "reason": "",
+   "rev_cagr5": 15.43,
+   "revenue": 977831000.0,
+   "roic_med": 13.1,
+   "size_band": "small",
+   "ticker": "PRGS",
+   "total_debt": 1400349000.0,
+   "years": 16
   },
   {
    "basis": "ev",
@@ -12548,10 +12386,10 @@
     "sales_trend": 6.36
    },
    "growth_ranks": {
-    "fcf_trend": 39.23,
-    "sales_trend": 50.27
+    "fcf_trend": 39.38,
+    "sales_trend": 50.68
    },
-   "growth_score": 44.75,
+   "growth_score": 45.03,
    "industry": "Coating, Engraving & Allied Services",
    "market_cap": 4207811170.0,
    "name": "AZZ INC",
@@ -12587,10 +12425,10 @@
     "sales_trend": 4.04
    },
    "growth_ranks": {
-    "fcf_trend": 51.96,
-    "sales_trend": 37.48
+    "fcf_trend": 52.23,
+    "sales_trend": 37.69
    },
-   "growth_score": 44.72,
+   "growth_score": 44.96,
    "industry": "Steel Works, Blast Furnaces & Rolling & Finishing Mills",
    "market_cap": 1402563755.0,
    "name": "GIBRALTAR INDUSTRIES, INC.",
@@ -12626,10 +12464,10 @@
     "sales_trend": 9.43
    },
    "growth_ranks": {
-    "fcf_trend": 21.88,
-    "sales_trend": 66.82
+    "fcf_trend": 21.85,
+    "sales_trend": 67.39
    },
-   "growth_score": 44.35,
+   "growth_score": 44.62,
    "industry": "Services-Business Services, NEC",
    "market_cap": 467713560.0,
    "name": "Rimini Street, Inc.",
@@ -12664,10 +12502,10 @@
     "sales_trend": 1.7
    },
    "growth_ranks": {
-    "fcf_trend": 67.07,
-    "sales_trend": 21.56
+    "fcf_trend": 67.49,
+    "sales_trend": 21.62
    },
-   "growth_score": 44.31,
+   "growth_score": 44.55,
    "industry": "Retail-Shoe Stores",
    "market_cap": 382018904.0,
    "name": "SHOE STATION GROUP INC",
@@ -12702,10 +12540,10 @@
     "sales_trend": 5.18
    },
    "growth_ranks": {
-    "fcf_trend": 38.9,
-    "sales_trend": 44.14
+    "fcf_trend": 39.05,
+    "sales_trend": 44.46
    },
-   "growth_score": 41.52,
+   "growth_score": 41.75,
    "industry": "Services-Computer Integrated Systems Design",
    "market_cap": 2706166153.0,
    "name": "NETSCOUT SYSTEMS INC",
@@ -12741,10 +12579,10 @@
     "sales_trend": 2.08
    },
    "growth_ranks": {
-    "fcf_trend": 58.63,
-    "sales_trend": 24.15
+    "fcf_trend": 59.0,
+    "sales_trend": 24.25
    },
-   "growth_score": 41.39,
+   "growth_score": 41.62,
    "industry": "Pharmaceutical Preparations",
    "market_cap": 246689190.0,
    "name": "NATURES SUNSHINE PRODUCTS INC",
@@ -12780,10 +12618,10 @@
     "sales_trend": 4.79
    },
    "growth_ranks": {
-    "fcf_trend": 40.02,
-    "sales_trend": 42.22
+    "fcf_trend": 40.19,
+    "sales_trend": 42.51
    },
-   "growth_score": 41.12,
+   "growth_score": 41.35,
    "industry": "Food and Kindred Products",
    "market_cap": 1329600011.0,
    "name": "FLOWERS FOODS INC",
@@ -12819,10 +12657,10 @@
     "sales_trend": 1.46
    },
    "growth_ranks": {
-    "fcf_trend": 60.77,
-    "sales_trend": 20.48
+    "fcf_trend": 61.18,
+    "sales_trend": 20.53
    },
-   "growth_score": 40.62,
+   "growth_score": 40.86,
    "industry": "Household Furniture",
    "market_cap": 140930448.0,
    "name": "HOOKER FURNISHINGS Corp",
@@ -12837,44 +12675,6 @@
    "ticker": "HOFT",
    "total_debt": 3223000.0,
    "years": 11
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 85.9,
-   "cash": 155584000.0,
-   "country": "CA",
-   "cyclical": false,
-   "debt_inferred_zero": false,
-   "ev": 440575275.0,
-   "exchange": "Nasdaq",
-   "fcf": 59850000.0,
-   "fcf_yield": 13.58,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 11.79,
-    "sales_trend": 1.05
-   },
-   "growth_ranks": {
-    "fcf_trend": 61.71,
-    "sales_trend": 19.14
-   },
-   "growth_score": 40.42,
-   "industry": "Gas & Other Services Combined",
-   "market_cap": 363734275.0,
-   "multiple_fault": "6.1x is under a fifth of its own 37.2x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
-   "name": "Clean Energy Fuels Corp.",
-   "op_margin_now": -37.6,
-   "pfcf": 6.1,
-   "pfcf_med": 37.2,
-   "reason": "",
-   "rev_cagr5": 3.58,
-   "revenue": 424833000.0,
-   "roic_med": -9.8,
-   "size_band": "small",
-   "ticker": "CLNE",
-   "total_debt": 226779000.0,
-   "years": 15
   },
   {
    "basis": "ev",
@@ -12895,10 +12695,10 @@
     "sales_trend": 1.55
    },
    "growth_ranks": {
-    "fcf_trend": 57.37,
-    "sales_trend": 20.97
+    "fcf_trend": 57.73,
+    "sales_trend": 21.03
    },
-   "growth_score": 39.17,
+   "growth_score": 39.38,
    "industry": "Retail-Furniture Stores",
    "market_cap": 445353959.0,
    "name": "HAVERTY FURNITURE COMPANIES INC",
@@ -12933,10 +12733,10 @@
     "sales_trend": 1.88
    },
    "growth_ranks": {
-    "fcf_trend": 54.85,
-    "sales_trend": 22.94
+    "fcf_trend": 55.17,
+    "sales_trend": 23.02
    },
-   "growth_score": 38.9,
+   "growth_score": 39.09,
    "industry": "Services-Computer Programming, Data Processing, Etc.",
    "market_cap": 9609004232.0,
    "name": "Match Group, Inc.",
@@ -12972,10 +12772,10 @@
     "sales_trend": 0.72
    },
    "growth_ranks": {
-    "fcf_trend": 58.49,
-    "sales_trend": 17.26
+    "fcf_trend": 58.86,
+    "sales_trend": 17.35
    },
-   "growth_score": 37.88,
+   "growth_score": 38.11,
    "industry": "Motor Vehicles & Passenger Car Bodies",
    "market_cap": 77005147238.0,
    "name": "General Motors Co",
@@ -13011,10 +12811,10 @@
     "sales_trend": 4.48
    },
    "growth_ranks": {
-    "fcf_trend": 35.17,
-    "sales_trend": 40.43
+    "fcf_trend": 35.26,
+    "sales_trend": 40.69
    },
-   "growth_score": 37.8,
+   "growth_score": 37.97,
    "industry": "Household Furniture",
    "market_cap": 1312128778.0,
    "name": "LA-Z-BOY INC",
@@ -13030,45 +12830,6 @@
    "ticker": "LZB",
    "total_debt": 0.0,
    "years": 15
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 29.6,
-   "cash": 112100000.0,
-   "country": "NY",
-   "cyclical": false,
-   "debt_inferred_zero": false,
-   "ev": 690395483.0,
-   "exchange": "NYSE",
-   "fcf": 146100000.0,
-   "fcf_yield": 21.16,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": -10.65,
-    "sales_trend": 10.67
-   },
-   "growth_ranks": {
-    "fcf_trend": 4.2,
-    "sales_trend": 70.84
-   },
-   "growth_score": 37.52,
-   "industry": "Fabricated Structural Metal Products",
-   "market_cap": 101495483.0,
-   "multiple_fault": "0.7x is below the 2x floor \u2014 no going concern trades there, so this is a data fault, and on a screen that ranks by cheapness it would sort first",
-   "name": "INNOVATE Corp.",
-   "nd_ebit": 16.35,
-   "op_margin_now": 2.3,
-   "pfcf": 0.7,
-   "pfcf_med": 9.0,
-   "reason": "",
-   "rev_cagr5": -7.46,
-   "revenue": 1246000000.0,
-   "roic_med": -0.9,
-   "size_band": "micro",
-   "ticker": "VATE",
-   "total_debt": 687100000.0,
-   "years": 14
   },
   {
    "basis": "ev",
@@ -13089,10 +12850,10 @@
     "sales_trend": 5.56
    },
    "growth_ranks": {
-    "fcf_trend": 27.99,
-    "sales_trend": 46.42
+    "fcf_trend": 27.96,
+    "sales_trend": 46.78
    },
-   "growth_score": 37.2,
+   "growth_score": 37.37,
    "industry": "Services-Prepackaged Software",
    "market_cap": 13992891890.0,
    "name": "CHECK POINT SOFTWARE TECHNOLOGIES LTD",
@@ -13128,10 +12889,10 @@
     "sales_trend": 4.26
    },
    "growth_ranks": {
-    "fcf_trend": 34.7,
-    "sales_trend": 38.69
+    "fcf_trend": 34.79,
+    "sales_trend": 38.92
    },
-   "growth_score": 36.7,
+   "growth_score": 36.86,
    "industry": "Sporting & Athletic Goods, NEC",
    "market_cap": 485208721.0,
    "name": "JOHNSON OUTDOORS INC",
@@ -13146,6 +12907,200 @@
    "ticker": "JOUT",
    "total_debt": 0.0,
    "years": 15
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2026-06-30",
+   "capex_ocf": 18.6,
+   "cash": 406316000.0,
+   "country": "IL",
+   "cyclical": true,
+   "debt_inferred_zero": false,
+   "ev": 4616566454.0,
+   "exchange": "NYSE",
+   "fcf": 392726000.0,
+   "fcf_conv": 140.8,
+   "fcf_yield": 8.51,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 4.65,
+    "sales_trend": 4.13
+   },
+   "growth_ranks": {
+    "fcf_trend": 34.88,
+    "sales_trend": 38.42
+   },
+   "growth_score": 36.65,
+   "industry": "Services-Educational Services",
+   "market_cap": 4360032454.0,
+   "name": "Covista Inc.",
+   "nd_ebit": 0.67,
+   "op_margin_now": 19.6,
+   "pfcf": 11.1,
+   "pfcf_med": 12.4,
+   "reason": "",
+   "rev_cagr5": 6.72,
+   "revenue": 1954085000.0,
+   "roic_med": 10.4,
+   "size_band": "mid",
+   "ticker": "CVSA",
+   "total_debt": 662850000.0,
+   "years": 16
+  }
+ ],
+ "held_out": [
+  {
+   "fault": "0.7x is below the 2x floor \u2014 no going concern trades there, so this is a data fault, and on a screen that ranks by cheapness it would sort first",
+   "fcf": 146100000.0,
+   "market_cap": 101495483.0,
+   "name": "INNOVATE Corp.",
+   "pfcf": 0.7,
+   "pfcf_med": 9.0,
+   "ticker": "VATE"
+  },
+  {
+   "fault": "1.2x is below the 2x floor \u2014 no going concern trades there, so this is a data fault, and on a screen that ranks by cheapness it would sort first",
+   "fcf": 57656000.0,
+   "market_cap": 67500580.0,
+   "name": "HAIN CELESTIAL GROUP INC",
+   "pfcf": 1.2,
+   "pfcf_med": 32.5,
+   "ticker": "HAIN"
+  },
+  {
+   "fault": "1.8x is below the 2x floor \u2014 no going concern trades there, so this is a data fault, and on a screen that ranks by cheapness it would sort first",
+   "fcf": 117324000.0,
+   "market_cap": 212079706.0,
+   "name": "Shutterstock, Inc.",
+   "pfcf": 1.8,
+   "pfcf_med": 20.5,
+   "ticker": "SSTK"
+  },
+  {
+   "fault": "1.9x is below the 2x floor \u2014 no going concern trades there, so this is a data fault, and on a screen that ranks by cheapness it would sort first",
+   "fcf": 272367000.0,
+   "market_cap": 514799638.0,
+   "name": "AMC Global Media Inc.",
+   "pfcf": 1.9,
+   "pfcf_med": 3.9,
+   "ticker": "AMCX"
+  },
+  {
+   "fault": "2.0x is under a fifth of its own 11.3x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "fcf": 156800000.0,
+   "market_cap": 318407417.0,
+   "name": "Emergent BioSolutions Inc.",
+   "pfcf": 2.0,
+   "pfcf_med": 11.3,
+   "ticker": "EBS"
+  },
+  {
+   "fault": "2.6x is under a fifth of its own 23.4x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "fcf": 783353000.0,
+   "market_cap": 2049953702.0,
+   "name": "Melco Resorts & Entertainment LTD",
+   "pfcf": 2.6,
+   "pfcf_med": 23.4,
+   "ticker": "MLCO"
+  },
+  {
+   "fault": "3.2x is under a fifth of its own 38.5x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "fcf": 103281000.0,
+   "market_cap": 332544234.0,
+   "name": "Fiverr International Ltd.",
+   "pfcf": 3.2,
+   "pfcf_med": 38.5,
+   "ticker": "FVRR"
+  },
+  {
+   "fault": "3.6x is under a fifth of its own 20.8x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "fcf": 365300000.0,
+   "market_cap": 1324104486.0,
+   "name": "CLARIVATE PLC",
+   "pfcf": 3.6,
+   "pfcf_med": 20.8,
+   "ticker": "CLVT"
+  },
+  {
+   "fault": "4.5x is under a fifth of its own 25.5x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "fcf": 255895000.0,
+   "market_cap": 1140975652.0,
+   "name": "Teladoc Health, Inc.",
+   "pfcf": 4.5,
+   "pfcf_med": 25.5,
+   "ticker": "TDOC"
+  },
+  {
+   "fault": "4.6x is under a fifth of its own 49.9x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "fcf": 76040000.0,
+   "market_cap": 351190846.0,
+   "name": "MGP INGREDIENTS INC",
+   "pfcf": 4.6,
+   "pfcf_med": 49.9,
+   "ticker": "MGPI"
+  },
+  {
+   "fault": "4.9x is under a fifth of its own 114.5x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "fcf": 223120000.0,
+   "market_cap": 1097900578.0,
+   "name": "UPWORK, INC",
+   "pfcf": 4.9,
+   "pfcf_med": 114.5,
+   "ticker": "UPWK"
+  },
+  {
+   "fault": "5.7x is under a fifth of its own 35.3x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "fcf": 130122000.0,
+   "market_cap": 741407040.0,
+   "name": "Rapid7, Inc.",
+   "pfcf": 5.7,
+   "pfcf_med": 35.3,
+   "ticker": "RPD"
+  },
+  {
+   "fault": "6.1x is under a fifth of its own 37.2x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "fcf": 59850000.0,
+   "market_cap": 363734275.0,
+   "name": "Clean Energy Fuels Corp.",
+   "pfcf": 6.1,
+   "pfcf_med": 37.2,
+   "ticker": "CLNE"
+  },
+  {
+   "fault": "8.7x is under a fifth of its own 68.8x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "fcf": 782958000.0,
+   "market_cap": 6780371199.0,
+   "name": "Trade Desk, Inc.",
+   "pfcf": 8.7,
+   "pfcf_med": 68.8,
+   "ticker": "TTD"
+  },
+  {
+   "fault": "14.1x is under a fifth of its own 119.5x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "fcf": 134896000.0,
+   "market_cap": 1901277582.0,
+   "name": "BLACKLINE, INC.",
+   "pfcf": 14.1,
+   "pfcf_med": 119.5,
+   "ticker": "BL"
+  },
+  {
+   "fault": "15.3x is under a fifth of its own 90.8x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "fcf": 162109000.0,
+   "market_cap": 2486051876.0,
+   "name": "Five9, Inc.",
+   "pfcf": 15.3,
+   "pfcf_med": 90.8,
+   "ticker": "FIVN"
+  },
+  {
+   "fault": "20.5x is under a fifth of its own 143.5x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "fcf": 2424676000.0,
+   "market_cap": 49721794200.0,
+   "name": "Block, Inc.",
+   "pfcf": 20.5,
+   "pfcf_med": 143.5,
+   "ticker": "XYZ"
   }
  ],
  "rejected": [
@@ -13298,6 +13253,12 @@
    "name": "AMC ENTERTAINMENT HOLDINGS, INC.",
    "reason": "free cash flow is not positive \u2014 this screen ranks companies BY their cash generation, so a company without any is not a low-ranked member of it, it is outside the question",
    "ticker": "AMC"
+  },
+  {
+   "market_cap": 514799638.0,
+   "name": "AMC Global Media Inc.",
+   "reason": "the price-to-free-cash-flow multiple looks like a data fault (price or share count): 1.9x is below the 2x floor \u2014 no going concern trades there, so this is a data fault, and on a screen that ranks by cheapness it would sort first",
+   "ticker": "AMCX"
   },
   {
    "market_cap": 203136605.0,
@@ -13546,6 +13507,12 @@
    "ticker": "BKYI"
   },
   {
+   "market_cap": 1901277582.0,
+   "name": "BLACKLINE, INC.",
+   "reason": "the price-to-free-cash-flow multiple looks like a data fault (price or share count): 14.1x is under a fifth of its own 119.5x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "ticker": "BL"
+  },
+  {
    "market_cap": 4672648581.0,
    "name": "Boot Barn Holdings, Inc.",
    "reason": "debt not filed, so enterprise value cannot be computed. Treating an unfiled tag as zero would shrink the denominator, RAISE the yield, and sort this row UP a board ranked by yield \u2014 the company that failed to file would outrank the one that did.",
@@ -13726,6 +13693,12 @@
    "ticker": "CLMB"
   },
   {
+   "market_cap": 363734275.0,
+   "name": "Clean Energy Fuels Corp.",
+   "reason": "the price-to-free-cash-flow multiple looks like a data fault (price or share count): 6.1x is under a fifth of its own 37.2x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "ticker": "CLNE"
+  },
+  {
    "market_cap": 13617847.0,
    "name": "CLEARONE INC",
    "reason": "market cap of $14m is under the $50m floor \u2014 below it a yield sort ranks shells, because any cash flow at all divided by a tiny denominator wins",
@@ -13736,6 +13709,12 @@
    "name": "CELESTICA INC",
    "reason": "free cash flow not filed",
    "ticker": "CLS"
+  },
+  {
+   "market_cap": 1324104486.0,
+   "name": "CLARIVATE PLC",
+   "reason": "the price-to-free-cash-flow multiple looks like a data fault (price or share count): 3.6x is under a fifth of its own 20.8x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "ticker": "CLVT"
   },
   {
    "market_cap": 337392823.0,
@@ -14080,6 +14059,12 @@
    "ticker": "EBF"
   },
   {
+   "market_cap": 318407417.0,
+   "name": "Emergent BioSolutions Inc.",
+   "reason": "the price-to-free-cash-flow multiple looks like a data fault (price or share count): 2.0x is under a fifth of its own 11.3x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "ticker": "EBS"
+  },
+  {
    "market_cap": 26086065578.0,
    "name": "EchoStar CORP",
    "reason": "free cash flow is not positive \u2014 this screen ranks companies BY their cash generation, so a company without any is not a low-ranked member of it, it is outside the question",
@@ -14194,6 +14179,12 @@
    "ticker": "FE"
   },
   {
+   "market_cap": 2486051876.0,
+   "name": "Five9, Inc.",
+   "reason": "the price-to-free-cash-flow multiple looks like a data fault (price or share count): 15.3x is under a fifth of its own 90.8x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "ticker": "FIVN"
+  },
+  {
    "market_cap": 542876731.0,
    "name": "Fulgent Genetics, Inc.",
    "reason": "free cash flow is not positive \u2014 this screen ranks companies BY their cash generation, so a company without any is not a low-ranked member of it, it is outside the question",
@@ -14276,6 +14267,12 @@
    "name": "FuboTV Inc.",
    "reason": "free cash flow is not positive \u2014 this screen ranks companies BY their cash generation, so a company without any is not a low-ranked member of it, it is outside the question",
    "ticker": "FUBO"
+  },
+  {
+   "market_cap": 332544234.0,
+   "name": "Fiverr International Ltd.",
+   "reason": "the price-to-free-cash-flow multiple looks like a data fault (price or share count): 3.2x is under a fifth of its own 38.5x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "ticker": "FVRR"
   },
   {
    "market_cap": 6287283000.0,
@@ -14402,6 +14399,12 @@
    "name": "GRAN TIERRA ENERGY INC.",
    "reason": "free cash flow not filed",
    "ticker": "GTE"
+  },
+  {
+   "market_cap": 67500580.0,
+   "name": "HAIN CELESTIAL GROUP INC",
+   "reason": "the price-to-free-cash-flow multiple looks like a data fault (price or share count): 1.2x is below the 2x floor \u2014 no going concern trades there, so this is a data fault, and on a screen that ranks by cheapness it would sort first",
+   "ticker": "HAIN"
   },
   {
    "market_cap": 127183284.0,
@@ -14884,6 +14887,12 @@
    "ticker": "METC"
   },
   {
+   "market_cap": 351190846.0,
+   "name": "MGP INGREDIENTS INC",
+   "reason": "the price-to-free-cash-flow multiple looks like a data fault (price or share count): 4.6x is under a fifth of its own 49.9x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "ticker": "MGPI"
+  },
+  {
    "market_cap": 2725659734.0,
    "name": "MCGRATH RENTCORP",
    "reason": "debt not filed, so enterprise value cannot be computed. Treating an unfiled tag as zero would shrink the denominator, RAISE the yield, and sort this row UP a board ranked by yield \u2014 the company that failed to file would outrank the one that did.",
@@ -14900,6 +14909,12 @@
    "name": "M/I HOMES, INC.",
    "reason": "debt not filed, so enterprise value cannot be computed. Treating an unfiled tag as zero would shrink the denominator, RAISE the yield, and sort this row UP a board ranked by yield \u2014 the company that failed to file would outrank the one that did.",
    "ticker": "MHO"
+  },
+  {
+   "market_cap": 2049953702.0,
+   "name": "Melco Resorts & Entertainment LTD",
+   "reason": "the price-to-free-cash-flow multiple looks like a data fault (price or share count): 2.6x is under a fifth of its own 23.4x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "ticker": "MLCO"
   },
   {
    "market_cap": 41636426.0,
@@ -15526,6 +15541,12 @@
    "ticker": "RNGR"
   },
   {
+   "market_cap": 741407040.0,
+   "name": "Rapid7, Inc.",
+   "reason": "the price-to-free-cash-flow multiple looks like a data fault (price or share count): 5.7x is under a fifth of its own 35.3x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "ticker": "RPD"
+  },
+  {
    "market_cap": 9814539630.0,
    "name": "RANGE RESOURCES CORP",
    "reason": "free cash flow not filed",
@@ -15676,6 +15697,12 @@
    "ticker": "SRPT"
   },
   {
+   "market_cap": 212079706.0,
+   "name": "Shutterstock, Inc.",
+   "reason": "the price-to-free-cash-flow multiple looks like a data fault (price or share count): 1.8x is below the 2x floor \u2014 no going concern trades there, so this is a data fault, and on a screen that ranks by cheapness it would sort first",
+   "ticker": "SSTK"
+  },
+  {
    "market_cap": 689380312.0,
    "name": "STRATASYS LTD.",
    "reason": "free cash flow is not positive \u2014 this screen ranks companies BY their cash generation, so a company without any is not a low-ranked member of it, it is outside the question",
@@ -15778,6 +15805,12 @@
    "ticker": "TCX"
   },
   {
+   "market_cap": 1140975652.0,
+   "name": "Teladoc Health, Inc.",
+   "reason": "the price-to-free-cash-flow multiple looks like a data fault (price or share count): 4.5x is under a fifth of its own 25.5x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "ticker": "TDOC"
+  },
+  {
    "market_cap": 1317781355.0,
    "name": "TSAKOS ENERGY NAVIGATION LTD",
    "reason": "free cash flow is not positive \u2014 this screen ranks companies BY their cash generation, so a company without any is not a low-ranked member of it, it is outside the question",
@@ -15860,6 +15893,12 @@
    "name": "TOWER SEMICONDUCTOR LTD",
    "reason": "free cash flow is not positive \u2014 this screen ranks companies BY their cash generation, so a company without any is not a low-ranked member of it, it is outside the question",
    "ticker": "TSEM"
+  },
+  {
+   "market_cap": 6780371199.0,
+   "name": "Trade Desk, Inc.",
+   "reason": "the price-to-free-cash-flow multiple looks like a data fault (price or share count): 8.7x is under a fifth of its own 68.8x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "ticker": "TTD"
   },
   {
    "market_cap": 68028397.0,
@@ -15958,6 +15997,12 @@
    "ticker": "UPLD"
   },
   {
+   "market_cap": 1097900578.0,
+   "name": "UPWORK, INC",
+   "reason": "the price-to-free-cash-flow multiple looks like a data fault (price or share count): 4.9x is under a fifth of its own 114.5x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "ticker": "UPWK"
+  },
+  {
    "market_cap": 6933872671.0,
    "name": "URBAN OUTFITTERS INC",
    "reason": "debt not filed, so enterprise value cannot be computed. Treating an unfiled tag as zero would shrink the denominator, RAISE the yield, and sort this row UP a board ranked by yield \u2014 the company that failed to file would outrank the one that did.",
@@ -15992,6 +16037,12 @@
    "name": "Vivani Medical, Inc.",
    "reason": "revenue of $0.0m is under the $10m floor \u2014 market cap alone cannot tell a small business from a registrant with a filing agent",
    "ticker": "VANI"
+  },
+  {
+   "market_cap": 101495483.0,
+   "name": "INNOVATE Corp.",
+   "reason": "the price-to-free-cash-flow multiple looks like a data fault (price or share count): 0.7x is below the 2x floor \u2014 no going concern trades there, so this is a data fault, and on a screen that ranks by cheapness it would sort first",
+   "ticker": "VATE"
   },
   {
    "market_cap": 2740018833.0,
@@ -16190,6 +16241,12 @@
    "name": "22nd Century Group, Inc.",
    "reason": "market cap of $2m is under the $50m floor \u2014 below it a yield sort ranks shells, because any cash flow at all divided by a tiny denominator wins",
    "ticker": "XXII"
+  },
+  {
+   "market_cap": 49721794200.0,
+   "name": "Block, Inc.",
+   "reason": "the price-to-free-cash-flow multiple looks like a data fault (price or share count): 20.5x is under a fifth of its own 143.5x fifteen-year median \u2014 a de-rating that large is possible, but it is far more often a bad price or a bad share count",
+   "ticker": "XYZ"
   },
   {
    "market_cap": 1175350031.0,
@@ -16530,34 +16587,34 @@
  ],
  "stages": [
   {
-   "count": 1072,
+   "count": 1055,
    "label": "Starting universe",
-   "median_fcf_yield": 4.14,
+   "median_fcf_yield": 4.1,
    "median_growth_rates": {
-    "fcf_trend": 9.07,
-    "sales_trend": 6.0
+    "fcf_trend": 9.01,
+    "sales_trend": 5.85
    },
-   "median_growth_score": 48.28
+   "median_growth_score": 48.37
   },
   {
-   "count": 201,
+   "count": 198,
    "label": "Free cash flow screen",
-   "median_fcf_yield": 9.96,
+   "median_fcf_yield": 9.66,
    "median_growth_rates": {
-    "fcf_trend": 10.42,
-    "sales_trend": 6.37
+    "fcf_trend": 9.84,
+    "sales_trend": 6.15
    },
-   "median_growth_score": 52.98
+   "median_growth_score": 52.16
   },
   {
-   "count": 134,
+   "count": 132,
    "label": "Growth filter",
-   "median_fcf_yield": 9.86,
+   "median_fcf_yield": 9.61,
    "median_growth_rates": {
-    "fcf_trend": 16.42,
-    "sales_trend": 10.2
+    "fcf_trend": 15.95,
+    "sales_trend": 9.27
    },
-   "median_growth_score": 66.07
+   "median_growth_score": 65.72
   }
  ]
 }

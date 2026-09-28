@@ -58,7 +58,6 @@ sys.path.insert(0, str(ROOT))
 
 import fcf_quality as Q          # noqa: E402
 import freshness as F            # noqa: E402
-import holt as H                 # noqa: E402
 
 SCHLOSS = ROOT / "data" / "schloss.json"
 COMPOUNDERS = ROOT / "data" / "compounders.json"
@@ -164,38 +163,13 @@ def load_join() -> tuple[list, dict]:
     return rows, meta
 
 
-def multiple_guard(rows: list) -> int:
-    """Apply holt.py's P/FCF fault test to every ranked row.
-
-    Not a second opinion on the yield — a second opinion on the PRICE
-    behind it. holt.py was written against this exact compounders file
-    after 31 companies came through under 2x P/FCF and 29 under a fifth
-    of their own fifteen-year median: data faults wearing the costume of
-    bargains, and on a board sorted by cheapness they were the whole top.
-
-    A yield screen has the identical exposure from the other direction —
-    a broken multiple of 0.8x IS a 125% yield — so the guard is reused
-    rather than reasoned about again. Marks rows; does not drop them.
-    """
-    flagged = 0
-    for r in rows:
-        mc, fcf = r.get("market_cap"), r.get("fcf")
-        if not mc or not fcf or fcf <= 0:
-            continue
-        mult = mc / fcf
-        r["pfcf"] = round(mult, 1)
-        fault = H.multiple_fault(mult, r.get("pfcf_med"))
-        if fault:
-            r["multiple_fault"] = fault
-            flagged += 1
-    return flagged
-
-
-# Two files, because either can change the board on unchanged inputs:
-# fcf_quality.py is the funnel, this script is the join and the guards
+# Three files, because any of them can change the board on unchanged
+# inputs: fcf_quality.py is the funnel, holt.py holds the multiple test
+# the funnel refuses rows on, and this script is the join and the guards
 # wrapped around it. freshness.py is deliberately NOT hashed — a comment
 # fix there would rebuild every joining board in the repo at once.
-LOGIC_FILES = (ROOT / "fcf_quality.py", Path(__file__).resolve())
+LOGIC_FILES = (ROOT / "fcf_quality.py", ROOT / "holt.py",
+               Path(__file__).resolve())
 
 
 def logic_stamp() -> str:
@@ -252,8 +226,10 @@ def build(out_dir: Path = OUT_DIR, force: bool = False) -> dict:
 
     result = Q.screen(rows)
 
-    for bucket in ("final", "fcf_cut", "measured"):
-        multiple_flagged = multiple_guard(result[bucket])
+    # Rows whose P/FCF failed holt.py's fault test. fcf_quality.measure()
+    # refuses them before the ranking; they are listed here so the page can
+    # say which names were held out and why, instead of losing them.
+    held_out = [r for r in result["rejected"] if r.get("multiple_fault")]
     for bucket in ("measured", "fcf_cut", "final"):
         for r in result[bucket]:
             r["size_band"] = Q.size_band(r.get("market_cap"))
@@ -264,7 +240,7 @@ def build(out_dir: Path = OUT_DIR, force: bool = False) -> dict:
     keep = ("ticker", "name", "market_cap", "fcf", "revenue", "fcf_yield",
             "growth_score", "growth_ranks", "growth_components", "size_band",
             "exchange", "country", "industry", "pfcf", "pfcf_med",
-            "multiple_fault", "fcf_conv", "capex_ocf", "roic_med",
+            "fcf_conv", "capex_ocf", "roic_med",
             "op_margin_now", "nd_ebit", "rev_cagr5", "years", "cyclical",
             "foreign", "basis", "ev", "reason", "leverage_note",
             "total_debt", "cash", "debt_inferred_zero", "bs_as_of")
@@ -313,7 +289,7 @@ def build(out_dir: Path = OUT_DIR, force: bool = False) -> dict:
             },
             "join": join_meta,
             "census": result["census"],
-            "multiple_flagged": multiple_flagged,
+            "multiple_refused": len(held_out),
             "vflo_published": Q.VFLO_PUBLISHED,
         },
         "stages": result["stages"],
@@ -324,6 +300,11 @@ def build(out_dir: Path = OUT_DIR, force: bool = False) -> dict:
                       "market_cap": r.get("market_cap"),
                       "reason": r.get("reason")}
                      for r in result["rejected"]],
+        "held_out": [{"ticker": r.get("ticker"), "name": r.get("name"),
+                      "market_cap": r.get("market_cap"), "fcf": r.get("fcf"),
+                      "pfcf": r.get("pfcf"), "pfcf_med": r.get("pfcf_med"),
+                      "fault": r["multiple_fault"]}
+                     for r in sorted(held_out, key=lambda r: r.get("pfcf") or 0)],
     }
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -379,7 +360,8 @@ def main() -> int:
     print(f"  fcf cut         {c['fcf_cut']}")
     print(f"  final           {c['final']}")
     print(f"  below large cap {len(s['below_large_cap'])} of {c['final']}")
-    print(f"  multiple faults {m['multiple_flagged']}")
+    print(f"  held out        {m['multiple_refused']} "
+          f"(P/FCF failed the multiple fault test)")
     lev = sum(1 for r in s["final"] if r.get("leverage_note"))
     print(f"  levered (yield overstated on market cap) {lev} of {c['final']}")
     print()

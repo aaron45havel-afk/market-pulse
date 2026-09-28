@@ -194,3 +194,7 @@ Format: `- [PHASE-SEEN] item — why it matters`
   date. Storing the fiscal year would let the page say which year's HUD rents it shows.
 - [MF-FINDER] The scenario card prints negative dollar figures as `$-5,543` (per year,
   and "if you move out") — pre-existing, the sign belongs before the dollar sign.
+- [FCFQ-PRICE-DATE] FCF Quality divides the compounders refresh's cash flow (2026-09-28) by
+  the Schloss file's market cap (2026-09-07). The page prints both dates, but a price three
+  weeks older than the cash flow can move a yield, and the P/FCF fault test reads that same
+  market cap. Refresh Schloss before the FCF build, or carry market cap in compounders.json.

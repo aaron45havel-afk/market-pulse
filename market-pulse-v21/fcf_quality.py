@@ -39,6 +39,8 @@ from __future__ import annotations
 import math
 from statistics import median
 
+import holt as H
+
 # ── the funnel, in VFLO's own proportions ────────────────────────────
 #
 # 75 of 400 is 18.75%, then 50 of 75 is 66.67%, so the index is the top
@@ -393,6 +395,8 @@ REASONS = {
     "no_fcf": "no positive free cash flow",
     "ev_unusable": "enterprise value could not be used",
     "yield_fault": "free cash flow yield is not usable",
+    "multiple_fault": "the price-to-free-cash-flow multiple looks like a "
+                      "data fault (price or share count)",
     "no_growth_score": "not enough growth components to score",
     "cut_on_yield": "did not make the free cash flow cut",
     "cut_on_growth": "made the yield cut but not the growth cut",
@@ -501,6 +505,29 @@ def measure(row: dict, basis: str = "ev") -> dict:
     if fault:
         out["measured"] = True
         out["reason"] = fault
+        return out
+
+    # The price behind the yield, tested the way the HOLT board tests it.
+    # A broken multiple of 0.8x IS a 125% yield, so on a board sorted by
+    # yield a data fault sorts first. This used to only badge the row, and
+    # the badged rows were the board's top two. A row that fails is seen,
+    # counted and held out of the ranking — and out of the growth-rank
+    # cohort, which is built from rankable rows only. Market cap over free
+    # cash flow on every basis: the fault is in the price or the share
+    # count, and enterprise value would only blur which.
+    #
+    # Only the side that flatters is refused. HOLT's ceiling (a multiple
+    # past 2,000x) matters on a valuation board; here it is a yield under
+    # 0.05%, which sorts last on its own and is far more often a real
+    # company with almost no free cash flow that year than a bad input.
+    pfcf = mc / fcf
+    out["pfcf"] = round(pfcf, 1)
+    bad = (None if pfcf > H.MULTIPLE_CEILING
+           else H.multiple_fault(pfcf, row.get("pfcf_med")))
+    if bad:
+        out["measured"] = True
+        out["multiple_fault"] = bad
+        out["reason"] = f"{REASONS['multiple_fault']}: {bad}"
         return out
 
     out["fcf_yield"] = y

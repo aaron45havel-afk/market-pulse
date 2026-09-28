@@ -265,6 +265,43 @@ check(_none["basis"] == "market_cap" and _none["census"]["measured"] == 2,
       "the ranking is still internally consistent — it is measuring a "
       "different thing, and the snapshot says which")
 
+# ── a broken multiple is held out, not badged ──
+# The September board's top two were Fiverr at 49.8% and Shutterstock at
+# 38.0%, both already failing holt.py's multiple test and ranked anyway
+# because the test only drew a badge. Shapes below are theirs: 3.2x
+# against a 38.5x own median, and 1.8x with no median needed.
+_fv = {**GOOD, "ticker": "FV", "market_cap": 1e9, "fcf": 3.1e8,
+       "total_debt": 4e8, "cash": 1e8, "pfcf_med": 38.5}
+_m = Q.measure(_fv)
+check(_m["measured"] is True and _m["rankable"] is False,
+      "A MULTIPLE UNDER A FIFTH OF ITS OWN MEDIAN IS SEEN BUT NOT RANKED — "
+      f"its yield would otherwise top the board (got {_m.get('reason')})")
+check(_m.get("fcf_yield") is None and _m["pfcf"] == 3.2,
+      "it carries its P/FCF, not a yield")
+check("data fault (price or share count)" in _m["reason"]
+      and "fifteen-year median" in _m["reason"]
+      and _m["multiple_fault"] in _m["reason"],
+      "and the reason names the fault as data, not as a price to go check")
+_ss = Q.measure({**_fv, "ticker": "SS", "fcf": 5.5e8, "pfcf_med": None})
+check(_ss["rankable"] is False and "floor" in _ss["reason"],
+      "1.8x is under the 2x floor with or without a median")
+check(Q.measure({**_fv, "pfcf_med": 15.0})["rankable"] is True,
+      "3.2x against a 15x median is a de-rating inside a fifth, and ranks")
+check(Q.measure({**_fv, "pfcf_med": None})["rankable"] is True,
+      "and 3.2x with no median to compare against ranks too")
+_thin = Q.measure({**GOOD, "fcf": 1e6})
+check(_thin["rankable"] is True and _thin["pfcf"] == 5000.0,
+      "A 5,000x MULTIPLE IS NOT REFUSED HERE. It is a 0.02% yield that "
+      "sorts last on its own; refusing it would call a real company with "
+      "almost no free cash flow a data fault")
+check(Q.measure({**GOOD, "fcf": 2.5e6})["rankable"] is True
+      and Q.measure({**GOOD, "fcf": 2.5e6})["pfcf"] == 2000.0,
+      "including exactly at holt's 2,000x ceiling")
+_err = Q.measure({**_fv, "total_debt": None})
+check("outrank the one that did" in _err["reason"]
+      and "multiple_fault" not in _err,
+      "a row already refused for its denominator keeps that reason")
+
 
 # ══════════════════════════════════════════════════════════════════
 # THE FUNNEL — order, proportions, and the published shape
@@ -352,6 +389,22 @@ check(all(x["ticker"] != "T999" for x in r2["fcf_cut"]),
       "highest yield in that cohort — VFLO's wording is 'the top 75 "
       "companies with the highest free cash flow yield THAT HAVE A GROWTH "
       "SCORE', and the order of those clauses is load-bearing")
+
+# A broken multiple with the best yield and the best growth in the cohort.
+_bad = {**company(998, 2e9, 1e9, 99.0, 99.0), "pfcf_med": 30.0}
+r3 = Q.screen(UNIVERSE + [_bad])
+check(all(x["ticker"] != "T998" for x in r3["measured"] + r3["fcf_cut"]),
+      "A ROW THAT FAILS THE MULTIPLE TEST NEVER REACHES THE RANKING")
+check([x["ticker"] for x in r3["final"]] == [x["ticker"] for x in res["final"]]
+      and [x["growth_score"] for x in r3["final"]]
+      == [x["growth_score"] for x in res["final"]],
+      "and the board is exactly the board without it — its growth numbers "
+      "do not shift anyone's percentile rank either")
+_held = [x for x in r3["rejected"] if x["ticker"] == "T998"]
+check(len(_held) == 1 and _held[0]["multiple_fault"]
+      and r3["census"]["seen_but_unrankable"]
+      == res["census"]["seen_but_unrankable"] + 1,
+      "it is counted as seen but not rankable, carrying its fault")
 
 check(Q.screen([])["census"]["input"] == 0,
       "an empty universe produces an empty funnel rather than an error")
