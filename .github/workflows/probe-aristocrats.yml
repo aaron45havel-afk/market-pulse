@@ -1,4 +1,4 @@
-name: TEMPORARY — SEC payout and leverage inputs for the aristocrats
+name: TEMPORARY — SEC payout and leverage inputs for the aristocrats (5-year)
 
 # Read-only. Deleted before the branch merges.
 on:
@@ -80,6 +80,7 @@ jobs:
               row["currency"] = currency
               def latest(key, unit):
                   s, u = R._annual_series(f, LISTS[key] if key in LISTS else R.TAGS[key], unit)
+                  row[key + "_hist"] = {str(y): s[y] for y in sorted(s)[-6:]} if s else {}
                   if not s: return None, None, u
                   y = max(s); return y, s[y], u
               for key in ("net_income", "ocf", "capex", "op_income", "revenue"):
@@ -96,9 +97,10 @@ jobs:
                           s = R._annual_series(f, [(tax, tag)], unit)[0]
                           if s:
                               y = max(s)
-                              if best is None or y > best[0]: best = (y, s[y], unit, tag)
+                              if best is None or y > best[0]: best = (y, s[y], unit, tag, s)
                   if best:
-                      row[key + "_fy"], row[key], row[key + "_unit"], row[key + "_tag"] = best
+                      row[key + "_fy"], row[key], row[key + "_unit"], row[key + "_tag"] = best[:4]
+                      row[key + "_hist"] = {str(y): best[4][y] for y in sorted(best[4])[-6:]}
               bs = R.balance_sheet(f, want_unit=currency, revenue=row.get("revenue"))
               row.update({"debt": bs["total_debt"], "cash": bs["cash"], "bs_as_of": bs["as_of"],
                           "bs_unit": bs["unit"], "bs_notes": bs["notes"], "debt_zero_as_of": bs.get("debt_zero_as_of")})
