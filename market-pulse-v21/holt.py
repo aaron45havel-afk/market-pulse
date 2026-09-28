@@ -92,12 +92,13 @@ MULTIPLE_PROXY = "P/FCF"
 #
 # THIS IS THE LOAD-BEARING GUARD ON THIS WHOLE BOARD. The screen ranks by
 # cheapness, so a multiple that is wrong-low does not sit harmlessly in
-# the middle of the list — it sorts to number one. In the shipped
-# compounders file, Booking Holdings carries 0.8x P/FCF and Cable One
-# 0.8x; 31 companies sit under 2x and 29 sit below a fifth of their own
-# fifteen-year median. Those are data faults wearing the costume of
-# bargains, and without this guard they would be the entire top of the
-# board.
+# the middle of the list — it sorts to number one. When this was written
+# Booking Holdings carried 0.8x P/FCF and 29 companies sat under 2x: data
+# faults wearing the costume of bargains, mostly stock splits and share
+# counts filed in millions, both since corrected at the source
+# (refresh_compounders). 21 still sit under 2x, and a guard cannot tell a
+# genuine collapse from a fault it hasn't met yet — so it refuses rather
+# than ranks.
 MULTIPLE_FLOOR = 2.0
 MULTIPLE_CEILING = 2000.0
 # A current multiple this far below the company's own 15-year median is
