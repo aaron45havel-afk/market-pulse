@@ -29,13 +29,12 @@ requests all exit non-zero and leave the committed file alone.
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import sqlite3
 import sys
 import threading
 import time
-import urllib.error
-import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -44,7 +43,6 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 OUT = ROOT / "data" / "headroom" / "fbi_agencies.json"
 ZIPS_DB = ROOT / "data" / "zips.db"
-BASE = "https://cde.ucr.cjis.gov/LATEST"
 UA = {"User-Agent": "MarketPulse/1.0 (city crime layer; invoice@archfms.com)"}
 STATES = ("AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS "
           "MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY").split()
@@ -61,20 +59,51 @@ class Refuse(Exception):
     """A pull that must not publish."""
 
 
-def _get(path: str, attempts: int = 3):
+# One persistent HTTPS connection per worker thread. Measured from GitHub's
+# runners in Sept 2026: a request answers in ~0.3s, but about one NEW
+# connection in twenty-five hangs in connect until it times out. Opening a
+# fresh connection per request — what urllib does — turned that into a
+# stall every few seconds and a 90-minute run that never finished; reusing
+# the connection makes new connects rare, and a stuck one is dropped after
+# TIMEOUT seconds and retried on a fresh socket.
+HOST = "cde.ucr.cjis.gov"
+PREFIX = "/LATEST"
+TIMEOUT = 10
+_local = threading.local()
+
+
+def _conn() -> http.client.HTTPSConnection:
+    c = getattr(_local, "conn", None)
+    if c is None:
+        c = http.client.HTTPSConnection(HOST, timeout=TIMEOUT)
+        _local.conn = c
+    return c
+
+
+def _drop() -> None:
+    c = getattr(_local, "conn", None)
+    if c is not None:
+        c.close()
+    _local.conn = None
+
+
+def _get(path: str, attempts: int = 5):
     last = None
     for i in range(attempts):
         try:
-            req = urllib.request.Request(BASE + path, headers=UA)
-            with urllib.request.urlopen(req, timeout=30) as r:
-                return json.loads(r.read())
-        except urllib.error.HTTPError as e:
-            if e.code == 404:
+            c = _conn()
+            c.request("GET", PREFIX + path, headers={**UA, "Connection": "keep-alive"})
+            r = c.getresponse()
+            body = r.read()
+            if r.status == 404:
                 return None
-            last = e
+            if r.status != 200:
+                raise RuntimeError(f"HTTP {r.status}")
+            return json.loads(body)
         except Exception as e:                               # noqa: BLE001
             last = e
-        time.sleep(2 * (i + 1))
+            _drop()
+            time.sleep(0.5 * (i + 1))
     raise RuntimeError(f"{path}: {last}")
 
 
