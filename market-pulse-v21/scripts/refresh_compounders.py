@@ -596,6 +596,10 @@ BALANCE_TAGS: dict[str, list[tuple[str, str]]] = {
         ("us-gaap", "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents"),
         ("us-gaap", "CashAndDueFromBanks"),
         ("ifrs-full", "CashAndCashEquivalents"),
+        # Plain cash, for filers whose balance-sheet line is only that (SLB,
+        # Performance Food, Jack in the Box) — they had no cash on the
+        # latest balance sheet, and so no enterprise value.
+        ("us-gaap", "Cash"),
     ],
     # VFLO's definition is "total debt", so operating-lease liabilities are
     # deliberately absent: ASC 842 put them on the balance sheet in 2019

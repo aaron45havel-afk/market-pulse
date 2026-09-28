@@ -2,7 +2,7 @@ name: TEMPORARY — rebuild compounders, FCF quality and Lynch on the branch
 
 # Branch data run for the tag-reading fixes. Commits the rebuilt data to
 # this branch for review. Deleted before the branch merges.
-# Run 6: the filer's combined total stands unless plainly broken.
+# Run 7: plain Cash read.
 on:
   push:
     branches: [claude/legal-rep-invoice-tracking-9j1i9r]

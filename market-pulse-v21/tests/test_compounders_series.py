@@ -803,6 +803,13 @@ check(R.balance_sheet(merge(dated("StockholdersEquity", "2025-12-31", 1e9),
                             dur("InterestExpense", "2025-12-31", 1e6)), revenue=1e9)["debt_inferred_zero"],
       "one paying 0.1% still reads as inferred zero")
 
+_slb = R.balance_sheet(merge(dated("CashAndCashEquivalentsAtCarryingValue", "2014-12-31", 3.13e9),
+                             dated("Cash", "2025-12-31", 3.036e9),
+                             dated("StockholdersEquity", "2025-12-31", 26.1e9)))
+check(_slb["cash"] == 3.036e9 and _slb["as_of"] == "2025-12-31",
+      f"SLB's cash is its plain `Cash` line this year, not the 2014 figure under the main tag "
+      f"(got {_slb['cash']})")
+
 lone = R.balance_sheet(bs(LongTermDebt=4_500,
                           CashAndCashEquivalentsAtCarryingValue=900))
 check(lone["total_debt"] == 4_500,
