@@ -366,7 +366,8 @@ check(why(revenue=2_000_000) == "tiny_revenue", "below the operating-business fl
 check(why(last_filing="2023-01-01") == "dormant", "a dormant registrant")
 check(why(total_assets=100) == "cap_implausible", "cap orders of magnitude off assets")
 check(why(net_income=-1e8, eps_by_year={"2022-12-31": -2.60, "2023-12-31": -3.00,
-                                        "2024-12-31": -3.50, "2025-12-31": -1.00})
+                                        "2024-12-31": -3.50, "2025-12-31": -1.00},
+          net_income_by_year={"2023-12-31": -3e8, "2024-12-31": -3.5e8, "2025-12-31": -1e8})
       == "unprofitable",
       "a loss-maker — with an EPS series that agrees with it, or the units "
       "invariant fires first and correctly")
@@ -858,6 +859,104 @@ check(all(isinstance(v["exchange"], str) for v in _parsed.values()),
       "every parsed exchange is a string, so .upper() is always safe")
 check(SE.parse_exchanges({}) == {} and SE.parse_exchanges(None) == {},
       "a failed fetch yields an empty map, not a crash")
+
+
+# ══════════════════════════════════════════════════════════════════
+# THE UNITS CHECK'S INPUTS — real filings that failed it for our reasons
+# ══════════════════════════════════════════════════════════════════
+def _yr(end, val, form="10-K", start=None):
+    y = int(end[:4])
+    return {"start": start or f"{y - 1}{end[4:]}", "end": end, "val": val, "form": form, "fp": "FY"}
+
+
+def _multi(**concepts):
+    """{"us-gaap:Tag": (unit, [entries])} → companyfacts."""
+    out = {"facts": {}}
+    for key, (unit, entries) in concepts.items():
+        tax, tag = key.split(":")
+        out["facts"].setdefault(tax, {})[tag] = {"units": {unit: entries}}
+    return out
+
+
+# Amazon's 10-Q carries net income for the twelve months to June.
+_amzn = _multi(**{"us-gaap:NetIncomeLoss": ("USD", [
+    _yr("2024-12-31", 59.2e9), _yr("2025-12-31", 77.4e9),
+    _yr("2026-06-30", 135.3e9, form="10-Q", start="2025-07-01")])})
+_ni, _ = L.annual_series(_amzn, "NetIncomeLoss")
+check(max(_ni) == "2025-12-31" and _ni["2025-12-31"] == 77.4e9,
+      "A TWELVE-MONTH FIGURE IN A QUARTERLY REPORT IS NOT A FISCAL YEAR: Amazon's latest "
+      "annual net income is FY2025's, not the twelve months to June 2026")
+
+# Walmart: the balance-sheet tag stopped in 2012; the cover page is current.
+_wmt = _multi(**{"us-gaap:CommonStockSharesOutstanding": ("shares", [
+                     {"end": "2011-01-31", "val": 3.516e9}, {"end": "2012-01-31", "val": 3.418e9}]),
+                 "dei:EntityCommonStockSharesOutstanding": ("shares", [
+                     {"end": "2026-05-27", "val": 7.958e9}, {"end": "2026-08-26", "val": 7.934e9}]),
+                 "us-gaap:WeightedAverageNumberOfDilutedSharesOutstanding": ("shares", [
+                     _yr("2025-01-31", 8.07e9), _yr("2026-01-31", 8.02e9)])})
+check(L.current_shares(_wmt, "2026-09-04") == 7.934e9,
+      "THE NEWEST SHARE COUNT FROM EITHER TAG — Walmart's 2026 cover page, not the 3.4bn "
+      "its balance-sheet tag last said in 2012, before a 3-for-1 split")
+check(L.weighted_shares(_wmt) == {"2025-01-31": 8.07e9, "2026-01-31": 8.02e9},
+      "and the weighted-average count EPS was divided by comes per fiscal year")
+# Mastercard files its cover-page count per class; the only untagged one is 2010's.
+_ma = _multi(**{"dei:EntityCommonStockSharesOutstanding": ("shares", [
+    {"end": "2010-10-27", "val": 122_530_193}])})
+check(L.current_shares(_ma, "2026-09-04") is None,
+      "A COUNT LAST FILED IN 2010 IS NOT TODAY'S — none rather than a stale one")
+check(L.current_shares(_multi(**{"us-gaap:CommonStockSharesOutstanding": ("shares", [
+          {"end": "2009-12-31", "val": 1_381_700}]),
+      "dei:EntityCommonStockSharesOutstanding": ("shares", [{"end": "2026-06-30", "val": 1.3478e9}])}),
+      "2026-09-04") == 1.3478e9, "RTX: the 2009 tag loses to this year's cover page")
+
+# FedEx: FY2026 net income filed as 4,433 (millions), EPS 18.55 on 239m shares.
+_ni_fx, _fixed = L.rescale_net_income({"2025-05-31": 4.09e9, "2026-05-31": 4433.0},
+                                      {"2025-05-31": 16.81, "2026-05-31": 18.55},
+                                      {"2025-05-31": 243.3e6, "2026-05-31": 239.0e6})
+check(_ni_fx["2026-05-31"] == 4.433e9 and _ni_fx["2025-05-31"] == 4.09e9 and _fixed == ["2026-05-31"],
+      f"FEDEX'S 4,433 IS PUT BACK AS $4.43bn: its own EPS x shares agree on the size; the "
+      f"year already right is untouched (got {_ni_fx})")
+check(L.rescale_net_income({"2025": 4.8e6}, {"2025": 3.73}, {"2025": 1.29e6})[0]["2025"] == 4.8e6
+      and L.rescale_net_income({"2025": 4801.0}, {"2025": 3.73}, {"2025": 1.2872e6})[0]["2025"] == 4.801e6,
+      "a thousandfold unit error is caught as well as a millionfold one")
+check(L.rescale_net_income({"2025": 272e6}, {"2025": 3.31}, {"2025": 314e6}) == ({"2025": 272e6}, []),
+      "A MISMATCH THAT ISN'T A POWER OF A THOUSAND IS LEFT ALONE — Xunlei's per-ADS EPS "
+      "(2.8x) is for the units check to reject, not for this to 'fix'")
+check(L.rescale_net_income({"2025": 4433.0}, {}, {"2025": 239e6}) == ({"2025": 4433.0}, []),
+      "without the company's own EPS there is no evidence, so no rescale")
+
+# evaluate() on Walmart's real figures: the stale period-end count failed it.
+_W = {**GOOD, "market_cap": 850e9, "price": 107.14, "total_assets": 260e9, "equity": 95e9,
+      "revenue": 700e9, "net_income": 21.893e9, "shares": 3.418e9,
+      "eps_by_year": {"2023-01-31": 2.07, "2024-01-31": 1.91, "2025-01-31": 2.41, "2026-01-31": 2.73},
+      "net_income_by_year": {"2025-01-31": 19.4e9, "2026-01-31": 21.893e9},
+      "eps_shares_by_year": {"2026-01-31": 8.02e9}}
+check(L.evaluate(_W)["reason"] != "units_unverified" and L.evaluate(_W)["units"]["ok"] is True,
+      "WALMART PASSES THE UNITS CHECK ON THE WEIGHTED COUNT FOR ITS EPS YEAR — it was "
+      "rejected on a 2012 share count")
+check(L.evaluate({k: v for k, v in _W.items() if k != "eps_shares_by_year"})["reason"] == "units_unverified",
+      "(the fixture reproduces the rejection when only the stale count is available)")
+# An EPS tag a year behind net income: the check compares the same year.
+_lag = {**_W, "net_income": 45e9,
+        "net_income_by_year": {"2025-01-31": 19.4e9, "2026-01-31": 21.893e9, "2027-01-31": 45e9}}
+check(L.evaluate(_lag)["units"]["ok"] is True,
+      "EPS IS CHECKED AGAINST ITS OWN YEAR'S NET INCOME, not a later year the EPS tag "
+      "hasn't reached")
+
+# Through the screener's record builder, on FedEx-shaped filings.
+import lynch_screener as LS
+_fdx = _multi(**{
+    "us-gaap:NetIncomeLoss": ("USD", [_yr("2025-05-31", 4.09e9), _yr("2026-05-31", 4433.0)]),
+    "us-gaap:EarningsPerShareDiluted": ("USD/shares", [_yr("2025-05-31", 16.81), _yr("2026-05-31", 18.55)]),
+    "us-gaap:WeightedAverageNumberOfDilutedSharesOutstanding": ("shares", [
+        _yr("2025-05-31", 243.3e6), _yr("2026-05-31", 239.0e6)]),
+    "dei:EntityCommonStockSharesOutstanding": ("shares", [{"end": "2026-07-16", "val": 236.58e6}])})
+_rec = LS.facts_to_record({"ticker": "FDX", "name": "FedEx"}, {"price": 322.5, "market_cap": 76.3e9},
+                          _fdx, "2026-09-04")
+check(_rec["net_income"] == 4.433e9 and _rec["ni_rescaled"] == ["2026-05-31"]
+      and _rec["shares"] == 236.58e6 and _rec["eps_shares_by_year"]["2026-05-31"] == 239.0e6,
+      f"THE LYNCH RECORD CARRIES FEDEX'S NET INCOME AS $4.43bn, says it was rescaled, and "
+      f"has both share counts (got {_rec['net_income']}, {_rec['ni_rescaled']})")
 
 
 # ── report ──

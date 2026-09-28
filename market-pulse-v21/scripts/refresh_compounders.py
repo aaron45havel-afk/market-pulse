@@ -199,6 +199,30 @@ TAGS: dict[str, list[tuple[str, str]]] = {
         ("ifrs-full", "PaymentsToAcquirePropertyPlantAndEquipment"),
         ("ifrs-full", "AcquisitionOfPropertyPlantAndEquipment"),
     ],
+    # The "Other" capex tags, which some filers use for their WHOLE capex
+    # line: Eli Lilly ($7.8bn in 2025), ADP, and Verizon since 2019 ($17bn
+    # — it tagged PaymentsToAcquireProductiveAssets until 2018, so its
+    # capex ratio was being measured on 2014-18). FILL ONLY: a year any tag
+    # above covers keeps that figure, because for other filers these are a
+    # minor line beside the main one, and a "most years wins" merge could
+    # otherwise put the minor line in charge.
+    "capex_other": [
+        ("us-gaap", "PaymentsToAcquireOtherPropertyPlantAndEquipment"),
+        ("us-gaap", "PaymentsToAcquireOtherProductiveAssets"),
+    ],
+    # EBIT for the years a filer reports no operating-income line: pre-tax
+    # income plus interest expense. TJX stopped tagging OperatingIncomeLoss
+    # in 2019 and Sherwin-Williams in 2023, which left both with no net
+    # debt/EBIT and GATED on debt nobody had measured. Fill only.
+    "pretax_income": [
+        ("us-gaap", "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"),
+        ("us-gaap", "IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments"),
+    ],
+    "interest_expense": [
+        ("us-gaap", "InterestExpense"),
+        ("us-gaap", "InterestExpenseNonoperating"),
+        ("us-gaap", "InterestExpenseDebt"),
+    ],
     # Capitalised software, content and spectrum. Real reinvestment that
     # never touches the PP&E line — Comcast pays ~$2.8bn a year here on top
     # of $12.5bn of capex, so PP&E alone understates what it costs that
@@ -563,8 +587,9 @@ def _rows_for(node: dict, unit: str, filed_out: dict | None = None) -> dict[int,
 # wins. For a balance sheet that is not a rounding difference — it is
 # last year's debt on this year's row.
 #
-# The `end` date is unambiguous where `fy` is not, so these take the
-# latest `end` and ignore `fy` entirely.
+# The `end` date is unambiguous where `fy` is not, so these are keyed on
+# `end` and ignore `fy` entirely — and every component is read as of ONE
+# date, the company's latest balance sheet (see balance_sheet()).
 BALANCE_TAGS: dict[str, list[tuple[str, str]]] = {
     "cash": [
         ("us-gaap", "CashAndCashEquivalentsAtCarryingValue"),
@@ -579,21 +604,32 @@ BALANCE_TAGS: dict[str, list[tuple[str, str]]] = {
     "debt_total": [
         ("us-gaap", "DebtLongtermAndShorttermCombinedAmount"),
     ],
+    # THE BALANCE-SHEET LINE for long-term debt, excluding what falls due
+    # this year. `LongTermDebtAndCapitalLeaseObligations` is that line too
+    # (finance leases included) and it is what Union Pacific, AbbVie,
+    # Lowe's, AT&T, Home Depot and Micron file today — it plus the current
+    # portion reproduces each one's `LongTermDebt` total. It used to sit
+    # with `LongTermDebt` as "ambiguous" and was thrown away.
     "debt_noncurrent": [
         ("us-gaap", "LongTermDebtNoncurrent"),
+        ("us-gaap", "LongTermDebtAndCapitalLeaseObligations"),
         ("ifrs-full", "NoncurrentPortionOfNoncurrentBorrowings"),
     ],
-    # AMBIGUOUS ON PURPOSE, and handled separately below. US GAAP
-    # `LongTermDebt` means total long-term debt INCLUDING current
-    # maturities in some filings and excluding them in others, so adding
-    # it to `LongTermDebtCurrent` double-counts for the first group.
-    "debt_longterm_ambiguous": [
+    # The TOTAL: the taxonomy defines `LongTermDebt` as current plus
+    # noncurrent. Used only when no balance-sheet line above was filed, and
+    # then on its own — never added to a current portion it contains.
+    "debt_longterm_total": [
         ("us-gaap", "LongTermDebt"),
-        ("us-gaap", "LongTermDebtAndCapitalLeaseObligations"),
     ],
     "debt_current": [
         ("us-gaap", "LongTermDebtCurrent"),
         ("us-gaap", "LongTermDebtAndCapitalLeaseObligationsCurrent"),
+    ],
+    # All debt due within a year, short-term borrowings INCLUDED — so it
+    # stands in for current portion AND short-term borrowings, never
+    # beside them (Micron files only this).
+    "debt_current_all": [
+        ("us-gaap", "DebtCurrent"),
     ],
     "debt_short": [
         ("us-gaap", "ShortTermBorrowings"),
@@ -669,95 +705,131 @@ def _latest_instant(facts: dict, slots: list[tuple[str, str]],
     return val, end, unit
 
 
+def _instant_at(facts: dict, slots: list[tuple[str, str]], end: str,
+                unit: str) -> float | None:
+    """The first slot's value AT exactly `end`, in `unit`, from an annual
+    filing — the latest-filed one when a 10-K/A restated it. None if no
+    slot has a value on that date."""
+    for taxonomy, tag in slots:
+        rows = (((facts.get(taxonomy) or {}).get(tag) or {}).get("units") or {}).get(unit) or []
+        hits = [v for v in rows
+                if v.get("form") in ANNUAL_FORMS and not v.get("start")
+                and v.get("end") == end and isinstance(v.get("val"), (int, float))]
+        if hits:
+            return float(max(hits, key=lambda v: v.get("filed") or "")["val"])
+    return None
+
+
+DEBT_KEYS = ("debt_total", "debt_noncurrent", "debt_longterm_total",
+             "debt_current", "debt_current_all", "debt_short")
+
+
 def balance_sheet(facts: dict, want_unit: str = "USD") -> dict:
     """The enterprise-value inputs, or an explicit absence.
 
-    Returns total_debt, cash, preferred and minority in ONE unit, with the
-    date they were measured and the reason for anything missing.
+    Returns total_debt, cash, preferred and minority in ONE unit, as of the
+    company's latest balance sheet, with the reason for anything missing.
+
+    ONE DATE FOR EVERYTHING. Each component used to take its own latest
+    value, so a tag the company stopped using years ago supplied a debt
+    figure beside this year's cash: Home Depot's "noncurrent debt" was
+    $8.7bn from its 2011 10-K against $46bn today, AT&T's and Micron's
+    came from 2011-12 too. Now the date is the latest balance sheet —
+    the newest equity, liabilities or cash figure in an annual filing —
+    and a component with no value on that date is simply not filed.
 
     TOTAL DEBT IS ASSEMBLED, NOT READ. Almost nobody files a single
-    total-debt tag, so it is:
+    total-debt tag, so, on that one date:
 
-        DebtLongtermAndShorttermCombinedAmount        if present, alone
-        else  noncurrent + current portion + short-term borrowings
+        DebtLongtermAndShorttermCombinedAmount              if filed, alone
+        else  noncurrent line + current portion + short-term borrowings
+        else  LongTermDebt (current included) + short-term borrowings
 
-    and the noncurrent leg prefers `LongTermDebtNoncurrent`. The fallback
-    `LongTermDebt` is used ONLY when no current-portion tag exists,
-    because US GAAP lets `LongTermDebt` mean total-including-current in
-    some filings and excluding-current in others — so adding it to a
-    current portion double-counts for half the filers and there is no way
-    to tell which half from the fact alone. Skipping the sum when there is
-    nothing to double-count keeps the ambiguity out of the number.
+    where "current portion + short-term borrowings" is DebtCurrent when
+    that is all a filer tags. `LongTermDebt` is the taxonomy's total; used
+    alone it can understate by a current portion if a filer put it on the
+    noncurrent line, which is far less than the old rule lost by throwing
+    it away whenever a current portion was also filed (Union Pacific read
+    $1.5bn against $31.8bn, AbbVie $8.6bn against $64.5bn).
 
     NO DEBT TAG IS NOT AUTOMATICALLY UNKNOWN. A genuinely debt-free
     company files no debt tag, and treating that as unmeasurable would
-    throw away exactly the balance sheets this screen most wants. So: if
-    the company filed a balance sheet at all — equity or total liabilities
-    present — an absent debt tag is read as zero and FLAGGED as inferred.
-    If it filed no balance sheet, debt is None and the row is not ranked.
+    throw away exactly the balance sheets this screen most wants. So if the
+    company filed a balance sheet and has NEVER filed a debt tag, debt is
+    read as zero and FLAGGED as inferred. A company that filed debt tags in
+    the past but none on its latest balance sheet has moved them to one
+    this list does not read — that is unknown, not zero.
     """
-    def one(key):
-        return _latest_instant(facts, BALANCE_TAGS[key], want_unit)
+    anchors = BALANCE_TAGS["equity"] + BALANCE_TAGS["liabilities"] + BALANCE_TAGS["cash"]
+    debt_slots = [s for k in DEBT_KEYS for s in BALANCE_TAGS[k]]
+    # The unit: the wanted one if ANY balance-sheet figure is in it (a
+    # stray euro cash line must not turn dollar debt into euros), else
+    # whatever the balance sheet is in.
+    _, _, unit = _latest_instant(facts, anchors + debt_slots, want_unit)
+    # The date: the latest balance sheet in that unit — an anchor's date,
+    # or failing any anchor, the newest debt figure's.
+    ref = None
+    for slots in (anchors, debt_slots):
+        _, end, u = _latest_instant(facts, slots, unit or want_unit)
+        if end is not None and u == unit:
+            ref = end
+            break
+    if ref is None:
+        return {"total_debt": None, "debt_inferred_zero": False, "cash": None,
+                "preferred": None, "minority": None, "unit": None, "as_of": None,
+                "filed_balance_sheet": False, "notes": ["no balance sheet filed"]}
 
-    cash, cash_at, cash_unit = one("cash")
-    combined, comb_at, comb_unit = one("debt_total")
-    noncur, noncur_at, noncur_unit = one("debt_noncurrent")
-    ambig, ambig_at, ambig_unit = one("debt_longterm_ambiguous")
-    current, cur_at, cur_unit = one("debt_current")
-    short, short_at, short_unit = one("debt_short")
-    pref, pref_at, pref_unit = one("preferred")
-    mino, mino_at, mino_unit = one("minority")
-    equity, _, eq_unit = one("equity")
-    liab, _, liab_unit = one("liabilities")
+    def at(key):
+        return _instant_at(facts, BALANCE_TAGS[key], ref, unit)
 
-    units = {u for u in (cash_unit, comb_unit, noncur_unit, ambig_unit,
-                         cur_unit, short_unit, eq_unit, liab_unit) if u}
-    unit = want_unit if want_unit in units else (sorted(units)[0] if units else None)
+    cash = at("cash")
+    combined, noncur, lt_total = at("debt_total"), at("debt_noncurrent"), at("debt_longterm_total")
+    current, current_all, short = at("debt_current"), at("debt_current_all"), at("debt_short")
 
     notes = []
     debt = None
-    if combined is not None and comb_unit == unit:
+    if combined is not None:
         debt = combined
         notes.append("single combined debt tag")
     else:
-        parts = []
-        if noncur is not None and noncur_unit == unit:
-            parts.append(noncur)
-        elif ambig is not None and ambig_unit == unit:
-            # Only safe when there is no current portion to double-count.
-            if current is None:
-                parts.append(ambig)
-                notes.append("LongTermDebt used with no current portion filed")
-            else:
-                notes.append("LongTermDebt ignored: ambiguous against a "
-                             "filed current portion, and adding both "
-                             "double-counts for filers who include it")
-        if current is not None and cur_unit == unit:
-            parts.append(current)
-        if short is not None and short_unit == unit:
-            parts.append(short)
-        if parts:
-            debt = sum(parts)
+        if current is None and current_all is not None:
+            near = current_all                     # includes short-term borrowings
+            notes.append("DebtCurrent stands in for current portion and short-term borrowings")
+        else:
+            near = (current or 0.0) + (short or 0.0) if (current is not None or short is not None) else None
+        if noncur is not None:
+            debt = noncur + (near or 0.0)
+        elif lt_total is not None:
+            # A total already holding the current portion: add only what it
+            # cannot contain — short-term borrowings.
+            debt = max(lt_total, current or 0.0) + (short or 0.0)
+            notes.append("LongTermDebt used as the total (current portion included)")
+        elif near is not None:
+            debt = near
 
-    filed_a_balance_sheet = (equity is not None or liab is not None
+    filed_a_balance_sheet = (at("equity") is not None or at("liabilities") is not None
                              or cash is not None)
     debt_inferred_zero = False
     if debt is None and filed_a_balance_sheet:
-        debt = 0.0
-        debt_inferred_zero = True
-        notes.append("no debt tag on a filed balance sheet — read as zero "
-                     "debt rather than unknown, because a debt-free "
-                     "company files nothing here")
+        ever = _latest_instant(facts, debt_slots, unit)[0] is not None
+        if ever:
+            notes.append("debt tags were filed before but none on the latest balance "
+                         "sheet — moved to a tag this list does not read; unknown, not zero")
+        else:
+            debt = 0.0
+            debt_inferred_zero = True
+            notes.append("no debt tag on a filed balance sheet — read as zero "
+                         "debt rather than unknown, because a debt-free "
+                         "company files nothing here")
 
     return {
         "total_debt": debt,
         "debt_inferred_zero": debt_inferred_zero,
-        "cash": cash if cash_unit == unit else None,
-        "preferred": pref if pref_unit == unit else None,
-        "minority": mino if mino_unit == unit else None,
+        "cash": cash,
+        "preferred": at("preferred"),
+        "minority": at("minority"),
         "unit": unit,
-        "as_of": max([d for d in (cash_at, comb_at, noncur_at, ambig_at,
-                                  cur_at, short_at) if d], default=None),
+        "as_of": ref,
         "filed_balance_sheet": filed_a_balance_sheet,
         "notes": notes,
     }
@@ -1035,6 +1107,16 @@ def compute_metrics(facts: dict) -> dict | None:
     last = years[-1]
 
     op, gp, capex = s["op_income"], s["gross_profit"], s["capex"]
+    # FILL-ONLY sources (see TAGS): a year the main tags cover keeps their
+    # figure. Money in the reporting currency only — a filler in another
+    # unit is dropped rather than spliced in.
+    def same_ccy(key):
+        return s[key] if pulled[key][1] in (currency, "") else {}
+    capex = {**same_ccy("capex_other"), **capex}
+    interest = same_ccy("interest_expense")
+    ebit = {y: v + interest.get(y, 0.0) for y, v in same_ccy("pretax_income").items()}
+    if pulled["op_income"][1] in (currency, ""):
+        op = {**ebit, **op}
     capex_int = s["capex_intangible"]
     shares, cash, equity = s["shares_diluted"], s["cash"], s["equity"]
     lt, st = s["lt_debt"], s["st_debt"]

@@ -253,6 +253,56 @@ check(_m["_shares"][2016] == 9e6 and _m["_shares_filed"][2016] == "2017-03-01",
       "a year filled from a second tag carries THAT tag's filing date")
 check(_m["_fcf"][2025] == 2e8 and "fcf_ps" not in _m,
       "FCF goes across whole; FCF per share is no longer built before the splits are known")
+# ── capex and operating income filed under tags the main lists don't hold ──
+def co(extra, years=range(2016, 2026)):
+    base = {
+        "Revenues": {"units": {"USD": [fyv(y, 1e10, f"{y + 1}-02-10") for y in years]}},
+        "NetIncomeLoss": {"units": {"USD": [fyv(y, 1e9, f"{y + 1}-02-10") for y in years]}},
+        "NetCashProvidedByUsedInOperatingActivities": {"units": {"USD": [fyv(y, 2e9, f"{y + 1}-02-10") for y in years]}},
+        "WeightedAverageNumberOfDilutedSharesOutstanding": {"units": {"shares": [fyv(y, 1e8, f"{y + 1}-02-10") for y in years]}},
+        "LongTermDebtNoncurrent": {"units": {"USD": [dict(fyv(y, 3e9, f"{y + 1}-02-10"), start=None) for y in years]}},
+    }
+    base.update(extra)
+    return {"us-gaap": base}
+
+
+def usd(ys, v, tag_start=True):
+    return {"units": {"USD": [fyv(y, v, f"{y + 1}-02-10") for y in ys]}}
+
+
+# Verizon: PaymentsToAcquireProductiveAssets to 2018, ...OtherProductiveAssets since.
+_vz = R.compute_metrics(co({"PaymentsToAcquireProductiveAssets": usd(range(2016, 2019), 5e8),
+                            "PaymentsToAcquireOtherProductiveAssets": usd(range(2019, 2026), 8e8)}))
+check(_vz["fcf_last"] == 2e9 - 8e8 and _vz["capex_ocf"] == 40.0,
+      f"VERIZON'S CAPEX IS READ THROUGH ITS 2019 TAG CHANGE: this year's free cash flow "
+      f"exists and the capex ratio is on the last five years, not 2014-18 "
+      f"(got fcf {_vz['fcf_last']}, capex/OCF {_vz['capex_ocf']})")
+# Eli Lilly: only the "Other" tag.
+_lly = R.compute_metrics(co({"PaymentsToAcquireOtherPropertyPlantAndEquipment": usd(range(2016, 2026), 6e8)}))
+check(_lly["fcf_last"] == 1.4e9 and _lly["capex_ocf"] == 30.0,
+      "a filer whose whole capex line is the 'Other' tag has free cash flow (Lilly, ADP)")
+# A minor "Other" line filed for MORE years than the main capex must not take over.
+_minor = R.compute_metrics(co({"PaymentsToAcquirePropertyPlantAndEquipment": usd(range(2018, 2026), 9e8),
+                               "PaymentsToAcquireOtherPropertyPlantAndEquipment": usd(range(2012, 2026), 1e7)}))
+check(_minor["capex_ocf"] == 45.0 and _minor["fcf_last"] == 2e9 - 9e8,
+      "THE 'OTHER' TAGS ONLY FILL YEARS THE MAIN CAPEX TAG LACKS — a small side line "
+      "filed for longer never replaces the real capex figure")
+# TJX: OperatingIncomeLoss stops in 2019; pre-tax income + interest continue.
+_tjx = R.compute_metrics(co({"OperatingIncomeLoss": usd(range(2016, 2020), 1.5e9),
+                             "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest": usd(range(2016, 2026), 1.3e9),
+                             "InterestExpense": usd(range(2016, 2026), 1e8)}))
+check(_tjx["nd_ebit"] == round(3e9 / 1.4e9, 2),
+      f"TJX HAS A NET DEBT/EBIT AGAIN: pre-tax income plus interest stands in for the "
+      f"operating line it stopped filing in 2019 (got {_tjx['nd_ebit']})")
+check(_tjx["op_margin_med"] is not None,
+      "and its margins and ROIC are measured on the recent years too")
+_keep = R.compute_metrics(co({"OperatingIncomeLoss": usd(range(2016, 2026), 1.5e9),
+                              "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest": usd(range(2016, 2026), 9e9)}))
+check(_keep["nd_ebit"] == 2.0, "a year with a filed operating line keeps it — the proxy only fills")
+_eur = R.compute_metrics(co({"IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest":
+                             {"units": {"EUR": [fyv(y, 1.3e9, f"{y + 1}-02-10") for y in range(2016, 2026)]}}}))
+check(_eur["nd_ebit"] is None, "a filler in another currency is not spliced into dollars")
+
 _amend = {"us-gaap": {"WeightedAverageNumberOfDilutedSharesOutstanding": {"units": {"shares": [
     fyv(2023, 5.0, "2024-02-01"), fyv(2024, 5.0, "2025-02-01"), fyv(2025, 5.0, "2026-02-01"),
     dict(fyv(2025, 6.0, "2026-05-01"), form="10-K/A")]}}}}

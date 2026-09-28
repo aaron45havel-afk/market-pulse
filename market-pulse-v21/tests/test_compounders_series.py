@@ -516,19 +516,90 @@ check(summed["total_debt"] == 4_750,
       f"borrowings (got {summed['total_debt']})")
 check(summed["cash"] == 900, "and cash comes across")
 
-# THE DOUBLE-COUNT. US GAAP `LongTermDebt` means total-including-current
-# for some filers and excluding-current for others, and the fact carries
-# nothing that says which.
-ambiguous = R.balance_sheet(bs(LongTermDebt=4_500, LongTermDebtCurrent=500,
-                               CashAndCashEquivalentsAtCarryingValue=900))
-check(ambiguous["total_debt"] == 500,
-      f"`LongTermDebt` IS IGNORED WHEN A CURRENT PORTION IS ALSO FILED. "
-      f"Adding them gives 5,000 for a filer whose LongTermDebt already "
-      f"includes the 500 — an overstated denominator, which UNDERSTATES "
-      f"the yield, so this one errs toward missing a name rather than "
-      f"promoting one (got {ambiguous['total_debt']})")
-check(any("double-count" in n for n in ambiguous["notes"]),
-      "and the row says why the tag was dropped")
+# `LongTermDebt` IS THE TOTAL, current portion included. It used to be
+# thrown away whenever a current portion was also filed — which kept only
+# the current portion. From the SEC's own figures (2025 10-Ks, $bn):
+#   Union Pacific  LongTermDebt 31.81 · LTDACLO 30.29 · current 1.52  -> read 1.52
+#   AbbVie         LongTermDebt 64.50 · LTDACLO 58.94 · current 6.06 · STB 2.50 -> read 8.55
+unp = R.balance_sheet(bs(LongTermDebt=31.81e9, LongTermDebtAndCapitalLeaseObligations=30.29e9,
+                         LongTermDebtAndCapitalLeaseObligationsCurrent=1.52e9, CommercialPaper=0.0,
+                         CashAndCashEquivalentsAtCarryingValue=1.27e9))
+check(abs(unp["total_debt"] - 31.81e9) < 1e6,
+      f"UNION PACIFIC'S DEBT IS $31.8bn, NOT ITS $1.5bn CURRENT PORTION: the noncurrent "
+      f"line (LongTermDebtAndCapitalLeaseObligations) plus the current portion "
+      f"(got {unp['total_debt'] / 1e9:.2f}bn)")
+abbv = R.balance_sheet(bs(LongTermDebt=64.50e9, LongTermDebtAndCapitalLeaseObligations=58.94e9,
+                          LongTermDebtAndCapitalLeaseObligationsCurrent=6.06e9,
+                          ShortTermBorrowings=2.50e9, StockholdersEquity=3e9))
+check(abs(abbv["total_debt"] - 67.50e9) < 1e6,
+      f"AbbVie: noncurrent + current + short-term borrowings, $67.5bn "
+      f"(got {abbv['total_debt'] / 1e9:.2f}bn; the old rule read $8.55bn)")
+ltd_only = R.balance_sheet(bs(LongTermDebt=4_500, LongTermDebtCurrent=500,
+                              CashAndCashEquivalentsAtCarryingValue=900))
+check(ltd_only["total_debt"] == 4_500,
+      f"WITH NO NONCURRENT LINE, LongTermDebt IS USED AS THE TOTAL and the current "
+      f"portion it contains is not added again (got {ltd_only['total_debt']})")
+check(R.balance_sheet(bs(LongTermDebt=4_500, ShortTermBorrowings=250,
+                         StockholdersEquity=1))["total_debt"] == 4_750,
+      "short-term borrowings, which LongTermDebt cannot contain, are added")
+check(R.balance_sheet(bs(LongTermDebt=300, LongTermDebtCurrent=500,
+                         StockholdersEquity=1))["total_debt"] == 500,
+      "a LongTermDebt below its own current portion is not a total — the larger stands")
+
+# ONE DATE FOR EVERYTHING. Home Depot stopped tagging LongTermDebtNoncurrent
+# in 2011; the old reader took that $8.71bn beside this year's figures.
+def dated(tag, end, val, unit="USD", filed=None):
+    return inst("us-gaap", tag, [{"end": end, "val": val, "fy": int(end[:4]), "fp": "FY",
+                                  "form": "10-K", "filed": filed or end}], unit=unit)
+
+
+HD = merge(dated("LongTermDebtNoncurrent", "2011-01-30", 8.71e9),
+           dated("LongTermDebtCurrent", "2011-01-30", 1.04e9),
+           dated("LongTermDebt", "2026-02-01", 49.40e9),
+           dated("LongTermDebtAndCapitalLeaseObligations", "2026-02-01", 46.34e9),
+           dated("LongTermDebtAndCapitalLeaseObligationsCurrent", "2026-02-01", 4.97e9),
+           dated("CommercialPaper", "2026-02-01", 4.46e9),
+           dated("StockholdersEquity", "2026-02-01", 12e9),
+           dated("CashAndCashEquivalentsAtCarryingValue", "2026-02-01", 1.39e9))
+hd = R.balance_sheet(HD)
+check(abs(hd["total_debt"] - 55.77e9) < 1e6 and hd["as_of"] == "2026-02-01",
+      f"HOME DEPOT'S DEBT IS READ FROM ITS 2026 BALANCE SHEET — $46.3bn + $5.0bn + "
+      f"$4.5bn of commercial paper — never the $8.7bn it filed in 2011 "
+      f"(got {hd['total_debt'] / 1e9:.2f}bn as of {hd['as_of']})")
+MU = merge(dated("LongTermDebtNoncurrent", "2012-08-30", 3.04e9),
+           dated("LongTermDebtCurrent", "2012-08-30", 0.22e9),
+           dated("LongTermDebt", "2025-08-28", 11.53e9),
+           dated("LongTermDebtAndCapitalLeaseObligations", "2025-08-28", 14.02e9),
+           dated("DebtCurrent", "2025-08-28", 0.56e9),
+           dated("StockholdersEquity", "2025-08-28", 54e9))
+mu = R.balance_sheet(MU)
+check(abs(mu["total_debt"] - 14.58e9) < 1e6,
+      f"Micron: this year's noncurrent line plus DebtCurrent, $14.6bn — not $3.3bn "
+      f"from 2012 (got {mu['total_debt'] / 1e9:.2f}bn)")
+_dc =R.balance_sheet(merge(dated("LongTermDebtNoncurrent", "2025-12-31", 4_000.0),
+                            dated("DebtCurrent", "2025-12-31", 600.0),
+                            dated("ShortTermBorrowings", "2025-12-31", 250.0),
+                            dated("StockholdersEquity", "2025-12-31", 1.0)))
+check(_dc["total_debt"] == 4_600.0,
+      f"DebtCurrent already holds short-term borrowings, so they are not added beside it "
+      f"(got {_dc['total_debt']})")
+_gone = R.balance_sheet(merge(dated("LongTermDebtNoncurrent", "2015-12-31", 4_000.0),
+                              dated("StockholdersEquity", "2025-12-31", 1.0),
+                              dated("CashAndCashEquivalentsAtCarryingValue", "2025-12-31", 900.0)))
+check(_gone["total_debt"] is None and not _gone["debt_inferred_zero"],
+      "A COMPANY THAT FILED DEBT TAGS ONCE AND NONE ON ITS LATEST BALANCE SHEET HAS "
+      "UNKNOWN DEBT — it moved to a tag this list doesn't read; it is not debt-free")
+_amend = R.balance_sheet(merge(
+    inst("us-gaap", "LongTermDebtNoncurrent", [
+        {"end": "2025-12-31", "val": 4_000.0, "fy": 2025, "fp": "FY", "form": "10-K/A", "filed": "2026-05-01"},
+        {"end": "2025-12-31", "val": 3_000.0, "fy": 2025, "fp": "FY", "form": "10-K", "filed": "2026-02-01"}]),
+    dated("StockholdersEquity", "2025-12-31", 1.0)))
+check(_amend["total_debt"] == 4_000.0, "a restated figure (10-K/A, filed later) wins")
+_late = R.balance_sheet(merge(dated("StockholdersEquity", "2025-12-31", 1.0),
+                              dated("LongTermDebtNoncurrent", "2025-12-31", 4_000.0),
+                              dated("ShortTermBorrowings", "2026-02-15", 999.0)))
+check(_late["total_debt"] == 4_000.0 and _late["as_of"] == "2025-12-31",
+      "the date is the balance sheet's: a footnote figure dated after it doesn't move it")
 
 lone = R.balance_sheet(bs(LongTermDebt=4_500,
                           CashAndCashEquivalentsAtCarryingValue=900))
