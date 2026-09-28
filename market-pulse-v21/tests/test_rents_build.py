@@ -229,6 +229,9 @@ check(_ms["46711"]["bedrooms"]["2"] == 999 and _mf["46711"]["bedrooms"]["2"] == 
       "carry, --states OH would erase every other state's")
 check(_rep["failed_counties"] == 1 and _rep["carried_fmr"] == 2,
       "and the report counts what failed and what was carried")
+check(_rep["unmatched_zips"] == 0,
+      "a run limited to Ohio doesn't report Indiana's counties as unmatched — the "
+      "first New England run listed Los Angeles County among its misses")
 check(R.merge_hud(dict(_hud, failed={f"c{i}" for i in range(5)}), {}, {}, _rows, None) is None,
       "MORE THAN 5% OF COUNTIES FAILING DISCARDS THE PULL — five of 88 is a "
       "broken run, not five counties with no rents")

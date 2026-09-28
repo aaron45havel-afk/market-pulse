@@ -3924,8 +3924,13 @@ def _zip_layer(name: str) -> dict:
     Returns {} when the file is absent or unreadable, which the finder reads
     as "this source has no data" — the filters that need it are then listed
     as unavailable rather than offered over nothing.
+
+    MF_ZIP_LAYER_DIR (unset in production) points at another folder: the page
+    test serves a copy with one state removed, since no real state lacks
+    these layers any more.
     """
-    p = Path(__file__).resolve().parent / "data" / f"{name}.json"
+    base = os.environ.get("MF_ZIP_LAYER_DIR") or Path(__file__).resolve().parent / "data"
+    p = Path(base) / f"{name}.json"
     try:
         mtime = p.stat().st_mtime
     except OSError:
@@ -4140,9 +4145,8 @@ async def multifamily_page(
     # Sources that actually carry data FOR THE ROWS IN SCOPE. A filter over an
     # empty source would mark every row NO DATA and empty the board while
     # looking like a strict choice, so filters are offered only where their
-    # source has figures — which is also how Connecticut, whose 2022 tract
-    # renumbering FEMA's tracts no longer match, gets no hazard filters rather
-    # than a board emptied by them.
+    # source has figures — a state a source doesn't reach gets no filter for
+    # it rather than a board emptied by one.
     with_data = set()
     for c in ("pct_renter_occupied", "pct_multi_unit", "pct_rent_burdened",
               "pct_age_25_34", "pct_2_4_units"):

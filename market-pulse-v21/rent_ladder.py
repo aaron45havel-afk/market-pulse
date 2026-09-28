@@ -97,7 +97,8 @@ TIERS = (
         "label": "HUD FMR (county)",
         "basis": "voucher-floor",
         "measures": "the same 40th-percentile gross-rent voucher standard, "
-                    "set for the whole county (or metro) rather than the ZIP",
+                    "set for the whole county (or metro) rather than the ZIP — "
+                    "in New England, for the rent area of the ZIP's town",
         "caveat": "County-wide, so a good and a bad ZIP in the same county "
                   "carry the same number. Against Zillow (8,268 ZIPs, "
                   "FY2027) the 2-bedroom figure is 0.93x at the median, and "

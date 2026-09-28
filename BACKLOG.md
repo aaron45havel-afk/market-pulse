@@ -92,11 +92,6 @@ Format: `- [PHASE-SEEN] item — why it matters`
   safe and rough neighborhoods; nothing free publishes it nationally today.
 - [MF-CRIME] 27 researcher-flagged cities stay unverified because their FBI figure is
   under 100 per 100k — a human pass could clear the genuinely safe ones.
-- [MF-HAZARDS] Connecticut has no hazard figures. FEMA's NRI uses CT's 2022 planning-region
-  tract IDs; the Census 2020 ZCTA–tract file uses the old county-based ones, so no CT tract
-  joins. The Census Bureau publishes a CT 2020→2022 tract crosswalk; applying it in
-  `refresh_zip_hazards.parse_relationship` would restore the state. The build already
-  reports it under `weak_states`.
 - [MF-HAZARDS] FEMA's inland-flood model (IFLD) sets a baseline nearly everywhere, so
   downtown Phoenix ($148/yr per $100k) comes out above Miami Beach ($88) and levee-protected
   New Orleans below the national median. The page says so. A second flood source — NFIP
@@ -109,11 +104,18 @@ Format: `- [PHASE-SEEN] item — why it matters`
 - [MF-WEATHER] No elevation correction: a ZIP matched to a station a few hundred metres
   lower reads warm by roughly 2°F per 300 m. The station's elevation is in
   `zip_climate.json`; the ZIP's is not in `zips.db`.
-- [MF-RENTS] Connecticut's HUD county rents don't join: HUD's FY2027 FMRs use CT's 2022
-  planning regions, `zips.db` the old counties (the same renumbering that blocks CT
-  hazards). ~140 CT ZIPs have no rent. The Census CT county→planning-region crosswalk
-  would fix both. A handful of Alaska ZIPs miss for the same kind of reason ("Anchorage
-  Borough" vs HUD's "Anchorage Municipality").
+- [MF-RENTS] Outside New England, ZIPs still join HUD counties by name, and a handful of
+  Alaska ZIPs miss on names that differ in substance ("Anchorage Borough" vs HUD's
+  "Anchorage Municipality"). HUD's ZIP-to-county crosswalk (`/usps?type=2`, the same API
+  the New England town join uses as type 11) would replace the name join with codes.
+- [MF-RENTS] A New England ZIP split roughly evenly between two towns in different HUD
+  rent areas gets no FMR (it falls to ACS). Weighting the two areas' FMRs by the
+  crosswalk's residential shares would give it one, at the cost of a figure HUD never
+  published.
+- [MF-RENTS] One New England town the crosswalk places a ZIP in came back from HUD with no
+  rent, so 05452 (Essex, VT) lost its FMR; it keeps its Zillow rent. Probably a town newer
+  than HUD's town list (Essex Junction became a city in 2022) — not verified. Asking HUD
+  for crosswalk towns its list doesn't name would show whether it knows the new code.
 - [MF-RENTS] `rent_ladder.spread()` reads ZORI above SAFMR as a "tight market" on the
   premise that SAFMR is a floor. The first national run showed SAFMR at 1.01× ZORI at the
   median, so about half of ZIPs would read "soft". Nothing displays the reading today;

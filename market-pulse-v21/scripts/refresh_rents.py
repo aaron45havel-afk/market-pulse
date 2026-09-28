@@ -608,8 +608,11 @@ def merge_hud(hud: dict, c_safmr: dict, c_fmr: dict, zip_rows: list,
 
     town_states = hud.get("town_states") or set()
     by_town = [r for r in zip_rows if r[1] in town_states]
+    # Only the states this run asked for: a --states run would otherwise
+    # report every other state's counties as "unmatched".
     fips_of, unmatched = county_fips_by_name(
-        [r for r in zip_rows if r[1] not in town_states], hud.get("counties") or [])
+        [r for r in zip_rows if r[1] not in town_states
+         and (pulled_states is None or r[1] in pulled_states)], hud.get("counties") or [])
     county_fmr = hud.get("fmr") or {}
     safmr = dict(hud.get("safmr") or {})
     fmr = {z: county_fmr[f] for z, f in fips_of.items() if f in county_fmr}

@@ -42,12 +42,30 @@ def check(cond, msg):
         _FAILS.append(msg)
 
 
+# No real state lacks the weather or hazard layers any more — Connecticut, the
+# last one, now joins — so the server is handed a copy of the hazards file with
+# NO_HZ's ZIPs taken out. That is the only way left to see, end to end, what a
+# state with no figures gets. Every other state is served the real file.
+import json                                              # noqa: E402
+import shutil                                            # noqa: E402
+import tempfile                                          # noqa: E402
+NO_HZ = "VT"
+_LAYERS = tempfile.mkdtemp(prefix="mf_layers_")
+shutil.copy(os.path.join(ROOT, "data", "zip_climate.json"), _LAYERS)
+with open(os.path.join(ROOT, "data", "zip_hazards.json")) as _f:
+    _hz = json.load(_f)
+_drop = {z for (z,) in sqlite3.connect(DB).execute("select zip from zips where state=?", (NO_HZ,))}
+_hz["zips"] = {z: v for z, v in _hz["zips"].items() if z not in _drop}
+with open(os.path.join(_LAYERS, "zip_hazards.json"), "w") as _f:
+    json.dump(_hz, _f)
+
 PORT = int(os.environ.get("MF_PAGE_TEST_PORT", "58311"))
 BASE = f"http://127.0.0.1:{PORT}"
 server = subprocess.Popen(
     [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1",
      "--port", str(PORT), "--log-level", "warning"],
-    cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+    env={**os.environ, "MF_ZIP_LAYER_DIR": _LAYERS})
 
 
 def stop():
@@ -57,6 +75,7 @@ def stop():
             server.wait(timeout=10)
         except subprocess.TimeoutExpired:
             server.kill()
+    shutil.rmtree(_LAYERS, ignore_errors=True)
 
 
 def get(path):
@@ -495,18 +514,24 @@ try:
           "weather and hazard filters are offered nationally")
 
     st, page = get("/multifamily?state=CT&unknown=1")
+    ch, ct_rows = col(page, "hazard"), table_rows(page)
+    check('name="max_flood"' in page and ct_rows
+          and all(re.fullmatch(r"(\$[\d,]+|under \$1).*", r["cells"][ch]) for r in ct_rows),
+          f"CONNECTICUT HAS HAZARD FIGURES AND FILTERS — FEMA's 2022-renumbered tracts "
+          f"are matched back to the 2020 ZIP file ({len(ct_rows)} rows, every one in dollars)")
+
+    # NO_HZ is served without hazard figures (see the top of this file).
+    st, page = get(f"/multifamily?state={NO_HZ}&unknown=1")
     check("<legend>Natural hazards</legend>" not in page,
           "and no empty 'Natural hazards' heading with nothing under it")
     check('name="max_flood"' not in page and 'name="min_winter"' in page,
-          "CONNECTICUT GETS WEATHER FILTERS BUT NO HAZARD FILTERS — FEMA's tracts "
-          "use CT's 2022 renumbering, the ZIP file the old one, so there are no "
-          "hazard figures to filter on")
-    check("Flood damage" in page and "No FEMA hazard figures for CT" in page,
-          "and says so: the hazard filters show as unavailable for CT")
+          "A STATE WITH NO HAZARD FIGURES GETS WEATHER FILTERS BUT NO HAZARD FILTERS")
+    check("Flood damage" in page and f"No FEMA hazard figures for {NO_HZ}" in page,
+          "and says so: the hazard filters show as unavailable for that state")
     e_plain = funnel_numbers(page)[2]
-    st, page = get("/multifamily?state=CT&unknown=1&max_flood=100")
+    st, page = get(f"/multifamily?state={NO_HZ}&unknown=1&max_flood=100")
     check(funnel_numbers(page)[2] == e_plain,
-          "A URL ASKING FOR A FLOOD FILTER IN CT IS IGNORED — it cannot empty "
+          "A URL ASKING FOR A FLOOD FILTER THERE IS IGNORED — it cannot empty "
           "the board by marking every row no-data")
 
     # ── nothing else broke ──────────────────────────────────────────
