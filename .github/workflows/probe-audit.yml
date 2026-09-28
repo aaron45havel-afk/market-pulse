@@ -1,4 +1,4 @@
-name: TEMPORARY — debt tags on the latest balance sheet
+name: TEMPORARY — Lynch units check on the newly unverified
 
 # Read-only. Deleted before the branch merges.
 on:
@@ -24,9 +24,9 @@ jobs:
           python-version: '3.11'
       - run: |
           python3 -u - <<'PY'
-          import gzip, json, sys, time, urllib.request, re
-          sys.path.insert(0, "."); sys.path.insert(0, "scripts")
-          import refresh_compounders as R
+          import gzip, json, sys, time, urllib.request
+          sys.path.insert(0, ".")
+          import lynch as L
           SEC = {"User-Agent": "market-pulse-research admin@focusedops.io", "Accept-Encoding": "gzip, deflate"}
           def get(url):
               with urllib.request.urlopen(urllib.request.Request(url, headers=SEC), timeout=60) as r:
@@ -34,20 +34,30 @@ jobs:
                   return json.loads(gzip.decompress(b) if r.headers.get("Content-Encoding") == "gzip" else b)
           tick = get("https://www.sec.gov/files/company_tickers.json")
           cik = {v["ticker"]: int(v["cik_str"]) for v in tick.values()}
-          PAT = re.compile(r"Debt|Borrowing|Notes|Loan|Lease.*Liabilit|Obligation", re.I)
-          for t in ("DE", "TRP", "APD", "WDC", "PBR", "VAL", "HTZ", "CNK", "NVR", "PANW", "SM", "ILMN", "BUD", "TSM", "B", "XYZ"):
+          T = "AIRO BE BRCB BUDA CAMT CMCM CWEN DDL DKNG DSP EE EH EL EYPT FLOC FXHO GOGO HOVNP IIIV INR KELYB LINC MDIA NEGG NNDM NVMI OM PTRN RSKD SEI SSP SWBI TEM VHI VIOT VNOM VTEX WSE YSG".split()
+          def last(d, n=3):
+              return {k: d[k] for k in sorted(d)[-n:]}
+          for t in T:
               if t not in cik: print("no cik", t); continue
-              f = get(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik[t]:010d}.json")["facts"]; time.sleep(0.2)
-              bs = R.balance_sheet(f)
-              ref, unit = bs["as_of"], bs["unit"]
-              print(f"== {t}: total_debt={bs['total_debt']} unit={unit} as_of={ref} notes={bs['notes']}")
-              for tax in ("us-gaap", "ifrs-full"):
-                  for tag, node in (f.get(tax) or {}).items():
-                      if not PAT.search(tag) or "Payments" in tag or "Proceeds" in tag or "Repayments" in tag or "Interest" in tag:
-                          continue
-                      rows = [r for r in (node.get("units") or {}).get(unit or "USD", []) if r.get("form") in R.ANNUAL_FORMS and not r.get("start")]
-                      at = [r for r in rows if r.get("end") == ref]
-                      if at:
-                          r = max(at, key=lambda r: r.get("filed") or "")
-                          print(f"    {tax}:{tag} = {r['val']/1e9:.3f}bn")
+              try:
+                  facts = get(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik[t]:010d}.json")
+              except Exception as e:
+                  print(t, "fetch failed", e); continue
+              time.sleep(0.15)
+              eps, concept, unit = L.eps_series(facts)
+              ni, _ = L.annual_series(facts, "NetIncomeLoss")
+              w = L.weighted_shares(facts)
+              wd, _ = L.annual_series(facts, ["WeightedAverageNumberOfDilutedSharesOutstanding"], unit="shares")
+              wb, _ = L.annual_series(facts, ["WeightedAverageNumberOfSharesOutstandingBasic"], unit="shares")
+              cur = L.current_shares(facts, "2026-09-28")
+              ni2, fixed = L.rescale_net_income(ni, eps, w)
+              y = max(eps) if eps else None
+              e = eps.get(y) if y else None
+              n_same = ni2.get(y); n_last = ni2[max(ni2)] if ni2 else None
+              print(f"== {t} {concept} {unit} eps_year={y} eps={e} rescaled={fixed}")
+              print(f"   ni_same={n_same} ni_last={n_last} ({max(ni2) if ni2 else None})")
+              print(f"   weighted={w.get(y)} dil={wd.get(y)} basic={wb.get(y)} current={cur}")
+              print(f"   check weighted={L.units_check(e, w.get(y) or cur, n_same if n_same is not None else n_last)}")
+              print(f"   check current ={L.units_check(e, cur, n_last)}")
+              print(f"   eps last={last(eps)} ni last={last(ni2)} w last={last(w)}")
           PY
