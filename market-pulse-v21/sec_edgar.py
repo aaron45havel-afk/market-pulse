@@ -15,7 +15,7 @@ Filters:
 
 Includes dividends per share from SEC EDGAR.
 """
-import os, json, logging, time, urllib.request
+import os, json, logging, re, time, urllib.request
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -222,13 +222,50 @@ def get_company_details_bulk(ciks):
     return result
 
 def _is_warrant(ticker):
-    """Check if ticker is a warrant (not common stock)."""
+    """Check if ticker is a warrant (not common stock).
+
+    A WARRANT IS SPELLED ONE OF TWO WAYS: a class suffix (ACME-WT, ACME.WS,
+    ACME-W) or Nasdaq's fifth letter W on a four-letter root (ACMEW). The
+    old test was "ends in W", which is also how Lowe's (LOW), ServiceNow
+    (NOW), Sherwin-Williams (SHW), Edwards Lifesciences (EW), T. Rowe Price
+    (TROW), Snowflake (SNOW) and CDW are spelled — and each vanished from
+    every screen built on this, uncounted.
+    """
     t = ticker.upper()
-    if t.endswith("W") or t.endswith("WT") or t.endswith("WS"):
+    if re.search(r"[-.](W|WT|WS)$", t):
         return True
-    if "-WT" in t or "-W" in t or ".WT" in t or ".WS" in t:
-        return True
-    return False
+    return len(t) == 5 and t.endswith("W") and t.isalpha()
+
+
+# A class suffix that is not common stock: preferred (-PA, -P), units
+# (-U, -UN), rights (-R, -RI) and warrants. Share classes (-A, -B) are
+# common stock and stay.
+_NOT_COMMON = re.compile(r"-(P[A-Z]?|U|UN|R|RI|W|WT|WS)$")
+
+
+def parse_tickers(d):
+    """company_tickers.json -> {cik: {"ticker", "name"}}, ONE ticker per
+    company: the first listed that is common stock.
+
+    A company can carry several tickers — Boeing's common and its preferred,
+    Alphabet's two classes. The map used to keep whichever came LAST, so
+    about 250 companies were screened under a preferred line or a unit
+    (Boeing as BA-PA, Albemarle as ALB-PA) and read "no market cap" against
+    a quote for the wrong security. SEC lists the primary line first for
+    1,432 of 1,453 such companies; a first entry that is plainly not common
+    stock (SRG-PA before SRG) gives way to the next one that is.
+    """
+    by_cik = {}
+    for k in sorted((d or {}), key=lambda x: int(x) if str(x).isdigit() else 0):
+        e = d[k] or {}
+        if e.get("cik_str") and e.get("ticker"):
+            by_cik.setdefault(str(e["cik_str"]), []).append((e["ticker"], e.get("title", "")))
+    out = {}
+    for cik, entries in by_cik.items():
+        common = [x for x in entries if not _NOT_COMMON.search(x[0].upper())]
+        ticker, name = (common or entries)[0]
+        out[cik] = {"ticker": ticker, "name": name}
+    return out
 
 def _china_flag(name, sic_data=None):
     """Check if company likely has Chinese operations based on name."""
@@ -289,12 +326,13 @@ def _periods():
     return f"CY{cy}Q{cq}I", f"CY{cy}Q{cq}", f"CY{py}Q{pq}I"
 
 def get_tickers():
-    c = _rc("tickers_v5", 168)
+    # v6: one COMMON ticker per company (parse_tickers); v5 kept the last.
+    c = _rc("tickers_v6", 168)
     if c: return c
     d = _get("https://www.sec.gov/files/company_tickers.json")
     if not d: return {}
-    r = {str(e["cik_str"]): {"ticker": e["ticker"], "name": e.get("title","")} for e in d.values() if e.get("cik_str") and e.get("ticker")}
-    _wc("tickers_v5", r)
+    r = parse_tickers(d)
+    _wc("tickers_v6", r)
     return r
 
 def parse_exchanges(d):

@@ -184,7 +184,10 @@ def build_universe(tickers: dict | None = None,
     for cik, t in tickers.items():
         ticker = (t.get("ticker") or "").upper()
         name = t.get("name") or ""
-        if not ticker or not name or _is_warrant(ticker):
+        if not ticker or not name:
+            continue
+        if _is_warrant(ticker):
+            dropped_structural += 1              # counted, not vanished
             continue
         if _excluded_keyword(name, sectors=False):
             dropped_structural += 1
@@ -364,6 +367,7 @@ def facts_to_record(row: dict, quote: dict, facts: dict, as_of: str) -> dict:
         "equity_by_year": equity_by_year,
         "last_filing": L.first_filing_end(facts),
         "is_international": _is_foreign_issuer(facts),
+        "statements": L.statements_basis(facts),
     }
 
 
