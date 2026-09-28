@@ -14,11 +14,11 @@
    "unscorable": 48
   },
   "ev_inputs": {
-   "debt_cross_check_refused": 5,
+   "debt_cross_check_refused": 4,
    "debt_inferred_zero": 55,
    "of": 1635,
    "with_cash": 1618,
-   "with_debt": 1502
+   "with_debt": 1501
   },
   "fcf_take": 0.1875,
   "forward_looking": false,
@@ -144,6 +144,7 @@
   "RICK",
   "INMD",
   "PAGP",
+  "AGX",
   "OTEX",
   "EVTC",
   "PANL",
@@ -180,7 +181,6 @@
   "AZZ",
   "SHOE",
   "RMNI",
-  "NVGS",
   "NTCT",
   "NATR",
   "FLO",
@@ -230,6 +230,44 @@
    "ticker": "FVRR",
    "total_debt": 0.0,
    "years": 7
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2025-12-31",
+   "capex_ocf": 0.7,
+   "cash": 231252000.0,
+   "country": "MA",
+   "cyclical": true,
+   "debt_inferred_zero": false,
+   "ev": 801994574.0,
+   "exchange": "Nasdaq",
+   "fcf": 327583000.0,
+   "fcf_yield": 40.85,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 49.19,
+    "sales_trend": 17.11
+   },
+   "growth_ranks": {
+    "fcf_trend": 96.23,
+    "sales_trend": 84.28
+   },
+   "growth_score": 90.25,
+   "industry": "Pharmaceutical Preparations",
+   "market_cap": 766033574.0,
+   "name": "COLLEGIUM PHARMACEUTICAL, INC",
+   "nd_ebit": -1.29,
+   "op_margin_now": 23.0,
+   "pfcf": 2.3,
+   "pfcf_med": 4.4,
+   "reason": "",
+   "rev_cagr5": 17.49,
+   "revenue": 780567000.0,
+   "roic_med": 121.3,
+   "size_band": "small",
+   "ticker": "COLL",
+   "total_debt": 267213000.0,
+   "years": 8
   },
   {
    "basis": "ev",
@@ -318,11 +356,11 @@
    "country": "WI",
    "cyclical": true,
    "debt_inferred_zero": false,
-   "ev": 2985495864.0,
+   "ev": 2966495864.0,
    "exchange": "NYSE",
    "fcf": 1008000000.0,
    "fcf_conv": 153.2,
-   "fcf_yield": 33.76,
+   "fcf_yield": 33.98,
    "foreign": false,
    "growth_components": {
     "fcf_trend": -4.11,
@@ -346,7 +384,7 @@
    "roic_med": 15.8,
    "size_band": "mid",
    "ticker": "KSS",
-   "total_debt": 1455000000.0,
+   "total_debt": 1436000000.0,
    "years": 17
   },
   {
@@ -387,44 +425,6 @@
    "ticker": "WB",
    "total_debt": 2096160000.0,
    "years": 12
-  },
-  {
-   "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 0.7,
-   "cash": 231252000.0,
-   "country": "MA",
-   "cyclical": true,
-   "debt_inferred_zero": false,
-   "ev": 1105893574.0,
-   "exchange": "Nasdaq",
-   "fcf": 327583000.0,
-   "fcf_yield": 29.62,
-   "foreign": false,
-   "growth_components": {
-    "fcf_trend": 49.19,
-    "sales_trend": 17.11
-   },
-   "growth_ranks": {
-    "fcf_trend": 96.23,
-    "sales_trend": 84.28
-   },
-   "growth_score": 90.25,
-   "industry": "Pharmaceutical Preparations",
-   "market_cap": 766033574.0,
-   "name": "COLLEGIUM PHARMACEUTICAL, INC",
-   "nd_ebit": -1.29,
-   "op_margin_now": 23.0,
-   "pfcf": 2.3,
-   "pfcf_med": 4.4,
-   "reason": "",
-   "rev_cagr5": 17.49,
-   "revenue": 780567000.0,
-   "roic_med": 121.3,
-   "size_band": "small",
-   "ticker": "COLL",
-   "total_debt": 571112000.0,
-   "years": 8
   },
   {
    "basis": "ev",
@@ -6837,44 +6837,6 @@
   },
   {
    "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 14.3,
-   "cash": 154950000.0,
-   "country": "United Kingdom",
-   "cyclical": true,
-   "debt_inferred_zero": false,
-   "ev": 1459648334.0,
-   "exchange": "NYSE",
-   "fcf": 116643000.0,
-   "fcf_conv": 123.1,
-   "fcf_yield": 7.99,
-   "foreign": true,
-   "growth_components": {
-    "fcf_trend": 2.98,
-    "sales_trend": 7.32
-   },
-   "growth_ranks": {
-    "fcf_trend": 28.23,
-    "sales_trend": 56.28
-   },
-   "growth_score": 42.26,
-   "industry": "Deep Sea Foreign Transportation of  Freight",
-   "market_cap": 1416631334.0,
-   "name": "Navigator Holdings Ltd.",
-   "nd_ebit": 0.08,
-   "op_margin_now": 28.2,
-   "pfcf": 12.1,
-   "reason": "",
-   "rev_cagr5": 11.75,
-   "revenue": 586961000.0,
-   "roic_med": 4.0,
-   "size_band": "small",
-   "ticker": "NVGS",
-   "total_debt": 168066000.0,
-   "years": 13
-  },
-  {
-   "basis": "ev",
    "bs_as_of": "2026-01-03",
    "capex_ocf": 11.8,
    "cash": 222239000.0,
@@ -7881,6 +7843,45 @@
    "ticker": "CHRD",
    "total_debt": 1479581000.0,
    "years": 8
+  },
+  {
+   "basis": "ev",
+   "bs_as_of": "2026-01-31",
+   "capex_ocf": 2.0,
+   "cash": 339481000.0,
+   "country": "VA",
+   "cyclical": true,
+   "debt_inferred_zero": true,
+   "ev": 5524852658.0,
+   "exchange": "NYSE",
+   "fcf": 410841000.0,
+   "fcf_conv": 179.0,
+   "fcf_yield": 7.44,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 7.87,
+    "sales_trend": 13.33
+   },
+   "growth_ranks": {
+    "fcf_trend": 45.62,
+    "sales_trend": 77.24
+   },
+   "growth_score": 61.43,
+   "industry": "Construction - Special Trade Contractors",
+   "market_cap": 5864333658.0,
+   "name": "ARGAN INC",
+   "nd_ebit": -2.52,
+   "op_margin_now": 14.3,
+   "pfcf": 14.3,
+   "pfcf_med": 15.4,
+   "reason": "",
+   "rev_cagr5": 21.69,
+   "revenue": 944606000.0,
+   "roic_med": 32.9,
+   "size_band": "mid",
+   "ticker": "AGX",
+   "total_debt": 0.0,
+   "years": 8
   }
  ],
  "final": [
@@ -8585,10 +8586,10 @@
    "country": "MA",
    "cyclical": true,
    "debt_inferred_zero": false,
-   "ev": 1105893574.0,
+   "ev": 801994574.0,
    "exchange": "Nasdaq",
    "fcf": 327583000.0,
-   "fcf_yield": 29.62,
+   "fcf_yield": 40.85,
    "foreign": false,
    "growth_components": {
     "fcf_trend": 49.19,
@@ -8612,7 +8613,7 @@
    "roic_med": 121.3,
    "size_band": "small",
    "ticker": "COLL",
-   "total_debt": 571112000.0,
+   "total_debt": 267213000.0,
    "years": 8
   },
   {
@@ -10821,6 +10822,45 @@
   },
   {
    "basis": "ev",
+   "bs_as_of": "2026-01-31",
+   "capex_ocf": 2.0,
+   "cash": 339481000.0,
+   "country": "VA",
+   "cyclical": true,
+   "debt_inferred_zero": true,
+   "ev": 5524852658.0,
+   "exchange": "NYSE",
+   "fcf": 410841000.0,
+   "fcf_conv": 179.0,
+   "fcf_yield": 7.44,
+   "foreign": false,
+   "growth_components": {
+    "fcf_trend": 7.87,
+    "sales_trend": 13.33
+   },
+   "growth_ranks": {
+    "fcf_trend": 45.62,
+    "sales_trend": 77.24
+   },
+   "growth_score": 61.43,
+   "industry": "Construction - Special Trade Contractors",
+   "market_cap": 5864333658.0,
+   "name": "ARGAN INC",
+   "nd_ebit": -2.52,
+   "op_margin_now": 14.3,
+   "pfcf": 14.3,
+   "pfcf_med": 15.4,
+   "reason": "",
+   "rev_cagr5": 21.69,
+   "revenue": 944606000.0,
+   "roic_med": 32.9,
+   "size_band": "mid",
+   "ticker": "AGX",
+   "total_debt": 0.0,
+   "years": 8
+  },
+  {
+   "basis": "ev",
    "bs_as_of": "2026-06-30",
    "capex_ocf": 15.7,
    "cash": 956024000.0,
@@ -12529,44 +12569,6 @@
   },
   {
    "basis": "ev",
-   "bs_as_of": "2025-12-31",
-   "capex_ocf": 14.3,
-   "cash": 154950000.0,
-   "country": "United Kingdom",
-   "cyclical": true,
-   "debt_inferred_zero": false,
-   "ev": 1459648334.0,
-   "exchange": "NYSE",
-   "fcf": 116643000.0,
-   "fcf_conv": 123.1,
-   "fcf_yield": 7.99,
-   "foreign": true,
-   "growth_components": {
-    "fcf_trend": 2.98,
-    "sales_trend": 7.32
-   },
-   "growth_ranks": {
-    "fcf_trend": 28.23,
-    "sales_trend": 56.28
-   },
-   "growth_score": 42.26,
-   "industry": "Deep Sea Foreign Transportation of  Freight",
-   "market_cap": 1416631334.0,
-   "name": "Navigator Holdings Ltd.",
-   "nd_ebit": 0.08,
-   "op_margin_now": 28.2,
-   "pfcf": 12.1,
-   "reason": "",
-   "rev_cagr5": 11.75,
-   "revenue": 586961000.0,
-   "roic_med": 4.0,
-   "size_band": "small",
-   "ticker": "NVGS",
-   "total_debt": 168066000.0,
-   "years": 13
-  },
-  {
-   "basis": "ev",
    "bs_as_of": "2026-03-31",
    "capex_ocf": 4.1,
    "cash": 586499000.0,
@@ -13879,7 +13881,7 @@
   {
    "market_cap": 186993311984.0,
    "name": "DEERE & CO",
-   "reason": "the debt tags found sum to $-1.68bn of net debt against $5.55bn implied by this company's own net-debt/EBIT \u2014 under half. Two independent paths disagreeing that far means the tag ladder missed borrowings, which would shrink enterprise value, RAISE the yield and move this row up a board sorted by yield.",
+   "reason": "debt not filed, so enterprise value cannot be computed. Treating an unfiled tag as zero would shrink the denominator, RAISE the yield, and sort this row UP a board ranked by yield \u2014 the company that failed to file would outrank the one that did.",
    "ticker": "DE"
   },
   {
@@ -16494,7 +16496,7 @@
     "fcf_trend": 10.42,
     "sales_trend": 6.37
    },
-   "median_growth_score": 52.51
+   "median_growth_score": 52.93
   },
   {
    "count": 133,
@@ -16502,7 +16504,7 @@
    "median_fcf_yield": 9.9,
    "median_growth_rates": {
     "fcf_trend": 16.4,
-    "sales_trend": 10.07
+    "sales_trend": 10.11
    },
    "median_growth_score": 66.11
   }
