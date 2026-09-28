@@ -80,24 +80,16 @@ Format: `- [PHASE-SEEN] item — why it matters`
   `refresh_hundred` already carry and `refresh_screener`, `refresh_quiet_value`,
   `refresh_catalysts` and `refresh_aristocrats` do not. A fetcher that comes back with an
   empty or halved result currently publishes it.
-- [MF-FINDER] The Census ACS columns (`pct_renter_occupied`, `pct_multi_unit`,
-  `pct_rent_burdened`, `pct_pre_1960`, `median_year_built`) are 0% populated in all 25,769
-  ZIPs. The old `CENSUS_API_KEY` was invalid and has been deleted; the Census API now
-  REQUIRES a key (keyless requests get a "Missing Key" page — an earlier note here said
-  otherwise, and was wrong). Needs a new, activated key in the `CENSUS_API_KEY` secret,
-  then a `refresh-national-zips` run. The job should also FAIL on an auth error rather
-  than carry forward empty values and go green, and it is still pinned to the 2022 ACS
-  vintage. The renter-share and multi-unit filters light up by themselves once the
-  columns have data.
+- [MF-CENSUS] The 2024 ACS suppresses income for small ZCTAs, and the ZIP build requires
+  income, so the first keyless rebuild skipped 486 Zillow ZIPs (median population ~485;
+  20 with 1,500+). Keeping them with a null income would need `crime_proxy` and the
+  composites to tolerate it.
 - [MF-FINDER] Crime coverage is the binding constraint on /multifamily, and with HUD rents
   filling the rent gap it is now the ONLY big one. At the defaults Ohio keeps 3 ZIPs: the
   safety gate removes 820, and 790 of those only because their city has no FBI figure
   (Toledo, Dayton and Cleveland have no entry in `data/headroom/crime.json`). Nationally the verified
   board is 102 ZIPs; showing unverified cities, 15,231. FBI Crime Data Explorer (agency
   level) would take coverage from 394 hand-researched cities to thousands.
-- [MF-FINDER] The finder's pending filters need data: age 25–34 and a true 2–4 unit count
-  (ACS B01001, B25024_004+005 — the current `pct_multi_unit` sums 2 through 50+). Both
-  wait on the Census key above.
 - [MF-HAZARDS] Connecticut has no hazard figures. FEMA's NRI uses CT's 2022 planning-region
   tract IDs; the Census 2020 ZCTA–tract file uses the old county-based ones, so no CT tract
   joins. The Census Bureau publishes a CT 2020→2022 tract crosswalk; applying it in

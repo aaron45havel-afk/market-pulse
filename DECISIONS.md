@@ -212,3 +212,32 @@ whose request failed keeps its stored HUD rents instead of blanking them; more t
 of counties failing discards the pull entirely. Stored county FMR is carried back as
 FMR, never promoted to SAFMR. Same principle the ladder already applied to whole
 sources, now applied per state and per county.
+
+## 2026-09-28 — Census ACS comes from the Bureau's bulk files, not the keyed API
+**Decided.** The Census data API now refuses keyless requests, and a key requested for
+this repo never activated ("Invalid Key" after the validation page failed). The same
+5-year tables are published as one pipe-delimited file per table, for every geography,
+on www2.census.gov with no key. `acs_bulk.py` reads them (ZCTA rows by default, states
+by prefix), renames columns to the API's spelling so the derivations didn't change, and
+picks the newest vintage on the server (2024 today; the code had been pinned to 2022).
+The ZIP build, the rent ladder's ACS tier and the state job all use it; `CENSUS_API_KEY`
+is gone. A bulk-file outage still carries the prior values forward, but as a GitHub
+warning — the silent carry-forward is how the ACS columns stayed 0% populated for
+months while the job went green.
+
+## 2026-09-28 — The monthly ZIP rebuild carries the rent ladder across
+**Decided.** `build_national_zips` deletes and recreates `zips.db`, and the columns
+`refresh_rents` adds weren't in its schema — so HUD rents vanished on the 1st of every
+month until the rent refresh on the 2nd, and for a month if HUD failed that day. The
+rebuild now snapshots the stored per-source rents first and re-resolves every ZIP with
+`refresh_rents.apply` (fresh ZORI, carried HUD/ACS). Verified on the real rebuild: of
+the ZIPs present before and after, none lost a rent or changed source.
+
+## 2026-09-28 — "Young adults" and "2–4 unit buildings" are filters, from ACS
+**Assumption.** Young adults = share of residents aged 25–34 (B01001), thresholds 12 /
+15 / 18% (the typical board ZIP is 12%; 18% keeps the top 8%). "Young professional" is
+left as a combination the user builds — this plus degree share plus renter share —
+rather than a composite with invented weights. 2–4 unit buildings = share of housing
+units in 2- and 3–4-unit structures (B25024_004 + _005), thresholds 5 / 10 / 15% (the
+typical ZIP is 4%). Both are offered only where the column has data, like the other
+Census filters.
