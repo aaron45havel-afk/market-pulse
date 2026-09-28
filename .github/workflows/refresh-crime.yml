@@ -10,11 +10,13 @@ name: Refresh crime layer (FBI CDE)
 # and it read the agency list as a flat list when the FBI returns it keyed
 # by county, so it could never have matched one.
 #
-# TWO STEPS. fetch_fbi_crime.py makes ~24,000 requests (every city agency,
-# violent + property, three years) and writes the raw per-agency file;
-# build_crime.py applies the trust rules in crime_build.py to it, offline.
-# Each refuses to publish a broken result and leaves the committed files
-# alone.
+# TWO STAGES. Ten fetch jobs run at once, each taking every tenth city agency
+# that matches a ZIP city (fetch_fbi_crime.py --shard i/10): one runner
+# making every request was slowed to a crawl by the FBI's server, while a
+# tenth of the load per runner completes in minutes. The build job merges
+# the shards — refusing a missing or duplicated one — and applies the trust
+# rules in crime_build.py (build_crime.py). Each stage refuses to publish a
+# broken result and leaves the committed files alone.
 #
 # Cadence: the FBI publishes a year's data each September, so this runs in
 # October and again in January in case the release slipped.
@@ -41,9 +43,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  refresh:
+  fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     defaults:
       run:
         working-directory: market-pulse-v21
@@ -54,17 +60,45 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Prove the rules before an hour of requests
+      - name: Prove the parsers
+        run: python tests/test_crime_build.py
+      - name: Fetch shard ${{ matrix.shard }} of 10
         run: |
-          python tests/test_crime_build.py
-          python tests/test_safety.py
-      - name: Fetch every city agency
+          set -euo pipefail
+          ARGS="--shard ${{ matrix.shard }}/10 --out fbi-shard-${{ matrix.shard }}.json"
+          if [ -n "${{ inputs.end_year }}" ]; then ARGS="$ARGS --end-year ${{ inputs.end_year }}"; fi
+          python -u scripts/fetch_fbi_crime.py $ARGS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fbi-shard-${{ matrix.shard }}
+          path: market-pulse-v21/fbi-shard-${{ matrix.shard }}.json
+          retention-days: 3
+
+  build:
+    needs: fetch
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: market-pulse-v21
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: fbi-shard-*
+          merge-multiple: true
+          path: market-pulse-v21/shards
+      - name: Merge the shards
         run: |
           set -euo pipefail
           ARGS=""
-          if [ -n "${{ inputs.end_year }}" ]; then ARGS="$ARGS --end-year ${{ inputs.end_year }}"; fi
-          if [ "${{ inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
-          python scripts/fetch_fbi_crime.py $ARGS
+          if [ "${{ inputs.force }}" = "true" ]; then ARGS="--force"; fi
+          python scripts/fetch_fbi_crime.py --merge shards/fbi-shard-*.json $ARGS
       - name: Build crime.json
         run: |
           set -euo pipefail
@@ -73,6 +107,7 @@ jobs:
           python scripts/build_crime.py $ARGS
       - name: Verify the safety gate and the screens still build
         run: |
+          python tests/test_crime_build.py
           python tests/test_safety.py
           python scripts/snapshot_screens.py
       - name: Commit

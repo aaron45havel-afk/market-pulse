@@ -118,6 +118,32 @@ for pull, limited, should, why in (
 
 
 
+
+# ── shards: a national pull split across runners, merged back ──
+def shard(i, n, oris, matched, years=(2023, 2024, 2025), failed=0):
+    return {"_meta": {"years": list(years), "matched": matched, "shard": f"{i}/{n}",
+                      "shards": n, "list_failures": [], "failed_requests": failed,
+                      "states": ["OH"]},
+            "agencies": [{"ori": o} for o in oris]}
+
+
+_ok = F.merge([shard(1, 2, ["A", "C"], 3), shard(2, 2, ["B"], 3)])
+check(sorted(a["ori"] for a in _ok["agencies"]) == ["A", "B", "C"] and _ok["matched"] == 3,
+      "two shards merge into the whole pull")
+for parts, why in (
+        ([shard(1, 2, ["A", "C"], 3)], "A MISSING SHARD IS REFUSED — not published as a smaller country"),
+        ([shard(1, 2, ["A", "C"], 3), shard(1, 2, ["B"], 3)], "the same shard twice is refused"),
+        ([shard(1, 2, ["A", "C"], 3), shard(2, 2, ["C"], 3)], "an agency in two shards is refused"),
+        ([shard(1, 2, ["A", "C"], 3), shard(2, 2, ["B"], 3, years=(2022, 2023, 2024))],
+         "shards covering different years are refused"),
+        ([shard(1, 2, ["A"], 3), shard(2, 2, ["B"], 3)],
+         "shards that don't add up to the matched total are refused")):
+    try:
+        F.merge(parts)
+        check(False, why)
+    except F.Refuse:
+        check(True, why)
+
 # ══════════════════════════════════════════════════════════════════
 # NAMES — agency to place
 # ══════════════════════════════════════════════════════════════════

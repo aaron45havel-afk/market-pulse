@@ -175,7 +175,7 @@ def matchable(agencies: list) -> list:
     return [a for a in agencies if a["ori"] in keep]
 
 
-def fetch(states: list, end_year: int) -> dict:
+def fetch(states: list, end_year: int, shard: tuple = (0, 1)) -> dict:
     years = list(range(end_year - YEARS + 1, end_year + 1))
     agencies, list_failures = [], []
     for st in states:
@@ -185,9 +185,13 @@ def fetch(states: list, end_year: int) -> dict:
             print(f"  agency list failed for {st}: {e}", flush=True)
             list_failures.append(st)
     listed = len(agencies)
-    agencies = matchable(agencies)
+    agencies = sorted(matchable(agencies), key=lambda a: a["ori"])
+    matched = len(agencies)
+    i, n = shard
+    agencies = agencies[i::n]
     print(f"{listed:,} city agencies in {len(states) - len(list_failures)} states; "
-          f"{len(agencies):,} match a ZIP city and will be fetched", flush=True)
+          f"{matched:,} match a ZIP city; shard {i + 1}/{n} fetches {len(agencies):,}",
+          flush=True)
 
     window = f"from=01-{years[0]}&to=12-{years[-1]}"
     failed = []
@@ -222,16 +226,66 @@ def fetch(states: list, end_year: int) -> dict:
         rows = list(ex.map(tracked, agencies))
     print(f"fetched in {time.time() - t0:.0f}s; {len(failed)} failed requests", flush=True)
     return {"agencies": rows, "years": years, "list_failures": list_failures,
-            "failed": failed, "requests": len(agencies) * len(OFFENSES), "listed": listed}
+            "failed": failed, "requests": len(agencies) * len(OFFENSES), "listed": listed,
+            "matched": matched}
 
 
 def guard(pull: dict, limited: bool) -> None:
     if len(pull["list_failures"]) > MAX_STATE_LIST_FAILURES:
         raise Refuse(f"agency lists failed for {pull['list_failures']}")
-    if not limited and len(pull["agencies"]) < MIN_AGENCIES:
-        raise Refuse(f"only {len(pull['agencies']):,} city agencies (floor {MIN_AGENCIES:,})")
+    n = pull.get("matched", len(pull["agencies"]))
+    if not limited and n < MIN_AGENCIES:
+        raise Refuse(f"only {n:,} city agencies match a ZIP city (floor {MIN_AGENCIES:,})")
     if pull["requests"] and len(pull["failed"]) / pull["requests"] > MAX_REQUEST_FAILURE:
         raise Refuse(f"{len(pull['failed'])} of {pull['requests']} requests failed")
+
+
+def merge(parts: list) -> dict:
+    """Shard files → one pull. Every shard must cover the same years and
+    the same matched total, and together they must hold every agency
+    exactly once — a missing shard is refused, not published as a smaller
+    country."""
+    if not parts:
+        raise Refuse("no shard files to merge")
+    metas = [p["_meta"] for p in parts]
+    if len({tuple(m["years"]) for m in metas}) != 1:
+        raise Refuse("shards cover different years")
+    if len({m.get("matched") for m in metas}) != 1:
+        raise Refuse("shards disagree on how many agencies match")
+    shards = {m.get("shard") for m in metas}
+    total = metas[0].get("shards", len(parts))
+    if len(parts) != total or shards != {f"{i + 1}/{total}" for i in range(total)}:
+        raise Refuse(f"expected {total} distinct shards, got {sorted(shards)}")
+    agencies = [a for p in parts for a in p["agencies"]]
+    if len({a["ori"] for a in agencies}) != len(agencies):
+        raise Refuse("an agency appears in two shards")
+    if len(agencies) != metas[0]["matched"]:
+        raise Refuse(f"shards hold {len(agencies):,} agencies, expected {metas[0]['matched']:,}")
+    return {"agencies": agencies, "years": metas[0]["years"],
+            "list_failures": sorted({s for m in metas for s in m["list_failures"]}),
+            "failed": [None] * sum(m["failed_requests"] for m in metas),
+            "requests": len(agencies) * len(OFFENSES), "matched": metas[0]["matched"],
+            "states": metas[0]["states"]}
+
+
+def write(pull: dict, states: list, out: Path, extra: dict | None = None) -> None:
+    payload = {
+        "_meta": {
+            "source": "FBI Crime Data Explorer (cde.ucr.cjis.gov), summarized agency data",
+            "built": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "as_of": date.today().isoformat(), "years": pull["years"],
+            "agencies": len(pull["agencies"]), "matched": pull.get("matched"),
+            "states": states, "failed_requests": len(pull["failed"]),
+            "list_failures": pull["list_failures"],
+            "fields": {"v/p": "violent / property offenses per year",
+                       "n": "offenses reported", "m": "months reported (of 12)",
+                       "pop": "agency population, mean of the months"},
+            **(extra or {}),
+        },
+        "agencies": sorted(pull["agencies"], key=lambda a: a["ori"]),
+    }
+    out.write_text(json.dumps(payload, separators=(",", ":")))
+    print(f"wrote {out} ({out.stat().st_size:,} bytes)", flush=True)
 
 
 def main() -> int:
@@ -239,31 +293,34 @@ def main() -> int:
     ap.add_argument("--end-year", type=int, default=date.today().year - 1,
                     help="last complete calendar year (default: last year)")
     ap.add_argument("--states", default="", help="comma-separated, for a test pull")
+    ap.add_argument("--shard", default="1/1",
+                    help="i/n: fetch every n-th matched agency starting at i (1-based), "
+                         "so a national pull can run on n runners at once")
+    ap.add_argument("--out", default=str(OUT))
+    ap.add_argument("--merge", nargs="*", default=None,
+                    help="merge shard files into --out instead of fetching")
     ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
-    states = [s.strip().upper() for s in args.states.split(",") if s.strip()] or STATES
+    out = Path(args.out)
     try:
-        pull = fetch(states, args.end_year)
+        if args.merge is not None:
+            parts = [json.loads(Path(f).read_text()) for f in args.merge]
+            pull = merge(parts)
+            if not args.force:
+                guard(pull, limited=False)
+            write(pull, pull["states"], out)
+            return 0
+        i, n = (int(x) for x in args.shard.split("/"))
+        if not (1 <= i <= n):
+            raise SystemExit(f"--shard {args.shard}: want i/n with 1 <= i <= n")
+        states = [s.strip().upper() for s in args.states.split(",") if s.strip()] or STATES
+        pull = fetch(states, args.end_year, (i - 1, n))
         if not args.force:
-            guard(pull, limited=bool(args.states))
+            guard(pull, limited=bool(args.states) or n > 1)
     except Refuse as e:
         print(f"::error::REFUSING TO PUBLISH fbi_agencies.json — {e}")
         return 1
-    payload = {
-        "_meta": {
-            "source": "FBI Crime Data Explorer (cde.ucr.cjis.gov), summarized agency data",
-            "built": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "as_of": date.today().isoformat(), "years": pull["years"],
-            "agencies": len(pull["agencies"]), "states": states,
-            "failed_requests": len(pull["failed"]), "list_failures": pull["list_failures"],
-            "fields": {"v/p": "violent / property offenses per year",
-                       "n": "offenses reported", "m": "months reported (of 12)",
-                       "pop": "agency population, mean of the months"},
-        },
-        "agencies": sorted(pull["agencies"], key=lambda a: a["ori"]),
-    }
-    OUT.write_text(json.dumps(payload, separators=(",", ":")))
-    print(f"wrote {OUT} ({OUT.stat().st_size:,} bytes)")
+    write(pull, states, out, {"shard": f"{i}/{n}", "shards": n} if n > 1 else None)
     return 0
 
 
