@@ -80,6 +80,11 @@ Format: `- [PHASE-SEEN] item — why it matters`
 - [P2] Lynch: an EPS rounded to the cent on a tiny figure (-0.01 against a true -0.006)
   fails the 35% units identity (YSG). Harmless — a one-cent EPS is not a Lynch candidate —
   but it is counted as a units problem.
+- [P2] Aristocrats: ten names have no SEC company statements (OTC ADRs — Nestlé, Roche, Kao,
+  Spirax, Halma, Bunzl, Metro, Canadian Utilities — plus SJW and Lancaster Colony, which the SEC
+  ticker map did not match), so their safety rests on a seed or stays unmeasured. Leverage is
+  on GAAP EBITDA; a company with large one-offs in all three years (BDX, SWK) reads higher
+  than on the adjusted figure analysts quote.
 - [P0] `CRON_SECRET` was exposed in an earlier session and has not been rotated.
 - [P1] `mf_audit_log` has the immutability trigger ARCHITECTURE.md §5.4 asks for but not
   the insert-only grant. A grant is meaningless while the app connects as the table's

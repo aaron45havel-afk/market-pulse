@@ -433,3 +433,31 @@ failed, and could not be measured — and words the third as a limit of the read
 
 Not done here (BACKLOG): actually reading IFRS statements and bank revenue on these boards,
 partnership equity, and telling a fund's 404 from a failed request.
+
+## 2026-09-28 — Aristocrats: dividend safety is measured from filings, and unknown is never safe
+**Decided.** Audit item #3. The safety gate read a missing payout or leverage as a pass, and
+both were hand-seeded for only 22 and 16 of 92 names, so four of the five BUYs had neither. The
+monthly refresh (`refresh_aristocrats.py`) now computes both from SEC companyfacts:
+- **Payout** = cash dividends paid over the BETTER of two three-year covers: earnings and
+  free cash flow (REITs and midstream may also use earnings + D&A, an FFO proxy). One year's
+  charge cannot decide it — AbbVie's GAAP payout reads 248% on acquired R&D and 58% on cash;
+  a utility's negative free cash flow simply leaves the earnings cover. Dividends paid while
+  every cover was negative (Albemarle) is a failure. Lines 75% warn / 90% hide: the trailing
+  covers ran ~9 points above dividend.com's forward seeds, which keep their 65/80 lines where
+  SEC has no figure (SJW, Canadian Utilities).
+- **Leverage** = net debt on the latest annual balance sheet (the compounders build's debt
+  assembly) over EBITDA, taking the higher of the latest year and the three-year median so
+  one impairment year does not gate (Air Products), and adding intangible amortization where
+  a filer tags it apart from depreciation (AbbVie). Lines 2.5x/3.5x; 5.5x/6.5x for utilities,
+  REITs and midstream, which run regulated or contracted cash flows at those levels as a
+  matter of course; not applicable to insurers (Chubb, Aflac, Cincinnati Financial). A debt
+  figure that is one kind of borrowing only is a floor: it can prove a failure, never a pass.
+  A balance sheet over 21 months old is not measured.
+- **Status.** A cheap name that clears Chowder but whose payout or leverage could not be
+  measured is UNMEASURED, never BUY.
+
+Branch refresh: payout measured for 79 of 92 names, leverage for 73. BUY is now Lowe's (payout
+36%, 3.2x — warn), California Water, Middlesex Water, ADP and NextEra (6.1x — warn); Brown &
+Brown, a BUY with no figures, is gated at 3.8x after its acquisition borrowing. Becton
+Dickinson (3.7x) and Stanley Black & Decker (3.9x) gate on GAAP EBITDA, which runs below the
+adjusted EBITDA most published leverage figures use — the page says which basis it measured.
