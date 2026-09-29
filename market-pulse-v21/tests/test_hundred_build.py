@@ -234,6 +234,15 @@ check(_unread_vetoed["verdict"] == "reject" and _unread_vetoed["reason"].startsw
 _few = _verdict({2: "Great", 4: "Great", 5: "Great", 1: "Yikes"})
 check(_few["verdict"] == "reject" and "Good-or-Great" in _few["reason"],
       "the Good-or-Great count still decides first, so existing reasons do not change")
+_thin_but_failed = _verdict({1: "Yikes", 2: "Great", 4: "Great"})
+check((_thin_but_failed["verdict"], _thin_but_failed["reason"])
+      == ("reject", "revenue growth 2.0%/yr, need 15%/yr or better"),
+      "A MEASURED GROWTH FAILURE IS A REJECT EVEN WITH TOO FEW CRITERIA READ — no further "
+      f"reading could list it, so 'could not measure' would be wrong (got {_thin_but_failed})")
+check(_verdict({1: "Good", 2: "Great", 4: "Great"})["verdict"] == "thin",
+      "while too few readings with passing growth is still could-not-measure")
+check(_verdict({2: "Great", 4: "Great"})["verdict"] == "thin",
+      "and so is too few readings with growth unread")
 check(H.RULES["growth_required_id"] == 1 and H.RULES["growth_required_min"] == 15.0,
       "the page is told which criterion is required and from what rate")
 

@@ -286,22 +286,27 @@ def evaluate(rec: dict, medians: dict) -> dict:
     led = C.ledger(m)
     out["ledger"] = led
 
+    # Measured answers before could-not-measure: a revenue line that grew
+    # too slowly, or a veto, is a firmer answer than a growth rate this
+    # screen could not read — or than too few criteria read to count.
+    growth = m[GROWTH_REQUIRED_ID]
+    need = C.THRESHOLDS[GROWTH_REQUIRED_ID][1]
+    growth_fails = growth.measured and growth.band not in GROWTH_REQUIRED_BANDS
+    growth_reason = (f"revenue growth {growth.value:.1f}%/yr, need "
+                     f"{need:.0f}%/yr or better") if growth_fails else ""
     if led["measured_n"] < MIN_MEASURED:
+        # A required criterion measured and failed settles it: no number of
+        # further readings could put this company on the list.
+        if growth_fails:
+            return {**out, "verdict": "reject", "reason": growth_reason}
         return {**out, "verdict": "thin",
                 "reason": f"only {led['measured_n']} of "
                           f"{len(C.SCOREABLE_IDS)} scoreable criteria measured"}
     if led["passing_n"] < MIN_PASSING:
         return {**out, "verdict": "reject",
                 "reason": f"{led['passing_n']} Good-or-Great, need {MIN_PASSING}"}
-    # Measured answers before could-not-measure: a revenue line that grew
-    # too slowly, or a veto, is a firmer answer than a growth rate this
-    # screen could not read.
-    growth = m[GROWTH_REQUIRED_ID]
-    need = C.THRESHOLDS[GROWTH_REQUIRED_ID][1]
-    if growth.measured and growth.band not in GROWTH_REQUIRED_BANDS:
-        return {**out, "verdict": "reject",
-                "reason": f"revenue growth {growth.value:.1f}%/yr, need "
-                          f"{need:.0f}%/yr or better"}
+    if growth_fails:
+        return {**out, "verdict": "reject", "reason": growth_reason}
     # THE VETO IS LAST. A company has to earn its way to this line first;
     # only then can one of the three say no. That ordering keeps the veto
     # strictly subtractive — it can never promote anything.

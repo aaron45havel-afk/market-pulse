@@ -138,7 +138,7 @@
         <th data-sort="market_cap" title="From the bulk market file, not price x shares — the computed version disagreed with the Schloss board by more than 2x on 211 companies, in both directions.">Mkt cap<span class="arrow">↕</span></th>
         <th data-sort="price">Price<span class="arrow">↕</span></th>
         <th data-sort="pe_ratio" title="Market cap over net income. Neither side touches a share count, so it is immune to the ADS ratio and to a non-USD EPS.">P/E<span class="arrow">↕</span></th>
-        <th data-sort="eps_3yr_cagr_pct" title="Endpoint CAGR between annual periods, reported as measured with no ceiling. A trough base, a step change, a loss year or a spike reports no rate at all — the guards reject, they do not trim.">EPS CAGR<span class="arrow">↕</span></th>
+        <th data-sort="eps_3yr_cagr_pct" title="Endpoint CAGR between annual periods, reported as measured with no ceiling. A trough base, a step change or a loss year reports no rate at all. A spike year, or a base sitting below a recent peak, re-measures the rate from the years that are not the anomaly — always lower, never higher.">EPS CAGR<span class="arrow">↕</span></th>
         <th data-sort="latest_yoy" title="Latest year versus the one before. An endpoint CAGR is structurally blind to deceleration, which was the only thing that mattered to Lynch for a fast grower.">Last yr<span class="arrow">↕</span></th>
         <th data-sort="up_years" title="Years the figure rose, out of the periods on file.">Up<span class="arrow">↕</span></th>
         <th data-sort="peg" title="P/E over growth. Growth is no longer bounded, so this has no floor — a very fast grower sorts to the top with a PEG near zero. Read it beside the EPS path, not on its own.">PEG<span class="arrow">↕</span></th>
@@ -184,10 +184,17 @@
         −0.86 → 4.72 → 4.80 → 1.65 → 10.07 and published 28.7%/yr at a 0.20 PEG; the last year is a
         divestiture gain and the CAGR runs straight through it. The step guard could not see it — that
         compares a level to its window, and 10.07 against a median of 4.76 is unremarkable. So a year more
-        than 200% above the one before it is treated as a discontinuity, and the trend is re-measured
+        more than 100% above the one before it is treated as a discontinuity, and the trend is re-measured
         <em>without</em> it. The company is not dropped for having a spike: it is judged on the years that
         are not the anomaly. Sonoco's underlying path is 4.72 → 4.80 → 1.65, falling, and it leaves;
         a company still compounding without its best year stays, badged, at the conservative rate.</li>
+    <li><strong>A dip is not a starting point.</strong> A three-year rate measured from a bad year is a
+        recovery: A.O. Smith ran 3.02 → 1.51 → 3.69 → 3.63 → 3.85 and printed 36.6%/yr, and Covista, Yum
+        China and YETI looked the same. Those dips are too shallow for the trough guard, and rejecting every
+        dip would throw out honest compounders, because earnings dip in ordinary years. So when the base
+        sits below the highest of the three years before it, the rate is measured from that peak instead.
+        That rate is always lower and is the honest one: A.O. Smith is 6.3%/yr from its 3.02 and leaves,
+        while Interface still compounds at 20%/yr from its 0.94 and stays, badged.</li>
     <li><strong>A turnaround is not a growth rate.</strong> Both guards above used to switch off when the
         window's median was negative, so EPS of 0.12, −0.80, −0.45, 3.10 fell through to the endpoint
         formula and produced a raw 195.5%/yr, which the growth ceiling then in force rewrote as a tidy
@@ -238,6 +245,7 @@ function row(r) {
 
   const flags = [];
   if (g.spike) flags.push(`<span class="flag" title="The latest year is ${yoy == null ? 'far' : (yoy > 0 ? '+' : '') + yoy.toFixed(0) + '%'} against the one before it — a jump that size is usually a one-time gain, not a continuation. Through that year the rate computes to ${g.cagr_through_spike == null ? 'nothing' : g.cagr_through_spike + '%'}; the figure shown EXCLUDES it, so the company is judged on the years that are not the anomaly. A genuine fast grower still clears the floor without its best year.">spike year</span>`);
+  if (g.rebased) flags.push(`<span class="flag" title="The base year sat below ${g.rebased_from} in ${(g.from_year || '').slice(0, 4)}, a recent peak — a rate measured from the dip is a recovery. The figure shown is measured from that peak instead, which is lower and is the one PEG uses.">from peak</span>`);
   if (g.capped) flags.push(`<span class="flag" title="Computes to ${g.cagr_raw}%/yr. Sustaining that for three years is rare enough that a GARP buyer should not underwrite it, so it is shown at the cap.">capped</span>`);
   if (r.pe_suspect) flags.push(`<span class="flag" title="Raw multiple ${r.pe_raw} — below the plausible floor.">P/E odd</span>`);
   if (m.roe_capped) flags.push(`<span class="flag quiet" title="ROE bounded at 100% — equity is small enough that the ratio stops describing the business.">ROE capped</span>`);

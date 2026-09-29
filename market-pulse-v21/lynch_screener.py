@@ -66,6 +66,8 @@ LYNCH_RULES = {
     "capex_to_ocf_max": L.CAPEX_TO_OCF_MAX,
     "exchanges": ("NYSE", "Nasdaq", "NASDAQ", "AMEX", "NYSE American"),
     "min_eps_years": L.MIN_EPS_YEARS,
+    "spike_yoy_pct": L.LYNCH_SPIKE_YOY_PCT,
+    "rebase_lookback_years": L.REBASE_LOOKBACK,
     "min_revenue": L.MIN_REVENUE,
     "min_price": L.MIN_PRICE,
     "moat_roe_min_pct": L.MOAT_ROE_MIN,

@@ -167,6 +167,29 @@ WINDOW_OPEN_DROP = 0.75
 # is the one reported and gated on.
 SPIKE_YOY_PCT = 200.0
 
+# THE LYNCH BOARD ASKS MORE OF ITS RATE than the defaults above, which the
+# 100-bagger's ten-year windows keep. Since the P/E ceiling became a 20x
+# backstop, the growth rate is what admits a company (PEG <= 1), so an
+# inflated rate now buys a place at a higher price. Both options below
+# only ever LOWER a rate — neither can add a name.
+#
+# A spike at +100% rather than +200%. Disney ran 1.72, 1.29, 2.72, 6.85
+# and passed at 58.8%/yr: the last year is +152% on a tax benefit, under
+# the old line.
+LYNCH_SPIKE_YOY_PCT = 100.0
+
+# A BASE BELOW A RECENT PEAK IS A DIP, and a rate measured off a dip is a
+# recovery. The trough guard only fires below a quarter of the window's
+# median, so ordinary dips slip under it: A.O. Smith ran 3.02, 1.51, 3.69,
+# 3.63, 3.85 and printed 36.6%/yr; Covista 6.43, 2.05 ... 7.04 printed
+# 50.9%; Graham Holdings missed the trough line by a cent. Rejecting every
+# dip would repeat the old mistake — earnings dip in ordinary years — so
+# the rate is RE-MEASURED from the highest of the few years before the
+# base instead. That is always a lower rate, and an honest one: A.O. Smith
+# is 6.3%/yr from its 3.02 and leaves; Interface ran 0.94, 0.33 ... 1.96
+# and still compounds at 20%/yr from its 0.94, so it stays.
+REBASE_LOOKBACK = MIN_EPS_YEARS
+
 # XBRL annual durations wander either side of 365 — 52/53-week retail
 # calendars, leap years, stub periods. This band admits every real annual
 # period and excludes every quarter.
@@ -607,7 +630,8 @@ def ads_ratio(market_cap: float | None, price: float | None,
 # ═══════════════════════════════════════════════════════════════════
 
 def growth(series: dict, spans: int | None = None,
-           cap: float | None = None, drawdown_base: bool = False) -> dict:
+           cap: float | None = None, drawdown_base: bool = False,
+           spike_pct: float | None = None, rebase_lookback: int = 0) -> dict:
     """Earnings growth, with the two things an endpoint CAGR cannot see.
 
     A TROUGH BASE IS NOT A GROWTH RATE. Abercrombie went
@@ -628,7 +652,8 @@ def growth(series: dict, spans: int | None = None,
            "step": False, "loss_window": False, "spike": False,
            "cagr_through_spike": None, "years": len(pts),
            "span": None, "latest_yoy": None, "up_years": None,
-           "of_years": None, "from_year": None, "to_year": None}
+           "of_years": None, "from_year": None, "to_year": None,
+           "rebased": False, "rebased_from": None}
     if len(pts) < 2:
         return out
 
@@ -639,7 +664,7 @@ def growth(series: dict, spans: int | None = None,
     out["up_years"], out["of_years"] = ups, len(vals) - 1
 
     out["spans"] = spans if spans is not None else MIN_EPS_YEARS
-    out.update(_rate(pts, spans, cap, drawdown_base))
+    out.update(_rate(pts, spans, cap, drawdown_base, rebase_lookback))
 
     # ── ONE YEAR THAT IS NOT A CONTINUATION OF THE OTHERS ──
     #
@@ -670,12 +695,14 @@ def growth(series: dict, spans: int | None = None,
     # definite `loss_window` with "could not tell" loses information about
     # a company the screen understood perfectly well.
     yoy = out["latest_yoy"]
-    if out["cagr"] is not None and yoy is not None and yoy > SPIKE_YOY_PCT:
+    spike_line = SPIKE_YOY_PCT if spike_pct is None else spike_pct
+    if out["cagr"] is not None and yoy is not None and yoy > spike_line:
         out["spike"] = True
         out["cagr_through_spike"] = out["cagr"]
-        prior = _rate(pts[:-1], spans, cap, drawdown_base)
+        prior = _rate(pts[:-1], spans, cap, drawdown_base, rebase_lookback)
         for k in ("cagr", "cagr_raw", "capped", "trough", "step",
-                  "loss_window", "span", "from_year", "to_year"):
+                  "loss_window", "span", "from_year", "to_year",
+                  "rebased", "rebased_from"):
             out[k] = prior[k]
     return out
 
@@ -700,7 +727,7 @@ def _base_jump(window: list) -> bool:
 
 
 def _rate(pts: list, spans: int | None = None, cap: float | None = None,
-          drawdown_base: bool = False) -> dict:
+          drawdown_base: bool = False, rebase_lookback: int = 0) -> dict:
     """The endpoint CAGR over the last MIN_EPS_YEARS+1 points, guarded.
 
     Split out of growth() so it can be run twice on the same company —
@@ -709,7 +736,8 @@ def _rate(pts: list, spans: int | None = None, cap: float | None = None,
     """
     out = {"cagr": None, "cagr_raw": None, "capped": False, "trough": False,
            "step": False, "loss_window": False, "drawdown_base": False,
-           "span": None, "from_year": None, "to_year": None}
+           "span": None, "from_year": None, "to_year": None,
+           "rebased": False, "rebased_from": None}
     # WINDOW LENGTH IS A PARAMETER, defaulting to the value every existing
     # caller already gets. A 100-bagger thesis needs a decade; a GARP screen
     # reads three years. Same guards, different window, one implementation —
@@ -833,6 +861,23 @@ def _rate(pts: list, spans: int | None = None, cap: float | None = None,
         return out
     if start <= 0 or end <= 0:
         return out
+
+    # RE-MEASURED FROM A RECENT PEAK when the base sits below one (see
+    # REBASE_LOOKBACK). After every guard, so it can only lower a rate the
+    # screen would otherwise have reported — never rescue a rejected one.
+    if rebase_lookback:
+        i0 = len(pts) - (n + 1)
+        before = list(enumerate(pts))[max(0, i0 - rebase_lookback):i0]
+        if before:
+            ip, (yp, vp) = max(before, key=lambda e: e[1][1])
+            if vp > start:
+                try:
+                    span = (date.fromisoformat(y1) - date.fromisoformat(yp)).days / 365.25
+                except (ValueError, TypeError):
+                    span = float(len(pts) - 1 - ip)
+                start = vp
+                out["from_year"], out["span"] = yp, round(span, 2)
+                out["rebased"], out["rebased_from"] = True, vp
 
     raw = ((end / start) ** (1.0 / span) - 1.0) * 100.0
     out["cagr_raw"] = round(raw, 1)
@@ -1065,7 +1110,8 @@ def evaluate(f: dict) -> dict:
         return done("pe_high")
 
     # ── growth ──
-    g = growth(eps_hist)
+    g = growth(eps_hist, spike_pct=LYNCH_SPIKE_YOY_PCT,
+               rebase_lookback=REBASE_LOOKBACK)
     r["growth"] = g
     r["eps_3yr_cagr_pct"] = g["cagr"]
     r["eps_cagr_raw_pct"] = g["cagr_raw"]
