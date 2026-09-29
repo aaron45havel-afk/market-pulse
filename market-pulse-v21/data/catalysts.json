@@ -1,34 +1,34 @@
 {
  "_meta": {
-  "as_of": "2026-09-28",
+  "as_of": "2026-09-29",
   "days_scanned": 1,
-  "rows_parsed": 4411,
-  "filings_scanned": 746,
-  "matched": 7,
-  "insider_issuers": 31,
-  "routine_set_aside": 15,
+  "rows_parsed": 5088,
+  "filings_scanned": 805,
+  "matched": 22,
+  "insider_issuers": 35,
+  "routine_set_aside": 1,
   "form4": {
-   "filings": 349,
-   "index_rows": 724,
+   "filings": 372,
+   "index_rows": 782,
    "capped": 0,
    "fetch_failed": 0,
    "unparsed": 0,
-   "not_purchases": 313,
-   "purchases": 36
+   "not_purchases": 329,
+   "purchases": 43
   },
   "watched_forms": [
    "SC 13E-3",
-   "NT 10-Q",
-   "NT 10-K",
    "DEFM14A",
-   "SC TO-T",
-   "DEF 14A",
    "SC TO-I",
+   "DEF 14A",
+   "NT 10-K",
+   "SC TO-T",
+   "NT 10-Q",
+   "10-12B",
+   "15-15D",
    "SC 13D",
    "15-12G",
-   "10-12B",
    "15-12B",
-   "15-15D",
    "15F",
    "8-K",
    "15",
@@ -39,11 +39,11 @@
  "rows": [
   {
    "form": "NT 10-K",
-   "company": "YAN CHUANG GROUP INC.",
-   "cik": "2086503",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/2086503/0001683168-26-007412.txt",
-   "accession": "0001683168-26-007412.txt",
+   "company": "iPower Inc.",
+   "cik": "1830072",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1830072/0001683168-26-007458.txt",
+   "accession": "0001683168-26-007458.txt",
    "label": "Late annual filing",
    "note": "Cannot file on time. Read why before anything else.",
    "typical_days": 0,
@@ -54,11 +54,11 @@
   },
   {
    "form": "NT 10-K",
-   "company": "VIVIC CORP.",
-   "cik": "1703073",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1703073/0001493152-26-044272.txt",
-   "accession": "0001493152-26-044272.txt",
+   "company": "Zeo ScientifiX, Inc.",
+   "cik": "1557376",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1557376/0001829126-26-010483.txt",
+   "accession": "0001829126-26-010483.txt",
    "label": "Late annual filing",
    "note": "Cannot file on time. Read why before anything else.",
    "typical_days": 0,
@@ -68,14 +68,89 @@
    "routine": false
   },
   {
-   "form": "15-15D",
-   "company": "GOWell Technology Ltd",
-   "cik": "2097557",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/2097557/0001213900-26-103527.txt",
-   "accession": "0001213900-26-103527.txt",
-   "label": "Suspending 15(d) reporting",
-   "note": "Reporting duty from a registration statement lapses. Usually a class that was never exchange-listed. Read which security it covers.",
+   "form": "NT 10-K",
+   "company": "TREASURE GLOBAL INC",
+   "cik": "1905956",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1905956/0001213900-26-104122.txt",
+   "accession": "0001213900-26-104122.txt",
+   "label": "Late annual filing",
+   "note": "Cannot file on time. Read why before anything else.",
+   "typical_days": 0,
+   "completion": 1.0,
+   "actionable": false,
+   "warning": true,
+   "routine": false
+  },
+  {
+   "form": "NT 10-K",
+   "company": "T-REX Acquisition Corp.",
+   "cik": "1437750",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1437750/0001477932-26-005821.txt",
+   "accession": "0001477932-26-005821.txt",
+   "label": "Late annual filing",
+   "note": "Cannot file on time. Read why before anything else.",
+   "typical_days": 0,
+   "completion": 1.0,
+   "actionable": false,
+   "warning": true,
+   "routine": false
+  },
+  {
+   "form": "NT 10-K",
+   "company": "Shreya Acquisition Group",
+   "cik": "2083452",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/2083452/0001829126-26-010487.txt",
+   "accession": "0001829126-26-010487.txt",
+   "label": "Late annual filing",
+   "note": "Cannot file on time. Read why before anything else.",
+   "typical_days": 0,
+   "completion": 1.0,
+   "actionable": false,
+   "warning": true,
+   "routine": false
+  },
+  {
+   "form": "NT 10-K",
+   "company": "Protopia Global Holdings Inc.",
+   "cik": "1959585",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1959585/0001829126-26-010466.txt",
+   "accession": "0001829126-26-010466.txt",
+   "label": "Late annual filing",
+   "note": "Cannot file on time. Read why before anything else.",
+   "typical_days": 0,
+   "completion": 1.0,
+   "actionable": false,
+   "warning": true,
+   "routine": false
+  },
+  {
+   "form": "NT 10-K",
+   "company": "OZ VISION INC.",
+   "cik": "1751707",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1751707/0001493152-26-044562.txt",
+   "accession": "0001493152-26-044562.txt",
+   "label": "Late annual filing",
+   "note": "Cannot file on time. Read why before anything else.",
+   "typical_days": 0,
+   "completion": 1.0,
+   "actionable": false,
+   "warning": true,
+   "routine": false
+  },
+  {
+   "form": "15-12G",
+   "company": "ONEOK INC /NEW/",
+   "cik": "1039684",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1039684/0001193125-26-405508.txt",
+   "accession": "0001193125-26-405508.txt",
+   "label": "Deregistering a 12(g) class",
+   "note": "Often a SECONDARY class \u2014 notes, warrants, SPAC units \u2014 not the listed common. Check which security before reacting. Alarming only if it is the stock.",
    "typical_days": 90,
    "completion": 1.0,
    "actionable": false,
@@ -84,11 +159,11 @@
   },
   {
    "form": "NT 10-K",
-   "company": "America Great Health",
-   "cik": "1098009",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1098009/0001185185-26-004340.txt",
-   "accession": "0001185185-26-004340.txt",
+   "company": "OKMIN RESOURCES, INC.",
+   "cik": "1848334",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1848334/0001079973-26-001294.txt",
+   "accession": "0001079973-26-001294.txt",
    "label": "Late annual filing",
    "note": "Cannot file on time. Read why before anything else.",
    "typical_days": 0,
@@ -98,46 +173,196 @@
    "routine": false
   },
   {
-   "form": "DEFM14A",
-   "company": "Weave Communications, Inc.",
-   "cik": "1609151",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1609151/0001140361-26-037628.txt",
-   "accession": "0001140361-26-037628.txt",
-   "label": "Merger vote scheduled",
-   "note": "Definitive proxy. The vote date is a real deadline you can annualize against.",
-   "typical_days": 45,
-   "completion": 0.9,
+   "form": "NT 10-K",
+   "company": "NightFood Holdings, Inc.",
+   "cik": "1593001",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1593001/0001493152-26-044557.txt",
+   "accession": "0001493152-26-044557.txt",
+   "label": "Late annual filing",
+   "note": "Cannot file on time. Read why before anything else.",
+   "typical_days": 0,
+   "completion": 1.0,
+   "actionable": false,
+   "warning": true,
+   "routine": false
+  },
+  {
+   "form": "NT 10-K",
+   "company": "MedWellAI, Inc.",
+   "cik": "1520118",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1520118/0001477932-26-005825.txt",
+   "accession": "0001477932-26-005825.txt",
+   "label": "Late annual filing",
+   "note": "Cannot file on time. Read why before anything else.",
+   "typical_days": 0,
+   "completion": 1.0,
+   "actionable": false,
+   "warning": true,
+   "routine": false
+  },
+  {
+   "form": "NT 10-K",
+   "company": "Longduoduo Co Ltd",
+   "cik": "1892316",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1892316/0001213900-26-103959.txt",
+   "accession": "0001213900-26-103959.txt",
+   "label": "Late annual filing",
+   "note": "Cannot file on time. Read why before anything else.",
+   "typical_days": 0,
+   "completion": 1.0,
+   "actionable": false,
+   "warning": true,
+   "routine": false
+  },
+  {
+   "form": "NT 10-K",
+   "company": "INTEGRAL TECHNOLOGIES INC",
+   "cik": "1018281",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1018281/0001437749-26-031346.txt",
+   "accession": "0001437749-26-031346.txt",
+   "label": "Late annual filing",
+   "note": "Cannot file on time. Read why before anything else.",
+   "typical_days": 0,
+   "completion": 1.0,
+   "actionable": false,
+   "warning": true,
+   "routine": false
+  },
+  {
+   "form": "NT 10-K",
+   "company": "GHST World Inc.",
+   "cik": "1121795",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1121795/0001079973-26-001290.txt",
+   "accession": "0001079973-26-001290.txt",
+   "label": "Late annual filing",
+   "note": "Cannot file on time. Read why before anything else.",
+   "typical_days": 0,
+   "completion": 1.0,
+   "actionable": false,
+   "warning": true,
+   "routine": false
+  },
+  {
+   "form": "NT 10-K",
+   "company": "ESCALON MEDICAL CORP",
+   "cik": "862668",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/862668/0001213900-26-104085.txt",
+   "accession": "0001213900-26-104085.txt",
+   "label": "Late annual filing",
+   "note": "Cannot file on time. Read why before anything else.",
+   "typical_days": 0,
+   "completion": 1.0,
+   "actionable": false,
+   "warning": true,
+   "routine": false
+  },
+  {
+   "form": "NT 10-K",
+   "company": "Cavitation Technologies, Inc.",
+   "cik": "1376793",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1376793/0001683168-26-007449.txt",
+   "accession": "0001683168-26-007449.txt",
+   "label": "Late annual filing",
+   "note": "Cannot file on time. Read why before anything else.",
+   "typical_days": 0,
+   "completion": 1.0,
+   "actionable": false,
+   "warning": true,
+   "routine": false
+  },
+  {
+   "form": "NT 10-K",
+   "company": "BION ENVIRONMENTAL TECHNOLOGIES INC",
+   "cik": "875729",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/875729/0001079973-26-001291.txt",
+   "accession": "0001079973-26-001291.txt",
+   "label": "Late annual filing",
+   "note": "Cannot file on time. Read why before anything else.",
+   "typical_days": 0,
+   "completion": 1.0,
+   "actionable": false,
+   "warning": true,
+   "routine": false
+  },
+  {
+   "form": "NT 10-K",
+   "company": "Advanced Biomed Inc.",
+   "cik": "1941029",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1941029/0001213900-26-104071.txt",
+   "accession": "0001213900-26-104071.txt",
+   "label": "Late annual filing",
+   "note": "Cannot file on time. Read why before anything else.",
+   "typical_days": 0,
+   "completion": 1.0,
+   "actionable": false,
+   "warning": true,
+   "routine": false
+  },
+  {
+   "form": "NT 10-K",
+   "company": "APPlife Digital Solutions Inc",
+   "cik": "1755101",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1755101/0001096906-26-001457.txt",
+   "accession": "0001096906-26-001457.txt",
+   "label": "Late annual filing",
+   "note": "Cannot file on time. Read why before anything else.",
+   "typical_days": 0,
+   "completion": 1.0,
+   "actionable": false,
+   "warning": true,
+   "routine": false
+  },
+  {
+   "form": "SC TO-I/A",
+   "company": "VINEBROOK HOMES TRUST, INC.",
+   "cik": "1755755",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1755755/0001437749-26-031347.txt",
+   "accession": "0001437749-26-031347.txt",
+   "label": "Issuer tender offer",
+   "note": "Company buying its own shares. Check for an odd-lot provision \u2014 it's the one that lets a small account get filled in full.",
+   "typical_days": 30,
+   "completion": 0.95,
+   "actionable": true,
+   "warning": false,
+   "routine": false
+  },
+  {
+   "form": "SC TO-I/A",
+   "company": "NexPoint Capital, Inc.",
+   "cik": "1588272",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1588272/0001193125-26-405214.txt",
+   "accession": "0001193125-26-405214.txt",
+   "label": "Issuer tender offer",
+   "note": "Company buying its own shares. Check for an odd-lot provision \u2014 it's the one that lets a small account get filled in full.",
+   "typical_days": 30,
+   "completion": 0.95,
    "actionable": true,
    "warning": false,
    "routine": false
   },
   {
    "form": "DEFM14A",
-   "company": "Pulmatrix, Inc.",
-   "cik": "1574235",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1574235/0001493152-26-044341.txt",
-   "accession": "0001493152-26-044341.txt",
+   "company": "Finward Bancorp",
+   "cik": "919864",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/919864/0001104659-26-111383.txt",
+   "accession": "0001104659-26-111383.txt",
    "label": "Merger vote scheduled",
    "note": "Definitive proxy. The vote date is a real deadline you can annualize against.",
    "typical_days": 45,
    "completion": 0.9,
-   "actionable": true,
-   "warning": false,
-   "routine": false
-  },
-  {
-   "form": "10-12B/A",
-   "company": "MSGS Spinco, Inc.",
-   "cik": "2132873",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/2132873/0001193125-26-402509.txt",
-   "accession": "0001193125-26-402509.txt",
-   "label": "Spin-off registration",
-   "note": "Forced selling by index funds at separation is the classic entry.",
-   "typical_days": 90,
-   "completion": 0.85,
    "actionable": true,
    "warning": false,
    "routine": false
@@ -146,11 +371,11 @@
  "insiders": [
   {
    "form": "4",
-   "company": "LENNAR CORP /NEW/",
-   "cik": "920760",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1067983/0001193125-26-403089.txt",
-   "accession": "0001193125-26-403089.txt",
+   "company": "GROUP 1 AUTOMOTIVE INC",
+   "cik": "1031203",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1773994/0000905148-26-004278.txt",
+   "accession": "0000905148-26-004278.txt",
    "label": "Insider open-market purchase",
    "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
    "typical_days": 180,
@@ -158,82 +383,37 @@
    "actionable": true,
    "warning": false,
    "routine": false,
-   "ticker": "LEN",
+   "ticker": "GPI",
    "buy": {
-    "shares": 1679700.0,
-    "dollars": 136382789.45,
+    "shares": 126288.0,
+    "dollars": 31524452.36,
     "unpriced_shares": 0.0,
     "fully_priced": true,
-    "price_per_share": 81.1947,
+    "price_per_share": 249.6235,
     "suspect": null,
     "buyers": [
-     "BERKSHIRE HATHAWAY INC",
-     "BUFFETT WARREN E"
+     "Conifer Management, L.L.C."
     ],
     "roles": [
-     "10% owner",
      "10% owner"
     ],
     "by_insider": false,
     "dates": [
-     "2026-09-23",
      "2026-09-24",
      "2026-09-25"
     ]
    },
    "filings": 1,
-   "distinct_buyers": 2,
-   "cluster": true
-  },
-  {
-   "form": "4/A",
-   "company": "Core University Living Real Estate Income Trust",
-   "cik": "2119505",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/2140787/0001193125-26-402876.txt",
-   "accession": "0001193125-26-402876.txt",
-   "label": "Insider open-market purchase",
-   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
-   "typical_days": 180,
-   "completion": 0.5,
-   "actionable": true,
-   "warning": false,
-   "routine": false,
-   "ticker": "",
-   "buy": {
-    "shares": 6681518.0,
-    "dollars": 66815180.0,
-    "unpriced_shares": 0.0,
-    "fully_priced": true,
-    "price_per_share": 10.0,
-    "suspect": null,
-    "buyers": [
-     "CS RE Holdings, LLC",
-     "Core Spaces, LLC",
-     "Lifshin Marc Chanin",
-     "Gamson Michael"
-    ],
-    "roles": [
-     "10% owner",
-     "10% owner",
-     "Director"
-    ],
-    "by_insider": true,
-    "dates": [
-     "2026-07-21"
-    ]
-   },
-   "filings": 3,
-   "distinct_buyers": 4,
-   "cluster": true
+   "distinct_buyers": 1,
+   "cluster": false
   },
   {
    "form": "4",
    "company": "Corebridge Financial, Inc.",
    "cik": "1889539",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1889539/0001193125-26-402895.txt",
-   "accession": "0001193125-26-402895.txt",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1889539/0001193125-26-405404.txt",
+   "accession": "0001193125-26-405404.txt",
    "label": "Insider open-market purchase",
    "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
    "typical_days": 180,
@@ -243,11 +423,11 @@
    "routine": false,
    "ticker": "CRBG",
    "buy": {
-    "shares": 219273.0,
-    "dollars": 7484664.58,
+    "shares": 258878.0,
+    "dollars": 8763848.71,
     "unpriced_shares": 0.0,
     "fully_priced": true,
-    "price_per_share": 34.134,
+    "price_per_share": 33.8532,
     "suspect": null,
     "buyers": [
      "NIPPON LIFE INSURANCE CO"
@@ -257,7 +437,7 @@
     ],
     "by_insider": false,
     "dates": [
-     "2026-09-23"
+     "2026-09-24"
     ]
    },
    "filings": 1,
@@ -266,11 +446,11 @@
   },
   {
    "form": "4",
-   "company": "Calamos Aksia Hedged Strategies Fund",
-   "cik": "2063706",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/2063706/0002125773-26-000013.txt",
-   "accession": "0002125773-26-000013.txt",
+   "company": "Liberty Live Holdings, Inc.",
+   "cik": "2078416",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/2078416/0001225208-26-007970.txt",
+   "accession": "0001225208-26-007970.txt",
    "label": "Insider open-market purchase",
    "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
    "typical_days": 180,
@@ -278,95 +458,21 @@
    "actionable": true,
    "warning": false,
    "routine": false,
-   "ticker": "",
+   "ticker": "LLYVK",
    "buy": {
-    "shares": 714183.38,
-    "dollars": 7477500.0,
+    "shares": 28333.0,
+    "dollars": 2904982.49,
     "unpriced_shares": 0.0,
     "fully_priced": true,
-    "price_per_share": 10.47,
+    "price_per_share": 102.53,
     "suspect": null,
     "buyers": [
-     "Calamos Aksia Hedged Strategies Fund (Offshore), Ltd."
+     "MALONE JOHN C"
     ],
     "roles": [
      "10% owner"
     ],
     "by_insider": false,
-    "dates": [
-     "2026-09-23"
-    ]
-   },
-   "filings": 1,
-   "distinct_buyers": 1,
-   "cluster": false
-  },
-  {
-   "form": "4",
-   "company": "CEMEX SAB DE CV",
-   "cik": "1076378",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1076378/0002035244-26-000009.txt",
-   "accession": "0002035244-26-000009.txt",
-   "label": "Insider open-market purchase",
-   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
-   "typical_days": 180,
-   "completion": 0.5,
-   "actionable": true,
-   "warning": false,
-   "routine": false,
-   "ticker": "CX",
-   "buy": {
-    "shares": 400800.0,
-    "dollars": 6926304.96,
-    "unpriced_shares": 0.0,
-    "fully_priced": true,
-    "price_per_share": 17.2812,
-    "suspect": null,
-    "buyers": [
-     "Zambrano Lozano Rogelio"
-    ],
-    "roles": [
-     "Director"
-    ],
-    "by_insider": true,
-    "dates": [
-     "2026-09-25"
-    ]
-   },
-   "filings": 1,
-   "distinct_buyers": 1,
-   "cluster": false
-  },
-  {
-   "form": "4",
-   "company": "Kayne Anderson BDC, Inc.",
-   "cik": "1747172",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1747172/0001183254-26-000007.txt",
-   "accession": "0001183254-26-000007.txt",
-   "label": "Insider open-market purchase",
-   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
-   "typical_days": 180,
-   "completion": 0.5,
-   "actionable": true,
-   "warning": false,
-   "routine": false,
-   "ticker": "KBDC",
-   "buy": {
-    "shares": 105000.0,
-    "dollars": 1369830.0,
-    "unpriced_shares": 0.0,
-    "fully_priced": true,
-    "price_per_share": 13.046,
-    "suspect": null,
-    "buyers": [
-     "ROBO JAMES L"
-    ],
-    "roles": [
-     "Director"
-    ],
-    "by_insider": true,
     "dates": [
      "2026-09-24"
     ]
@@ -377,11 +483,11 @@
   },
   {
    "form": "4",
-   "company": "Intercont (Cayman) Ltd",
-   "cik": "2018529",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/2018529/0001493152-26-044229.txt",
-   "accession": "0001493152-26-044229.txt",
+   "company": "QVC Group, Inc.",
+   "cik": "1254699",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1278951/0001493152-26-044626.txt",
+   "accession": "0001493152-26-044626.txt",
    "label": "Insider open-market purchase",
    "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
    "typical_days": 180,
@@ -389,37 +495,40 @@
    "actionable": true,
    "warning": false,
    "routine": false,
-   "ticker": "NCT",
+   "ticker": "QVCG",
    "buy": {
-    "shares": 1625000.0,
-    "dollars": 650000.0,
+    "shares": 80000.0,
+    "dollars": 1148000.0,
     "unpriced_shares": 0.0,
     "fully_priced": true,
-    "price_per_share": 0.4,
+    "price_per_share": 14.35,
     "suspect": null,
     "buyers": [
-     "Zhu Muchun"
+     "GOLDENTREE ASSET MANAGEMENT LP",
+     "GoldenTree Asset Management LLC",
+     "Tananbaum Steven A."
     ],
     "roles": [
-     "CEO and Chairman",
-     "Director"
+     "10% owner",
+     "10% owner",
+     "10% owner"
     ],
-    "by_insider": true,
+    "by_insider": false,
     "dates": [
-     "2026-09-25"
+     "2026-09-24"
     ]
    },
    "filings": 1,
-   "distinct_buyers": 1,
-   "cluster": false
+   "distinct_buyers": 3,
+   "cluster": true
   },
   {
    "form": "4",
-   "company": "Harvard Apparatus Regenerative Technology, Inc.",
-   "cik": "1563665",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1563665/0001437749-26-031181.txt",
-   "accession": "0001437749-26-031181.txt",
+   "company": "Inhibrx Biosciences, Inc.",
+   "cik": "2007919",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/2007919/0001366074-26-000004.txt",
+   "accession": "0001366074-26-000004.txt",
    "label": "Insider open-market purchase",
    "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
    "typical_days": 180,
@@ -427,55 +536,16 @@
    "actionable": true,
    "warning": false,
    "routine": false,
-   "ticker": "HRGN",
+   "ticker": "INBX",
    "buy": {
-    "shares": 368630.0,
-    "dollars": 394459.0,
+    "shares": 10000.0,
+    "dollars": 998783.69,
     "unpriced_shares": 0.0,
     "fully_priced": true,
-    "price_per_share": 1.0701,
+    "price_per_share": 99.8784,
     "suspect": null,
     "buyers": [
-     "He Junli"
-    ],
-    "roles": [
-     "CEO",
-     "Director"
-    ],
-    "by_insider": true,
-    "dates": [
-     "2026-09-11",
-     "2026-09-15"
-    ]
-   },
-   "filings": 1,
-   "distinct_buyers": 1,
-   "cluster": false
-  },
-  {
-   "form": "4",
-   "company": "MAGNACHIP SEMICONDUCTOR Corp",
-   "cik": "1325702",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1548322/0001193125-26-402849.txt",
-   "accession": "0001193125-26-402849.txt",
-   "label": "Insider open-market purchase",
-   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
-   "typical_days": 180,
-   "completion": 0.5,
-   "actionable": true,
-   "warning": false,
-   "routine": false,
-   "ticker": "MX",
-   "buy": {
-    "shares": 100000.0,
-    "dollars": 318496.0,
-    "unpriced_shares": 0.0,
-    "fully_priced": true,
-    "price_per_share": 3.185,
-    "suspect": null,
-    "buyers": [
-     "LEE CHAE"
+     "Lappe Mark"
     ],
     "roles": [
      "Chief Executive Officer",
@@ -483,8 +553,8 @@
     ],
     "by_insider": true,
     "dates": [
-     "2026-09-23",
-     "2026-09-24"
+     "2026-09-25",
+     "2026-09-28"
     ]
    },
    "filings": 1,
@@ -493,11 +563,11 @@
   },
   {
    "form": "4",
-   "company": "STUDIO CITY INTERNATIONAL HOLDINGS Ltd",
-   "cik": "1713334",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1958709/0001193125-26-401498.txt",
-   "accession": "0001193125-26-401498.txt",
+   "company": "HUDSON TECHNOLOGIES INC /NY",
+   "cik": "925528",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/925528/0000921895-26-002658.txt",
+   "accession": "0000921895-26-002658.txt",
    "label": "Insider open-market purchase",
    "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
    "typical_days": 180,
@@ -505,95 +575,21 @@
    "actionable": true,
    "warning": false,
    "routine": false,
-   "ticker": "MSC",
+   "ticker": "HDSN",
    "buy": {
-    "shares": 1043600.0,
-    "dollars": 206319.72,
+    "shares": 118549.0,
+    "dollars": 604445.79,
     "unpriced_shares": 0.0,
     "fully_priced": true,
-    "price_per_share": 0.1977,
+    "price_per_share": 5.0987,
     "suspect": null,
     "buyers": [
-     "HO LAWRENCE YAU LUNG"
+     "Hartree Partners, LP"
     ],
     "roles": [
-     "Director"
+     "10% owner"
     ],
-    "by_insider": true,
-    "dates": [
-     "2026-09-23"
-    ]
-   },
-   "filings": 1,
-   "distinct_buyers": 1,
-   "cluster": false
-  },
-  {
-   "form": "4",
-   "company": "Anixa Biosciences Inc",
-   "cik": "715446",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/715446/0001493152-26-044250.txt",
-   "accession": "0001493152-26-044250.txt",
-   "label": "Insider open-market purchase",
-   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
-   "typical_days": 180,
-   "completion": 0.5,
-   "actionable": true,
-   "warning": false,
-   "routine": false,
-   "ticker": "ANIX",
-   "buy": {
-    "shares": 49036.0,
-    "dollars": 131906.84,
-    "unpriced_shares": 0.0,
-    "fully_priced": true,
-    "price_per_share": 2.69,
-    "suspect": null,
-    "buyers": [
-     "Titterton Lewis H jr"
-    ],
-    "roles": [
-     "Director"
-    ],
-    "by_insider": true,
-    "dates": [
-     "2026-09-23"
-    ]
-   },
-   "filings": 1,
-   "distinct_buyers": 1,
-   "cluster": false
-  },
-  {
-   "form": "4",
-   "company": "DoubleLine Yield Opportunities Fund",
-   "cik": "1788399",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1788399/0000904454-26-000490.txt",
-   "accession": "0000904454-26-000490.txt",
-   "label": "Insider open-market purchase",
-   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
-   "typical_days": 180,
-   "completion": 0.5,
-   "actionable": true,
-   "warning": false,
-   "routine": false,
-   "ticker": "DLY",
-   "buy": {
-    "shares": 10000.0,
-    "dollars": 130300.0,
-    "unpriced_shares": 0.0,
-    "fully_priced": true,
-    "price_per_share": 13.03,
-    "suspect": null,
-    "buyers": [
-     "Sherman Jeffrey J."
-    ],
-    "roles": [
-     "Vice President"
-    ],
-    "by_insider": true,
+    "by_insider": false,
     "dates": [
      "2026-09-24"
     ]
@@ -604,11 +600,11 @@
   },
   {
    "form": "4",
-   "company": "UR-ENERGY INC",
-   "cik": "1375205",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1375205/0001654954-26-008582.txt",
-   "accession": "0001654954-26-008582.txt",
+   "company": "Liberty Latin America Ltd.",
+   "cik": "1712184",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1712184/0000937797-26-000032.txt",
+   "accession": "0000937797-26-000032.txt",
    "label": "Insider open-market purchase",
    "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
    "typical_days": 180,
@@ -616,23 +612,26 @@
    "actionable": true,
    "warning": false,
    "routine": false,
-   "ticker": "URG",
+   "ticker": "LILA",
    "buy": {
-    "shares": 96556.0,
-    "dollars": 110071.21,
+    "shares": 22442.0,
+    "dollars": 458653.75,
     "unpriced_shares": 0.0,
     "fully_priced": true,
-    "price_per_share": 1.14,
+    "price_per_share": 20.4373,
     "suspect": null,
     "buyers": [
-     "Walle Jade"
+     "MALONE JOHN C"
     ],
     "roles": [
-     "VICE PRESIDENT FINANCE"
+     "10% owner",
+     "Director Emeritus"
     ],
     "by_insider": true,
     "dates": [
-     "2026-09-24"
+     "2026-09-24",
+     "2026-09-25",
+     "2026-09-28"
     ]
    },
    "filings": 1,
@@ -641,11 +640,11 @@
   },
   {
    "form": "4",
-   "company": "Annexon, Inc.",
-   "cik": "1528115",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1528115/0001818520-26-000003.txt",
-   "accession": "0001818520-26-000003.txt",
+   "company": "INFINITY NATURAL RESOURCES, INC.",
+   "cik": "2029118",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1331940/0002029118-26-000113.txt",
+   "accession": "0002029118-26-000113.txt",
    "label": "Insider open-market purchase",
    "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
    "typical_days": 180,
@@ -653,24 +652,24 @@
    "actionable": true,
    "warning": false,
    "routine": false,
-   "ticker": "ANNX",
+   "ticker": "INR",
    "buy": {
-    "shares": 26065.0,
-    "dollars": 99828.95,
+    "shares": 22316.0,
+    "dollars": 299993.28,
     "unpriced_shares": 0.0,
     "fully_priced": true,
-    "price_per_share": 3.83,
+    "price_per_share": 13.443,
     "suspect": null,
     "buyers": [
-     "Love Douglas"
+     "Baetz Cary D"
     ],
     "roles": [
-     "PRESIDENT AND CEO",
-     "Director"
+     "EVP and CFO"
     ],
     "by_insider": true,
     "dates": [
-     "2026-09-24"
+     "2026-09-24",
+     "2026-09-25"
     ]
    },
    "filings": 1,
@@ -679,11 +678,11 @@
   },
   {
    "form": "4",
-   "company": "DeFi Development Corp.",
-   "cik": "1805526",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1805526/0002061848-26-000005.txt",
-   "accession": "0002061848-26-000005.txt",
+   "company": "Angel Oak Mortgage REIT, Inc.",
+   "cik": "1766478",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1766478/0001766478-26-000056.txt",
+   "accession": "0001766478-26-000056.txt",
    "label": "Insider open-market purchase",
    "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
    "typical_days": 180,
@@ -691,16 +690,54 @@
    "actionable": true,
    "warning": false,
    "routine": false,
-   "ticker": "DFDV",
+   "ticker": "AOMR",
    "buy": {
-    "shares": 10000.0,
-    "dollars": 89567.72,
+    "shares": 38726.0,
+    "dollars": 290510.83,
     "unpriced_shares": 0.0,
     "fully_priced": true,
-    "price_per_share": 8.9568,
+    "price_per_share": 7.5017,
     "suspect": null,
     "buyers": [
-     "White Parker"
+     "Fierman Michael"
+    ],
+    "roles": [
+     "Director",
+     "10% owner"
+    ],
+    "by_insider": true,
+    "dates": [
+     "2026-09-25"
+    ]
+   },
+   "filings": 1,
+   "distinct_buyers": 1,
+   "cluster": false
+  },
+  {
+   "form": "4",
+   "company": "Alpha Cognition Inc.",
+   "cik": "1655923",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1655923/0001493152-26-044690.txt",
+   "accession": "0001493152-26-044690.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "ACOG",
+   "buy": {
+    "shares": 31763.0,
+    "dollars": 270800.3,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 8.5257,
+    "suspect": null,
+    "buyers": [
+     "Opaleye Management Inc."
     ],
     "roles": [
      "10% owner"
@@ -717,11 +754,11 @@
   },
   {
    "form": "4",
-   "company": "RGC RESOURCES INC",
-   "cik": "1069533",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1280855/0001437749-26-031185.txt",
-   "accession": "0001437749-26-031185.txt",
+   "company": "Damora Therapeutics, Inc.",
+   "cik": "1800315",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1800315/0001193125-26-403355.txt",
+   "accession": "0001193125-26-403355.txt",
    "label": "Insider open-market purchase",
    "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
    "typical_days": 180,
@@ -729,65 +766,24 @@
    "actionable": true,
    "warning": false,
    "routine": false,
-   "ticker": "RGCO",
+   "ticker": "DMRA",
    "buy": {
-    "shares": 4073.0,
-    "dollars": 85087.95,
+    "shares": 12500.0,
+    "dollars": 252875.0,
     "unpriced_shares": 0.0,
     "fully_priced": true,
-    "price_per_share": 20.8907,
+    "price_per_share": 20.23,
     "suspect": null,
     "buyers": [
-     "JOHNSTON ROBERT B",
-     "Nester Paul W",
-     "WILLIAMSON JOHN B III"
+     "Jarrett Jennifer"
     ],
     "roles": [
-     "Director",
-     "President & CEO"
+     "Director, President and CEO",
+     "Director"
     ],
     "by_insider": true,
     "dates": [
-     "2026-09-23"
-    ]
-   },
-   "filings": 3,
-   "distinct_buyers": 3,
-   "cluster": true
-  },
-  {
-   "form": "4",
-   "company": "Clipper Realty Inc.",
-   "cik": "1649096",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1649096/0001539497-26-002601.txt",
-   "accession": "0001539497-26-002601.txt",
-   "label": "Insider open-market purchase",
-   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
-   "typical_days": 180,
-   "completion": 0.5,
-   "actionable": true,
-   "warning": false,
-   "routine": false,
-   "ticker": "CLPR",
-   "buy": {
-    "shares": 22923.0,
-    "dollars": 77434.26,
-    "unpriced_shares": 0.0,
-    "fully_priced": true,
-    "price_per_share": 3.378,
-    "suspect": null,
-    "buyers": [
-     "Levinson Sam"
-    ],
-    "roles": [
-     "Director",
-     "10% owner"
-    ],
-    "by_insider": true,
-    "dates": [
-     "2026-09-23",
-     "2026-09-24"
+     "2026-09-25"
     ]
    },
    "filings": 1,
@@ -795,12 +791,12 @@
    "cluster": false
   },
   {
-   "form": "4",
-   "company": "Skillsoft Corp.",
-   "cik": "1774675",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1091482/0001091482-26-000019.txt",
-   "accession": "0001091482-26-000019.txt",
+   "form": "4/A",
+   "company": "AtlasClear Holdings, Inc.",
+   "cik": "1963088",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1963088/0001493152-26-044627.txt",
+   "accession": "0001493152-26-044627.txt",
    "label": "Insider open-market purchase",
    "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
    "typical_days": 180,
@@ -808,24 +804,68 @@
    "actionable": true,
    "warning": false,
    "routine": false,
-   "ticker": "SKIL",
+   "ticker": "ATCH",
    "buy": {
-    "shares": 11196.0,
-    "dollars": 66414.67,
+    "shares": 815000.0,
+    "dollars": 162524.19,
     "unpriced_shares": 0.0,
     "fully_priced": true,
-    "price_per_share": 5.932,
+    "price_per_share": 0.1994,
     "suspect": null,
     "buyers": [
-     "HOVSEPIAN RONALD W"
+     "Carlson Steven J.",
+     "Hammond Thomas Jon",
+     "Patel Sandip I",
+     "Ridenhour David Craig",
+     "Schaible John Martin"
     ],
     "roles": [
-     "CEO & Executive Chair",
-     "Director"
+     "Director",
+     "CFO & General Counsel",
+     "President",
+     "Executive Chairman"
     ],
     "by_insider": true,
     "dates": [
-     "2026-09-23"
+     "2026-09-24",
+     "2026-09-25"
+    ]
+   },
+   "filings": 5,
+   "distinct_buyers": 5,
+   "cluster": true
+  },
+  {
+   "form": "4",
+   "company": "Zumiez Inc",
+   "cik": "1318008",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1700575/0001700575-26-000005.txt",
+   "accession": "0001700575-26-000005.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "ZUMZ",
+   "buy": {
+    "shares": 10000.0,
+    "dollars": 134000.0,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 13.4,
+    "suspect": null,
+    "buyers": [
+     "ELLIS ADAM CHRISTOPHER"
+    ],
+    "roles": [
+     "President International"
+    ],
+    "by_insider": true,
+    "dates": [
+     "2026-09-18"
     ]
    },
    "filings": 1,
@@ -836,9 +876,9 @@
    "form": "4",
    "company": "FIRST TRUST HIGH YIELD OPPORTUNITIES 2027 TERM FUND",
    "cik": "1810523",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1810523/0001445546-26-007128.txt",
-   "accession": "0001445546-26-007128.txt",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1810523/0001445546-26-007146.txt",
+   "accession": "0001445546-26-007146.txt",
    "label": "Insider open-market purchase",
    "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
    "typical_days": 180,
@@ -848,165 +888,17 @@
    "routine": false,
    "ticker": "FTHY",
    "buy": {
-    "shares": 5000.0,
-    "dollars": 64500.0,
+    "shares": 10000.0,
+    "dollars": 129247.0,
     "unpriced_shares": 0.0,
     "fully_priced": true,
-    "price_per_share": 12.9,
+    "price_per_share": 12.9247,
     "suspect": null,
     "buyers": [
-     "HOUSEY WILLIAM A JR"
+     "MCGAREL DAVID"
     ],
     "roles": [
-     "Officer of Advisor, Port. Mgr."
-    ],
-    "by_insider": true,
-    "dates": [
-     "2026-09-24"
-    ]
-   },
-   "filings": 1,
-   "distinct_buyers": 1,
-   "cluster": false
-  },
-  {
-   "form": "4",
-   "company": "EuroDry Ltd.",
-   "cik": "1731388",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1731388/0002127484-26-000018.txt",
-   "accession": "0002127484-26-000018.txt",
-   "label": "Insider open-market purchase",
-   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
-   "typical_days": 180,
-   "completion": 0.5,
-   "actionable": true,
-   "warning": false,
-   "routine": false,
-   "ticker": "EDRY",
-   "buy": {
-    "shares": 900.0,
-    "dollars": 46199.16,
-    "unpriced_shares": 0.0,
-    "fully_priced": true,
-    "price_per_share": 51.3324,
-    "suspect": null,
-    "buyers": [
-     "Pittas Aristeidis P"
-    ],
-    "roles": [
-     "Director"
-    ],
-    "by_insider": true,
-    "dates": [
-     "2026-09-24"
-    ]
-   },
-   "filings": 1,
-   "distinct_buyers": 1,
-   "cluster": false
-  },
-  {
-   "form": "4",
-   "company": "BNY MELLON HIGH YIELD STRATEGIES FUND",
-   "cik": "1057861",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1057861/0001180645-26-000001.txt",
-   "accession": "0001180645-26-000001.txt",
-   "label": "Insider open-market purchase",
-   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
-   "typical_days": 180,
-   "completion": 0.5,
-   "actionable": true,
-   "warning": false,
-   "routine": false,
-   "ticker": "DHF",
-   "buy": {
-    "shares": 20000.0,
-    "dollars": 44400.0,
-    "unpriced_shares": 0.0,
-    "fully_priced": true,
-    "price_per_share": 2.22,
-    "suspect": null,
-    "buyers": [
-     "DIMARTINO JOSEPH S"
-    ],
-    "roles": [
-     "Director"
-    ],
-    "by_insider": true,
-    "dates": [
-     "2026-09-24"
-    ]
-   },
-   "filings": 1,
-   "distinct_buyers": 1,
-   "cluster": false
-  },
-  {
-   "form": "4",
-   "company": "abrdn Emerging Markets ex-China Fund, Inc.",
-   "cik": "846676",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1652951/0001104659-26-110663.txt",
-   "accession": "0001104659-26-110663.txt",
-   "label": "Insider open-market purchase",
-   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
-   "typical_days": 180,
-   "completion": 0.5,
-   "actionable": true,
-   "warning": false,
-   "routine": false,
-   "ticker": "AEF",
-   "buy": {
-    "shares": 4500.0,
-    "dollars": 43335.0,
-    "unpriced_shares": 0.0,
-    "fully_priced": true,
-    "price_per_share": 9.63,
-    "suspect": null,
-    "buyers": [
-     "Clark Anthony S."
-    ],
-    "roles": [
-     "Director"
-    ],
-    "by_insider": true,
-    "dates": [
-     "2026-09-24"
-    ]
-   },
-   "filings": 1,
-   "distinct_buyers": 1,
-   "cluster": false
-  },
-  {
-   "form": "4",
-   "company": "Rush Street Interactive, Inc.",
-   "cik": "1793659",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1705859/0001705859-26-000006.txt",
-   "accession": "0001705859-26-000006.txt",
-   "label": "Insider open-market purchase",
-   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
-   "typical_days": 180,
-   "completion": 0.5,
-   "actionable": true,
-   "warning": false,
-   "routine": false,
-   "ticker": "RSI",
-   "buy": {
-    "shares": 1500.0,
-    "dollars": 29025.0,
-    "unpriced_shares": 0.0,
-    "fully_priced": true,
-    "price_per_share": 19.35,
-    "suspect": null,
-    "buyers": [
-     "Markell Jack A."
-    ],
-    "roles": [
-     "Director"
+     "Officer-Investment Adviser"
     ],
     "by_insider": true,
     "dates": [
@@ -1019,11 +911,11 @@
   },
   {
    "form": "4",
-   "company": "JEWETT CAMERON TRADING CO LTD",
-   "cik": "885307",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/2141914/0001536588-26-000034.txt",
-   "accession": "0001536588-26-000034.txt",
+   "company": "Hyperscale Data, Inc.",
+   "cik": "896493",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1212502/0001214659-26-011988.txt",
+   "accession": "0001214659-26-011988.txt",
    "label": "Insider open-market purchase",
    "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
    "typical_days": 180,
@@ -1031,44 +923,650 @@
    "actionable": true,
    "warning": false,
    "routine": false,
-   "ticker": "JCTC",
+   "ticker": "GPUS",
    "buy": {
-    "shares": 6887.0,
-    "dollars": 20112.35,
+    "shares": 689600.0,
+    "dollars": 117459.24,
     "unpriced_shares": 0.0,
     "fully_priced": true,
-    "price_per_share": 2.9203,
+    "price_per_share": 0.1703,
     "suspect": null,
     "buyers": [
-     "AJB Investment Fund II, LP",
-     "AJB Capital, LLC",
-     "Bradley Adam James",
-     "Bradley Melinda Hodges"
+     "AULT MILTON C III",
+     "Ault & Company, Inc."
     ],
     "roles": [
+     "Executive Chairman",
+     "Director",
      "10% owner",
      "10% owner",
-     "10% owner",
-     "10% owner"
+     "See Remark"
     ],
-    "by_insider": false,
+    "by_insider": true,
     "dates": [
-     "2026-09-23",
      "2026-09-24",
      "2026-09-25"
     ]
    },
+   "filings": 1,
+   "distinct_buyers": 2,
+   "cluster": true
+  },
+  {
+   "form": "4",
+   "company": "Advanced Flower Capital Inc.",
+   "cik": "1822523",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1822523/0001628280-26-063722.txt",
+   "accession": "0001628280-26-063722.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "AFCG",
+   "buy": {
+    "shares": 25228.0,
+    "dollars": 88202.56,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 3.4962,
+    "suspect": null,
+    "buyers": [
+     "TANNENBAUM LEONARD M"
+    ],
+    "roles": [
+     "Director",
+     "10% owner"
+    ],
+    "by_insider": true,
+    "dates": [
+     "2026-09-24",
+     "2026-09-25"
+    ]
+   },
+   "filings": 1,
+   "distinct_buyers": 1,
+   "cluster": false
+  },
+  {
+   "form": "4",
+   "company": "CME GROUP INC.",
+   "cik": "1156375",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1156375/0001212852-26-000005.txt",
+   "accession": "0001212852-26-000005.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "CME",
+   "buy": {
+    "shares": 292.55,
+    "dollars": 78625.74,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 268.76,
+    "suspect": null,
+    "buyers": [
+     "SHEPARD WILLIAM R"
+    ],
+    "roles": [
+     "Director"
+    ],
+    "by_insider": true,
+    "dates": [
+     "2026-09-25"
+    ]
+   },
+   "filings": 1,
+   "distinct_buyers": 1,
+   "cluster": false
+  },
+  {
+   "form": "4",
+   "company": "PIMCO Dynamic Income Fund",
+   "cik": "1510599",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1510599/0001495443-26-000007.txt",
+   "accession": "0001495443-26-000007.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "PDI",
+   "buy": {
+    "shares": 5500.0,
+    "dollars": 75654.7,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 13.7554,
+    "suspect": null,
+    "buyers": [
+     "Rappaport Alan"
+    ],
+    "roles": [
+     "Director"
+    ],
+    "by_insider": true,
+    "dates": [
+     "2026-09-24"
+    ]
+   },
+   "filings": 1,
+   "distinct_buyers": 1,
+   "cluster": false
+  },
+  {
+   "form": "4",
+   "company": "NEW GERMANY FUND INC",
+   "cik": "858706",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/858706/0001510281-26-000312.txt",
+   "accession": "0001510281-26-000312.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "GF",
+   "buy": {
+    "shares": 5756.0,
+    "dollars": 61874.44,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 10.7496,
+    "suspect": null,
+    "buyers": [
+     "Saba Capital Management, L.P."
+    ],
+    "roles": [
+     "10% owner"
+    ],
+    "by_insider": false,
+    "dates": [
+     "2026-09-24",
+     "2026-09-25"
+    ]
+   },
+   "filings": 1,
+   "distinct_buyers": 1,
+   "cluster": false
+  },
+  {
+   "form": "4",
+   "company": "Western Asset Diversified Income Fund (WDI)",
+   "cik": "1819559",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/2010871/0002010871-26-000002.txt",
+   "accession": "0002010871-26-000002.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "WDI",
+   "buy": {
+    "shares": 5000.0,
+    "dollars": 59415.0,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 11.883,
+    "suspect": null,
+    "buyers": [
+     "Buchanan Michael Carlton"
+    ],
+    "roles": [
+     "Co-CIO/Subadviser"
+    ],
+    "by_insider": true,
+    "dates": [
+     "2026-09-24"
+    ]
+   },
+   "filings": 1,
+   "distinct_buyers": 1,
+   "cluster": false
+  },
+  {
+   "form": "4",
+   "company": "Eva Live Inc",
+   "cik": "1983736",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1653409/0001493152-26-044536.txt",
+   "accession": "0001493152-26-044536.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "GOAI",
+   "buy": {
+    "shares": 19800.0,
+    "dollars": 39798.0,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 2.01,
+    "suspect": null,
+    "buyers": [
+     "Boulette David"
+    ],
+    "roles": [
+     "Chief Executive Officer",
+     "Director",
+     "10% owner"
+    ],
+    "by_insider": true,
+    "dates": [
+     "2026-09-25"
+    ]
+   },
+   "filings": 1,
+   "distinct_buyers": 1,
+   "cluster": false
+  },
+  {
+   "form": "4",
+   "company": "MEXICO FUND INC",
+   "cik": "65433",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/65433/0001510281-26-000313.txt",
+   "accession": "0001510281-26-000313.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "MXF",
+   "buy": {
+    "shares": 1883.0,
+    "dollars": 39000.97,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 20.7121,
+    "suspect": null,
+    "buyers": [
+     "Saba Capital Management, L.P."
+    ],
+    "roles": [
+     "10% owner"
+    ],
+    "by_insider": false,
+    "dates": [
+     "2026-09-24",
+     "2026-09-25"
+    ]
+   },
+   "filings": 1,
+   "distinct_buyers": 1,
+   "cluster": false
+  },
+  {
+   "form": "4",
+   "company": "Anixa Biosciences Inc",
+   "cik": "715446",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/715446/0001493152-26-044457.txt",
+   "accession": "0001493152-26-044457.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "ANIX",
+   "buy": {
+    "shares": 12000.0,
+    "dollars": 33260.0,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 2.7717,
+    "suspect": null,
+    "buyers": [
+     "Baskies Arnold M",
+     "KUMAR AMIT"
+    ],
+    "roles": [
+     "Director",
+     "Chief Executive Officer"
+    ],
+    "by_insider": true,
+    "dates": [
+     "2026-09-24"
+    ]
+   },
    "filings": 2,
+   "distinct_buyers": 2,
+   "cluster": true
+  },
+  {
+   "form": "4",
+   "company": "DYNEX CAPITAL INC",
+   "cik": "826675",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/2136350/0000826675-26-000107.txt",
+   "accession": "0000826675-26-000107.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "DX",
+   "buy": {
+    "shares": 2500.0,
+    "dollars": 27950.0,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 11.18,
+    "suspect": null,
+    "buyers": [
+     "Connelly Terrence John JR"
+    ],
+    "roles": [
+     "Chief Investment Officer"
+    ],
+    "by_insider": true,
+    "dates": [
+     "2026-09-25"
+    ]
+   },
+   "filings": 1,
+   "distinct_buyers": 1,
+   "cluster": false
+  },
+  {
+   "form": "4",
+   "company": "Dave & Buster's Entertainment, Inc.",
+   "cik": "1525769",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1525769/0001193125-26-405479.txt",
+   "accession": "0001193125-26-405479.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "PLAY",
+   "buy": {
+    "shares": 4000.0,
+    "dollars": 25999.6,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 6.4999,
+    "suspect": null,
+    "buyers": [
+     "Hatton Cory"
+    ],
+    "roles": [
+     "Interim CFO"
+    ],
+    "by_insider": true,
+    "dates": [
+     "2026-09-28"
+    ]
+   },
+   "filings": 1,
+   "distinct_buyers": 1,
+   "cluster": false
+  },
+  {
+   "form": "4",
+   "company": "PodcastOne, Inc.",
+   "cik": "1940177",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1022711/0001213900-26-104166.txt",
+   "accession": "0001213900-26-104166.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "PODC",
+   "buy": {
+    "shares": 11000.0,
+    "dollars": 24310.0,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 2.21,
+    "suspect": null,
+    "buyers": [
+     "MERRIMAN D JONATHAN"
+    ],
+    "roles": [
+     "Director"
+    ],
+    "by_insider": true,
+    "dates": [
+     "2026-09-24"
+    ]
+   },
+   "filings": 1,
+   "distinct_buyers": 1,
+   "cluster": false
+  },
+  {
+   "form": "4/A",
+   "company": "C1 Fund Inc.",
+   "cik": "2044327",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/2044327/0001104659-26-111497.txt",
+   "accession": "0001104659-26-111497.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "CFND",
+   "buy": {
+    "shares": 5000.0,
+    "dollars": 24050.0,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 4.81,
+    "suspect": null,
+    "buyers": [
+     "Han Elliot Jin"
+    ],
+    "roles": [
+     "Chief Investment Officer"
+    ],
+    "by_insider": true,
+    "dates": [
+     "2025-12-17"
+    ]
+   },
+   "filings": 1,
+   "distinct_buyers": 1,
+   "cluster": false
+  },
+  {
+   "form": "4",
+   "company": "Angel Oak Financial Strategies Income Term Trust",
+   "cik": "1745059",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1745059/0001816321-26-000004.txt",
+   "accession": "0001816321-26-000004.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "FINS",
+   "buy": {
+    "shares": 1000.0,
+    "dollars": 11900.0,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 11.9,
+    "suspect": null,
+    "buyers": [
+     "Parks Kevin"
+    ],
+    "roles": [
+     "Portfolio Manager"
+    ],
+    "by_insider": true,
+    "dates": [
+     "2026-09-25"
+    ]
+   },
+   "filings": 1,
+   "distinct_buyers": 1,
+   "cluster": false
+  },
+  {
+   "form": "4",
+   "company": "INTELLINETICS, INC.",
+   "cik": "1081745",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1081745/0001493152-26-044556.txt",
+   "accession": "0001493152-26-044556.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "INLX",
+   "buy": {
+    "shares": 1088.0,
+    "dollars": 5603.15,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 5.15,
+    "suspect": null,
+    "buyers": [
+     "SEID PAUL"
+    ],
+    "roles": [
+     "Director"
+    ],
+    "by_insider": true,
+    "dates": [
+     "2026-09-24",
+     "2026-09-25"
+    ]
+   },
+   "filings": 1,
+   "distinct_buyers": 1,
+   "cluster": false
+  },
+  {
+   "form": "4",
+   "company": "Dolphin Entertainment, Inc.",
+   "cik": "1282224",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1282224/0001079973-26-001296.txt",
+   "accession": "0001079973-26-001296.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "DLPN",
+   "buy": {
+    "shares": 4400.0,
+    "dollars": 4884.0,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 1.11,
+    "suspect": null,
+    "buyers": [
+     "O'Dowd William IV"
+    ],
+    "roles": [
+     "Chief Executive Officer",
+     "Director",
+     "10% owner"
+    ],
+    "by_insider": true,
+    "dates": [
+     "2026-09-28"
+    ]
+   },
+   "filings": 1,
+   "distinct_buyers": 1,
+   "cluster": false
+  },
+  {
+   "form": "4",
+   "company": "Finward Bancorp",
+   "cik": "919864",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1583893/0001628280-26-063746.txt",
+   "accession": "0001628280-26-063746.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "FNWD",
+   "buy": {
+    "shares": 84.97,
+    "dollars": 3694.59,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 43.4811,
+    "suspect": null,
+    "buyers": [
+     "Bochnowski Benjamin J",
+     "Lowry Robert T",
+     "Puntillo Anthony",
+     "Scheub Todd M."
+    ],
+    "roles": [
+     "President, CEO",
+     "Director",
+     "Executive Vice President"
+    ],
+    "by_insider": true,
+    "dates": [
+     "2026-09-25"
+    ]
+   },
+   "filings": 4,
    "distinct_buyers": 4,
    "cluster": true
   },
   {
    "form": "4",
-   "company": "UMH PROPERTIES, INC.",
-   "cik": "752642",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1782938/0000752642-26-000112.txt",
-   "accession": "0000752642-26-000112.txt",
+   "company": "Commercial Bancgroup, Inc.",
+   "cik": "1981546",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1981546/0000898432-26-000710.txt",
+   "accession": "0000898432-26-000710.txt",
    "label": "Insider open-market purchase",
    "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
    "typical_days": 180,
@@ -1076,175 +1574,24 @@
    "actionable": true,
    "warning": false,
    "routine": false,
-   "ticker": "UMH",
+   "ticker": "CBK",
    "buy": {
-    "shares": 1300.0,
-    "dollars": 19890.0,
+    "shares": 70.0,
+    "dollars": 2287.95,
     "unpriced_shares": 0.0,
     "fully_priced": true,
-    "price_per_share": 15.3,
+    "price_per_share": 32.685,
     "suspect": null,
     "buyers": [
-     "Mitchell William Edward"
+     "Robertson John Adam"
     ],
     "roles": [
+     "Executive Chairperson",
      "Director"
     ],
     "by_insider": true,
     "dates": [
-     "2026-09-25"
-    ]
-   },
-   "filings": 1,
-   "distinct_buyers": 1,
-   "cluster": false
-  },
-  {
-   "form": "4",
-   "company": "Phio Pharmaceuticals Corp.",
-   "cik": "1533040",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1313325/0001683168-26-007432.txt",
-   "accession": "0001683168-26-007432.txt",
-   "label": "Insider open-market purchase",
-   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
-   "typical_days": 180,
-   "completion": 0.5,
-   "actionable": true,
-   "warning": false,
-   "routine": false,
-   "ticker": "PHIO",
-   "buy": {
-    "shares": 6500.0,
-    "dollars": 6582.55,
-    "unpriced_shares": 0.0,
-    "fully_priced": true,
-    "price_per_share": 1.0127,
-    "suspect": null,
-    "buyers": [
-     "BRADFORD PATRICIA A"
-    ],
-    "roles": [
-     "Director"
-    ],
-    "by_insider": true,
-    "dates": [
-     "2026-09-24"
-    ]
-   },
-   "filings": 1,
-   "distinct_buyers": 1,
-   "cluster": false
-  },
-  {
-   "form": "4",
-   "company": "Adagene Inc.",
-   "cik": "1818838",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1818838/0001104659-26-111069.txt",
-   "accession": "0001104659-26-111069.txt",
-   "label": "Insider open-market purchase",
-   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
-   "typical_days": 180,
-   "completion": 0.5,
-   "actionable": true,
-   "warning": false,
-   "routine": false,
-   "ticker": "ADAG",
-   "buy": {
-    "shares": 2000.0,
-    "dollars": 6000.0,
-    "unpriced_shares": 0.0,
-    "fully_priced": true,
-    "price_per_share": 3.0,
-    "suspect": null,
-    "buyers": [
-     "Tam Man Kin"
-    ],
-    "roles": [
-     "Chief Financial Officer",
-     "Director"
-    ],
-    "by_insider": true,
-    "dates": [
-     "2026-09-23"
-    ]
-   },
-   "filings": 1,
-   "distinct_buyers": 1,
-   "cluster": false
-  },
-  {
-   "form": "4",
-   "company": "Cuentas Inc.",
-   "cik": "1424657",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1424657/0001213900-26-103430.txt",
-   "accession": "0001213900-26-103430.txt",
-   "label": "Insider open-market purchase",
-   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
-   "typical_days": 180,
-   "completion": 0.5,
-   "actionable": true,
-   "warning": false,
-   "routine": false,
-   "ticker": "CUEN",
-   "buy": {
-    "shares": 10000.0,
-    "dollars": 5863.0,
-    "unpriced_shares": 0.0,
-    "fully_priced": true,
-    "price_per_share": 0.5863,
-    "suspect": null,
-    "buyers": [
-     "Maimon Shalom Arik"
-    ],
-    "roles": [
-     "CEO"
-    ],
-    "by_insider": true,
-    "dates": [
-     "2026-09-18",
-     "2026-09-23",
-     "2026-09-24",
-     "2026-09-25"
-    ]
-   },
-   "filings": 1,
-   "distinct_buyers": 1,
-   "cluster": false
-  },
-  {
-   "form": "4",
-   "company": "Compass Therapeutics, Inc.",
-   "cik": "1738021",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1738021/0001171843-26-006235.txt",
-   "accession": "0001171843-26-006235.txt",
-   "label": "Insider open-market purchase",
-   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
-   "typical_days": 180,
-   "completion": 0.5,
-   "actionable": true,
-   "warning": false,
-   "routine": false,
-   "ticker": "CMPX",
-   "buy": {
-    "shares": 2500.0,
-    "dollars": 2850.0,
-    "unpriced_shares": 0.0,
-    "fully_priced": true,
-    "price_per_share": 1.14,
-    "suspect": null,
-    "buyers": [
-     "Lerner Neil"
-    ],
-    "roles": [
-     "Chief Accounting Officer"
-    ],
-    "by_insider": true,
-    "dates": [
-     "2026-09-24"
+     "2026-09-16"
     ]
    },
    "filings": 1,
@@ -1255,9 +1602,9 @@
    "form": "4",
    "company": "RENN Fund, Inc.",
    "cik": "919567",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1056823/0001437749-26-031189.txt",
-   "accession": "0001437749-26-031189.txt",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1056823/0001437749-26-031300.txt",
+   "accession": "0001437749-26-031300.txt",
    "label": "Insider open-market purchase",
    "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
    "typical_days": 180,
@@ -1268,10 +1615,10 @@
    "ticker": "RCG",
    "buy": {
     "shares": 756.0,
-    "dollars": 2298.24,
+    "dollars": 2283.12,
     "unpriced_shares": 0.0,
     "fully_priced": true,
-    "price_per_share": 3.04,
+    "price_per_share": 3.02,
     "suspect": null,
     "buyers": [
      "HORIZON KINETICS ASSET MANAGEMENT LLC"
@@ -1281,7 +1628,7 @@
     ],
     "by_insider": false,
     "dates": [
-     "2026-09-24"
+     "2026-09-25"
     ]
    },
    "filings": 1,
@@ -1290,11 +1637,11 @@
   },
   {
    "form": "4",
-   "company": "Texas Pacific Land Corp",
-   "cik": "1811074",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1056823/0001437749-26-031186.txt",
-   "accession": "0001437749-26-031186.txt",
+   "company": "Fundrise Real Estate Interval Fund, LLC",
+   "cik": "1777677",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1777677/0001213900-26-103844.txt",
+   "accession": "0001213900-26-103844.txt",
    "label": "Insider open-market purchase",
    "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
    "typical_days": 180,
@@ -1302,23 +1649,61 @@
    "actionable": true,
    "warning": false,
    "routine": false,
-   "ticker": "TPL",
+   "ticker": "",
    "buy": {
-    "shares": 1.0,
-    "dollars": 340.28,
+    "shares": 42.02,
+    "dollars": 500.0,
     "unpriced_shares": 0.0,
     "fully_priced": true,
-    "price_per_share": 340.28,
+    "price_per_share": 11.8991,
     "suspect": null,
     "buyers": [
-     "HORIZON KINETICS ASSET MANAGEMENT LLC"
+     "Staloch Alison"
     ],
     "roles": [
-     "10% owner"
+     "Treasurer"
     ],
-    "by_insider": false,
+    "by_insider": true,
     "dates": [
-     "2026-09-24"
+     "2026-09-25"
+    ]
+   },
+   "filings": 1,
+   "distinct_buyers": 1,
+   "cluster": false
+  },
+  {
+   "form": "4",
+   "company": "CTT PHARMACEUTICAL HOLDINGS, INC.",
+   "cik": "1035422",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1035422/0001035422-26-000014.txt",
+   "accession": "0001035422-26-000014.txt",
+   "label": "Insider open-market purchase",
+   "note": "Only transaction code P is a buy. Grants and option exercises are noise.",
+   "typical_days": 180,
+   "completion": 0.5,
+   "actionable": true,
+   "warning": false,
+   "routine": false,
+   "ticker": "CTTH",
+   "buy": {
+    "shares": 3400.0,
+    "dollars": 187.0,
+    "unpriced_shares": 0.0,
+    "fully_priced": true,
+    "price_per_share": 0.055,
+    "suspect": null,
+    "buyers": [
+     "CTT PHARMACEUTICAL HOLDINGS, INC."
+    ],
+    "roles": [
+     "CEO",
+     "Director"
+    ],
+    "by_insider": true,
+    "dates": [
+     "2026-09-28"
     ]
    },
    "filings": 1,
@@ -1329,221 +1714,11 @@
  "routine": [
   {
    "form": "SC TO-I",
-   "company": "Hedge Fund Guided Portfolio Solution",
-   "cik": "1738008",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1738008/0001193125-26-401853.txt",
-   "accession": "0001193125-26-401853.txt",
-   "label": "Issuer tender offer",
-   "note": "Company buying its own shares. Check for an odd-lot provision \u2014 it's the one that lets a small account get filled in full.",
-   "typical_days": 30,
-   "completion": 0.95,
-   "actionable": true,
-   "warning": false,
-   "routine": true
-  },
-  {
-   "form": "SC TO-I",
-   "company": "GCM GROSVENOR CORE ABSOLUTE RETURN MASTER FUND, LLC",
-   "cik": "1212030",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1212030/0001193125-26-401829.txt",
-   "accession": "0001193125-26-401829.txt",
-   "label": "Issuer tender offer",
-   "note": "Company buying its own shares. Check for an odd-lot provision \u2014 it's the one that lets a small account get filled in full.",
-   "typical_days": 30,
-   "completion": 0.95,
-   "actionable": true,
-   "warning": false,
-   "routine": true
-  },
-  {
-   "form": "SC TO-I",
-   "company": "GCM GROSVENOR CORE ABSOLUTE RETURN FUND II, LLC",
-   "cik": "1475456",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1475456/0001193125-26-401844.txt",
-   "accession": "0001193125-26-401844.txt",
-   "label": "Issuer tender offer",
-   "note": "Company buying its own shares. Check for an odd-lot provision \u2014 it's the one that lets a small account get filled in full.",
-   "typical_days": 30,
-   "completion": 0.95,
-   "actionable": true,
-   "warning": false,
-   "routine": true
-  },
-  {
-   "form": "SC TO-I",
-   "company": "GCM GROSVENOR CORE ABSOLUTE RETURN FUND I, LLC",
-   "cik": "1475457",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1475457/0001193125-26-401836.txt",
-   "accession": "0001193125-26-401836.txt",
-   "label": "Issuer tender offer",
-   "note": "Company buying its own shares. Check for an odd-lot provision \u2014 it's the one that lets a small account get filled in full.",
-   "typical_days": 30,
-   "completion": 0.95,
-   "actionable": true,
-   "warning": false,
-   "routine": true
-  },
-  {
-   "form": "SC TO-I",
-   "company": "Destiny Alternative Fund",
-   "cik": "2093738",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/2093738/0001104659-26-110652.txt",
-   "accession": "0001104659-26-110652.txt",
-   "label": "Issuer tender offer",
-   "note": "Company buying its own shares. Check for an odd-lot provision \u2014 it's the one that lets a small account get filled in full.",
-   "typical_days": 30,
-   "completion": 0.95,
-   "actionable": true,
-   "warning": false,
-   "routine": true
-  },
-  {
-   "form": "SC TO-I",
-   "company": "BlackRock Alpha Strategies Fund",
-   "cik": "1833936",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1833936/0001193125-26-402890.txt",
-   "accession": "0001193125-26-402890.txt",
-   "label": "Issuer tender offer",
-   "note": "Company buying its own shares. Check for an odd-lot provision \u2014 it's the one that lets a small account get filled in full.",
-   "typical_days": 30,
-   "completion": 0.95,
-   "actionable": true,
-   "warning": false,
-   "routine": true
-  },
-  {
-   "form": "SC TO-I/A",
-   "company": "Ares Core Infrastructure Fund",
-   "cik": "2031750",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/2031750/0001104659-26-110967.txt",
-   "accession": "0001104659-26-110967.txt",
-   "label": "Issuer tender offer",
-   "note": "Company buying its own shares. Check for an odd-lot provision \u2014 it's the one that lets a small account get filled in full.",
-   "typical_days": 30,
-   "completion": 0.95,
-   "actionable": true,
-   "warning": false,
-   "routine": true
-  },
-  {
-   "form": "SC TO-I/A",
-   "company": "Antares Private Credit Fund",
-   "cik": "1976336",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1976336/0001104659-26-110700.txt",
-   "accession": "0001104659-26-110700.txt",
-   "label": "Issuer tender offer",
-   "note": "Company buying its own shares. Check for an odd-lot provision \u2014 it's the one that lets a small account get filled in full.",
-   "typical_days": 30,
-   "completion": 0.95,
-   "actionable": true,
-   "warning": false,
-   "routine": true
-  },
-  {
-   "form": "SC TO-I/A",
-   "company": "ARES STRATEGIC INCOME FUND",
-   "cik": "1918712",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1918712/0001104659-26-110962.txt",
-   "accession": "0001104659-26-110962.txt",
-   "label": "Issuer tender offer",
-   "note": "Company buying its own shares. Check for an odd-lot provision \u2014 it's the one that lets a small account get filled in full.",
-   "typical_days": 30,
-   "completion": 0.95,
-   "actionable": true,
-   "warning": false,
-   "routine": true
-  },
-  {
-   "form": "SC TO-I",
-   "company": "A&Q Technology Fund LLC",
-   "cik": "1186643",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1186643/0001104659-26-111005.txt",
-   "accession": "0001104659-26-111005.txt",
-   "label": "Issuer tender offer",
-   "note": "Company buying its own shares. Check for an odd-lot provision \u2014 it's the one that lets a small account get filled in full.",
-   "typical_days": 30,
-   "completion": 0.95,
-   "actionable": true,
-   "warning": false,
-   "routine": true
-  },
-  {
-   "form": "SC TO-I/A",
-   "company": "A&Q Technology Fund LLC",
-   "cik": "1186643",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1186643/0001104659-26-110923.txt",
-   "accession": "0001104659-26-110923.txt",
-   "label": "Issuer tender offer",
-   "note": "Company buying its own shares. Check for an odd-lot provision \u2014 it's the one that lets a small account get filled in full.",
-   "typical_days": 30,
-   "completion": 0.95,
-   "actionable": true,
-   "warning": false,
-   "routine": true
-  },
-  {
-   "form": "SC TO-I",
-   "company": "A&Q Multi-Strategy Fund",
-   "cik": "1506707",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1506707/0001104659-26-111001.txt",
-   "accession": "0001104659-26-111001.txt",
-   "label": "Issuer tender offer",
-   "note": "Company buying its own shares. Check for an odd-lot provision \u2014 it's the one that lets a small account get filled in full.",
-   "typical_days": 30,
-   "completion": 0.95,
-   "actionable": true,
-   "warning": false,
-   "routine": true
-  },
-  {
-   "form": "SC TO-I/A",
-   "company": "A&Q Multi-Strategy Fund",
-   "cik": "1506707",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1506707/0001104659-26-110912.txt",
-   "accession": "0001104659-26-110912.txt",
-   "label": "Issuer tender offer",
-   "note": "Company buying its own shares. Check for an odd-lot provision \u2014 it's the one that lets a small account get filled in full.",
-   "typical_days": 30,
-   "completion": 0.95,
-   "actionable": true,
-   "warning": false,
-   "routine": true
-  },
-  {
-   "form": "SC TO-I",
-   "company": "A&Q Long/Short Strategies Fund LLC",
-   "cik": "1186641",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1186641/0001104659-26-110999.txt",
-   "accession": "0001104659-26-110999.txt",
-   "label": "Issuer tender offer",
-   "note": "Company buying its own shares. Check for an odd-lot provision \u2014 it's the one that lets a small account get filled in full.",
-   "typical_days": 30,
-   "completion": 0.95,
-   "actionable": true,
-   "warning": false,
-   "routine": true
-  },
-  {
-   "form": "SC TO-I/A",
-   "company": "A&Q Long/Short Strategies Fund LLC",
-   "cik": "1186641",
-   "filed": "20260925",
-   "url": "https://www.sec.gov/Archives/edgar/data/1186641/0001104659-26-110896.txt",
-   "accession": "0001104659-26-110896.txt",
+   "company": "AB Private Lending Fund",
+   "cik": "1982701",
+   "filed": "20260928",
+   "url": "https://www.sec.gov/Archives/edgar/data/1982701/0001193125-26-405338.txt",
+   "accession": "0001193125-26-405338.txt",
    "label": "Issuer tender offer",
    "note": "Company buying its own shares. Check for an odd-lot provision \u2014 it's the one that lets a small account get filled in full.",
    "typical_days": 30,
