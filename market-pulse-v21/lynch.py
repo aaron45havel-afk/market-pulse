@@ -186,8 +186,10 @@ LYNCH_SPIKE_YOY_PCT = 100.0
 # dip would repeat the old mistake — earnings dip in ordinary years — so
 # the rate is RE-MEASURED from the highest of the few years before the
 # base instead. That is always a lower rate, and an honest one: A.O. Smith
-# is 6.3%/yr from its 3.02 and leaves; Interface ran 0.94, 0.33 ... 1.96
-# and still compounds at 20%/yr from its 0.94, so it stays.
+# is 6.3%/yr from its 3.02 and leaves; Lululemon ran 7.49, 6.68 ... 13.26
+# and still compounds at 15%/yr from its 7.49, so it stays. (Interface
+# looked like a stayer on five points — 0.94, 0.33 ... 1.96 — but its
+# pre-COVID peak sits inside the three years and it measures 6.5%.)
 REBASE_LOOKBACK = MIN_EPS_YEARS
 
 # XBRL annual durations wander either side of 365 — 52/53-week retail

@@ -494,6 +494,14 @@ board is now G-III 34.0%, Weibo 31.8%, Collegium 29.6%.
   −3%/yr penalty for paying above it stays. COMPOUNDER 8 → 2 (LKQ, Lennar); Adobe, Sirius XM, Gartner,
   Pool, Maximus and National Beverage stay on the page as QUALITY. The page said "10-yr median"; it is 7.
 
-Not done (BACKLOG): measuring the drift against a median without 2020-21 (needs per-year P/FCF stored),
-and the Lynch growth guards letting through recoveries whose base sits just above a quarter of the window
-median.
+- **Lynch growth guards tightened** (owner, after the first rebuild showed 7 of 28 passes at 50%+/yr, most
+  of them recoveries). Lynch board only; the 100-bagger keeps the defaults. When the base year sits below
+  the highest of the three years before it, the rate is measured from that peak; a latest year more than
+  100% above the one before (was 200%) is re-measured without it. Both only lower a rate. Rebuild: 28 → 14.
+  Out on an honest rate under 10%/yr: A.O. Smith 6.3%, Covista, Cirrus, Yum China, Spectrum, YETI, Dorman,
+  El Pollo Loco, Graham Holdings, Disney (−17% from its 2018 peak), Interface 6.5%, Optex, Mueller Water,
+  Marzetti. Lululemon, Limbach, Yalla and Genpact stay at their lower from-peak rates, badged.
+- **100-bagger verdict order:** a measured revenue-growth failure is now a reject even when too few
+  criteria were read to count; 377 rows move from could-not-measure to rejected. The list is unchanged.
+
+Not done (BACKLOG): measuring the drift against a median without 2020-21 (needs per-year P/FCF stored).

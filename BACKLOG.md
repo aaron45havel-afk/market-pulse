@@ -198,11 +198,5 @@ Format: `- [PHASE-SEEN] item — why it matters`
   the Schloss file's market cap (2026-09-07). The page prints both dates, but a price three
   weeks older than the cash flow can move a yield, and the P/FCF fault test reads that same
   market cap. Refresh Schloss before the FCF build, or carry market cap in compounders.json.
-- [LYNCH-RECOVERY] With the P/E ceiling at 20x, seven of 28 Lynch passes print EPS growth of 50%+/yr, and
-  several are recoveries the guards miss by a whisker: Interface 0.94 → 0.33 → 1.96, Covista
-  6.43 → 2.05 → 7.04, Graham Holdings 70.45 → 13.79 → 66.47 (base 13.79 against a trough line of 13.79),
-  Disney 1.72 → 6.85 on a FY2025 tax benefit. The pre-window drawdown test is revenue-only by design
-  (earnings dip in ordinary years). Options: apply it to EPS with a looser fraction, or cap PEG credit when
-  the latest year does most of the growing. Owner's call.
 - [COMP-DRIFT-MEDIAN] Compounders' valuation median spans 7 years including 2020-21. Storing per-year
   P/FCF in compounders.json would let the median exclude the peak and be re-measured offline.

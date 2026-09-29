@@ -1108,9 +1108,13 @@ check(_aos["rebased"] and _aos["rebased_from"] == 3.02 and _aos["from_year"] == 
       and _aos["cagr"] == 6.3,
       "A BASE BELOW A RECENT PEAK IS MEASURED FROM THE PEAK: A.O. Smith's 36.6%/yr off a "
       f"pension-charge year is 6.3% from its 3.02 (got {_aos['cagr']})")
-_tile = L.growth(_series([0.94, 0.33, 0.76, 1.48, 1.96]), **LYNCH_G)
-check(_tile["rebased"] and 19 < _tile["cagr"] < 21,
-      f"while Interface still compounds at ~20%/yr from its 0.94 and stays (got {_tile['cagr']})")
+_lulu = L.growth(_series([7.49, 6.68, 12.2, 14.64, 13.26]), **LYNCH_G)
+check(_lulu["rebased"] and 15 < _lulu["cagr"] < 16,
+      f"while Lululemon still compounds at ~15%/yr from its 7.49 and stays (got {_lulu['cagr']})")
+_tile = L.growth(_series([1.37, 1.10, 0.94, 0.33, 0.76, 1.48, 1.96]), **LYNCH_G)
+check(_tile["rebased"] and _tile["rebased_from"] == 1.37 and _tile["cagr"] < L.EPS_GROWTH_MIN,
+      "and the lookback is three years, not one: Interface's older peak inside it puts the "
+      f"recovery at single digits (got {_tile['cagr']})")
 _steady = _series([2.0, 2.3, 2.6, 3.0, 3.4])
 check(L.growth(_steady, **LYNCH_G)["cagr"] == L.growth(_steady)["cagr"]
       and not L.growth(_steady, **LYNCH_G)["rebased"],
