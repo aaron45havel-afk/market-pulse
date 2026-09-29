@@ -476,3 +476,32 @@ it can now change the board.
 
 Branch rebuild: 17 held out (10 had passed both stages), 132 pass (was 134). The top of the
 board is now G-III 34.0%, Weibo 31.8%, Collegium 29.6%.
+
+## 2026-09-29 — Owner design calls (#5): Lynch on PEG, 100-bagger requires growth, no re-rating credit
+**Decided by the owner**, from options measured on the committed data (audit item #5):
+- **Lynch: PEG ≤ 1, with P/E ≤ 20 as a backstop** (was P/E ≤ 10). PEG ≤ 1 is Lynch's own test; the
+  single-digit P/E was a stricter value tilt that stopped 91% of the companies reaching it. The 20x
+  ceiling stays because the trailing growth rate is uncapped. `PE_SANE`'s unused upper value is now
+  `PE_MAX`. Rejected rows keep P/E, growth and PEG so the next rule change can be measured offline.
+  Rebuild: 5 → 28 passing; all five previous names still pass. `pe_high` 1,119 → 759 rejections.
+- **100-bagger: revenue growth must score Good or better** (15%/yr, the checklist's own line). The owner
+  chose revenue rather than "revenue or EPS", accepting that steady earnings compounders with slower
+  sales growth (Pool, Genpact, SAIC) leave. Growth this screen cannot read goes to could-not-measure.
+- **100-bagger: ROE at the 100% bound and P/E under 5x are unmeasured, not Great.** Neither casts a vote;
+  the low P/E still counts in its peer median. Rebuild: 33 → 15 listed, exactly the offline estimate
+  (Embecta, MIND CTI, Brinker, Novavax, SANUWAVE, Exzeo and 12 others out; none in).
+- **Compounders: no credit for re-rating up** toward the 7-year median P/FCF, which includes 2020-21; the
+  −3%/yr penalty for paying above it stays. COMPOUNDER 8 → 2 (LKQ, Lennar); Adobe, Sirius XM, Gartner,
+  Pool, Maximus and National Beverage stay on the page as QUALITY. The page said "10-yr median"; it is 7.
+
+- **Lynch growth guards tightened** (owner, after the first rebuild showed 7 of 28 passes at 50%+/yr, most
+  of them recoveries). Lynch board only; the 100-bagger keeps the defaults. When the base year sits below
+  the highest of the three years before it, the rate is measured from that peak; a latest year more than
+  100% above the one before (was 200%) is re-measured without it. Both only lower a rate. Rebuild: 28 → 14.
+  Out on an honest rate under 10%/yr: A.O. Smith 6.3%, Covista, Cirrus, Yum China, Spectrum, YETI, Dorman,
+  El Pollo Loco, Graham Holdings, Disney (−17% from its 2018 peak), Interface 6.5%, Optex, Mueller Water,
+  Marzetti. Lululemon, Limbach, Yalla and Genpact stay at their lower from-peak rates, badged.
+- **100-bagger verdict order:** a measured revenue-growth failure is now a reject even when too few
+  criteria were read to count; 377 rows move from could-not-measure to rejected. The list is unchanged.
+
+Not done (BACKLOG): measuring the drift against a median without 2020-21 (needs per-year P/FCF stored).

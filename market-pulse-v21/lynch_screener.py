@@ -58,6 +58,7 @@ log = logging.getLogger(__name__)
 LYNCH_RULES = {
     "market_cap_min": L.MARKET_CAP_MIN,
     "pe_max": L.PE_MAX,
+    "peg_max": L.PEG_MAX,
     "pe_min": L.PE_SANE[0],
     "eps_growth_3yr_min_pct": L.EPS_GROWTH_MIN,
     "eps_growth_cap_pct": L.EPS_GROWTH_CAP,
@@ -65,6 +66,8 @@ LYNCH_RULES = {
     "capex_to_ocf_max": L.CAPEX_TO_OCF_MAX,
     "exchanges": ("NYSE", "Nasdaq", "NASDAQ", "AMEX", "NYSE American"),
     "min_eps_years": L.MIN_EPS_YEARS,
+    "spike_yoy_pct": L.LYNCH_SPIKE_YOY_PCT,
+    "rebase_lookback_years": L.REBASE_LOOKBACK,
     "min_revenue": L.MIN_REVENUE,
     "min_price": L.MIN_PRICE,
     "moat_roe_min_pct": L.MOAT_ROE_MIN,

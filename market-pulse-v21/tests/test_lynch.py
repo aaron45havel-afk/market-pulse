@@ -372,7 +372,29 @@ check(why(net_income=-1e8, eps_by_year={"2022-12-31": -2.60, "2023-12-31": -3.00
       "a loss-maker — with an EPS series that agrees with it, or the units "
       "invariant fires first and correctly")
 check(why(market_cap=400_000_000) == "pe_suspect", "a P/E of 1.0 is withheld")
-check(why(market_cap=8_000_000_000) == "pe_high", "a P/E of 20 is over the ceiling")
+check(why(market_cap=10_000_000_000) == "pe_high",
+      "a P/E of 25 is over the 20x backstop, whatever the growth")
+# LYNCH'S OWN TEST. GOOD grows EPS 2.60 -> 4.00, 15.4%/yr.
+check(L.evaluate({**GOOD, "market_cap": 6_000_000_000})["verdict"] == "pass",
+      "A P/E OF 15 ON 15% GROWTH PASSES — PEG 0.97. The old single-digit "
+      "ceiling refused it, which was a value tilt and not Lynch's rule")
+check(why(market_cap=7_200_000_000) == "peg_high",
+      "a P/E of 18 on the same growth is PEG 1.17: the price already pays "
+      "for the growth")
+check(why(market_cap=8_000_000_000) == "peg_high",
+      "and 20x on 15% is refused on PEG, not on the backstop")
+_fast = {**GOOD, "market_cap": 8_000_000_000,
+         "eps_by_year": {"2022-12-31": 2.05, "2023-12-31": 2.56,
+                         "2024-12-31": 3.20, "2025-12-31": 4.00}}
+_fr = L.evaluate(_fast)
+check(_fr["verdict"] == "pass" and _fr["peg"] <= L.PEG_MAX,
+      f"while 20x on 25%/yr growth passes at PEG {_fr.get('peg')} — the "
+      f"backstop is inclusive (got {_fr['reason']})")
+check(L.PE_SANE[1] == L.PE_MAX,
+      "PE_SANE's upper value is the backstop, not a second copy that could "
+      "silently disagree with it")
+check("peg_high" in L.REASONS and "peg_high" not in L.UNMEASURED_CODES,
+      "PEG over 1 is a measured failure with a label on the funnel")
 check(why(eps_by_year={"2024-12-31": 3.5, "2025-12-31": 4.0}) == "short_history",
       "fewer than four annual periods")
 check(why(eps_by_year={"2022-12-31": 0.02, "2023-12-31": 3.00,
@@ -1066,6 +1088,70 @@ check(_rec["net_income"] == 4.433e9 and _rec["ni_rescaled"] == ["2026-05-31"]
       and _rec["statements"] == "us-gaap",
       f"THE LYNCH RECORD CARRIES FEDEX'S NET INCOME AS $4.43bn, says it was rescaled, and "
       f"has both share counts (got {_rec['net_income']}, {_rec['ni_rescaled']})")
+
+
+# ══════════════════════════════════════════════════════════════════
+# THE LYNCH BOARD'S TIGHTER RATE — a dip is not a starting point
+# ══════════════════════════════════════════════════════════════════
+def _series(vals, last=2025):
+    return {f"{last - len(vals) + 1 + i}-12-31": v for i, v in enumerate(vals)}
+
+
+LYNCH_G = dict(spike_pct=L.LYNCH_SPIKE_YOY_PCT, rebase_lookback=L.REBASE_LOOKBACK)
+AOS = _series([3.02, 1.51, 3.69, 3.63, 3.85])          # A.O. Smith, Sept 2026
+_plain = L.growth(AOS)
+check(_plain["cagr"] == 36.6 and not _plain["rebased"],
+      "THE DEFAULTS ARE UNCHANGED — the 100-bagger's windows still measure from the base "
+      f"(got {_plain['cagr']})")
+_aos = L.growth(AOS, **LYNCH_G)
+check(_aos["rebased"] and _aos["rebased_from"] == 3.02 and _aos["from_year"] == "2021-12-31"
+      and _aos["cagr"] == 6.3,
+      "A BASE BELOW A RECENT PEAK IS MEASURED FROM THE PEAK: A.O. Smith's 36.6%/yr off a "
+      f"pension-charge year is 6.3% from its 3.02 (got {_aos['cagr']})")
+_lulu = L.growth(_series([7.49, 6.68, 12.2, 14.64, 13.26]), **LYNCH_G)
+check(_lulu["rebased"] and 15 < _lulu["cagr"] < 16,
+      f"while Lululemon still compounds at ~15%/yr from its 7.49 and stays (got {_lulu['cagr']})")
+_tile = L.growth(_series([1.37, 1.10, 0.94, 0.33, 0.76, 1.48, 1.96]), **LYNCH_G)
+check(_tile["rebased"] and _tile["rebased_from"] == 1.37 and _tile["cagr"] < L.EPS_GROWTH_MIN,
+      "and the lookback is three years, not one: Interface's older peak inside it puts the "
+      f"recovery at single digits (got {_tile['cagr']})")
+_steady = _series([2.0, 2.3, 2.6, 3.0, 3.4])
+check(L.growth(_steady, **LYNCH_G)["cagr"] == L.growth(_steady)["cagr"]
+      and not L.growth(_steady, **LYNCH_G)["rebased"],
+      "a compounder whose base is its highest point yet is not touched")
+_old_peak = _series([9.0, 1.0, 1.1, 1.2, 1.5, 2.0, 2.6, 3.4])
+check(not L.growth(_old_peak, **LYNCH_G)["rebased"],
+      "a peak more than three years before the base is a different business, not a dip")
+for _vals in ([0.94, 0.33, 0.76, 1.48, 1.96], [6.43, 2.05, 3.39, 6.18, 7.04],
+              [5.52, 3.09, 4.9, 6.0, 7.85], [70.45, 13.79, 43.82, 163.4, 66.47]):
+    _a, _b = L.growth(_series(_vals)), L.growth(_series(_vals), **LYNCH_G)
+    check(_b["cagr"] is None or _a["cagr"] is None or _b["cagr"] <= _a["cagr"],
+          f"re-measuring can only lower a rate ({_vals[0]}: {_a['cagr']} -> {_b['cagr']})")
+check(L.growth(_series([4.20, 0.05, 6.22, 10.69, 10.46]), **LYNCH_G)["trough"],
+      "and a real trough is still rejected outright, not rescued by the peak before it")
+
+# A spike at +100% on the Lynch board. Disney's last year is +152%.
+DIS = _series([1.09, 1.72, 1.29, 2.72, 6.85])
+check(not L.growth(DIS)["spike"], "under the default +200% line Disney's year is not a spike")
+_dis = L.growth(DIS, **LYNCH_G)
+check(_dis["spike"] and _dis["cagr_through_spike"] > 55 and _dis["cagr"] < 40,
+      f"on the Lynch board it is, and the rate is re-measured without it (got {_dis['cagr']})")
+_dis_full = L.growth(_series([8.36, 6.64, -1.57, 1.09, 1.72, 1.29, 2.72, 6.85]), **LYNCH_G)
+check(_dis_full["spike"] and _dis_full["rebased"] and _dis_full["cagr"] < L.EPS_GROWTH_MIN,
+      "and with its pre-COVID years behind it, the re-measured window opens on a dip too — "
+      f"no growth left to price (got {_dis_full['cagr']})")
+
+# Wired into the row.
+_dip = L.evaluate({**GOOD, "eps_by_year": {"2021-12-31": 4.00, "2022-12-31": 2.00,
+                                           "2023-12-31": 2.60, "2024-12-31": 3.30,
+                                           "2025-12-31": 4.00}})
+check(_dip["reason"] == "no_growth" and _dip["growth"]["rebased"],
+      f"EVALUATE USES THE TIGHTER RATE: 2.00 -> 4.00 is 26%/yr, from the 4.00 before it is "
+      f"nothing (got {_dip['reason']}, {_dip['eps_3yr_cagr_pct']})")
+check(L.evaluate(GOOD)["verdict"] == "pass",
+      "and the clean fixture, whose base is its highest point, still passes")
+check(LS.LYNCH_RULES["spike_yoy_pct"] == 100.0 and LS.LYNCH_RULES["rebase_lookback_years"] == 3,
+      "the snapshot's rules say which lines this board used")
 
 
 # ── report ──

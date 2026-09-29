@@ -172,10 +172,15 @@ def main(argv: list[str] | None = None) -> int:
         # Passing rows carry the full record; rejections carry enough to
         # render the funnel without a 6MB file.
         "companies": [r for r in rows if r["verdict"] == "pass"],
+        # Plus the three numbers the price gates read, where the row got
+        # that far, so a change to those gates can be measured against the
+        # committed file instead of needing a fresh SEC pull.
         "rejected": [
             {"ticker": r.get("ticker"), "name": r.get("name"),
              "reason": r.get("reason"), "market_cap": r.get("market_cap"),
-             "size_band": r.get("size_band")}
+             "size_band": r.get("size_band"),
+             **{k: r[k] for k in ("pe_ratio", "eps_3yr_cagr_pct", "peg")
+                if r.get(k) is not None}}
             for r in rows if r["verdict"] != "pass"
         ],
     }

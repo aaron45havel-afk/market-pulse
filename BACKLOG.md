@@ -198,3 +198,5 @@ Format: `- [PHASE-SEEN] item — why it matters`
   the Schloss file's market cap (2026-09-07). The page prints both dates, but a price three
   weeks older than the cash flow can move a yield, and the P/FCF fault test reads that same
   market cap. Refresh Schloss before the FCF build, or carry market cap in compounders.json.
+- [COMP-DRIFT-MEDIAN] Compounders' valuation median spans 7 years including 2020-21. Storing per-year
+  P/FCF in compounders.json would let the median exclude the peak and be re-measured offline.

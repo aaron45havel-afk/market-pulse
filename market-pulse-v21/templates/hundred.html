@@ -297,6 +297,17 @@
         printed a peer discount of −198,956,563%. The low end was already bounded at 3x for the same
         reason; the high end never needed it until this page had no downstream gate to catch it. It is
         withheld rather than clamped, and kept out of the peer median so it moves nobody else's row.</li>
+    <li><strong>Revenue growth is required, not one vote among six.</strong> A hundred-bagger needs a long
+        runway of growth; margins, returns and cheapness describe a good business, not one that can grow a
+        hundredfold. The September board listed nine names on exactly those four with no good growth at all,
+        two of them shrinking. Sales growth must now come out Good or better (15%/yr, the checklist's own
+        line). A company whose revenue growth this page cannot read is listed under could-not-measure, not
+        rejected.</li>
+    <li><strong>Two readings are "not measured" rather than Great.</strong> A median ROE at the 100% bound
+        means equity is near zero and the ratio describes the denominator — 31 companies sat there, all
+        scored Great. A P/E under 5x is usually a one-time gain in net income, which a filing total cannot
+        tell from a real discount — Embecta, SANUWAVE and Novavax each scored a Great peer discount at
+        3.5–4x. Neither casts a vote; neither is a fail. The low P/E still counts in its peers' median.</li>
     <li><strong>Criterion 9 is the one that hurts most.</strong> Analyst coverage is <em>inverted</em> —
         zero analysts is the best score — and it is licensed terminal data. Losing it removes the
         thesis's own explanation of why a quality company would ever be cheap.</li>
@@ -580,6 +591,7 @@ function renderSubtitle() {
   if (r.scoreable_ids) parts.push(`<strong>${r.scoreable_ids.length} of ${r.criteria_total}</strong> criteria are scoreable from free filings`);
   if (r.never_scored_ids) parts.push(`<strong>${r.never_scored_ids.length}</strong> can never be scored`);
   if (r.min_passing != null) parts.push(`a company is listed on <strong>${r.min_passing}</strong> Good-or-Great from at least <strong>${r.min_measured}</strong> measured`);
+  if (r.growth_required_min != null) parts.push(`sales growth of at least <strong>${r.growth_required_min}%/yr</strong> is required`);
   if (r.market_cap_ceiling != null) parts.push(`nothing over <strong>${f.cap(r.market_cap_ceiling)}</strong> is listed at all`);
   if (r.veto_ids && r.veto_ids.length) parts.push(`and <strong>${r.veto_ids.length}</strong> can only veto`);
   document.getElementById('hbSubtitle').innerHTML =
