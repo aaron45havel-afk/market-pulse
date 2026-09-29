@@ -2,20 +2,20 @@
   "_meta": {
     "as_of": "2026-09-29",
     "snapshot_month": "2026-09",
-    "passing_count": 28,
+    "passing_count": 14,
     "screened_count": 3550,
     "census": {
       "screened": 3550,
-      "passing": 28,
-      "rejected": 2544,
-      "unmeasured": 978,
+      "passing": 14,
+      "rejected": 2572,
+      "unmeasured": 964,
       "by_reason": {
         "pe_high": 759,
         "unprofitable": 520,
         "too_small": 295,
+        "no_growth": 259,
         "penny": 225,
         "ifrs_filer": 223,
-        "no_growth": 209,
         "negative_equity": 193,
         "no_cap": 157,
         "facts_unavailable": 139,
@@ -26,20 +26,20 @@
         "trough_base": 61,
         "no_equity": 61,
         "loss_window": 51,
-        "debt_high": 37,
-        "pass": 28,
         "no_price": 24,
         "short_history": 24,
-        "peg_high": 21,
-        "stale_balance_sheet": 20,
         "pe_suspect": 19,
+        "peg_high": 18,
         "no_earnings": 18,
+        "debt_high": 17,
+        "pass": 14,
         "dormant": 12,
-        "debt_unknown": 8,
-        "spike_year": 7,
+        "stale_balance_sheet": 9,
+        "spike_year": 9,
+        "debt_unknown": 5,
         "cap_implausible": 5,
-        "capex_high": 4,
         "step_change": 4,
+        "capex_high": 3,
         "capex_unknown": 1
       },
       "labels": {
@@ -95,6 +95,8 @@
         "NYSE American"
       ],
       "min_eps_years": 3,
+      "spike_yoy_pct": 100.0,
+      "rebase_lookback_years": 3,
       "min_revenue": 10000000,
       "min_price": 1.0,
       "moat_roe_min_pct": 15.0,
@@ -150,6 +152,8 @@
         "of_years": 3,
         "from_year": "2022-12-31",
         "to_year": "2025-12-31",
+        "rebased": false,
+        "rebased_from": null,
         "spans": 3,
         "drawdown_base": false
       },
@@ -188,564 +192,6 @@
         0.25,
         0.42,
         0.55
-      ],
-      "location": "Cayman Islands",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
-    {
-      "ticker": "OPXS",
-      "name": "Optex Systems Holdings Inc",
-      "exchange": "Nasdaq",
-      "sic": "3827",
-      "cik": "1397016",
-      "price": 10.42,
-      "market_cap": 72521877.0,
-      "size_band": "MICRO",
-      "cap_to_assets": 2.233,
-      "equity": 27745000.0,
-      "revenue": 41337000.0,
-      "last_filing": "2026-06-28",
-      "ttm_eps": 0.74,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": 6959873.0,
-      "net_income": 5147000.0,
-      "ads": {
-        "ratio": 1,
-        "clean": true,
-        "implied_shares": 6959873.032629559
-      },
-      "units": {
-        "ok": true,
-        "ratio": 0.01,
-        "implied": 5080307.2,
-        "basis": "weighted",
-        "scale": 1
-      },
-      "pe_ratio": 14.09,
-      "pe_raw": 14.09,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 66.9,
-        "cagr_raw": 66.9,
-        "capped": false,
-        "trough": false,
-        "step": false,
-        "loss_window": false,
-        "spike": false,
-        "cagr_through_spike": null,
-        "years": 12,
-        "span": 2.99,
-        "latest_yoy": 34.5,
-        "up_years": 7,
-        "of_years": 11,
-        "from_year": "2022-10-02",
-        "to_year": "2025-09-28",
-        "spans": 3,
-        "drawdown_base": false
-      },
-      "eps_3yr_cagr_pct": 66.9,
-      "eps_cagr_raw_pct": 66.9,
-      "peg": 0.21,
-      "debt_as_of": null,
-      "debt_to_equity": null,
-      "debt_known": true,
-      "debt_bounded": true,
-      "short_term_debt": null,
-      "long_term_debt": null,
-      "total_liabilities": 4736000.0,
-      "non_debt_liabilities": 2962000.0,
-      "ttm_capex": 494000.0,
-      "ttm_ocf": 6931000.0,
-      "capex_to_ocf": 0.07,
-      "moat": {
-        "avg_roe_3yr_pct": 18.8,
-        "roe_capped": false,
-        "years_positive_eps": 8,
-        "op_margin_pct": 17.3,
-        "has_moat": true
-      },
-      "has_moat": true,
-      "roc": {
-        "roc_pct": 27.3,
-        "roc_raw_pct": 27.3,
-        "capped": false,
-        "capital": 26124000.0,
-        "reason": null
-      },
-      "roc_pct": 27.3,
-      "eps_path": [
-        0.18,
-        0.16,
-        0.34,
-        0.55,
-        0.74
-      ],
-      "location": "DE",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
-    {
-      "ticker": "TILE",
-      "name": "INTERFACE INC",
-      "exchange": "Nasdaq",
-      "sic": "2273",
-      "cik": "715787",
-      "price": 35.2,
-      "market_cap": 2034576192.0,
-      "size_band": "MID",
-      "cap_to_assets": 1.602,
-      "equity": 678365000.0,
-      "revenue": 1386854000.0,
-      "last_filing": "2026-07-05",
-      "ttm_eps": 1.96,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": 57800460.0,
-      "net_income": 116098000.0,
-      "ads": {
-        "ratio": 1,
-        "clean": true,
-        "implied_shares": 57800459.99999999
-      },
-      "units": {
-        "ok": true,
-        "ratio": 0.0,
-        "implied": 115957520.0,
-        "basis": "weighted",
-        "scale": 1
-      },
-      "pe_ratio": 17.52,
-      "pe_raw": 17.52,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 81.5,
-        "cagr_raw": 81.5,
-        "capped": false,
-        "trough": false,
-        "step": false,
-        "loss_window": false,
-        "spike": false,
-        "cagr_through_spike": null,
-        "years": 18,
-        "span": 2.99,
-        "latest_yoy": 32.4,
-        "up_years": 9,
-        "of_years": 17,
-        "from_year": "2023-01-01",
-        "to_year": "2025-12-28",
-        "spans": 3,
-        "drawdown_base": false
-      },
-      "eps_3yr_cagr_pct": 81.5,
-      "eps_cagr_raw_pct": 81.5,
-      "peg": 0.21,
-      "debt_as_of": "2026-07-05",
-      "debt_to_equity": 0.314,
-      "debt_known": true,
-      "debt_bounded": false,
-      "short_term_debt": 8790000.0,
-      "long_term_debt": 204356000.0,
-      "total_liabilities": 591875000.0,
-      "non_debt_liabilities": 161728000.0,
-      "ttm_capex": 46192000.0,
-      "ttm_ocf": 167906000.0,
-      "capex_to_ocf": 0.28,
-      "moat": {
-        "avg_roe_3yr_pct": 15.4,
-        "roe_capped": false,
-        "years_positive_eps": 5,
-        "op_margin_pct": 11.8,
-        "has_moat": true
-      },
-      "has_moat": true,
-      "roc": {
-        "roc_pct": 22.6,
-        "roc_raw_pct": 22.6,
-        "capped": false,
-        "capital": 724647000.0,
-        "reason": null
-      },
-      "roc_pct": 22.6,
-      "eps_path": [
-        0.94,
-        0.33,
-        0.76,
-        1.48,
-        1.96
-      ],
-      "location": "GA",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
-    {
-      "ticker": "LMB",
-      "name": "Limbach Holdings, Inc.",
-      "exchange": "Nasdaq",
-      "sic": "1700",
-      "cik": "1606163",
-      "price": 51.48,
-      "market_cap": 613898640.0,
-      "size_band": "SMALL",
-      "cap_to_assets": 1.52,
-      "equity": 203148000.0,
-      "revenue": 646804000.0,
-      "last_filing": "2026-06-30",
-      "ttm_eps": 3.23,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": 11924993.0,
-      "net_income": 39064000.0,
-      "ads": {
-        "ratio": 1,
-        "clean": true,
-        "implied_shares": 11924993.006993007
-      },
-      "units": {
-        "ok": true,
-        "ratio": 0.0,
-        "implied": 39017053.089999996,
-        "basis": "weighted",
-        "scale": 1
-      },
-      "pe_ratio": 15.72,
-      "pe_raw": 15.72,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 71.5,
-        "cagr_raw": 71.5,
-        "capped": false,
-        "trough": false,
-        "step": false,
-        "loss_window": false,
-        "spike": false,
-        "cagr_through_spike": null,
-        "years": 9,
-        "span": 3.0,
-        "latest_yoy": 25.7,
-        "up_years": 5,
-        "of_years": 8,
-        "from_year": "2022-12-31",
-        "to_year": "2025-12-31",
-        "spans": 3,
-        "drawdown_base": false
-      },
-      "eps_3yr_cagr_pct": 71.5,
-      "eps_cagr_raw_pct": 71.5,
-      "peg": 0.22,
-      "debt_as_of": "2026-06-30",
-      "debt_to_equity": 0.2,
-      "debt_known": true,
-      "debt_bounded": false,
-      "short_term_debt": 4862000.0,
-      "long_term_debt": 35842000.0,
-      "total_liabilities": 200859000.0,
-      "non_debt_liabilities": 134342000.0,
-      "ttm_capex": 3807000.0,
-      "ttm_ocf": 45700000.0,
-      "capex_to_ocf": 0.08,
-      "moat": {
-        "avg_roe_3yr_pct": 19.1,
-        "roe_capped": false,
-        "years_positive_eps": 6,
-        "op_margin_pct": 7.6,
-        "has_moat": true
-      },
-      "has_moat": true,
-      "roc": {
-        "roc_pct": 52.4,
-        "roc_raw_pct": 52.4,
-        "capped": false,
-        "capital": 94462000.0,
-        "reason": null
-      },
-      "roc_pct": 52.4,
-      "eps_path": [
-        0.66,
-        0.64,
-        1.76,
-        2.57,
-        3.23
-      ],
-      "location": "DE",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
-    {
-      "ticker": "GHC",
-      "name": "Graham Holdings Co",
-      "exchange": "NYSE",
-      "sic": "8200",
-      "cik": "104889",
-      "price": 1154.89,
-      "market_cap": 4890875998.0,
-      "size_band": "MID",
-      "cap_to_assets": 0.601,
-      "equity": 4761578000.0,
-      "revenue": 4911563000.0,
-      "last_filing": "2026-06-30",
-      "ttm_eps": 66.47,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": null,
-      "net_income": 292291000.0,
-      "ads": {
-        "ratio": null,
-        "clean": null,
-        "implied_shares": null
-      },
-      "units": {
-        "ok": true,
-        "ratio": 0.01,
-        "implied": 290673310.0,
-        "basis": "weighted",
-        "scale": 1
-      },
-      "pe_ratio": 16.73,
-      "pe_raw": 16.73,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 68.9,
-        "cagr_raw": 68.9,
-        "capped": false,
-        "trough": false,
-        "step": false,
-        "loss_window": false,
-        "spike": false,
-        "cagr_through_spike": null,
-        "years": 18,
-        "span": 3.0,
-        "latest_yoy": -59.3,
-        "up_years": 11,
-        "of_years": 17,
-        "from_year": "2022-12-31",
-        "to_year": "2025-12-31",
-        "spans": 3,
-        "drawdown_base": false
-      },
-      "eps_3yr_cagr_pct": 68.9,
-      "eps_cagr_raw_pct": 68.9,
-      "peg": 0.24,
-      "debt_as_of": "2026-06-30",
-      "debt_to_equity": 0.189,
-      "debt_known": true,
-      "debt_bounded": false,
-      "short_term_debt": 191472000.0,
-      "long_term_debt": 708901000.0,
-      "total_liabilities": 3319623000.0,
-      "non_debt_liabilities": 906400000.0,
-      "ttm_capex": 71881000.0,
-      "ttm_ocf": 347185000.0,
-      "capex_to_ocf": 0.21,
-      "moat": {
-        "avg_roe_3yr_pct": 9.4,
-        "roe_capped": false,
-        "years_positive_eps": 10,
-        "op_margin_pct": 4.8,
-        "has_moat": false
-      },
-      "has_moat": false,
-      "roc": {
-        "roc_pct": 14.4,
-        "roc_raw_pct": 14.4,
-        "capped": false,
-        "capital": 1627615000.0,
-        "reason": null
-      },
-      "roc_pct": 14.4,
-      "eps_path": [
-        70.45,
-        13.79,
-        43.82,
-        163.4,
-        66.47
-      ],
-      "location": "DE",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
-    {
-      "ticker": "DIS",
-      "name": "Walt Disney Co",
-      "exchange": "NYSE",
-      "sic": "7990",
-      "cik": "1744489",
-      "price": 106.15,
-      "market_cap": 183287814647.0,
-      "size_band": "LARGE",
-      "cap_to_assets": 0.895,
-      "equity": 110032000000.0,
-      "revenue": 94425000000.0,
-      "last_filing": "2026-06-27",
-      "ttm_eps": 6.85,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": 1726686902.0,
-      "net_income": 12404000000.0,
-      "ads": {
-        "ratio": 1,
-        "clean": true,
-        "implied_shares": 1726686901.9971738
-      },
-      "units": {
-        "ok": true,
-        "ratio": 0.0,
-        "implied": 12405350000.0,
-        "basis": "weighted",
-        "scale": 1
-      },
-      "pe_ratio": 14.78,
-      "pe_raw": 14.78,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 58.8,
-        "cagr_raw": 58.8,
-        "capped": false,
-        "trough": false,
-        "step": false,
-        "loss_window": false,
-        "spike": false,
-        "cagr_through_spike": null,
-        "years": 10,
-        "span": 2.99,
-        "latest_yoy": 151.8,
-        "up_years": 5,
-        "of_years": 9,
-        "from_year": "2022-10-01",
-        "to_year": "2025-09-27",
-        "spans": 3,
-        "drawdown_base": false
-      },
-      "eps_3yr_cagr_pct": 58.8,
-      "eps_cagr_raw_pct": 58.8,
-      "peg": 0.25,
-      "debt_as_of": "2026-06-27",
-      "debt_to_equity": 0.418,
-      "debt_known": true,
-      "debt_bounded": false,
-      "short_term_debt": 8627000000.0,
-      "long_term_debt": 37414000000.0,
-      "total_liabilities": 94708000000.0,
-      "non_debt_liabilities": 29185000000.0,
-      "ttm_capex": 8024000000.0,
-      "ttm_ocf": 18101000000.0,
-      "capex_to_ocf": 0.44,
-      "moat": {
-        "avg_roe_3yr_pct": 6.2,
-        "roe_capped": false,
-        "years_positive_eps": 5,
-        "op_margin_pct": 18.6,
-        "has_moat": false
-      },
-      "has_moat": false,
-      "roc": {
-        "roc_pct": 50.8,
-        "roc_raw_pct": 50.8,
-        "capped": false,
-        "capital": 34531000000.0,
-        "reason": null
-      },
-      "roc_pct": 50.8,
-      "eps_path": [
-        1.09,
-        1.72,
-        1.29,
-        2.72,
-        6.85
-      ],
-      "location": "DE",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
-    {
-      "ticker": "YALA",
-      "name": "Yalla Group Ltd",
-      "exchange": "NYSE",
-      "sic": "7370",
-      "cik": "1794350",
-      "price": 5.48,
-      "market_cap": 832022849.0,
-      "size_band": "SMALL",
-      "cap_to_assets": 0.928,
-      "equity": 810278701.0,
-      "revenue": 341938110.0,
-      "last_filing": "2025-12-31",
-      "ttm_eps": 0.83,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": null,
-      "net_income": 148139844.0,
-      "ads": {
-        "ratio": null,
-        "clean": null,
-        "implied_shares": null
-      },
-      "units": {
-        "ok": true,
-        "ratio": 0.01,
-        "implied": 149468732.29999998,
-        "basis": "weighted",
-        "scale": 1
-      },
-      "pe_ratio": 5.62,
-      "pe_raw": 5.62,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 22.6,
-        "cagr_raw": 22.6,
-        "capped": false,
-        "trough": false,
-        "step": false,
-        "loss_window": false,
-        "spike": false,
-        "cagr_through_spike": null,
-        "years": 7,
-        "span": 3.0,
-        "latest_yoy": 12.2,
-        "up_years": 4,
-        "of_years": 6,
-        "from_year": "2022-12-31",
-        "to_year": "2025-12-31",
-        "spans": 3,
-        "drawdown_base": false
-      },
-      "eps_3yr_cagr_pct": 22.6,
-      "eps_cagr_raw_pct": 22.6,
-      "peg": 0.25,
-      "debt_as_of": null,
-      "debt_to_equity": null,
-      "debt_known": true,
-      "debt_bounded": true,
-      "short_term_debt": null,
-      "long_term_debt": null,
-      "total_liabilities": 94172576.0,
-      "non_debt_liabilities": 57697488.0,
-      "ttm_capex": 1976915.0,
-      "ttm_ocf": 137536580.0,
-      "capex_to_ocf": 0.01,
-      "moat": {
-        "avg_roe_3yr_pct": 19.1,
-        "roe_capped": false,
-        "years_positive_eps": 5,
-        "op_margin_pct": 35.7,
-        "has_moat": true
-      },
-      "has_moat": true,
-      "roc": {
-        "roc_pct": 16.9,
-        "roc_raw_pct": 16.9,
-        "capped": false,
-        "capital": 722969065.0,
-        "reason": null
-      },
-      "roc_pct": 16.9,
-      "eps_path": [
-        0.46,
-        0.45,
-        0.65,
-        0.74,
-        0.83
       ],
       "location": "Cayman Islands",
       "verdict": "pass",
@@ -800,6 +246,8 @@
         "of_years": 7,
         "from_year": "2022-12-31",
         "to_year": "2025-12-31",
+        "rebased": false,
+        "rebased_from": null,
         "spans": 3,
         "drawdown_base": false
       },
@@ -841,99 +289,6 @@
         0.57
       ],
       "location": "Israel",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
-    {
-      "ticker": "LULU",
-      "name": "lululemon athletica inc.",
-      "exchange": "Nasdaq",
-      "sic": "2300",
-      "cik": "1397187",
-      "price": 101.3,
-      "market_cap": 10696678683.0,
-      "size_band": "LARGE",
-      "cap_to_assets": 1.261,
-      "equity": 4791174000.0,
-      "revenue": 11102600000.0,
-      "last_filing": "2026-08-02",
-      "ttm_eps": 13.26,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": 105594064.0,
-      "net_income": 1579183000.0,
-      "ads": {
-        "ratio": 1,
-        "clean": true,
-        "implied_shares": 105594063.99802567
-      },
-      "units": {
-        "ok": true,
-        "ratio": 0.0,
-        "implied": 1578841680.0,
-        "basis": "weighted",
-        "scale": 1
-      },
-      "pe_ratio": 6.77,
-      "pe_raw": 6.77,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 25.6,
-        "cagr_raw": 25.6,
-        "capped": false,
-        "trough": false,
-        "step": false,
-        "loss_window": false,
-        "spike": false,
-        "cagr_through_spike": null,
-        "years": 18,
-        "span": 3.01,
-        "latest_yoy": -9.4,
-        "up_years": 11,
-        "of_years": 17,
-        "from_year": "2023-01-29",
-        "to_year": "2026-02-01",
-        "spans": 3,
-        "drawdown_base": false
-      },
-      "eps_3yr_cagr_pct": 25.6,
-      "eps_cagr_raw_pct": 25.6,
-      "peg": 0.26,
-      "debt_as_of": "2026-08-02",
-      "debt_to_equity": null,
-      "debt_known": true,
-      "debt_bounded": true,
-      "short_term_debt": 0.0,
-      "long_term_debt": null,
-      "total_liabilities": 3693404000.0,
-      "non_debt_liabilities": 2515619000.0,
-      "ttm_capex": 680802000.0,
-      "ttm_ocf": 1602477000.0,
-      "capex_to_ocf": 0.42,
-      "moat": {
-        "avg_roe_3yr_pct": 36.8,
-        "roe_capped": false,
-        "years_positive_eps": 18,
-        "op_margin_pct": 19.9,
-        "has_moat": true
-      },
-      "has_moat": true,
-      "roc": {
-        "roc_pct": 52.8,
-        "roc_raw_pct": 52.8,
-        "capped": false,
-        "capital": 4190299000.0,
-        "reason": null
-      },
-      "roc_pct": 52.8,
-      "eps_path": [
-        7.49,
-        6.68,
-        12.2,
-        14.64,
-        13.26
-      ],
-      "location": "DE",
       "verdict": "pass",
       "reason": "pass",
       "reasons": []
@@ -986,6 +341,8 @@
         "of_years": 16,
         "from_year": "2023-06-30",
         "to_year": "2026-06-30",
+        "rebased": false,
+        "rebased_from": null,
         "spans": 3,
         "drawdown_base": false
       },
@@ -1032,94 +389,96 @@
       "reasons": []
     },
     {
-      "ticker": "CVSA",
-      "name": "Covista Inc.",
+      "ticker": "YALA",
+      "name": "Yalla Group Ltd",
       "exchange": "NYSE",
-      "sic": "8200",
-      "cik": "730464",
-      "price": 120.75,
-      "market_cap": 4110187515.0,
-      "size_band": "MID",
-      "cap_to_assets": 1.364,
-      "equity": 1446185000.0,
-      "revenue": 1954085000.0,
-      "last_filing": "2026-06-30",
-      "ttm_eps": 7.04,
+      "sic": "7370",
+      "cik": "1794350",
+      "price": 5.48,
+      "market_cap": 832022849.0,
+      "size_band": "SMALL",
+      "cap_to_assets": 0.928,
+      "equity": 810278701.0,
+      "revenue": 341938110.0,
+      "last_filing": "2025-12-31",
+      "ttm_eps": 0.83,
       "eps_unit": "USD/shares",
-      "shares_outstanding": 34038820.0,
-      "net_income": 251566000.0,
+      "shares_outstanding": null,
+      "net_income": 148139844.0,
       "ads": {
-        "ratio": 1,
-        "clean": true,
-        "implied_shares": 34038820.0
+        "ratio": null,
+        "clean": null,
+        "implied_shares": null
       },
       "units": {
         "ok": true,
-        "ratio": 0.0,
-        "implied": 251433600.0,
+        "ratio": 0.01,
+        "implied": 149468732.29999998,
         "basis": "weighted",
         "scale": 1
       },
-      "pe_ratio": 16.34,
-      "pe_raw": 16.34,
+      "pe_ratio": 5.62,
+      "pe_raw": 5.62,
       "pe_suspect": false,
       "growth": {
-        "cagr": 50.9,
-        "cagr_raw": 50.9,
+        "cagr": 15.9,
+        "cagr_raw": 15.9,
         "capped": false,
         "trough": false,
         "step": false,
         "loss_window": false,
         "spike": false,
         "cagr_through_spike": null,
-        "years": 18,
-        "span": 3.0,
-        "latest_yoy": 13.9,
-        "up_years": 11,
-        "of_years": 17,
-        "from_year": "2023-06-30",
-        "to_year": "2026-06-30",
+        "years": 7,
+        "span": 4.0,
+        "latest_yoy": 12.2,
+        "up_years": 4,
+        "of_years": 6,
+        "from_year": "2021-12-31",
+        "to_year": "2025-12-31",
+        "rebased": true,
+        "rebased_from": 0.46,
         "spans": 3,
         "drawdown_base": false
       },
-      "eps_3yr_cagr_pct": 50.9,
-      "eps_cagr_raw_pct": 50.9,
-      "peg": 0.32,
-      "debt_as_of": "2026-06-30",
-      "debt_to_equity": 0.462,
+      "eps_3yr_cagr_pct": 15.9,
+      "eps_cagr_raw_pct": 15.9,
+      "peg": 0.35,
+      "debt_as_of": null,
+      "debt_to_equity": null,
       "debt_known": true,
-      "debt_bounded": false,
-      "short_term_debt": 5100000.0,
-      "long_term_debt": 662850000.0,
-      "total_liabilities": 1566523000.0,
-      "non_debt_liabilities": 626533000.0,
-      "ttm_capex": 77696000.0,
-      "ttm_ocf": 470422000.0,
-      "capex_to_ocf": 0.17,
+      "debt_bounded": true,
+      "short_term_debt": null,
+      "long_term_debt": null,
+      "total_liabilities": 94172576.0,
+      "non_debt_liabilities": 57697488.0,
+      "ttm_capex": 1976915.0,
+      "ttm_ocf": 137536580.0,
+      "capex_to_ocf": 0.01,
       "moat": {
-        "avg_roe_3yr_pct": 14.6,
+        "avg_roe_3yr_pct": 19.1,
         "roe_capped": false,
-        "years_positive_eps": 6,
-        "op_margin_pct": 19.6,
-        "has_moat": false
+        "years_positive_eps": 5,
+        "op_margin_pct": 35.7,
+        "has_moat": true
       },
-      "has_moat": false,
+      "has_moat": true,
       "roc": {
-        "roc_pct": 100.0,
-        "roc_raw_pct": 107.0,
-        "capped": true,
-        "capital": 358270000.0,
+        "roc_pct": 16.9,
+        "roc_raw_pct": 16.9,
+        "capped": false,
+        "capital": 722969065.0,
         "reason": null
       },
-      "roc_pct": 100.0,
+      "roc_pct": 16.9,
       "eps_path": [
-        6.43,
-        2.05,
-        3.39,
-        6.18,
-        7.04
+        0.46,
+        0.45,
+        0.65,
+        0.74,
+        0.83
       ],
-      "location": "DE",
+      "location": "Cayman Islands",
       "verdict": "pass",
       "reason": "pass",
       "reasons": []
@@ -1172,6 +531,8 @@
         "of_years": 3,
         "from_year": "2023-06-30",
         "to_year": "2026-06-30",
+        "rebased": false,
+        "rebased_from": null,
         "spans": 3,
         "drawdown_base": false
       },
@@ -1212,192 +573,6 @@
         0.66
       ],
       "location": "NV",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
-    {
-      "ticker": "AOS",
-      "name": "SMITH A O CORP",
-      "exchange": "NYSE",
-      "sic": "3630",
-      "cik": "91142",
-      "price": 58.65,
-      "market_cap": 7971037806.0,
-      "size_band": "MID",
-      "cap_to_assets": 2.187,
-      "equity": 1841900000.0,
-      "revenue": 3830200000.0,
-      "last_filing": "2026-06-30",
-      "ttm_eps": 3.85,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": null,
-      "net_income": 546200000.0,
-      "ads": {
-        "ratio": null,
-        "clean": null,
-        "implied_shares": null
-      },
-      "units": {
-        "ok": true,
-        "ratio": 0.0,
-        "implied": 546372134.0,
-        "basis": "weighted",
-        "scale": 1
-      },
-      "pe_ratio": 14.59,
-      "pe_raw": 14.59,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 36.6,
-        "cagr_raw": 36.6,
-        "capped": false,
-        "trough": false,
-        "step": false,
-        "loss_window": false,
-        "spike": false,
-        "cagr_through_spike": null,
-        "years": 18,
-        "span": 3.0,
-        "latest_yoy": 6.1,
-        "up_years": 10,
-        "of_years": 17,
-        "from_year": "2022-12-31",
-        "to_year": "2025-12-31",
-        "spans": 3,
-        "drawdown_base": false
-      },
-      "eps_3yr_cagr_pct": 36.6,
-      "eps_cagr_raw_pct": 36.6,
-      "peg": 0.4,
-      "debt_as_of": "2026-06-30",
-      "debt_to_equity": 0.346,
-      "debt_known": true,
-      "debt_bounded": false,
-      "short_term_debt": 39500000.0,
-      "long_term_debt": 598000000.0,
-      "total_liabilities": 1802600000.0,
-      "non_debt_liabilities": 74300000.0,
-      "ttm_capex": 70800000.0,
-      "ttm_ocf": 616800000.0,
-      "capex_to_ocf": 0.11,
-      "moat": {
-        "avg_roe_3yr_pct": 29.3,
-        "roe_capped": false,
-        "years_positive_eps": 18,
-        "op_margin_pct": 19.0,
-        "has_moat": true
-      },
-      "has_moat": true,
-      "roc": {
-        "roc_pct": 64.1,
-        "roc_raw_pct": 64.1,
-        "capped": false,
-        "capital": 1136600000.0,
-        "reason": null
-      },
-      "roc_pct": 64.1,
-      "eps_path": [
-        3.02,
-        1.51,
-        3.69,
-        3.63,
-        3.85
-      ],
-      "location": "DE",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
-    {
-      "ticker": "CRUS",
-      "name": "CIRRUS LOGIC, INC.",
-      "exchange": "Nasdaq",
-      "sic": "3674",
-      "cik": "772406",
-      "price": 119.92,
-      "market_cap": 6010097915.0,
-      "size_band": "MID",
-      "cap_to_assets": 2.347,
-      "equity": 2189131000.0,
-      "revenue": 1997379000.0,
-      "last_filing": "2026-06-27",
-      "ttm_eps": 7.85,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": 50117561.0,
-      "net_income": 414408000.0,
-      "ads": {
-        "ratio": 1,
-        "clean": true,
-        "implied_shares": 50117560.998999335
-      },
-      "units": {
-        "ok": true,
-        "ratio": 0.0,
-        "implied": 414652700.0,
-        "basis": "weighted",
-        "scale": 1
-      },
-      "pe_ratio": 14.5,
-      "pe_raw": 14.5,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 36.3,
-        "cagr_raw": 36.3,
-        "capped": false,
-        "trough": false,
-        "step": false,
-        "loss_window": false,
-        "spike": false,
-        "cagr_through_spike": null,
-        "years": 17,
-        "span": 3.01,
-        "latest_yoy": 30.8,
-        "up_years": 10,
-        "of_years": 16,
-        "from_year": "2023-03-25",
-        "to_year": "2026-03-28",
-        "spans": 3,
-        "drawdown_base": false
-      },
-      "eps_3yr_cagr_pct": 36.3,
-      "eps_cagr_raw_pct": 36.3,
-      "peg": 0.4,
-      "debt_as_of": null,
-      "debt_to_equity": null,
-      "debt_known": true,
-      "debt_bounded": true,
-      "short_term_debt": null,
-      "long_term_debt": null,
-      "total_liabilities": 371149000.0,
-      "non_debt_liabilities": 212716000.0,
-      "ttm_capex": 13988000.0,
-      "ttm_ocf": 650598000.0,
-      "capex_to_ocf": 0.02,
-      "moat": {
-        "avg_roe_3yr_pct": 17.2,
-        "roe_capped": false,
-        "years_positive_eps": 17,
-        "op_margin_pct": 23.0,
-        "has_moat": true
-      },
-      "has_moat": true,
-      "roc": {
-        "roc_pct": 32.2,
-        "roc_raw_pct": 32.2,
-        "capped": false,
-        "capital": 1429013000.0,
-        "reason": null
-      },
-      "roc_pct": 32.2,
-      "eps_path": [
-        5.52,
-        3.09,
-        4.9,
-        6.0,
-        7.85
-      ],
-      "location": "DE",
       "verdict": "pass",
       "reason": "pass",
       "reasons": []
@@ -1450,6 +625,8 @@
         "of_years": 16,
         "from_year": "2022-09-30",
         "to_year": "2025-09-30",
+        "rebased": false,
+        "rebased_from": null,
         "spans": 3,
         "drawdown_base": false
       },
@@ -1496,229 +673,40 @@
       "reasons": []
     },
     {
-      "ticker": "YUMC",
-      "name": "Yum China Holdings, Inc.",
-      "exchange": "NYSE",
-      "sic": "5812",
-      "cik": "1673358",
-      "price": 40.47,
-      "market_cap": 13859280764.0,
+      "ticker": "LULU",
+      "name": "lululemon athletica inc.",
+      "exchange": "Nasdaq",
+      "sic": "2300",
+      "cik": "1397187",
+      "price": 101.3,
+      "market_cap": 10696678683.0,
       "size_band": "LARGE",
-      "cap_to_assets": 1.275,
-      "equity": 5357000000.0,
-      "revenue": 11797000000.0,
-      "last_filing": "2026-06-30",
-      "ttm_eps": 2.51,
+      "cap_to_assets": 1.261,
+      "equity": 4791174000.0,
+      "revenue": 11102600000.0,
+      "last_filing": "2026-08-02",
+      "ttm_eps": 13.26,
       "eps_unit": "USD/shares",
-      "shares_outstanding": 342458136.0,
-      "net_income": 929000000.0,
+      "shares_outstanding": 105594064.0,
+      "net_income": 1579183000.0,
       "ads": {
         "ratio": 1,
         "clean": true,
-        "implied_shares": 342458136.0019768
-      },
-      "ni_rescaled": [
-        "2014-12-31"
-      ],
-      "units": {
-        "ok": true,
-        "ratio": 0.0,
-        "implied": 931209999.9999999,
-        "basis": "weighted",
-        "scale": 1
-      },
-      "pe_ratio": 14.92,
-      "pe_raw": 14.92,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 34.1,
-        "cagr_raw": 34.1,
-        "capped": false,
-        "trough": false,
-        "step": false,
-        "loss_window": false,
-        "spike": false,
-        "cagr_through_spike": null,
-        "years": 12,
-        "span": 3.0,
-        "latest_yoy": 7.7,
-        "up_years": 9,
-        "of_years": 11,
-        "from_year": "2022-12-31",
-        "to_year": "2025-12-31",
-        "spans": 3,
-        "drawdown_base": false
-      },
-      "eps_3yr_cagr_pct": 34.1,
-      "eps_cagr_raw_pct": 34.1,
-      "peg": 0.44,
-      "debt_as_of": "2026-06-30",
-      "debt_to_equity": null,
-      "debt_known": true,
-      "debt_bounded": true,
-      "short_term_debt": 66000000.0,
-      "long_term_debt": null,
-      "total_liabilities": 4810000000.0,
-      "non_debt_liabilities": 3358000000.0,
-      "ttm_capex": 626000000.0,
-      "ttm_ocf": 1466000000.0,
-      "capex_to_ocf": 0.43,
-      "moat": {
-        "avg_roe_3yr_pct": 15.4,
-        "roe_capped": false,
-        "years_positive_eps": 11,
-        "op_margin_pct": 10.9,
-        "has_moat": true
-      },
-      "has_moat": true,
-      "roc": {
-        "roc_pct": 50.8,
-        "roc_raw_pct": 50.8,
-        "capped": false,
-        "capital": 2537000000.0,
-        "reason": null
-      },
-      "roc_pct": 50.8,
-      "eps_path": [
-        2.28,
-        1.04,
-        1.97,
-        2.33,
-        2.51
-      ],
-      "location": "DE",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
-    {
-      "ticker": "MWA",
-      "name": "Mueller Water Products, Inc.",
-      "exchange": "NYSE",
-      "sic": "3490",
-      "cik": "1350593",
-      "price": 21.63,
-      "market_cap": 3376998437.0,
-      "size_band": "MID",
-      "cap_to_assets": 1.729,
-      "equity": 1120400000.0,
-      "revenue": 1429700000.0,
-      "last_filing": "2026-06-30",
-      "ttm_eps": 1.22,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": 156125679.0,
-      "net_income": 191700000.0,
-      "ads": {
-        "ratio": 1,
-        "clean": true,
-        "implied_shares": 156125679.01063338
+        "implied_shares": 105594063.99802567
       },
       "units": {
         "ok": true,
         "ratio": 0.0,
-        "implied": 192150000.0,
+        "implied": 1578841680.0,
         "basis": "weighted",
         "scale": 1
       },
-      "pe_ratio": 17.62,
-      "pe_raw": 17.62,
+      "pe_ratio": 6.77,
+      "pe_raw": 6.77,
       "pe_suspect": false,
       "growth": {
-        "cagr": 36.5,
-        "cagr_raw": 36.5,
-        "capped": false,
-        "trough": false,
-        "step": false,
-        "loss_window": false,
-        "spike": false,
-        "cagr_through_spike": null,
-        "years": 16,
-        "span": 3.0,
-        "latest_yoy": 64.9,
-        "up_years": 11,
-        "of_years": 15,
-        "from_year": "2022-09-30",
-        "to_year": "2025-09-30",
-        "spans": 3,
-        "drawdown_base": false
-      },
-      "eps_3yr_cagr_pct": 36.5,
-      "eps_cagr_raw_pct": 36.5,
-      "peg": 0.48,
-      "debt_as_of": "2026-06-30",
-      "debt_to_equity": 0.404,
-      "debt_known": true,
-      "debt_bounded": false,
-      "short_term_debt": 1600000.0,
-      "long_term_debt": 451300000.0,
-      "total_liabilities": 832900000.0,
-      "non_debt_liabilities": 165500000.0,
-      "ttm_capex": 47300000.0,
-      "ttm_ocf": 219300000.0,
-      "capex_to_ocf": 0.22,
-      "moat": {
-        "avg_roe_3yr_pct": 15.3,
-        "roe_capped": false,
-        "years_positive_eps": 12,
-        "op_margin_pct": 18.2,
-        "has_moat": true
-      },
-      "has_moat": true,
-      "roc": {
-        "roc_pct": 21.2,
-        "roc_raw_pct": 21.2,
-        "capped": false,
-        "capital": 1231600000.0,
-        "reason": null
-      },
-      "roc_pct": 21.2,
-      "eps_path": [
-        0.44,
-        0.48,
-        0.55,
-        0.74,
-        1.22
-      ],
-      "location": "DE",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
-    {
-      "ticker": "G",
-      "name": "Genpact LTD",
-      "exchange": "NYSE",
-      "sic": "8742",
-      "cik": "1398659",
-      "price": 33.1,
-      "market_cap": 5561938872.0,
-      "size_band": "MID",
-      "cap_to_assets": 1.027,
-      "equity": 2604797000.0,
-      "revenue": 5079879000.0,
-      "last_filing": "2026-06-30",
-      "ttm_eps": 3.13,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": 168034407.0,
-      "net_income": 552494000.0,
-      "ads": {
-        "ratio": 1,
-        "clean": true,
-        "implied_shares": 168034407.00906342
-      },
-      "units": {
-        "ok": true,
-        "ratio": 0.0,
-        "implied": 552903995.72,
-        "basis": "weighted",
-        "scale": 1
-      },
-      "pe_ratio": 10.07,
-      "pe_raw": 10.07,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 18.5,
-        "cagr_raw": 18.5,
+        "cagr": 15.3,
+        "cagr_raw": 15.3,
         "capped": false,
         "trough": false,
         "step": false,
@@ -1726,53 +714,150 @@
         "spike": false,
         "cagr_through_spike": null,
         "years": 18,
-        "span": 3.0,
-        "latest_yoy": 9.8,
-        "up_years": 13,
+        "span": 4.01,
+        "latest_yoy": -9.4,
+        "up_years": 11,
         "of_years": 17,
-        "from_year": "2022-12-31",
-        "to_year": "2025-12-31",
+        "from_year": "2022-01-30",
+        "to_year": "2026-02-01",
+        "rebased": true,
+        "rebased_from": 7.49,
         "spans": 3,
         "drawdown_base": false
       },
-      "eps_3yr_cagr_pct": 18.5,
-      "eps_cagr_raw_pct": 18.5,
-      "peg": 0.54,
-      "debt_as_of": "2026-06-30",
-      "debt_to_equity": 0.463,
+      "eps_3yr_cagr_pct": 15.3,
+      "eps_cagr_raw_pct": 15.3,
+      "peg": 0.44,
+      "debt_as_of": "2026-08-02",
+      "debt_to_equity": null,
       "debt_known": true,
-      "debt_bounded": false,
-      "short_term_debt": 26201000.0,
-      "long_term_debt": 1180257000.0,
-      "total_liabilities": 2808299000.0,
-      "non_debt_liabilities": 385813000.0,
-      "ttm_capex": 78203000.0,
-      "ttm_ocf": 812856000.0,
-      "capex_to_ocf": 0.1,
+      "debt_bounded": true,
+      "short_term_debt": 0.0,
+      "long_term_debt": null,
+      "total_liabilities": 3693404000.0,
+      "non_debt_liabilities": 2515619000.0,
+      "ttm_capex": 680802000.0,
+      "ttm_ocf": 1602477000.0,
+      "capex_to_ocf": 0.42,
       "moat": {
-        "avg_roe_3yr_pct": 23.7,
+        "avg_roe_3yr_pct": 36.8,
         "roe_capped": false,
         "years_positive_eps": 18,
-        "op_margin_pct": 14.8,
+        "op_margin_pct": 19.9,
         "has_moat": true
       },
       "has_moat": true,
       "roc": {
-        "roc_pct": 59.2,
-        "roc_raw_pct": 59.2,
+        "roc_pct": 52.8,
+        "roc_raw_pct": 52.8,
         "capped": false,
-        "capital": 1267427000.0,
+        "capital": 4190299000.0,
         "reason": null
       },
-      "roc_pct": 59.2,
+      "roc_pct": 52.8,
       "eps_path": [
-        1.91,
-        1.88,
-        3.41,
-        2.85,
-        3.13
+        7.49,
+        6.68,
+        12.2,
+        14.64,
+        13.26
       ],
-      "location": "Bermuda",
+      "location": "DE",
+      "verdict": "pass",
+      "reason": "pass",
+      "reasons": []
+    },
+    {
+      "ticker": "LMB",
+      "name": "Limbach Holdings, Inc.",
+      "exchange": "Nasdaq",
+      "sic": "1700",
+      "cik": "1606163",
+      "price": 51.48,
+      "market_cap": 613898640.0,
+      "size_band": "SMALL",
+      "cap_to_assets": 1.52,
+      "equity": 203148000.0,
+      "revenue": 646804000.0,
+      "last_filing": "2026-06-30",
+      "ttm_eps": 3.23,
+      "eps_unit": "USD/shares",
+      "shares_outstanding": 11924993.0,
+      "net_income": 39064000.0,
+      "ads": {
+        "ratio": 1,
+        "clean": true,
+        "implied_shares": 11924993.006993007
+      },
+      "units": {
+        "ok": true,
+        "ratio": 0.0,
+        "implied": 39017053.089999996,
+        "basis": "weighted",
+        "scale": 1
+      },
+      "pe_ratio": 15.72,
+      "pe_raw": 15.72,
+      "pe_suspect": false,
+      "growth": {
+        "cagr": 35.0,
+        "cagr_raw": 35.0,
+        "capped": false,
+        "trough": false,
+        "step": false,
+        "loss_window": false,
+        "spike": false,
+        "cagr_through_spike": null,
+        "years": 9,
+        "span": 5.0,
+        "latest_yoy": 25.7,
+        "up_years": 5,
+        "of_years": 8,
+        "from_year": "2020-12-31",
+        "to_year": "2025-12-31",
+        "rebased": true,
+        "rebased_from": 0.72,
+        "spans": 3,
+        "drawdown_base": false
+      },
+      "eps_3yr_cagr_pct": 35.0,
+      "eps_cagr_raw_pct": 35.0,
+      "peg": 0.45,
+      "debt_as_of": "2026-06-30",
+      "debt_to_equity": 0.2,
+      "debt_known": true,
+      "debt_bounded": false,
+      "short_term_debt": 4862000.0,
+      "long_term_debt": 35842000.0,
+      "total_liabilities": 200859000.0,
+      "non_debt_liabilities": 134342000.0,
+      "ttm_capex": 3807000.0,
+      "ttm_ocf": 45700000.0,
+      "capex_to_ocf": 0.08,
+      "moat": {
+        "avg_roe_3yr_pct": 19.1,
+        "roe_capped": false,
+        "years_positive_eps": 6,
+        "op_margin_pct": 7.6,
+        "has_moat": true
+      },
+      "has_moat": true,
+      "roc": {
+        "roc_pct": 52.4,
+        "roc_raw_pct": 52.4,
+        "capped": false,
+        "capital": 94462000.0,
+        "reason": null
+      },
+      "roc_pct": 52.4,
+      "eps_path": [
+        0.66,
+        0.64,
+        1.76,
+        2.57,
+        3.23
+      ],
+      "location": "DE",
       "verdict": "pass",
       "reason": "pass",
       "reasons": []
@@ -1825,6 +910,8 @@
         "of_years": 5,
         "from_year": "2023-06-30",
         "to_year": "2026-06-30",
+        "rebased": false,
+        "rebased_from": null,
         "spans": 3,
         "drawdown_base": false
       },
@@ -1918,6 +1005,8 @@
         "of_years": 17,
         "from_year": "2022-12-31",
         "to_year": "2025-12-31",
+        "rebased": false,
+        "rebased_from": null,
         "spans": 3,
         "drawdown_base": false
       },
@@ -2017,6 +1106,8 @@
         "of_years": 14,
         "from_year": "2022-12-31",
         "to_year": "2025-12-31",
+        "rebased": false,
+        "rebased_from": null,
         "spans": 3,
         "drawdown_base": false
       },
@@ -2110,6 +1201,8 @@
         "of_years": 18,
         "from_year": "2023-07-31",
         "to_year": "2026-07-31",
+        "rebased": false,
+        "rebased_from": null,
         "spans": 3,
         "drawdown_base": false
       },
@@ -2149,99 +1242,6 @@
         10.43,
         13.67,
         16.46
-      ],
-      "location": "DE",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
-    {
-      "ticker": "SPB",
-      "name": "Spectrum Brands Holdings, Inc.",
-      "exchange": "NYSE",
-      "sic": "3690",
-      "cik": "109177",
-      "price": 84.91,
-      "market_cap": 1952556056.0,
-      "size_band": "SMALL",
-      "cap_to_assets": 0.546,
-      "equity": 1848700000.0,
-      "revenue": 2809000000.0,
-      "last_filing": "2026-06-28",
-      "ttm_eps": 3.86,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": 22995596.0,
-      "net_income": 99900000.0,
-      "ads": {
-        "ratio": 1,
-        "clean": true,
-        "implied_shares": 22995595.995760217
-      },
-      "units": {
-        "ok": true,
-        "ratio": 0.0,
-        "implied": 99974000.0,
-        "basis": "weighted",
-        "scale": 1
-      },
-      "pe_ratio": 19.55,
-      "pe_raw": 19.55,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 30.2,
-        "cagr_raw": 30.2,
-        "capped": false,
-        "trough": false,
-        "step": false,
-        "loss_window": false,
-        "spike": false,
-        "cagr_through_spike": null,
-        "years": 16,
-        "span": 3.0,
-        "latest_yoy": -5.9,
-        "up_years": 7,
-        "of_years": 15,
-        "from_year": "2022-09-30",
-        "to_year": "2025-09-30",
-        "spans": 3,
-        "drawdown_base": false
-      },
-      "eps_3yr_cagr_pct": 30.2,
-      "eps_cagr_raw_pct": 30.2,
-      "peg": 0.65,
-      "debt_as_of": "2026-06-28",
-      "debt_to_equity": 0.333,
-      "debt_known": true,
-      "debt_bounded": false,
-      "short_term_debt": 12200000.0,
-      "long_term_debt": 603600000.0,
-      "total_liabilities": 1667200000.0,
-      "non_debt_liabilities": 493800000.0,
-      "ttm_capex": 38300000.0,
-      "ttm_ocf": 203600000.0,
-      "capex_to_ocf": 0.19,
-      "moat": {
-        "avg_roe_3yr_pct": 27.5,
-        "roe_capped": false,
-        "years_positive_eps": 9,
-        "op_margin_pct": 4.4,
-        "has_moat": true
-      },
-      "has_moat": true,
-      "roc": {
-        "roc_pct": 10.8,
-        "roc_raw_pct": 10.8,
-        "capped": false,
-        "capital": 1153100000.0,
-        "reason": null
-      },
-      "roc_pct": 10.8,
-      "eps_path": [
-        4.39,
-        1.75,
-        45.65,
-        4.1,
-        3.86
       ],
       "location": "DE",
       "verdict": "pass",
@@ -2296,6 +1296,8 @@
         "of_years": 16,
         "from_year": "2022-09-30",
         "to_year": "2025-09-30",
+        "rebased": false,
+        "rebased_from": null,
         "spans": 3,
         "drawdown_base": false
       },
@@ -2342,40 +1344,40 @@
       "reasons": []
     },
     {
-      "ticker": "MZTI",
-      "name": "MARZETTI CO",
-      "exchange": "Nasdaq",
-      "sic": "2030",
-      "cik": "57515",
-      "price": 100.47,
-      "market_cap": 2741926770.0,
+      "ticker": "G",
+      "name": "Genpact LTD",
+      "exchange": "NYSE",
+      "sic": "8742",
+      "cik": "1398659",
+      "price": 33.1,
+      "market_cap": 5561938872.0,
       "size_band": "MID",
-      "cap_to_assets": 1.708,
-      "equity": 1053150000.0,
-      "revenue": 1929823000.0,
+      "cap_to_assets": 1.027,
+      "equity": 2604797000.0,
+      "revenue": 5079879000.0,
       "last_filing": "2026-06-30",
-      "ttm_eps": 6.98,
+      "ttm_eps": 3.13,
       "eps_unit": "USD/shares",
-      "shares_outstanding": 27291000.0,
-      "net_income": 191606000.0,
+      "shares_outstanding": 168034407.0,
+      "net_income": 552494000.0,
       "ads": {
         "ratio": 1,
         "clean": true,
-        "implied_shares": 27291000.0
+        "implied_shares": 168034407.00906342
       },
       "units": {
         "ok": true,
         "ratio": 0.0,
-        "implied": 191293880.0,
+        "implied": 552903995.72,
         "basis": "weighted",
         "scale": 1
       },
-      "pe_ratio": 14.31,
-      "pe_raw": 14.31,
+      "pe_ratio": 10.07,
+      "pe_raw": 10.07,
       "pe_suspect": false,
       "growth": {
-        "cagr": 20.0,
-        "cagr_raw": 20.0,
+        "cagr": 13.1,
+        "cagr_raw": 13.1,
         "capped": false,
         "trough": false,
         "step": false,
@@ -2383,388 +1385,61 @@
         "spike": false,
         "cagr_through_spike": null,
         "years": 18,
-        "span": 3.0,
-        "latest_yoy": 15.0,
-        "up_years": 11,
+        "span": 4.0,
+        "latest_yoy": 9.8,
+        "up_years": 13,
         "of_years": 17,
-        "from_year": "2023-06-30",
-        "to_year": "2026-06-30",
+        "from_year": "2021-12-31",
+        "to_year": "2025-12-31",
+        "rebased": true,
+        "rebased_from": 1.91,
         "spans": 3,
         "drawdown_base": false
       },
-      "eps_3yr_cagr_pct": 20.0,
-      "eps_cagr_raw_pct": 20.0,
-      "peg": 0.72,
+      "eps_3yr_cagr_pct": 13.1,
+      "eps_cagr_raw_pct": 13.1,
+      "peg": 0.77,
       "debt_as_of": "2026-06-30",
-      "debt_to_equity": 0.199,
+      "debt_to_equity": 0.463,
       "debt_known": true,
       "debt_bounded": false,
-      "short_term_debt": 10000000.0,
-      "long_term_debt": 199276000.0,
-      "total_liabilities": 551870000.0,
-      "non_debt_liabilities": 200926000.0,
-      "ttm_capex": 77679000.0,
-      "ttm_ocf": 283816000.0,
-      "capex_to_ocf": 0.27,
+      "short_term_debt": 26201000.0,
+      "long_term_debt": 1180257000.0,
+      "total_liabilities": 2808299000.0,
+      "non_debt_liabilities": 385813000.0,
+      "ttm_capex": 78203000.0,
+      "ttm_ocf": 812856000.0,
+      "capex_to_ocf": 0.1,
       "moat": {
-        "avg_roe_3yr_pct": 17.4,
+        "avg_roe_3yr_pct": 23.7,
         "roe_capped": false,
         "years_positive_eps": 18,
-        "op_margin_pct": 12.4,
+        "op_margin_pct": 14.8,
         "has_moat": true
       },
       "has_moat": true,
       "roc": {
-        "roc_pct": 35.1,
-        "roc_raw_pct": 35.1,
+        "roc_pct": 59.2,
+        "roc_raw_pct": 59.2,
         "capped": false,
-        "capital": 680979000.0,
+        "capital": 1267427000.0,
         "reason": null
       },
-      "roc_pct": 35.1,
+      "roc_pct": 59.2,
       "eps_path": [
-        3.25,
-        4.04,
-        5.76,
-        6.07,
-        6.98
+        1.91,
+        1.88,
+        3.41,
+        2.85,
+        3.13
       ],
-      "location": "OH",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
-    {
-      "ticker": "YETI",
-      "name": "YETI Holdings, Inc.",
-      "exchange": "NYSE",
-      "sic": "3949",
-      "cik": "1670592",
-      "price": 42.28,
-      "market_cap": 3085966295.0,
-      "size_band": "MID",
-      "cap_to_assets": 2.371,
-      "equity": 609504000.0,
-      "revenue": 1868494000.0,
-      "last_filing": "2026-07-04",
-      "ttm_eps": 2.03,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": 72988796.0,
-      "net_income": 165387000.0,
-      "ads": {
-        "ratio": 1,
-        "clean": true,
-        "implied_shares": 72988796.00283822
-      },
-      "units": {
-        "ok": true,
-        "ratio": 0.0,
-        "implied": 165637849.99999997,
-        "basis": "weighted",
-        "scale": 1
-      },
-      "pe_ratio": 18.66,
-      "pe_raw": 18.66,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 25.3,
-        "cagr_raw": 25.3,
-        "capped": false,
-        "trough": false,
-        "step": false,
-        "loss_window": false,
-        "spike": false,
-        "cagr_through_spike": null,
-        "years": 10,
-        "span": 3.01,
-        "latest_yoy": -1.0,
-        "up_years": 5,
-        "of_years": 9,
-        "from_year": "2022-12-31",
-        "to_year": "2026-01-03",
-        "spans": 3,
-        "drawdown_base": false
-      },
-      "eps_3yr_cagr_pct": 25.3,
-      "eps_cagr_raw_pct": 25.3,
-      "peg": 0.74,
-      "debt_as_of": "2026-01-03",
-      "debt_to_equity": 0.165,
-      "debt_known": true,
-      "debt_bounded": false,
-      "short_term_debt": 4219000.0,
-      "long_term_debt": 96443000.0,
-      "total_liabilities": 692215000.0,
-      "non_debt_liabilities": 372955000.0,
-      "ttm_capex": 42667000.0,
-      "ttm_ocf": 254737000.0,
-      "capex_to_ocf": 0.17,
-      "moat": {
-        "avg_roe_3yr_pct": 24.2,
-        "roe_capped": false,
-        "years_positive_eps": 10,
-        "op_margin_pct": 11.4,
-        "has_moat": true
-      },
-      "has_moat": true,
-      "roc": {
-        "roc_pct": 55.1,
-        "roc_raw_pct": 55.1,
-        "capped": false,
-        "capital": 387469000.0,
-        "reason": null
-      },
-      "roc_pct": 55.1,
-      "eps_path": [
-        2.4,
-        1.03,
-        1.94,
-        2.05,
-        2.03
-      ],
-      "location": "DE",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
-    {
-      "ticker": "DORM",
-      "name": "Dorman Products, Inc.",
-      "exchange": "Nasdaq",
-      "sic": "3714",
-      "cik": "868780",
-      "price": 124.02,
-      "market_cap": 3680370144.0,
-      "size_band": "MID",
-      "cap_to_assets": 1.472,
-      "equity": 1515040000.0,
-      "revenue": 2130319000.0,
-      "last_filing": "2026-06-27",
-      "ttm_eps": 6.64,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": 29675618.0,
-      "net_income": 204194000.0,
-      "ads": {
-        "ratio": 1,
-        "clean": true,
-        "implied_shares": 29675617.997097243
-      },
-      "units": {
-        "ok": true,
-        "ratio": 0.0,
-        "implied": 204219840.0,
-        "basis": "weighted",
-        "scale": 1
-      },
-      "pe_ratio": 18.02,
-      "pe_raw": 18.02,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 19.9,
-        "cagr_raw": 19.9,
-        "capped": false,
-        "trough": false,
-        "step": false,
-        "loss_window": false,
-        "spike": false,
-        "cagr_through_spike": null,
-        "years": 17,
-        "span": 3.0,
-        "latest_yoy": 8.1,
-        "up_years": 13,
-        "of_years": 16,
-        "from_year": "2022-12-31",
-        "to_year": "2025-12-31",
-        "spans": 3,
-        "drawdown_base": false
-      },
-      "eps_3yr_cagr_pct": 19.9,
-      "eps_cagr_raw_pct": 19.9,
-      "peg": 0.91,
-      "debt_as_of": "2026-06-27",
-      "debt_to_equity": 0.291,
-      "debt_known": true,
-      "debt_bounded": false,
-      "short_term_debt": 0.0,
-      "long_term_debt": 440479000.0,
-      "total_liabilities": 985123000.0,
-      "non_debt_liabilities": 275814000.0,
-      "ttm_capex": 37969000.0,
-      "ttm_ocf": 113634000.0,
-      "capex_to_ocf": 0.33,
-      "moat": {
-        "avg_roe_3yr_pct": 13.2,
-        "roe_capped": false,
-        "years_positive_eps": 17,
-        "op_margin_pct": 14.1,
-        "has_moat": false
-      },
-      "has_moat": false,
-      "roc": {
-        "roc_pct": 23.3,
-        "roc_raw_pct": 23.3,
-        "capped": false,
-        "capital": 1288269000.0,
-        "reason": null
-      },
-      "roc_pct": 23.3,
-      "eps_path": [
-        4.12,
-        3.85,
-        4.1,
-        6.14,
-        6.64
-      ],
-      "location": "PA",
-      "verdict": "pass",
-      "reason": "pass",
-      "reasons": []
-    },
-    {
-      "ticker": "LOCO",
-      "name": "El Pollo Loco Holdings, Inc.",
-      "exchange": "Nasdaq",
-      "sic": "5812",
-      "cik": "1606366",
-      "price": 14.09,
-      "market_cap": 428800082.0,
-      "size_band": "SMALL",
-      "cap_to_assets": 0.693,
-      "equity": 317043000.0,
-      "revenue": 490046000.0,
-      "last_filing": "2026-07-01",
-      "ttm_eps": 0.9,
-      "eps_unit": "USD/shares",
-      "shares_outstanding": 30432937.0,
-      "net_income": 26486000.0,
-      "ads": {
-        "ratio": 1,
-        "clean": true,
-        "implied_shares": 30432936.976579133
-      },
-      "units": {
-        "ok": true,
-        "ratio": 0.0,
-        "implied": 26457201.0,
-        "basis": "weighted",
-        "scale": 1
-      },
-      "pe_ratio": 16.19,
-      "pe_raw": 16.19,
-      "pe_suspect": false,
-      "growth": {
-        "cagr": 16.4,
-        "cagr_raw": 16.4,
-        "capped": false,
-        "trough": false,
-        "step": false,
-        "loss_window": false,
-        "spike": false,
-        "cagr_through_spike": null,
-        "years": 14,
-        "span": 3.01,
-        "latest_yoy": 4.7,
-        "up_years": 7,
-        "of_years": 13,
-        "from_year": "2022-12-28",
-        "to_year": "2025-12-31",
-        "spans": 3,
-        "drawdown_base": false
-      },
-      "eps_3yr_cagr_pct": 16.4,
-      "eps_cagr_raw_pct": 16.4,
-      "peg": 0.99,
-      "debt_as_of": "2026-07-01",
-      "debt_to_equity": null,
-      "debt_known": true,
-      "debt_bounded": true,
-      "short_term_debt": null,
-      "long_term_debt": 30000000.0,
-      "total_liabilities": 301744000.0,
-      "non_debt_liabilities": 212066000.0,
-      "ttm_capex": 22635000.0,
-      "ttm_ocf": 48076000.0,
-      "capex_to_ocf": 0.47,
-      "moat": {
-        "avg_roe_3yr_pct": 9.7,
-        "roe_capped": false,
-        "years_positive_eps": 7,
-        "op_margin_pct": 8.6,
-        "has_moat": false
-      },
-      "has_moat": false,
-      "roc": {
-        "roc_pct": 85.1,
-        "roc_raw_pct": 85.1,
-        "capped": false,
-        "capital": 49385000.0,
-        "reason": null
-      },
-      "roc_pct": 85.1,
-      "eps_path": [
-        0.8,
-        0.57,
-        0.74,
-        0.86,
-        0.9
-      ],
-      "location": "DE",
+      "location": "Bermuda",
       "verdict": "pass",
       "reason": "pass",
       "reasons": []
     }
   ],
   "rejected": [
-    {
-      "ticker": "CMCSA",
-      "name": "COMCAST CORP",
-      "reason": "debt_high",
-      "market_cap": 77750627314.0,
-      "size_band": "LARGE",
-      "pe_ratio": 3.89,
-      "eps_3yr_cagr_pct": 64.5,
-      "peg": 0.06
-    },
-    {
-      "ticker": "VAL",
-      "name": "Valaris Ltd",
-      "reason": "stale_balance_sheet",
-      "market_cap": 5623606009.0,
-      "size_band": "MID",
-      "pe_ratio": 5.74,
-      "eps_3yr_cagr_pct": 81.2,
-      "peg": 0.07
-    },
-    {
-      "ticker": "GBX",
-      "name": "GREENBRIER COMPANIES INC",
-      "reason": "debt_unknown",
-      "market_cap": 1316174242.0,
-      "size_band": "SMALL",
-      "pe_ratio": 6.45,
-      "eps_3yr_cagr_pct": 65.5,
-      "peg": 0.1
-    },
-    {
-      "ticker": "SKYW",
-      "name": "SKYWEST INC",
-      "reason": "debt_high",
-      "market_cap": 3971749364.0,
-      "size_band": "MID",
-      "pe_ratio": 9.27,
-      "eps_3yr_cagr_pct": 93.0,
-      "peg": 0.1
-    },
-    {
-      "ticker": "YELP",
-      "name": "YELP INC",
-      "reason": "stale_balance_sheet",
-      "market_cap": 978373087.0,
-      "size_band": "SMALL",
-      "pe_ratio": 6.72,
-      "eps_3yr_cagr_pct": 64.8,
-      "peg": 0.1
-    },
     {
       "ticker": "LNG",
       "name": "Cheniere Energy, Inc.",
@@ -2773,26 +1448,6 @@
       "size_band": "LARGE",
       "pe_ratio": 8.16,
       "eps_3yr_cagr_pct": 62.3,
-      "peg": 0.13
-    },
-    {
-      "ticker": "OTEX",
-      "name": "OPEN TEXT CORP",
-      "reason": "debt_high",
-      "market_cap": 5641068510.0,
-      "size_band": "MID",
-      "pe_ratio": 8.77,
-      "eps_3yr_cagr_pct": 66.4,
-      "peg": 0.13
-    },
-    {
-      "ticker": "TRN",
-      "name": "TRINITY INDUSTRIES INC",
-      "reason": "debt_unknown",
-      "market_cap": 2223575354.0,
-      "size_band": "MID",
-      "pe_ratio": 8.02,
-      "eps_3yr_cagr_pct": 62.5,
       "peg": 0.13
     },
     {
@@ -2806,16 +1461,6 @@
       "peg": 0.14
     },
     {
-      "ticker": "UAL",
-      "name": "United Airlines Holdings, Inc.",
-      "reason": "debt_high",
-      "market_cap": 36999304170.0,
-      "size_band": "LARGE",
-      "pe_ratio": 11.03,
-      "eps_3yr_cagr_pct": 66.0,
-      "peg": 0.17
-    },
-    {
       "ticker": "PDD",
       "name": "PDD Holdings Inc.",
       "reason": "stale_balance_sheet",
@@ -2824,56 +1469,6 @@
       "pe_ratio": 7.89,
       "eps_3yr_cagr_pct": 44.0,
       "peg": 0.18
-    },
-    {
-      "ticker": "TASK",
-      "name": "TaskUs, Inc.",
-      "reason": "debt_high",
-      "market_cap": 751833572.0,
-      "size_band": "SMALL",
-      "pe_ratio": 7.35,
-      "eps_3yr_cagr_pct": 41.3,
-      "peg": 0.18
-    },
-    {
-      "ticker": "AROC",
-      "name": "Archrock, Inc.",
-      "reason": "debt_unknown",
-      "market_cap": 5335540970.0,
-      "size_band": "MID",
-      "pe_ratio": 16.56,
-      "eps_3yr_cagr_pct": 86.9,
-      "peg": 0.19
-    },
-    {
-      "ticker": "DAL",
-      "name": "DELTA AIR LINES, INC.",
-      "reason": "debt_high",
-      "market_cap": 55858500168.0,
-      "size_band": "LARGE",
-      "pe_ratio": 11.16,
-      "eps_3yr_cagr_pct": 54.9,
-      "peg": 0.2
-    },
-    {
-      "ticker": "UHS",
-      "name": "UNIVERSAL HEALTH SERVICES INC",
-      "reason": "debt_high",
-      "market_cap": 10541385073.0,
-      "size_band": "LARGE",
-      "pe_ratio": 7.08,
-      "eps_3yr_cagr_pct": 36.2,
-      "peg": 0.2
-    },
-    {
-      "ticker": "BAH",
-      "name": "Booz Allen Hamilton Holding Corp",
-      "reason": "debt_high",
-      "market_cap": 8774788780.0,
-      "size_band": "MID",
-      "pe_ratio": 10.32,
-      "eps_3yr_cagr_pct": 50.3,
-      "peg": 0.21
     },
     {
       "ticker": "WTRG",
@@ -2896,23 +1491,23 @@
       "peg": 0.22
     },
     {
-      "ticker": "PYPL",
-      "name": "PayPal Holdings, Inc.",
+      "ticker": "YELP",
+      "name": "YELP INC",
       "reason": "stale_balance_sheet",
-      "market_cap": 47084566505.0,
-      "size_band": "LARGE",
-      "pe_ratio": 9.0,
-      "eps_3yr_cagr_pct": 37.3,
+      "market_cap": 978373087.0,
+      "size_band": "SMALL",
+      "pe_ratio": 6.72,
+      "eps_3yr_cagr_pct": 27.6,
       "peg": 0.24
     },
     {
-      "ticker": "EIX",
-      "name": "EDISON INTERNATIONAL",
+      "ticker": "CMCSA",
+      "name": "COMCAST CORP",
       "reason": "debt_high",
-      "market_cap": 20260455994.0,
+      "market_cap": 77750627314.0,
       "size_band": "LARGE",
-      "pe_ratio": 4.54,
-      "eps_3yr_cagr_pct": 18.3,
+      "pe_ratio": 3.89,
+      "eps_3yr_cagr_pct": 15.4,
       "peg": 0.25
     },
     {
@@ -2926,84 +1521,14 @@
       "peg": 0.25
     },
     {
-      "ticker": "EAT",
-      "name": "BRINKER INTERNATIONAL, INC",
-      "reason": "stale_balance_sheet",
-      "market_cap": 8653710072.0,
-      "size_band": "MID",
-      "pe_ratio": 17.77,
-      "eps_3yr_cagr_pct": 68.6,
-      "peg": 0.26
-    },
-    {
-      "ticker": "LAUR",
-      "name": "LAUREATE EDUCATION, INC.",
+      "ticker": "GBX",
+      "name": "GREENBRIER COMPANIES INC",
       "reason": "debt_unknown",
-      "market_cap": 5151826064.0,
-      "size_band": "MID",
-      "pe_ratio": 18.29,
-      "eps_3yr_cagr_pct": 66.4,
-      "peg": 0.28
-    },
-    {
-      "ticker": "SMCI",
-      "name": "Super Micro Computer, Inc.",
-      "reason": "stale_balance_sheet",
-      "market_cap": 28420322512.0,
-      "size_band": "LARGE",
-      "pe_ratio": 12.74,
-      "eps_3yr_cagr_pct": 41.9,
-      "peg": 0.3
-    },
-    {
-      "ticker": "URBN",
-      "name": "URBAN OUTFITTERS INC",
-      "reason": "stale_balance_sheet",
-      "market_cap": 6454494638.0,
-      "size_band": "MID",
-      "pe_ratio": 13.88,
-      "eps_3yr_cagr_pct": 43.8,
-      "peg": 0.32
-    },
-    {
-      "ticker": "STRA",
-      "name": "Strategic Education, Inc.",
-      "reason": "stale_balance_sheet",
-      "market_cap": 1706206758.0,
+      "market_cap": 1316174242.0,
       "size_band": "SMALL",
-      "pe_ratio": 13.48,
-      "eps_3yr_cagr_pct": 40.7,
-      "peg": 0.33
-    },
-    {
-      "ticker": "FTDR",
-      "name": "Frontdoor, Inc.",
-      "reason": "debt_unknown",
-      "market_cap": 5097416451.0,
-      "size_band": "MID",
-      "pe_ratio": 19.99,
-      "eps_3yr_cagr_pct": 57.8,
-      "peg": 0.35
-    },
-    {
-      "ticker": "LDOS",
-      "name": "Leidos Holdings, Inc.",
-      "reason": "debt_high",
-      "market_cap": 15512091954.0,
-      "size_band": "LARGE",
-      "pe_ratio": 10.71,
-      "eps_3yr_cagr_pct": 30.9,
-      "peg": 0.35
-    },
-    {
-      "ticker": "DECK",
-      "name": "DECKERS OUTDOOR CORP",
-      "reason": "stale_balance_sheet",
-      "market_cap": 10731707238.0,
-      "size_band": "LARGE",
-      "pe_ratio": 10.48,
-      "eps_3yr_cagr_pct": 29.5,
-      "peg": 0.36
+      "pe_ratio": 6.45,
+      "eps_3yr_cagr_pct": 19.9,
+      "peg": 0.32
     },
     {
       "ticker": "ESEA",
@@ -3013,16 +1538,6 @@
       "size_band": "SMALL",
       "pe_ratio": 3.59,
       "eps_3yr_cagr_pct": 10.1,
-      "peg": 0.36
-    },
-    {
-      "ticker": "FLXS",
-      "name": "FLEXSTEEL INDUSTRIES INC",
-      "reason": "stale_balance_sheet",
-      "market_cap": 365678893.0,
-      "size_band": "SMALL",
-      "pe_ratio": 11.04,
-      "eps_3yr_cagr_pct": 30.4,
       "peg": 0.36
     },
     {
@@ -3036,24 +1551,14 @@
       "peg": 0.36
     },
     {
-      "ticker": "SFM",
-      "name": "Sprouts Farmers Market, Inc.",
-      "reason": "stale_balance_sheet",
-      "market_cap": 5827044086.0,
-      "size_band": "MID",
-      "pe_ratio": 11.13,
-      "eps_3yr_cagr_pct": 30.6,
-      "peg": 0.36
-    },
-    {
-      "ticker": "PRG",
-      "name": "PROG Holdings, Inc.",
-      "reason": "debt_unknown",
-      "market_cap": 1301697766.0,
-      "size_band": "SMALL",
-      "pe_ratio": 8.87,
-      "eps_3yr_cagr_pct": 23.6,
-      "peg": 0.38
+      "ticker": "UHS",
+      "name": "UNIVERSAL HEALTH SERVICES INC",
+      "reason": "debt_high",
+      "market_cap": 10541385073.0,
+      "size_band": "LARGE",
+      "pe_ratio": 7.08,
+      "eps_3yr_cagr_pct": 18.2,
+      "peg": 0.39
     },
     {
       "ticker": "DJCO",
@@ -3086,26 +1591,6 @@
       "peg": 0.41
     },
     {
-      "ticker": "KEX",
-      "name": "KIRBY CORP",
-      "reason": "stale_balance_sheet",
-      "market_cap": 6804864000.0,
-      "size_band": "MID",
-      "pe_ratio": 19.19,
-      "eps_3yr_cagr_pct": 46.1,
-      "peg": 0.42
-    },
-    {
-      "ticker": "RAVE",
-      "name": "RAVE RESTAURANT GROUP, INC.",
-      "reason": "stale_balance_sheet",
-      "market_cap": 32544486.0,
-      "size_band": "NANO",
-      "pe_ratio": 11.31,
-      "eps_3yr_cagr_pct": 25.9,
-      "peg": 0.44
-    },
-    {
       "ticker": "PPC",
       "name": "PILGRIMS PRIDE CORP",
       "reason": "debt_high",
@@ -3114,26 +1599,6 @@
       "pe_ratio": 6.12,
       "eps_3yr_cagr_pct": 13.5,
       "peg": 0.45
-    },
-    {
-      "ticker": "ALV",
-      "name": "AUTOLIV INC",
-      "reason": "debt_high",
-      "market_cap": 8606837742.0,
-      "size_band": "MID",
-      "pe_ratio": 11.71,
-      "eps_3yr_cagr_pct": 25.3,
-      "peg": 0.46
-    },
-    {
-      "ticker": "MMS",
-      "name": "MAXIMUS, INC.",
-      "reason": "debt_high",
-      "market_cap": 2754541911.0,
-      "size_band": "MID",
-      "pe_ratio": 8.63,
-      "eps_3yr_cagr_pct": 18.8,
-      "peg": 0.46
     },
     {
       "ticker": "VIPS",
@@ -3156,26 +1621,6 @@
       "peg": 0.47
     },
     {
-      "ticker": "BFAM",
-      "name": "BRIGHT HORIZONS FAMILY SOLUTIONS INC.",
-      "reason": "debt_high",
-      "market_cap": 3203121253.0,
-      "size_band": "MID",
-      "pe_ratio": 16.59,
-      "eps_3yr_cagr_pct": 34.8,
-      "peg": 0.48
-    },
-    {
-      "ticker": "D",
-      "name": "DOMINION ENERGY, INC",
-      "reason": "debt_high",
-      "market_cap": 53369634585.0,
-      "size_band": "LARGE",
-      "pe_ratio": 17.8,
-      "eps_3yr_cagr_pct": 37.4,
-      "peg": 0.48
-    },
-    {
       "ticker": "ARCO",
       "name": "Arcos Dorados Holdings Inc.",
       "reason": "debt_high",
@@ -3194,6 +1639,16 @@
       "pe_ratio": 14.19,
       "eps_3yr_cagr_pct": 28.7,
       "peg": 0.49
+    },
+    {
+      "ticker": "LDOS",
+      "name": "Leidos Holdings, Inc.",
+      "reason": "debt_high",
+      "market_cap": 15512091954.0,
+      "size_band": "LARGE",
+      "pe_ratio": 10.71,
+      "eps_3yr_cagr_pct": 20.5,
+      "peg": 0.52
     },
     {
       "ticker": "NGVC",
@@ -3216,14 +1671,14 @@
       "peg": 0.53
     },
     {
-      "ticker": "PSN",
-      "name": "PARSONS CORP",
-      "reason": "debt_high",
-      "market_cap": 4600108320.0,
+      "ticker": "TRN",
+      "name": "TRINITY INDUSTRIES INC",
+      "reason": "debt_unknown",
+      "market_cap": 2223575354.0,
       "size_band": "MID",
-      "pe_ratio": 19.08,
-      "eps_3yr_cagr_pct": 36.2,
-      "peg": 0.53
+      "pe_ratio": 8.02,
+      "eps_3yr_cagr_pct": 14.9,
+      "peg": 0.54
     },
     {
       "ticker": "ACM",
@@ -3236,94 +1691,34 @@
       "peg": 0.57
     },
     {
-      "ticker": "PEG",
-      "name": "PUBLIC SERVICE ENTERPRISE GROUP INC",
-      "reason": "debt_high",
-      "market_cap": 33404110411.0,
-      "size_band": "LARGE",
-      "pe_ratio": 15.82,
-      "eps_3yr_cagr_pct": 27.0,
-      "peg": 0.59
-    },
-    {
-      "ticker": "PRDO",
-      "name": "PERDOCEO EDUCATION Corp",
+      "ticker": "EAT",
+      "name": "BRINKER INTERNATIONAL, INC",
       "reason": "stale_balance_sheet",
-      "market_cap": 1907974407.0,
-      "size_band": "SMALL",
-      "pe_ratio": 11.93,
-      "eps_3yr_cagr_pct": 20.3,
-      "peg": 0.59
+      "market_cap": 8653710072.0,
+      "size_band": "MID",
+      "pe_ratio": 17.77,
+      "eps_3yr_cagr_pct": 31.0,
+      "peg": 0.57
     },
     {
-      "ticker": "ALRM",
-      "name": "Alarm.com Holdings, Inc.",
+      "ticker": "OTEX",
+      "name": "OPEN TEXT CORP",
+      "reason": "debt_high",
+      "market_cap": 5641068510.0,
+      "size_band": "MID",
+      "pe_ratio": 8.77,
+      "eps_3yr_cagr_pct": 15.3,
+      "peg": 0.57
+    },
+    {
+      "ticker": "SFM",
+      "name": "Sprouts Farmers Market, Inc.",
       "reason": "stale_balance_sheet",
-      "market_cap": 2620436371.0,
+      "market_cap": 5827044086.0,
       "size_band": "MID",
-      "pe_ratio": 19.91,
-      "eps_3yr_cagr_pct": 32.0,
-      "peg": 0.62
-    },
-    {
-      "ticker": "CBT",
-      "name": "CABOT CORP",
-      "reason": "debt_high",
-      "market_cap": 4066458111.0,
-      "size_band": "MID",
-      "pe_ratio": 12.29,
-      "eps_3yr_cagr_pct": 18.5,
-      "peg": 0.66
-    },
-    {
-      "ticker": "DUK",
-      "name": "Duke Energy CORP",
-      "reason": "debt_high",
-      "market_cap": 88379243577.0,
-      "size_band": "LARGE",
-      "pe_ratio": 17.79,
-      "eps_3yr_cagr_pct": 25.8,
-      "peg": 0.69
-    },
-    {
-      "ticker": "ADBE",
-      "name": "ADOBE INC.",
-      "reason": "debt_high",
-      "market_cap": 91644924000.0,
-      "size_band": "LARGE",
-      "pe_ratio": 12.85,
-      "eps_3yr_cagr_pct": 18.3,
-      "peg": 0.7
-    },
-    {
-      "ticker": "AXTA",
-      "name": "Axalta Coating Systems Ltd.",
-      "reason": "debt_high",
-      "market_cap": 7039117701.0,
-      "size_band": "MID",
-      "pe_ratio": 18.57,
-      "eps_3yr_cagr_pct": 26.5,
-      "peg": 0.7
-    },
-    {
-      "ticker": "GATX",
-      "name": "GATX CORP",
-      "reason": "debt_high",
-      "market_cap": 6485669000.0,
-      "size_band": "MID",
-      "pe_ratio": 19.46,
-      "eps_3yr_cagr_pct": 28.0,
-      "peg": 0.7
-    },
-    {
-      "ticker": "SAM",
-      "name": "BOSTON BEER CO INC",
-      "reason": "stale_balance_sheet",
-      "market_cap": 1685468597.0,
-      "size_band": "SMALL",
-      "pe_ratio": 15.4,
-      "eps_3yr_cagr_pct": 22.1,
-      "peg": 0.7
+      "pe_ratio": 11.13,
+      "eps_3yr_cagr_pct": 17.0,
+      "peg": 0.65
     },
     {
       "ticker": "BR",
@@ -3336,14 +1731,14 @@
       "peg": 0.76
     },
     {
-      "ticker": "AEO",
-      "name": "AMERICAN EAGLE OUTFITTERS INC",
-      "reason": "capex_high",
-      "market_cap": 2778365861.0,
-      "size_band": "MID",
-      "pe_ratio": 14.94,
-      "eps_3yr_cagr_pct": 19.4,
-      "peg": 0.77
+      "ticker": "FLXS",
+      "name": "FLEXSTEEL INDUSTRIES INC",
+      "reason": "stale_balance_sheet",
+      "market_cap": 365678893.0,
+      "size_band": "SMALL",
+      "pe_ratio": 11.04,
+      "eps_3yr_cagr_pct": 14.5,
+      "peg": 0.76
     },
     {
       "ticker": "CHKP",
@@ -3376,16 +1771,6 @@
       "peg": 0.86
     },
     {
-      "ticker": "FOXA",
-      "name": "Fox Corp",
-      "reason": "debt_high",
-      "market_cap": 26594955340.0,
-      "size_band": "LARGE",
-      "pe_ratio": 15.78,
-      "eps_3yr_cagr_pct": 18.1,
-      "peg": 0.87
-    },
-    {
       "ticker": "LII",
       "name": "LENNOX INTERNATIONAL INC",
       "reason": "debt_high",
@@ -3396,24 +1781,14 @@
       "peg": 0.89
     },
     {
-      "ticker": "PPG",
-      "name": "PPG INDUSTRIES INC",
-      "reason": "debt_high",
-      "market_cap": 23901696000.0,
-      "size_band": "LARGE",
-      "pe_ratio": 15.17,
-      "eps_3yr_cagr_pct": 17.1,
-      "peg": 0.89
-    },
-    {
-      "ticker": "LEA",
-      "name": "LEAR CORP",
-      "reason": "debt_high",
-      "market_cap": 6052641790.0,
+      "ticker": "AROC",
+      "name": "Archrock, Inc.",
+      "reason": "debt_unknown",
+      "market_cap": 5335540970.0,
       "size_band": "MID",
-      "pe_ratio": 13.86,
-      "eps_3yr_cagr_pct": 14.2,
-      "peg": 0.98
+      "pe_ratio": 16.56,
+      "eps_3yr_cagr_pct": 17.4,
+      "peg": 0.95
     },
     {
       "ticker": "ITRN",
@@ -3436,14 +1811,24 @@
       "peg": 1.06
     },
     {
-      "ticker": "FDS",
-      "name": "FACTSET RESEARCH SYSTEMS INC",
+      "ticker": "KEX",
+      "name": "KIRBY CORP",
       "reason": "peg_high",
-      "market_cap": 9712238482.0,
+      "market_cap": 6804864000.0,
       "size_band": "MID",
-      "pe_ratio": 16.27,
-      "eps_3yr_cagr_pct": 14.9,
-      "peg": 1.09
+      "pe_ratio": 19.19,
+      "eps_3yr_cagr_pct": 17.8,
+      "peg": 1.08
+    },
+    {
+      "ticker": "URBN",
+      "name": "URBAN OUTFITTERS INC",
+      "reason": "peg_high",
+      "market_cap": 6454494638.0,
+      "size_band": "MID",
+      "pe_ratio": 13.88,
+      "eps_3yr_cagr_pct": 12.8,
+      "peg": 1.08
     },
     {
       "ticker": "OPCH",
@@ -3466,34 +1851,14 @@
       "peg": 1.11
     },
     {
-      "ticker": "SAH",
-      "name": "SONIC AUTOMOTIVE INC",
+      "ticker": "ALV",
+      "name": "AUTOLIV INC",
       "reason": "peg_high",
-      "market_cap": 2053381390.0,
+      "market_cap": 8606837742.0,
       "size_band": "MID",
-      "pe_ratio": 17.3,
-      "eps_3yr_cagr_pct": 15.3,
-      "peg": 1.13
-    },
-    {
-      "ticker": "ICFI",
-      "name": "ICF International, Inc.",
-      "reason": "peg_high",
-      "market_cap": 1498555347.0,
-      "size_band": "SMALL",
-      "pe_ratio": 16.29,
-      "eps_3yr_cagr_pct": 13.6,
-      "peg": 1.2
-    },
-    {
-      "ticker": "PNR",
-      "name": "PENTAIR plc",
-      "reason": "peg_high",
-      "market_cap": 8566172397.0,
-      "size_band": "MID",
-      "pe_ratio": 13.1,
-      "eps_3yr_cagr_pct": 10.9,
-      "peg": 1.2
+      "pe_ratio": 11.71,
+      "eps_3yr_cagr_pct": 10.3,
+      "peg": 1.14
     },
     {
       "ticker": "SAIC",
@@ -3516,24 +1881,24 @@
       "peg": 1.35
     },
     {
-      "ticker": "CPRT",
-      "name": "COPART INC",
+      "ticker": "DORM",
+      "name": "Dorman Products, Inc.",
       "reason": "peg_high",
-      "market_cap": 25543138788.0,
-      "size_band": "LARGE",
-      "pe_ratio": 16.45,
-      "eps_3yr_cagr_pct": 12.1,
-      "peg": 1.36
+      "market_cap": 3680370144.0,
+      "size_band": "MID",
+      "pe_ratio": 18.02,
+      "eps_3yr_cagr_pct": 12.6,
+      "peg": 1.43
     },
     {
-      "ticker": "ETR",
-      "name": "ENTERGY CORP /DE/",
+      "ticker": "FDS",
+      "name": "FACTSET RESEARCH SYSTEMS INC",
       "reason": "peg_high",
-      "market_cap": 45995866758.0,
-      "size_band": "LARGE",
-      "pe_ratio": 19.52,
-      "eps_3yr_cagr_pct": 13.4,
-      "peg": 1.46
+      "market_cap": 9712238482.0,
+      "size_band": "MID",
+      "pe_ratio": 16.27,
+      "eps_3yr_cagr_pct": 10.7,
+      "peg": 1.52
     },
     {
       "ticker": "TRAK",
@@ -3556,6 +1921,16 @@
       "peg": 1.58
     },
     {
+      "ticker": "AXTA",
+      "name": "Axalta Coating Systems Ltd.",
+      "reason": "peg_high",
+      "market_cap": 7039117701.0,
+      "size_band": "MID",
+      "pe_ratio": 18.57,
+      "eps_3yr_cagr_pct": 11.2,
+      "peg": 1.66
+    },
+    {
       "ticker": "CRAI",
       "name": "CRA INTERNATIONAL, INC.",
       "reason": "peg_high",
@@ -3564,16 +1939,6 @@
       "pe_ratio": 18.56,
       "eps_3yr_cagr_pct": 11.2,
       "peg": 1.66
-    },
-    {
-      "ticker": "RPM",
-      "name": "RPM INTERNATIONAL INC/DE/",
-      "reason": "peg_high",
-      "market_cap": 12830347421.0,
-      "size_band": "LARGE",
-      "pe_ratio": 19.38,
-      "eps_3yr_cagr_pct": 11.6,
-      "peg": 1.67
     },
     {
       "ticker": "MGRC",
@@ -3586,44 +1951,24 @@
       "peg": 1.68
     },
     {
-      "ticker": "LOPE",
-      "name": "Grand Canyon Education, Inc.",
+      "ticker": "FTDR",
+      "name": "Frontdoor, Inc.",
       "reason": "peg_high",
-      "market_cap": 3838858649.0,
+      "market_cap": 5097416451.0,
       "size_band": "MID",
-      "pe_ratio": 17.76,
-      "eps_3yr_cagr_pct": 10.4,
-      "peg": 1.71
+      "pe_ratio": 19.99,
+      "eps_3yr_cagr_pct": 11.3,
+      "peg": 1.77
     },
     {
-      "ticker": "TGT",
-      "name": "TARGET CORP",
+      "ticker": "ALRM",
+      "name": "Alarm.com Holdings, Inc.",
       "reason": "peg_high",
-      "market_cap": 71529021083.0,
-      "size_band": "LARGE",
-      "pe_ratio": 19.31,
-      "eps_3yr_cagr_pct": 10.7,
-      "peg": 1.8
-    },
-    {
-      "ticker": "KNF",
-      "name": "Knife River Corp",
-      "reason": "peg_high",
-      "market_cap": 3098147464.0,
+      "market_cap": 2620436371.0,
       "size_band": "MID",
-      "pe_ratio": 19.72,
-      "eps_3yr_cagr_pct": 10.4,
-      "peg": 1.9
-    },
-    {
-      "ticker": "PCYO",
-      "name": "PURE CYCLE CORP",
-      "reason": "peg_high",
-      "market_cap": 261938412.0,
-      "size_band": "MICRO",
-      "pe_ratio": 19.98,
-      "eps_3yr_cagr_pct": 10.5,
-      "peg": 1.9
+      "pe_ratio": 19.91,
+      "eps_3yr_cagr_pct": 10.0,
+      "peg": 1.99
     },
     {
       "ticker": "A",
@@ -3731,7 +2076,7 @@
       "market_cap": 2917834390.0,
       "size_band": "MID",
       "pe_ratio": 17.97,
-      "eps_3yr_cagr_pct": -8.8
+      "eps_3yr_cagr_pct": -7.6
     },
     {
       "ticker": "ABNB",
@@ -3910,6 +2255,15 @@
       "pe_ratio": 43.12
     },
     {
+      "ticker": "ADBE",
+      "name": "ADOBE INC.",
+      "reason": "no_growth",
+      "market_cap": 91644924000.0,
+      "size_band": "LARGE",
+      "pe_ratio": 12.85,
+      "eps_3yr_cagr_pct": 9.0
+    },
+    {
       "ticker": "ADBT",
       "name": "Advasa Holdings, Inc.",
       "reason": "penny",
@@ -4085,6 +2439,15 @@
       "market_cap": 248780594.0,
       "size_band": "MICRO",
       "pe_ratio": 19.05
+    },
+    {
+      "ticker": "AEO",
+      "name": "AMERICAN EAGLE OUTFITTERS INC",
+      "reason": "no_growth",
+      "market_cap": 2778365861.0,
+      "size_band": "MID",
+      "pe_ratio": 14.94,
+      "eps_3yr_cagr_pct": -14.4
     },
     {
       "ticker": "AEP",
@@ -4915,6 +3278,15 @@
       "size_band": ""
     },
     {
+      "ticker": "AOS",
+      "name": "SMITH A O CORP",
+      "reason": "no_growth",
+      "market_cap": 7971037806.0,
+      "size_band": "MID",
+      "pe_ratio": 14.59,
+      "eps_3yr_cagr_pct": 6.3
+    },
+    {
       "ticker": "AOSL",
       "name": "ALPHA & OMEGA SEMICONDUCTOR Ltd",
       "reason": "unprofitable",
@@ -5033,7 +3405,7 @@
       "market_cap": 52459961.0,
       "size_band": "MICRO",
       "pe_ratio": 14.99,
-      "eps_3yr_cagr_pct": 8.3
+      "eps_3yr_cagr_pct": -29.7
     },
     {
       "ticker": "APTV",
@@ -5449,7 +3821,7 @@
       "market_cap": 2456595532.0,
       "size_band": "MID",
       "pe_ratio": 11.91,
-      "eps_3yr_cagr_pct": -6.9
+      "eps_3yr_cagr_pct": -30.9
     },
     {
       "ticker": "ATHR",
@@ -5625,7 +3997,7 @@
       "market_cap": 2940561861.0,
       "size_band": "MID",
       "pe_ratio": 15.24,
-      "eps_3yr_cagr_pct": 3.9
+      "eps_3yr_cagr_pct": -3.6
     },
     {
       "ticker": "AVAH",
@@ -5889,6 +4261,15 @@
       "pe_ratio": 70.04
     },
     {
+      "ticker": "BAH",
+      "name": "Booz Allen Hamilton Holding Corp",
+      "reason": "no_growth",
+      "market_cap": 8774788780.0,
+      "size_band": "MID",
+      "pe_ratio": 10.32,
+      "eps_3yr_cagr_pct": 9.6
+    },
+    {
       "ticker": "BALL",
       "name": "BALL Corp",
       "reason": "units_unverified",
@@ -6002,7 +4383,7 @@
       "market_cap": 754683505.0,
       "size_band": "SMALL",
       "pe_ratio": 13.86,
-      "eps_3yr_cagr_pct": 8.2
+      "eps_3yr_cagr_pct": -16.8
     },
     {
       "ticker": "BBUC",
@@ -6034,7 +4415,7 @@
       "market_cap": 18982453946.0,
       "size_band": "LARGE",
       "pe_ratio": 17.76,
-      "eps_3yr_cagr_pct": -7.1
+      "eps_3yr_cagr_pct": -15.4
     },
     {
       "ticker": "BC",
@@ -6125,7 +4506,7 @@
       "market_cap": 83862153.0,
       "size_band": "MICRO",
       "pe_ratio": 16.66,
-      "eps_3yr_cagr_pct": -7.3
+      "eps_3yr_cagr_pct": -19.2
     },
     {
       "ticker": "BDSX",
@@ -6190,6 +4571,15 @@
       "reason": "no_price",
       "market_cap": null,
       "size_band": ""
+    },
+    {
+      "ticker": "BFAM",
+      "name": "BRIGHT HORIZONS FAMILY SOLUTIONS INC.",
+      "reason": "no_growth",
+      "market_cap": 3203121253.0,
+      "size_band": "MID",
+      "pe_ratio": 16.59,
+      "eps_3yr_cagr_pct": 1.6
     },
     {
       "ticker": "BFLY",
@@ -6406,7 +4796,7 @@
       "market_cap": 2177430585.0,
       "size_band": "MID",
       "pe_ratio": 10.38,
-      "eps_3yr_cagr_pct": -6.9
+      "eps_3yr_cagr_pct": -5.4
     },
     {
       "ticker": "BKH",
@@ -6708,7 +5098,7 @@
       "market_cap": 3734121265.0,
       "size_band": "MID",
       "pe_ratio": 16.53,
-      "eps_3yr_cagr_pct": 9.4
+      "eps_3yr_cagr_pct": 3.8
     },
     {
       "ticker": "BORR",
@@ -6860,7 +5250,7 @@
       "market_cap": 1837620000.0,
       "size_band": "SMALL",
       "pe_ratio": 12.5,
-      "eps_3yr_cagr_pct": -18.2
+      "eps_3yr_cagr_pct": -24.9
     },
     {
       "ticker": "BRTX",
@@ -7489,6 +5879,15 @@
       "size_band": "LARGE"
     },
     {
+      "ticker": "CBT",
+      "name": "CABOT CORP",
+      "reason": "no_growth",
+      "market_cap": 4066458111.0,
+      "size_band": "MID",
+      "pe_ratio": 12.29,
+      "eps_3yr_cagr_pct": 8.5
+    },
+    {
       "ticker": "CBUS",
       "name": "Cibus, Inc.",
       "reason": "tiny_revenue",
@@ -7636,7 +6035,7 @@
       "market_cap": 645403753.0,
       "size_band": "SMALL",
       "pe_ratio": 7.64,
-      "eps_3yr_cagr_pct": 6.1
+      "eps_3yr_cagr_pct": -13.9
     },
     {
       "ticker": "CCTG",
@@ -7800,7 +6199,7 @@
       "market_cap": 2473033547.0,
       "size_band": "MID",
       "pe_ratio": 15.19,
-      "eps_3yr_cagr_pct": 4.4
+      "eps_3yr_cagr_pct": -1.9
     },
     {
       "ticker": "CENX",
@@ -8429,7 +6828,7 @@
       "market_cap": 19739680711.0,
       "size_band": "LARGE",
       "pe_ratio": 18.43,
-      "eps_3yr_cagr_pct": 7.4
+      "eps_3yr_cagr_pct": -6.7
     },
     {
       "ticker": "CMS-PB",
@@ -8654,7 +7053,7 @@
       "market_cap": 2948727974.0,
       "size_band": "MID",
       "pe_ratio": 16.64,
-      "eps_3yr_cagr_pct": -13.2
+      "eps_3yr_cagr_pct": -11.7
     },
     {
       "ticker": "CON",
@@ -8775,7 +7174,7 @@
       "market_cap": 5776806003.0,
       "size_band": "MID",
       "pe_ratio": 14.33,
-      "eps_3yr_cagr_pct": -22.8
+      "eps_3yr_cagr_pct": -20.9
     },
     {
       "ticker": "CPHC",
@@ -8813,6 +7212,15 @@
       "reason": "units_unverified",
       "market_cap": 1716139432.0,
       "size_band": "SMALL"
+    },
+    {
+      "ticker": "CPRT",
+      "name": "COPART INC",
+      "reason": "no_growth",
+      "market_cap": 25543138788.0,
+      "size_band": "LARGE",
+      "pe_ratio": 16.45,
+      "eps_3yr_cagr_pct": -11.5
     },
     {
       "ticker": "CPS",
@@ -8858,7 +7266,7 @@
       "market_cap": 4663932581.0,
       "size_band": "MID",
       "pe_ratio": 12.85,
-      "eps_3yr_cagr_pct": -15.0
+      "eps_3yr_cagr_pct": -13.4
     },
     {
       "ticker": "CRCT",
@@ -8867,7 +7275,7 @@
       "market_cap": 1285988714.0,
       "size_band": "SMALL",
       "pe_ratio": 16.77,
-      "eps_3yr_cagr_pct": 7.7
+      "eps_3yr_cagr_pct": -13.9
     },
     {
       "ticker": "CRDO",
@@ -8929,7 +7337,7 @@
       "market_cap": 1149427202.0,
       "size_band": "SMALL",
       "pe_ratio": 12.52,
-      "eps_3yr_cagr_pct": -26.3
+      "eps_3yr_cagr_pct": -24.5
     },
     {
       "ticker": "CRK",
@@ -8997,6 +7405,15 @@
       "market_cap": 797680261.0,
       "size_band": "SMALL",
       "pe_ratio": 5.35
+    },
+    {
+      "ticker": "CRUS",
+      "name": "CIRRUS LOGIC, INC.",
+      "reason": "no_growth",
+      "market_cap": 6010097915.0,
+      "size_band": "MID",
+      "pe_ratio": 14.5,
+      "eps_3yr_cagr_pct": 9.2
     },
     {
       "ticker": "CRWD",
@@ -9381,6 +7798,15 @@
       "pe_ratio": 64.48
     },
     {
+      "ticker": "CVSA",
+      "name": "Covista Inc.",
+      "reason": "no_growth",
+      "market_cap": 4110187515.0,
+      "size_band": "MID",
+      "pe_ratio": 16.34,
+      "eps_3yr_cagr_pct": 2.3
+    },
+    {
       "ticker": "CVU",
       "name": "CPI AEROSTRUCTURES INC",
       "reason": "unprofitable",
@@ -9523,13 +7949,22 @@
       "size_band": "MID"
     },
     {
+      "ticker": "D",
+      "name": "DOMINION ENERGY, INC",
+      "reason": "no_growth",
+      "market_cap": 53369634585.0,
+      "size_band": "LARGE",
+      "pe_ratio": 17.8,
+      "eps_3yr_cagr_pct": -4.3
+    },
+    {
       "ticker": "DAC",
       "name": "Danaos Corp",
       "reason": "no_growth",
       "market_cap": 2805883637.0,
       "size_band": "MID",
       "pe_ratio": 5.67,
-      "eps_3yr_cagr_pct": -0.6
+      "eps_3yr_cagr_pct": -15.0
     },
     {
       "ticker": "DAIC",
@@ -9552,6 +7987,15 @@
       "market_cap": 818536903.0,
       "size_band": "SMALL",
       "pe_ratio": 18.04
+    },
+    {
+      "ticker": "DAL",
+      "name": "DELTA AIR LINES, INC.",
+      "reason": "no_growth",
+      "market_cap": 55858500168.0,
+      "size_band": "LARGE",
+      "pe_ratio": 11.16,
+      "eps_3yr_cagr_pct": 0.8
     },
     {
       "ticker": "DAN",
@@ -9747,6 +8191,15 @@
       "pe_ratio": 3.1
     },
     {
+      "ticker": "DECK",
+      "name": "DECKERS OUTDOOR CORP",
+      "reason": "no_growth",
+      "market_cap": 10731707238.0,
+      "size_band": "LARGE",
+      "pe_ratio": 10.48,
+      "eps_3yr_cagr_pct": -18.9
+    },
+    {
       "ticker": "DELL",
       "name": "Dell Technologies Inc.",
       "reason": "negative_equity",
@@ -9920,6 +8373,15 @@
       "pe_ratio": 66.73
     },
     {
+      "ticker": "DIS",
+      "name": "Walt Disney Co",
+      "reason": "no_growth",
+      "market_cap": 183287814647.0,
+      "size_band": "LARGE",
+      "pe_ratio": 14.78,
+      "eps_3yr_cagr_pct": -17.1
+    },
+    {
       "ticker": "DIT",
       "name": "AMCON DISTRIBUTING CO",
       "reason": "pe_high",
@@ -9969,7 +8431,7 @@
       "market_cap": 12132250035.0,
       "size_band": "LARGE",
       "pe_ratio": 14.29,
-      "eps_3yr_cagr_pct": -2.6
+      "eps_3yr_cagr_pct": -7.9
     },
     {
       "ticker": "DLHC",
@@ -10323,7 +8785,7 @@
       "market_cap": 348358363.0,
       "size_band": "SMALL",
       "pe_ratio": 19.54,
-      "eps_3yr_cagr_pct": -56.7
+      "eps_3yr_cagr_pct": -19.4
     },
     {
       "ticker": "DSY",
@@ -10354,7 +8816,7 @@
       "market_cap": 25270215099.0,
       "size_band": "LARGE",
       "pe_ratio": 17.28,
-      "eps_3yr_cagr_pct": 8.4
+      "eps_3yr_cagr_pct": -0.1
     },
     {
       "ticker": "DTF",
@@ -10391,6 +8853,15 @@
       "reason": "too_small",
       "market_cap": 7317120.0,
       "size_band": "NANO"
+    },
+    {
+      "ticker": "DUK",
+      "name": "Duke Energy CORP",
+      "reason": "no_growth",
+      "market_cap": 88379243577.0,
+      "size_band": "LARGE",
+      "pe_ratio": 17.79,
+      "eps_3yr_cagr_pct": 3.7
     },
     {
       "ticker": "DUKR",
@@ -10728,7 +9199,7 @@
       "market_cap": 1357920000.0,
       "size_band": "SMALL",
       "pe_ratio": 11.96,
-      "eps_3yr_cagr_pct": -20.8
+      "eps_3yr_cagr_pct": -23.7
     },
     {
       "ticker": "EFR",
@@ -10859,6 +9330,15 @@
       "reason": "no_cap",
       "market_cap": null,
       "size_band": ""
+    },
+    {
+      "ticker": "EIX",
+      "name": "EDISON INTERNATIONAL",
+      "reason": "no_growth",
+      "market_cap": 20260455994.0,
+      "size_band": "LARGE",
+      "pe_ratio": 4.54,
+      "eps_3yr_cagr_pct": -2.6
     },
     {
       "ticker": "EJH",
@@ -11220,7 +9700,7 @@
       "market_cap": 5583258954.0,
       "size_band": "MID",
       "pe_ratio": 14.78,
-      "eps_3yr_cagr_pct": -1.8
+      "eps_3yr_cagr_pct": -4.7
     },
     {
       "ticker": "EPC",
@@ -11308,7 +9788,7 @@
       "market_cap": 347615599.0,
       "size_band": "SMALL",
       "pe_ratio": 15.14,
-      "eps_3yr_cagr_pct": 0.0
+      "eps_3yr_cagr_pct": -2.2
     },
     {
       "ticker": "ERO",
@@ -11338,7 +9818,7 @@
       "market_cap": 4470487217.0,
       "size_band": "MID",
       "pe_ratio": 19.71,
-      "eps_3yr_cagr_pct": -0.2
+      "eps_3yr_cagr_pct": -1.6
     },
     {
       "ticker": "ESCA",
@@ -11347,7 +9827,7 @@
       "market_cap": 268713764.0,
       "size_band": "MICRO",
       "pe_ratio": 19.61,
-      "eps_3yr_cagr_pct": -8.9
+      "eps_3yr_cagr_pct": -11.4
     },
     {
       "ticker": "ESE",
@@ -11461,6 +9941,15 @@
       "reason": "no_statements",
       "market_cap": 498691039.0,
       "size_band": "SMALL"
+    },
+    {
+      "ticker": "ETR",
+      "name": "ENTERGY CORP /DE/",
+      "reason": "no_growth",
+      "market_cap": 45995866758.0,
+      "size_band": "LARGE",
+      "pe_ratio": 19.52,
+      "eps_3yr_cagr_pct": -10.7
     },
     {
       "ticker": "ETS",
@@ -11875,7 +10364,7 @@
       "market_cap": 3707958407.0,
       "size_band": "MID",
       "pe_ratio": 13.69,
-      "eps_3yr_cagr_pct": 7.8
+      "eps_3yr_cagr_pct": 5.5
     },
     {
       "ticker": "FCUV",
@@ -11906,7 +10395,7 @@
       "market_cap": 67652243845.0,
       "size_band": "LARGE",
       "pe_ratio": 15.26,
-      "eps_3yr_cagr_pct": 6.2
+      "eps_3yr_cagr_pct": -0.9
     },
     {
       "ticker": "FDXF",
@@ -12120,7 +10609,7 @@
       "market_cap": 2777566010.0,
       "size_band": "MID",
       "pe_ratio": 15.12,
-      "eps_3yr_cagr_pct": 8.8
+      "eps_3yr_cagr_pct": 1.1
     },
     {
       "ticker": "FKWL",
@@ -12405,6 +10894,15 @@
       "market_cap": 3036016614.0,
       "size_band": "MID",
       "pe_ratio": 20.65
+    },
+    {
+      "ticker": "FOXA",
+      "name": "Fox Corp",
+      "reason": "no_growth",
+      "market_cap": 26594955340.0,
+      "size_band": "LARGE",
+      "pe_ratio": 15.78,
+      "eps_3yr_cagr_pct": 1.2
     },
     {
       "ticker": "FOXF",
@@ -12805,6 +11303,15 @@
       "eps_3yr_cagr_pct": 6.2
     },
     {
+      "ticker": "GATX",
+      "name": "GATX CORP",
+      "reason": "no_growth",
+      "market_cap": 6485669000.0,
+      "size_band": "MID",
+      "pe_ratio": 19.46,
+      "eps_3yr_cagr_pct": 7.8
+    },
+    {
       "ticker": "GAU",
       "name": "Galiano Gold Inc.",
       "reason": "ifrs_filer",
@@ -13001,7 +11508,7 @@
       "market_cap": 30095854971.0,
       "size_band": "LARGE",
       "pe_ratio": 14.44,
-      "eps_3yr_cagr_pct": 2.5
+      "eps_3yr_cagr_pct": -2.1
     },
     {
       "ticker": "GEL",
@@ -13017,7 +11524,7 @@
       "market_cap": 12941451632.0,
       "size_band": "LARGE",
       "pe_ratio": 13.3,
-      "eps_3yr_cagr_pct": -9.8
+      "eps_3yr_cagr_pct": -20.1
     },
     {
       "ticker": "GENC",
@@ -13048,7 +11555,7 @@
       "market_cap": 4109163412.0,
       "size_band": "MID",
       "pe_ratio": 16.15,
-      "eps_3yr_cagr_pct": -27.6
+      "eps_3yr_cagr_pct": -30.9
     },
     {
       "ticker": "GETY",
@@ -13157,6 +11664,15 @@
       "reason": "negative_equity",
       "market_cap": 23786271133.0,
       "size_band": "LARGE"
+    },
+    {
+      "ticker": "GHC",
+      "name": "Graham Holdings Co",
+      "reason": "no_growth",
+      "market_cap": 4890875998.0,
+      "size_band": "MID",
+      "pe_ratio": 16.73,
+      "eps_3yr_cagr_pct": -1.4
     },
     {
       "ticker": "GHG",
@@ -13500,7 +12016,7 @@
       "market_cap": 4757229614.0,
       "size_band": "MID",
       "pe_ratio": 12.36,
-      "eps_3yr_cagr_pct": 8.6
+      "eps_3yr_cagr_pct": 0.8
     },
     {
       "ticker": "GO",
@@ -13539,7 +12055,7 @@
       "market_cap": 1281351526.0,
       "size_band": "SMALL",
       "pe_ratio": 15.56,
-      "eps_3yr_cagr_pct": -49.3
+      "eps_3yr_cagr_pct": -46.9
     },
     {
       "ticker": "GOLF",
@@ -14049,7 +12565,7 @@
       "market_cap": 500861290.0,
       "size_band": "SMALL",
       "pe_ratio": 18.93,
-      "eps_3yr_cagr_pct": 2.5
+      "eps_3yr_cagr_pct": -10.4
     },
     {
       "ticker": "HBIO",
@@ -14273,7 +12789,7 @@
       "market_cap": 10403601964.0,
       "size_band": "LARGE",
       "pe_ratio": 17.2,
-      "eps_3yr_cagr_pct": 2.1
+      "eps_3yr_cagr_pct": -2.1
     },
     {
       "ticker": "HIMS",
@@ -14460,7 +12976,7 @@
       "market_cap": 67365599126.0,
       "size_band": "LARGE",
       "pe_ratio": 14.25,
-      "eps_3yr_cagr_pct": 0.4
+      "eps_3yr_cagr_pct": -2.2
     },
     {
       "ticker": "HOS",
@@ -14733,7 +13249,7 @@
       "market_cap": 1855397493.0,
       "size_band": "SMALL",
       "pe_ratio": 17.84,
-      "eps_3yr_cagr_pct": -12.4
+      "eps_3yr_cagr_pct": -19.0
     },
     {
       "ticker": "HUBS",
@@ -14940,6 +13456,15 @@
       "pe_ratio": 265.74
     },
     {
+      "ticker": "ICFI",
+      "name": "ICF International, Inc.",
+      "reason": "no_growth",
+      "market_cap": 1498555347.0,
+      "size_band": "SMALL",
+      "pe_ratio": 16.29,
+      "eps_3yr_cagr_pct": 7.4
+    },
+    {
       "ticker": "ICG",
       "name": "Intchains Group Ltd",
       "reason": "penny",
@@ -15130,7 +13655,7 @@
       "market_cap": 570681122.0,
       "size_band": "SMALL",
       "pe_ratio": 13.91,
-      "eps_3yr_cagr_pct": -31.0
+      "eps_3yr_cagr_pct": -33.9
     },
     {
       "ticker": "IIIV",
@@ -15747,7 +14272,7 @@
       "market_cap": 574394676.0,
       "size_band": "SMALL",
       "pe_ratio": 10.68,
-      "eps_3yr_cagr_pct": -19.5
+      "eps_3yr_cagr_pct": -15.0
     },
     {
       "ticker": "JBL",
@@ -16211,7 +14736,7 @@
       "market_cap": 3913506382.0,
       "size_band": "MID",
       "pe_ratio": 13.94,
-      "eps_3yr_cagr_pct": 9.7
+      "eps_3yr_cagr_pct": -3.3
     },
     {
       "ticker": "KGEI",
@@ -16300,7 +14825,7 @@
       "market_cap": 32735754710.0,
       "size_band": "LARGE",
       "pe_ratio": 16.2,
-      "eps_3yr_cagr_pct": 2.0
+      "eps_3yr_cagr_pct": -2.4
     },
     {
       "ticker": "KMI",
@@ -16324,7 +14849,7 @@
       "market_cap": 2370382662.0,
       "size_band": "MID",
       "pe_ratio": 6.76,
-      "eps_3yr_cagr_pct": -11.3
+      "eps_3yr_cagr_pct": -13.7
     },
     {
       "ticker": "KMX",
@@ -16348,6 +14873,15 @@
       "reason": "penny",
       "market_cap": 59044235.0,
       "size_band": "MICRO"
+    },
+    {
+      "ticker": "KNF",
+      "name": "Knife River Corp",
+      "reason": "no_growth",
+      "market_cap": 3098147464.0,
+      "size_band": "MID",
+      "pe_ratio": 19.72,
+      "eps_3yr_cagr_pct": 4.8
     },
     {
       "ticker": "KNOP",
@@ -16401,7 +14935,7 @@
       "market_cap": 875038251.0,
       "size_band": "SMALL",
       "pe_ratio": 15.63,
-      "eps_3yr_cagr_pct": -2.8
+      "eps_3yr_cagr_pct": -13.7
     },
     {
       "ticker": "KOPN",
@@ -16666,6 +15200,15 @@
       "size_band": "MID"
     },
     {
+      "ticker": "LAUR",
+      "name": "LAUREATE EDUCATION, INC.",
+      "reason": "no_growth",
+      "market_cap": 5151826064.0,
+      "size_band": "MID",
+      "pe_ratio": 18.29,
+      "eps_3yr_cagr_pct": -12.6
+    },
+    {
       "ticker": "LAW",
       "name": "CS Disco, Inc.",
       "reason": "unprofitable",
@@ -16745,6 +15288,15 @@
       "market_cap": 303123020.0,
       "size_band": "SMALL",
       "pe_ratio": 55.03
+    },
+    {
+      "ticker": "LEA",
+      "name": "LEAR CORP",
+      "reason": "no_growth",
+      "market_cap": 6052641790.0,
+      "size_band": "MID",
+      "pe_ratio": 13.86,
+      "eps_3yr_cagr_pct": -7.2
     },
     {
       "ticker": "LECO",
@@ -16880,7 +15432,7 @@
       "market_cap": 1162181117.0,
       "size_band": "SMALL",
       "pe_ratio": 16.02,
-      "eps_3yr_cagr_pct": -39.0
+      "eps_3yr_cagr_pct": -34.8
     },
     {
       "ticker": "LGL",
@@ -17125,6 +15677,15 @@
       "size_band": "NANO"
     },
     {
+      "ticker": "LOCO",
+      "name": "El Pollo Loco Holdings, Inc.",
+      "reason": "no_growth",
+      "market_cap": 428800082.0,
+      "size_band": "SMALL",
+      "pe_ratio": 16.19,
+      "eps_3yr_cagr_pct": 3.0
+    },
+    {
       "ticker": "LOGI",
       "name": "LOGITECH INTERNATIONAL S.A.",
       "reason": "pe_high",
@@ -17145,6 +15706,15 @@
       "reason": "penny",
       "market_cap": 22303351.0,
       "size_band": "NANO"
+    },
+    {
+      "ticker": "LOPE",
+      "name": "Grand Canyon Education, Inc.",
+      "reason": "no_growth",
+      "market_cap": 3838858649.0,
+      "size_band": "MID",
+      "pe_ratio": 17.76,
+      "eps_3yr_cagr_pct": 6.8
     },
     {
       "ticker": "LOT",
@@ -17175,7 +15745,7 @@
       "market_cap": 2285878646.0,
       "size_band": "MID",
       "pe_ratio": 11.8,
-      "eps_3yr_cagr_pct": 1.9
+      "eps_3yr_cagr_pct": 0.7
     },
     {
       "ticker": "LPL",
@@ -17354,7 +15924,7 @@
       "market_cap": 25253869164.0,
       "size_band": "LARGE",
       "pe_ratio": 15.52,
-      "eps_3yr_cagr_pct": -0.7
+      "eps_3yr_cagr_pct": -6.4
     },
     {
       "ticker": "LVWR",
@@ -17476,7 +16046,7 @@
       "market_cap": 5913039265.0,
       "size_band": "MID",
       "pe_ratio": 9.21,
-      "eps_3yr_cagr_pct": -17.1
+      "eps_3yr_cagr_pct": -15.5
     },
     {
       "ticker": "MA",
@@ -17601,7 +16171,7 @@
       "market_cap": 3796953000.0,
       "size_band": "MID",
       "pe_ratio": 9.54,
-      "eps_3yr_cagr_pct": 4.1
+      "eps_3yr_cagr_pct": -16.3
     },
     {
       "ticker": "MATV",
@@ -18134,7 +16704,7 @@
       "market_cap": 12888743403.0,
       "size_band": "LARGE",
       "pe_ratio": 16.33,
-      "eps_3yr_cagr_pct": 5.2
+      "eps_3yr_cagr_pct": 1.1
     },
     {
       "ticker": "MKDW",
@@ -18240,6 +16810,15 @@
       "reason": "no_equity",
       "market_cap": 84509322.0,
       "size_band": "MICRO"
+    },
+    {
+      "ticker": "MMS",
+      "name": "MAXIMUS, INC.",
+      "reason": "no_growth",
+      "market_cap": 2754541911.0,
+      "size_band": "MID",
+      "pe_ratio": 8.63,
+      "eps_3yr_cagr_pct": 4.2
     },
     {
       "ticker": "MMT",
@@ -18844,6 +17423,15 @@
       "size_band": "MICRO"
     },
     {
+      "ticker": "MWA",
+      "name": "Mueller Water Products, Inc.",
+      "reason": "no_growth",
+      "market_cap": 3376998437.0,
+      "size_band": "MID",
+      "pe_ratio": 17.62,
+      "eps_3yr_cagr_pct": 9.2
+    },
+    {
       "ticker": "MWC",
       "name": "Micware Co., Ltd.",
       "reason": "short_history",
@@ -18971,6 +17559,15 @@
       "reason": "too_small",
       "market_cap": 1439526.0,
       "size_band": "NANO"
+    },
+    {
+      "ticker": "MZTI",
+      "name": "MARZETTI CO",
+      "reason": "no_growth",
+      "market_cap": 2741926770.0,
+      "size_band": "MID",
+      "pe_ratio": 14.31,
+      "eps_3yr_cagr_pct": 6.2
     },
     {
       "ticker": "NA",
@@ -19347,7 +17944,7 @@
       "market_cap": 7507612370.0,
       "size_band": "MID",
       "pe_ratio": 14.48,
-      "eps_3yr_cagr_pct": -40.4
+      "eps_3yr_cagr_pct": -24.5
     },
     {
       "ticker": "NFGC",
@@ -19494,7 +18091,7 @@
       "market_cap": 53035078632.0,
       "size_band": "LARGE",
       "pe_ratio": 17.06,
-      "eps_3yr_cagr_pct": -13.4
+      "eps_3yr_cagr_pct": -13.5
     },
     {
       "ticker": "NKLR",
@@ -19644,7 +18241,7 @@
       "market_cap": 72526016034.0,
       "size_band": "LARGE",
       "pe_ratio": 17.34,
-      "eps_3yr_cagr_pct": -2.6
+      "eps_3yr_cagr_pct": -9.6
     },
     {
       "ticker": "NOG",
@@ -20127,7 +18724,7 @@
       "market_cap": 1980080028.0,
       "size_band": "SMALL",
       "pe_ratio": 17.47,
-      "eps_3yr_cagr_pct": 2.9
+      "eps_3yr_cagr_pct": 2.0
     },
     {
       "ticker": "NWPX",
@@ -20381,7 +18978,7 @@
       "market_cap": 257808984.0,
       "size_band": "MICRO",
       "pe_ratio": 17.39,
-      "eps_3yr_cagr_pct": -14.4
+      "eps_3yr_cagr_pct": -13.3
     },
     {
       "ticker": "OFRM",
@@ -20411,7 +19008,7 @@
       "market_cap": 9256907470.0,
       "size_band": "MID",
       "pe_ratio": 19.67,
-      "eps_3yr_cagr_pct": -11.3
+      "eps_3yr_cagr_pct": -10.9
     },
     {
       "ticker": "OGS",
@@ -20682,6 +19279,15 @@
       "reason": "unprofitable",
       "market_cap": 298071097.0,
       "size_band": "MICRO"
+    },
+    {
+      "ticker": "OPXS",
+      "name": "Optex Systems Holdings Inc",
+      "reason": "no_growth",
+      "market_cap": 72521877.0,
+      "size_band": "MICRO",
+      "pe_ratio": 14.09,
+      "eps_3yr_cagr_pct": 8.6
     },
     {
       "ticker": "OR",
@@ -21010,7 +19616,7 @@
       "market_cap": 2199779901.0,
       "size_band": "MID",
       "pe_ratio": 16.29,
-      "eps_3yr_cagr_pct": -24.3
+      "eps_3yr_cagr_pct": -20.2
     },
     {
       "ticker": "PAVS",
@@ -21167,6 +19773,15 @@
       "pe_ratio": 28.2
     },
     {
+      "ticker": "PCYO",
+      "name": "PURE CYCLE CORP",
+      "reason": "no_growth",
+      "market_cap": 261938412.0,
+      "size_band": "MICRO",
+      "pe_ratio": 19.98,
+      "eps_3yr_cagr_pct": -10.2
+    },
+    {
       "ticker": "PD",
       "name": "PagerDuty, Inc.",
       "reason": "loss_window",
@@ -21243,6 +19858,15 @@
       "reason": "unprofitable",
       "market_cap": 174258290.0,
       "size_band": "MICRO"
+    },
+    {
+      "ticker": "PEG",
+      "name": "PUBLIC SERVICE ENTERPRISE GROUP INC",
+      "reason": "no_growth",
+      "market_cap": 33404110411.0,
+      "size_band": "LARGE",
+      "pe_ratio": 15.82,
+      "eps_3yr_cagr_pct": 2.3
     },
     {
       "ticker": "PEGA",
@@ -21596,7 +20220,7 @@
       "market_cap": 917081808.0,
       "size_band": "SMALL",
       "pe_ratio": 19.56,
-      "eps_3yr_cagr_pct": 6.3
+      "eps_3yr_cagr_pct": -1.2
     },
     {
       "ticker": "PLPC",
@@ -21723,6 +20347,15 @@
       "size_band": "MICRO"
     },
     {
+      "ticker": "PNR",
+      "name": "PENTAIR plc",
+      "reason": "no_growth",
+      "market_cap": 8566172397.0,
+      "size_band": "MID",
+      "pe_ratio": 13.1,
+      "eps_3yr_cagr_pct": 4.7
+    },
+    {
       "ticker": "PNRG",
       "name": "PRIMEENERGY RESOURCES CORP",
       "reason": "no_growth",
@@ -21837,6 +20470,15 @@
       "size_band": "MICRO"
     },
     {
+      "ticker": "PPG",
+      "name": "PPG INDUSTRIES INC",
+      "reason": "no_growth",
+      "market_cap": 23901696000.0,
+      "size_band": "LARGE",
+      "pe_ratio": 15.17,
+      "eps_3yr_cagr_pct": 3.7
+    },
+    {
       "ticker": "PPHC",
       "name": "Public Policy Holding Company, Inc.",
       "reason": "unprofitable",
@@ -21885,6 +20527,24 @@
       "reason": "units_unverified",
       "market_cap": 17890218139.0,
       "size_band": "LARGE"
+    },
+    {
+      "ticker": "PRDO",
+      "name": "PERDOCEO EDUCATION Corp",
+      "reason": "no_growth",
+      "market_cap": 1907974407.0,
+      "size_band": "SMALL",
+      "pe_ratio": 11.93,
+      "eps_3yr_cagr_pct": 6.8
+    },
+    {
+      "ticker": "PRG",
+      "name": "PROG Holdings, Inc.",
+      "reason": "no_growth",
+      "market_cap": 1301697766.0,
+      "size_band": "SMALL",
+      "pe_ratio": 8.87,
+      "eps_3yr_cagr_pct": -0.5
     },
     {
       "ticker": "PRGS",
@@ -22062,6 +20722,15 @@
       "pe_ratio": 36.46
     },
     {
+      "ticker": "PSN",
+      "name": "PARSONS CORP",
+      "reason": "no_growth",
+      "market_cap": 4600108320.0,
+      "size_band": "MID",
+      "pe_ratio": 19.08,
+      "eps_3yr_cagr_pct": 9.2
+    },
+    {
       "ticker": "PSNL",
       "name": "Personalis, Inc.",
       "reason": "unprofitable",
@@ -22229,6 +20898,15 @@
       "market_cap": 67096658.0,
       "size_band": "MICRO",
       "pe_ratio": 33.65
+    },
+    {
+      "ticker": "PYPL",
+      "name": "PayPal Holdings, Inc.",
+      "reason": "no_growth",
+      "market_cap": 47084566505.0,
+      "size_band": "LARGE",
+      "pe_ratio": 9.0,
+      "eps_3yr_cagr_pct": 8.9
     },
     {
       "ticker": "PZG",
@@ -22487,6 +21165,15 @@
       "size_band": "NANO"
     },
     {
+      "ticker": "RAVE",
+      "name": "RAVE RESTAURANT GROUP, INC.",
+      "reason": "no_growth",
+      "market_cap": 32544486.0,
+      "size_band": "NANO",
+      "pe_ratio": 11.31,
+      "eps_3yr_cagr_pct": -18.3
+    },
+    {
       "ticker": "RAYA",
       "name": "Erayak Power Solution Group Inc.",
       "reason": "too_small",
@@ -22559,7 +21246,7 @@
       "market_cap": 337885186.0,
       "size_band": "SMALL",
       "pe_ratio": 15.17,
-      "eps_3yr_cagr_pct": 2.1
+      "eps_3yr_cagr_pct": 0.7
     },
     {
       "ticker": "RCL",
@@ -22790,7 +21477,7 @@
       "market_cap": 4567840580.0,
       "size_band": "MID",
       "pe_ratio": 15.18,
-      "eps_3yr_cagr_pct": 5.1
+      "eps_3yr_cagr_pct": -4.2
     },
     {
       "ticker": "REZI",
@@ -22885,7 +21572,7 @@
       "market_cap": 2350930353.0,
       "size_band": "MID",
       "pe_ratio": 18.84,
-      "eps_3yr_cagr_pct": -31.7
+      "eps_3yr_cagr_pct": -26.9
     },
     {
       "ticker": "RHI",
@@ -22984,7 +21671,7 @@
       "market_cap": 2053387668.0,
       "size_band": "MID",
       "pe_ratio": 15.58,
-      "eps_3yr_cagr_pct": -14.0
+      "eps_3yr_cagr_pct": -18.4
     },
     {
       "ticker": "RMBS",
@@ -23201,6 +21888,15 @@
       "size_band": "MICRO"
     },
     {
+      "ticker": "RPM",
+      "name": "RPM INTERNATIONAL INC/DE/",
+      "reason": "no_growth",
+      "market_cap": 12830347421.0,
+      "size_band": "LARGE",
+      "pe_ratio": 19.38,
+      "eps_3yr_cagr_pct": 6.0
+    },
+    {
       "ticker": "RQI",
       "name": "COHEN & STEERS QUALITY INCOME REALTY FUND INC",
       "reason": "no_equity",
@@ -23221,7 +21917,7 @@
       "market_cap": 9022366074.0,
       "size_band": "MID",
       "pe_ratio": 13.71,
-      "eps_3yr_cagr_pct": -16.4
+      "eps_3yr_cagr_pct": -12.2
     },
     {
       "ticker": "RRGB",
@@ -23496,6 +22192,15 @@
       "size_band": "NANO"
     },
     {
+      "ticker": "SAH",
+      "name": "SONIC AUTOMOTIVE INC",
+      "reason": "no_growth",
+      "market_cap": 2053381390.0,
+      "size_band": "MID",
+      "pe_ratio": 17.3,
+      "eps_3yr_cagr_pct": -19.3
+    },
+    {
       "ticker": "SAIA",
       "name": "SAIA INC",
       "reason": "pe_high",
@@ -23509,6 +22214,15 @@
       "reason": "unprofitable",
       "market_cap": 11783616105.0,
       "size_band": "LARGE"
+    },
+    {
+      "ticker": "SAM",
+      "name": "BOSTON BEER CO INC",
+      "reason": "no_growth",
+      "market_cap": 1685468597.0,
+      "size_band": "SMALL",
+      "pe_ratio": 15.4,
+      "eps_3yr_cagr_pct": -8.6
     },
     {
       "ticker": "SANG",
@@ -23576,7 +22290,7 @@
       "market_cap": 1608430977.0,
       "size_band": "SMALL",
       "pe_ratio": 8.21,
-      "eps_3yr_cagr_pct": 4.4
+      "eps_3yr_cagr_pct": -2.9
     },
     {
       "ticker": "SBI",
@@ -23658,7 +22372,7 @@
       "market_cap": 10634459856.0,
       "size_band": "LARGE",
       "pe_ratio": 19.6,
-      "eps_3yr_cagr_pct": 2.5
+      "eps_3yr_cagr_pct": -5.3
     },
     {
       "ticker": "SCKT",
@@ -23879,7 +22593,7 @@
       "market_cap": 7497331886.0,
       "size_band": "MID",
       "pe_ratio": 7.6,
-      "eps_3yr_cagr_pct": 3.1
+      "eps_3yr_cagr_pct": -1.5
     },
     {
       "ticker": "SFHG",
@@ -24004,7 +22718,7 @@
       "market_cap": 359692087.0,
       "size_band": "SMALL",
       "pe_ratio": 16.93,
-      "eps_3yr_cagr_pct": 1.7
+      "eps_3yr_cagr_pct": -20.3
     },
     {
       "ticker": "SHLS",
@@ -24035,7 +22749,7 @@
       "market_cap": 353389595.0,
       "size_band": "SMALL",
       "pe_ratio": 6.76,
-      "eps_3yr_cagr_pct": -21.7
+      "eps_3yr_cagr_pct": -23.0
     },
     {
       "ticker": "SHOO",
@@ -24200,6 +22914,15 @@
       "size_band": "NANO"
     },
     {
+      "ticker": "SKYW",
+      "name": "SKYWEST INC",
+      "reason": "no_growth",
+      "market_cap": 3971749364.0,
+      "size_band": "MID",
+      "pe_ratio": 9.27,
+      "eps_3yr_cagr_pct": 7.7
+    },
+    {
       "ticker": "SKYX",
       "name": "SKYX Platforms Corp.",
       "reason": "unprofitable",
@@ -24249,7 +22972,7 @@
       "market_cap": 3795041338.0,
       "size_band": "MID",
       "pe_ratio": 13.16,
-      "eps_3yr_cagr_pct": -4.2
+      "eps_3yr_cagr_pct": -4.4
     },
     {
       "ticker": "SLI",
@@ -24307,7 +23030,7 @@
       "market_cap": 1429778338.0,
       "size_band": "SMALL",
       "pe_ratio": 10.83,
-      "eps_3yr_cagr_pct": 6.8
+      "eps_3yr_cagr_pct": -14.9
     },
     {
       "ticker": "SM",
@@ -24324,6 +23047,15 @@
       "reason": "units_unverified",
       "market_cap": 625489018.0,
       "size_band": "SMALL"
+    },
+    {
+      "ticker": "SMCI",
+      "name": "Super Micro Computer, Inc.",
+      "reason": "no_growth",
+      "market_cap": 28420322512.0,
+      "size_band": "LARGE",
+      "pe_ratio": 12.74,
+      "eps_3yr_cagr_pct": 9.3
     },
     {
       "ticker": "SMG",
@@ -24361,7 +23093,7 @@
       "market_cap": 842005643.0,
       "size_band": "SMALL",
       "pe_ratio": 19.95,
-      "eps_3yr_cagr_pct": -9.7
+      "eps_3yr_cagr_pct": -17.7
     },
     {
       "ticker": "SMPL",
@@ -24660,6 +23392,15 @@
       "size_band": "MICRO"
     },
     {
+      "ticker": "SPB",
+      "name": "Spectrum Brands Holdings, Inc.",
+      "reason": "no_growth",
+      "market_cap": 1952556056.0,
+      "size_band": "SMALL",
+      "pe_ratio": 19.55,
+      "eps_3yr_cagr_pct": -14.3
+    },
+    {
       "ticker": "SPCB",
       "name": "SuperCom Ltd",
       "reason": "loss_window",
@@ -24821,7 +23562,7 @@
       "market_cap": 4564099828.0,
       "size_band": "MID",
       "pe_ratio": 16.8,
-      "eps_3yr_cagr_pct": 3.4
+      "eps_3yr_cagr_pct": -3.1
     },
     {
       "ticker": "SRAD",
@@ -25070,6 +23811,15 @@
       "reason": "ifrs_filer",
       "market_cap": 4218149757.0,
       "size_band": "MID"
+    },
+    {
+      "ticker": "STRA",
+      "name": "Strategic Education, Inc.",
+      "reason": "no_growth",
+      "market_cap": 1706206758.0,
+      "size_band": "SMALL",
+      "pe_ratio": 13.48,
+      "eps_3yr_cagr_pct": 7.5
     },
     {
       "ticker": "STRL",
@@ -25410,6 +24160,14 @@
       "size_band": "MID"
     },
     {
+      "ticker": "TASK",
+      "name": "TaskUs, Inc.",
+      "reason": "spike_year",
+      "market_cap": 751833572.0,
+      "size_band": "SMALL",
+      "pe_ratio": 7.35
+    },
+    {
       "ticker": "TATT",
       "name": "TAT TECHNOLOGIES LTD",
       "reason": "pe_high",
@@ -25698,6 +24456,15 @@
       "size_band": "MID"
     },
     {
+      "ticker": "TGT",
+      "name": "TARGET CORP",
+      "reason": "no_growth",
+      "market_cap": 71529021083.0,
+      "size_band": "LARGE",
+      "pe_ratio": 19.31,
+      "eps_3yr_cagr_pct": -12.8
+    },
+    {
       "ticker": "TH",
       "name": "Target Hospitality Corp.",
       "reason": "unprofitable",
@@ -25774,6 +24541,15 @@
       "reason": "ifrs_filer",
       "market_cap": 285063339.0,
       "size_band": "MICRO"
+    },
+    {
+      "ticker": "TILE",
+      "name": "INTERFACE INC",
+      "reason": "no_growth",
+      "market_cap": 2034576192.0,
+      "size_band": "MID",
+      "pe_ratio": 17.52,
+      "eps_3yr_cagr_pct": 6.5
     },
     {
       "ticker": "TIMB",
@@ -26168,7 +24944,7 @@
       "market_cap": 1404462128.0,
       "size_band": "SMALL",
       "pe_ratio": 11.69,
-      "eps_3yr_cagr_pct": -23.1
+      "eps_3yr_cagr_pct": -22.6
     },
     {
       "ticker": "TRSG",
@@ -26234,7 +25010,7 @@
       "market_cap": 16813965221.0,
       "size_band": "LARGE",
       "pe_ratio": 15.34,
-      "eps_3yr_cagr_pct": 2.0
+      "eps_3yr_cagr_pct": -30.0
     },
     {
       "ticker": "TSEM",
@@ -26518,7 +25294,7 @@
       "market_cap": 13172477973.0,
       "size_band": "LARGE",
       "pe_ratio": 14.3,
-      "eps_3yr_cagr_pct": 8.4
+      "eps_3yr_cagr_pct": 0.8
     },
     {
       "ticker": "TY",
@@ -26569,6 +25345,15 @@
       "reason": "unprofitable",
       "market_cap": 1902886747.0,
       "size_band": "SMALL"
+    },
+    {
+      "ticker": "UAL",
+      "name": "United Airlines Holdings, Inc.",
+      "reason": "no_growth",
+      "market_cap": 36999304170.0,
+      "size_band": "LARGE",
+      "pe_ratio": 11.03,
+      "eps_3yr_cagr_pct": -2.1
     },
     {
       "ticker": "UAMY",
@@ -26671,7 +25456,7 @@
       "market_cap": 32527779.0,
       "size_band": "NANO",
       "pe_ratio": 15.45,
-      "eps_3yr_cagr_pct": -6.3
+      "eps_3yr_cagr_pct": -17.8
     },
     {
       "ticker": "UGI",
@@ -26828,7 +25613,7 @@
       "market_cap": 79939437445.0,
       "size_band": "LARGE",
       "pe_ratio": 14.35,
-      "eps_3yr_cagr_pct": -20.8
+      "eps_3yr_cagr_pct": -18.2
     },
     {
       "ticker": "UPWK",
@@ -27013,6 +25798,14 @@
       "reason": "negative_equity",
       "market_cap": 32644869.0,
       "size_band": "NANO"
+    },
+    {
+      "ticker": "VAL",
+      "name": "Valaris Ltd",
+      "reason": "spike_year",
+      "market_cap": 5623606009.0,
+      "size_band": "MID",
+      "pe_ratio": 5.74
     },
     {
       "ticker": "VALE",
@@ -27407,7 +26200,7 @@
       "market_cap": 4256096000.0,
       "size_band": "MID",
       "pe_ratio": 10.48,
-      "eps_3yr_cagr_pct": 3.5
+      "eps_3yr_cagr_pct": 1.1
     },
     {
       "ticker": "VNTG",
@@ -27669,7 +26462,7 @@
       "market_cap": 195606816510.0,
       "size_band": "LARGE",
       "pe_ratio": 11.11,
-      "eps_3yr_cagr_pct": -7.1
+      "eps_3yr_cagr_pct": -6.5
     },
     {
       "ticker": "VZLA",
@@ -27855,7 +26648,7 @@
       "market_cap": 1248888042.0,
       "size_band": "SMALL",
       "pe_ratio": 7.57,
-      "eps_3yr_cagr_pct": 1.2
+      "eps_3yr_cagr_pct": -1.1
     },
     {
       "ticker": "WERN",
@@ -28178,7 +26971,7 @@
       "market_cap": 3045203036.0,
       "size_band": "MID",
       "pe_ratio": 19.51,
-      "eps_3yr_cagr_pct": -15.4
+      "eps_3yr_cagr_pct": -25.2
     },
     {
       "ticker": "WPM",
@@ -28290,7 +27083,7 @@
       "market_cap": 1927412103.0,
       "size_band": "SMALL",
       "pe_ratio": 3.86,
-      "eps_3yr_cagr_pct": -13.4
+      "eps_3yr_cagr_pct": -7.7
     },
     {
       "ticker": "WVVI",
@@ -28605,6 +27398,15 @@
       "size_band": "SMALL"
     },
     {
+      "ticker": "YETI",
+      "name": "YETI Holdings, Inc.",
+      "reason": "no_growth",
+      "market_cap": 3085966295.0,
+      "size_band": "MID",
+      "pe_ratio": 18.66,
+      "eps_3yr_cagr_pct": -4.1
+    },
+    {
       "ticker": "YEXT",
       "name": "Yext, Inc.",
       "reason": "units_unverified",
@@ -28747,6 +27549,15 @@
       "reason": "negative_equity",
       "market_cap": 37832277414.0,
       "size_band": "LARGE"
+    },
+    {
+      "ticker": "YUMC",
+      "name": "Yum China Holdings, Inc.",
+      "reason": "no_growth",
+      "market_cap": 13859280764.0,
+      "size_band": "LARGE",
+      "pe_ratio": 14.92,
+      "eps_3yr_cagr_pct": 2.4
     },
     {
       "ticker": "YXT",
