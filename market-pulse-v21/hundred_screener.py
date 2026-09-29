@@ -44,6 +44,17 @@ SIC_PREFIX = 2
 MIN_MEASURED = 4
 MIN_PASSING = 4
 
+# REVENUE GROWTH IS REQUIRED, not one vote among seven. Mayer's mechanism
+# is a long runway of growth; margins, returns and cheapness describe a
+# good business, not one that can grow a hundredfold. The September board
+# listed nine names on exactly those four with no Good growth at all —
+# Embecta and MIND CTI were shrinking. Criterion 1 must come out Good or
+# better (the checklist's own 15%/yr cut, no new threshold). A company
+# whose revenue growth cannot be read goes to could-not-measure, not
+# rejected: that is the screen's limit, not the company's.
+GROWTH_REQUIRED_ID = 1
+GROWTH_REQUIRED_BANDS = ("Good", "Great")
+
 GROSS_PROFIT_TAGS = ["GrossProfit"]
 COST_TAGS = ["CostOfRevenue", "CostOfGoodsAndServicesSold",
              "CostOfGoodsSold", "CostOfServices"]
@@ -63,6 +74,8 @@ RULES = {
     "sic_prefix": SIC_PREFIX,
     "min_measured": MIN_MEASURED,
     "min_passing": MIN_PASSING,
+    "growth_required_id": GROWTH_REQUIRED_ID,
+    "growth_required_min": C.THRESHOLDS[GROWTH_REQUIRED_ID][1],
     "gate_ids": list(C.GATE_IDS),
     "veto_ids": list(C.VETO_IDS),
     "veto_reasons": {str(k): v for k, v in C.VETO_REASONS.items()},
@@ -280,12 +293,25 @@ def evaluate(rec: dict, medians: dict) -> dict:
     if led["passing_n"] < MIN_PASSING:
         return {**out, "verdict": "reject",
                 "reason": f"{led['passing_n']} Good-or-Great, need {MIN_PASSING}"}
+    # Measured answers before could-not-measure: a revenue line that grew
+    # too slowly, or a veto, is a firmer answer than a growth rate this
+    # screen could not read.
+    growth = m[GROWTH_REQUIRED_ID]
+    need = C.THRESHOLDS[GROWTH_REQUIRED_ID][1]
+    if growth.measured and growth.band not in GROWTH_REQUIRED_BANDS:
+        return {**out, "verdict": "reject",
+                "reason": f"revenue growth {growth.value:.1f}%/yr, need "
+                          f"{need:.0f}%/yr or better"}
     # THE VETO IS LAST. A company has to earn its way to this line first;
     # only then can one of the three say no. That ordering keeps the veto
     # strictly subtractive — it can never promote anything.
     if led["vetoed"]:
         why = ", ".join(C.VETO_REASONS[c] for c in led["vetoed_by"])
         return {**out, "verdict": "reject", "reason": f"veto: {why}"}
+    if not growth.measured:
+        return {**out, "verdict": "thin",
+                "reason": f"revenue growth could not be measured "
+                          f"({growth.reason or 'no rate'}) — this board requires it"}
     return {**out, "verdict": "list", "reason": "listed"}
 
 

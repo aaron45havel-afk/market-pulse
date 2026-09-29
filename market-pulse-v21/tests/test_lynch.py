@@ -372,7 +372,29 @@ check(why(net_income=-1e8, eps_by_year={"2022-12-31": -2.60, "2023-12-31": -3.00
       "a loss-maker — with an EPS series that agrees with it, or the units "
       "invariant fires first and correctly")
 check(why(market_cap=400_000_000) == "pe_suspect", "a P/E of 1.0 is withheld")
-check(why(market_cap=8_000_000_000) == "pe_high", "a P/E of 20 is over the ceiling")
+check(why(market_cap=10_000_000_000) == "pe_high",
+      "a P/E of 25 is over the 20x backstop, whatever the growth")
+# LYNCH'S OWN TEST. GOOD grows EPS 2.60 -> 4.00, 15.4%/yr.
+check(L.evaluate({**GOOD, "market_cap": 6_000_000_000})["verdict"] == "pass",
+      "A P/E OF 15 ON 15% GROWTH PASSES — PEG 0.97. The old single-digit "
+      "ceiling refused it, which was a value tilt and not Lynch's rule")
+check(why(market_cap=7_200_000_000) == "peg_high",
+      "a P/E of 18 on the same growth is PEG 1.17: the price already pays "
+      "for the growth")
+check(why(market_cap=8_000_000_000) == "peg_high",
+      "and 20x on 15% is refused on PEG, not on the backstop")
+_fast = {**GOOD, "market_cap": 8_000_000_000,
+         "eps_by_year": {"2022-12-31": 2.05, "2023-12-31": 2.56,
+                         "2024-12-31": 3.20, "2025-12-31": 4.00}}
+_fr = L.evaluate(_fast)
+check(_fr["verdict"] == "pass" and _fr["peg"] <= L.PEG_MAX,
+      f"while 20x on 25%/yr growth passes at PEG {_fr.get('peg')} — the "
+      f"backstop is inclusive (got {_fr['reason']})")
+check(L.PE_SANE[1] == L.PE_MAX,
+      "PE_SANE's upper value is the backstop, not a second copy that could "
+      "silently disagree with it")
+check("peg_high" in L.REASONS and "peg_high" not in L.UNMEASURED_CODES,
+      "PEG over 1 is a measured failure with a label on the funnel")
 check(why(eps_by_year={"2024-12-31": 3.5, "2025-12-31": 4.0}) == "short_history",
       "fewer than four annual periods")
 check(why(eps_by_year={"2022-12-31": 0.02, "2023-12-31": 3.00,

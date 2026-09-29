@@ -160,10 +160,13 @@
 <details class="ly-explain">
   <summary>What this screen is, and what it deliberately does not do</summary>
   <ul>
-    <li><strong>Lynch's rule was PEG &lt; 1.</strong> This board also demands a single-digit P/E, which is
-        stricter and selects the corner of PEG &lt; 1 where the market has priced the growth as fake. That
-        is a deliberate value tilt, not Lynch's screen — expect turnarounds and companies the market
-        distrusts, and read the last-year column before the CAGR.</li>
+    <li><strong>This is Lynch's rule: PEG of 1 or less.</strong> "The p/e ratio of any company that's fairly
+        priced will equal its growth rate" — so a company passes when its P/E is no higher than its EPS growth
+        rate. The board used to demand a single-digit P/E instead, a value tilt stricter than Lynch that
+        stopped nine in ten companies before growth was even read. A 20x ceiling stays as a backstop, because
+        the growth rate here is trailing and uncapped: an inflated rate that cleared every guard would
+        otherwise admit any multiple. Lynch's PEG used <em>expected</em> growth; read the last-year column
+        before the CAGR.</li>
     <li><strong>A trough base is not a growth rate.</strong> Abercrombie went 4.20 → 0.05 → 6.22 → 10.69
         and the screen printed 493.6%. When the base year is far below the window's median, or the latest
         year has no history behind it, no rate is reported at all.</li>
@@ -445,6 +448,7 @@ function renderSubtitle() {
   if (r.pe_min != null && r.pe_max != null)
     clauses.push(`P/E between <strong>${r.pe_min}</strong> and <strong>${r.pe_max}</strong>`);
   else if (r.pe_max != null) clauses.push(`P/E under <strong>${r.pe_max}</strong>`);
+  if (r.peg_max != null) clauses.push(`PEG of <strong>${r.peg_max}</strong> or less`);
   if (r.eps_growth_3yr_min_pct != null) {
     const yrs = r.min_eps_years != null ? `${r.min_eps_years}-yr ` : '';
     const cappedAt = r.eps_growth_cap_pct != null ? ` (capped at ${r.eps_growth_cap_pct}%)` : '';

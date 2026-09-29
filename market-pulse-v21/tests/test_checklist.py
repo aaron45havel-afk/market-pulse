@@ -194,9 +194,18 @@ check("equity shrank" in shrink.basis,
       "trap itself, and the number alone cannot tell buybacks from returns")
 check(not C.return_on_equity(ni, {y: -50 for y in ni}).measured,
       "negative equity every year yields no ROE rather than a negative one")
-check(C.return_on_equity({"2024-12-31": 900}, {"2024-12-31": 100}).value == 100.0,
-      "and the ratio is bounded, because near-zero equity stops describing "
-      "a business")
+_capped = C.return_on_equity({"2024-12-31": 900}, {"2024-12-31": 100})
+check(not _capped.measured and "bound" in _capped.reason,
+      "A MEDIAN ROE AT THE 100% BOUND IS UNMEASURED, NOT GREAT. Near-zero "
+      "equity stops describing a business; clamping it to 100 and scoring "
+      "it put Brinker, SANUWAVE and Exzeo on the board on a denominator")
+check(_capped.band is None and "yrs" in _capped.basis,
+      "it casts no vote either way, and still shows the basis it came from")
+check(not C.return_on_equity({"2024-12-31": 100}, {"2024-12-31": 100}).measured,
+      "exactly 100% is the bound itself")
+_high = C.return_on_equity({"2024-12-31": 99}, {"2024-12-31": 100})
+check(_high.measured and _high.band == "Great" and _high.value == 99.0,
+      "just under it is a real, if high, ROE and scores normally")
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -227,7 +236,7 @@ check(not C.peer_discount(8.0, 16.0, 5).measured,
 # ARISTA arrived with a P/E of 69,913,371 against $245.5bn of market cap —
 # about $3,500 of net income — and printed a peer discount of -198,956,563%.
 # lynch.price_earnings bounds the LOW end and never needed an upper one,
-# because the Lynch screen gates at PE_MAX = 10 right afterwards. Nothing
+# because the Lynch screen gates at its PE_MAX backstop right afterwards. Nothing
 # gates it here.
 anet = C.peer_discount(69913371.44, 35.14, 900)
 check(not anet.measured and "denominator" in anet.reason,
@@ -239,6 +248,17 @@ check(C.peer_discount(200.0, 30.0, 40).measured,
 check(C.peer_discount(200.0, 30.0, 40).band == "Yikes",
       "and lands in Yikes, which is a finding about the price rather than "
       "about the parser")
+
+# EMBECTA, SANUWAVE, NOVAVAX: P/Es of 3.5-4.0, each scored a Great discount.
+_low = C.peer_discount(3.5, 16.0, 40)
+check(not _low.measured and "one-time gain" in _low.reason,
+      "A P/E UNDER 5x IS NOT READ AS A DISCOUNT — at that level net income "
+      "is usually a one-time gain, and the screen cannot tell which")
+check(_low.band is None, "unmeasured casts no vote, it is not a fail")
+check(C.peer_discount(C.PE_DISCOUNT_FLOOR, 16.0, 40).band == "Great",
+      "exactly 5x is read normally")
+check(C.peer_discount(4.99, 16.0, 40).measured is False,
+      "and just under it is not")
 
 check(not C.peer_discount(None, 16.0, 40).measured, "no P/E, no discount")
 check(not C.peer_discount(8.0, -2.0, 40).measured,

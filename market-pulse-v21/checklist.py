@@ -207,7 +207,7 @@ INSIDER_MIN_PCT = S.INSIDER_ALIGNED_MIN * 100
 # A P/E ABOVE THIS IS A NEAR-ZERO DENOMINATOR, not a valuation.
 # lynch.price_earnings bounds the LOW end at PE_SANE[0] — below 3 is a
 # currency or share-basis artefact — but never needed an upper bound,
-# because the Lynch screen gates at PE_MAX = 10 immediately afterwards.
+# because the Lynch screen gates at its PE_MAX backstop immediately afterwards.
 # Nothing gates it here, and Arista arrived with a P/E of 69,913,371
 # against $245.5bn of market cap, which is about $3,500 of net income.
 # It printed a peer discount of -198,956,563%.
@@ -216,6 +216,16 @@ INSIDER_MIN_PCT = S.INSIDER_ALIGNED_MIN * 100
 # describing the business, which is the same failure as below 3x and gets
 # the same treatment: withheld, not clamped to a pretty number.
 PE_PLAUSIBLE_MAX = 500.0
+
+# A P/E UNDER THIS IS NOT READ AS A DISCOUNT. At 3-4x the net income under
+# it is far more often a one-time gain (a disposal, a tax release, a legal
+# settlement) than a price, and every such row scored "Great" on
+# criterion 11: Embecta 3.5x, SANUWAVE 3.7x, Novavax 4.0x on the September
+# board. The criterion is left unmeasured — neither a pass nor a fail —
+# because this screen cannot tell the two apart from a filing total. The
+# multiple still counts in its peer group's median: the company is real,
+# and dropping low P/Es from the median would move every peer's discount.
+PE_DISCOUNT_FLOOR = 5.0
 
 # ── Criterion 13 is a PRECONDITION, not a quality ────────────────────
 #
@@ -404,12 +414,20 @@ def return_on_equity(net_income_by_year: dict, equity_by_year: dict) -> Measure:
     if not roes:
         return unmeasured("no year with both net income and positive equity")
     med = L.median(roes)
-    capped = med > L.ROC_CAP
     first, last = _num(eq[years[0]]), _num(eq[years[-1]])
     trend = ("equity shrank — check whether the return rose or the base fell"
              if (first and last and last < first) else "equity grew or held")
-    return Measure(min(med, L.ROC_CAP), True, "", band_for(4, min(med, L.ROC_CAP)),
-                   f"median of {len(roes)} yrs{', capped' if capped else ''}; {trend}")
+    basis = f"median of {len(roes)} yrs; {trend}"
+    # AT THE BOUND IT IS UNMEASURED, NOT GREAT. Clamping to 100 and scoring
+    # it kept the number pretty and the vote wrong: 31 companies sat exactly
+    # at 100 and every one counted as Great, three of them on the board
+    # (Brinker, SANUWAVE, Exzeo) with equity near zero. The ratio there is
+    # describing the denominator, which is what the bound says.
+    if med >= L.ROC_CAP:
+        return unmeasured(f"median ROE {med:,.0f}% is at or past the "
+                          f"{L.ROC_CAP:.0f}% bound — equity is too close to zero "
+                          f"for the ratio to describe the business", basis)
+    return Measure(med, True, "", band_for(4, med), basis)
 
 
 def return_on_capital(op_income, current_assets, current_liabilities, ppe) -> Measure:
@@ -452,6 +470,10 @@ def peer_discount(pe_ratio, peer_median_pe, peer_count) -> Measure:
         return unmeasured(f"P/E of {pe:,.0f} is a near-zero denominator, not a "
                           f"valuation — above the {PE_PLAUSIBLE_MAX:,.0f}x "
                           f"plausibility ceiling")
+    if pe < PE_DISCOUNT_FLOOR:
+        return unmeasured(f"P/E of {pe:.1f} is under {PE_DISCOUNT_FLOOR:.0f}x — "
+                          f"usually a one-time gain in net income, which this "
+                          f"screen cannot tell from a real discount")
     if med is None or n is None or n < PEER_MIN:
         return unmeasured(f"only {int(n) if n is not None else 0} peers in this "
                           f"SIC group, need {PEER_MIN} for a median")

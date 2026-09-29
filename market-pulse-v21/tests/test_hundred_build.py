@@ -177,6 +177,66 @@ check(C.census([_ifrs_v, _fund, _cny_v, _noq, H.evaluate(_gone, {})])["thin"] ==
 check("banks" in C.NO_REVENUE_TAG and C.sales_growth({}).reason == C.NO_REVENUE_TAG,
       "a bank's missing revenue line is a limit of the reading, not 'revenue not filed'")
 
+
+# ── REVENUE GROWTH IS REQUIRED ───────────────────────────────────────
+# Nine September names were listed on margin, ROE, return on capital and
+# peer discount alone. The measure functions are stubbed so the verdict
+# order is what is under test, not the arithmetic behind each band.
+def _verdict(bands: dict, vetoed: bool = False) -> dict:
+    fns = {1: "sales_growth", 2: "gross_margin", 3: "eps_growth",
+           4: "return_on_equity", 5: "return_on_capital", 11: "peer_discount",
+           13: "market_cap", 6: "capital_veto", 8: "moat_veto"}
+    vals = {"Great": 30.0, "Good": 18.0, "Meh": 12.0, "Yikes": 2.0}
+    saved = {n: getattr(C, n) for n in fns.values()}
+
+    def stub(cid):
+        def f(*_a, **_k):
+            if cid in (6, 8):
+                return C.Measure(0.0, True, "", "Yikes" if vetoed and cid == 8
+                                 else "Good", "")
+            b = bands.get(cid)
+            if b is None:
+                return C.unmeasured("only 3 annual periods")
+            return C.Measure(vals[b], True, "", b, "")
+        return f
+    try:
+        for cid, n in fns.items():
+            setattr(C, n, stub(cid))
+        return H.evaluate({**_live, "market_cap": 2.0e9}, {})
+    finally:
+        for n, f in saved.items():
+            setattr(C, n, f)
+
+
+_four = {2: "Great", 4: "Great", 5: "Great", 11: "Great", 13: "Good"}
+_shrinking = _verdict({**_four, 1: "Yikes", 3: "Yikes"})
+check((_shrinking["verdict"], _shrinking["reason"])
+      == ("reject", "revenue growth 2.0%/yr, need 15%/yr or better"),
+      f"FOUR GREATS WITHOUT GROWTH ARE NOT A 100-BAGGER — the MIND CTI / Embecta shape "
+      f"(got {_shrinking['verdict']}, {_shrinking['reason']})")
+_meh = _verdict({**_four, 1: "Meh", 3: "Great"})
+check(_meh["verdict"] == "reject" and "revenue growth 12.0%/yr" in _meh["reason"],
+      "revenue growth under the checklist's own Good line is rejected even with Great EPS "
+      "growth — the owner chose revenue, the strict option")
+_unread = _verdict({**_four, 3: "Great"})
+check(_unread["verdict"] == "thin" and "could not be measured" in _unread["reason"]
+      and "only 3 annual periods" in _unread["reason"],
+      f"growth the screen could not read is could-not-measure, not rejected (got {_unread})")
+check(_verdict({**_four, 1: "Good"})["verdict"] == "list",
+      "Good revenue growth plus the rest is listed")
+check(_verdict({**_four, 1: "Great"})["verdict"] == "list", "and so is Great")
+_vetoed = _verdict({**_four, 1: "Yikes"}, vetoed=True)
+check(_vetoed["verdict"] == "reject" and _vetoed["reason"].startswith("revenue growth"),
+      "a measured growth failure is reported before a veto")
+_unread_vetoed = _verdict({**_four}, vetoed=True)
+check(_unread_vetoed["verdict"] == "reject" and _unread_vetoed["reason"].startswith("veto"),
+      "and a veto — a measured answer — beats could-not-measure")
+_few = _verdict({2: "Great", 4: "Great", 5: "Great", 1: "Yikes"})
+check(_few["verdict"] == "reject" and "Good-or-Great" in _few["reason"],
+      "the Good-or-Great count still decides first, so existing reasons do not change")
+check(H.RULES["growth_required_id"] == 1 and H.RULES["growth_required_min"] == 15.0,
+      "the page is told which criterion is required and from what rate")
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

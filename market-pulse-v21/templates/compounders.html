@@ -89,7 +89,7 @@
   <span class="cp-refresh">Data: {{ data_source }}</span>
 </div>
 <p class="cp-sub">
-  Long-run return = <strong>growth + buybacks + dividends ± valuation drift</strong> — shown per stock, no black box.
+  Long-run return = <strong>growth + buybacks + dividends − valuation drift</strong> — shown per stock, no black box.
   Hard quality gates first (ROIC ≥ {{ roic_min|int }}% for a decade, revenue consistency, profits that convert to
   actual cash, low debt, low capex); then every survivor's expected 10-yr CAGR is built from those four terms with
   trailing growth <em>haircut</em>, because past growth fades while high return-on-capital persists.
@@ -137,7 +137,10 @@
   <summary>How the math works — and what it can't see</summary>
   <ul>
     <li><strong>Expected CAGR</strong> = 0.7 × blended revenue CAGR (haircut — growth fades) + margin-trend effect
-        + net buyback yield + dividend yield + valuation drift (P/FCF reverting to its own 10-yr median over 10 yrs, capped ±3%/yr).</li>
+        + net buyback yield + dividend yield − valuation drift: a penalty when P/FCF is above its own 7-yr median
+        (reverting over 10 yrs, at most −3%/yr), and <em>no credit</em> when it is below. That median includes the
+        2020–21 peak, and a multiple climbing back to it is a forecast — so a cheap stock is shown as cheap in the
+        P/FCF column, not paid for in E[r].</li>
     <li><strong>Gates:</strong> 10-yr median ROIC ≥ {{ roic_min|int }}% · revenue up ≥ 60% of years and CAGR ≥ 4% ·
         profits positive ≥ 8/10 yrs · ΣFCF/Σnet-income ≥ 70% (cash-is-real fraud guard) · net debt/EBIT ≤ 3× ·
         reinvestment (capex + capitalised intangibles) ≤ 40% of operating cash flow · investable jurisdiction. Financials excluded (different math). Moat isn't a column —
@@ -166,14 +169,14 @@
       <th data-col="g" data-numeric="1" title="Growth term (haircut trailing revenue CAGR + margin trend)">G<span class="arrow"></span></th>
       <th data-col="b" data-numeric="1" title="Net buyback yield (negative share-count CAGR)">B<span class="arrow"></span></th>
       <th data-col="d" data-numeric="1" title="Dividend yield">D<span class="arrow"></span></th>
-      <th data-col="m" data-numeric="1" title="Valuation drift to own 10-yr median P/FCF">M<span class="arrow"></span></th>
+      <th data-col="m" data-numeric="1" title="Valuation drift: a penalty for paying above the own 7-yr median P/FCF; never a credit">M<span class="arrow"></span></th>
       <th data-col="roic" data-numeric="1" title="10-yr median return on invested capital">ROIC<span class="arrow"></span></th>
       <th data-col="yrs" data-numeric="1" title="Fiscal years of XBRL on file. COMPOUNDER requires 15; anything shorter is scored identically and labelled QUALITY.">Yrs<span class="arrow"></span></th>
       <th data-col="rev" data-numeric="1" title="Fitted 15-year trend where available, else the endpoint CAGR">Growth<span class="arrow"></span></th>
       <th data-col="conv" data-numeric="1" title="ΣFCF ÷ Σnet income, 10 yrs — cash-is-real check">Conv<span class="arrow"></span></th>
       <th data-col="nd" data-numeric="1">ND/EBIT<span class="arrow"></span></th>
       <th data-col="cap" data-numeric="1">Capex<span class="arrow"></span></th>
-      <th data-col="pf" data-numeric="1" title="P/FCF now vs own 10-yr median">P/FCF<span class="arrow"></span></th>
+      <th data-col="pf" data-numeric="1" title="P/FCF now vs own 7-yr median">P/FCF<span class="arrow"></span></th>
       <th data-col="st">Status<span class="arrow"></span></th>
     </tr></thead>
     <tbody>

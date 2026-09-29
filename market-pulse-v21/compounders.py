@@ -3,7 +3,7 @@
 Long-run return decomposes into four terms and nothing else:
 
     E[return] ≈ organic growth + buyback yield + dividend yield
-                ± valuation drift
+                − valuation drift (never a credit)
 
 so the page shows that math per stock instead of a black-box score.
 The engine behind the growth term is ROIC × reinvestment — and the key
@@ -68,13 +68,21 @@ QUALITY_FLOOR = 10.0
 CYCLE_PEAK = 75
 CYCLE_LOW = 35
 GROWTH_HAIRCUT = 0.70          # trailing growth fades; don't pay full freight
-MULT_DRIFT_CAP = 3.0           # valuation drift capped at ±3%/yr over 10y
+MULT_DRIFT_CAP = 3.0           # de-rating penalty floor: -3%/yr over 10y
+# No credit for re-rating UP. The drift term reverts today's P/FCF to the
+# company's own 7-year median over ten years, and that median includes the
+# 2020-21 peak, so almost anything looked cheap against it: seven of eight
+# COMPOUNDERs on the September board cleared 14% only on the full +3
+# credit. A multiple returning to a peak is a forecast, which is the one
+# thing a trailing screen cannot supply. Paying ABOVE the median still
+# costs return — that direction is arithmetic, not a forecast.
+MULT_DRIFT_UP = 0.0
 
 # ── The dividend term ────────────────────────────────────────────────
 #
 # Every other term here is bounded, because a trailing figure is not a
 # forecast: growth is haircut and clamped to 14, buybacks to ±4, drift to
-# ±3. The dividend went in RAW — and it is the one input that grows as the
+# -3..0. The dividend went in RAW — and it is the one input that grows as the
 # market loses confidence, because it divides last year's payout by a
 # collapsed price. It was also the only term with no upper bound at all.
 #
@@ -384,7 +392,7 @@ def score(data: dict | None = None) -> list[dict]:
             pf_now = None
         if pf_now and pf_med and pf_now > 0:
             mult = ((pf_med / pf_now) ** 0.1 - 1) * 100
-            mult = max(-MULT_DRIFT_CAP, min(MULT_DRIFT_CAP, mult))
+            mult = max(-MULT_DRIFT_CAP, min(MULT_DRIFT_UP, mult))
             rich = mult <= -2.0
         elif m.get("fcf_last") is not None and m["fcf_last"] <= 0:
             mult = -2.0    # negative FCF today: pay a drift penalty + flag
@@ -427,7 +435,7 @@ def score(data: dict | None = None) -> list[dict]:
                            f"Cyclical at the {cycle_pos}th percentile of its own margin history with the quality engine intact — the buy-the-low setup."})
         if rich:
             badges.append({"key": "rich", "label": "rich", "title":
-                           "Trading well above its own 10-yr median P/FCF — the valuation-drift term is eating your return."})
+                           "Trading well above its own 7-yr median P/FCF — the valuation-drift term is eating your return."})
 
         # ── Reinvestment we could not measure ──
         # 162 rows on the last board reported capex/OCF as exactly 0.0% —

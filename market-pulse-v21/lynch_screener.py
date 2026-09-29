@@ -58,6 +58,7 @@ log = logging.getLogger(__name__)
 LYNCH_RULES = {
     "market_cap_min": L.MARKET_CAP_MIN,
     "pe_max": L.PE_MAX,
+    "peg_max": L.PEG_MAX,
     "pe_min": L.PE_SANE[0],
     "eps_growth_3yr_min_pct": L.EPS_GROWTH_MIN,
     "eps_growth_cap_pct": L.EPS_GROWTH_CAP,

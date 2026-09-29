@@ -108,15 +108,25 @@ check(no_price["div_payout_fcf"] is None, "and payout stays unknown")
 check(one(rev_cagr5=40.0, rev_cagr10=40.0)["er_growth"] <= 14.0 * C.GROWTH_HAIRCUT + 1.5,
       "growth stays clamped")
 check(one(shares_cagr5=-20.0)["er_buyback"] == 4.0, "buyback stays clamped at +4")
-check(one(pfcf_now=5.0, pfcf_med=500.0)["er_mult"] == C.MULT_DRIFT_CAP,
-      "valuation drift stays clamped at +3 (P/FCF inside the sane band, so "
-      "the clamp is what binds — not the plausibility guard)")
+check(one(pfcf_now=5.0, pfcf_med=500.0)["er_mult"] == 0.0,
+      "A MULTIPLE FAR BELOW ITS OWN MEDIAN EARNS NO RE-RATING CREDIT. The "
+      "median includes the 2020-21 peak, and seven of eight September "
+      "COMPOUNDERs cleared 14% only on the old +3 (P/FCF inside the sane "
+      "band, so the clamp is what binds — not the plausibility guard)")
+check(one(pfcf_now=15.0, pfcf_med=25.0)["er_mult"] == 0.0,
+      "an ordinary discount to the median earns none either")
+check(one(pfcf_now=150.0, pfcf_med=5.0)["er_mult"] == -C.MULT_DRIFT_CAP,
+      "while paying far above the median still costs the full -3")
+_rich = one(pfcf_now=22.0, pfcf_med=20.0)
+check(-C.MULT_DRIFT_CAP < _rich["er_mult"] < 0,
+      f"and a modest premium costs a modest amount (got {_rich['er_mult']})")
 
 
 # ── evidence length: shown, never hidden ────────────────────────────
-# Input that genuinely clears the 14% bar: g 9.8 + b 1.0 + d 2.0 + m 3.0.
+# Input that genuinely clears the 14% bar without any valuation credit:
+# g 9.8 + b 3.0 + d 2.0 + m 0.
 STRONG = dict(rev_cagr5=15.0, rev_cagr10=15.0, div_yield=2.0,
-              pfcf_now=15.0, pfcf_med=25.0)
+              shares_cagr5=-3.0, pfcf_now=15.0, pfcf_med=25.0)
 
 proven = one(years=16, **STRONG)
 check(proven["expected"] >= C.TARGET,
@@ -152,7 +162,8 @@ check(odd["er_mult"] == 0.0,
       f"a P/FCF of 0.1 contributes no valuation drift (got {odd['er_mult']})")
 check(any(b["key"] == "pfcfodd" for b in odd["badges"]), "and says so on the row")
 sane = one(pfcf_now=15.0, pfcf_med=25.0)
-check(sane["er_mult"] > 0, "an ordinary P/FCF still drives the term normally")
+check(one(pfcf_now=25.0, pfcf_med=15.0)["er_mult"] < 0,
+      "an ordinary P/FCF still drives the term normally")
 check(not any(b["key"] == "pfcfodd" for b in sane["badges"]), "and is not flagged")
 huge = one(pfcf_now=34400.0, pfcf_med=25.0)
 check(huge["er_mult"] == 0.0, "the top of the range is guarded too")

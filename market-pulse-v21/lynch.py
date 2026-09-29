@@ -47,7 +47,16 @@ _DATA_DIR = Path(__file__).resolve().parent / "data" / "lynch_snapshots"
 # so lowering it costs no extra requests.
 MARKET_CAP_MIN = 30_000_000
 
-PE_MAX = 10.0
+# LYNCH'S OWN TEST, WITH A BACKSTOP. "The p/e ratio of any company that's
+# fairly priced will equal its growth rate" — so a pass needs PEG <= 1,
+# P/E no higher than the growth rate. The board used to demand a single-
+# digit P/E instead, a value tilt stricter than Lynch that stopped 91% of
+# the companies reaching it and left five names. PE_MAX is now only a
+# backstop: the growth rate is trailing and uncapped (EPS_GROWTH_CAP is
+# None), so without a ceiling an inflated rate that clears every guard
+# would admit any multiple. checklist.py's P/E bounds also lean on it.
+PE_MAX = 20.0
+PEG_MAX = 1.0
 EPS_GROWTH_MIN = 10.0
 DEBT_TO_EQUITY_MAX = 0.5
 CAPEX_TO_OCF_MAX = 0.5
@@ -59,7 +68,7 @@ MIN_EPS_YEARS = 3               # need this many spans, so 4 annual points
 # is priced at a fifth of one year's earnings; that is a wrong currency, a
 # wrong share basis, or a one-time gain. Below the floor the multiple is
 # WITHHELD and badged, not silently dropped.
-PE_SANE = (3.0, 10.0)
+PE_SANE = (3.0, PE_MAX)
 
 # NO CEILING ON THE REPORTED EPS RATE. None means the board prints the rate
 # it measured, whatever it is, and the reader judges it.
@@ -899,7 +908,8 @@ REASONS = {
     "no_earnings": "no net income filed",
     "unprofitable": "net income not positive",
     "pe_suspect": "earnings multiple below the plausible floor",
-    "pe_high": "earnings multiple above the ceiling",
+    "pe_high": "earnings multiple above the 20x backstop",
+    "peg_high": "P/E above the growth rate (PEG over 1) — the price already pays for the growth",
     "short_history": "fewer than four annual EPS periods",
     "trough_base": "base year is a trough — recovery, not growth",
     "step_change": "latest year has no history behind it — a step, not a rate",
@@ -1076,6 +1086,8 @@ def evaluate(f: dict) -> dict:
     if g["cagr"] is None or g["cagr"] < EPS_GROWTH_MIN:
         return done("no_growth")
     r["peg"] = peg(pe_info["pe"], g["cagr"])
+    if r["peg"] is None or r["peg"] > PEG_MAX:
+        return done("peg_high")
 
     # ── debt: the schloss verdict, not a reimplementation ──
     #
