@@ -1,5 +1,6 @@
 # TEMPORARY — rebuilds the Lynch and 100-bagger snapshots on this branch
-# after the #5 rule changes. Deleted before the PR merges.
+# after the #5 rule changes (second run: tighter Lynch growth guards).
+# Deleted before the PR merges.
 name: Branch rebuild (owner design calls)
 
 on:
