@@ -7,9 +7,9 @@ Each input is that year's own figure:
 
   * price   — the ZIP's 2019 average Zillow ZHVI (all twelve months, or none)
   * income  — Census ACS 2015-2019 5-year median household income, in 2019
-              dollars. It does not overlap the 2020-2024 estimate the page
-              uses for today, which is the Census Bureau's rule for
-              comparing two 5-year periods.
+              dollars, from the keyless summary file. It does not overlap the
+              2020-2024 estimate the page uses for today, which is the Census
+              Bureau's rule for comparing two 5-year periods.
   * rate    — the 2019 average of Freddie Mac's weekly 30-year rate
   * CPI     — 2019 and the current ACS end year's averages, and the latest
               month, so today's Census income can be brought to today's
@@ -30,24 +30,35 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import zipfile
 
 log = logging.getLogger(__name__)
 
 BASELINE_YEAR = 2019
 ACS19_VINTAGE = "2015-2019 5-year"
 
-# Census null and annotation codes. -666666666 is "no estimate"; a margin of
-# -333333333 marks a median in an open-ended interval ("$250,000+").
-NO_ESTIMATE = -666666666
+# A negative estimate is a Census annotation ("no estimate"), never a value.
+# A margin of -333333333 marks a median in an open-ended interval, as do
+# B19013's jam values themselves.
 MOE_OPEN = -333333333
+JAM_TOP, JAM_BOTTOM = 250001, 2499     # "$250,000+" and "under $2,500"
 
-CENSUS_URL = "https://api.census.gov/data/{year}/acs/acs5"
+# The 2015-2019 vintage predates the table-based bulk files acs_bulk.py reads
+# (they begin with 2017-2021), and the Census API refuses keyless requests
+# (this repo's key never activated — DECISIONS 2026-09-28). Its keyless form
+# is the sequence-based summary file: a lookup says which sequence and column
+# hold a table, a geography file maps record numbers to GEOIDs, and one zip
+# per sequence holds the estimates and the margins.
+SF19 = "https://www2.census.gov/programs-surveys/acs/summary_file/2019"
+SF19_LOOKUP = f"{SF19}/documentation/user_tools/ACS_5yr_Seq_Table_Number_Lookup.txt"
+SF19_DIR = f"{SF19}/data/5_year_seq_by_state/UnitedStates/All_Geographies_Not_Tracts_Block_Groups"
+SF19_GEO = f"{SF19_DIR}/g20195us.csv"
+SF19_SEQ = SF19_DIR + "/20195us{seq}000.zip"
+ZCTA_SUMLEVEL, ZCTA_GEOID = "860", "86000US"
+
 FRED_API = "https://api.stlouisfed.org/fred/series/observations"
 FRED_CSV = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={series}"
 UA = {"User-Agent": "MarketPulse/1.0 (affordability baseline)"}
-
-STATE_FIPS = ("01 02 04 05 06 08 09 10 11 12 13 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 "
-              "31 32 33 34 35 36 37 38 39 40 41 42 44 45 46 47 48 49 50 51 53 54 55 56").split()
 
 
 class SourceUnavailable(RuntimeError):
@@ -73,100 +84,97 @@ def annual_average(rec: dict | None, year: int = BASELINE_YEAR) -> float | None:
 
 # ── Census ACS 2015-2019 median household income ─────────────────────
 
-def parse_census_income(rows: list[list], national_median: float | None = None) -> dict:
-    """Census API rows (header first) → {zcta: {"income": v, "coded": side}}.
+def sequence_position(lookup_text: str, table: str = "B19013") -> tuple[str, int]:
+    """(sequence '0058', 0-based column) of a one-cell table's first cell,
+    from the vintage's Seq_Table_Number_Lookup. 'Start Position' counts the
+    six leading fields (FILEID … LOGRECNO), 1-based."""
+    for row in csv.reader(io.StringIO(lookup_text)):
+        if len(row) > 4 and row[1] == table and row[4].strip():
+            return row[2].strip(), int(row[4]) - 1
+    raise ValueError(f"{table} not in the sequence lookup")
 
-    "No estimate" is None. An open-interval median keeps its bound as the
-    value, with coded = "top" or "bottom" (read against the national median),
-    so a page can print "$250,000+" rather than a measured $250,001."""
-    if not rows:
-        return {}
-    head = rows[0]
-    try:
-        iv, im = head.index("B19013_001E"), head.index("B19013_001M")
-        iz = head.index("zip code tabulation area")
-    except ValueError as e:
-        raise ValueError(f"unexpected Census header {head}") from e
-    raw = {}
-    for r in rows[1:]:
-        z = str(r[iz]).zfill(5)
-        try:
-            v = int(float(r[iv])) if r[iv] not in (None, "") else None
-            m = int(float(r[im])) if r[im] not in (None, "") else None
-        except ValueError:
-            continue
-        if v is None or v <= NO_ESTIMATE or v < 0:
-            raw[z] = (None, None)
-        else:
-            raw[z] = (v, m)
-    if national_median is None:
-        vals = [v for v, _ in raw.values() if v is not None]
-        national_median = statistics.median(vals) if vals else None
+
+def parse_geo(text: str) -> dict:
+    """g20195us.csv → {LOGRECNO: zcta} for the ZCTA rows (summary level 860)."""
     out = {}
-    for z, (v, m) in raw.items():
+    for row in csv.reader(io.StringIO(text)):
+        if len(row) > 4 and row[2] == ZCTA_SUMLEVEL:
+            gid = next((f for f in row if f.startswith(ZCTA_GEOID)), None)
+            if gid:
+                out[row[4]] = gid[len(ZCTA_GEOID):len(ZCTA_GEOID) + 5]
+    return out
+
+
+def _cell(row: list, col: int):
+    try:
+        return int(float(row[col]))
+    except (IndexError, ValueError):
+        return None
+
+
+def parse_sequence(e_text: str, m_text: str, col: int, geo: dict,
+                   national_median: float | None = None) -> dict:
+    """Estimate and margin files of one sequence → {zcta: {"income", "coded"}}.
+
+    A negative estimate is an annotation, stored None. An open-interval median
+    keeps its bound as the value, coded "top" or "bottom" (against the national
+    median), so a page prints "$250,000+" rather than a measured $250,001."""
+    est = {r[5]: _cell(r, col) for r in csv.reader(io.StringIO(e_text)) if len(r) > 5 and r[5] in geo}
+    moe = {r[5]: _cell(r, col) for r in csv.reader(io.StringIO(m_text)) if len(r) > 5 and r[5] in geo}
+    vals = [v for v in est.values() if v is not None and v > 0]
+    med = national_median if national_median is not None else (statistics.median(vals) if vals else None)
+    out = {}
+    for rec, z in geo.items():
+        if rec not in est:
+            continue
+        v = est[rec]
+        if v is None or v < 0:
+            out[z] = {"income": None, "coded": None}
+            continue
         coded = None
-        if v is not None and m == MOE_OPEN:
-            coded = "top" if (national_median is None or v >= national_median) else "bottom"
+        if moe.get(rec) == MOE_OPEN or v in (JAM_TOP, JAM_BOTTOM):
+            coded = "top" if (med is None or v >= med) else "bottom"
         out[z] = {"income": v, "coded": coded}
     return out
 
 
-def _get_json(url: str, attempts: int = 3, timeout: int = 300):
-    """Errors name the response, never the URL — a keyed URL must not reach
-    a log. The Census API answers some refusals (a bad key, an unsupported
-    geography) with HTTP 200 and an HTML or text page, so a body that is not
-    JSON is reported by its first characters and not retried."""
+def _get(url: str, attempts: int = 3, timeout: int = 600) -> bytes:
+    """Errors name the file, never the full URL (a keyed URL must not reach
+    a log)."""
     last = None
     for k in range(attempts):
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=timeout) as r:
-                body = r.read()
+                return r.read()
         except urllib.error.HTTPError as e:
-            last = f"HTTP {e.code}: {e.read()[:160]!r}"
-            if e.code == 400:        # a malformed query does not improve on retry
-                raise SourceUnavailable(last) from e
+            last = f"HTTP {e.code}"
+            if e.code in (400, 404):
+                break
         except (urllib.error.URLError, TimeoutError) as e:
             last = str(e)
-        else:
-            try:
-                return json.loads(body)
-            except ValueError:
-                raise SourceUnavailable(f"not JSON ({len(body)} bytes): {body[:160]!r}") from None
         time.sleep(3 * (k + 1))
-    raise SourceUnavailable(last or "unknown")
+    raise SourceUnavailable(f"{url.split('?')[0].rsplit('/', 1)[-1]}: {last}")
 
 
 def fetch_acs19_income(min_rows: int = 30_000) -> dict:
-    """All ZCTAs' 2015-2019 median household income. Keyless first (one
-    national call is well inside the keyless allowance), then — only if
-    that fails — with CENSUS_API_KEY. Each try is one national call, or one
-    call per state if the API wants ZCTAs nested in states for this vintage."""
-    base = CENSUS_URL.format(year=BASELINE_YEAR)
-    q = {"get": "B19013_001E,B19013_001M", "for": "zip code tabulation area:*"}
-    key = os.environ.get("CENSUS_API_KEY", "").strip()
-    errors = []
-    for label, extra in (("keyless", {}), ("keyed", {"key": key} if key else None)):
-        if extra is None:
-            continue
-        try:
-            try:
-                rows = _get_json(f"{base}?{urllib.parse.urlencode({**q, **extra})}")
-            except SourceUnavailable as e:
-                errors.append(f"{label} national: {e}")
-                rows = None
-                for st in STATE_FIPS:
-                    part = _get_json(f"{base}?{urllib.parse.urlencode({**q, **extra, 'in': f'state:{st}'})}")
-                    rows = part if rows is None else rows + part[1:]
-            out = parse_census_income(rows or [])
-        except (SourceUnavailable, ValueError) as e:
-            errors.append(f"{label} by state: {e}")
-            continue
-        if len(out) < min_rows:
-            errors.append(f"{label}: only {len(out):,} ZCTAs (floor {min_rows:,})")
-            continue
-        log.info("  ACS %s income: %s, %d ZCTAs", ACS19_VINTAGE, label, len(out))
-        return out
-    raise SourceUnavailable("; ".join(errors))
+    """All ZCTAs' 2015-2019 median household income, from the keyless
+    sequence-based summary file."""
+    seq, col = sequence_position(_get(SF19_LOOKUP).decode("latin-1"))
+    geo = parse_geo(_get(SF19_GEO).decode("latin-1"))
+    with zipfile.ZipFile(io.BytesIO(_get(SF19_SEQ.format(seq=seq)))) as zf:
+        names = {n.lower(): n for n in zf.namelist()}
+        e_name = names.get(f"e20195us{seq}000.txt")
+        m_name = names.get(f"m20195us{seq}000.txt")
+        if not (e_name and m_name):
+            raise SourceUnavailable(f"sequence {seq} zip holds {zf.namelist()}")
+        e_text = zf.read(e_name).decode("latin-1")
+        m_text = zf.read(m_name).decode("latin-1")
+    out = parse_sequence(e_text, m_text, col, geo)
+    log.info("  ACS %s: sequence %s column %d, %d ZCTAs, %d with an income",
+             ACS19_VINTAGE, seq, col + 1, len(out), sum(1 for v in out.values() if v["income"]))
+    if len(out) < min_rows:
+        raise SourceUnavailable(f"ACS 2019 income: only {len(out):,} ZCTAs (floor {min_rows:,})")
+    return out
 
 
 # ── FRED: CPI and the 30-year mortgage rate ──────────────────────────
@@ -193,7 +201,10 @@ def fetch_fred(series: str, start: str = "2018-01-01") -> dict:
     if key:
         q = urllib.parse.urlencode({"series_id": series, "api_key": key, "file_type": "json",
                                     "observation_start": start})
-        obs = _get_json(f"{FRED_API}?{q}").get("observations", [])
+        try:
+            obs = json.loads(_get(f"{FRED_API}?{q}")).get("observations", [])
+        except ValueError as e:
+            raise SourceUnavailable(f"FRED {series}: not JSON") from e
         out = {}
         for o in obs:
             try:
@@ -201,16 +212,8 @@ def fetch_fred(series: str, start: str = "2018-01-01") -> dict:
             except (KeyError, ValueError):
                 continue
         return out
-    last = None
-    for k in range(3):
-        try:
-            with urllib.request.urlopen(urllib.request.Request(FRED_CSV.format(series=series),
-                                                               headers=UA), timeout=120) as r:
-                return {d: v for d, v in parse_fred_csv(r.read().decode()).items() if d >= start}
-        except (urllib.error.URLError, TimeoutError) as e:
-            last = str(e)
-            time.sleep(3 * (k + 1))
-    raise SourceUnavailable(f"FRED {series}: {last}")
+    return {d: v for d, v in parse_fred_csv(_get(FRED_CSV.format(series=series)).decode()).items()
+            if d >= start}
 
 
 def year_mean(obs: dict, year: int, min_n: int) -> float | None:

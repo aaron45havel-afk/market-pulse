@@ -9,6 +9,7 @@ import io
 import json
 import os
 import sys
+import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -43,83 +44,86 @@ check(AI.annual_average({"start": "2016-01", "vals": [1.0] * 40}) is None,
 check(AI.annual_average(None) is None, "no Zillow series, no baseline price")
 
 # ══════════════════════════════════════════════════════════════════
-# CENSUS 2015-2019 MEDIAN HOUSEHOLD INCOME
+# CENSUS 2015-2019 MEDIAN HOUSEHOLD INCOME — the keyless summary file
 # ══════════════════════════════════════════════════════════════════
-HEAD = ["B19013_001E", "B19013_001M", "zip code tabulation area"]
-rows = [HEAD,
-        ["61000", "4100", "44107"],
-        ["250001", "-333333333", "10007"],
-        ["2499", "-333333333", "99999"],
-        ["-666666666", "-222222222", "00601"],
-        ["58000", "9000", "1001"]]
-inc = AI.parse_census_income(rows)
+LOOKUP = "\n".join([
+    "File ID,Table ID,Sequence Number,Line Number,Start Position,Total Cells in Table,"
+    "Total Cells in Sequence,Table Title,Subject Area",
+    "ACSSF,B01001,0001,,7,49 CELLS,,SEX BY AGE,Age-Sex",
+    "ACSSF,B19013,0058,,177,1 CELL,,MEDIAN HOUSEHOLD INCOME IN THE PAST 12 MONTHS "
+    "(IN 2019 INFLATION-ADJUSTED DOLLARS),Income",
+    "ACSSF,B19013,0058,,,,,Universe:  Households,",
+    "ACSSF,B19013,0058,1,,,,Median household income in the past 12 months,"])
+check(AI.sequence_position(LOOKUP) == ("0058", 176),
+      "B19013 IS SEQUENCE 0058, COLUMN 177 (1-based, counting the six leading fields) — as published")
+try:
+    AI.sequence_position(LOOKUP, "B99999")
+    check(False, "a table missing from the lookup must fail loudly")
+except ValueError:
+    check(True, "")
+
+
+def g(sumlevel, rec, geoid):
+    return ",".join(["ACSSF", "US", sumlevel, "00", rec] + [""] * 40 + [geoid, '"name"', "", "", ""])
+
+
+GEO = "\n".join([g("010", "0000001", "01000US"), g("860", "0033001", "86000US44107"),
+                  g("860", "0033002", "86000US10007"), g("860", "0033003", "86000US99999"),
+                  g("860", "0033004", "86000US00601"), g("860", "0033005", "86000US01001"),
+                  g("050", "0000100", "05000US39035")])
+geo = AI.parse_geo(GEO)
+check(geo == {"0033001": "44107", "0033002": "10007", "0033003": "99999", "0033004": "00601",
+              "0033005": "01001"},
+      "summary level 860 rows map record numbers to ZCTAs; the nation and counties are skipped")
+
+
+def seq_row(rec, val):
+    return ",".join(["ACSSF", "2019e5", "us", "000", "0058", rec] + ["0"] * 170 + [str(val)])
+
+
+E = "\n".join(seq_row(r, v) for r, v in (("0000001", 62843), ("0033001", 61000), ("0033002", 250001),
+                                           ("0033003", 2499), ("0033004", -666666666), ("0033005", 58000)))
+M = "\n".join(seq_row(r, v) for r, v in (("0000001", 150), ("0033001", 4100), ("0033002", -333333333),
+                                           ("0033003", -333333333), ("0033004", -222222222), ("0033005", 9000)))
+inc = AI.parse_sequence(E, M, 176, geo)
 check(inc["44107"] == {"income": 61000, "coded": None}, "a measured median is kept as is")
 check(inc["10007"] == {"income": 250001, "coded": "top"},
       "A TOP-CODED $250,001 IS MARKED 'top', so the page prints '$250,000+'")
 check(inc["99999"]["coded"] == "bottom", "and a bottom-code is marked 'bottom'")
 check(inc["00601"]["income"] is None, "Census 'no estimate' is None, never -666,666,666")
-check("01001" in inc, "ZCTAs zero-filled")
-per_state = AI.parse_census_income([HEAD[:2] + ["state", HEAD[2]], ["61000", "4100", "39", "44107"]])
-check(per_state["44107"]["income"] == 61000, "the state-nested response shape parses too")
-try:
-    AI.parse_census_income([["NAME", "B01001_001E"], ["x", "1"]])
-    check(False, "a changed Census header must fail loudly")
-except ValueError:
-    check(True, "")
+check("01001" in inc and len(inc) == 5, "every ZCTA record is read, and only those")
 
+_real_get = AI._get
 calls = []
 
 
-def fake_get_json(url, attempts=3, timeout=300):
-    calls.append(url)
-    if "in=state" not in url:
-        raise AI.SourceUnavailable("HTTP 400")
-    st = url.split("state%3A")[1][:2]
-    return [HEAD[:2] + ["state", HEAD[2]], ["50000", "100", st, f"{st}001"]]
+def fake_get(url, attempts=3, timeout=600):
+    calls.append(url.rsplit("/", 1)[-1])
+    if url == AI.SF19_LOOKUP:
+        return LOOKUP.encode()
+    if url == AI.SF19_GEO:
+        return GEO.encode()
+    if url == AI.SF19_SEQ.format(seq="0058"):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr("e20195us0058000.txt", E)
+            zf.writestr("m20195us0058000.txt", M)
+        return buf.getvalue()
+    raise AI.SourceUnavailable(url)
 
 
-_real = AI._get_json
-AI._get_json = fake_get_json
+AI._get = fake_get
 try:
-    got = AI.fetch_acs19_income(min_rows=51)
-    check(len(got) == 51 and len(calls) == 52,
-          "IF THE NATIONAL ZCTA CALL IS REFUSED, ONE CALL PER STATE + DC")
+    got = AI.fetch_acs19_income(min_rows=5)
+    check(got["10007"]["coded"] == "top" and calls[-1] == "20195us0058000.zip",
+          "the fetch reads the lookup, the geography and sequence 0058's zip")
     try:
         AI.fetch_acs19_income(min_rows=30_000)
         check(False, "a thin answer must not publish")
     except AI.SourceUnavailable:
         check(True, "")
 finally:
-    AI._get_json = _real
-
-
-def keyed_only(url, attempts=3, timeout=300):
-    if "key=" not in url:
-        raise AI.SourceUnavailable("not JSON (40 bytes): b'<html>error</html>'")
-    return [HEAD] + [["50000", "100", f"{i:05d}"] for i in range(60)]
-
-
-_ck = os.environ.get("CENSUS_API_KEY")
-os.environ["CENSUS_API_KEY"] = "test-key"
-AI._get_json = keyed_only
-try:
-    check(len(AI.fetch_acs19_income(min_rows=50)) == 60,
-          "KEYLESS FIRST; THE KEY ONLY IF KEYLESS FAILS")
-finally:
-    AI._get_json = _real
-    os.environ.pop("CENSUS_API_KEY")
-    if _ck is not None:
-        os.environ["CENSUS_API_KEY"] = _ck
-try:
-    AI._get_json = lambda url, attempts=3, timeout=300: (_ for _ in ()).throw(
-        AI.SourceUnavailable("not JSON (12 bytes): b'Invalid Key'"))
-    AI.fetch_acs19_income(min_rows=1)
-    check(False, "an unanswerable Census API must raise")
-except AI.SourceUnavailable as e:
-    check("Invalid Key" in str(e) and "key=" not in str(e),
-          "the error carries what Census said, never the URL (or a key in it)")
-finally:
-    AI._get_json = _real
+    AI._get = _real_get
 
 # ══════════════════════════════════════════════════════════════════
 # FRED — yearly averages and the latest CPI
@@ -146,29 +150,20 @@ check(AI.year_mean(dict(list(pmms.items())[:49]), 2019, 50) is None,
       "nor is half a year of weekly rates")
 
 
-class _Resp(io.BytesIO):
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *a):
-        return False
-
-
-_urlopen = AI.urllib.request.urlopen
 _key = os.environ.pop("FRED_API_KEY", None)
-AI.urllib.request.urlopen = lambda req, timeout=0: _Resp(CSV.encode())
+AI._get = lambda url, attempts=3, timeout=600: CSV.encode()
 try:
     check(AI.fetch_fred("CPIAUCSL", start="2019-06-01") == {"2020-01-01": 258.0},
           "without a key FRED's graph CSV is read, from the start date on")
 finally:
-    AI.urllib.request.urlopen = _urlopen
+    AI._get = _real_get
 os.environ["FRED_API_KEY"] = "test-key"
-AI._get_json = lambda url, attempts=3, timeout=300: {
-    "observations": [{"date": "2019-01-01", "value": "251.7"}, {"date": "2019-02-01", "value": "."}]}
+AI._get = lambda url, attempts=3, timeout=600: json.dumps({"observations": [
+    {"date": "2019-01-01", "value": "251.7"}, {"date": "2019-02-01", "value": "."}]}).encode()
 try:
     check(AI.fetch_fred("CPIAUCSL") == {"2019-01-01": 251.7}, "with a key, the API")
 finally:
-    AI._get_json = _real
+    AI._get = _real_get
     del os.environ["FRED_API_KEY"]
     if _key is not None:
         os.environ["FRED_API_KEY"] = _key

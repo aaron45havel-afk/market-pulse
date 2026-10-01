@@ -1,4 +1,4 @@
-# TEMPORARY: one real build of the affordability baseline on the branch (run 2). Deleted before the PR.
+# TEMPORARY: one real build of the affordability baseline on the branch (run 3). Deleted before the PR.
 # Builds market-pulse-v21/data/zip_profile.db and data/zip_series.db —
 # the dataset behind the rebuilt map and ZIP page (scripts/build_zip_profile.py).
 # Runs on the 3rd, after refresh-national-zips (1st) and refresh-rents (2nd),
@@ -44,12 +44,11 @@ jobs:
           python tests/test_affordability_inputs.py
 
       # FRED supplies the affordability baseline's CPI and mortgage-rate
-      # averages (keyless CSV if the key is absent); Census 2015-2019 income
-      # comes from the API, keyless at this volume, keyed if the secret exists.
+      # averages (keyless CSV if the key is absent). Census 2015-2019 income
+      # comes from the keyless summary file — no Census key is used.
       - name: Build the ZIP profile
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
-          CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
         run: python scripts/build_zip_profile.py
 
       - name: Commit + push if changed
