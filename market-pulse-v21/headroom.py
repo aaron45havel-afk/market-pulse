@@ -28,8 +28,17 @@ First-pass underwriting for ranking markets — not tax or investment advice.
 from __future__ import annotations
 
 import json
+import os
+import sqlite3
+import statistics
+import tempfile
+import threading
+from collections import OrderedDict
 from functools import lru_cache
 from pathlib import Path
+
+import househack as HH
+import rent_ladder as RL
 
 _DATA = Path(__file__).resolve().parent / "data" / "headroom"
 
@@ -457,55 +466,140 @@ COMPETITION_LABEL = {
     "declining": ("BUYER'S MARKET — but values falling", "!"),
 }
 
+# The research tables this page reads, for its freshness line (crime too,
+# on the house-hack board).
+LAYERS = ("calibration", "financing", "proptax", "insurance", "utilities", "inctax")
+
+_ZIPS_DB = Path(__file__).resolve().parent / "data" / "zips.db"
 _AGG_PATH = _DATA / "market_aggregates.json"
+# Bump when the aggregation changes, so a cache written by older code is
+# never read as current.
+AGG_VERSION = 2
+# Zillow ZIPs a market needs before it gets a median rent.
+MIN_MARKET_RENTS = 10
 
 
-def market_aggregates(force: bool = False) -> dict:
-    """Per-market aggregates from zips.db, cached to disk (rebuilt when the
-    db as_of changes or force=True). One pass assigns every ZIP to its
-    nearest metro within radius (else its rest-of-state bucket) and rolls
-    up: median home value, ZORI-only median rent (imputed rows — rent ==
-    value/17/12 — are excluded), population, value P25/P75, median 3-yr
-    CAGR and the modal trajectory label from each ZIP's 60-mo history."""
-    import sqlite3 as _sq
-    import statistics as _st
+def _connect(db: Path):
+    conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+_FP_MEMO: dict = {}
+
+
+def _fingerprint(db: Path) -> str:
+    """zips.db's CONTENT, for cache keys. Not its file time: every checkout
+    and deploy resets that, so a cache keyed on it was never reused and
+    every local run rewrote the committed copy. Memoized on (mtime, size)
+    so a request does not rescan the table."""
+    st = db.stat()
+    memo = (str(db), st.st_mtime_ns, st.st_size)
+    if memo not in _FP_MEMO:
+        conn = _connect(db)
+        try:
+            r = conn.execute("SELECT MAX(as_of), MAX(rent_as_of), COUNT(*), SUM(median_home_value), "
+                             "SUM(median_rent_monthly), SUM(LENGTH(history_zhvi)) FROM zips").fetchone()
+        finally:
+            conn.close()
+        _FP_MEMO[memo] = f"v{AGG_VERSION}:" + "|".join("" if x is None else str(x) for x in r)
+    return _FP_MEMO[memo]
+
+
+def _write_atomic(path: Path, payload) -> None:
+    """Write then rename, so a concurrent reader never sees half a file. A
+    read-only data directory is not an error: the caller still has its answer."""
+    tmp = None
+    try:
+        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".tmp")
+        with os.fdopen(fd, "w") as f:
+            json.dump(payload, f, sort_keys=True)
+        os.replace(tmp, path)
+    except OSError:
+        if tmp:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+
+
+_ZIP_MARKET: dict = {}
+
+
+def zip_markets(db: Path | None = None) -> dict:
+    """{zip: market code}: each ZIP's nearest metro within that metro's
+    radius, else its rest-of-state bucket, else None. One pass over every
+    ZIP against ~100 anchors — seconds — so it is kept per database content."""
     from value_add import METRO_GEO, STATE_COST_FACTORS, _haversine_mi
-    from structural import trajectory_from_history
-
-    db = Path(__file__).resolve().parent / "data" / "zips.db"
-    as_of = str(int(db.stat().st_mtime))
-    if _AGG_PATH.exists() and not force:
-        cached = json.loads(_AGG_PATH.read_text())
-        if cached.get("_as_of") == as_of:
-            return cached["markets"]
-
-    conn = _sq.connect(str(db))
-    conn.row_factory = _sq.Row
-    rows = conn.execute(
-        "SELECT zip, state, lat, lng, population, median_home_value, "
-        "median_rent_monthly, history_zhvi FROM zips WHERE lat IS NOT NULL "
-        "AND median_home_value IS NOT NULL AND population >= 1500").fetchall()
-    conn.close()
-
+    db = Path(db or _ZIPS_DB)
+    key = (str(db), _fingerprint(db))
+    hit = _ZIP_MARKET.get(key)
+    if hit is not None:
+        return hit
+    conn = _connect(db)
+    try:
+        rows = conn.execute("SELECT zip, state, lat, lng FROM zips WHERE lat IS NOT NULL").fetchall()
+    finally:
+        conn.close()
     anchors = [(code, lat, lng, rad) for code, (lat, lng, rad) in METRO_GEO.items()
                if code in STATE_COST_FACTORS]
-    buckets: dict[str, dict] = {}
+    out = {}
     for r in rows:
         best, best_d = None, 1e12
         for code, lat, lng, rad in anchors:
             d = _haversine_mi(r["lat"], r["lng"], lat, lng)
             if d <= rad and d < best_d:
                 best, best_d = code, d
-        code = best or (r["state"] if r["state"] in STATE_COST_FACTORS else None)
+        out[r["zip"]] = best or (r["state"] if r["state"] in STATE_COST_FACTORS else None)
+    _ZIP_MARKET[key] = out
+    return out
+
+
+def market_aggregates(force: bool = False, db: Path | None = None,
+                      path: Path | None = None) -> dict:
+    """Per-market aggregates from zips.db, cached to disk under the
+    database's content fingerprint. Every ZIP goes to its market
+    (zip_markets) and rolls up: median home value, median rent, population,
+    value P25/P75, median 3-yr CAGR and the modal trajectory label from
+    each ZIP's 60-month history.
+
+    RENT IS ZILLOW'S ONLY — the rent ladder's ZORI answer, an asking rent.
+    The ladder also answers with HUD voucher figures (gross, utilities in,
+    40th percentile) and Census rents; a median across ZIPs that mixes
+    those has no basis anyone can name, and the page says "ZORI". A market
+    with fewer than MIN_MARKET_RENTS Zillow ZIPs has no rent."""
+    db = Path(db or _ZIPS_DB)
+    path = Path(path or _AGG_PATH)
+    key = _fingerprint(db)
+    if path.exists() and not force:
+        try:
+            cached = json.loads(path.read_text())
+            if cached.get("_key") == key:
+                return cached["markets"]
+        except (OSError, ValueError):
+            pass
+
+    from structural import trajectory_from_history
+    conn = _connect(db)
+    try:
+        rows = conn.execute(
+            "SELECT zip, population, median_home_value, median_rent_monthly, rent_tier, history_zhvi "
+            "FROM zips WHERE lat IS NOT NULL AND median_home_value IS NOT NULL AND population >= 1500"
+        ).fetchall()
+    finally:
+        conn.close()
+    market_of = zip_markets(db)
+    buckets: dict[str, dict] = {}
+    for r in rows:
+        code = market_of.get(r["zip"])
         if code is None:
             continue
         b = buckets.setdefault(code, {"values": [], "rents": [], "pop": 0,
                                       "cagr3": [], "traj": {}})
         b["values"].append(r["median_home_value"])
         b["pop"] += r["population"] or 0
-        rent = r["median_rent_monthly"]
-        if rent and abs(rent * 17 * 12 / r["median_home_value"] - 1) > 0.02:
-            b["rents"].append(rent)
+        if r["rent_tier"] == "zori" and r["median_rent_monthly"]:
+            b["rents"].append(r["median_rent_monthly"])
         if r["history_zhvi"]:
             try:
                 t = trajectory_from_history(json.loads(r["history_zhvi"]))
@@ -521,17 +615,41 @@ def market_aggregates(force: bool = False) -> dict:
         n = len(vals)
         traj = max(b["traj"], key=b["traj"].get) if b["traj"] else None
         markets[code] = {
-            "value": _st.median(vals), "p25": vals[n // 4], "p75": vals[(3 * n) // 4],
-            "rent": (_st.median(b["rents"]) if len(b["rents"]) >= 10 else None),
+            "value": statistics.median(vals), "p25": vals[n // 4], "p75": vals[(3 * n) // 4],
+            "rent": (statistics.median(b["rents"]) if len(b["rents"]) >= MIN_MARKET_RENTS else None),
             "n_zips": n, "n_zori": len(b["rents"]), "population": b["pop"],
-            "cagr3_pct": (round(_st.median(b["cagr3"]), 2) if b["cagr3"] else None),
+            "cagr3_pct": (round(statistics.median(b["cagr3"]), 2) if b["cagr3"] else None),
             "trajectory": traj,
         }
-    _AGG_PATH.write_text(json.dumps({"_as_of": as_of, "markets": markets}))
+    _write_atomic(path, {"_key": key, "markets": markets})
     return markets
 
 
-_BOARD_CACHE: dict = {}
+# Solved boards, newest last. Bounded: the key is built from whatever the
+# query string says, and an unbounded dict grew by one ~100-row board per
+# distinct URL anyone sent.
+BOARD_CACHE_MAX = 64
+_BOARD_CACHE: OrderedDict = OrderedDict()
+_CACHE_LOCK = threading.Lock()
+# One national solve at a time: each is seconds of pure-Python CPU, and a
+# pile of them in worker threads starves the event loop of the GIL.
+_SOLVE_LOCK = threading.Lock()
+
+
+def _cache_get(key):
+    with _CACHE_LOCK:
+        hit = _BOARD_CACHE.get(key)
+        if hit is not None:
+            _BOARD_CACHE.move_to_end(key)
+        return hit
+
+
+def _cache_put(key, value) -> None:
+    with _CACHE_LOCK:
+        _BOARD_CACHE[key] = value
+        _BOARD_CACHE.move_to_end(key)
+        while len(_BOARD_CACHE) > BOARD_CACHE_MAX:
+            _BOARD_CACHE.popitem(last=False)
 
 
 def build_board(*, mode: str = "brrrr", scope: str = "moderate", level: str = "low",
@@ -541,11 +659,23 @@ def build_board(*, mode: str = "brrrr", scope: str = "moderate", level: str = "l
     """Solve every market and rank by headroom. x_adjust is the manual
     competition knob (added to the fixer entry discount, bounds per the
     calibration tightness rule). Results cached in-process per input set."""
-    from value_add import STATE_NAMES
     key = (mode, scope, level, round(target, 1), round(rate_pct, 2),
            int(sqft), round(x_adjust, 3), metros_only, min_pop)
-    if key in _BOARD_CACHE:
-        return _BOARD_CACHE[key]
+    hit = _cache_get(key)
+    if hit is not None:
+        return hit
+    with _SOLVE_LOCK:
+        hit = _cache_get(key)              # solved while this request waited
+        if hit is not None:
+            return hit
+        out = _solve_board(mode=mode, scope=scope, level=level, target=target, rate_pct=rate_pct,
+                           sqft=sqft, x_adjust=x_adjust, metros_only=metros_only, min_pop=min_pop)
+        _cache_put(key, out)
+        return out
+
+
+def _solve_board(*, mode, scope, level, target, rate_pct, sqft, x_adjust, metros_only, min_pop):
+    from value_add import STATE_NAMES
     aggs = market_aggregates()
     x_adj = max(-0.02, min(0.05, x_adjust))
     out = []
@@ -578,39 +708,33 @@ def build_board(*, mode: str = "brrrr", scope: str = "moderate", level: str = "l
                     "trajectory": a["trajectory"], "competition": comp[0],
                     "median_psf": a["value"] / sqft})
     out.sort(key=lambda r: (r["headroom"] is None, -(r["headroom"] or -9)))
-    _BOARD_CACHE[key] = out
     return out
 
 
 def zip_drilldown(metro_code: str, *, mode: str = "brrrr", scope: str = "moderate",
                   level: str = "low", target: float = TARGET_DEFAULT,
                   rate_pct: float = 6.55, sqft: float = 1500.0,
-                  top: int = 15) -> list[dict]:
+                  top: int = 15, db: Path | None = None) -> list[dict]:
     """Best ZIPs inside one market: rank by rent-to-value (the BRRRR fuel),
     solve headroom per ZIP using the ZIP's own median value/rent priced at
-    the metro's construction-cost code."""
-    import sqlite3 as _sq
+    the metro's construction-cost code. Zillow rents only, as on the board:
+    a county-wide HUD figure divided by each ZIP's value would rank the
+    county's cheapest ZIPs first by construction."""
     from value_add import METRO_GEO, _haversine_mi
+    from structural import trajectory_from_history
     if metro_code not in METRO_GEO:
         return []
     lat0, lng0, rad = METRO_GEO[metro_code]
-    db = Path(__file__).resolve().parent / "data" / "zips.db"
-    conn = _sq.connect(str(db))
-    conn.row_factory = _sq.Row
-    rows = conn.execute(
-        "SELECT zip, name, state, lat, lng, population, median_home_value, "
-        "median_rent_monthly, history_zhvi FROM zips WHERE lat IS NOT NULL "
-        "AND median_home_value IS NOT NULL AND median_rent_monthly IS NOT NULL "
-        "AND population >= 5000").fetchall()
-    conn.close()
-    from structural import trajectory_from_history
-    members = []
-    for r in rows:
-        if _haversine_mi(r["lat"], r["lng"], lat0, lng0) > rad:
-            continue
-        if abs(r["median_rent_monthly"] * 17 * 12 / r["median_home_value"] - 1) <= 0.02:
-            continue                     # imputed rent — no real signal
-        members.append(r)
+    conn = _connect(Path(db or _ZIPS_DB))
+    try:
+        rows = conn.execute(
+            "SELECT zip, name, state, lat, lng, population, median_home_value, "
+            "median_rent_monthly, history_zhvi FROM zips WHERE lat IS NOT NULL "
+            "AND median_home_value IS NOT NULL AND median_rent_monthly IS NOT NULL "
+            "AND rent_tier = 'zori' AND population >= 5000").fetchall()
+    finally:
+        conn.close()
+    members = [r for r in rows if _haversine_mi(r["lat"], r["lng"], lat0, lng0) <= rad]
     members.sort(key=lambda r: r["median_rent_monthly"] / r["median_home_value"],
                  reverse=True)
     out = []
@@ -639,117 +763,159 @@ def zip_drilldown(metro_code: str, *, mode: str = "brrrr", scope: str = "moderat
 
 # ── House-hack mode: owner-occupant FHA 203(k), ZIP-level ────────────
 
+FHA_DOWN = 0.035
+FHA_UFMIP = 0.0175             # upfront MIP, financed into the loan
+FHA_MIP_ANNUAL = 0.0055        # annual MIP on the base loan (LTV > 95%)
+HH_UNIT_SQFT = 900.0
+# What set the offer, in the order the page names them.
+HH_BINDING = {"value": "building value", "live_free": "cash flow",
+              "fha_self_sufficiency": "FHA 75% test", "budget": "your budget"}
+
+
+@lru_cache(maxsize=4096)
+def _hh_rehab(code: str, units: int, scope: str, level: str) -> float:
+    from value_add import remodel_budget
+    return remodel_budget(units * HH_UNIT_SQFT, 3, max(2.0, units * 1.0), 1965, scope, level,
+                          state=code)["total"]
+
+
 def house_hack_max_offer(median_value: float, rent_unit: float, code: str,
                          *, units: int = 4, scope: str = "cosmetic",
                          level: str = "low", rate_pct: float = 6.55,
                          max_price: float = 300_000.0) -> dict | None:
-    """The offer number for an owner-occupant house-hacker: the highest
-    purchase price at which, after a 203(k) remodel (rehab rolled into the
-    loan at 3.5% down, owner rate, MIP), the OTHER units' rent covers the
-    entire PITI (live-free) AND the FHA self-sufficiency gate passes
-    (3-4 units: 75% x ALL units' rent >= PITI — the funding rule that
-    replaces an investor loan's DSCR; owner-occupants don't have DSCR).
+    """The offer number for an owner-occupant house-hacker: the LOWEST of
 
-    Both gates are linear in P -> closed form. rent_unit uses the ZIP
-    median rent per unit — same convention as /multifamily. Insurance
-    scales +25% per extra unit (estimate). Property tax at the investor
-    table (conservative: homestead would trim the owner's unit share)."""
-    if not rent_unit or rent_unit <= 0 or units < 2:
+      value      what the building is likely worth — the ZIP's single-family
+                 median × the 2-4 unit factor /multifamily prices it at
+                 (househack.est_building_price; an estimate, not a listing).
+                 Rents alone once set offers at 4.8x the local median: a
+                 cash-flow ceiling no appraisal would support.
+      live_free  the price where the other units' rent, less 8% vacancy and
+                 repairs at 1.5% a year of (price + remodel), covers the
+                 entire PITI — the same vacancy and maintenance the BRRRR
+                 side underwrites with.
+      fha_self_sufficiency  (3-4 units) FHA's funding rule: 75% of ALL
+                 units' rent ≥ PITI. Owner-occupants face this, not a DSCR.
+      budget     the user's cap.
+
+    PITI after a 203(k) remodel: 3.5% down on (price + remodel), the 1.75%
+    upfront MIP financed, 0.55% annual MIP, property tax at the investor
+    table (homestead on the owner's unit would only trim it), insurance at
+    the state landlord premium × /multifamily's unit factor. Every term is
+    linear in the price, so each cap is a closed form.
+
+    rent_unit is the ZIP rent per unit — same convention as /multifamily;
+    the caller names its source."""
+    if not rent_unit or rent_unit <= 0 or units < 2 or not median_value or median_value <= 0:
         return None
     sc = state_costs(code)
-    sqft = units * 900.0
-    from value_add import remodel_budget
-    R = remodel_budget(sqft, 3, max(2.0, units * 1.0), 1965, scope, level, state=code)["total"]
+    R = _hh_rehab(code, units, scope, level)
+    est = HH.est_building_price(median_value, units)
     r = rate_pct / 100.0
-    # PITI(P) = pmt(0.965(P+R)) + MIP + tax + ins  — all linear in P.
     k12 = (r / 12) * (1 + r / 12) ** 360 / ((1 + r / 12) ** 360 - 1)
-    pay_per_loan = k12 + 0.0055 / 12                     # P&I + annual MIP /12, per $ of loan
-    ins_mo = sc["ins_landlord"] * (1 + 0.25 * (units - 1)) / 12
-    # PITI(P) = pay_per_loan*0.965*(P+R) + tax_mo*P + ins_mo
-    a = pay_per_loan * 0.965 + sc["proptax"] / 12
-    b = pay_per_loan * 0.965 * R + ins_mo
-    caps = {"live_free": ((units - 1) * rent_unit - b) / a}
-    if units >= 3:
-        caps["fha_self_sufficiency"] = (0.75 * units * rent_unit - b) / a
+    # Monthly cost per dollar of BASE loan: P&I on the base plus financed
+    # UFMIP, and the annual MIP on the base.
+    per_base = k12 * (1 + FHA_UFMIP) + FHA_MIP_ANNUAL / 12
+    ins_mo = sc["ins_landlord"] * HH.UNIT_INSURANCE_FACTOR.get(units, 1.45) / 12
+    # PITI(P) = a·P + b
+    a = per_base * (1 - FHA_DOWN) + sc["proptax"] / 12
+    b = per_base * (1 - FHA_DOWN) * R + ins_mo
+    m = MAINTENANCE_PCT / 12                       # repairs per dollar of (P + R), monthly
+    gross_other = (units - 1) * rent_unit
+    kept = gross_other * (1 - VACANCY)
+    caps = {"value": float(est["estimated_price"]),
+            "live_free": (kept - m * R - b) / (a + m),
+            "budget": float(max_price)}
+    if units >= HH.FHA_SELF_SUFF_UNITS:
+        caps["fha_self_sufficiency"] = (HH.FHA_RENT_CREDIT * units * rent_unit - b) / a
+    if min(caps["live_free"], caps.get("fha_self_sufficiency", caps["live_free"])) <= 0:
+        return None                                # the rents carry no price at all
     binding = min(caps, key=caps.get)
-    offer = min(min(caps.values()), max_price)
-    if offer <= 0:
-        return None
+    offer = caps[binding]
     piti = a * offer + b
-    cash = 0.035 * (offer + R) + 0.03 * offer            # down + ~3% closing
-    return {"max_offer": round(offer), "binding": binding, "rehab": round(R),
-            "piti": round(piti), "rent_offset": round((units - 1) * rent_unit),
-            "cash_to_close": round(cash), "capped_at_budget": offer >= max_price - 1,
-            "monthly_surplus": round((units - 1) * rent_unit - piti)}
+    repairs = m * (offer + R)
+    cash = FHA_DOWN * (offer + R) + 0.03 * offer   # down + ~3% closing
+    return {"max_offer": round(offer), "binding": binding, "binding_label": HH_BINDING[binding],
+            "rehab": round(R), "est_value": est["estimated_price"], "est_basis": est["basis"],
+            "piti": round(piti), "rent_offset": round(gross_other),
+            "vacancy": round(gross_other * VACANCY), "repairs": round(repairs),
+            "cash_to_close": round(cash), "capped_at_budget": binding == "budget",
+            "monthly_surplus": round(kept - repairs - piti),
+            "fha_75_passes": (HH.FHA_RENT_CREDIT * units * rent_unit >= piti - 0.5
+                              if units >= HH.FHA_SELF_SUFF_UNITS else None)}
 
 
 def zip_board_hh(*, state: str | None = None, units: int = 4, scope: str = "cosmetic",
                  level: str = "low", rate_pct: float = 6.55,
                  max_price: float = 300_000.0, min_pop: int = 5_000,
                  top: int = 40, max_tier: str = "safe",
-                 allow_unknown: bool = False) -> list[dict]:
-    """ZIP-level house-hack board: every real-rent ZIP (optionally one
-    state), solved for the max offer; ranked by rent-to-value with the
-    live-free ZIPs first.
+                 allow_unknown: bool = False, db: Path | None = None) -> list[dict]:
+    """ZIP-level house-hack board: every ZIP with a measured rent (optionally
+    one state), solved for the max offer; safest first, then rent-to-value.
+
+    Rents: whatever the rent ladder measured for the ZIP — Zillow, HUD
+    (small-area or county voucher figures, utilities included) or Census —
+    each row labelled with its source, and a HUD rent that would take a
+    large share of local income flagged, as /multifamily does. ZIPs the
+    ladder could not answer for are left out.
 
     Safety gate (safety.py, real FBI city-level figures): rows above
     `max_tier` are dropped, and cities we have no verified figure for are
     dropped too unless allow_unknown — the yield leaders are exactly the
     places most likely to be screened out, which is the point."""
-    import sqlite3 as _sq
-    from value_add import METRO_GEO, STATE_COST_FACTORS, _haversine_mi
+    from safety import zip_safety, passes, TIER_ORDER
     from structural import trajectory_from_history
-    db = Path(__file__).resolve().parent / "data" / "zips.db"
-    conn = _sq.connect(str(db))
-    conn.row_factory = _sq.Row
-    q = ("SELECT zip, name, state, lat, lng, population, median_home_value, "
-         "median_rent_monthly, history_zhvi FROM zips WHERE lat IS NOT NULL AND "
-         "median_home_value IS NOT NULL AND median_rent_monthly IS NOT NULL "
-         "AND population >= ?")
-    args: list = [min_pop]
+    db = Path(db or _ZIPS_DB)
+    tiers = RL.TIER_ORDER
+    q = ("SELECT zip, name, state, population, median_home_value, median_rent_monthly, rent_tier, "
+         "median_household_income, history_zhvi FROM zips WHERE median_home_value IS NOT NULL "
+         "AND median_rent_monthly IS NOT NULL AND population >= ? "
+         f"AND rent_tier IN ({', '.join('?' * len(tiers))})")
+    args: list = [min_pop, *tiers]
     if state:
         q += " AND state = ?"
         args.append(state.upper())
-    rows = conn.execute(q, args).fetchall()
-    conn.close()
-    anchors = [(c, la, ln, rd) for c, (la, ln, rd) in METRO_GEO.items()
-               if c in STATE_COST_FACTORS]
+    conn = _connect(db)
+    try:
+        rows = conn.execute(q, args).fetchall()
+    finally:
+        conn.close()
+    market_of = zip_markets(db)
     out = []
     for rr in rows:
-        mv, rent = rr["median_home_value"], rr["median_rent_monthly"]
-        if abs(rent * 17 * 12 / mv - 1) <= 0.02:         # imputed rent
-            continue
-        best, bd = None, 1e12
-        for c, la, ln, rd in anchors:
-            d = _haversine_mi(rr["lat"], rr["lng"], la, ln)
-            if d <= rd and d < bd:
-                best, bd = c, d
-        code = best or (rr["state"] if rr["state"] in STATE_COST_FACTORS else None)
+        code = market_of.get(rr["zip"])
         if code is None:
             continue
+        sf = zip_safety(rr["name"], rr["state"])
+        if not passes(sf, max_tier, allow_unknown):
+            continue
+        mv, rent = rr["median_home_value"], rr["median_rent_monthly"]
         h = house_hack_max_offer(mv, rent, code, units=units, scope=scope,
                                  level=level, rate_pct=rate_pct, max_price=max_price)
         if h is None:
             continue
-        label = None
-        if rr["history_zhvi"]:
-            try:
-                t = trajectory_from_history(json.loads(rr["history_zhvi"]))
-                label = t["label"] if t else None
-            except (ValueError, TypeError):
-                label = None
-        from safety import zip_safety, passes
-        sf = zip_safety(rr["name"], rr["state"])
-        if not passes(sf, max_tier, allow_unknown):
-            continue
+        tier = RL.TIER_BY_KEY[rr["rent_tier"]]
         out.append({**h, "zip": rr["zip"], "place": rr["name"], "state": rr["state"],
                     "market": code, "population": rr["population"],
                     "median_value": mv, "rent": rent,
-                    "rtv_pct": round(rent * 12 / mv * 100, 1), "trajectory": label,
-                    "safety": sf,
-                    "competition": COMPETITION_LABEL.get(label or "steady", ("BALANCED", "="))[0]})
+                    "rent_tier": rr["rent_tier"], "rent_label": tier["label"],
+                    "rent_basis": tier["basis"], "rent_caveat": tier["caveat"],
+                    "rent_strains_income": RL.hud_rent_strains_income(
+                        rent, rr["rent_tier"], rr["median_household_income"]),
+                    "rtv_pct": round(rent * 12 / mv * 100, 1),
+                    "safety": sf, "_history": rr["history_zhvi"]})
     # Safest first, then yield — a house-hack is where the family lives, so
     # safety outranks rent-to-value in the ordering.
-    from safety import TIER_ORDER as _TO
-    out.sort(key=lambda x: (_TO[x["safety"]["tier"]], -x["rtv_pct"], -x["max_offer"]))
-    return out[:top]
+    out.sort(key=lambda x: (TIER_ORDER[x["safety"]["tier"]], -x["rtv_pct"], -x["max_offer"]))
+    out = out[:top]
+    for z in out:                                  # trend only for the rows shown
+        label, hist = None, z.pop("_history")
+        if hist:
+            try:
+                t = trajectory_from_history(json.loads(hist))
+                label = t["label"] if t else None
+            except (ValueError, TypeError):
+                label = None
+        z["trajectory"] = label
+        z["competition"] = COMPETITION_LABEL.get(label or "steady", ("BALANCED", "="))[0]
+    return out

@@ -231,6 +231,17 @@ Format: `- [PHASE-SEEN] item — why it matters`
   deleted (map rebuild phase 5); remove it with the per-state derived scores only it displayed.
 - [CONDITIONS-METRO] Realtor.com publishes the same core metrics by metro (936 CBSAs). A metro view of
   /conditions would answer "which markets", not just "which states". If Redfin resumes, the ZIP profile picks it up unchanged.
+- [HEADROOM-BOARD] /headroom phase 2, the market board. At 7.03% every one of 105 markets reads PRICED OUT in every
+  BRRRR setting and PRIMED never appears in any of 24 settings, because the fixer price is the median × one national
+  discount while remodel cost is per square foot: in Cleveland the modelled fixer plus a moderate remodel is 105% of
+  ARV before financing, so headroom tracks remodel cost ÷ value (r = −0.84) and falls as rent yield rises (−0.57).
+  Rebuild: drop the modelled fixer price and the verdict tiers; per market show the most you can pay as a % of the
+  median and in $/sqft, name the limit that binds (return target, the $25k floor — which sets the flip price in 106
+  of 107 markets, so the target input does nothing there — or the refi/DSCR cap) and rank on that; competition from
+  Realtor.com listing data (days on market, price cuts) instead of the price-trend guess, on both boards; exit
+  appreciation 0% or a user input rather than the trailing 3-year CAGR used as a forecast; suspended passive losses
+  offsetting later rental income, refi points prorated in year 1 and the unamortized rest deducted at payoff; rent
+  (or a stated vacancy) for the months between the remodel and the refi.
 - [AFF-INCOME] Today's affordability income is the Census 2020-24 median brought forward by CPI (no real growth
   assumed since 2024). The build picks up the 2021-25 ACS when the Bureau posts it (about December 2026),
   shrinking the CPI step; a wage index (e.g. Atlanta Fed wage growth) could replace the no-growth assumption.

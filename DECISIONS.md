@@ -711,3 +711,34 @@ r = 0.80) and Montana silently dropped. The owner chose to rebuild it on current
   table row, and in the map tooltip and detail card, which use the state's months rather than the page's.
   Realtor.com's quality flag is marked per state.
 - The `market_climate_pct` composite is removed from data_providers.
+
+## 2026-10-01 — /headroom phase 1: a house-hack offer an appraisal could support; one rent basis per board
+**Why:** the audit found the house-hack board offering up to 4.8x a ZIP's median home value (29 of the top 40
+rows above 2x) — a cash-flow ceiling with no link to what the building is worth — calling rows "live-free" with
+no vacancy or repairs (26 of 40 went negative with the page's own 8% and 1.5%), and showing county HUD voucher
+rents as "ZIP median rent". The market board said "Rents: ZORI-observed ZIPs only" while blending 7,987 Zillow
+ZIPs with 10,777 HUD and Census ones, and a leftover test for the retired value÷204 imputation dropped 960 real
+rents. The owner chose option B (fix the house-hack and the honesty now; rebuild the board in phase 2).
+**Decided:**
+- **The house-hack offer is the lowest of four limits, and the row names which:** the building's estimated value
+  (the ZIP's single-family median × 1.25 / 1.55 / 1.85 for 2 / 3 / 4 units — `househack.est_building_price`, the
+  estimate /multifamily already prices buildings at, labelled as an estimate); the price where the other units'
+  rent, less 8% vacancy and repairs at 1.5% a year of price + remodel, covers the whole PITI; FHA's 75%
+  self-sufficiency test on 3–4 units; the user's budget. Surplus is after vacancy, repairs and PITI.
+- **PITI** adds FHA's 1.75% upfront MIP (financed) to the 0.55% annual MIP, and insures at /multifamily's unit
+  factors (`househack.UNIT_INSURANCE_FACTOR`) instead of a separate +25% per unit.
+- **House-hack rents are the rent ladder's measured answer, labelled** (Zillow ZORI / HUD SAFMR / HUD FMR county /
+  Census), with a HUD rent that takes a large share of local income flagged — /multifamily's rule ("labelled, not
+  adjusted"). A ZIP is in when its rent carries a ladder tier; the value÷204 test is gone.
+- **The market board and the ZIP drill-down use Zillow rents only**, as the page already said: a market median
+  needs one basis, and a county-wide HUD figure divided by each ZIP's value ranks the county's cheapest ZIPs
+  first. A market with fewer than 10 Zillow ZIPs has no rent and leaves the board (Alaska, Delaware: 105 markets).
+- **Wording:** the "fixer ask" is called what it is — a modelled price, the median × one national discount, not
+  sales observed in the market; the claim that rent-to-price drives the all-red board is removed (the audit
+  found headroom falls as rent yield rises). The page lists its research tables' dates and flags stale ones,
+  which the freshness workflow's issue text already promised.
+- **Caches:** `market_aggregates.json` is keyed on zips.db's content, not its file time (every deploy and checkout
+  reset the time, so the committed copy was never reused), and written atomically. Solved boards are held in a
+  64-entry LRU, one national solve at a time; ZIP-to-market assignment is computed once per database (a national
+  house-hack request fell from 3.1s to 0.2s warm).
+- Phase 2 (BACKLOG HEADROOM-BOARD) rebuilds the market board itself.
