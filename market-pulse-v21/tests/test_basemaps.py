@@ -78,7 +78,7 @@ for path in sorted(TEMPLATES.rglob("*.html")):
 
 check(len(found_layers) >= 4,
       f"the scanner finds the tile layers at all — /map has two and "
-      f"/fair-value has two (found {len(found_layers)})")
+      f"/housing-affordability has two (found {len(found_layers)})")
 
 
 # ── 1. no provider that now demands a key ──

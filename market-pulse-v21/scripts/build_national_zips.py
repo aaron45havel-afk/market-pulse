@@ -17,7 +17,7 @@ No composite score and no forecast: both were retired with the old map
 (DECISIONS, map rebuild phase 5). The ZIP map and ZIP page read
 data/zip_profile.db (scripts/build_zip_profile.py).
 
-Readers: /multifamily, /headroom, /value-add, /norcal and /fair-value
+Readers: /multifamily, /headroom, /value-add and /norcal
 (see each module); the ~30K ZIPs Zillow tracks nationally.
 
 Sources, all free and stable:
@@ -226,7 +226,7 @@ def parse_zhvi_per_zip(csv_text: str) -> dict[str, dict]:
         if county_idx is not None and county_idx < len(row):
             entry["county"] = row[county_idx].strip()
         # Capture the trailing 60 monthly values (history_zhvi), read by
-        # /multifamily, /headroom and /fair-value for value trajectories.
+        # /multifamily, /headroom and /norcal for value trajectories.
         # Drops empties / parse-errors silently (≥12 needed to keep one).
         history: list[float] = []
         for col_i, _ in date_cols[-60:]:   # ~5 years of monthly data
@@ -525,7 +525,7 @@ CREATE TABLE zips (
     cap_rate_pct             REAL,
     -- Trailing 60 monthly ZHVI values, JSON-encoded list (oldest →
     -- newest), for the value-trajectory reads on /multifamily,
-    -- /headroom and /fair-value.
+    -- /headroom and /norcal.
     history_zhvi             TEXT,
     as_of                    TEXT
 );

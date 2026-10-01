@@ -68,11 +68,18 @@ RATE = 6.3
 inv_keys = set(U.investor(300_000, 2000, tax_rate_pct=1, insurance_annual=1000, rate_pct=7))
 own_keys = set(U.owner(300_000, tax_rate_pct=1, insurance_annual=1000, rate_pct=7, market_rent=2000,
                        area_income=80_000))
+import affordability as AF  # noqa: E402
+AFF_KEYS = {"ratio", "ratio19", "change_pts", "gap_pct", "affordable", "payment", "payment19"}
+_m = AF.measure({"price": 300_000, "price19": 250_000, "income": 70_000, "income19": 60_000,
+                 "tax_rate": 1.0, "ins_300k": 1500},
+                {"baseline_year": 2019, "pmms": {"2019": 3.94}, "cpi": {"2019": 255.0, "2024": 313.0,
+                                                                       "latest": 334.0}}, 7.0)
+check(AFF_KEYS <= set(_m), "the affordability fields the map reads exist on a measured ZIP")
 bad = []
 for m in MD.METRICS.values():
     kind, field = m["how"].split(":", 1)
     ok = ((kind == "col" and field in B.COLUMN_NAMES) or (kind == "inv" and field in inv_keys)
-          or (kind == "own" and field in own_keys))
+          or (kind == "own" and field in own_keys) or (kind == "aff" and field in AFF_KEYS))
     if not ok or m["fmt"] not in MD._ROUND or (m["thin"] and m["thin"] not in B.COLUMN_NAMES):
         bad.append(m["key"])
 check(not bad, f"EVERY METRIC READS A REAL COLUMN OR UNDERWRITING RESULT, with a known format: {bad}")

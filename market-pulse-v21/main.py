@@ -4320,67 +4320,27 @@ async def multifamily_page(
 
 
 @app.get("/fair-value")
-async def fair_value_page(request: Request, state: str = "OH"):
-    """Inflation-adjusted-payment fair-value methodology (per
-    @VladTheInflator). Takes a state's median home value from ~5
-    years ago, builds the baseline PITI, inflates the payment by
-    cumulative CPI, then back-solves for the home price today's
-    mortgage rate produces. Compares to current market value to
-    flag % over/undervalued."""
-    from data_providers import CHOROPLETH_STATES
-    from fair_value import compute_state_fair_value, compute_zips_in_state
-    state = (state or "OH").upper()
-    rows = []
-    for code, sd in CHOROPLETH_STATES.items():
-        mv = sd.get("home_value")
-        if not mv:
-            continue
-        result = compute_state_fair_value(code, mv)
-        if not result:
-            continue
-        result["code"] = code
-        result["name"] = sd.get("name", code)
-        rows.append(result)
-    rows.sort(key=lambda r: r["delta_pct"], reverse=True)
-    picked = next((r for r in rows if r["code"] == state), None)
-    # Per-ZIP drilldown for the picked state. Send everything — the
-    # search box has to be able to find any ZIP, and capping the
-    # response set hides ZIPs ranked below the cap (Lakewood OH
-    # ranked #404 of 979; +56% overvalued but invisible at cap=250).
-    # 5000-row hard ceiling is a safety net against pathological
-    # states; CA has ~1500 ZIPs which is the realistic upper bound.
-    zip_rows = compute_zips_in_state(state, limit=5000) if picked else []
-    # FIPS→delta map for the choropleth — us-states.json features
-    # are keyed by FIPS, not by 2-letter code. Pre-build the lookup
-    # so the client doesn't have to do it for every polygon.
-    fips_to_delta = {}
-    for r in rows:
-        fips = CHOROPLETH_STATES.get(r["code"], {}).get("fips")
-        if fips:
-            fips_to_delta[fips] = {
-                "code": r["code"], "name": r["name"],
-                "delta_pct": r["delta_pct"],
-                "fair_value": r["fair_value"], "market_value": r["market_value"],
-            }
-    # ZIP markers — only need the geo + delta_pct for the map; the
-    # full rows already power the table below.
-    zip_markers = [
-        {"zip": r["zip"], "lat": r["lat"], "lng": r["lng"],
-         "delta_pct": r["delta_pct"], "area": r["area"],
-         "market_value": r["market_value"], "fair_value": r["fair_value"]}
-        for r in zip_rows if r.get("lat") is not None and r.get("lng") is not None
-    ]
-    return templates.TemplateResponse("fair_value.html", {
-        "request": request,
-        "rows": rows,
-        "picked": picked,
-        "zip_rows": zip_rows,
-        "state": state,
-        "states": sorted(r["code"] for r in rows),
-        "fips_to_delta": fips_to_delta,
-        "zip_markers": zip_markers,
-    })
+async def fair_value_redirect(state: str = ""):
+    """The inflation-adjusted-payment "fair value" page was retired after its
+    audit (DECISIONS 2026-10-01); its question is answered by housing
+    affordability against a fixed 2019 baseline."""
+    st = (state or "").strip().upper()
+    q = f"?state={st}" if len(st) == 2 and st.isalpha() else ""
+    return RedirectResponse(url=f"/housing-affordability{q}", status_code=301)
 
+
+@app.get("/housing-affordability")
+def housing_affordability(request: Request, state: str = ""):
+    """What it takes for the median household to buy the typical home, today
+    against 2019: payment-to-income, the price affordable at 30% of income,
+    and how much of the change came from prices, rates, incomes and
+    insurance. Every state and the nation are the typical household of the
+    same ZIPs at both ends (affordability.py)."""
+    import affordability as AF
+    from data_providers import CHOROPLETH_STATES, MORTGAGE_30Y_RATE, MORTGAGE_30Y_OBS_DATE
+    ctx = AF.page(MORTGAGE_30Y_RATE, _fmt_obs_date(MORTGAGE_30Y_OBS_DATE), state,
+                  {k: {"name": v.get("name", k), "fips": v.get("fips")} for k, v in CHOROPLETH_STATES.items()})
+    return templates.TemplateResponse("housing_affordability.html", {"request": request, **ctx})
 
 @app.get("/conditions")
 async def conditions_page(request: Request):

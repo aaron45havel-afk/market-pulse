@@ -2,7 +2,7 @@
 """Build data/zip_profile.db — the one dataset behind the rebuilt map and ZIP page.
 
 WHY A NEW FILE. data/zips.db is read by eleven other modules (multifamily,
-headroom, fair_value, value_add, norcal ...) and carries columns the rebuild
+headroom, value_add, norcal ...) and carries columns the rebuild
 retires: persona composites, a damped-Holt forecast that does not beat
 "last year repeats", and walk/restaurant/crime "scores" computed from
 density, income and education. Changing it in place would move every one

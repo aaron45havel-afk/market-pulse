@@ -247,6 +247,15 @@ def _f(params: dict, key: str, default):
         return default
 
 
+def _income_today(row: dict) -> float | None:
+    """The ZIP's Census median household income brought to today's dollars
+    by CPI — the affordability page's income, so the owner card's
+    payment-to-income and that page agree at the defaults."""
+    import affordability as AF
+    inc, f = row.get("acs_median_income"), AF.income_factor()
+    return inc * f if (inc and f) else inc
+
+
 def underwrite_zip(row: dict, params: dict, mortgage_rate: float | None) -> dict:
     """Defaults for this ZIP, overridden by any of `params`, run through
     underwrite.py for both readers. Returns the inputs used and results."""
@@ -291,7 +300,7 @@ def underwrite_zip(row: dict, params: dict, mortgage_rate: float | None) -> dict
                   hoa_monthly=used["o_hoa"], rate_pct=used["o_rate"], down_pct=used["o_down"],
                   pmi_annual_pct=used["o_pmi"], other_debt_monthly=used["o_debt"],
                   closing_cost_pct=used["closing"],
-                  area_income=row.get("acs_median_income"),
+                  area_income=_income_today(row),
                   market_rent=used["rent"])
     return {"used": used, "options": opts, "chosen": chosen, "investor": inv, "owner": own,
             "notes": {
