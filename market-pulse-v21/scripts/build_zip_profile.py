@@ -420,7 +420,8 @@ COLUMNS = [
     # derived ratios
     ("price_to_income", "REAL"), ("price_to_rent", "REAL"),
     # tax and insurance defaults
-    ("tax_rate_acs", "REAL"), ("tax_rate_investor", "REAL"), ("tax_basis_investor", "TEXT"),
+    ("tax_rate_acs", "REAL"), ("tax_rate_zip", "REAL"), ("tax_rate_zip_basis", "TEXT"),
+    ("tax_rate_investor", "REAL"), ("tax_basis_investor", "TEXT"),
     ("tax_rate_owner", "REAL"), ("tax_basis_owner", "TEXT"),
     ("ins_landlord_300k", "REAL"), ("ins_owner_300k", "REAL"),
     # FEMA NRI expected annual building loss, $/yr per $100k of building value
@@ -495,16 +496,51 @@ def build_rows(geo: dict, county: dict, acs: dict, zhvi: dict, zhvi_br: dict, zo
                        clim_snow_in=cl.get("sn"), clim_station_km=cl.get("tk"))
         rows.append(row)
 
-    # Tax defaults need every ZIP's rate first: the investor level is the
-    # ZIP's Census rate relative to its state's median.
-    st_med = RA.state_medians({r["zip"]: (r["state"], r["tax_rate_acs"]) for r in rows})
+    apply_tax_defaults(rows)
     for r in rows:
-        t = RA.tax_defaults(r["state"], r["tax_rate_acs"], st_med.get(r["state"]))
         i = RA.insurance_defaults(r["state"])
-        r.update(tax_rate_investor=t["investor_pct"], tax_basis_investor=t["investor_basis"],
-                 tax_rate_owner=t["owner_pct"], tax_basis_owner=t["owner_basis"],
-                 ins_landlord_300k=i["landlord_300k"], ins_owner_300k=i["owner_300k"])
+        r.update(ins_landlord_300k=i["landlord_300k"], ins_owner_300k=i["owner_300k"])
     return rows
+
+
+def zip_tax_rate(row: dict, county_med: dict, state_med: dict) -> tuple:
+    """(rate %, basis) for one ZIP: the measured Census rate, or — when the
+    Census top-coded its median taxes at "$10,000+" — an estimate.
+
+    The top code is still information: median taxes of at least $10,001 on
+    the ZIP's median value is a FLOOR on the rate. The estimate is the
+    greater of that floor and the county's median measured rate (the
+    state's when the county has none). 925 ZIPs on the 2024 vintage, 4.9%
+    of residents, almost all in NY, NJ and CA; without this they fell
+    through to the statewide rate, which put Manhattan on upstate's."""
+    if row.get("tax_rate_acs") is not None:
+        return row["tax_rate_acs"], "measured"
+    flag = json.loads(row.get("acs_flags") or "{}").get("acs_median_taxes")
+    value = row.get("acs_median_value")
+    if flag and flag.get("side") == "top" and value:
+        floor = flag["bound"] / value * 100
+        ref = county_med.get(row.get("county_fips")) or state_med.get(row.get("state"))
+        return round(max(floor, ref or 0), 3), "top-coded"
+    return None, None
+
+
+def apply_tax_defaults(rows: list[dict]) -> None:
+    """Fill tax_rate_zip and the investor/owner defaults. Needs every row:
+    county and state medians come from MEASURED rates only."""
+    by_county: dict = {}
+    for r in rows:
+        if r.get("tax_rate_acs") is not None:
+            by_county.setdefault(r.get("county_fips"), []).append(r["tax_rate_acs"])
+    county_med = {k: statistics.median(v) for k, v in by_county.items()}
+    st_med = RA.state_medians({r["zip"]: (r["state"], r.get("tax_rate_acs")) for r in rows})
+    for r in rows:
+        rate, basis = zip_tax_rate(r, county_med, st_med)
+        r.update(tax_rate_zip=rate, tax_rate_zip_basis=basis)
+        t = RA.tax_defaults(r["state"], rate, st_med.get(r["state"]), zip_basis=basis)
+        r.update(tax_rate_investor=t["investor_pct"], tax_basis_investor=t["investor_basis"],
+                 tax_rate_owner=t["owner_pct"], tax_basis_owner=t["owner_basis"])
+
+
 
 
 def series_payload(zhvi: dict, zori: dict, meta: dict) -> dict:

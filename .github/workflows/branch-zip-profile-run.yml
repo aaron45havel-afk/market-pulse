@@ -1,6 +1,7 @@
 # TEMPORARY — builds the ZIP profile on this branch from live sources and
 # probes Redfin's ZIP-level market tracker for phase 2. Deleted before merge.
-# Run 2: install requirements (re_assumptions reads data_providers, which needs pandas).
+# Run 3: top-coded taxes estimated from the county median, floored at the $10,000 bound.
+# (The Redfin probe ran in runs 1-2: 1.55 GB, 9.7M rows, streams in 82 s, latest 2026-05-31.)
 name: Branch run (ZIP profile + Redfin probe)
 
 on:
@@ -59,41 +60,3 @@ jobs:
             sleep $((attempt * 5))
           done
 
-  redfin-probe:
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    steps:
-      - name: Probe Redfin's ZIP market tracker
-        run: |
-          python3 - <<'PY'
-          import csv, gzip, io, time, urllib.request, collections
-          URL = ("https://redfin-public-data.s3.us-west-2.amazonaws.com/"
-                 "redfin_market_tracker/zip_code_market_tracker.tsv000.gz")
-          head = urllib.request.urlopen(urllib.request.Request(URL, method="HEAD"), timeout=60)
-          print("status", head.status, "bytes", head.headers.get("Content-Length"),
-                "modified", head.headers.get("Last-Modified"))
-          t0 = time.time()
-          r = urllib.request.urlopen(URL, timeout=300)
-          rd = csv.reader(io.TextIOWrapper(gzip.GzipFile(fileobj=r), encoding="utf-8", newline=""),
-                          delimiter="\t")
-          header = next(rd)
-          print("columns", len(header), header)
-          idx = {h.lower(): i for i, h in enumerate(header)}
-          n, latest, types, durs, zips = 0, "", collections.Counter(), collections.Counter(), set()
-          sample = None
-          for row in rd:
-              n += 1
-              pe = row[idx["period_end"]] if "period_end" in idx else ""
-              latest = max(latest, pe)
-              types[row[idx["property_type"]]] += 1
-              durs[row[idx["period_duration"]]] += 1
-              if n == 1000:
-                  sample = dict(zip(header, row))
-              if time.time() - t0 > 1800:
-                  print("stopped at 30 min")
-                  break
-          print("rows", n, "seconds", round(time.time() - t0), "latest period_end", latest)
-          print("property_type", types.most_common(8))
-          print("period_duration", durs.most_common(5))
-          print("sample row", sample)
-          PY

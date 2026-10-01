@@ -121,7 +121,7 @@ def state_medians(zip_rates: dict) -> dict:
 
 
 def tax_defaults(state: str, zip_rate: float | None,
-                 state_median_zip_rate: float | None) -> dict:
+                 state_median_zip_rate: float | None, zip_basis: str | None = "measured") -> dict:
     """Default tax rates (percent of purchase price per year) for one ZIP.
 
     investor: reset states → the state purchase rate, flat. Elsewhere the
@@ -140,14 +140,14 @@ def tax_defaults(state: str, zip_rate: float | None,
     elif zip_rate is not None and st_inv and state_median_zip_rate:
         lo, hi = INVESTOR_FACTOR_BOUNDS
         factor = min(hi, max(lo, st_inv / state_median_zip_rate))
-        inv, inv_basis = zip_rate * factor, "ZIP Census rate scaled to the state investor rate"
+        inv, inv_basis = zip_rate * factor, f"{_zip_label(zip_basis)} scaled to the state investor rate"
     elif st_inv:
         inv, inv_basis = st_inv, "state investor rate (no ZIP Census rate)"
     else:
         inv, inv_basis = FALLBACK_INVESTOR_TAX_PCT, "national fallback"
 
     if zip_rate is not None:
-        own, own_basis = zip_rate, "ZIP Census rate (existing owners)"
+        own, own_basis = zip_rate, f"{_zip_label(zip_basis)} (existing owners)"
     elif st_own:
         own, own_basis = st_own, "state owner-occupied rate (no ZIP Census rate)"
     else:
@@ -158,6 +158,12 @@ def tax_defaults(state: str, zip_rate: float | None,
 
     return {"investor_pct": round(inv, 3), "investor_basis": inv_basis,
             "owner_pct": round(own, 3), "owner_basis": own_basis}
+
+
+def _zip_label(basis: str | None) -> str:
+    if basis == "top-coded":
+        return "ZIP estimate (Census taxes top-coded at $10,000+: county median, floored at the bound)"
+    return "ZIP Census rate"
 
 
 def insurance_defaults(state: str) -> dict:

@@ -195,6 +195,32 @@ for banned in ("composite", "walk", "crime", "restaurant", "forecast", "score"):
     check(not any(banned in c for c in B.COLUMN_NAMES),
           f"NO '{banned}' COLUMN: the rebuild carries measurements only")
 
+# ── taxes top-coded at "$10,000+" ──
+TOP = json.dumps({"acs_median_taxes": {"bound": 10001, "side": "top"}})
+cm, sm = {"36061": 0.80, "34017": 1.59}, {"NY": 2.30, "NJ": 2.10}
+man = {"tax_rate_acs": None, "acs_flags": TOP, "acs_median_value": 712_700,
+       "county_fips": "36061", "state": "NY"}
+check(B.zip_tax_rate(man, cm, sm) == (round(10001 / 712_700 * 100, 3), "top-coded"),
+      "MANHATTAN: taxes of at least $10,001 on a $712,700 median is a 1.40% FLOOR, "
+      "which beats the county's 0.80% — not New York State's upstate-driven rate")
+hob = {**man, "acs_median_value": 895_100, "county_fips": "34017", "state": "NJ"}
+check(B.zip_tax_rate(hob, cm, sm) == (1.59, "top-coded"),
+      "Hoboken: the county median binds when it is above the floor")
+lone = {**man, "county_fips": "99999"}
+check(B.zip_tax_rate(lone, cm, sm)[0] == 2.30,
+      "no measured county neighbour: the state median, still floored")
+check(B.zip_tax_rate({"tax_rate_acs": 0.9}, cm, sm) == (0.9, "measured"),
+      "a measured rate passes through untouched")
+check(B.zip_tax_rate({"tax_rate_acs": None, "acs_flags": None, "acs_median_value": 5e5}, cm, sm)
+      == (None, None), "no taxes and no top-code: no rate is invented")
+_rows = [{"zip": "a", "state": "NY", "county_fips": "36061", "tax_rate_acs": 0.8, "acs_flags": None,
+          "acs_median_value": 6e5},
+         {"zip": "b", **man}]
+B.apply_tax_defaults(_rows)
+check(_rows[1]["tax_rate_zip"] == round(10001 / 712_700 * 100, 3)
+      and _rows[1]["tax_rate_acs"] is None and "top-coded" in _rows[1]["tax_basis_owner"],
+      "the estimate goes in tax_rate_zip; tax_rate_acs stays measured-only; the basis says so")
+
 pay = B.series_payload(zh, zo, {"built_at": "x"})
 check(pay["zhvi"]["94105"] == ["2025-01", [11000] * 12 + [11270]]
       and pay["zori"]["94105"][0] == "2025-01" and pay["_meta"]["zhvi_unit"] == "USD/100",
