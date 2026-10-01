@@ -1,0 +1,78 @@
+# TEMPORARY — phase 2 source probe: which market-activity files are current,
+# at what geography, with which columns. Deleted before merge.
+name: Branch probe (market activity sources)
+
+on:
+  push:
+    branches: [claude/legal-rep-invoice-tracking-9j1i9r]
+    paths: ['.github/workflows/branch-market-probe.yml']
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Probe sources
+        run: |
+          python3 - <<'PY'
+          import csv, gzip, io, re, time, urllib.request, urllib.error
+          RF = "https://redfin-public-data.s3.us-west-2.amazonaws.com/"
+          RDC = "https://econdata.s3-us-west-2.amazonaws.com/Reports/Core/"
+          ZL = "https://files.zillowstatic.com/research/public_csvs/"
+          SOURCES = [
+            ("rdc_zip", RDC + "RDC_Inventory_Core_Metrics_Zip.csv"),
+            ("rdc_zip_history", RDC + "RDC_Inventory_Core_Metrics_Zip_History.csv"),
+            ("rdc_county", RDC + "RDC_Inventory_Core_Metrics_County.csv"),
+            ("rdc_metro", RDC + "RDC_Inventory_Core_Metrics_Metro.csv"),
+            ("redfin_weekly", RF + "redfin_covid19/weekly_housing_market_data_most_recent.tsv000.gz"),
+            ("redfin_county", RF + "redfin_market_tracker/county_market_tracker.tsv000.gz"),
+            ("redfin_metro", RF + "redfin_market_tracker/redfin_metro_market_tracker.tsv000.gz"),
+            ("redfin_national", RF + "redfin_market_tracker/us_national_market_tracker.tsv000.gz"),
+            ("zillow_metro_invt", ZL + "invt_fs/Metro_invt_fs_uc_sfrcondo_sm_month.csv"),
+            ("zillow_zip_invt", ZL + "invt_fs/Zip_invt_fs_uc_sfrcondo_sm_month.csv"),
+            ("zillow_metro_dom", ZL + "med_doz_pending/Metro_med_doz_pending_uc_sfrcondo_sm_month.csv"),
+            ("zillow_metro_cut", ZL + "perc_listings_price_cut/Metro_perc_listings_price_cut_uc_sfrcondo_sm_month.csv"),
+            ("zillow_metro_s2l", ZL + "mean_sale_to_list/Metro_mean_sale_to_list_uc_sfrcondo_sm_month.csv"),
+            ("zillow_metro_sales", ZL + "sales_count_now/Metro_sales_count_now_uc_sfrcondo_month.csv"),
+          ]
+          DATE_COLS = ("period_end", "month_date_yyyymm", "PERIOD_END")
+          for name, url in SOURCES:
+              print("=" * 100); print(name, url)
+              try:
+                  h = urllib.request.urlopen(urllib.request.Request(url, method="HEAD"), timeout=60)
+                  print("  HEAD", h.status, "bytes", h.headers.get("Content-Length"), "modified", h.headers.get("Last-Modified"))
+              except urllib.error.HTTPError as e:
+                  print("  HEAD HTTP", e.code); continue
+              except Exception as e:
+                  print("  HEAD error", e); continue
+              t0 = time.time()
+              try:
+                  r = urllib.request.urlopen(url, timeout=300)
+                  raw = gzip.GzipFile(fileobj=r) if url.endswith(".gz") else r
+                  text = io.TextIOWrapper(raw, encoding="utf-8", errors="replace", newline="")
+                  delim = "\t" if ".tsv" in url else ","
+                  rd = csv.reader(text, delimiter=delim)
+                  header = next(rd)
+                  print("  columns", len(header), header[:60] if len(header) < 80 else header[:12] + ["..."] + header[-6:])
+                  dcol = next((header.index(c) for c in DATE_COLS if c in header), None)
+                  wide = [h for h in header if re.fullmatch(r"\d{4}-\d{2}-\d{2}", h)]
+                  if wide:
+                      print("  wide format: first", wide[0], "last", wide[-1], "months", len(wide))
+                  n, latest, sample, regtypes = 0, "", None, {}
+                  for row in rd:
+                      n += 1
+                      if dcol is not None and dcol < len(row):
+                          latest = max(latest, row[dcol])
+                      if n == 3:
+                          sample = dict(zip(header, row))
+                      if "REGION_TYPE" in header:
+                          rt = row[header.index("REGION_TYPE")]
+                          regtypes[rt] = regtypes.get(rt, 0) + 1
+                      if time.time() - t0 > 300:
+                          print("  (stopped scanning at 5 min)"); break
+                  print("  rows", n, "latest", latest or "-", "secs", round(time.time() - t0))
+                  if regtypes: print("  region types", regtypes)
+                  if sample: print("  sample", {k: sample[k] for k in list(sample)[:40]})
+              except Exception as e:
+                  print("  GET error", repr(e)[:200])
+          PY
