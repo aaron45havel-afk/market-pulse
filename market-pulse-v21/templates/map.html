@@ -1,0 +1,642 @@
+{% extends "base.html" %}
+{% block title %}ZIP map · Market Pulse{% endblock %}
+{% block body_class %}compact-sidebar{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+  .zm { max-width: 1400px; margin: 0 auto; padding: 0 16px 40px; }
+  .zm-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; margin: 6px 0 10px; }
+  .zm-head h1 { font-family: var(--display); font-size: 2rem; margin: 0; line-height: 1.1; }
+  .zm-head .sub { font-size: 0.82rem; color: var(--ink-3); }
+  .zm-grid { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 14px; align-items: start; }
+  .zm-grid > * { min-width: 0; }
+  @media (max-width: 960px) { .zm-grid { grid-template-columns: minmax(0, 1fr); } }
+  .zm-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .zm-panel h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3);
+                 margin: 14px 0 6px; font-weight: 650; }
+  .zm-panel h3:first-child { margin-top: 0; }
+  #zmBasisBox h3 { margin-top: 14px; }
+  .zm-panel select, .zm-panel input[type=text], .zm-panel input[type=number] {
+      width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid var(--line-strong);
+      border-radius: 7px; font-size: 0.88rem; background: var(--surface); color: var(--ink); }
+  .zm-help { font-size: 0.75rem; color: var(--ink-3); margin-top: 5px; line-height: 1.45; }
+  .zm-src { font-size: 0.72rem; color: var(--ink-4); margin-top: 3px; }
+  .zm-warn { font-size: 0.75rem; background: var(--gold-soft); color: var(--gold-ink); border-radius: 7px;
+             padding: 6px 8px; margin-top: 6px; line-height: 1.4; }
+  .zm-row { display: flex; gap: 6px; align-items: center; }
+  .zm-row > * { min-width: 0; }
+  .zm-filter { border: 1px solid var(--line); border-radius: 8px; padding: 8px; margin-bottom: 6px; }
+  .zm-filter .zm-row { margin-top: 5px; }
+  .zm-filter input { width: 50%; }
+  .zm-x { border: 0; background: none; color: var(--ink-3); cursor: pointer; font-size: 1rem; padding: 0 4px; }
+  .zm-btn { border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); border-radius: 7px;
+            padding: 5px 10px; font-size: 0.8rem; cursor: pointer; }
+  .zm-btn:hover { background: var(--surface-2); }
+  .zm-check { font-size: 0.8rem; color: var(--ink-2); display: flex; gap: 6px; align-items: flex-start; margin-top: 8px; }
+  .zm-legend { font-size: 0.78rem; }
+  .zm-legend .li { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+  .zm-legend .sw { width: 14px; height: 14px; border-radius: 50%; flex: 0 0 14px; }
+  .zm-legend .ct { margin-left: auto; color: var(--ink-4); font-variant-numeric: tabular-nums; }
+  .zm-mapwrap { position: relative; }
+  #zmMap { height: 72vh; min-height: 420px; border-radius: 12px; border: 1px solid var(--line); background: #e9e9e6; }
+  @media (max-width: 960px) { #zmMap { height: 60vh; min-height: 340px; } }
+  .zm-loading { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 500;
+                background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px;
+                font-size: 0.78rem; color: var(--ink-2); display: none; }
+  .zm-tip { position: absolute; z-index: 600; pointer-events: none; background: var(--surface); border: 1px solid var(--line);
+            border-radius: 7px; padding: 5px 8px; font-size: 0.76rem; box-shadow: 0 2px 8px rgba(0,0,0,.12); display: none;
+            white-space: nowrap; }
+  .zm-summary { font-size: 0.8rem; color: var(--ink-2); margin: 8px 2px 0; line-height: 1.5; }
+  .zm-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-top: 14px; }
+  .zm-card h2 { font-size: 1rem; margin: 0 0 4px; }
+  .zm-tablebar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .zm-scroll { overflow-x: auto; max-width: 100%; }
+  table.zm-t { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  table.zm-t th, table.zm-t td { padding: 6px 6px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  table.zm-t th { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-3); font-weight: 600;
+                  cursor: pointer; user-select: none; white-space: normal; vertical-align: bottom; }
+  table.zm-t th.sorted { color: var(--ink); }
+  table.zm-t td.l, table.zm-t th.l { text-align: left; }
+  table.zm-t td.place { white-space: normal; min-width: 120px; }
+  table.zm-t a { color: var(--primary); text-decoration: none; font-weight: 600; }
+  .zp-badge { display: inline-block; font-size: 0.62rem; font-weight: 700; border-radius: 999px; padding: 0 6px;
+              margin-left: 4px; text-transform: uppercase; letter-spacing: 0.04em; vertical-align: 1px; }
+  .b-thin { background: var(--surface-3); color: var(--ink-2); }
+  .b-vol { background: var(--coral-soft); color: var(--coral-ink); }
+  .b-stale { background: var(--gold-soft); color: var(--gold-ink); }
+  .zm-dag { color: var(--coral-ink); font-weight: 700; margin-left: 2px; cursor: help; }
+  .zm-pop { font-size: 0.82rem; line-height: 1.5; min-width: 200px; }
+  .zm-pop b { font-size: 0.95rem; }
+  .zm-pop .v { font-size: 1.1rem; font-weight: 650; }
+  .zm-pop .o { color: var(--ink-3); font-size: 0.76rem; }
+  .zm-pop a { color: var(--primary); font-weight: 600; text-decoration: none; }
+  details.zm-assume summary { cursor: pointer; font-size: 0.78rem; color: var(--primary); margin-top: 8px; }
+  details.zm-assume ul { margin: 6px 0 0; padding-left: 18px; font-size: 0.75rem; color: var(--ink-2); line-height: 1.5; }
+  .zm-foot { font-size: 0.74rem; color: var(--ink-3); margin-top: 14px; line-height: 1.6; }
+  @media (max-width: 600px) {
+    .zm-head h1 { font-size: 1.6rem; }
+    table.zm-t { font-size: 0.78rem; }
+    table.zm-t th, table.zm-t td { padding: 5px 4px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="zm">
+  <div class="zm-head">
+    <h1>ZIP map</h1>
+    <div class="sub">Every ZIP in the 50 states and DC, one measure at a time. No scores — each figure says where it came from and when.</div>
+  </div>
+
+  <div class="zm-grid">
+    <!-- ── CONTROLS ─────────────────────────────────────────── -->
+    <div class="zm-panel" id="zmPanel">
+      <h3>Colour ZIPs by</h3>
+      <select id="zmMetric" aria-label="Metric">
+        {% set groups = [] %}
+        {% for m in registry %}{% if m.group not in groups %}{% set _ = groups.append(m.group) %}{% endif %}{% endfor %}
+        {% for g in groups %}
+        <optgroup label="{{ g }}">
+          {% for m in registry if m.group == g %}<option value="{{ m.key }}">{{ m.label }}</option>{% endfor %}
+        </optgroup>
+        {% endfor %}
+      </select>
+      <div class="zm-help" id="zmHelp"></div>
+      <div class="zm-src" id="zmSrc"></div>
+      <div class="zm-warn" id="zmStale" style="display:none">Redfin's ZIP data stopped updating after June 2, 2026. These are its last 90-day windows (ending May 2026) — not current.</div>
+
+      <div id="zmBasisBox">
+        <h3>Price and rent for investor figures</h3>
+        <select id="zmBasis" aria-label="Price and rent basis">
+          {% for k, b in bases.items() %}<option value="{{ k }}">{{ b.label }}</option>{% endfor %}
+        </select>
+        <div class="zm-help" id="zmBasisNote"></div>
+        <details class="zm-assume" id="zmAssume">
+          <summary>Assumptions behind underwritten figures</summary>
+          <ul>
+            <li>Investor: {{ defaults.investor_down_pct|int }}% down, {{ defaults.closing_cost_pct|int }}% closing costs, 30-year loan at {% if rate %}{{ "%.2f"|format(rate + defaults.investor_rate_premium) }}% (Freddie Mac 30-yr {{ "%.2f"|format(rate) }}% on {{ rate_date }} + {{ defaults.investor_rate_premium }}){% else %}— no mortgage rate loaded{% endif %}.</li>
+            <li>Of rent: vacancy {{ defaults.vacancy_pct|int }}%, management {{ defaults.management_pct|int }}%, maintenance {{ defaults.maintenance_pct|int }}%, capital reserve {{ defaults.capex_pct|int }}%. HOA and utilities $0 (tenant pays). One unit.</li>
+            <li>Property tax: the ZIP's rate scaled to what a buyer pays in that state; insurance: the state's landlord (DP-3) average scaled to price.</li>
+            <li>Owner: Zillow's typical home, {{ defaults.owner_down_pct|int }}% down at {% if rate %}{{ "%.2f"|format(rate) }}%{% else %}—{% endif %}, PMI {{ defaults.pmi_annual_pct }}%/yr above 80% loan-to-value, homeowner (HO-3) insurance, income needed at {{ defaults.front_end_dti_pct|int }}/{{ defaults.back_end_dti_pct|int }}.</li>
+            <li>Open any ZIP to change every one of these.</li>
+          </ul>
+        </details>
+      </div>
+
+      <h3>Where</h3>
+      <select id="zmState" aria-label="State"><option value="">All states</option></select>
+      <div class="zm-row" style="margin-top:8px">
+        <input type="text" id="zmSearch" inputmode="numeric" maxlength="5" placeholder="Find a ZIP" aria-label="Find a ZIP">
+        <button class="zm-btn" id="zmGo" type="button">Go</button>
+      </div>
+      <div class="zm-help" id="zmSearchMsg"></div>
+
+      <h3>Filters</h3>
+      <div id="zmFilters"></div>
+      <button class="zm-btn" id="zmAddFilter" type="button">+ Add a filter</button>
+      <div class="zm-help">ZIPs without a figure for a filter are left out. Enter values as shown (percent as 5 for 5%).</div>
+      <label class="zm-check" id="zmThinBox"><input type="checkbox" id="zmThin"> <span>Include flagged figures: <span id="zmFlagWhy"></span></span></label>
+
+      <h3>Legend</h3>
+      <div class="zm-legend" id="zmLegend"></div>
+      <div class="zm-help">Colours split the ZIPs shown into equal-sized groups, so they re-scale with every filter.</div>
+    </div>
+
+    <!-- ── MAP ──────────────────────────────────────────────── -->
+    <div>
+      <div class="zm-mapwrap">
+        <div id="zmMap"></div>
+        <div class="zm-loading" id="zmLoading">Loading…</div>
+        <div class="zm-tip" id="zmTip"></div>
+      </div>
+      <div class="zm-summary" id="zmSummary"></div>
+    </div>
+  </div>
+
+  <!-- ── TABLE ─────────────────────────────────────────────── -->
+  <div class="zm-card">
+    <div class="zm-tablebar">
+      <div><h2 id="zmTableTitle">ZIPs</h2><div class="zm-help" style="margin:0">Click a column to sort. Every ZIP opens its full page.</div></div>
+      <button class="zm-btn" id="zmCsv" type="button">Download CSV</button>
+    </div>
+    <div class="zm-scroll"><table class="zm-t" id="zmTable"></table></div>
+    <div class="zm-help" id="zmDagNote" style="display:none">† Realtor.com flagged this ZIP's listing figures for the month (often a change in its data sources) — read the change figures with care.</div>
+    <div style="margin-top:10px; text-align:center"><button class="zm-btn" id="zmMore" type="button">Show 50 more</button></div>
+  </div>
+
+  <div class="zm-foot">
+    Sources: Zillow Research (ZHVI, ZORI); Realtor.com Economic Research (listings); Redfin Data Center (sales, frozen at May 2026);
+    U.S. Census Bureau ACS {{ meta.get("acs_vintage", "") }} and 2020 ZCTA Gazetteer; HUD Fair Market Rents; FEMA National Risk Index;
+    NOAA 1991-2020 climate normals; Freddie Mac PMMS. Points are ZIP centroids. Built {{ meta.get("built_at", "") }}.
+    Not financial advice.
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(function () {
+  const REG = {{ registry|tojson }};
+  const BASES = {{ bases|tojson }};
+  const DEFAULT_METRIC = {{ default_metric|tojson }};
+  const DEFAULT_BASIS = {{ default_basis|tojson }};
+  const BY = Object.fromEntries(REG.map(m => [m.key, m]));
+  const PALETTE = ['#fdc328', '#f89540', '#e16462', '#c03a83', '#8f0da4', '#5402a3', '#0d0887'];
+  const NOFIG = '#b9b9b4';
+  const PAGE = 50;
+
+  // ── state, mirrored in the URL so a view can be shared ──
+  const q = new URLSearchParams(location.search);
+  const S = {
+    metric: BY[q.get('m')] ? q.get('m') : DEFAULT_METRIC,
+    basis: BASES[q.get('b')] ? q.get('b') : DEFAULT_BASIS,
+    st: q.get('st') || '',
+    thin: q.get('thin') === '1',
+    filters: (q.get('f') || '').split(',').filter(Boolean).map(s => {
+      const [key, lo, hi] = s.split(':');
+      return BY[key] ? {key, min: lo === '' || lo == null ? null : +lo, max: hi === '' || hi == null ? null : +hi} : null;
+    }).filter(Boolean),
+    sort: null, dir: -1, shown: PAGE,
+  };
+  function pushUrl() {
+    const p = new URLSearchParams();
+    if (S.metric !== DEFAULT_METRIC) p.set('m', S.metric);
+    if (S.basis !== DEFAULT_BASIS) p.set('b', S.basis);
+    if (S.st) p.set('st', S.st);
+    if (S.thin) p.set('thin', '1');
+    if (S.filters.length) p.set('f', S.filters.map(f => `${f.key}:${f.min ?? ''}:${f.max ?? ''}`).join(','));
+    const s = p.toString();
+    history.replaceState(null, '', location.pathname + (s ? '?' + s : ''));
+  }
+
+  // ── formatting ──
+  const nf0 = new Intl.NumberFormat('en-US', {maximumFractionDigits: 0});
+  function money(v, d) {
+    const s = Math.abs(v).toLocaleString('en-US', {minimumFractionDigits: d, maximumFractionDigits: d});
+    return (v < 0 ? '−$' : '$') + s;
+  }
+  function fmt(v, f) {
+    if (v == null) return '—';
+    switch (f) {
+      case 'money': return money(v, 0);
+      case 'money2': return money(v, Math.abs(v) < 10 ? 2 : 0);
+      case 'pct': return v.toFixed(1) + '%';
+      case 'pct2': return v.toFixed(2) + '%';
+      case 'x': return v.toFixed(1) + '×';
+      case 'ratio': return v.toFixed(2);
+      case 'days': return nf0.format(v) + ' d';
+      case 'num1': return v.toFixed(1);
+      case 'year': return String(v);
+      case 'deg': return v.toFixed(0) + '°F';
+      case 'inch': return nf0.format(v) + ' in';
+      default: return nf0.format(v);
+    }
+  }
+  function fmtCell(d, i, m) {
+    const v = d.values[i];
+    if (v == null) return '—';
+    const c = d.coded[i];
+    if (c === 'top') return fmt(m.fmt === 'year' ? v : v - 1, m.fmt) + '+';
+    if (c === 'bottom') return m.fmt === 'year' ? `${v} or earlier` : `under ${fmt(v, m.fmt)}`;
+    if (m.key === 'break_even_occ' && v > 100) return `${fmt(v, m.fmt)} (rent can't cover costs)`;
+    return fmt(v, m.fmt);
+  }
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+
+  // ── data ──
+  let B = null;                 // base: zip, lat, lng, st, states, place
+  const cache = new Map();
+  const loading = document.getElementById('zmLoading');
+  let pending = 0;
+  function busy(on) { pending += on ? 1 : -1; loading.style.display = pending > 0 ? 'block' : 'none'; }
+  function getMetric(key) {
+    const m = BY[key];
+    const ck = key + '|' + (m.basis ? S.basis : '');
+    if (!cache.has(ck)) {
+      busy(true);
+      cache.set(ck, fetch(`/api/map/metric/${key}?basis=${S.basis}`)
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(d => { d.thinSet = new Set(d.thin); d.susSet = new Set(d.suspect); d.volSet = new Set(d.volatile); return d; })
+        .finally(() => busy(false)));
+    }
+    return cache.get(ck);
+  }
+  // Flagged: under 10 listings/sales, or a year's rent over 20% of the price. Kept, drawn hollow,
+  // and left out of the colours, medians and table unless the reader includes them.
+  const flagged = (d, i) => d.thinSet.has(i) || d.susSet.has(i);
+  const usable = (d, i) => d.values[i] != null && (S.thin || !flagged(d, i));
+
+  // ── map and the dot layer ──
+  const map = L.map('zmMap', {minZoom: 3, maxZoom: 16, worldCopyJump: false}).setView([38.5, -96.5], 4);
+  const ESRI_CANVAS = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas';
+  L.tileLayer(ESRI_CANVAS + '/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 16, maxNativeZoom: 16, attribution: 'Tiles &copy; Esri'}).addTo(map);
+  L.tileLayer(ESRI_CANVAS + '/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 16, maxNativeZoom: 16, attribution: '', pane: 'shadowPane'}).addTo(map);
+
+  let view = null;              // {keep, color[], thinShown, main, filters, colored[]}
+  const Dots = L.Layer.extend({
+    onAdd(m) {
+      this._c = L.DomUtil.create('canvas', 'leaflet-zoom-hide');
+      m.getPanes().overlayPane.appendChild(this._c);
+      m.on('moveend zoomend resize', this.redraw, this);
+      this.redraw();
+    },
+    onRemove(m) { this._c.remove(); m.off('moveend zoomend resize', this.redraw, this); },
+    redraw() {
+      const c = this._c, size = map.getSize(), dpr = window.devicePixelRatio || 1;
+      L.DomUtil.setPosition(c, map.containerPointToLayerPoint([0, 0]));
+      c.width = size.x * dpr; c.height = size.y * dpr;
+      c.style.width = size.x + 'px'; c.style.height = size.y + 'px';
+      const ctx = c.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, size.x, size.y);
+      this.pts = [];
+      if (!B || !view) return;
+      const z = map.getZoom();
+      const r = z <= 4 ? 1.7 : z <= 5 ? 2.2 : z <= 7 ? 3 : z <= 9 ? 4.5 : z <= 11 ? 6 : 8;
+      this.r = r;
+      const bnd = map.getBounds().pad(0.05);
+      const s = bnd.getSouth(), n = bnd.getNorth(), w = bnd.getWest(), e = bnd.getEast();
+      const layers = [[], [], []];          // no figure, thin, coloured
+      for (let i = 0; i < B.n; i++) {
+        if (!view.keep[i]) continue;
+        const la = B.lat[i], lo = B.lng[i];
+        if (la == null || la < s || la > n || lo < w || lo > e) continue;
+        const k = view.color[i] >= 0 ? 2 : (view.thinShown[i] ? 1 : 0);
+        layers[k].push(i);
+      }
+      layers[2].sort((a, b) => view.color[a] - view.color[b]);
+      const pt = i => map.latLngToContainerPoint([B.lat[i], B.lng[i]]);
+      ctx.fillStyle = NOFIG; ctx.globalAlpha = 0.55;
+      for (const i of layers[0]) { const p = pt(i); ctx.fillRect(p.x - 1, p.y - 1, 2, 2); this.pts.push([p.x, p.y, i]); }
+      ctx.globalAlpha = 1; ctx.lineWidth = 1.2; ctx.strokeStyle = '#8a8a86';
+      for (const i of layers[1]) {
+        const p = pt(i); ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(r - 0.6, 1.4), 0, 6.283); ctx.stroke(); this.pts.push([p.x, p.y, i]);
+      }
+      for (const i of layers[2]) {
+        const p = pt(i); ctx.fillStyle = view.colors[view.color[i]];
+        ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 6.283); ctx.fill(); this.pts.push([p.x, p.y, i]);
+      }
+      if (z >= 9 && layers[2].length < 4000) {     // a hairline ring keeps neighbours apart up close
+        ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 0.8;
+        for (const i of layers[2]) { const p = pt(i); ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 6.283); ctx.stroke(); }
+      }
+    },
+    nearest(cp) {
+      let best = -1, bd = Infinity;
+      const lim = Math.pow((this.r || 3) + 4, 2);
+      for (const [x, y, i] of this.pts || []) {
+        const d = (x - cp.x) ** 2 + (y - cp.y) ** 2;
+        if (d < bd && d <= lim) { bd = d; best = i; }
+      }
+      return best;
+    },
+  });
+  const dots = new Dots().addTo(map);
+
+  // ── recompute what is shown ──
+  function quantileBreaks(vals, k) {
+    const v = vals.slice().sort((a, b) => a - b);
+    const br = [];
+    for (let j = 1; j < k; j++) {
+      const x = v[Math.min(v.length - 1, Math.floor(v.length * j / k))];
+      if (!br.length || x > br[br.length - 1]) br.push(x);
+    }
+    return br;
+  }
+  function binOf(br, x) { let lo = 0, hi = br.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (x >= br[mid]) lo = mid + 1; else hi = mid; } return lo; }
+
+  async function recompute() {
+    const m = BY[S.metric];
+    let main, fds;
+    try {
+      [main, ...fds] = await Promise.all([getMetric(S.metric), ...S.filters.map(f => getMetric(f.key))]);
+    } catch (e) {
+      document.getElementById('zmSummary').textContent = 'Could not load this measure. Try again in a moment.';
+      return;
+    }
+    const n = B.n, stIdx = S.st ? B.states.indexOf(S.st) : -1;
+    const keep = new Uint8Array(n), color = new Int8Array(n).fill(-1), thinShown = new Uint8Array(n);
+    const colored = [];
+    let kept = 0, nofig = 0, thinN = 0;
+    for (let i = 0; i < n; i++) {
+      if (stIdx >= 0 && B.st[i] !== stIdx) continue;
+      let ok = true;
+      for (let j = 0; j < S.filters.length && ok; j++) {
+        const f = S.filters[j], d = fds[j];
+        if (!usable(d, i)) { ok = false; break; }
+        const v = d.values[i];
+        if ((f.min != null && v < f.min) || (f.max != null && v > f.max)) ok = false;
+      }
+      if (!ok) continue;
+      keep[i] = 1; kept++;
+      if (usable(main, i)) colored.push(i);
+      else if (main.values[i] != null) { thinShown[i] = 1; thinN++; }
+      else nofig++;
+    }
+    const br = quantileBreaks(colored.map(i => main.values[i]), PALETTE.length);
+    const nb = br.length + 1;
+    const colors = nb >= PALETTE.length ? PALETTE
+      : Array.from({length: nb}, (_, j) => PALETTE[Math.round(j * (PALETTE.length - 1) / Math.max(1, nb - 1))]);
+    const counts = new Array(nb).fill(0);
+    for (const i of colored) { const b = binOf(br, main.values[i]); color[i] = b; counts[b]++; }
+    view = {keep, color, thinShown, colors, main, fds, colored, br, counts, kept, nofig, thinN};
+    dots.redraw();
+    drawLegend(m);
+    drawSummary(m);
+    S.shown = PAGE;
+    drawTable();
+    pushUrl();
+  }
+
+  function drawLegend(m) {
+    const L_ = document.getElementById('zmLegend');
+    const {br, counts, colors, main, thinN, nofig} = view;
+    if (!view.colored.length) { L_.innerHTML = '<div class="zm-help">No ZIP shown has this figure.</div>'; return; }
+    const vals = view.colored.map(i => main.values[i]);
+    const lo = Math.min(...vals), hi = Math.max(...vals);
+    let h = '';
+    for (let b = colors.length - 1; b >= 0; b--) {
+      const a = b === 0 ? lo : br[b - 1], z = b === colors.length - 1 ? hi : br[b];
+      const label = b === colors.length - 1 ? `${fmt(a, m.fmt)} and up` : (b === 0 ? `under ${fmt(z, m.fmt)}` : `${fmt(a, m.fmt)} – ${fmt(z, m.fmt)}`);
+      h += `<div class="li"><span class="sw" style="background:${colors[b]}"></span><span>${label}</span><span class="ct">${counts[b].toLocaleString()}</span></div>`;
+    }
+    if (thinN) h += `<div class="li"><span class="sw" style="border:1.5px solid #8a8a86;box-sizing:border-box"></span><span>Flagged — hollow</span><span class="ct">${thinN.toLocaleString()}</span></div>`;
+    if (nofig) h += `<div class="li"><span class="sw" style="background:${NOFIG};transform:scale(.45)"></span><span>No figure</span><span class="ct">${nofig.toLocaleString()}</span></div>`;
+    L_.innerHTML = h;
+  }
+
+  function median(a) { if (!a.length) return null; const v = a.slice().sort((x, y) => x - y); const k = v.length >> 1; return v.length % 2 ? v[k] : (v[k - 1] + v[k]) / 2; }
+  function drawSummary(m) {
+    const {main, colored, kept, nofig, thinN} = view;
+    const med = median(colored.map(i => main.values[i]));
+    const where = S.st ? S.st : 'the US';
+    let s = `<b>${colored.length.toLocaleString()}</b> ZIPs coloured in ${esc(where)}` +
+      (med != null ? ` · median <b>${esc(fmt(med, m.fmt))}</b>` : '');
+    if (thinN) s += ` · ${thinN.toLocaleString()} flagged`;
+    if (nofig) s += ` · ${nofig.toLocaleString()} with no figure`;
+    const out = (S.st ? B.st.filter(x => x === B.states.indexOf(S.st)).length : B.n) - kept;
+    if (S.filters.length) s += ` · ${out.toLocaleString()} filtered out`;
+    if (main.as_of) s += ` · ${esc(m.source === 'underwrite' || m.source === 'owner' ? 'Underwritten from ' + main.as_of : m.source + ', ' + main.as_of)}`;
+    document.getElementById('zmSummary').innerHTML = s;
+  }
+
+  // ── table ──
+  function columns() {
+    const cols = [S.metric, ...S.filters.map(f => f.key).filter(k => k !== S.metric)];
+    return [...new Set(cols)];
+  }
+  function valueOf(key, i) {
+    const d = key === S.metric ? view.main : view.fds[S.filters.findIndex(f => f.key === key)];
+    return d ? d.values[i] : null;
+  }
+  function sortedRows() {
+    const rows = view.colored.slice();
+    const key = S.sort || S.metric, dir = S.dir;
+    if (key === 'zip') rows.sort((a, b) => dir * B.zip[a].localeCompare(B.zip[b]));
+    else if (key === 'place') rows.sort((a, b) => dir * (B.place[a] + B.states[B.st[a]]).localeCompare(B.place[b] + B.states[B.st[b]]));
+    else rows.sort((a, b) => {
+      const x = valueOf(key, a), y = valueOf(key, b);
+      if (x == null) return 1; if (y == null) return -1;
+      return dir * (x - y);
+    });
+    return rows;
+  }
+  // `compact` (the table): Realtor.com flags about half of all ZIPs some months, so there a
+  // dagger and a footnote carry it; the popup spells it out.
+  function badges(d, i, m, compact) {
+    let s = '';
+    if (d.thinSet.has(i)) s += '<span class="zp-badge b-thin" title="Fewer than 10 listings or sales">thin</span>';
+    if (d.susSet.has(i)) s += '<span class="zp-badge b-vol" title="A year\'s rent is over 20% of the price: the two probably describe different homes">check</span>';
+    if (d.volSet.has(i)) s += compact
+      ? '<sup class="zm-dag" title="Realtor.com flagged this ZIP\'s figures this month">†</sup>'
+      : '<span class="zp-badge b-vol" title="Realtor.com flagged this ZIP\'s figures this month">volatile</span>';
+    return s;
+  }
+  function drawTable() {
+    const t = document.getElementById('zmTable');
+    const cols = columns();
+    const key = S.sort || S.metric;
+    const th = (k, label, cls) => `<th class="${cls || ''}${key === k ? ' sorted' : ''}" data-k="${k}">${esc(label)}${key === k ? (S.dir < 0 ? ' ↓' : ' ↑') : ''}</th>`;
+    let h = '<tr><th class="l">#</th>' + th('zip', 'ZIP', 'l') + th('place', 'Place', 'l') +
+      cols.map(k => th(k, BY[k].label)).join('') + '</tr>';
+    const rows = sortedRows();
+    rows.slice(0, S.shown).forEach((i, r) => {
+      h += `<tr><td class="l">${r + 1}</td><td class="l"><a href="/zip/${B.zip[i]}">${B.zip[i]}</a></td>` +
+        `<td class="l place">${esc(B.place[i])}, ${B.states[B.st[i]] || ''}</td>` +
+        cols.map(k => {
+          const d = k === S.metric ? view.main : view.fds[S.filters.findIndex(f => f.key === k)];
+          return `<td>${esc(fmtCell(d, i, BY[k]))}${badges(d, i, BY[k], true)}</td>`;
+        }).join('') + '</tr>';
+    });
+    if (!rows.length) h += `<tr><td class="l" colspan="${3 + cols.length}">No ZIPs match.</td></tr>`;
+    t.innerHTML = h;
+    document.getElementById('zmTableTitle').textContent = `${rows.length.toLocaleString()} ZIPs`;
+    document.getElementById('zmDagNote').style.display = t.querySelector('.zm-dag') ? 'block' : 'none';
+    const more = document.getElementById('zmMore');
+    more.style.display = rows.length > S.shown ? 'inline-block' : 'none';
+    t.querySelectorAll('th[data-k]').forEach(el => el.addEventListener('click', () => {
+      const k = el.dataset.k;
+      if ((S.sort || S.metric) === k) S.dir = -S.dir; else { S.sort = k; S.dir = (k === 'zip' || k === 'place') ? 1 : -1; }
+      drawTable();
+    }));
+  }
+  document.getElementById('zmMore').addEventListener('click', () => { S.shown += PAGE; drawTable(); });
+  document.getElementById('zmCsv').addEventListener('click', () => {
+    const cols = columns();
+    const q_ = s => `"${String(s).replace(/"/g, '""')}"`;
+    const lines = [['zip', 'place', 'state', ...cols.map(k => `${k} (${BY[k].label})`), 'flags'].map(q_).join(',')];
+    for (const i of sortedRows()) {
+      const flags = [];
+      cols.forEach(k => {
+        const d = k === S.metric ? view.main : view.fds[S.filters.findIndex(f => f.key === k)];
+        if (d.thinSet.has(i)) flags.push(`${k}:thin`);
+        if (d.susSet.has(i)) flags.push(`${k}:rent-over-20pct-of-price`);
+        if (d.volSet.has(i)) flags.push(`${k}:volatile`);
+        if (d.coded[i]) flags.push(`${k}:census-${d.coded[i]}-coded`);
+      });
+      lines.push([B.zip[i], B.place[i], B.states[B.st[i]] || '', ...cols.map(k => valueOf(k, i) ?? ''), flags.join(' ')].map(q_).join(','));
+    }
+    const blob = new Blob([lines.join('\n')], {type: 'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `zip-map-${S.metric}${S.st ? '-' + S.st : ''}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+
+  // ── popup and hover ──
+  function popupHtml(i) {
+    const m = BY[S.metric], d = view.main;
+    let h = `<div class="zm-pop"><b>${B.zip[i]}</b> · ${esc(B.place[i])}, ${B.states[B.st[i]] || ''}<br>` +
+      `<span class="o">${esc(m.label)}</span><br><span class="v">${esc(fmtCell(d, i, m))}</span>${badges(d, i, m)}`;
+    if (m.stale) h += '<span class="zp-badge b-stale">May 2026</span>';
+    S.filters.forEach((f, j) => {
+      if (f.key === S.metric) return;
+      h += `<br><span class="o">${esc(BY[f.key].label)}:</span> ${esc(fmtCell(view.fds[j], i, BY[f.key]))}`;
+    });
+    return h + `<br><a href="/zip/${B.zip[i]}">Open ZIP page →</a></div>`;
+  }
+  map.on('click', e => {
+    const i = dots.nearest(e.containerPoint);
+    if (i >= 0) L.popup({maxWidth: 280}).setLatLng([B.lat[i], B.lng[i]]).setContent(popupHtml(i)).openOn(map);
+  });
+  const tip = document.getElementById('zmTip');
+  let raf = 0;
+  map.on('mousemove', e => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      const i = view ? dots.nearest(e.containerPoint) : -1;
+      if (i < 0) { tip.style.display = 'none'; map.getContainer().style.cursor = ''; return; }
+      map.getContainer().style.cursor = 'pointer';
+      tip.innerHTML = `<b>${B.zip[i]}</b> ${esc(B.place[i])} · ${esc(fmtCell(view.main, i, BY[S.metric]))}`;
+      tip.style.left = (e.containerPoint.x + 12) + 'px'; tip.style.top = (e.containerPoint.y + 12) + 'px';
+      tip.style.display = 'block';
+    });
+  });
+  map.on('mouseout', () => { tip.style.display = 'none'; });
+
+  // ── controls ──
+  const selM = document.getElementById('zmMetric'), selB = document.getElementById('zmBasis'),
+        selS = document.getElementById('zmState'), thinBox = document.getElementById('zmThin');
+  function describe() {
+    const m = BY[S.metric];
+    document.getElementById('zmHelp').textContent = m.help || '';
+    const src = m.source === 'underwrite' ? 'Underwritten: ' + BASES[S.basis].label
+      : m.source === 'owner' ? 'Underwritten: Zillow typical home' : 'Source: ' + m.source;
+    document.getElementById('zmSrc').textContent = src;
+    document.getElementById('zmStale').style.display = m.stale ? 'block' : 'none';
+    const anyBasis = m.basis || S.filters.some(f => BY[f.key].basis);
+    selB.disabled = !anyBasis;
+    document.getElementById('zmBasisNote').textContent = anyBasis ? BASES[S.basis].note
+      : 'Applies to the investor measures (cap rate, cash flow and the rest).';
+    const used = [m, ...S.filters.map(f => BY[f.key])];
+    const why = [];
+    if (used.some(x => x.thin)) why.push('fewer than 10 listings or sales');
+    if (used.some(x => x.basis || x.key === 'own_minus_rent'))
+      why.push("a year's rent over 20% of the price — usually a distressed sale against a rentable home's rent, or a seasonal rent");
+    document.getElementById('zmFlagWhy').textContent = why.join('; ');
+    document.getElementById('zmThinBox').style.display = why.length ? 'flex' : 'none';
+    document.getElementById('zmAssume').style.display = (m.source === 'underwrite' || m.source === 'owner'
+      || S.filters.some(f => ['underwrite', 'owner'].includes(BY[f.key].source))) ? 'block' : 'none';
+  }
+  function filterOptions(sel) {
+    return selM.innerHTML.replace(`value="${sel}"`, `value="${sel}" selected`);
+  }
+  function drawFilters() {
+    const box = document.getElementById('zmFilters');
+    box.innerHTML = S.filters.map((f, j) => `
+      <div class="zm-filter" data-j="${j}">
+        <div class="zm-row"><select class="fk" aria-label="Filter measure">${filterOptions(f.key)}</select>
+          <button class="zm-x" type="button" title="Remove filter" aria-label="Remove filter">×</button></div>
+        <div class="zm-row"><input type="number" step="any" class="fmin" placeholder="min" value="${f.min ?? ''}" aria-label="Minimum">
+          <input type="number" step="any" class="fmax" placeholder="max" value="${f.max ?? ''}" aria-label="Maximum"></div>
+      </div>`).join('');
+    box.querySelectorAll('.zm-filter').forEach(el => {
+      const j = +el.dataset.j;
+      el.querySelector('.fk').addEventListener('change', ev => { S.filters[j] = {key: ev.target.value, min: null, max: null}; drawFilters(); describe(); recompute(); });
+      el.querySelector('.zm-x').addEventListener('click', () => { S.filters.splice(j, 1); drawFilters(); describe(); recompute(); });
+      let tmr = 0;
+      const upd = () => { clearTimeout(tmr); tmr = setTimeout(() => {
+        const lo = el.querySelector('.fmin').value, hi = el.querySelector('.fmax').value;
+        S.filters[j].min = lo === '' ? null : +lo; S.filters[j].max = hi === '' ? null : +hi; recompute(); }, 350); };
+      el.querySelector('.fmin').addEventListener('input', upd);
+      el.querySelector('.fmax').addEventListener('input', upd);
+    });
+  }
+  document.getElementById('zmAddFilter').addEventListener('click', () => {
+    S.filters.push({key: S.metric === 'zhvi' ? 'rdc_dom' : 'zhvi', min: null, max: null});
+    drawFilters(); describe(); recompute();
+  });
+  selM.addEventListener('change', () => { S.metric = selM.value; S.sort = null; S.dir = -1; describe(); recompute(); });
+  selB.addEventListener('change', () => { S.basis = selB.value; describe(); recompute(); });
+  thinBox.addEventListener('change', () => { S.thin = thinBox.checked; recompute(); });
+  selS.addEventListener('change', () => { S.st = selS.value; fitState(); recompute(); });
+
+  function fitState() {
+    if (!S.st) { map.setView([38.5, -96.5], 4); return; }
+    const k = B.states.indexOf(S.st);
+    let s = 90, n = -90, w = 180, e = -180;
+    for (let i = 0; i < B.n; i++) if (B.st[i] === k && B.lat[i] != null) {
+      s = Math.min(s, B.lat[i]); n = Math.max(n, B.lat[i]); w = Math.min(w, B.lng[i]); e = Math.max(e, B.lng[i]);
+    }
+    if (s <= n) map.fitBounds([[s, w], [n, e]], {padding: [20, 20]});
+  }
+
+  // ── ZIP search ──
+  let zipIdx = null;
+  function findZip() {
+    const z = document.getElementById('zmSearch').value.trim();
+    const msg = document.getElementById('zmSearchMsg');
+    if (!/^\d{5}$/.test(z)) { msg.textContent = 'Enter a 5-digit ZIP.'; return; }
+    const i = zipIdx.get(z);
+    if (i == null) { msg.innerHTML = `${z} is not a Census ZIP area in the 50 states or DC (PO-box and business ZIPs have no area).`; return; }
+    msg.innerHTML = `<a href="/zip/${z}" style="color:var(--primary);font-weight:600;text-decoration:none">Open ${z}'s page →</a>`;
+    map.setView([B.lat[i], B.lng[i]], 11);
+    setTimeout(() => L.popup({maxWidth: 280}).setLatLng([B.lat[i], B.lng[i]]).setContent(popupHtml(i)).openOn(map), 50);
+  }
+  document.getElementById('zmGo').addEventListener('click', findZip);
+  document.getElementById('zmSearch').addEventListener('keydown', e => { if (e.key === 'Enter') findZip(); });
+
+  // ── start ──
+  selM.value = S.metric; selB.value = S.basis; thinBox.checked = S.thin;
+  describe(); drawFilters();
+  busy(true);
+  fetch('/api/map/base').then(r => r.json()).then(b => {
+    B = b;
+    zipIdx = new Map(B.zip.map((z, i) => [z, i]));
+    selS.insertAdjacentHTML('beforeend', B.states.map(s => `<option value="${s}">${s}</option>`).join(''));
+    if (S.st && B.states.includes(S.st)) { selS.value = S.st; fitState(); } else S.st = '';
+    return recompute();
+  }).catch(() => {
+    document.getElementById('zmSummary').textContent = 'The ZIP data could not be loaded.';
+  }).finally(() => busy(false));
+})();
+</script>
+{% endblock %}
