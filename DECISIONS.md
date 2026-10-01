@@ -538,3 +538,25 @@ year repeats".
 - **Redfin ZIP market activity is feasible but stale**: the tracker is 1.55 GB, 9.7M rows, streams in
   82 seconds on a runner, but its latest period ends 2026-05-31 (file last modified June 2). Phase 2
   must date every figure.
+
+## 2026-10-01 — Map rebuild, phase 2: market activity, every figure dated
+**Probe (2026-10-01):** every Redfin market tracker is frozen — the monthly ZIP, county, metro, state and
+national files end 2026-05-31 and were last written 2026-06-02; the weekly file ends 2026-04-26. The
+existing state "days on market / sale-to-list" layers on the old map read Redfin's state file, so they
+are four months old (BACKLOG). Realtor.com's Inventory Core Metrics are current (September 2026, written
+2026-09-30) by ZIP, county and metro; Zillow's metro market files run to August.
+**Decided:**
+- **Listings from Realtor.com, by ZIP (28,558) and county (32,464 ZIPs' counties):** active, new and
+  pending listings, pending ratio, median days on market, share with a price cut, list price and list
+  $/sqft, with year-over-year change. '_yy' on a count or price is a fractional change (stored as %), on
+  a share it is a change in points (stored as points). Attribution: Realtor.com Economic Research.
+- **Sales from Redfin, frozen and dated:** median sale price, homes sold, $/sqft, sale-to-list, sold above
+  list, months of supply, days on market (90-day windows ending 2026-05-31; all residential, plus
+  single-family and 2-4 unit sale price and count). Only windows ending on the file's final period count —
+  3,302 ZIPs Redfin stopped reporting (some in 2012) carry no "latest" sales.
+- **Thin:** under 10 listings or 10 sales in the window is flagged thin, not hidden (12,310 ZIPs' listing
+  figures). **Realtor.com's own quality_flag** is kept: 14,700 ZIPs carry it, 8,798 of them with under 10
+  listings; of 979 ZIPs with 200+ listings only 116 are flagged, typically with double-digit year-over-year
+  list-price swings. The page will badge flagged figures as volatile rather than drop them.
+- **A failed source never blanks the board:** its columns carry forward from the previous build with their
+  own months, and meta records which source was carried.

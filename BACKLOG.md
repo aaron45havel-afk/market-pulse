@@ -214,3 +214,7 @@ Format: `- [PHASE-SEEN] item — why it matters`
   crosswalk would name them.
 - [CRIME-JOIN] FBI crime is joined by Zillow mailing-city name; before it appears on the new pages, weight
   it by the Census ZCTA-to-place file and show it as a police-jurisdiction figure, never a ZIP's.
+- [REDFIN-FROZEN] Redfin's public market trackers stopped updating after 2026-06-02 (data through
+  2026-05-31). The old map's state layers (days on market, sale-to-list, price drops, homes sold, months of
+  supply) read refresh_redfin.py's state file and present May data as current. Switch them to Realtor.com
+  state/metro core metrics, or label the month. If Redfin resumes, the ZIP profile picks it up unchanged.

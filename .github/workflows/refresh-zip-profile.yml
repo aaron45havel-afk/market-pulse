@@ -37,6 +37,7 @@ jobs:
         run: |
           python tests/test_acs_bulk.py
           python tests/test_zip_profile.py
+          python tests/test_zip_market.py
           python tests/test_underwrite.py
 
       - name: Build the ZIP profile

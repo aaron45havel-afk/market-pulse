@@ -57,6 +57,7 @@ sys.path.insert(0, str(ROOT))
 
 import acs_bulk as AB  # noqa: E402
 import re_assumptions as RA  # noqa: E402
+import zip_market as ZM  # noqa: E402
 
 log = logging.getLogger("zip_profile")
 
@@ -430,14 +431,86 @@ COLUMNS = [
     # NOAA 1991-2020 normals at the nearest qualifying station
     ("clim_winter_low", "REAL"), ("clim_summer_high", "REAL"), ("clim_days_90", "REAL"),
     ("clim_nights_32", "REAL"), ("clim_snow_in", "REAL"), ("clim_station_km", "REAL"),
+    # Realtor.com listings, latest month (this ZIP, then its county)
+    *[(c, "TEXT" if c.endswith("_month") else "REAL") for c in (
+        "rdc_month", "rdc_active", "rdc_active_yoy_pct", "rdc_new", "rdc_pending",
+        "rdc_pending_ratio", "rdc_dom", "rdc_dom_yoy_pct", "rdc_price_cut_pct",
+        "rdc_price_cut_yoy_pp", "rdc_list_price", "rdc_list_price_yoy_pct", "rdc_list_ppsf",
+        "rdc_list_sqft", "rdc_quality_flag", "rdc_thin",
+        "cty_rdc_month", "cty_rdc_active", "cty_rdc_active_yoy_pct", "cty_rdc_pending_ratio",
+        "cty_rdc_dom", "cty_rdc_price_cut_pct", "cty_rdc_list_price", "cty_rdc_list_price_yoy_pct")],
+    # Redfin sales, latest 90-day window (frozen at 2026-05-31; see zip_market.py)
+    *[(c, "TEXT" if c.endswith(("_end", "_begin")) else "REAL") for c in (
+        "rf_period_begin", "rf_period_end", "rf_sale_price", "rf_sale_price_yoy_pct",
+        "rf_homes_sold", "rf_sale_ppsf", "rf_sale_to_list_pct", "rf_sold_above_list_pct",
+        "rf_months_supply", "rf_sold_dom", "rf_thin", "rf_sfr_sale_price", "rf_sfr_homes_sold",
+        "rf_mf24_sale_price", "rf_mf24_homes_sold")],
 ]
 COLUMN_NAMES = [c for c, _ in COLUMNS]
 
 
+MARKET_PREFIXES = ("rdc_", "cty_rdc_", "rf_")
+RDC_COUNTY_KEEP = ("month", "active", "active_yoy_pct", "pending_ratio", "dom", "price_cut_pct",
+                   "list_price", "list_price_yoy_pct")
+REDFIN_KEEP = ("period_begin", "period_end", "sale_price", "sale_price_yoy_pct", "homes_sold",
+               "sale_ppsf", "sale_to_list_pct", "sold_above_list_pct", "months_supply", "sold_dom",
+               "thin", "sfr_sale_price", "sfr_homes_sold", "mf24_sale_price", "mf24_homes_sold")
+
+
+def apply_market(row: dict, rdc_zip: dict, rdc_county: dict, redfin: dict) -> None:
+    """Copy one ZIP's market figures onto its row, each source under its own
+    prefix so a page can never mistake a listing figure for a sale figure,
+    or a county figure for the ZIP's."""
+    z = rdc_zip.get(row["zip"])
+    if z:
+        for k, v in z.items():
+            row[f"rdc_{k}"] = int(v) if k == "thin" else v
+    c = rdc_county.get(row.get("county_fips") or "")
+    if c:
+        for k in RDC_COUNTY_KEEP:
+            row[f"cty_rdc_{k}"] = c.get(k)
+    f = redfin.get(row["zip"])
+    if f:
+        for k in REDFIN_KEEP:
+            v = f.get(k)
+            row[f"rf_{k}"] = int(v) if (k == "thin" and v is not None) else v
+
+
+def carry_forward(rows: list[dict], prior: dict, prefixes: tuple) -> int:
+    """Fill the columns under `prefixes` from the previous build, unchanged
+    and still carrying their own month — a failed fetch shows last month's
+    figures with last month's date, never blanks and never a fresh date."""
+    n = 0
+    for r in rows:
+        old = prior.get(r["zip"])
+        if not old:
+            continue
+        for k, v in old.items():
+            if k.startswith(prefixes):
+                r[k] = v
+        n += 1
+    return n
+
+
+def _prior_rows() -> dict:
+    if not OUT_DB.exists():
+        return {}
+    c = sqlite3.connect(f"file:{OUT_DB}?mode=ro", uri=True)
+    c.row_factory = sqlite3.Row
+    try:
+        return {r["zip"]: dict(r) for r in c.execute("SELECT * FROM zip_profile")}
+    except sqlite3.Error:
+        return {}
+    finally:
+        c.close()
+
+
 def build_rows(geo: dict, county: dict, acs: dict, zhvi: dict, zhvi_br: dict, zori: dict,
-               rents: dict, hazards: dict, climate: dict) -> list[dict]:
-    """Join everything onto the Census ZCTA list. Pure: every input is a dict."""
+               rents: dict, hazards: dict, climate: dict, market: dict | None = None) -> list[dict]:
+    """Join everything onto the Census ZCTA list. Pure: every input is a dict.
+    `market` = {"rdc_zip": ..., "rdc_county": ..., "redfin": ...}, any may be {}."""
     med = national_medians(acs)
+    mk = market or {}
     rows = []
     for z, g in sorted(geo.items()):
         cty = county.get(z)
@@ -494,6 +567,8 @@ def build_rows(geo: dict, county: dict, acs: dict, zhvi: dict, zhvi_br: dict, zo
             row.update(clim_winter_low=cl.get("wl"), clim_summer_high=cl.get("sh"),
                        clim_days_90=cl.get("d90"), clim_nights_32=cl.get("d32"),
                        clim_snow_in=cl.get("sn"), clim_station_km=cl.get("tk"))
+        apply_market(row, mk.get("rdc_zip") or {}, mk.get("rdc_county") or {},
+                     mk.get("redfin") or {})
         rows.append(row)
 
     apply_tax_defaults(rows)
@@ -580,7 +655,7 @@ def coverage(rows: list[dict]) -> dict:
     n = len(rows)
     keys = ("zhvi", "zori", "hud_rent_br2", "acs_median_value", "acs_median_taxes", "tax_rate_acs",
             "acs_gross_rent", "acs_median_income", "rental_vacancy_pct", "haz_total",
-            "clim_winter_low")
+            "clim_winter_low", "rdc_month", "cty_rdc_month", "rf_period_end")
     return {"rows": n, **{k: sum(1 for r in rows if r.get(k) is not None) for k in keys},
             "acs_flagged": sum(1 for r in rows if r.get("acs_flags"))}
 
@@ -619,10 +694,28 @@ def main(argv=None) -> int:
     log.info("  Zillow: %d ZHVI, %s by bedroom, %d ZORI", len(zhvi),
              {n: len(v) for n, v in zhvi_br.items()}, len(zori))
 
+    # Market activity. A failed source is carried forward from the previous
+    # build with its own dates; it never blocks the rest of the profile.
+    market, failed, mmeta = {}, [], {}
+    for key, fn, prefix in (("rdc_zip", lambda: ZM.fetch_rdc(ZM.RDC_ZIP_URL, "postal_code"), "rdc_"),
+                            ("rdc_county", lambda: ZM.fetch_rdc(ZM.RDC_COUNTY_URL, "county_fips"), "cty_rdc_"),
+                            ("redfin", ZM.fetch_redfin, "rf_")):
+        try:
+            market[key] = fn()
+            log.info("  market %s: %d regions", key, len(market[key]))
+        except Exception as e:  # noqa: BLE001 — any failure means carry forward
+            print(f"::warning::market source {key} unavailable ({e}) — carrying forward")
+            market[key], failed = {}, failed + [prefix]
+    mmeta["rdc_last_modified"] = ZM.last_modified(ZM.RDC_ZIP_URL)
+    mmeta["redfin_last_modified"] = ZM.last_modified(ZM.REDFIN_ZIP_URL)
+
     # Both files nest their ZIPs under "zips" beside "_meta".
     hazards, climate = _load_json(HAZARDS), _load_json(CLIMATE)
     rows = build_rows(geo, county, acs, zhvi, zhvi_br, zori, _zips_db_rents(),
-                      hazards.get("zips", {}), climate.get("zips", {}))
+                      hazards.get("zips", {}), climate.get("zips", {}), market)
+    if failed:
+        n = carry_forward(rows, _prior_rows(), tuple(failed))
+        log.info("  carried %s forward for %d ZIPs", failed, n)
     cov = coverage(rows)
     log.info("coverage: %s", cov)
     short = {k: (cov[k], f) for k, f in FLOORS.items() if cov[k] < f}
@@ -641,6 +734,12 @@ def main(argv=None) -> int:
         "hazards_as_of": (hazards.get("_meta") or {}).get("as_of", ""),
         "climate_as_of": (climate.get("_meta") or {}).get("as_of", ""),
         "hud_rents_from": "data/zips.db (refresh_rents.py)",
+        "rdc_last_month": max((r["rdc_month"] for r in rows if r.get("rdc_month")), default=""),
+        "redfin_last_period": max((r["rf_period_end"] for r in rows if r.get("rf_period_end")), default=""),
+        "market_carried_forward": ",".join(failed),
+        "market_attribution": "Listings: Realtor.com Economic Research. Sales: Redfin Data Center "
+                              "(ZIP tracker frozen since 2026-06-02).",
+        **mmeta,
         "coverage": json.dumps(cov),
         "elapsed_s": round(time.time() - t0),
     }
