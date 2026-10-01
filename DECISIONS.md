@@ -681,3 +681,33 @@ a payment-to-income page on the ZIP data (phase B); this phase lays down the bas
 - **No warm-up thread:** computing 32k ZIPs in a background thread at startup starved the first request of the
   GIL (28 s to first byte, which tripped the ops fail-closed suite's start-up deadline). The arithmetic was made
   cheap instead (1.4 s, cached per build and rate) and runs on first use.
+
+## 2026-10-01 — /conditions: current Realtor.com listings by state, each against a year earlier, no composite
+**Why:** the audit found the page ranked states by a 0-100 "market climate" average of four Redfin state figures
+whose tracker stopped in May 2026 — the spring peak, read in October as "latest" — with tiers that never fired at
+the extremes (every state between 27 and 74), two inputs that move together (days on market and months of supply,
+r = 0.80) and Montana silently dropped. The owner chose to rebuild it on current data.
+**Decided:**
+- **Source:** Realtor.com's monthly state and national core metrics (`RDC_Inventory_Core_Metrics_State_History` /
+  `_Country_History`), fetched with the ZIP profile build and stored as `state_market` in `zip_profile.db` —
+  25 months per geo (all 50 states, DC and the US). A failed or short fetch carries the previous table with its
+  own months, and the page says so. So does a download that fails its checks: fewer than 51 states, the state and
+  national files on different months, a month older than the table's, most states missing the latest month, or a
+  shown measure blank for most states or the nation (a renamed column) — none of these may overwrite a good table.
+  A `US` row in the state file is skipped rather than colliding with the national series.
+- **One measure at a time, no blend:** median days on market, share of listings with a price cut, active
+  listings, new listings, pending ÷ active, median list price. The map shows one; the table shows all.
+- **Against the same month a year earlier**, computed here from the two months themselves (the exact month twelve
+  earlier, or none): counts and prices in percent, shares in points, days on market in days, the pending ratio
+  in its own unit. This removes the seasonal swing that made a May snapshot look like a hot market in October.
+  Checked against Realtor.com's own published year-over-year figures (US active +5.41%, price cuts +0.87 pts,
+  pending ratio −0.036, list price −1.35%) — they agree to the decimals shown. The pending ratio is stored to four
+  decimals, not three: it moves in the third, and rounding each month to three then the change for display turned
+  Arizona's −0.0346 into −0.04.
+- **Redfin stays only for what Realtor.com does not publish** — sale price ÷ list price and months of supply —
+  in a column group headed with its May 2026 window and marked frozen, read from redfin_overrides.json directly
+  (`conditions.load_redfin`) so no hand-seeded fallback can pass for May data.
+- **A state whose latest month lags the others is named on the page** with its own month — in the warning, on its
+  table row, and in the map tooltip and detail card, which use the state's months rather than the page's.
+  Realtor.com's quality flag is marked per state.
+- The `market_climate_pct` composite is removed from data_providers.

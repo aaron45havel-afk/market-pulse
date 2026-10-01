@@ -21,12 +21,14 @@ change, shares and ratios in points, days on market in days.
 """
 from __future__ import annotations
 
+import json
 import sqlite3
 from functools import lru_cache
 from pathlib import Path
 
 DATA = Path(__file__).resolve().parent / "data"
 PROFILE_DB = DATA / "zip_profile.db"
+REDFIN_JSON = DATA / "redfin_overrides.json"
 
 FIELDS = ("active", "new", "pending", "pending_ratio", "dom", "price_cut_pct", "list_price", "list_ppsf",
           "quality_flag")
@@ -72,7 +74,7 @@ def change(now, then, kind: str):
         return round((now / then - 1) * 100, 1) if then else None
     if kind == "pts":
         return round(now - then, 1)
-    return round(now - then, 3)
+    return round(now - then, 4)
 
 
 def _mtime(path: Path) -> float:
@@ -112,6 +114,7 @@ def geo_summary(series: dict) -> dict | None:
     month = max(series)
     now, then = series[month], series.get(month_add(month, -12))
     out = {"month": month, "year_ago_month": month_add(month, -12) if then else None,
+           "month_label": month_label(month), "year_ago_label": month_label(month_add(month, -12)),
            "quality_flag": now.get("quality_flag")}
     for key, _label, field, kind, _fmt, _help in MEASURES:
         out[key] = now.get(field)
@@ -131,6 +134,22 @@ def chart_series(series: dict, months: int = 13) -> dict:
             **{k: {"now": [(series.get(m) or {}).get(f) for m in ms],
                    "prior": [(series.get(m) or {}).get(f) for m in prior]}
                for k, _l, f, *_ in MEASURES}}
+
+
+def load_redfin(path: Path = REDFIN_JSON) -> tuple[dict, str | None]:
+    """Redfin's last state figures — ({code: {"sale_to_list_pct",
+    "months_of_supply"}}, period end) — from data/redfin_overrides.json.
+    A missing or unreadable file is ({}, None): the columns show dashes."""
+    try:
+        payload = json.loads(Path(path).read_text())
+    except (OSError, ValueError):
+        return {}, None
+    if not isinstance(payload, dict):
+        return {}, None
+    period = (payload.get("_meta") or {}).get("primary_period_end")
+    out = {k: {"sale_to_list_pct": v.get("sale_to_list_pct"), "months_of_supply": v.get("months_of_supply")}
+           for k, v in (payload.get("overrides") or {}).items() if isinstance(v, dict)}
+    return out, period
 
 
 def page(state_info: dict, redfin: dict, redfin_period_end: str | None,

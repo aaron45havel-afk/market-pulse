@@ -224,9 +224,13 @@ Format: `- [PHASE-SEEN] item — why it matters`
 - [CRIME-JOIN] FBI crime is joined by Zillow mailing-city name; before it appears on the new pages, weight
   it by the Census ZCTA-to-place file and show it as a police-jurisdiction figure, never a ZIP's.
 - [REDFIN-FROZEN] Redfin's public market trackers stopped updating after 2026-06-02 (data through
-  2026-05-31). refresh_redfin.py's state file still feeds CHOROPLETH_STATES and /conditions (days on
-  market, sale-to-list, price drops, homes sold, months of supply), presenting May data as current. Switch
-  them to Realtor.com state/metro core metrics, or label the month. If Redfin resumes, the ZIP profile picks it up unchanged.
+  2026-05-31). /conditions now leads with Realtor.com and shows Redfin's sale-to-list and months of supply
+  only as a dated, frozen column group; CHOROPLETH_STATES still carries Redfin's May state fields for any
+  other reader. If Redfin resumes, the ZIP profile and that column group pick it up unchanged.
+- [CHOROPLETH-METRICS] data_providers.CHOROPLETH_METRICS has had no reader since the old national map was
+  deleted (map rebuild phase 5); remove it with the per-state derived scores only it displayed.
+- [CONDITIONS-METRO] Realtor.com publishes the same core metrics by metro (936 CBSAs). A metro view of
+  /conditions would answer "which markets", not just "which states". If Redfin resumes, the ZIP profile picks it up unchanged.
 - [AFF-INCOME] Today's affordability income is the Census 2020-24 median brought forward by CPI (no real growth
   assumed since 2024). The build picks up the 2021-25 ACS when the Bureau posts it (about December 2026),
   shrinking the CPI step; a wage index (e.g. Atlanta Fed wage growth) could replace the no-growth assumption.

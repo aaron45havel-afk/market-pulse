@@ -517,6 +517,54 @@ def state_market_rows(states: dict, nation: dict) -> list[dict]:
     return [{"geo": g, **rec} for part in (states, nation) for g, recs in part.items() for rec in recs]
 
 
+# The measures /conditions shows. A download where one of them is blank for
+# most states (a renamed column) must not replace a good table.
+STATE_CORE = ("active", "new", "pending_ratio", "dom", "price_cut_pct", "list_price")
+STATE_MIN = 45
+
+
+def check_state_history(states: dict, nation: dict, prior_month: str = "") -> str:
+    """The latest month of a fresh state + national download, or ValueError
+    saying why it should not replace the table: too few states, no nation,
+    the two files on different months, a month older than the table's, or a
+    measure blank for most states (or the nation) in the latest month."""
+    if len(states) < 51:
+        raise ValueError(f"{len(states)} states")
+    us = (nation.get("US") or [None])[-1]
+    if not us:
+        raise ValueError("no national series")
+    month = max(recs[-1]["month"] for recs in states.values())
+    if us["month"] != month:
+        raise ValueError(f"states through {month}, nation through {us['month']}")
+    if prior_month and month < prior_month:
+        raise ValueError(f"{month} is older than the table's {prior_month}")
+    latest = [recs[-1] for recs in states.values() if recs[-1]["month"] == month]
+    if len(latest) < STATE_MIN:
+        raise ValueError(f"only {len(latest)} states have {month}")
+    for f in STATE_CORE:
+        n = sum(r.get(f) is not None for r in latest)
+        if n < STATE_MIN:
+            raise ValueError(f"{f} blank for {len(latest) - n} states in {month}")
+        if us.get(f) is None:
+            raise ValueError(f"{f} blank for the nation in {month}")
+    return month
+
+
+def state_market_or_carry(fetch, prior_rows, prior_month: str = "") -> tuple[list[dict], bool]:
+    """(rows, carried). `fetch()` → (states, nation) as parse_rdc_history
+    returns them; they replace the table only if check_state_history passes.
+    Otherwise `prior_rows()` — the previous build's table, with its months."""
+    try:
+        states, nation = fetch()
+        month = check_state_history(states, nation, prior_month)
+    except Exception as e:  # noqa: BLE001 — any failure means carry forward
+        print(f"::warning::state listing history failed or failed validation ({e}) — carrying forward")
+        return prior_rows(), True
+    rows = state_market_rows(states, nation)
+    log.info("  market states: %d geos, %d rows, latest %s", len(states) + 1, len(rows), month)
+    return rows, False
+
+
 def _prior_state_market() -> list[dict]:
     if not OUT_DB.exists():
         return []
@@ -798,21 +846,13 @@ def main(argv=None) -> int:
         except Exception as e:  # noqa: BLE001 — any failure means carry forward
             print(f"::warning::market source {key} unavailable ({e}) — carrying forward")
             market[key], failed = {}, failed + [prefix]
-    # State and national listing history for /conditions. A failed fetch (or
-    # one missing states) carries the previous build's table, with its months.
-    try:
-        st_hist = ZM.fetch_rdc_history(ZM.RDC_STATE_HISTORY_URL, "state_id")
-        us_hist = ZM.fetch_rdc_history(ZM.RDC_COUNTRY_HISTORY_URL, "country")
-        if len(st_hist) < 51 or "US" not in us_hist:
-            raise ValueError(f"{len(st_hist)} states, US {'present' if 'US' in us_hist else 'missing'}")
-        state_market = state_market_rows(st_hist, us_hist)
-        mmeta["state_market_carried"] = ""
-        log.info("  market states: %d geos, %d rows, latest %s", len(st_hist) + 1, len(state_market),
-                 max(r["month"] for r in state_market))
-    except Exception as e:  # noqa: BLE001 — any failure means carry forward
-        print(f"::warning::state listing history unavailable ({e}) — carrying forward")
-        state_market = _prior_state_market()
-        mmeta["state_market_carried"] = "1"
+    # State and national listing history for /conditions. A failed or
+    # implausible download carries the previous build's table, with its months.
+    state_market, carried = state_market_or_carry(
+        lambda: (ZM.fetch_rdc_history(ZM.RDC_STATE_HISTORY_URL, "state_id"),
+                 ZM.fetch_rdc_history(ZM.RDC_COUNTRY_HISTORY_URL, "country")),
+        _prior_state_market, _prior_meta().get("rdc_state_month", ""))
+    mmeta["state_market_carried"] = "1" if carried else ""
     mmeta["rdc_state_month"] = max((r["month"] for r in state_market), default="")
     mmeta["rdc_last_modified"] = ZM.last_modified(ZM.RDC_ZIP_URL)
     mmeta["redfin_last_modified"] = ZM.last_modified(ZM.REDFIN_ZIP_URL)

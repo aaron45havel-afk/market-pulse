@@ -14,6 +14,7 @@
   .mc h1 { font-family: var(--display); font-size: 2.1rem; margin: 6px 0 2px; line-height: 1.1; }
   .mc .lede { color: var(--ink-2); font-size: 0.95rem; max-width: 800px; line-height: 1.5; margin: 0; }
   .mc-asof { font-size: 0.75rem; color: var(--ink-3); margin-top: 8px; line-height: 1.6; }
+  .mc-old { font-size: 0.7rem; color: var(--gold-ink); background: var(--gold-soft); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
   .mc-warn { font-size: 0.8rem; background: var(--gold-soft); color: var(--gold-ink); border-radius: 8px; padding: 8px 10px; margin-top: 10px; }
   .mc-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-top: 14px; }
   .mc-card h2 { font-size: 1.02rem; margin: 0 0 4px; }
@@ -84,7 +85,7 @@
     measure at a time; no blended score.</p>
   <div class="mc-asof">Listings: Realtor.com Economic Research, {{ month_label }}. Sales measures: Redfin, through
     {{ redfin_label or "—" }} (frozen — Redfin's public data stopped updating after June 2, 2026).</div>
-  {% if carried %}<div class="mc-warn">This month's Realtor.com download failed; the figures are last build's, with their own month.</div>{% endif %}
+  {% if carried %}<div class="mc-warn">This month's Realtor.com download failed or did not pass its checks; the figures are last build's, with their own month.</div>{% endif %}
   {% if stale_months %}<div class="mc-warn">{{ stale_months|join(", ") }}: latest figures are from an earlier month than {{ month_label }}.</div>{% endif %}
 
   {% set by = {} %}{% for m in measures %}{% set _ = by.update({m.key: m}) %}{% endfor %}
@@ -158,7 +159,7 @@
             {% for k in ("dom", "dom_chg", "price_cut_pct", "price_cut_pct_chg", "active", "active_chg", "new_chg",
                          "pending_ratio", "pending_ratio_chg", "list_price", "list_price_chg", "rf_stl", "rf_supply") %}
             data-{{ k }}="{{ '' if r[k] is none else r[k] }}"{% endfor %}>
-          <td class="l">{{ r.name }}{% if r.quality_flag == 1 %} <span class="mc-dag" title="Realtor.com flagged this state's figures this month">†</span>{% endif %}</td>
+          <td class="l">{{ r.name }}{% if r.quality_flag == 1 %} <span class="mc-dag" title="Realtor.com flagged this state's figures this month">†</span>{% endif %}{% if r.month != month %} <span class="mc-old" title="Latest figures for this state are from {{ r.month_label }}, compared with {{ r.year_ago_label }}">{{ r.month_label }}</span>{% endif %}</td>
           <td>{{ level(by.dom, r.dom) }}</td><td>{{ chg(by.dom, r.dom_chg) }}</td>
           <td>{{ level(by.price_cut_pct, r.price_cut_pct) }}</td><td>{{ chg(by.price_cut_pct, r.price_cut_pct_chg) }}</td>
           <td>{{ num(r.active) }}</td><td>{{ chg(by.active, r.active_chg) }}</td><td>{{ chg(by.new, r.new_chg) }}</td>
@@ -284,7 +285,8 @@
         const r = byFips[f.id], m = BY[measure];
         if (!r) { tip.style.display = 'none'; return; }
         tip.innerHTML = `<b>${esc(r.name)}</b><br>${esc(m.label)}: ${fmtLevel(m, r[measure])}` +
-          `<br>${fmtChg(m, r[measure + '_chg'])} vs ${esc(D.yearAgo)}`;
+          (r.month_label !== D.month ? ` (${esc(r.month_label)})` : '') +
+          `<br>${fmtChg(m, r[measure + '_chg'])} vs ${esc(r.year_ago_label || D.yearAgo)}`;
         const p = e.containerPoint; tip.style.left = (p.x + 12) + 'px'; tip.style.top = (p.y + 12) + 'px';
         tip.style.display = 'block';
       });
@@ -298,8 +300,8 @@
   function drawDetail() {
     const g = selected, r = g === 'US' ? D.us : byCode[g], s = D.charts[g], m = BY[measure];
     document.getElementById('mcDetailTitle').textContent = g === 'US' ? 'United States' : (r ? r.name : g);
-    document.getElementById('mcDetailTable').innerHTML = '<tr><th>Measure</th><th>' + esc(D.month) + '</th><th>vs ' +
-      esc(D.yearAgo) + '</th></tr>' + D.measures.map(x =>
+    document.getElementById('mcDetailTable').innerHTML = '<tr><th>Measure</th><th>' + esc(r ? r.month_label : D.month) +
+      '</th><th>vs ' + esc(r ? r.year_ago_label : D.yearAgo) + '</th></tr>' + D.measures.map(x =>
         `<tr><td>${esc(x.label)}</td><td>${r ? fmtLevel(x, r[x.key]) : '—'}</td><td>${r ? fmtChg(x, r[x.key + '_chg']) : '—'}</td></tr>`).join('');
     document.querySelectorAll('#mcTable tbody tr').forEach(tr => tr.classList.toggle('sel', tr.dataset.code === g));
     if (!s || !s.months || typeof Chart === 'undefined') return;

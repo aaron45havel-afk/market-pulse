@@ -4351,16 +4351,7 @@ def conditions_page(request: Request):
     period (May 2026), marked frozen."""
     import conditions as CD
     from data_providers import CHOROPLETH_STATES
-    redfin, period = {}, None
-    try:
-        p = Path(__file__).resolve().parent / "data" / "redfin_overrides.json"
-        payload = json.loads(p.read_text())
-        period = (payload.get("_meta") or {}).get("primary_period_end")
-        redfin = {k: {"sale_to_list_pct": v.get("sale_to_list_pct"),
-                      "months_of_supply": v.get("months_of_supply")}
-                  for k, v in (payload.get("overrides") or {}).items()}
-    except (OSError, ValueError):
-        pass
+    redfin, period = CD.load_redfin()
     ctx = CD.page({k: {"name": v.get("name", k), "fips": v.get("fips")} for k, v in CHOROPLETH_STATES.items()},
                   redfin, period)
     return templates.TemplateResponse("conditions.html", {"request": request, **ctx})

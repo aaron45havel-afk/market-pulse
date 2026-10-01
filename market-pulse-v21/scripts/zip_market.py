@@ -84,6 +84,9 @@ STATE_FIELDS = (
     ("quality_flag", "quality_flag", 1),
 )
 STATE_COLUMNS = ("geo", "month") + tuple(dst for _, dst, _ in STATE_FIELDS)
+# Decimals kept where three would blur a year-over-year change: the ratio
+# moves in the third decimal (0.3641 → 0.3295 is −0.0346).
+STATE_DIGITS = {"pending_ratio": 4}
 
 # Redfin: the property types kept, and the fields read from each.
 REDFIN_TYPES = {"All Residential": "all", "Single Family Residential": "sfr",
@@ -113,9 +116,11 @@ def _num(v):
     return None if f != f else f
 
 
-def _scaled(v, scale):
+def _scaled(v, scale, digits=None):
     n = _num(v)
-    return None if n is None else round(n * scale, 2 if scale != 1 else 3)
+    if digits is None:
+        digits = 2 if scale != 1 else 3
+    return None if n is None else round(n * scale, digits)
 
 
 def yyyymm(v: str) -> str | None:
@@ -156,7 +161,8 @@ def parse_rdc_history(text: str, key: str = "state_id", months: int = STATE_MONT
     """A Realtor.com core-metrics HISTORY CSV → {geo: [record, ...]} with each
     geo's last `months` months, oldest first. `key` is 'state_id' (two
     letters, kept upper-case) or 'country' ("United States" becomes "US").
-    Rows with any other key (notes, totals) are skipped."""
+    Rows with any other key (notes, totals, a 'US' row in the state file,
+    which would collide with the national one) are skipped."""
     rd = csv.DictReader(io.StringIO(text))
     out: dict = {}
     for row in rd:
@@ -165,14 +171,14 @@ def parse_rdc_history(text: str, key: str = "state_id", months: int = STATE_MONT
             k = "US" if k == "United States" else ""
         else:
             k = k.upper()
-            if not (len(k) == 2 and k.isalpha()):
+            if not (len(k) == 2 and k.isalpha()) or k == "US":
                 continue
         month = yyyymm(row.get("month_date_yyyymm"))
         if not k or not month:
             continue
         rec = {"month": month}
         for src, dst, scale in STATE_FIELDS:
-            rec[dst] = _scaled(row.get(src), scale)
+            rec[dst] = _scaled(row.get(src), scale, STATE_DIGITS.get(dst))
         if rec["quality_flag"] is not None:
             rec["quality_flag"] = int(rec["quality_flag"])
         out.setdefault(k, {})[month] = rec
