@@ -632,3 +632,26 @@ other boards' inputs (the walk/restaurant/crime proxies and the flat-40% cap rat
 - **/norcal's deal check judges safety by FBI figures**, as its screen already did. A listing outside the
   screen's top tiers was being gated on `crime_index`, the proxy the screen had dropped.
 - **Out of scope:** /global-values' country composite (countries, not ZIPs) and its market-cycle refresh.
+
+## 2026-10-01 — Affordability, phase A: a fixed 2019 baseline in the ZIP profile
+**Why:** the /fair-value audit found its verdict was set by the calendar (a baseline that rolls forward
+five years, so 3% money turns into 6% money within a year), compared a statewide value against a
+median-ZIP baseline, and gave 789 ZIPs a "2021" baseline from 2022-24. The owner chose to rebuild it as
+a payment-to-income page on the ZIP data (phase B); this phase lays down the baseline.
+**Decided:**
+- **The baseline is 2019, fixed** — the last full year before the pandemic and the 2020-21 rate collapse.
+  It never rolls. Each input is that year's own figure: the ZIP's 2019 average Zillow ZHVI (all twelve
+  months or none; 23,919 ZIPs), Census ACS 2015-2019 median household income in 2019 dollars (30,651
+  ZCTAs; 15 top-coded, 9 bottom-coded, marked), and the 2019 average of Freddie Mac's weekly rate
+  (3.936%). 23,353 ZIPs carry price and income at both ends.
+- **Non-overlapping Census periods:** 2015-2019 against 2020-2024, the Bureau's rule for comparing two
+  5-year estimates.
+- **Today's income in today's dollars:** CPI averages for 2019 and 2024 and the latest month (CPI-U
+  255.653, 313.698, 334.131 for 2026-08) are stored so the page can bring 2024-dollar income forward,
+  assuming no real growth since — stated, not hidden.
+- **Keyless sources:** 2015-2019 predates the table-based bulk files (they begin with 2017-2021) and the
+  Census API refuses keyless requests, so the build reads the sequence-based summary file (B19013 is
+  sequence 0058, column 177; ZCTAs are summary level 860). FRED is read with the existing secret, or its
+  keyless CSV.
+- **Failure carries forward:** a failed Census pull carries the previous build's 2019 incomes; failed FRED
+  constants carry the previous meta. Neither blocks the profile.
