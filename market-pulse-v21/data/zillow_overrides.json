@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "as_of": "2026-09-01",
+    "as_of": "2026-10-01",
     "source": "Zillow Research (state ZHVI all-homes; state ZORI SFR+condo+MFR)",
     "zhvi_state_url": "https://files.zillowstatic.com/research/public_csvs/zhvi/State_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv",
     "zori_state_url": "https://files.zillowstatic.com/research/public_csvs/zori/State_zori_uc_sfrcondomfr_sm_month.csv",
@@ -8,208 +8,208 @@
   },
   "state_overrides": {
     "CA": {
-      "home_value": 773735,
-      "home_value_yoy": -0.0
+      "home_value": 764158,
+      "home_value_yoy": 0.4
     },
     "TX": {
-      "home_value": 301806,
-      "home_value_yoy": -1.8
+      "home_value": 299367,
+      "home_value_yoy": -1.6
     },
     "FL": {
-      "home_value": 378167,
-      "home_value_yoy": -2.2
+      "home_value": 375470,
+      "home_value_yoy": -1.5
     },
     "NY": {
-      "home_value": 527312,
-      "home_value_yoy": 5.3
+      "home_value": 526714,
+      "home_value_yoy": 5.6
     },
     "PA": {
-      "home_value": 290552,
+      "home_value": 290401,
       "home_value_yoy": 2.4
     },
     "IL": {
-      "home_value": 299900,
-      "home_value_yoy": 5.1
+      "home_value": 297573,
+      "home_value_yoy": 5.3
     },
     "OH": {
-      "home_value": 249941,
+      "home_value": 248803,
       "home_value_yoy": 3.4
     },
     "GA": {
-      "home_value": 334119,
-      "home_value_yoy": -0.7
+      "home_value": 330817,
+      "home_value_yoy": -0.5
     },
     "NC": {
-      "home_value": 338359,
+      "home_value": 334773,
       "home_value_yoy": -0.0
     },
     "MI": {
-      "home_value": 269576,
+      "home_value": 266292,
       "home_value_yoy": 4.0
     },
     "NJ": {
-      "home_value": 584072,
-      "home_value_yoy": 3.6
+      "home_value": 580353,
+      "home_value_yoy": 3.9
     },
     "VA": {
-      "home_value": 418375,
-      "home_value_yoy": 2.1
+      "home_value": 414662,
+      "home_value_yoy": 2.2
     },
     "WA": {
-      "home_value": 601545,
-      "home_value_yoy": -0.4
+      "home_value": 591879,
+      "home_value_yoy": -0.3
     },
     "AZ": {
-      "home_value": 421381,
-      "home_value_yoy": -1.4
+      "home_value": 417990,
+      "home_value_yoy": -1.1
     },
     "MA": {
-      "home_value": 669053,
-      "home_value_yoy": 2.1
+      "home_value": 661896,
+      "home_value_yoy": 2.3
     },
     "TN": {
-      "home_value": 336508,
-      "home_value_yoy": 0.5
+      "home_value": 334108,
+      "home_value_yoy": 0.7
     },
     "IN": {
-      "home_value": 260808,
-      "home_value_yoy": 2.9
+      "home_value": 260095,
+      "home_value_yoy": 3.0
     },
     "MD": {
-      "home_value": 433112,
+      "home_value": 428308,
       "home_value_yoy": 0.0
     },
     "MO": {
-      "home_value": 268420,
-      "home_value_yoy": 3.3
+      "home_value": 267879,
+      "home_value_yoy": 3.5
     },
     "WI": {
-      "home_value": 343798,
-      "home_value_yoy": 4.9
+      "home_value": 339699,
+      "home_value_yoy": 5.1
     },
     "CO": {
-      "home_value": 538932,
-      "home_value_yoy": -1.7
+      "home_value": 532748,
+      "home_value_yoy": -1.4
     },
     "MN": {
-      "home_value": 356066,
-      "home_value_yoy": 2.6
+      "home_value": 350752,
+      "home_value_yoy": 2.5
     },
     "SC": {
-      "home_value": 307777,
-      "home_value_yoy": 0.8
+      "home_value": 306323,
+      "home_value_yoy": 1.0
     },
     "AL": {
-      "home_value": 241009,
-      "home_value_yoy": 1.6
-    },
-    "LA": {
-      "home_value": 217092,
+      "home_value": 241613,
       "home_value_yoy": 1.9
     },
+    "LA": {
+      "home_value": 217039,
+      "home_value_yoy": 2.1
+    },
     "KY": {
-      "home_value": 234510,
-      "home_value_yoy": -0.7
+      "home_value": 232577,
+      "home_value_yoy": -0.4
     },
     "OR": {
-      "home_value": 502156,
-      "home_value_yoy": -0.3
+      "home_value": 496113,
+      "home_value_yoy": -0.1
     },
     "OK": {
-      "home_value": 223612,
-      "home_value_yoy": 2.6
+      "home_value": 223261,
+      "home_value_yoy": 2.8
     },
     "CT": {
-      "home_value": 453319,
-      "home_value_yoy": 4.9
+      "home_value": 450873,
+      "home_value_yoy": 5.0
     },
     "UT": {
-      "home_value": 539949,
+      "home_value": 534582,
       "home_value_yoy": 1.5
     },
     "IA": {
-      "home_value": 240435,
-      "home_value_yoy": 3.7
-    },
-    "NV": {
-      "home_value": 447473,
-      "home_value_yoy": -2.0
-    },
-    "AR": {
-      "home_value": 225822,
+      "home_value": 239547,
       "home_value_yoy": 3.5
     },
+    "NV": {
+      "home_value": 442027,
+      "home_value_yoy": -1.8
+    },
+    "AR": {
+      "home_value": 227264,
+      "home_value_yoy": 3.6
+    },
     "MS": {
-      "home_value": 196333,
-      "home_value_yoy": 2.0
+      "home_value": 197606,
+      "home_value_yoy": 2.3
     },
     "KS": {
-      "home_value": 250918,
-      "home_value_yoy": 4.0
+      "home_value": 249603,
+      "home_value_yoy": 3.8
     },
     "NM": {
-      "home_value": 320106,
-      "home_value_yoy": 1.5
+      "home_value": 318241,
+      "home_value_yoy": 1.7
     },
     "NE": {
-      "home_value": 282767,
+      "home_value": 280673,
       "home_value_yoy": 3.1
     },
     "ID": {
-      "home_value": 481825,
-      "home_value_yoy": 1.6
+      "home_value": 478744,
+      "home_value_yoy": 2.0
     },
     "WV": {
-      "home_value": 178702,
-      "home_value_yoy": 3.0
+      "home_value": 179496,
+      "home_value_yoy": 3.1
     },
     "HI": {
-      "home_value": 833877,
-      "home_value_yoy": 0.5
+      "home_value": 833340,
+      "home_value_yoy": 1.1
     },
     "NH": {
-      "home_value": 521177,
-      "home_value_yoy": 2.8
+      "home_value": 516306,
+      "home_value_yoy": 2.9
     },
     "ME": {
-      "home_value": 421966,
-      "home_value_yoy": 1.3
+      "home_value": 415552,
+      "home_value_yoy": 1.6
     },
     "RI": {
-      "home_value": 515289,
-      "home_value_yoy": 3.2
+      "home_value": 511233,
+      "home_value_yoy": 3.4
     },
     "MT": {
-      "home_value": 475191,
-      "home_value_yoy": 1.8
+      "home_value": 471746,
+      "home_value_yoy": 2.0
     },
     "DE": {
-      "home_value": 410192,
+      "home_value": 406074,
       "home_value_yoy": 1.3
     },
     "SD": {
-      "home_value": 324891,
+      "home_value": 321574,
       "home_value_yoy": 2.5
     },
     "ND": {
-      "home_value": 293741,
-      "home_value_yoy": 5.3
+      "home_value": 292293,
+      "home_value_yoy": 5.2
     },
     "AK": {
-      "home_value": 402190,
-      "home_value_yoy": 5.9
+      "home_value": 398663,
+      "home_value_yoy": 5.7
     },
     "DC": {
-      "home_value": 577041,
-      "home_value_yoy": -1.7
+      "home_value": 570119,
+      "home_value_yoy": -1.0
     },
     "VT": {
-      "home_value": 405980,
-      "home_value_yoy": 1.1
+      "home_value": 399053,
+      "home_value_yoy": 1.0
     },
     "WY": {
-      "home_value": 371685,
-      "home_value_yoy": 1.5
+      "home_value": 371854,
+      "home_value_yoy": 1.4
     }
   }
 }
