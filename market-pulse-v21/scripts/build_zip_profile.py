@@ -512,6 +512,24 @@ def _prior_meta() -> dict:
         c.close()
 
 
+def state_market_rows(states: dict, nation: dict) -> list[dict]:
+    """{geo: [records]} from parse_rdc_history → flat table rows."""
+    return [{"geo": g, **rec} for part in (states, nation) for g, recs in part.items() for rec in recs]
+
+
+def _prior_state_market() -> list[dict]:
+    if not OUT_DB.exists():
+        return []
+    c = sqlite3.connect(f"file:{OUT_DB}?mode=ro", uri=True)
+    c.row_factory = sqlite3.Row
+    try:
+        return [dict(r) for r in c.execute("SELECT * FROM state_market")]
+    except sqlite3.Error:
+        return []
+    finally:
+        c.close()
+
+
 def _prior_rows() -> dict:
     if not OUT_DB.exists():
         return {}
@@ -698,7 +716,9 @@ def read_series(path: Path, zip_code: str) -> dict:
         c.close()
 
 
-def write_db(rows: list[dict], meta: dict, path: Path) -> None:
+def write_db(rows: list[dict], meta: dict, path: Path, state_market: list | None = None) -> None:
+    """The profile, its meta, and — when given — the state/national listing
+    history behind /conditions (one row per geo and month)."""
     tmp = path.with_suffix(".tmp")
     if tmp.exists():
         tmp.unlink()
@@ -711,6 +731,11 @@ def write_db(rows: list[dict], meta: dict, path: Path) -> None:
                   f"({', '.join('?' * len(COLUMN_NAMES))})",
                   [[r[k] for k in COLUMN_NAMES] for r in rows])
     c.executemany("INSERT INTO meta VALUES (?, ?)", [(k, str(v)) for k, v in meta.items()])
+    cols = ZM.STATE_COLUMNS
+    c.execute(f"CREATE TABLE state_market ({', '.join(f'{k} TEXT' if k in ('geo', 'month') else f'{k} REAL' for k in cols)}, "
+              "PRIMARY KEY (geo, month))")
+    c.executemany(f"INSERT INTO state_market ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))})",
+                  [[r.get(k) for k in cols] for r in (state_market or [])])
     c.commit()
     c.execute("VACUUM")
     c.close()
@@ -773,6 +798,22 @@ def main(argv=None) -> int:
         except Exception as e:  # noqa: BLE001 — any failure means carry forward
             print(f"::warning::market source {key} unavailable ({e}) — carrying forward")
             market[key], failed = {}, failed + [prefix]
+    # State and national listing history for /conditions. A failed fetch (or
+    # one missing states) carries the previous build's table, with its months.
+    try:
+        st_hist = ZM.fetch_rdc_history(ZM.RDC_STATE_HISTORY_URL, "state_id")
+        us_hist = ZM.fetch_rdc_history(ZM.RDC_COUNTRY_HISTORY_URL, "country")
+        if len(st_hist) < 51 or "US" not in us_hist:
+            raise ValueError(f"{len(st_hist)} states, US {'present' if 'US' in us_hist else 'missing'}")
+        state_market = state_market_rows(st_hist, us_hist)
+        mmeta["state_market_carried"] = ""
+        log.info("  market states: %d geos, %d rows, latest %s", len(st_hist) + 1, len(state_market),
+                 max(r["month"] for r in state_market))
+    except Exception as e:  # noqa: BLE001 — any failure means carry forward
+        print(f"::warning::state listing history unavailable ({e}) — carrying forward")
+        state_market = _prior_state_market()
+        mmeta["state_market_carried"] = "1"
+    mmeta["rdc_state_month"] = max((r["month"] for r in state_market), default="")
     mmeta["rdc_last_modified"] = ZM.last_modified(ZM.RDC_ZIP_URL)
     mmeta["redfin_last_modified"] = ZM.last_modified(ZM.REDFIN_ZIP_URL)
 
@@ -838,7 +879,7 @@ def main(argv=None) -> int:
     if args.dry_run:
         log.info("--dry-run: %d rows, nothing written. meta %s", len(rows), meta)
         return 0
-    write_db(rows, meta, OUT_DB)
+    write_db(rows, meta, OUT_DB, state_market)
     write_series_db(series_payload(zhvi, zori, {k: meta[k] for k in
                                                 ("built_at", "zhvi_last_month", "zori_last_month")}),
                     SERIES_OUT)

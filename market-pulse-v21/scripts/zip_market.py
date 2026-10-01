@@ -36,6 +36,10 @@ log = logging.getLogger("zip_market")
 RDC = "https://econdata.s3-us-west-2.amazonaws.com/Reports/Core/"
 RDC_ZIP_URL = RDC + "RDC_Inventory_Core_Metrics_Zip.csv"
 RDC_COUNTY_URL = RDC + "RDC_Inventory_Core_Metrics_County.csv"
+# Monthly since 2016-07; the state file keys on a two-letter state_id (all 50
+# + DC), the country file on country = "United States".
+RDC_STATE_HISTORY_URL = RDC + "RDC_Inventory_Core_Metrics_State_History.csv"
+RDC_COUNTRY_HISTORY_URL = RDC + "RDC_Inventory_Core_Metrics_Country_History.csv"
 REDFIN_ZIP_URL = ("https://redfin-public-data.s3.us-west-2.amazonaws.com/"
                   "redfin_market_tracker/zip_code_market_tracker.tsv000.gz")
 UA = {"User-Agent": "MarketPulse/1.0 (zip market; invoice@archfms.com)"}
@@ -63,6 +67,23 @@ RDC_FIELDS = (
     ("median_square_feet", "list_sqft", 1),
     ("quality_flag", "quality_flag", 1),
 )
+
+# State and national history kept for /conditions: this month, the same month
+# a year earlier, and every month between — so a year-over-year change compares
+# the same season, and a chart can draw this year against last.
+STATE_MONTHS = 25
+STATE_FIELDS = (
+    ("active_listing_count", "active", 1),
+    ("new_listing_count", "new", 1),
+    ("pending_listing_count", "pending", 1),
+    ("pending_ratio", "pending_ratio", 1),
+    ("median_days_on_market", "dom", 1),
+    ("price_reduced_share", "price_cut_pct", 100),
+    ("median_listing_price", "list_price", 1),
+    ("median_listing_price_per_square_foot", "list_ppsf", 1),
+    ("quality_flag", "quality_flag", 1),
+)
+STATE_COLUMNS = ("geo", "month") + tuple(dst for _, dst, _ in STATE_FIELDS)
 
 # Redfin: the property types kept, and the fields read from each.
 REDFIN_TYPES = {"All Residential": "all", "Single Family Residential": "sfr",
@@ -129,6 +150,33 @@ def parse_rdc(text: str, key: str = "postal_code") -> dict:
         rec["thin"] = active is None or active < THIN_COUNT
         out[k] = rec
     return out
+
+
+def parse_rdc_history(text: str, key: str = "state_id", months: int = STATE_MONTHS) -> dict:
+    """A Realtor.com core-metrics HISTORY CSV → {geo: [record, ...]} with each
+    geo's last `months` months, oldest first. `key` is 'state_id' (two
+    letters, kept upper-case) or 'country' ("United States" becomes "US").
+    Rows with any other key (notes, totals) are skipped."""
+    rd = csv.DictReader(io.StringIO(text))
+    out: dict = {}
+    for row in rd:
+        k = (row.get(key) or "").strip()
+        if key == "country":
+            k = "US" if k == "United States" else ""
+        else:
+            k = k.upper()
+            if not (len(k) == 2 and k.isalpha()):
+                continue
+        month = yyyymm(row.get("month_date_yyyymm"))
+        if not k or not month:
+            continue
+        rec = {"month": month}
+        for src, dst, scale in STATE_FIELDS:
+            rec[dst] = _scaled(row.get(src), scale)
+        if rec["quality_flag"] is not None:
+            rec["quality_flag"] = int(rec["quality_flag"])
+        out.setdefault(k, {})[month] = rec
+    return {k: [v[m] for m in sorted(v)[-months:]] for k, v in out.items()}
 
 
 def parse_redfin(lines) -> dict:
@@ -226,6 +274,13 @@ def fetch_rdc(url: str, key: str) -> dict:
     def go():
         with _open(url) as r:
             return parse_rdc(r.read().decode("utf-8", "replace"), key)
+    return _retry(go, url)
+
+
+def fetch_rdc_history(url: str, key: str) -> dict:
+    def go():
+        with _open(url) as r:
+            return parse_rdc_history(r.read().decode("utf-8", "replace"), key)
     return _retry(go, url)
 
 
