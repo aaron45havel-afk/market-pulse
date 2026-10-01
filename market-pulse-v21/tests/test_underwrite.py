@@ -176,6 +176,19 @@ check(RA.scaled_premium(3000, 300_000) == 3000 and RA.scaled_premium(3000, 100_0
 check(RA.state_medians({"a": ("TX", 1.0), "b": ("TX", 3.0), "c": ("OH", None)}) == {"TX": 2.0},
       "state medians skip ZIPs with no rate")
 
+# ── a year's rent over 20% of the price is flagged, not dropped ──
+_ok = U.investor(300_000, 2_000, tax_rate_pct=1.0, insurance_annual=1_500)
+_bad = U.investor(47_000, 1_316, tax_rate_pct=1.0, insurance_annual=1_500)
+check(_ok["gross_yield_pct"] == 8.0 and _ok["implausible"] is False,
+      "gross yield: $24,000 of rent on $300k is 8%")
+check(_bad["implausible"] is True and _bad["cap_rate_pct"] is not None,
+      "DETROIT'S $47k HOME AT $1,316 RENT (34%) IS FLAGGED — and still computed, not dropped")
+check(U.owner(47_000, tax_rate_pct=1.0, insurance_annual=900, rate_pct=6.3,
+              market_rent=1_316)["rent_implausible"] is True
+      and U.owner(300_000, tax_rate_pct=1.0, insurance_annual=900, rate_pct=6.3,
+                  market_rent=2_000)["rent_implausible"] is False,
+      "the owner's own-vs-rent comparison carries the same flag")
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

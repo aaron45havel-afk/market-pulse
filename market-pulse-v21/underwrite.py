@@ -37,6 +37,12 @@ DEFAULTS = {
     "opportunity_return_pct": 4.0,
 }
 
+# A year's rent above this share of the price is rarely one home: it is
+# usually a distressed sale priced against a rentable home's rent, or a
+# seasonal rent against an annual price (Zillow's Sag Harbor rent is
+# $57,000 a month). Figures over it are flagged, never dropped or capped.
+IMPLAUSIBLE_GROSS_YIELD_PCT = 20.0
+
 PROVENANCE = {
     "vacancy_pct": "5% of scheduled rent: the common underwriting floor; lenders "
                    "typically require at least this whatever the local rate",
@@ -144,7 +150,9 @@ def investor(price, rent_per_unit, *, units: int = 1, tax_rate_pct=None,
                 "effective_gross_income": round(egi, 2),
                 "grm": round(price / gsi, 2) if gsi else None,
                 "rent_to_price_monthly_pct": round(rent * units / price * 100, 3),
-                "one_percent_rule": (rent * units / price) >= 0.01})
+                "one_percent_rule": (rent * units / price) >= 0.01,
+                "gross_yield_pct": round(gsi / price * 100, 2),
+                "implausible": gsi / price * 100 > IMPLAUSIBLE_GROSS_YIELD_PCT})
 
     tax = None if _num(tax_rate_pct) is None else price * _num(tax_rate_pct) / 100.0
     ins = _num(insurance_annual)
@@ -268,4 +276,5 @@ def owner(price, *, tax_rate_pct=None, insurance_annual=None, hoa_monthly=0.0,
     rent = _num(market_rent)
     out["market_rent"] = rent
     out["own_minus_rent_monthly"] = round(own_cost - rent, 2) if rent is not None else None
+    out["rent_implausible"] = (rent is not None and rent * 12 / price * 100 > IMPLAUSIBLE_GROSS_YIELD_PCT)
     return out

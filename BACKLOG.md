@@ -200,9 +200,13 @@ Format: `- [PHASE-SEEN] item — why it matters`
   market cap. Refresh Schloss before the FCF build, or carry market cap in compounders.json.
 - [COMP-DRIFT-MEDIAN] Compounders' valuation median spans 7 years including 2020-21. Storing per-year
   P/FCF in compounders.json would let the median exclude the peak and be re-measured offline.
-- [MAP-REBUILD] Phase 4: the new map on zip_profile.db (one metric at a time, filters, sortable
-  table, no composites; links to /zip/{zip}). Phase 5: retire composites/forecast/proxy columns from zips.db
-  and their readers.
+- [MAP-REBUILD] Phase 5: retire composites/forecast/proxy columns from zips.db and their readers,
+  including the old map now at /map/classic (national_map.html) and the metro maps it links to.
+- [MAP-POLYGONS] The map draws ZIP centroids. ZCTA boundaries (Census cartographic file, ~60 MB national)
+  simplified per state into TopoJSON would allow a filled choropleth at metro zoom.
+- [MAP-ASSUMPTIONS] Underwritten map measures use the stated defaults; letting the reader change
+  down payment, rate and expense ratios on the map would recompute 20k underwritings per change
+  (about 0.5 s server-side, cached per set).
 - [ZIP-PAGE-CRIME] The old ZIP page showed zips.db's crime_index and walk_score (proxies); the new page
   leaves both out. FBI city crime can join it once CRIME-JOIN is fixed.
 - [ZIP-PAGE-PROPERTY] The card underwrites a ZIP's typical home. A per-property mode (address, actual HOA,

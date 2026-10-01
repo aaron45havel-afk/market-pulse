@@ -102,8 +102,48 @@ async def home():
 
 
 @app.get("/map")
+def zip_map(request: Request):
+    """The national ZIP map: every Census ZCTA in data/zip_profile.db, one
+    metric at a time — published figures, or the ZIP page's underwriting at
+    the defaults the page states. No score. Points and values come from
+    /api/map/base and /api/map/metric/{key}; each ZIP links to /zip/{zip}."""
+    import map_data as MD
+    import underwrite as U
+    from data_providers import MORTGAGE_30Y_RATE, MORTGAGE_30Y_OBS_DATE
+    meta = MD.load()[1]
+    return templates.TemplateResponse("map.html", {
+        "request": request, "registry": MD.registry(), "bases": MD.BASES,
+        "default_metric": MD.DEFAULT_METRIC, "default_basis": MD.DEFAULT_BASIS,
+        "defaults": U.DEFAULTS, "rate": MORTGAGE_30Y_RATE,
+        "rate_date": _fmt_obs_date(MORTGAGE_30Y_OBS_DATE), "meta": meta,
+    })
+
+
+@app.get("/api/map/base")
+def api_map_base():
+    """Every ZIP's position, state and place name, in the order every
+    /api/map/metric array follows."""
+    import map_data as MD
+    return JSONResponse(MD.base(), headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.get("/api/map/metric/{key}")
+def api_map_metric(key: str, basis: str = "zillow"):
+    """One metric for every ZIP (see map_data.metric_values)."""
+    import map_data as MD
+    from data_providers import MORTGAGE_30Y_RATE, MORTGAGE_30Y_OBS_DATE
+    out = MD.metric_values(key, basis, MORTGAGE_30Y_RATE, _fmt_obs_date(MORTGAGE_30Y_OBS_DATE))
+    if out is None:
+        return JSONResponse({"error": f"unknown metric {key!r}"}, status_code=404)
+    return JSONResponse(out, headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.get("/map/classic")
 async def national_map(request: Request):
-    """National overview — every supported metro pinned on a single Leaflet
+    """The previous map (metro pins, composite scores), kept unlinked until
+    the map rebuild's last phase retires it with the other composite readers.
+
+    National overview — every supported metro pinned on a single Leaflet
     map. Each pin's color reflects the top ZIP's composite score under the
     default investor persona; click → popup with metro summary + link to
     the full per-metro deep-dive at /real-estate/{slug}/map."""

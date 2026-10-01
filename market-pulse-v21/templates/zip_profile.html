@@ -64,6 +64,8 @@
   }
   .zp-chart { position: relative; height: 280px; }
   .zp-missing { padding: 60px 16px; text-align: center; color: var(--ink-2); }
+  .zp-warn { font-size: 0.78rem; background: var(--gold-soft); color: var(--gold-ink); border-radius: 8px;
+             padding: 7px 10px; margin-top: 10px; line-height: 1.45; }
 </style>
 {% endblock %}
 
@@ -143,6 +145,7 @@
         </div>
         {% endif %}
       </div>
+      <div class="zp-warn" id="invWarn"{% if not uw.investor.implausible %} style="display:none"{% endif %}>A year's rent is over 20% of the price. The two probably describe different homes — a distressed sale against a rentable home's rent, or a seasonal rent. Check both before relying on these figures.</div>
       <div class="zp-scroll" style="margin-top:12px"><table class="zp-t zp-kv" id="invTable"></table></div>
       <div class="zp-note" id="invMissing"></div>
     </div>
@@ -331,6 +334,7 @@
         `<span class="${lev > 0 ? "zp-up" : "zp-down"}">${lev > 0 ? "+" : ""}${lev.toFixed(2)} pts</span>`);
     set("#invTable", invTable(i));
     set("#invMissing", (i.missing || []).length ? "Not computed — missing: " + i.missing.join(", ") : "");
+    document.getElementById("invWarn").style.display = i.implausible ? "block" : "none";
     set('[data-o="monthly_total"]', fmt$(o.monthly_total));
     set('[data-o="income_needed"]', fmt$(o.income_needed));
     set('[data-o="income_needed_basis"]', (o.income_needed_basis || "") + " DTI");

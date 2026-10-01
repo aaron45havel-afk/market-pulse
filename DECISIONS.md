@@ -584,3 +584,31 @@ are four months old (BACKLOG). Realtor.com's Inventory Core Metrics are current 
   out of the medians; "rank in state" is the share of the state's ZIPs at or below this one.
 - **Series storage moved to `data/zip_series.db`** (one zlib-JSON blob per ZIP and series) so a page
   reads one ZIP's history without loading the national file; replaces `zip_series.json.gz`.
+
+## 2026-10-01 — Map rebuild, phase 4: one measure at a time, on one basis, every ZIP
+**Decided:**
+- **`/map` is a ZIP map of all 32,793 ZCTAs** (`map_data.py` + `templates/map.html`), coloured by one of
+  55 measures in eight groups: investor and owner figures underwritten at stated defaults, prices,
+  rents, Realtor.com listings, Redfin sales (badged stale), Census people and housing, FEMA/NOAA risk
+  and climate. No score, no persona, no forecast. The previous map (metro pins, composite scores) moves
+  to an unlinked `/map/classic` until phase 5 retires it with the other composite readers.
+- **One price/rent basis per map.** Investor figures are computed on Zillow's typical home and rent
+  (8,404 ZIPs) or on Zillow's 3-bed value with HUD's 3-bed rent (20,159), chosen by the reader — never
+  Zillow rent in one ZIP and HUD rent in the next, which would colour the map by which source exists.
+  Owner figures use Zillow's typical home. The arithmetic is the ZIP page's (`underwrite.py`, same
+  defaults, same tax and insurance), and a test holds the map and the ZIP page to the same cap rate.
+- **A year's rent over 20% of the price is flagged, not dropped** (`underwrite.IMPLAUSIBLE_GROSS_YIELD_PCT`):
+  47 Zillow-basis ZIPs, 136 on the 3-bed basis — Sag Harbor's $57,000/month seasonal rent, Flint's $29k
+  distressed value against a rentable home's rent. Flagged and thin figures are drawn hollow and left out
+  of the colours, medians and table unless the reader includes them; the ZIP page shows the same warning.
+- **Colours are quantiles of what is shown** (7 groups), recomputed for every state and filter, so the
+  legend always splits the visible ZIPs evenly and prints its own ranges and counts.
+- **Filters are measure ranges** (any measure, min/max); a ZIP without a figure for a filter is left out,
+  and the page says so. The view lives in the URL, so it can be shared; the table exports to CSV with
+  each figure's flags.
+- **Census top-codes are sent as their bound and marked**, so a ZIP at "$250,000+" sorts at the top and
+  reads "$250,000+", rather than vanishing as missing.
+- **Realtor.com's quality flag** marks about half of ZIPs some months: a dagger and footnote in the table,
+  the full "volatile" badge in the popup.
+- **Points, not polygons**: ZIP centroids on a canvas layer. National ZCTA boundaries are ~60 MB; see
+  BACKLOG.
