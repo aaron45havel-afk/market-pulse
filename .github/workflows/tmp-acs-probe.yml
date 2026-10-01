@@ -1,4 +1,4 @@
-# TEMPORARY: which Census bulk files carry the 2015-2019 ZCTA income? Deleted before the PR.
+# TEMPORARY: which Census bulk files carry the 2015-2019 ZCTA income? Deleted before the PR. (round 2)
 name: TEMP ACS 2019 probe
 on:
   push:
@@ -7,19 +7,21 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Probe
+        shell: bash
         run: |
-          B=https://www2.census.gov/programs-surveys/acs/summary_file
-          for y in 2019 2020 2021; do
-            u="$B/$y/table-based-SF/data/5YRData/acsdt5y$y-b19013.dat"
-            echo "table-based $y: $(curl -s -o /dev/null -w '%{http_code} %{size_download}' -I "$u")"
+          set +e
+          B=https://www2.census.gov/programs-surveys/acs/summary_file/2019
+          for p in "" "data/" "data/5_year_seq_by_state/" "data/5_year_seq_by_state/UnitedStates/" "data/5_year_seq_by_state/UnitedStates/All_Geographies_Not_Tracts_Block_Groups/" "documentation/" "documentation/user_tools/" "documentation/geography/"; do
+            echo "== $p"; curl -s --max-time 60 "$B/$p" | grep -o 'href="[^"?]*"' | grep -v '^href="/' | head -40 | tr '\n' ' '; echo
           done
-          echo "--- 2019 table-based head (if any)"
-          curl -s --max-time 60 "$B/2019/table-based-SF/data/5YRData/acsdt5y2019-b19013.dat" | head -c 400; echo
-          curl -s --max-time 60 "$B/2019/table-based-SF/data/5YRData/acsdt5y2019-b19013.dat" | grep -m3 "^860" ; echo
-          echo "--- 2019 summary_file listings"
-          for p in "2019/" "2019/data/" "2019/data/5_year_seq_by_state/" "2019/data/5_year_seq_by_state/UnitedStates/" "2019/data/5_year_seq_by_state/UnitedStates/All_Geographies_Not_Tracts_Block_Groups/" "2019/documentation/user_tools/"; do
-            echo "== $p"; curl -s --max-time 60 "$B/$p" | grep -o 'href="[^"?]*"' | head -25 | tr '\n' ' '; echo
+          echo "== lookup B19013"
+          for f in ACS_5yr_Seq_Table_Number_Lookup.txt ACS_5yr_Seq_Table_Number_Lookup.csv; do
+            curl -s --max-time 60 "$B/documentation/user_tools/$f" -o lk.txt; echo "$f $(wc -c < lk.txt)"; head -2 lk.txt; grep -m4 "B19013," lk.txt
           done
+          D="$B/data/5_year_seq_by_state/UnitedStates/All_Geographies_Not_Tracts_Block_Groups"
+          echo "== geography file"
+          for g in g20195us.csv g20195us.txt; do echo "$g $(curl -s -o /dev/null -w '%{http_code} %{size_download}' -I "$D/$g")"; done
+          curl -s --max-time 120 "$D/g20195us.csv" -o g.csv; wc -c g.csv; head -c 300 g.csv; echo; grep -m3 "8600000US" g.csv
