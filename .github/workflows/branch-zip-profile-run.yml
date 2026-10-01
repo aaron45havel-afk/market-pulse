@@ -1,5 +1,6 @@
 # TEMPORARY — builds the ZIP profile on this branch from live sources and
 # probes Redfin's ZIP-level market tracker for phase 2. Deleted before merge.
+# Run 2: install requirements (re_assumptions reads data_providers, which needs pandas).
 name: Branch run (ZIP profile + Redfin probe)
 
 on:
@@ -22,6 +23,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Install runtime deps
+        run: pip install -r requirements.txt
       - run: |
           python tests/test_acs_bulk.py
           python tests/test_zip_profile.py

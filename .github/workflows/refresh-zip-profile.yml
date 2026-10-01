@@ -30,6 +30,9 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install runtime deps
+        run: pip install -r requirements.txt
+
       - name: Prove the parsers and the underwriting before spending any downloads
         run: |
           python tests/test_acs_bulk.py
