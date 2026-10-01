@@ -112,42 +112,61 @@ def parse_census_income(rows: list[list], national_median: float | None = None) 
 
 
 def _get_json(url: str, attempts: int = 3, timeout: int = 300):
+    """Errors name the response, never the URL — a keyed URL must not reach
+    a log. The Census API answers some refusals (a bad key, an unsupported
+    geography) with HTTP 200 and an HTML or text page, so a body that is not
+    JSON is reported by its first characters and not retried."""
     last = None
     for k in range(attempts):
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=timeout) as r:
-                return json.loads(r.read())
+                body = r.read()
         except urllib.error.HTTPError as e:
-            last = f"HTTP {e.code}"
+            last = f"HTTP {e.code}: {e.read()[:160]!r}"
             if e.code == 400:        # a malformed query does not improve on retry
                 raise SourceUnavailable(last) from e
-        except (urllib.error.URLError, TimeoutError, ValueError) as e:
+        except (urllib.error.URLError, TimeoutError) as e:
             last = str(e)
+        else:
+            try:
+                return json.loads(body)
+            except ValueError:
+                raise SourceUnavailable(f"not JSON ({len(body)} bytes): {body[:160]!r}") from None
         time.sleep(3 * (k + 1))
     raise SourceUnavailable(last or "unknown")
 
 
 def fetch_acs19_income(min_rows: int = 30_000) -> dict:
-    """All ZCTAs' 2015-2019 median household income. One national call;
-    if the API wants ZCTAs nested in states for this vintage, one call per
-    state. CENSUS_API_KEY is used when set (keyless works for this volume)."""
+    """All ZCTAs' 2015-2019 median household income. Keyless first (one
+    national call is well inside the keyless allowance), then — only if
+    that fails — with CENSUS_API_KEY. Each try is one national call, or one
+    call per state if the API wants ZCTAs nested in states for this vintage."""
+    base = CENSUS_URL.format(year=BASELINE_YEAR)
     q = {"get": "B19013_001E,B19013_001M", "for": "zip code tabulation area:*"}
     key = os.environ.get("CENSUS_API_KEY", "").strip()
-    if key:
-        q["key"] = key
-    base = CENSUS_URL.format(year=BASELINE_YEAR)
-    try:
-        rows = _get_json(f"{base}?{urllib.parse.urlencode(q)}")
-    except SourceUnavailable as e:
-        log.info("  ACS 2019 national ZCTA call failed (%s) — trying by state", e)
-        rows = None
-        for st in STATE_FIPS:
-            part = _get_json(f"{base}?{urllib.parse.urlencode({**q, 'in': f'state:{st}'})}")
-            rows = part if rows is None else rows + part[1:]
-    out = parse_census_income(rows or [])
-    if len(out) < min_rows:
-        raise SourceUnavailable(f"ACS 2019 income: only {len(out):,} ZCTAs (floor {min_rows:,})")
-    return out
+    errors = []
+    for label, extra in (("keyless", {}), ("keyed", {"key": key} if key else None)):
+        if extra is None:
+            continue
+        try:
+            try:
+                rows = _get_json(f"{base}?{urllib.parse.urlencode({**q, **extra})}")
+            except SourceUnavailable as e:
+                errors.append(f"{label} national: {e}")
+                rows = None
+                for st in STATE_FIPS:
+                    part = _get_json(f"{base}?{urllib.parse.urlencode({**q, **extra, 'in': f'state:{st}'})}")
+                    rows = part if rows is None else rows + part[1:]
+            out = parse_census_income(rows or [])
+        except (SourceUnavailable, ValueError) as e:
+            errors.append(f"{label} by state: {e}")
+            continue
+        if len(out) < min_rows:
+            errors.append(f"{label}: only {len(out):,} ZCTAs (floor {min_rows:,})")
+            continue
+        log.info("  ACS %s income: %s, %d ZCTAs", ACS19_VINTAGE, label, len(out))
+        return out
+    raise SourceUnavailable("; ".join(errors))
 
 
 # ── FRED: CPI and the 30-year mortgage rate ──────────────────────────

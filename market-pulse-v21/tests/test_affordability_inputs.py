@@ -92,6 +92,35 @@ try:
 finally:
     AI._get_json = _real
 
+
+def keyed_only(url, attempts=3, timeout=300):
+    if "key=" not in url:
+        raise AI.SourceUnavailable("not JSON (40 bytes): b'<html>error</html>'")
+    return [HEAD] + [["50000", "100", f"{i:05d}"] for i in range(60)]
+
+
+_ck = os.environ.get("CENSUS_API_KEY")
+os.environ["CENSUS_API_KEY"] = "test-key"
+AI._get_json = keyed_only
+try:
+    check(len(AI.fetch_acs19_income(min_rows=50)) == 60,
+          "KEYLESS FIRST; THE KEY ONLY IF KEYLESS FAILS")
+finally:
+    AI._get_json = _real
+    os.environ.pop("CENSUS_API_KEY")
+    if _ck is not None:
+        os.environ["CENSUS_API_KEY"] = _ck
+try:
+    AI._get_json = lambda url, attempts=3, timeout=300: (_ for _ in ()).throw(
+        AI.SourceUnavailable("not JSON (12 bytes): b'Invalid Key'"))
+    AI.fetch_acs19_income(min_rows=1)
+    check(False, "an unanswerable Census API must raise")
+except AI.SourceUnavailable as e:
+    check("Invalid Key" in str(e) and "key=" not in str(e),
+          "the error carries what Census said, never the URL (or a key in it)")
+finally:
+    AI._get_json = _real
+
 # ══════════════════════════════════════════════════════════════════
 # FRED — yearly averages and the latest CPI
 # ══════════════════════════════════════════════════════════════════

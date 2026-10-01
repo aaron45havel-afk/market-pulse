@@ -1,4 +1,4 @@
-# TEMPORARY: one real build of the affordability baseline on the branch. Deleted before the PR.
+# TEMPORARY: one real build of the affordability baseline on the branch (run 2). Deleted before the PR.
 # Builds market-pulse-v21/data/zip_profile.db and data/zip_series.db —
 # the dataset behind the rebuilt map and ZIP page (scripts/build_zip_profile.py).
 # Runs on the 3rd, after refresh-national-zips (1st) and refresh-rents (2nd),
