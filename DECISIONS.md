@@ -505,3 +505,36 @@ board is now G-III 34.0%, Weibo 31.8%, Collegium 29.6%.
   criteria were read to count; 377 rows move from could-not-measure to rejected. The list is unchanged.
 
 Not done (BACKLOG): measuring the drift against a median without 2020-21 (needs per-year P/FCF stored).
+
+## 2026-10-01 — Map rebuild, phase 1: a ZIP dataset of measurements, and the underwriting arithmetic
+**Decided by the owner:** rebuild the map and ZIP page from scratch for BOTH rental investors (single-family
+and 2-4 units) and owner-occupants, covering all US ZIPs, with no composite scores or personas. The audit
+found the old ones ranked ZIPs by density/income/education proxies labelled "walk", "restaurants" and
+"crime", put a flat-40% "cap rate" on a voucher rent, and charted a forecast that does not beat "last
+year repeats".
+- **A new file, not a migration.** `data/zip_profile.db` is built beside `zips.db`, which eleven other
+  pages read; the old map keeps working until the new one replaces it (later phases).
+- **Every Census ZCTA in the 50 states + DC (32,793)**, with state and county from the Census
+  ZCTA-to-county file (largest land share), not only Zillow's 26,210.
+- **Census placeholders are not numbers.** A median whose margin of error carries the open-interval
+  annotation (-333333333) is stored NULL with its bound in `acs_flags`. Confirmed on the 2024 vintage:
+  incomes $250,001, taxes $10,001, rents $3,501, owner costs $4,001; 5,007 ZIPs carry at least one.
+- **Property tax per ZIP** = Census median taxes paid ÷ median owner value (an existing-owner rate).
+  Investor default: that rate scaled to the state's investor purchase rate (proptax.json); states where
+  the assessment resets at sale (CA, FL, OK, AR, NM, SC, MI) use the state purchase rate flat. Owner
+  default: the ZIP rate, floored at 1.10% in California. Where the Census top-coded taxes at "$10,000+"
+  (925 ZIPs, 4.9% of residents, mostly NY/NJ/CA; 829 have a median value to work from) the ZIP rate is
+  the greater of the floor that implies
+  and the county's measured median — Manhattan 10009 1.40%, not New York's upstate-driven 1.95%.
+- **Insurance**: state DP-3 landlord and HO-3 owner premiums at a $300k dwelling, scaled by price within
+  0.6-2.0x (land is not insured). `re_assumptions.py` is now the one place these defaults come from.
+- **Rent**: Zillow asking rent (8,434 ZIPs) is the only rent price-to-rent is computed on; HUD and Census
+  rents by bedroom are carried for the underwriting card, labelled by source.
+- **Underwriting** (`underwrite.py`): investor operating statement line by line, NOI, cap rate, GRM,
+  1% rule, debt service at the owner rate + 0.75, cash flow, cash-on-cash, DSCR, break-even rent and
+  occupancy, leverage spread; owner PITI with PMI over 80% LTV, income needed at 28/36, cost of owning
+  (interest, not principal) against rent. Defaults carry their convention in `PROVENANCE`; a missing
+  input leaves its figures empty and is named.
+- **Redfin ZIP market activity is feasible but stale**: the tracker is 1.55 GB, 9.7M rows, streams in
+  82 seconds on a runner, but its latest period ends 2026-05-31 (file last modified June 2). Phase 2
+  must date every figure.

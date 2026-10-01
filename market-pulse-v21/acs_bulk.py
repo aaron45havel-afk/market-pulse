@@ -40,15 +40,35 @@ class AcsUnavailable(Exception):
     """The bulk files could not be read — the caller decides what to keep."""
 
 
-def api_name(col: str) -> str | None:
-    """'B25003_E001' → 'B25003_001E'; margins of error ('_M') → None."""
+# The margin-of-error column carries the annotation for its estimate.
+# -333333333 means the median sits in an OPEN-ENDED interval: the estimate
+# beside it is a placeholder (250001 for "$250,000+", 2499 for "under
+# $2,500", 1939 for "built 1939 or earlier"), not a measurement. The other
+# MOE codes say no margin can be given (controlled estimate, too few
+# samples, not applicable).
+MOE_OPEN_INTERVAL = -333333333
+MOE_CODES = {
+    -333333333: "open-ended interval (top- or bottom-coded median)",
+    -555555555: "estimate is controlled; no sampling error",
+    -222222222: "too few sample observations for a margin of error",
+    -999999999: "too few sample observations for a margin of error",
+    -888888888: "margin of error not applicable",
+}
+
+
+def api_name(col: str, keep_moe: bool = False) -> str | None:
+    """'B25003_E001' → 'B25003_001E'; margins of error ('_M001') →
+    'B25003_001M' when `keep_moe`, else None."""
     table, _, rest = col.partition("_")
-    if not rest.startswith("E") or not rest[1:].isdigit():
-        return None
-    return f"{table}_{rest[1:]}E"
+    if rest.startswith("E") and rest[1:].isdigit():
+        return f"{table}_{rest[1:]}E"
+    if keep_moe and rest.startswith("M") and rest[1:].isdigit():
+        return f"{table}_{rest[1:]}M"
+    return None
 
 
-def parse_table(lines, wanted: set | None = None, prefix: str = ZCTA_PREFIX) -> dict:
+def parse_table(lines, wanted: set | None = None, prefix: str = ZCTA_PREFIX,
+                keep_moe: bool = False) -> dict:
     """Lines of one table file → {geo: {var: number or None}} for the rows
     whose GEO_ID starts with `prefix` (ZCTAs by default; STATE_PREFIX for
     states), keyed by the rest of the GEO_ID.
@@ -57,6 +77,11 @@ def parse_table(lines, wanted: set | None = None, prefix: str = ZCTA_PREFIX) -> 
     decimals. Census writes suppressed or unavailable estimates as negative
     sentinels (-666666666 and kin) or blanks; both become None, never a
     number. `wanted` limits the variables kept (API spelling).
+
+    `keep_moe` also returns each margin of error as '<table>_<line>M'.
+    A margin keeps its negative annotation code (see MOE_CODES) instead of
+    becoming None, because the code is the only record that the estimate
+    beside it is a top- or bottom-code rather than a measured median.
     """
     it = iter(lines)
     header = next(it, "")
@@ -65,8 +90,9 @@ def parse_table(lines, wanted: set | None = None, prefix: str = ZCTA_PREFIX) -> 
     cols = header.rstrip("\r\n").split("|")
     if not cols or cols[0] != "GEO_ID":
         raise ValueError(f"not an ACS table file (header starts {header[:40]!r})")
-    keep = [(i, api_name(c)) for i, c in enumerate(cols)]
-    keep = [(i, n) for i, n in keep if n and (wanted is None or n in wanted)]
+    keep = [(i, api_name(c, keep_moe)) for i, c in enumerate(cols)]
+    keep = [(i, n) for i, n in keep
+            if n and (wanted is None or n in wanted or n[:-1] + "E" in wanted)]
     out = {}
     for raw in it:
         line = raw.decode("utf-8", "replace") if isinstance(raw, bytes) else raw
@@ -85,10 +111,19 @@ def parse_table(lines, wanted: set | None = None, prefix: str = ZCTA_PREFIX) -> 
                 n = None
             if n is not None and n >= 0:
                 rec[name] = int(n) if n.is_integer() else n
+            elif n is not None and name.endswith("M") and int(n) in MOE_CODES:
+                rec[name] = int(n)
             else:
                 rec[name] = None
         out[z] = rec
     return out
+
+
+def is_open_interval(record: dict, var: str) -> bool:
+    """True when `var`'s estimate is a top- or bottom-code placeholder:
+    its margin of error carries the open-interval annotation. Needs the
+    record to have been parsed with keep_moe=True."""
+    return record.get(var[:-1] + "M") == MOE_OPEN_INTERVAL
 
 
 def _open(url: str, method: str = "GET"):
@@ -111,7 +146,8 @@ def latest_year(today_year: int, table: str = "b25003", back: int = 4) -> int:
 
 
 def fetch(tables, year: int, wanted: set | None = None, attempts: int = 3,
-          prefix: str = ZCTA_PREFIX, min_rows: int = MIN_ZCTAS) -> dict:
+          prefix: str = ZCTA_PREFIX, min_rows: int = MIN_ZCTAS,
+          keep_moe: bool = False) -> dict:
     """{geo: {var: value}} merged across `tables` for one vintage."""
     merged: dict = {}
     for table in tables:
@@ -119,7 +155,7 @@ def fetch(tables, year: int, wanted: set | None = None, attempts: int = 3,
         for i in range(attempts):
             try:
                 with _open(URL.format(year=year, table=table)) as r:
-                    part = parse_table(r, wanted, prefix)
+                    part = parse_table(r, wanted, prefix, keep_moe)
                 break
             except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
                 last = e
