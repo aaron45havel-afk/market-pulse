@@ -4343,50 +4343,18 @@ def housing_affordability(request: Request, state: str = ""):
     return templates.TemplateResponse("housing_affordability.html", {"request": request, **ctx})
 
 @app.get("/conditions")
-async def conditions_page(request: Request):
-    """Market Conditions dashboard — ranks states by the 4-signal
-    Market Climate composite (sale-to-list, price drops, DOM, months
-    of supply) so investors can see which markets are coolest for
-    buyers at a glance. Data flows from data_providers' enriched
-    CHOROPLETH_STATES (Redfin overrides + the _compute_market_climate
-    pass that runs on module load)."""
+def conditions_page(request: Request):
+    """Market conditions by state: Realtor.com listings for the latest month
+    against the same month a year earlier, one measure at a time
+    (conditions.py). Redfin's sale-to-list and months of supply — sales
+    measures Realtor.com does not publish — are shown as of their last
+    period (May 2026), marked frozen."""
+    import conditions as CD
     from data_providers import CHOROPLETH_STATES
-    rows = []
-    for code, sd in CHOROPLETH_STATES.items():
-        # Skip states with missing inputs — the composite would be
-        # None and the row would look broken next to populated ones.
-        if sd.get("market_climate_pct") is None:
-            continue
-        rows.append({
-            "code": code,
-            "name": sd.get("name", code),
-            "fips": sd.get("fips"),
-            "market_climate_pct": sd["market_climate_pct"],
-            "sale_to_list_pct": sd.get("sale_to_list_pct"),
-            "price_drops_pct": sd.get("price_drops_pct"),
-            "dom": sd.get("dom"),
-            "months_of_supply": sd.get("months_of_supply"),
-            "home_value": sd.get("home_value"),
-            "home_value_yoy": sd.get("home_value_yoy"),
-        })
-    # Default sort: most buyer-friendly first.
-    rows.sort(key=lambda r: r["market_climate_pct"], reverse=True)
-    # Surface the Redfin period_end so users know how fresh the data
-    # is — read it from the overrides file's _meta the same way the
-    # rest of the site does.
-    redfin_period_end = None
-    try:
-        from pathlib import Path
-        p = Path(__file__).resolve().parent / "data" / "redfin_overrides.json"
-        if p.exists():
-            redfin_period_end = json.loads(p.read_text()).get("_meta", {}).get("primary_period_end")
-    except Exception:
-        pass
-    return templates.TemplateResponse("conditions.html", {
-        "request": request,
-        "rows": rows,
-        "redfin_period_end": redfin_period_end,
-    })
+    redfin, period = CD.load_redfin()
+    ctx = CD.page({k: {"name": v.get("name", k), "fips": v.get("fips")} for k, v in CHOROPLETH_STATES.items()},
+                  redfin, period)
+    return templates.TemplateResponse("conditions.html", {"request": request, **ctx})
 
 
 @app.get("/api/real-mortgage-index")

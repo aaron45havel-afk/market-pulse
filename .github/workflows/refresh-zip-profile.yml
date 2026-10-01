@@ -41,6 +41,7 @@ jobs:
           python tests/test_zip_page.py
           python tests/test_underwrite.py
           python tests/test_affordability_inputs.py
+          python tests/test_conditions.py
 
       # FRED supplies the affordability baseline's CPI and mortgage-rate
       # averages (keyless CSV if the key is absent). Census 2015-2019 income
