@@ -24,7 +24,8 @@ WHAT IS DIFFERENT, AND WHY:
     and the state tax/insurance defaults from re_assumptions.py.
   * ZILLOW WITH DATES. Every value carries the month it is for; trend
     figures (1, 3, 5, 10 years, peak and drawdown) come from the full series.
-    The series themselves go to data/zip_series.json.gz for charts.
+    The series themselves go to data/zip_series.db for charts, one
+    compressed row per ZIP so a page reads only its own.
   * RISK FROM REAL SOURCES: FEMA National Risk Index expected annual loss
     and NOAA 1991-2020 normals, joined from the files already in the repo.
 
@@ -49,6 +50,7 @@ import time
 import urllib.error
 import urllib.request
 import zipfile
+import zlib
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -62,7 +64,7 @@ import zip_market as ZM  # noqa: E402
 log = logging.getLogger("zip_profile")
 
 OUT_DB = ROOT / "data" / "zip_profile.db"
-SERIES_OUT = ROOT / "data" / "zip_series.json.gz"
+SERIES_OUT = ROOT / "data" / "zip_series.db"
 ZIPS_DB = ROOT / "data" / "zips.db"
 HAZARDS = ROOT / "data" / "zip_hazards.json"
 CLIMATE = ROOT / "data" / "zip_climate.json"
@@ -632,6 +634,44 @@ def series_payload(zhvi: dict, zori: dict, meta: dict) -> dict:
             "zhvi": pack(zhvi, 100, SERIES_MONTHS), "zori": pack(zori, 1, None)}
 
 
+def write_series_db(payload: dict, path: Path) -> None:
+    """Chart series → SQLite, one zlib-compressed JSON row per (zip, kind).
+
+    A page needs one ZIP's series. A single gzip of all of them had to be
+    decompressed and parsed whole (~150 MB of Python objects) to serve
+    one; this is one indexed read and a few hundred bytes to inflate."""
+    tmp = path.with_suffix(".tmp")
+    if tmp.exists():
+        tmp.unlink()
+    c = sqlite3.connect(tmp)
+    c.execute("CREATE TABLE series (zip TEXT, kind TEXT, start TEXT, data BLOB, "
+              "PRIMARY KEY (zip, kind))")
+    c.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)")
+    for kind in ("zhvi", "zori"):
+        c.executemany("INSERT INTO series VALUES (?, ?, ?, ?)",
+                      [(z, kind, start, zlib.compress(json.dumps(vals, separators=(",", ":")).encode(), 9))
+                       for z, (start, vals) in payload.get(kind, {}).items()])
+    c.executemany("INSERT INTO meta VALUES (?, ?)",
+                  [(k, str(v)) for k, v in payload.get("_meta", {}).items()])
+    c.commit()
+    c.execute("VACUUM")
+    c.close()
+    tmp.replace(path)
+
+
+def read_series(path: Path, zip_code: str) -> dict:
+    """{kind: (start 'YYYY-MM', [values])} for one ZIP; ZHVI in USD/100."""
+    if not path.exists():
+        return {}
+    c = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    try:
+        return {k: (start, json.loads(zlib.decompress(blob)))
+                for k, start, blob in c.execute(
+                    "SELECT kind, start, data FROM series WHERE zip = ?", (zip_code,))}
+    finally:
+        c.close()
+
+
 def write_db(rows: list[dict], meta: dict, path: Path) -> None:
     tmp = path.with_suffix(".tmp")
     if tmp.exists():
@@ -747,10 +787,9 @@ def main(argv=None) -> int:
         log.info("--dry-run: %d rows, nothing written. meta %s", len(rows), meta)
         return 0
     write_db(rows, meta, OUT_DB)
-    with gzip.open(SERIES_OUT, "wt", compresslevel=9) as f:
-        json.dump(series_payload(zhvi, zori, {k: meta[k] for k in
-                                              ("built_at", "zhvi_last_month", "zori_last_month")}),
-                  f, separators=(",", ":"))
+    write_series_db(series_payload(zhvi, zori, {k: meta[k] for k in
+                                                ("built_at", "zhvi_last_month", "zori_last_month")}),
+                    SERIES_OUT)
     log.info("wrote %s (%.1f MB) and %s (%.1f MB) in %ds", OUT_DB.name,
              OUT_DB.stat().st_size / 1e6, SERIES_OUT.name, SERIES_OUT.stat().st_size / 1e6,
              time.time() - t0)

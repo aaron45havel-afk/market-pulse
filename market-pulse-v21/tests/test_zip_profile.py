@@ -226,6 +226,14 @@ check(pay["zhvi"]["94105"] == ["2025-01", [11000] * 12 + [11270]]
       and pay["zori"]["94105"][0] == "2025-01" and pay["_meta"]["zhvi_unit"] == "USD/100",
       "chart series carry their start month; ZHVI in hundreds of dollars")
 json.dumps(pay)  # serialisable
+import tempfile  # noqa: E402
+from pathlib import Path  # noqa: E402
+_sdb = Path(tempfile.mkdtemp()) / "s.db"
+B.write_series_db(pay, _sdb)
+check(B.read_series(_sdb, "94105") == {"zhvi": ("2025-01", [11000] * 12 + [11270]),
+                                       "zori": ("2025-01", [5500] * 12 + [5958])}
+      and B.read_series(_sdb, "00000") == {},
+      "SERIES ROUND-TRIP THROUGH SQLITE: one ZIP read back exactly, an unknown ZIP empty")
 
 # ── report ──
 if _FAILS:
