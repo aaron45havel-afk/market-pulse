@@ -28,6 +28,9 @@ WHAT IS DIFFERENT, AND WHY:
     compressed row per ZIP so a page reads only its own.
   * RISK FROM REAL SOURCES: FEMA National Risk Index expected annual loss
     and NOAA 1991-2020 normals, joined from the files already in the repo.
+  * A FIXED 2019 BASELINE for the affordability page: the 2019 average ZHVI,
+    Census 2015-2019 median household income, and FRED's CPI and 30-year
+    rate averages in meta (scripts/affordability_inputs.py).
 
 No composite, no score, no forecast. Run in GitHub Actions — the sandbox
 cannot reach Census or Zillow.
@@ -58,6 +61,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 import acs_bulk as AB  # noqa: E402
+import affordability_inputs as AI  # noqa: E402
 import re_assumptions as RA  # noqa: E402
 import zip_market as ZM  # noqa: E402
 
@@ -422,6 +426,8 @@ COLUMNS = [
     ("acs_flags", "TEXT"),
     # derived ratios
     ("price_to_income", "REAL"), ("price_to_rent", "REAL"),
+    # the affordability page's fixed 2019 baseline (affordability_inputs.py)
+    ("zhvi_2019", "INTEGER"), ("acs19_median_income", "REAL"), ("acs19_income_coded", "TEXT"),
     # tax and insurance defaults
     ("tax_rate_acs", "REAL"), ("tax_rate_zip", "REAL"), ("tax_rate_zip_basis", "TEXT"),
     ("tax_rate_investor", "REAL"), ("tax_basis_investor", "TEXT"),
@@ -494,6 +500,18 @@ def carry_forward(rows: list[dict], prior: dict, prefixes: tuple) -> int:
     return n
 
 
+def _prior_meta() -> dict:
+    if not OUT_DB.exists():
+        return {}
+    c = sqlite3.connect(f"file:{OUT_DB}?mode=ro", uri=True)
+    try:
+        return dict(c.execute("SELECT key, value FROM meta").fetchall())
+    except sqlite3.Error:
+        return {}
+    finally:
+        c.close()
+
+
 def _prior_rows() -> dict:
     if not OUT_DB.exists():
         return {}
@@ -508,9 +526,11 @@ def _prior_rows() -> dict:
 
 
 def build_rows(geo: dict, county: dict, acs: dict, zhvi: dict, zhvi_br: dict, zori: dict,
-               rents: dict, hazards: dict, climate: dict, market: dict | None = None) -> list[dict]:
+               rents: dict, hazards: dict, climate: dict, market: dict | None = None,
+               acs19: dict | None = None) -> list[dict]:
     """Join everything onto the Census ZCTA list. Pure: every input is a dict.
-    `market` = {"rdc_zip": ..., "rdc_county": ..., "redfin": ...}, any may be {}."""
+    `market` = {"rdc_zip": ..., "rdc_county": ..., "redfin": ...}, any may be {}.
+    `acs19` = {zcta: {"income", "coded"}} (Census 2015-2019), may be {}."""
     med = national_medians(acs)
     mk = market or {}
     rows = []
@@ -545,6 +565,12 @@ def build_rows(geo: dict, county: dict, acs: dict, zhvi: dict, zhvi_br: dict, zo
         if zo:
             s = zillow_summary(zo)
             row.update(zori=round(s["latest"]), zori_month=s["month"], zori_yoy_pct=s["yoy_pct"])
+        z19 = AI.annual_average(zh)
+        row["zhvi_2019"] = round(z19) if z19 else None
+        # 2015-2019 ZCTAs are 2010 codes; a ZCTA new in 2020 has no 2019 figure.
+        a19 = (acs19 or {}).get(z) or {}
+        row["acs19_median_income"] = a19.get("income")
+        row["acs19_income_coded"] = a19.get("coded")
         row["neighborhood"] = rt.get("neighborhood") or None
         for b in range(5):
             row[f"hud_rent_br{b}"] = rt.get(f"rent_br{b}")
@@ -695,7 +721,8 @@ def coverage(rows: list[dict]) -> dict:
     n = len(rows)
     keys = ("zhvi", "zori", "hud_rent_br2", "acs_median_value", "acs_median_taxes", "tax_rate_acs",
             "acs_gross_rent", "acs_median_income", "rental_vacancy_pct", "haz_total",
-            "clim_winter_low", "rdc_month", "cty_rdc_month", "rf_period_end")
+            "clim_winter_low", "rdc_month", "cty_rdc_month", "rf_period_end",
+            "zhvi_2019", "acs19_median_income")
     return {"rows": n, **{k: sum(1 for r in rows if r.get(k) is not None) for k in keys},
             "acs_flagged": sum(1 for r in rows if r.get("acs_flags"))}
 
@@ -749,10 +776,32 @@ def main(argv=None) -> int:
     mmeta["rdc_last_modified"] = ZM.last_modified(ZM.RDC_ZIP_URL)
     mmeta["redfin_last_modified"] = ZM.last_modified(ZM.REDFIN_ZIP_URL)
 
+    # The affordability baseline. Census 2015-2019 income carries forward like
+    # a market source; FRED's constants carry forward in meta.
+    try:
+        acs19 = AI.fetch_acs19_income()
+        log.info("  ACS %s income: %d ZCTAs", AI.ACS19_VINTAGE, len(acs19))
+    except Exception as e:  # noqa: BLE001 — any failure means carry forward
+        print(f"::warning::ACS {AI.ACS19_VINTAGE} income unavailable ({e}) — carrying forward")
+        acs19, failed = {}, failed + ["acs19_"]
+    prior_meta = _prior_meta()
+    try:
+        afford = AI.macro(AI.fetch_fred("CPIAUCSL"), AI.fetch_fred("MORTGAGE30US"), year)
+    except Exception as e:  # noqa: BLE001
+        print(f"::warning::FRED unavailable ({e})")
+        afford = None
+    afford_carried = not AI.macro_complete(afford, year)
+    if afford_carried:
+        old = json.loads(prior_meta.get("afford_macro") or "null")
+        print(f"::warning::affordability constants incomplete ({afford}) — "
+              f"{'carrying the previous build' if old else 'none to carry'}")
+        afford = old
+    log.info("  affordability constants: %s", afford)
+
     # Both files nest their ZIPs under "zips" beside "_meta".
     hazards, climate = _load_json(HAZARDS), _load_json(CLIMATE)
     rows = build_rows(geo, county, acs, zhvi, zhvi_br, zori, _zips_db_rents(),
-                      hazards.get("zips", {}), climate.get("zips", {}), market)
+                      hazards.get("zips", {}), climate.get("zips", {}), market, acs19)
     if failed:
         n = carry_forward(rows, _prior_rows(), tuple(failed))
         log.info("  carried %s forward for %d ZIPs", failed, n)
@@ -779,6 +828,9 @@ def main(argv=None) -> int:
         "market_carried_forward": ",".join(failed),
         "market_attribution": "Listings: Realtor.com Economic Research. Sales: Redfin Data Center "
                               "(ZIP tracker frozen since 2026-06-02).",
+        "acs19_vintage": AI.ACS19_VINTAGE,
+        "afford_macro": json.dumps(afford) if afford else "",
+        "afford_macro_carried": "1" if afford_carried else "",
         **mmeta,
         "coverage": json.dumps(cov),
         "elapsed_s": round(time.time() - t0),
