@@ -1,9 +1,9 @@
 name: Refresh Zillow data
 
-# Pulls fresh Zillow ZHVI (home values) and ZORI (rents) for every ZIP in the
-# neighborhood maps, writes data/zillow_overrides.json, and commits the result
-# directly to main. Cap-rate scoring picks up the new numbers on the next
-# deploy. Runs on the 1st of every month plus on demand.
+# Pulls Zillow's state-level ZHVI (home values) and ZORI (rents), writes
+# data/zillow_overrides.json (state_overrides, read by data_providers), and
+# commits the result directly to main. Runs on the 1st of every month plus
+# on demand.
 
 on:
   schedule:

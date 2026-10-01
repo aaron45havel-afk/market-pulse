@@ -47,8 +47,8 @@
     .cond-table td.up { color: var(--accent); }
     .cond-table td.down { color: #ef4444; }
 
-    /* Climate tier badges — same 5-tier scale + colors as the metro
-       popup chip in national_map.html. Inline so the tooltip-style
+    /* Climate tier badges — a 5-tier scale (it began as the retired
+       national map's metro popup chip). Inline so the tooltip-style
        chip carries its meaning visually. */
     .climate-cell { display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; }
     .climate-cell .num { font-weight: 700; min-width: 1.7rem; text-align: right; }
@@ -119,7 +119,7 @@
                 </thead>
                 <tbody>
                     {% for r in rows %}
-                    {# Tier mapping mirrors buildBuyerPowerChip in national_map.html. #}
+                    {# Tier mapping from the retired national map's buyer-power chip. #}
                     {% set s = r.market_climate_pct %}
                     {% if s >= 75 %}
                         {% set tier_class = 't-buyers' %}{% set tier_label = "Buyer's mkt" %}

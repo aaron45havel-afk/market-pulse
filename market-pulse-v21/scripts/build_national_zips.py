@@ -6,15 +6,19 @@ Output: ``data/zips.db`` — one row per ZCTA covered by Zillow ZHVI, with:
   - median_home_value + home_value_yoy          (Zillow ZHVI per ZIP)
   - median_rent_monthly                         (Zillow ZORI per ZIP, or imputed)
   - median_household_income, pct_bachelors      (Census ACS 2022 5-year API)
-  - walk_score, crime_index, restaurant_score   (proxies — see helpers)
-  - cap_rate_pct, composite_{balanced,investor,lifestyle,score}
-                                                (compute_zip_metrics, same
-                                                 formula real metros use)
+  - walk_score, crime_index, restaurant_score   (proxies — see helpers; read
+                                                 by /norcal and /value-add,
+                                                 never by the ZIP map or page)
+  - cap_rate_pct                                (rent_ladder.cap_rate_pct; the
+                                                 rent ladder re-resolves it)
+  - history_zhvi                                (trailing 60 months of ZHVI)
 
-This is the data spine for serving viewport-filtered ZIPs to /map. The
-hand-curated metro datasets (DALLAS_ZIPS, etc.) stay separate and remain
-authoritative for their ZIPs — this DB augments coverage to the ~30K
-ZIPs Zillow tracks nationally without any hand-tuning.
+No composite score and no forecast: both were retired with the old map
+(DECISIONS, map rebuild phase 5). The ZIP map and ZIP page read
+data/zip_profile.db (scripts/build_zip_profile.py).
+
+Readers: /multifamily, /headroom, /value-add, /norcal and /fair-value
+(see each module); the ~30K ZIPs Zillow tracks nationally.
 
 Sources, all free and stable:
   * Zillow Research public CSVs (ZHVI all-ZIPs, ZORI all-ZIPs)
@@ -53,11 +57,8 @@ log = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = REPO_ROOT / "data" / "zips.db"
 
-# compute_zip_metrics is the canonical scoring formula — same one real
-# metros (DALLAS_ZIPS etc.) flow through. Using it here means national
-# ZIPs and hand-curated ZIPs sit on the same composite scale.
 sys.path.insert(0, str(REPO_ROOT))
-from dallas_neighborhoods import compute_zip_metrics  # noqa: E402
+import rent_ladder as RL  # noqa: E402
 
 # ─── Sources ────────────────────────────────────────────────────────
 ZHVI_URL = (
@@ -224,9 +225,9 @@ def parse_zhvi_per_zip(csv_text: str) -> dict[str, dict]:
             entry["city"] = row[city_idx].strip()
         if county_idx is not None and county_idx < len(row):
             entry["county"] = row[county_idx].strip()
-        # Capture the trailing 60 monthly values for the forecast
-        # helper. Drops empties / parse-errors silently — forecast just
-        # works with whatever monotonic series we recover (≥12 needed).
+        # Capture the trailing 60 monthly values (history_zhvi), read by
+        # /multifamily, /headroom and /fair-value for value trajectories.
+        # Drops empties / parse-errors silently (≥12 needed to keep one).
         history: list[float] = []
         for col_i, _ in date_cols[-60:]:   # ~5 years of monthly data
             if col_i < len(row) and row[col_i]:
@@ -238,64 +239,6 @@ def parse_zhvi_per_zip(csv_text: str) -> dict[str, dict]:
             entry["history"] = history
         out[zcode] = entry
     log.info("  → %d ZIPs with ZHVI", len(out))
-    return out
-
-
-# ─── 12-month forecast (damped Holt-Winters, level + trend) ────────
-# No statsmodels / Prophet dep — the math is 20 lines and runs in <1ms
-# per ZIP. Damped trend (phi < 1) prevents the forecast from
-# extrapolating wildly when the recent trend is steep; long-horizon
-# growth tapers off, which matches the post-2022 cooling pattern.
-#
-# Parameters tuned for monthly-frequency, smoothed (ZHVI-style) data:
-#   alpha = 0.4   — moderate weight on the latest observation
-#   beta  = 0.1   — slow trend update; keeps forecasts stable
-#   phi   = 0.92  — strong damping; 12-mo forecast settles at
-#                    roughly trend × (1 - phi^12) / (1 - phi) ≈ 7×monthly
-#
-# Returns None when history < 12 — forecast would be unreliable.
-# Tag the method in the returned dict so future versions (Prophet,
-# ARIMA, ML) can A/B without breaking the API contract.
-def forecast_home_value(history: list[float], alpha: float = 0.5,
-                        beta: float = 0.15, phi: float = 0.98) -> dict | None:
-    # Param tuning: phi=0.98 captures ~65-75% of recent trend over a
-    # 12-month horizon; phi=0.92 (initial guess) was too aggressive
-    # and projected only ~25%, missing real growth on a 5%-YoY series.
-    # Conservative-but-not-flatlining matches the "directional, not
-    # predictive" framing in the popup.
-    if not history or len(history) < 12:
-        return None
-    # Init: level = first value, trend = avg first-12-month diff.
-    level = history[0]
-    trend_window = min(11, len(history) - 1)
-    trend = (history[trend_window] - history[0]) / trend_window
-    for i in range(1, len(history)):
-        prev_level = level
-        level = alpha * history[i] + (1 - alpha) * (level + phi * trend)
-        trend = beta * (level - prev_level) + (1 - beta) * phi * trend
-    if not history[-1]:
-        return None
-    # Multi-horizon: 3mo / 6mo / 12mo / 60mo (5yr) projections via the
-    # geometric damping. Accumulate the damped trend at each horizon.
-    horizons = (3, 6, 12, 60)
-    out: dict = {"forecast_method": "damped_holt_v1"}
-    forecast = level
-    damp = 1.0
-    for h in range(1, max(horizons) + 1):
-        damp *= phi
-        forecast += damp * trend
-        if h in horizons:
-            tag = f"forecast_{h}mo" if h < 60 else "forecast_60mo"
-            if forecast <= 0:
-                continue
-            out[f"forecast_{h}mo_value"] = int(round(forecast))
-            out[f"forecast_{h}mo_pct"] = round(
-                (forecast / history[-1] - 1) * 100, 1
-            )
-    # Backwards-compat with P142's column names (used by /api/zips):
-    if "forecast_12mo_value" in out:
-        out["forecast_home_value_12mo"] = out["forecast_12mo_value"]
-        out["forecast_pct_change_12mo"] = out["forecast_12mo_pct"]
     return out
 
 
@@ -462,9 +405,8 @@ def fetch_acs_zcta() -> dict[str, dict]:
 def walk_proxy(density: float | None) -> float:
     """Population density (people per km²) → walk-score proxy 10-90.
     Saturating curve. Real Walk Score correlates ~0.7 with log-density
-    across cities, which is good enough for a first-pass national
-    surface. Hand-curated metros override this with measured Walk
-    Score values."""
+    across cities. A density curve, not a walkability measurement —
+    the ZIP map and ZIP page do not show it."""
     if density is None or density <= 0:
         return 25.0
     return min(90.0, 10.0 + 80.0 * (1 - 1 / (1 + density / 1500.0)))
@@ -495,9 +437,8 @@ def crime_proxy(density: float | None, income: int | None, pct_bach: float | Non
       income:   inverse linear, 1 at $30K, 0 at $200K+
       edu:      inverse linear, 1 at <10% bachelor's+, 0 at >70%
 
-    Output baseline ~25 (suburban-mid) lets hand-curated ZIPs (which
-    range 18-65 in DALLAS_ZIPS etc.) overlap meaningfully when both
-    flow through the same compute_zip_metrics scoring pipeline.
+    Output baseline ~25 (suburban-mid). A socioeconomic proxy, not a
+    crime rate: boards that judge safety use FBI figures (safety.py).
     """
     import math
     # Density factor — log scale because crime scales sub-linearly with
@@ -582,38 +523,14 @@ CREATE TABLE zips (
     crime_index              REAL,
     restaurant_score         REAL,
     cap_rate_pct             REAL,
-    composite_balanced       REAL,
-    composite_investor       REAL,
-    composite_lifestyle      REAL,
-    composite_score          REAL,
-    -- 12-month forward forecast (Phase A of paid feature). Damped
-    -- Holt-Winters on Zillow ZHVI history. Null when ZIP has too
-    -- little history (<12 months). 'method' tags the model used so
-    -- future versions can A/B without breaking the API contract.
-    forecast_home_value_12mo INTEGER,
-    forecast_pct_change_12mo REAL,
-    -- Additional horizons (P143). Same model, projected forward N
-    -- months. NULL when history < 12 OR forecast went non-positive.
-    forecast_3mo_value       INTEGER,
-    forecast_3mo_pct         REAL,
-    forecast_6mo_value       INTEGER,
-    forecast_6mo_pct         REAL,
-    forecast_60mo_value      INTEGER,
-    forecast_60mo_pct        REAL,
     -- Trailing 60 monthly ZHVI values, JSON-encoded list (oldest →
-    -- newest). Powers the historical chart on /zip/{zip}. ~600
-    -- bytes/ZIP × 25K = ~15MB extra in zips.db, acceptable.
+    -- newest), for the value-trajectory reads on /multifamily,
+    -- /headroom and /fair-value.
     history_zhvi             TEXT,
-    forecast_method          TEXT,
     as_of                    TEXT
 );
--- Indexes the Phase-2 viewport endpoint will use:
---   * by-state for state-zoom lists
---   * (lat, lng) for bbox queries
---   * composite_balanced DESC for top-N within a region
 CREATE INDEX idx_zips_state     ON zips(state);
 CREATE INDEX idx_zips_latlng    ON zips(lat, lng);
-CREATE INDEX idx_zips_composite ON zips(composite_balanced DESC);
 """
 
 
@@ -667,10 +584,9 @@ def build_db(rows: list[dict], dry_run: bool, zori: dict | None = None) -> None:
         log.info("--dry-run: would write %d rows to %s", len(rows), DB_PATH)
         for r in rows[:3]:
             log.info(
-                "  %s  %s  $%s · $%s/mo · cap=%.1f%% · bal=%.1f",
+                "  %s  %s  $%s · $%s/mo · cap=%s%%",
                 r["zip"], r["state"], r["median_home_value"],
                 r["median_rent_monthly"], r["cap_rate_pct"],
-                r["composite_balanced"],
             )
         return
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -702,7 +618,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     parser.add_argument(
         "--dry-run", action="store_true",
-        help="Fetch + parse + score, but don't write zips.db.",
+        help="Fetch + parse, but don't write zips.db.",
     )
     parser.add_argument(
         "--limit", type=int, default=0,
@@ -738,16 +654,7 @@ def main(argv: list[str] | None = None) -> int:
     rows: list[dict] = []
     skipped = {"no_centroid": 0, "no_income": 0}
     today = date.today().isoformat()
-    forecast_count = 0
     for z, zh in zhvi.items():
-        # Run the forecast in the join loop so we don't have to
-        # re-iterate later. Stores result on zh under '_forecast' for
-        # the row-build below to pick up. None when history < 12.
-        if zh.get("history"):
-            f = forecast_home_value(zh["history"])
-            if f:
-                zh["_forecast"] = f
-                forecast_count += 1
         g = gaz.get(z)
         if not g:
             skipped["no_centroid"] += 1
@@ -773,17 +680,6 @@ def main(argv: list[str] | None = None) -> int:
         # can answer for it.
         rent = zori.get(z)
         rent_source = "zori" if rent else None
-        # Same compute_zip_metrics call real metros use → composite
-        # numbers land on the same scale as DALLAS_ZIPS, HOUSTON_ZIPS, etc.
-        m = compute_zip_metrics({
-            "median_home_value": zh["home_value"],
-            "median_rent_monthly": rent,
-            "median_household_income": income,
-            "crime_index": crime,
-            "pct_bachelors": pct_bach,
-            "walk_score": walk,
-            "restaurant_score": rest,
-        })
         # State + city are in the ZHVI CSV directly. State is a 2-letter
         # code; we whitelist against the 50+DC set so we don't carry
         # territories Zillow lists separately. City lets us label rows
@@ -822,28 +718,11 @@ def main(argv: list[str] | None = None) -> int:
             "walk_score": round(walk, 1),
             "crime_index": crime,
             "restaurant_score": round(rest, 1),
-            "cap_rate_pct": m["cap_rate_pct"],
-            "composite_balanced": m["composite_by_persona"]["balanced"],
-            "composite_investor": m["composite_by_persona"]["investor"],
-            "composite_lifestyle": m["composite_by_persona"]["lifestyle"],
-            "composite_score": m["composite_score"],
-            # Phase-A forecast — 12-month forward home value via damped
-            # Holt-Winters on the trailing ZHVI history. None when the
-            # ZIP has too little history (<12 months); popup hides the
-            # row when the field is null.
-            "forecast_home_value_12mo": (zh.get("_forecast") or {}).get("forecast_home_value_12mo"),
-            "forecast_pct_change_12mo": (zh.get("_forecast") or {}).get("forecast_pct_change_12mo"),
-            "forecast_method":          (zh.get("_forecast") or {}).get("forecast_method"),
-            # Multi-horizon forecasts (P143) — null when no _forecast.
-            "forecast_3mo_value":  (zh.get("_forecast") or {}).get("forecast_3mo_value"),
-            "forecast_3mo_pct":    (zh.get("_forecast") or {}).get("forecast_3mo_pct"),
-            "forecast_6mo_value":  (zh.get("_forecast") or {}).get("forecast_6mo_value"),
-            "forecast_6mo_pct":    (zh.get("_forecast") or {}).get("forecast_6mo_pct"),
-            "forecast_60mo_value": (zh.get("_forecast") or {}).get("forecast_60mo_value"),
-            "forecast_60mo_pct":   (zh.get("_forecast") or {}).get("forecast_60mo_pct"),
-            # Persist the history so /zip/{zip} can chart it. JSON-encoded
-            # list of values, oldest first. None when the ZIP doesn't
-            # have a history (rare; mostly newly-added ZIPs).
+            # Net of a flat 40% — the rent ladder's arithmetic, which
+            # restore_rent_ladder re-runs on every ZIP after this insert.
+            "cap_rate_pct": RL.cap_rate_pct(rent, zh["home_value"]),
+            # JSON-encoded list of values, oldest first. None when the ZIP
+            # doesn't have a history (rare; mostly newly-added ZIPs).
             "history_zhvi": (json.dumps([round(v, 0) for v in zh["history"]]) if zh.get("history") else None),
             "as_of": today,
         })
@@ -851,8 +730,8 @@ def main(argv: list[str] | None = None) -> int:
             break
 
     log.info(
-        "Built %d rows · skipped %d no-centroid · %d no-income · %d with 12mo forecast",
-        len(rows), skipped["no_centroid"], skipped["no_income"], forecast_count,
+        "Built %d rows · skipped %d no-centroid · %d no-income",
+        len(rows), skipped["no_centroid"], skipped["no_income"],
     )
     if not rows:
         log.error("No rows produced — aborting.")

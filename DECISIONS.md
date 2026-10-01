@@ -612,3 +612,23 @@ are four months old (BACKLOG). Realtor.com's Inventory Core Metrics are current 
   the full "volatile" badge in the popup.
 - **Points, not polygons**: ZIP centroids on a canvas layer. National ZCTA boundaries are ~60 MB; see
   BACKLOG.
+
+## 2026-10-01 — Map rebuild, phase 5: the composites and forecasts are gone
+**Decided by the owner:** retire the old map, its metro maps and the composite/forecast columns; leave the
+other boards' inputs (the walk/restaurant/crime proxies and the flat-40% cap rate on /norcal,
+/multifamily and /value-add) as they are, logged in BACKLOG [BOARD-PROXIES].
+- **Deleted:** the old national map (`national_map.html`, served at /map/classic since phase 4), the 112
+  hand-curated metro maps (`state_map.html`, `state_neighborhoods.py`, `dallas_neighborhoods.py` — the
+  persona composite scorer), and `/api/zips`, `/api/zips/stats`, `/api/search`, which only those pages
+  called. `structural.state_trajectories` (read only by the old map) is gone.
+- **Redirected, not broken:** /map/classic → /map; /real-estate/{slug}/map → /map?st={state} (301).
+- **zips.db:** dropped `composite_{balanced,investor,lifestyle,score}`, the nine `forecast_*` columns and
+  the composite index (55 → 42 columns; every kept value byte-identical). `build_national_zips.py` no
+  longer computes them (the damped-Holt forecast is deleted) and writes `cap_rate_pct` with
+  rent_ladder's arithmetic, which the rebuild already re-ran on every ZIP; `refresh_rents.py` no longer
+  rescores. `history_zhvi` stays: /multifamily, /headroom and /fair-value read it.
+- **refresh_zillow.py keeps only the state section** data_providers reads; its per-ZIP section existed for
+  the metro maps' ~480 ZIPs and would have failed with them gone ("no target ZIPs").
+- **/norcal's deal check judges safety by FBI figures**, as its screen already did. A listing outside the
+  screen's top tiers was being gated on `crime_index`, the proxy the screen had dropped.
+- **Out of scope:** /global-values' country composite (countries, not ZIPs) and its market-cycle refresh.

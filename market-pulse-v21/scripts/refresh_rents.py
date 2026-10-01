@@ -706,33 +706,13 @@ def apply(conn: sqlite3.Connection, zori, safmr, fmr, acs,
           as_of: str, dry_run: bool) -> dict:
     """Resolve every ZIP through the ladder and write the result.
 
-    The persona composites are recomputed too, because cap_rate is one
-    of their seven inputs and the rent underneath it just changed. That
-    also re-syncs a pre-existing drift: 401 of a 3,000-row sample had
-    stored composites that no longer matched a recompute from their own
-    columns, because crime_index was later overwritten by the crime
-    refresh without anything rescoring the board.
-    """
-    have = {r[1] for r in conn.execute("PRAGMA table_info(zips)")}
-    scoring = {"crime_index", "pct_bachelors", "median_household_income",
-               "walk_score", "restaurant_score", "composite_balanced",
-               "composite_investor", "composite_lifestyle", "composite_score"}
-    rescore = scoring <= have
-    if rescore:
-        import dallas_neighborhoods as DN
-        rows = list(conn.execute(
-            "SELECT zip, median_home_value, crime_index, pct_bachelors, "
-            "median_household_income, walk_score, restaurant_score "
-            "FROM zips ORDER BY zip"))
-    else:
-        log.warning("Scoring columns absent — writing rents without rescoring.")
-        rows = [(r[0], r[1], None, None, None, None, None) for r in conn.execute(
-            "SELECT zip, median_home_value FROM zips ORDER BY zip")]
+    No composite is recomputed: the persona composites were retired with
+    the old map (DECISIONS, map rebuild phase 5)."""
+    rows = list(conn.execute("SELECT zip, median_home_value FROM zips ORDER BY zip"))
 
     tiers = []
     writes = []
-    rescores = []
-    for z, hv, crime, bach, inc, walk, rest in rows:
+    for z, hv in rows:
         s = safmr.get(z) or {}
         f = fmr.get(z) or {}
         s_beds, f_beds = s.get("bedrooms"), f.get("bedrooms")
@@ -754,15 +734,6 @@ def apply(conn: sqlite3.Connection, zori, safmr, fmr, acs,
             RL.cap_rate_pct(res["rent"], hv),
             as_of, z,
         ))
-        if rescore and hv:
-            m = DN.compute_zip_metrics({
-                "median_home_value": hv, "median_rent_monthly": res["rent"],
-                "crime_index": crime, "pct_bachelors": bach,
-                "median_household_income": inc,
-                "walk_score": walk or 0, "restaurant_score": rest or 0})
-            p = m["composite_by_persona"]
-            rescores.append((p["balanced"], p["investor"], p["lifestyle"],
-                             m["composite_score"], z))
     if not dry_run:
         conn.executemany("""
             UPDATE zips SET median_rent_monthly=?, rent_tier=?, rent_basis=?,
@@ -775,11 +746,6 @@ def apply(conn: sqlite3.Connection, zori, safmr, fmr, acs,
         # it in step with rent_tier so any reader not yet migrated stops
         # seeing 'imputed' on rows that now carry a real measurement.
         conn.execute("UPDATE zips SET rent_source = rent_tier")
-        if rescores:
-            conn.executemany(
-                "UPDATE zips SET composite_balanced=?, composite_investor=?, "
-                "composite_lifestyle=?, composite_score=? WHERE zip=?", rescores)
-            log.info("  rescored %d ZIPs", len(rescores))
         conn.commit()
     return RL.coverage([{"tier": t} for t in tiers])
 

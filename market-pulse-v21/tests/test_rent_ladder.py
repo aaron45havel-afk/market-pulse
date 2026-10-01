@@ -182,51 +182,6 @@ check(len(set(_imputed)) == 1,
       "always the value over 204. Four wildly different markets, one yield")
 
 
-# ── scoring a ZIP whose rent nobody measured ──
-#
-# compute_zip_metrics lives in dallas_neighborhoods and had never seen a
-# missing rent, because rent was imputed for every ZIP and so was never
-# absent. Deleting the imputation created this case; these checks cover
-# it, and they are here rather than in a dallas test file because the
-# case only exists because of the ladder.
-import dallas_neighborhoods as DN
-
-_BASE = {"median_home_value": 300977, "crime_index": 40, "pct_bachelors": 45,
-         "median_household_income": 70000, "walk_score": 60,
-         "restaurant_score": 55}
-_with = DN.compute_zip_metrics({**_BASE, "median_rent_monthly": 1467})
-_without = DN.compute_zip_metrics({**_BASE, "median_rent_monthly": None})
-
-check(_with["cap_rate_pct"] == 5.85, "a ZIP with a rent gets a real cap rate")
-check(_without["cap_rate_pct"] is None and _without["rent_to_price"] is None,
-      "and one WITHOUT a rent gets None, not 0.0 — a zero cap rate is a "
-      "claim that the property yields nothing, which nobody measured")
-check(_without["sub_scores"]["cap_rate"] is None,
-      "the cap-rate sub-score is absent too rather than scoring 0")
-check(all(v is not None for k, v in _without["sub_scores"].items()
-          if k != "cap_rate"),
-      "while the six dimensions that ARE known still score normally")
-check(all(0 < v <= 100 for v in _without["composite_by_persona"].values()),
-      "SO THE ZIP IS STILL RANKED. Its cap-rate weight is redistributed "
-      "across what is known; counted as zero it would sink to the bottom "
-      "of the board, where an unmeasured ZIP reads as a bad one")
-_inv = _without["composite_by_persona"]["investor"]
-check(_inv > 20,
-      f"the investor persona leans hardest on cap rate, so it is the one "
-      f"that would collapse — it scores {_inv}, not single digits")
-check(DN.compute_zip_metrics({**_BASE, "median_rent_monthly": 1467,
-                              "median_home_value": 0})["cap_rate_pct"] is None,
-      "a zero home value yields no cap rate either, rather than dividing "
-      "by zero or reporting 0%")
-# The weights sum to 1.0, so redistribution must not move a complete row.
-check(_with["composite_by_persona"] == {
-    k: round(sum(_with["sub_scores"][s] * w for s, w in p["weights"].items()), 1)
-    for k, p in DN.PERSONAS.items()},
-      "and for a row with every dimension known the result is IDENTICAL to "
-      "the plain weighted sum — the weights already total 1.0, so nothing "
-      "about the existing board's scores moved")
-
-
 # ── coverage census ──
 _cov = R.coverage([{"tier": "zori"}, {"tier": "zori"}, {"tier": "safmr"},
                    {"tier": "acs"}, {"tier": None}, {}])
