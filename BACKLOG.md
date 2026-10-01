@@ -200,15 +200,16 @@ Format: `- [PHASE-SEEN] item — why it matters`
   market cap. Refresh Schloss before the FCF build, or carry market cap in compounders.json.
 - [COMP-DRIFT-MEDIAN] Compounders' valuation median spans 7 years including 2020-21. Storing per-year
   P/FCF in compounders.json would let the median exclude the peak and be re-measured offline.
-- [MAP-REBUILD] Phase 2: Redfin ZIP market activity (DOM, months of supply, sale-to-list, price drops,
-  homes sold; 90-day windows by property type) into zip_profile.db, dated, with a staleness rule — the
-  ZIP file ended 2026-05-31; check whether the metro/county trackers are fresher. Phase 3: the new ZIP
-  page on zip_profile.db (editable underwriting card, owner card, trends from zip_series.json.gz with
-  real dates, FEMA/NOAA risk, Census margins). Phase 4: the new map (one metric at a time, filters,
-  table, no composites). Phase 5: retire composites/forecast/proxy columns from zips.db and their readers.
+- [MAP-REBUILD] Phase 4: the new map on zip_profile.db (one metric at a time, filters, sortable
+  table, no composites; links to /zip/{zip}). Phase 5: retire composites/forecast/proxy columns from zips.db
+  and their readers.
+- [ZIP-PAGE-CRIME] The old ZIP page showed zips.db's crime_index and walk_score (proxies); the new page
+  leaves both out. FBI city crime can join it once CRIME-JOIN is fixed.
+- [ZIP-PAGE-PROPERTY] The card underwrites a ZIP's typical home. A per-property mode (address, actual HOA,
+  tax bill, insurance quote) would reuse underwrite.py with no defaults.
 - [ZIP-PROFILE-RISK] FEMA hazards and NOAA climate cover the ~25.7k zips.db ZIPs only; extend
   refresh_zip_hazards/refresh_zip_climate to all 32.8k ZCTAs so Census-only ZIPs get risk figures.
-- [ZIP-PROFILE-SIZE] zip_profile.db is 20.3 MB and zip_series.json.gz 6.8 MB, committed monthly. Store the
+- [ZIP-PROFILE-SIZE] zip_profile.db is 27.6 MB and zip_series.db 9.5 MB, committed monthly. Store the
   repeated basis strings as codes, and consider a release asset or data branch for the series.
 - [ZIP-PROFILE-CITY] ZIPs Zillow does not cover have no city name (county only); a USPS/HUD ZIP-city
   crosswalk would name them.

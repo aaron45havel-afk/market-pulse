@@ -560,3 +560,27 @@ are four months old (BACKLOG). Realtor.com's Inventory Core Metrics are current 
   list-price swings. The page will badge flagged figures as volatile rather than drop them.
 - **A failed source never blanks the board:** its columns carry forward from the previous build with their
   own months, and meta records which source was carried.
+
+## 2026-10-01 — Map rebuild, phase 3: the ZIP page reads zip_profile.db, and every figure says what it is
+**Decided:**
+- **`/zip/{zip}` is rebuilt on zip_profile.db** (`zip_page.py` + `templates/zip_profile.html`); the old
+  page (`zip_detail.html`, its composite scores and forecasts) is gone. Any of the 32,793 ZCTAs gets a
+  page; one the Census does not map gets a plain not-found page.
+- **Price and rent must describe the same home.** The card offers only pairings with both halves:
+  Zillow typical home + Zillow typical rent (default where both exist); HUD n-bed rent with Zillow's n-bed
+  value; Census n-bed rent (labelled existing tenants' rent, which lags the market) with the same value.
+  With no Zillow value the price is the Census median owner value, and the note says so. Default order:
+  Zillow, HUD 3-bed, Census 3-bed, HUD 2-bed, Census 2-bed. HUD rent is named as county FMR or ZIP-level
+  Small Area FMR (40th percentile, utilities included).
+- **Every input is editable and recomputed server-side** (`/api/zip/{zip}/underwrite`, the same
+  `underwrite.py` the page renders with — no second copy of the arithmetic in JavaScript). Typed price or
+  rent beats the pairing; a junk value falls back to the default; units stop at 4 (above that is
+  commercial lending); no mortgage rate means the card says so rather than assuming one.
+- **Break-even occupancy over 100% reads "rent can't cover costs"**, not 427%.
+- **Labels:** Redfin's window is badged stale past 3 months (it is May 2026 for everyone until Redfin
+  resumes); a listing figure under 10 listings is "thin"; Realtor.com's quality flag is "volatile";
+  a Census top- or bottom-code reads "$10,000+" / "1939 or earlier", never as a measured figure.
+- **Comparisons are medians across ZIPs** (county, state, US) with how many ZIPs; thin listing figures stay
+  out of the medians; "rank in state" is the share of the state's ZIPs at or below this one.
+- **Series storage moved to `data/zip_series.db`** (one zlib-JSON blob per ZIP and series) so a page
+  reads one ZIP's history without loading the national file; replaces `zip_series.json.gz`.

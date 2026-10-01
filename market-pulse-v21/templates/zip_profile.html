@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+{% macro money(v, d=0) %}{% if v is none or v is undefined %}—{% elif v < 0 %}−${{ "{:,.{}f}".format(-v, d) }}{% else %}${{ "{:,.{}f}".format(v, d) }}{% endif %}{% endmacro %}
+{% macro num(v, d=0) %}{% if v is none or v is undefined %}—{% else %}{{ "{:,.{}f}".format(v, d) }}{% endif %}{% endmacro %}
+{% macro pct(v, d=1) %}{% if v is none or v is undefined %}—{% else %}{{ "{:.{}f}".format(v, d) }}%{% endif %}{% endmacro %}
+{% macro chg(v, d=1, unit="%") %}{% if v is none or v is undefined %}<span class="zp-dim">—</span>{% else %}<span class="{{ 'zp-up' if v > 0 else ('zp-down' if v < 0 else '') }}">{{ "+" if v > 0 else "" }}{{ "{:.{}f}".format(v, d) }}{{ unit }}</span>{% endif %}{% endmacro %}
+{% macro fmtv(v, f) %}{% if v is none or v is undefined %}—{% elif f == "money" %}{{ money(v) }}{% elif f == "pct" %}{{ pct(v) }}{% elif f == "pct3" %}{{ "{:.2f}".format(v) }}%{% elif f == "x" %}{{ "{:.1f}".format(v) }}×{% elif f == "days" %}{{ num(v) }} d{% elif f == "ratio" %}{{ "{:.2f}".format(v) }}{% else %}{{ v }}{% endif %}{% endmacro %}
+
+{% block title %}{% if page %}{{ page.row.zip }} · {{ page.row.city or page.row.county }}{% else %}ZIP not found{% endif %} · Market Pulse{% endblock %}
+
+{% block extra_css %}
+<style>
+  .zp { max-width: 1120px; margin: 0 auto; padding: 0 16px 48px; }
+  .zp-back { font-size: 0.85rem; color: var(--primary); text-decoration: none; }
+  .zp-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+             padding: 18px 20px; margin-top: 16px; }
+  .zp-card h2 { font-size: 1.02rem; margin: 0 0 4px; }
+  .zp-sub { font-size: 0.8rem; color: var(--ink-3); margin: 0 0 12px; line-height: 1.5; }
+  .zp-head h1 { font-family: var(--display); font-size: 2.4rem; margin: 6px 0 0; line-height: 1.05; }
+  .zp-head .where { color: var(--ink-2); font-size: 0.95rem; margin-top: 4px; }
+  .zp-asof { font-size: 0.76rem; color: var(--ink-3); margin-top: 10px; line-height: 1.6; }
+  .zp-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 14px; }
+  .zp-kpi { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; }
+  .zp-kpi .k { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); }
+  .zp-kpi .v { font-size: 1.35rem; font-weight: 650; margin-top: 2px; }
+  .zp-kpi .n { font-size: 0.74rem; color: var(--ink-3); margin-top: 2px; line-height: 1.4; }
+  .zp-up { color: var(--mint-ink); } .zp-down { color: var(--coral-ink); } .zp-dim { color: var(--ink-4); }
+  .zp-badge { display: inline-block; font-size: 0.66rem; font-weight: 700; border-radius: 999px; padding: 1px 7px;
+              margin-left: 6px; vertical-align: 1px; text-transform: uppercase; letter-spacing: 0.04em; cursor: help; }
+  .b-stale { background: var(--gold-soft); color: var(--gold-ink); }
+  .b-thin { background: var(--surface-3); color: var(--ink-2); }
+  .b-vol { background: var(--coral-soft); color: var(--coral-ink); }
+  .b-est { background: var(--primary-soft); color: var(--primary-ink); }
+  .zp-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  .zp-two > *, .zp-kpis > *, .zp-form > *, .zp-out > * { min-width: 0; }
+  .zp-form select { max-width: 100%; text-overflow: ellipsis; }
+  /* base.html sets nowrap on every tbody cell: labels and headers wrap here, figures
+     never split mid-number — a table too wide for a phone scrolls inside its card */
+  table.zp-t td, table.zp-t th { white-space: normal; }
+  table.zp-t td:not(:first-child) { white-space: nowrap; }
+  table.zp-kv td:not(:first-child) { white-space: normal; overflow-wrap: break-word; }
+  table.zp-kv { table-layout: fixed; }
+  table.zp-kv td:first-child { width: 52%; color: var(--ink-2); }
+  @media (max-width: 860px) { .zp-two { grid-template-columns: minmax(0, 1fr); } }
+  .zp-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 12px; }
+  .zp-form label { font-size: 0.72rem; color: var(--ink-3); display: block; }
+  .zp-form input, .zp-form select { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid var(--line-strong);
+              border-radius: 7px; font-size: 0.9rem; background: var(--surface); color: var(--ink); }
+  .zp-form .wide { grid-column: 1 / -1; }
+  .zp-note { font-size: 0.7rem; color: var(--ink-4); margin-top: 2px; line-height: 1.35; }
+  table.zp-t { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  table.zp-t td, table.zp-t th { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: right; }
+  table.zp-t td:first-child, table.zp-t th:first-child { text-align: left; }
+  table.zp-t th { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-3); font-weight: 600; }
+  table.zp-t tr.total td { font-weight: 700; border-top: 2px solid var(--line-strong); }
+  .zp-out { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 12px; }
+  .zp-out .zp-kpi .v { font-size: 1.15rem; }
+  .zp-scroll { overflow-x: auto; max-width: 100%; }
+  @media (max-width: 600px) {
+    .zp-card { padding: 14px 12px; }
+    table.zp-t { font-size: 0.8rem; }
+    table.zp-t td, table.zp-t th { padding: 5px 3px; }
+    table.zp-t th { letter-spacing: 0.02em; }
+    .zp-n { display: block; font-size: 0.7rem; }
+  }
+  .zp-chart { position: relative; height: 280px; }
+  .zp-missing { padding: 60px 16px; text-align: center; color: var(--ink-2); }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if not page %}
+<div class="zp"><div class="zp-missing">
+  <h1 style="font-family: var(--display)">No data for ZIP {{ missing }}</h1>
+  <p>It may be a PO-box-only or business ZIP the Census does not map, or outside the 50 states and DC.</p>
+  <a class="zp-back" href="/map">← Back to the map</a>
+</div></div>
+{% else %}
+{% set r = page.row %}{% set L = page.labels %}{% set uw = page.uw %}{% set ph = page.placeholders %}
+<div class="zp">
+  <a class="zp-back" href="/map">← Back to the map</a>
+
+  <!-- ── HEADER ───────────────────────────────────────────────── -->
+  <div class="zp-card zp-head">
+    <h1>{{ r.zip }}{% if r.neighborhood %} <span style="font-family: var(--sans); font-size: 1.1rem; color: var(--ink-2)">{{ r.neighborhood }}</span>{% endif %}</h1>
+    <div class="where">{% if r.city %}{{ r.city }}, {% endif %}{{ r.county }}, {{ r.state }}{% if r.metro %} · {{ r.metro }} metro{% endif %}</div>
+    <div class="zp-kpis">
+      <div class="zp-kpi"><div class="k">Typical home value</div>
+        <div class="v">{{ money(r.zhvi) if r.zhvi else (money(r.acs_median_value) if r.acs_median_value else (ph.acs_median_value or "—")) }}</div>
+        <div class="n">{% if r.zhvi %}Zillow, {{ L.zhvi }} · {{ chg(r.zhvi_yoy_pct) }} 1 yr{% else %}Census median owner value, {{ L.acs }} (Zillow does not cover this ZIP){% endif %}</div></div>
+      <div class="zp-kpi"><div class="k">Market rent</div>
+        <div class="v">{{ money(uw.used.rent) }}<span style="font-size:0.8rem; font-weight:500">/mo</span></div>
+        <div class="n">{{ uw.chosen.rent_note if uw.chosen else "No rent measured for this ZIP" }}</div></div>
+      <div class="zp-kpi"><div class="k">Price-to-rent</div>
+        <div class="v">{{ fmtv(r.price_to_rent, "x") }}</div>
+        <div class="n">{% if r.price_to_rent %}Value ÷ a year of asking rent (both Zillow). Under ~15 favours buying to rent out; over ~20 favours renting.{% else %}Needs Zillow's asking rent, which this ZIP lacks.{% endif %}</div></div>
+      <div class="zp-kpi"><div class="k">Price-to-income</div>
+        <div class="v">{{ fmtv(r.price_to_income, "x") }}</div>
+        <div class="n">Value ÷ median household income ({{ L.acs }}). US median {{ fmtv(page.compare[4].us[0], "x") }}.</div></div>
+      <div class="zp-kpi"><div class="k">Days on market</div>
+        <div class="v">{{ num(r.rdc_dom) }}{% if r.rdc_dom is not none %} d{% endif %}{% if r.rdc_thin %}<span class="zp-badge b-thin" title="Fewer than 10 active listings — a handful of homes, not a market.">thin</span>{% endif %}{% if r.rdc_quality_flag == 1 %}<span class="zp-badge b-vol" title="Realtor.com's own quality flag is set for this ZIP this month: read the change figures with care.">volatile</span>{% endif %}</div>
+        <div class="n">{% if r.rdc_month %}Listings, Realtor.com, {{ L.rdc }} · {{ chg(r.rdc_dom_yoy_pct) }} 1 yr{% else %}No listings data for this ZIP{% endif %}</div></div>
+    </div>
+    <div class="zp-asof">
+      Values: Zillow {{ L.zhvi or "—" }} · Rents: Zillow {{ L.zori or "—" }}, HUD, Census {{ L.acs }} · Listings: Realtor.com {{ L.rdc or "—" }} ·
+      Sales: Redfin {{ L.rf or "—" }}{% if L.rf_stale %} <span class="zp-badge b-stale" title="Redfin's public market data stopped updating after June 2, 2026.">stale</span>{% endif %} ·
+      Mortgage rate {{ pct(page.mortgage_rate, 2) }} (Freddie Mac, {{ page.rate_date }})
+    </div>
+  </div>
+
+  <!-- ── UNDERWRITING ─────────────────────────────────────────── -->
+  <div class="zp-two">
+    <div class="zp-card" id="invCard">
+      <h2>Rental investor</h2>
+      <p class="zp-sub">Single-family or 2-4 units, bought with an investment loan. Every input is editable; defaults are this ZIP's figures or a stated convention.</p>
+      <form class="zp-form" id="uwForm" onsubmit="return false">
+        <div class="wide"><label>Price and rent pairing</label>
+          <select name="pairing">{% for o in uw.options %}<option value="{{ o.key }}" {{ "selected" if uw.chosen and o.key == uw.chosen.key }}>{{ o.label }}</option>{% endfor %}</select>
+          <div class="zp-note" id="pairNote">{% if uw.chosen %}{{ uw.chosen.price_note }} · {{ uw.chosen.rent_note }}{% endif %}</div></div>
+        <div><label>Price ($)</label><input name="price" type="number" step="1000" value="{{ uw.used.price|round|int if uw.used.price else '' }}"></div>
+        <div><label>Rent per unit ($/mo)</label><input name="rent" type="number" step="25" value="{{ uw.used.rent|round|int if uw.used.rent else '' }}"></div>
+        <div><label>Units</label><select name="units">{% for u in (1,2,3,4) %}<option {{ "selected" if u == uw.used.units }}>{{ u }}</option>{% endfor %}</select></div>
+        <div><label>Property tax (% of price)</label><input name="tax" type="number" step="0.01" value="{{ uw.used.tax }}"><div class="zp-note">{{ uw.notes.tax }}</div></div>
+        <div><label>Insurance ($/yr)</label><input name="ins" type="number" step="50" value="{{ uw.used.ins|round|int if uw.used.ins }}"><div class="zp-note">{{ uw.notes.ins }}</div></div>
+        <div><label>HOA ($/mo)</label><input name="hoa" type="number" step="25" value="0"><div class="zp-note">Not measured — enter it for condos{% if r.pct_5plus_units and r.pct_5plus_units > 40 %} (this ZIP is {{ pct(r.pct_5plus_units, 0) }} 5+ unit buildings){% endif %}.</div></div>
+        <div><label>Owner-paid utilities ($/mo)</label><input name="util" type="number" step="25" value="0"></div>
+        <div><label>Vacancy (%)</label><input name="vac" type="number" step="0.5" value="{{ uw.used.vac }}"><div class="zp-note">This ZIP's rental vacancy: {{ pct(r.rental_vacancy_pct) }} (Census)</div></div>
+        <div><label>Management (%)</label><input name="mgmt" type="number" step="0.5" value="{{ uw.used.mgmt }}"></div>
+        <div><label>Repairs (% of rent)</label><input name="maint" type="number" step="0.5" value="{{ uw.used.maint }}"></div>
+        <div><label>CapEx reserve (% of rent)</label><input name="capex" type="number" step="0.5" value="{{ uw.used.capex }}"></div>
+        <div><label>Loan rate (%)</label><input name="rate" type="number" step="0.05" value="{{ uw.used.rate }}"><div class="zp-note">{{ uw.notes.rate }}</div></div>
+        <div><label>Down payment (%)</label><input name="down" type="number" step="1" value="{{ uw.used.down }}"></div>
+        <div><label>Closing costs (%)</label><input name="closing" type="number" step="0.5" value="{{ uw.used.closing }}"></div>
+      </form>
+      <div id="invOut">{% set i = uw.investor %}
+        {% if i.noi is defined %}
+        <div class="zp-out">
+          <div class="zp-kpi"><div class="k">Cap rate</div><div class="v" data-k="cap_rate_pct">{{ pct(i.cap_rate_pct, 2) }}</div></div>
+          <div class="zp-kpi"><div class="k">Cash flow</div><div class="v" data-k="cash_flow_monthly">{{ money(i.cash_flow_monthly) }}<span style="font-size:0.75rem">/mo</span></div></div>
+          <div class="zp-kpi"><div class="k">Cash-on-cash</div><div class="v" data-k="cash_on_cash_pct">{{ pct(i.cash_on_cash_pct, 1) }}</div></div>
+          <div class="zp-kpi"><div class="k">DSCR</div><div class="v" data-k="dscr">{{ num(i.dscr, 2) }}</div></div>
+          <div class="zp-kpi"><div class="k">Break-even rent</div><div class="v" data-k="break_even_rent_per_unit">{{ money(i.break_even_rent_per_unit) }}</div></div>
+          <div class="zp-kpi"><div class="k">Leverage</div><div class="v" data-k="leverage_spread_pct">{{ chg(i.leverage_spread_pct, 2, " pts") }}</div></div>
+        </div>
+        {% endif %}
+      </div>
+      <div class="zp-scroll" style="margin-top:12px"><table class="zp-t zp-kv" id="invTable"></table></div>
+      <div class="zp-note" id="invMissing"></div>
+    </div>
+
+    <div class="zp-card" id="ownCard">
+      <h2>Owner-occupant</h2>
+      <p class="zp-sub">The full monthly payment, the income lenders want to see, and what owning costs against renting the same home.</p>
+      <form class="zp-form" id="ownForm" onsubmit="return false">
+        <div><label>Down payment (%)</label><input name="o_down" type="number" step="1" value="{{ uw.used.o_down }}"></div>
+        <div><label>Rate (%)</label><input name="o_rate" type="number" step="0.05" value="{{ uw.used.o_rate }}"><div class="zp-note">{{ uw.notes.o_rate }}</div></div>
+        <div><label>Property tax (%)</label><input name="o_tax" type="number" step="0.01" value="{{ uw.used.o_tax }}"><div class="zp-note">{{ uw.notes.o_tax }}</div></div>
+        <div><label>Insurance ($/yr)</label><input name="o_ins" type="number" step="50" value="{{ uw.used.o_ins|round|int if uw.used.o_ins }}"></div>
+        <div><label>HOA ($/mo)</label><input name="o_hoa" type="number" step="25" value="0"></div>
+        <div><label>PMI (%/yr, over 80% LTV)</label><input name="o_pmi" type="number" step="0.05" value="{{ uw.used.o_pmi }}"></div>
+        <div><label>Other debt payments ($/mo)</label><input name="o_debt" type="number" step="50" value="0"></div>
+      </form>
+      {% set o = uw.owner %}
+      <div class="zp-out" id="ownOut">
+        <div class="zp-kpi"><div class="k">Monthly payment</div><div class="v" data-o="monthly_total">{{ money(o.monthly_total) }}</div></div>
+        <div class="zp-kpi"><div class="k">Income needed</div><div class="v" data-o="income_needed">{{ money(o.income_needed) }}</div><div class="n" data-o="income_needed_basis">{{ o.income_needed_basis or "" }} DTI</div></div>
+        <div class="zp-kpi"><div class="k">Payment ÷ ZIP income</div><div class="v" data-o="payment_to_income_pct">{{ pct(o.payment_to_income_pct) }}</div></div>
+        <div class="zp-kpi"><div class="k">Cash to close</div><div class="v" data-o="cash_to_close">{{ money(o.cash_to_close) }}</div></div>
+        <div class="zp-kpi"><div class="k">Owning vs renting</div><div class="v" data-o="own_minus_rent_monthly">{% if o.own_minus_rent_monthly is defined and o.own_minus_rent_monthly is not none %}{{ money(o.own_minus_rent_monthly|abs) }}{% else %}—{% endif %}</div>
+          <div class="n" data-o="own_vs_rent_note">{% if o.own_minus_rent_monthly is defined and o.own_minus_rent_monthly is not none %}{{ "more" if o.own_minus_rent_monthly > 0 else "less" }} a month to own than to rent, before appreciation{% endif %}</div></div>
+      </div>
+      <div class="zp-scroll" style="margin-top:12px"><table class="zp-t zp-kv" id="ownTable"></table></div>
+      <div class="zp-note" style="margin-top:8px">Cost of owning = interest (not principal, which is saving) + PMI + tax + insurance + HOA + 1%/yr upkeep + 4%/yr forgone on the cash to close. No appreciation assumed either way.</div>
+    </div>
+  </div>
+
+  <!-- ── MARKET ───────────────────────────────────────────────── -->
+  <div class="zp-card">
+    <h2>Market activity</h2>
+    <p class="zp-sub">Listings are current (Realtor.com, {{ L.rdc or "—" }}). Sales come only from Redfin, whose public data stopped after May 2026 — shown with that date, never as current.</p>
+    <div class="zp-scroll"><table class="zp-t">
+      <tr><th>Listings · {{ L.rdc }}</th><th>This ZIP</th><th>1-yr change</th><th>{{ r.county }}</th></tr>
+      <tr><td>Active listings{% if r.rdc_thin %}<span class="zp-badge b-thin" title="Fewer than 10 listings.">thin</span>{% endif %}{% if r.rdc_quality_flag == 1 %}<span class="zp-badge b-vol" title="Realtor.com's quality flag is set for this ZIP this month.">volatile</span>{% endif %}</td><td>{{ num(r.rdc_active) }}</td><td>{{ chg(r.rdc_active_yoy_pct) }}</td><td>{{ num(r.cty_rdc_active) }}</td></tr>
+      <tr><td>New listings this month</td><td>{{ num(r.rdc_new) }}</td><td></td><td></td></tr>
+      <tr><td>Pending ÷ active <span class="zp-dim">(above ~0.5 is a fast market)</span></td><td>{{ num(r.rdc_pending_ratio, 2) }}</td><td></td><td>{{ num(r.cty_rdc_pending_ratio, 2) }}</td></tr>
+      <tr><td>Median days on market</td><td>{{ num(r.rdc_dom) }}</td><td>{{ chg(r.rdc_dom_yoy_pct) }}</td><td>{{ num(r.cty_rdc_dom) }}</td></tr>
+      <tr><td>Listings with a price cut</td><td>{{ pct(r.rdc_price_cut_pct) }}</td><td>{{ chg(r.rdc_price_cut_yoy_pp, 1, " pts") }}</td><td>{{ pct(r.cty_rdc_price_cut_pct) }}</td></tr>
+      <tr><td>Median list price</td><td>{{ money(r.rdc_list_price) }}</td><td>{{ chg(r.rdc_list_price_yoy_pct) }}</td><td>{{ money(r.cty_rdc_list_price) }}</td></tr>
+      <tr><td>List price per sq ft</td><td>{{ money(r.rdc_list_ppsf) }}</td><td></td><td></td></tr>
+    </table></div>
+    <div class="zp-scroll" style="margin-top:14px"><table class="zp-t">
+      <tr><th>Sales · Redfin, {{ L.rf_begin }}–{{ L.rf }}{% if L.rf_stale %}<span class="zp-badge b-stale" title="Redfin's public data stopped updating after June 2, 2026; this window is {{ L.rf_age }} months old.">stale</span>{% endif %}</th><th>All homes</th><th>Single-family</th><th>2-4 units</th></tr>
+      <tr><td>Median sale price{% if r.rf_thin %}<span class="zp-badge b-thin" title="Fewer than 10 sales in the window.">thin</span>{% endif %}</td><td>{{ money(r.rf_sale_price) }}</td><td>{{ money(r.rf_sfr_sale_price) }}</td><td>{{ money(r.rf_mf24_sale_price) }}</td></tr>
+      <tr><td>Homes sold (90 days)</td><td>{{ num(r.rf_homes_sold) }}</td><td>{{ num(r.rf_sfr_homes_sold) }}</td><td>{{ num(r.rf_mf24_homes_sold) }}</td></tr>
+      <tr><td>Sale price ÷ list price</td><td>{{ pct(r.rf_sale_to_list_pct) }}</td><td></td><td></td></tr>
+      <tr><td>Sold above list</td><td>{{ pct(r.rf_sold_above_list_pct) }}</td><td></td><td></td></tr>
+      <tr><td>Sale price per sq ft</td><td>{{ money(r.rf_sale_ppsf) }}</td><td></td><td></td></tr>
+      <tr><td>Months of supply</td><td>{{ num(r.rf_months_supply, 1) }}</td><td></td><td></td></tr>
+    </table></div>
+  </div>
+
+  <!-- ── TRENDS ───────────────────────────────────────────────── -->
+  <div class="zp-card">
+    <h2>Value and rent, monthly</h2>
+    <p class="zp-sub">Zillow home value (left) and asking rent (right), one point per month. No forecast: a trend line drawn into the future did no better than "last year repeats" when tested on this data.
+      {% if r.zhvi_peak %}Peak {{ money(r.zhvi_peak) }} in {{ L.zhvi_peak }}; now {{ chg(r.zhvi_from_peak_pct) }} from it.{% endif %}
+      {% if r.zhvi_5y_pct is not none %}5-yr {{ chg(r.zhvi_5y_pct) }}{% endif %}{% if r.zhvi_10y_pct is not none %} · 10-yr {{ chg(r.zhvi_10y_pct) }}{% endif %}</p>
+    {% if page.series.zhvi or page.series.zori %}<div class="zp-chart"><canvas id="trend"></canvas></div>{% else %}<div class="zp-dim">No Zillow series for this ZIP.</div>{% endif %}
+  </div>
+
+  <!-- ── HOUSING & PEOPLE ─────────────────────────────────────── -->
+  <div class="zp-two">
+    <div class="zp-card">
+      <h2>Housing and people</h2>
+      <p class="zp-sub">Census American Community Survey, {{ L.acs }}. ± is the 90% margin of error; a "+" figure is the Census's top code, not a measured median.</p>
+      <table class="zp-t zp-kv">
+        <tr><td>Median household income</td><td>{{ ph.acs_median_income or money(r.acs_median_income) }}{% if r.acs_median_income_moe %} <span class="zp-dim">± {{ money(r.acs_median_income_moe) }}</span>{% endif %}</td></tr>
+        <tr><td>… owners / renters</td><td>{{ ph.acs_owner_income or money(r.acs_owner_income) }} / {{ ph.acs_renter_income or money(r.acs_renter_income) }}</td></tr>
+        <tr><td>Median owner home value</td><td>{{ ph.acs_median_value or money(r.acs_median_value) }}{% if r.acs_median_value_moe %} <span class="zp-dim">± {{ money(r.acs_median_value_moe) }}</span>{% endif %}</td></tr>
+        <tr><td>Median property taxes paid</td><td>{{ ph.acs_median_taxes or money(r.acs_median_taxes) }}</td></tr>
+        <tr><td>Effective tax rate (ZIP)</td><td>{% if r.tax_rate_zip is not none %}{{ "{:.2f}".format(r.tax_rate_zip) }}%{% if r.tax_rate_zip_basis == "top-coded" %}<span class="zp-badge b-est" title="Taxes are top-coded at $10,000+ here: the county's measured median, floored at the rate that bound implies.">estimate</span>{% endif %}{% else %}—{% endif %}</td></tr>
+        <tr><td>Median gross rent (all tenants)</td><td>{{ ph.acs_gross_rent or money(r.acs_gross_rent) }}</td></tr>
+        <tr><td>Rent as % of renter income</td><td>{{ ph.acs_rent_pct_income or pct(r.acs_rent_pct_income) }}</td></tr>
+        <tr><td>Renters paying 30%+ of income</td><td>{{ pct(r.pct_rent_burdened) }}</td></tr>
+        <tr><td>Owner costs, with a mortgage</td><td>{{ ph.acs_owner_cost_mortgaged or money(r.acs_owner_cost_mortgaged) }}/mo</td></tr>
+        <tr><td>Renter-occupied</td><td>{{ pct(r.pct_renter) }}</td></tr>
+        <tr><td>Rental vacancy / owner vacancy</td><td>{{ pct(r.rental_vacancy_pct) }} / {{ pct(r.owner_vacancy_pct) }}</td></tr>
+        <tr><td>Single-family detached / 2-4 units / 5+</td><td>{{ pct(r.pct_sfr_detached, 0) }} / {{ pct(r.pct_2_4_units, 0) }} / {{ pct(r.pct_5plus_units, 0) }}</td></tr>
+        <tr><td>Median year built</td><td>{{ ph.acs_year_built or (r.acs_year_built|int if r.acs_year_built else "—") }}</td></tr>
+        <tr><td>Population / households</td><td>{{ num(r.population) }} / {{ num(r.households) }}</td></tr>
+        <tr><td>Rents by bedroom: HUD{% if r.hud_rent_tier %} ({{ "ZIP" if r.hud_rent_tier == "safmr" else "county" }}){% endif %}</td><td>{% for b in range(5) %}{{ money(r["hud_rent_br" ~ b]) }}{{ " · " if not loop.last }}{% endfor %}</td></tr>
+        <tr><td>… Census (0-5 bed)</td><td>{% for b in range(6) %}{{ (ph.get("acs_rent_br" ~ b)) or money(r["acs_rent_br" ~ b]) }}{{ " · " if not loop.last }}{% endfor %}</td></tr>
+      </table>
+    </div>
+
+    <div class="zp-card">
+      <h2>Risk and climate</h2>
+      <p class="zp-sub">FEMA National Risk Index: modeled expected annual damage to buildings, dollars per $100,000 of building value, spread from census tracts to the ZIP by land area. National median in grey.</p>
+      {% set hm = page.hazard_medians %}
+      <table class="zp-t">
+        <tr><th>Hazard</th><th>This ZIP</th><th>US median</th></tr>
+        <tr><td>Flood (inland + coastal)</td><td>{{ money(r.haz_flood, 2 if (r.haz_flood is not none and r.haz_flood < 10) else 0) }}</td><td class="zp-dim">{{ money(hm.flood, 2 if (hm.flood is defined and hm.flood < 10) else 0) }}</td></tr>
+        <tr><td>Wildfire</td><td>{{ money(r.haz_wildfire, 2 if (r.haz_wildfire is not none and r.haz_wildfire < 10) else 0) }}</td><td class="zp-dim">{{ money(hm.wildfire, 2 if (hm.wildfire is defined and hm.wildfire < 10) else 0) }}</td></tr>
+        <tr><td>Hurricane + tornado</td><td>{{ money(r.haz_wind, 2 if (r.haz_wind is not none and r.haz_wind < 10) else 0) }}</td><td class="zp-dim">{{ money(hm.wind, 2 if (hm.wind is defined and hm.wind < 10) else 0) }}</td></tr>
+        <tr><td>Earthquake</td><td>{{ money(r.haz_quake, 2 if (r.haz_quake is not none and r.haz_quake < 10) else 0) }}</td><td class="zp-dim">{{ money(hm.quake, 2 if (hm.quake is defined and hm.quake < 10) else 0) }}</td></tr>
+        <tr class="total"><td>Total per $100k / yr</td><td>{{ money(r.haz_total, 0) }}</td><td class="zp-dim">{{ money(hm.total) if hm.total is defined else "" }}</td></tr>
+      </table>
+      <p class="zp-sub" style="margin-top:14px">NOAA 1991-2020 normals at the nearest qualifying station{% if r.clim_station_km is not none %}, {{ num(r.clim_station_km, 0) }} km away{% endif %} (no elevation correction).</p>
+      <table class="zp-t zp-kv">
+        <tr><td>Winter average low / summer average high</td><td>{{ num(r.clim_winter_low, 0) }}°F / {{ num(r.clim_summer_high, 0) }}°F</td></tr>
+        <tr><td>Days 90°F+ / nights 32°F or below</td><td>{{ num(r.clim_days_90, 0) }} / {{ num(r.clim_nights_32, 0) }}</td></tr>
+        <tr><td>Snowfall</td><td>{{ num(r.clim_snow_in, 0) }} in</td></tr>
+      </table>
+      {% if r.haz_total is none and r.clim_winter_low is none %}<div class="zp-note">FEMA and NOAA figures have not been built for this ZIP yet.</div>{% endif %}
+    </div>
+  </div>
+
+  <!-- ── COMPARISON ───────────────────────────────────────────── -->
+  <div class="zp-card">
+    <h2>Against its county, state and the US</h2>
+    <p class="zp-sub">Medians across ZIPs (n = ZIPs with a figure). Listing figures leave thin ZIPs out. "Rank in {{ r.state }}" is the share of the state's ZIPs at or below this one.</p>
+    <div class="zp-scroll"><table class="zp-t">
+      <tr><th>Metric</th><th>This ZIP</th><th>{{ r.county }}</th><th>{{ r.state }}</th><th>US</th><th>Rank in {{ r.state }}</th></tr>
+      {% for c in page.compare %}
+      <tr><td>{{ c.label }}</td><td><strong>{{ fmtv(c.zip, c.fmt) }}</strong></td>
+        <td>{{ fmtv(c.county[0], c.fmt) }} <span class="zp-dim zp-n">n={{ c.county[1] }}</span></td>
+        <td>{{ fmtv(c.state[0], c.fmt) }}</td><td>{{ fmtv(c.us[0], c.fmt) }}</td>
+        <td>{% if c.state_pct_rank is not none %}{{ c.state_pct_rank }}%{% else %}—{% endif %}</td></tr>
+      {% endfor %}
+    </table></div>
+  </div>
+
+  <div class="zp-asof" style="margin-top:18px">
+    Sources: Zillow Research (ZHVI, ZORI); Realtor.com Economic Research (listings); Redfin Data Center (sales, through {{ L.rf or "—" }});
+    U.S. Census Bureau ACS {{ L.acs }}, 2020 ZCTA Gazetteer and ZCTA-county file; HUD Fair Market Rents; FEMA National Risk Index;
+    NOAA climate normals; Freddie Mac PMMS. Built {{ page.meta.built_at }}. Not financial advice — verify taxes, insurance, HOA and rent for a specific property.
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if page %}
+<script>
+(function () {
+  const ZIP = {{ page.row.zip|tojson }};
+  const SERIES = {{ page.series|tojson }};
+  const fmt$ = v => v == null ? "—" : (v < 0 ? "−$" : "$") + Math.abs(Math.round(v)).toLocaleString();
+  const fmtP = (v, d = 1) => v == null ? "—" : v.toFixed(d) + "%";
+  const LINES = [["Gross scheduled rent", "gross_rent_annual"], ["Vacancy", "vacancy_loss", -1],
+                 ["Effective income", "effective_gross_income"]];
+  const EXP = [["Property tax", "property_tax"], ["Insurance", "insurance"], ["HOA", "hoa"],
+               ["Utilities", "utilities"], ["Management", "management"], ["Repairs", "maintenance"],
+               ["CapEx reserve", "capex_reserve"]];
+
+  function invTable(i) {
+    if (!i || i.gross_rent_annual === undefined) return "";
+    let h = "<tr><th>Annual</th><th>$</th></tr>";
+    LINES.forEach(([l, k, s]) => h += `<tr><td>${l}</td><td>${s ? "−" : ""}${fmt$(i[k])}</td></tr>`);
+    if (i.expenses) EXP.forEach(([l, k]) => h += `<tr><td>&nbsp;&nbsp;${l}</td><td>−${fmt$(i.expenses[k])}</td></tr>`);
+    if (i.noi !== undefined) h += `<tr class="total"><td>Net operating income</td><td>${fmt$(i.noi)}</td></tr>`;
+    if (i.annual_debt_service !== undefined) {
+      h += `<tr><td>Debt service (${fmt$(i.monthly_pi)}/mo on ${fmt$(i.loan_amount)})</td><td>−${fmt$(i.annual_debt_service)}</td></tr>`;
+      h += `<tr class="total"><td>Cash flow</td><td>${fmt$(i.cash_flow_annual)}</td></tr>`;
+      h += `<tr><td>Cash invested (down + closing)</td><td>${fmt$(i.cash_invested)}</td></tr>`;
+      h += `<tr><td>Expense ratio · GRM · 1% rule</td><td>${fmtP(i.expense_ratio_pct)} · ${i.grm ?? "—"} · ${i.one_percent_rule ? "meets" : "misses"}</td></tr>`;
+      const beo = i.break_even_occupancy_pct;
+      h += `<tr><td>Break-even occupancy · mortgage constant</td><td>${beo != null && beo > 100 ? "over 100% (rent can't cover costs)" : fmtP(beo)} · ${fmtP(i.mortgage_constant_pct, 2)}</td></tr>`;
+    }
+    return h;
+  }
+  function ownTable(o) {
+    if (!o || !o.monthly) return "";
+    const m = o.monthly;
+    return "<tr><th>Monthly</th><th>$</th></tr>" +
+      [["Principal & interest", m.principal_interest], ["PMI", m.pmi], ["Property tax", m.property_tax],
+       ["Insurance", m.insurance], ["HOA", m.hoa]].map(([l, v]) => `<tr><td>${l}</td><td>${fmt$(v)}</td></tr>`).join("") +
+      `<tr class="total"><td>Total payment</td><td>${fmt$(o.monthly_total)}</td></tr>` +
+      `<tr><td>Cost of owning (economic)</td><td>${fmt$(o.cost_of_owning_monthly)}</td></tr>` +
+      `<tr><td>Rent for the same home</td><td>${fmt$(o.market_rent)}</td></tr>`;
+  }
+  function paint(d) {
+    const i = d.investor || {}, o = d.owner || {};
+    const set = (sel, v) => { const el = document.querySelector(sel); if (el) el.innerHTML = v; };
+    set('[data-k="cap_rate_pct"]', fmtP(i.cap_rate_pct, 2));
+    set('[data-k="cash_flow_monthly"]', fmt$(i.cash_flow_monthly) + '<span style="font-size:0.75rem">/mo</span>');
+    set('[data-k="cash_on_cash_pct"]', fmtP(i.cash_on_cash_pct, 1));
+    set('[data-k="dscr"]', i.dscr == null ? "—" : i.dscr.toFixed(2));
+    set('[data-k="break_even_rent_per_unit"]', fmt$(i.break_even_rent_per_unit));
+    const lev = i.leverage_spread_pct;
+    set('[data-k="leverage_spread_pct"]', lev == null ? "—" :
+        `<span class="${lev > 0 ? "zp-up" : "zp-down"}">${lev > 0 ? "+" : ""}${lev.toFixed(2)} pts</span>`);
+    set("#invTable", invTable(i));
+    set("#invMissing", (i.missing || []).length ? "Not computed — missing: " + i.missing.join(", ") : "");
+    set('[data-o="monthly_total"]', fmt$(o.monthly_total));
+    set('[data-o="income_needed"]', fmt$(o.income_needed));
+    set('[data-o="income_needed_basis"]', (o.income_needed_basis || "") + " DTI");
+    set('[data-o="payment_to_income_pct"]', fmtP(o.payment_to_income_pct));
+    set('[data-o="cash_to_close"]', fmt$(o.cash_to_close));
+    const d2 = o.own_minus_rent_monthly;
+    set('[data-o="own_minus_rent_monthly"]', d2 == null ? "—" : fmt$(Math.abs(d2)));
+    set('[data-o="own_vs_rent_note"]', d2 == null ? "" : (d2 > 0 ? "more" : "less") + " a month to own than to rent, before appreciation");
+    set("#ownTable", ownTable(o));
+    if (d.chosen) set("#pairNote", d.chosen.price_note + " · " + d.chosen.rent_note);
+  }
+  let timer = null, pairingChanged = false;
+  function run() {
+    const q = new URLSearchParams();
+    for (const f of [document.getElementById("uwForm"), document.getElementById("ownForm")])
+      for (const el of f.elements) if (el.name && el.value !== "") q.set(el.name, el.value);
+    if (pairingChanged) { q.delete("price"); q.delete("rent"); }
+    fetch(`/api/zip/${ZIP}/underwrite?` + q.toString()).then(r => r.json()).then(d => {
+      if (pairingChanged && d.used) {
+        const f = document.getElementById("uwForm");
+        f.price.value = d.used.price == null ? "" : Math.round(d.used.price);
+        f.rent.value = d.used.rent == null ? "" : Math.round(d.used.rent);
+        pairingChanged = false;
+      }
+      paint(d);
+    }).catch(() => {});
+  }
+  function schedule() { clearTimeout(timer); timer = setTimeout(run, 250); }
+  document.querySelectorAll("#uwForm input, #uwForm select, #ownForm input").forEach(el =>
+    el.addEventListener("input", e => { if (e.target.name === "pairing") pairingChanged = true; schedule(); }));
+  run();
+
+  // ── trend chart: one point per month, real dates on the axis ──
+  const cv = document.getElementById("trend");
+  if (cv && window.Chart) {
+    const add = (ym, n) => { const y = +ym.slice(0, 4), m = +ym.slice(5, 7) - 1 + n; return `${y + Math.floor(m / 12)}-${String(m % 12 + 1).padStart(2, "0")}`; };
+    const months = new Set();
+    const toMap = s => { const out = {}; if (!s) return out; s.values.forEach((v, k) => { const ym = add(s.start, k); out[ym] = v; months.add(ym); }); return out; };
+    const zh = toMap(SERIES.zhvi), zo = toMap(SERIES.zori);
+    const labels = [...months].sort().filter(m => m >= (SERIES.zhvi ? SERIES.zhvi.start : "0"));
+    new Chart(cv, {
+      type: "line",
+      data: { labels, datasets: [
+        { label: "Home value (Zillow)", data: labels.map(m => zh[m] ?? null), yAxisID: "y", borderColor: "#5b4de0", pointRadius: 0, borderWidth: 2, spanGaps: false },
+        { label: "Asking rent (Zillow)", data: labels.map(m => zo[m] ?? null), yAxisID: "y2", borderColor: "#3fb07a", pointRadius: 0, borderWidth: 2, spanGaps: false },
+      ] },
+      options: { maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+        scales: {
+          x: { ticks: { autoSkip: false, maxRotation: 0, callback: (v, i) => labels[i].endsWith("-01") ? labels[i].slice(0, 4) : "" }, grid: { display: false } },
+          y: { position: "left", ticks: { callback: v => "$" + (v >= 1e6 ? (v / 1e6).toFixed(2) + "M" : Math.round(v / 1e3) + "k") } },
+          y2: { position: "right", grid: { display: false }, ticks: { callback: v => "$" + Math.round(v).toLocaleString() } } },
+        plugins: { tooltip: { callbacks: { label: c => `${c.dataset.label}: ${fmt$(c.parsed.y)}` } } } }
+    });
+  }
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -5224,99 +5224,40 @@ async def api_search(q: str = "", limit: int = 8):
 # the popup's "View full report →" button.
 
 @app.get("/zip/{zip}")
-async def zip_detail(request: Request, zip: str):
-    zip = zip.strip()
-    conn = _open_zips_db()
-    if conn is None:
+async def zip_page(request: Request, zip: str):
+    """One ZIP for an investor or an owner-occupant: what it costs, what it
+    rents for, what the market is doing and when, what could go wrong.
+
+    Reads data/zip_profile.db (scripts/build_zip_profile.py). No score and
+    no forecast — measurements with their sources and months, and an
+    underwriting card whose arithmetic runs in underwrite.py through
+    /api/zip/{zip}/underwrite."""
+    import zip_page as ZP
+    from data_providers import MORTGAGE_30Y_RATE, MORTGAGE_30Y_OBS_DATE
+    z = zip.strip()
+    if not (len(z) == 5 and z.isdigit()):
         return RedirectResponse(url="/map", status_code=302)
-    try:
-        # Detect schema version once; new columns are optional so older
-        # zips.db (pre-P143) still renders the page (with chart hidden).
-        existing = {r["name"] for r in conn.execute("PRAGMA table_info(zips)").fetchall()}
-        # Pull the full row for this ZIP, plus the county + state aggregates
-        # for the comparison strip. SELECT * because most fields go straight
-        # to the template and listing them all is noisy.
-        row = conn.execute("SELECT * FROM zips WHERE zip = ?", (zip,)).fetchone()
-        if not row:
-            conn.close()
-            return RedirectResponse(url="/map", status_code=302)
+    page = ZP.build_page(z, MORTGAGE_30Y_RATE, MORTGAGE_30Y_OBS_DATE)
+    if page is None:
+        return templates.TemplateResponse("zip_profile.html", {
+            "request": request, "missing": z, "page": None}, status_code=404)
+    return templates.TemplateResponse("zip_profile.html", {
+        "request": request, "missing": None, "page": page})
 
-        # Aggregates (median across the relevant pool). Median is more
-        # robust than mean against single-ZIP outliers like Beverly Hills.
-        def _median_for(where_clause: str, params: tuple) -> dict:
-            agg = conn.execute(
-                f"""SELECT
-                    median_home_value, home_value_yoy, cap_rate_pct,
-                    median_household_income
-                FROM zips WHERE {where_clause} ORDER BY zip""",
-                params,
-            ).fetchall()
-            if not agg:
-                return {}
-            def _med(key):
-                vals = [r[key] for r in agg if r[key] is not None]
-                if not vals:
-                    return None
-                vals.sort()
-                n = len(vals)
-                return vals[n // 2] if n % 2 else (vals[n // 2 - 1] + vals[n // 2]) / 2
-            return {
-                "n": len(agg),
-                "median_home_value": _med("median_home_value"),
-                "home_value_yoy": _med("home_value_yoy"),
-                "cap_rate_pct": _med("cap_rate_pct"),
-                "median_household_income": _med("median_household_income"),
-            }
 
-        county_agg = _median_for(
-            "county = ? AND state = ?",
-            (row["county"] if "county" in existing else "", row["state"]),
-        ) if (row["county"] if "county" in existing else "") else {}
-        state_agg = _median_for("state = ?", (row["state"],))
-    finally:
-        conn.close()
-
-    # Decode history JSON for the chart. Empty list when missing — the
-    # template hides the chart in that case.
-    import json as _json
-    history_values = []
-    try:
-        if "history_zhvi" in existing and row["history_zhvi"]:
-            history_values = _json.loads(row["history_zhvi"]) or []
-    except (ValueError, TypeError):
-        history_values = []
-
-    # Build the forecast trajectory the chart uses for the band: linear
-    # interpolation between the four horizons (3/6/12/60 months).
-    # Honest about the model's coarseness — we only forecast at those
-    # four points, not every month — but it visualizes the trend.
-    forecast_points: list[dict] = []
-    if "forecast_60mo_value" in existing and row["forecast_60mo_value"]:
-        last = history_values[-1] if history_values else (row["median_home_value"] or 0)
-        for h, v in [
-            (3,  row["forecast_3mo_value"] if "forecast_3mo_value" in existing else None),
-            (6,  row["forecast_6mo_value"] if "forecast_6mo_value" in existing else None),
-            (12, row["forecast_home_value_12mo"] if "forecast_home_value_12mo" in existing else None),
-            (60, row["forecast_60mo_value"] if "forecast_60mo_value" in existing else None),
-        ]:
-            if v is not None:
-                forecast_points.append({"h": h, "value": v})
-
-    return templates.TemplateResponse("zip_detail.html", {
-        "request": request,
-        "zip": dict(row),
-        "history_values": history_values,
-        "history_as_of": row["as_of"] if "as_of" in row.keys() else "",
-        "forecast_points": forecast_points,
-        "county_agg": county_agg,
-        "state_agg": state_agg,
-        "schema_has": {
-            "forecast": "forecast_60mo_value" in existing,
-            "history": "history_zhvi" in existing,
-            "neighborhood": "neighborhood" in existing,
-            "county": "county" in existing,
-        },
-    })
+@app.get("/api/zip/{zip}/underwrite")
+async def api_zip_underwrite(request: Request, zip: str):
+    """The underwriting card's arithmetic: this ZIP's defaults, overridden
+    by any query parameter (price, rent, units, tax, ins, hoa, util, vac,
+    mgmt, maint, capex, rate, down, closing, pairing, o_down, o_rate,
+    o_tax, o_ins, o_hoa, o_pmi, o_debt)."""
+    import zip_page as ZP
+    from data_providers import MORTGAGE_30Y_RATE
+    row = ZP.load_row(zip.strip())
+    if row is None:
+        return JSONResponse({"error": "unknown ZIP"}, status_code=404)
+    res = ZP.underwrite_zip(row, dict(request.query_params), MORTGAGE_30Y_RATE)
+    return JSONResponse({k: res[k] for k in ("used", "investor", "owner", "chosen")})
 
 
 @app.get("/api/finance/screener")

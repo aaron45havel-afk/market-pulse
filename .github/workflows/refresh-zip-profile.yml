@@ -1,4 +1,4 @@
-# Builds market-pulse-v21/data/zip_profile.db and data/zip_series.json.gz —
+# Builds market-pulse-v21/data/zip_profile.db and data/zip_series.db —
 # the dataset behind the rebuilt map and ZIP page (scripts/build_zip_profile.py).
 # Runs on the 3rd, after refresh-national-zips (1st) and refresh-rents (2nd),
 # because it carries HUD bedroom rents from zips.db rather than calling HUD.
@@ -38,6 +38,7 @@ jobs:
           python tests/test_acs_bulk.py
           python tests/test_zip_profile.py
           python tests/test_zip_market.py
+          python tests/test_zip_page.py
           python tests/test_underwrite.py
 
       - name: Build the ZIP profile
@@ -49,7 +50,7 @@ jobs:
           cd "$GITHUB_WORKSPACE"
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add market-pulse-v21/data/zip_profile.db market-pulse-v21/data/zip_series.json.gz
+          git add market-pulse-v21/data/zip_profile.db market-pulse-v21/data/zip_series.db
           if git diff --staged --quiet; then
             echo "No change to the ZIP profile — nothing to commit."
             exit 0
