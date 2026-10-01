@@ -1,0 +1,95 @@
+# TEMPORARY — builds the ZIP profile on this branch from live sources and
+# probes Redfin's ZIP-level market tracker for phase 2. Deleted before merge.
+name: Branch run (ZIP profile + Redfin probe)
+
+on:
+  push:
+    branches: [claude/legal-rep-invoice-tracking-9j1i9r]
+    paths: ['.github/workflows/branch-zip-profile-run.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: market-pulse-v21
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: |
+          python tests/test_acs_bulk.py
+          python tests/test_zip_profile.py
+          python tests/test_underwrite.py
+      - name: Build the ZIP profile
+        run: python scripts/build_zip_profile.py
+      - name: Report what was built
+        run: |
+          python - <<'PY'
+          import sqlite3, json
+          c = sqlite3.connect("data/zip_profile.db")
+          print(dict(c.execute("select key, value from meta").fetchall()))
+          for q in ("select state, count(*) from zip_profile group by state order by 2 desc limit 5",
+                    "select count(*), sum(zhvi is null), sum(acs_flags is not null), sum(tax_rate_acs is null) from zip_profile",
+                    "select zip, zhvi, zhvi_month, zori, tax_rate_acs, tax_rate_investor, tax_rate_owner, acs_median_income, acs_flags from zip_profile where zip in ('94105','20854','75201','10009','33139')"):
+              print(q[:60], c.execute(q).fetchall())
+          PY
+          ls -la data/zip_profile.db data/zip_series.json.gz
+      - name: Commit to the branch
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add market-pulse-v21/data/zip_profile.db market-pulse-v21/data/zip_series.json.gz
+          git diff --staged --quiet && exit 0
+          git commit -m "chore: ZIP profile (branch data run)"
+          for attempt in 1 2 3 4; do
+            git pull --rebase -X theirs origin claude/legal-rep-invoice-tracking-9j1i9r && \
+              git push origin HEAD:claude/legal-rep-invoice-tracking-9j1i9r && break
+            sleep $((attempt * 5))
+          done
+
+  redfin-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Probe Redfin's ZIP market tracker
+        run: |
+          python3 - <<'PY'
+          import csv, gzip, io, time, urllib.request, collections
+          URL = ("https://redfin-public-data.s3.us-west-2.amazonaws.com/"
+                 "redfin_market_tracker/zip_code_market_tracker.tsv000.gz")
+          head = urllib.request.urlopen(urllib.request.Request(URL, method="HEAD"), timeout=60)
+          print("status", head.status, "bytes", head.headers.get("Content-Length"),
+                "modified", head.headers.get("Last-Modified"))
+          t0 = time.time()
+          r = urllib.request.urlopen(URL, timeout=300)
+          rd = csv.reader(io.TextIOWrapper(gzip.GzipFile(fileobj=r), encoding="utf-8", newline=""),
+                          delimiter="\t")
+          header = next(rd)
+          print("columns", len(header), header)
+          idx = {h.lower(): i for i, h in enumerate(header)}
+          n, latest, types, durs, zips = 0, "", collections.Counter(), collections.Counter(), set()
+          sample = None
+          for row in rd:
+              n += 1
+              pe = row[idx["period_end"]] if "period_end" in idx else ""
+              latest = max(latest, pe)
+              types[row[idx["property_type"]]] += 1
+              durs[row[idx["period_duration"]]] += 1
+              if n == 1000:
+                  sample = dict(zip(header, row))
+              if time.time() - t0 > 1800:
+                  print("stopped at 30 min")
+                  break
+          print("rows", n, "seconds", round(time.time() - t0), "latest period_end", latest)
+          print("property_type", types.most_common(8))
+          print("period_duration", durs.most_common(5))
+          print("sample row", sample)
+          PY
