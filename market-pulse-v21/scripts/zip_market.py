@@ -158,8 +158,17 @@ def parse_redfin(lines) -> dict:
         if cur and cur[0] >= end:
             continue
         best[(z, ptype)] = (end, row[ix["PERIOD_BEGIN"]].strip(), row)
+    # ONLY THE FILE'S FINAL WINDOW. A ZIP whose newest row is older is one
+    # Redfin stopped reporting — its "latest" figures went back to 2012 for
+    # 3,302 ZIPs on the 2026-06 file. Every reporting ZIP shares the final
+    # period, so anything short of it is a ZIP the tracker no longer covers.
+    final = {}
+    for (_z, ptype), (end, _b, _r) in best.items():
+        final[ptype] = max(final.get(ptype, ""), end)
     out: dict = {}
     for (z, ptype), (end, begin, row) in best.items():
+        if end < final[ptype]:
+            continue
         rec = out.setdefault(z, {})
         vals = {dst: _scaled(row[ix[src]], scale)
                 for src, dst, scale in REDFIN_FIELDS if src in ix}

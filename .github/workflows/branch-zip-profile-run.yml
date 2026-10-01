@@ -1,5 +1,6 @@
 # TEMPORARY — phase 2: builds the ZIP profile with market activity on this
 # branch from live sources. Deleted before merge.
+# Run 2: Redfin limited to windows ending on the file's final period.
 name: Branch run (ZIP profile + market)
 
 on:

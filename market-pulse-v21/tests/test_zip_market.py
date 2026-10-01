@@ -109,6 +109,14 @@ check(v["sfr_sale_price"] == 480000 and v["mf24_sale_price"] == 620000 and v["mf
 check("condo_sale_price" not in v, "property types not asked for are ignored")
 check(v["thin"] is False and red["01001"]["thin"] is True,
       "eight sales in ninety days is flagged thin; ZIPs zero-filled from 'Zip Code: 1001'")
+gone = ZM.parse_redfin(rf(
+    ["2026-03-01", "2026-05-31", "90", "zip code", "Zip Code: 89178", "All Residential",
+     "455000", "0.031", "215", "245.1", "0.9896", "0.214", "NA", "41"],
+    ["2012-02-01", "2012-04-30", "90", "zip code", "Zip Code: 59001", "All Residential",
+     "90000", "0.1", "12", "80.0", "0.95", "0.1", "NA", "120"]))
+check("59001" not in gone and "89178" in gone,
+      "A ZIP REDFIN STOPPED REPORTING IN 2012 HAS NO 'LATEST' FIGURES: only windows "
+      "ending on the file's final period count")
 try:
     ZM.parse_redfin(["A\tB", "1\t2"])
     check(False, "a changed Redfin header must fail loudly")
