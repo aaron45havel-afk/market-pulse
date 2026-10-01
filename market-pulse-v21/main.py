@@ -548,8 +548,12 @@ async def headroom_page(request: Request, mode: str = "brrrr", scope: str = "mod
     (BRRRR or flip) vs what fixers actually cost there. See headroom.py.
     All numeric params parsed tolerantly."""
     import headroom as HR
+    import screen_history as SH
     from data_providers import MORTGAGE_30Y_RATE
     mode = mode if mode in ("brrrr", "flip", "hh") else "brrrr"
+    # The research tables this page reads, dated, stale ones flagged.
+    freshness = [f for f in SH.layer_freshness()
+                 if f["layer"] in HR.LAYERS + (("crime",) if mode == "hh" else ())]
     scope = scope if scope in ("cosmetic", "moderate", "gut") else "moderate"
     level = level if level in ("low", "mid", "high") else "low"
     target_n = max(1.0, min(60.0, _qnum(target, 14)))
@@ -581,6 +585,8 @@ async def headroom_page(request: Request, mode: str = "brrrr", scope: str = "mod
             "crime_cov": SF.coverage(), "us_violent": SF.US_VIOLENT,
             "calib": HR.calibration(scope), "fin": HR.financing_terms(rate_n),
             "profit_floor": HR.PROFIT_FLOOR, "hold_years": HR.HOLD_YEARS,
+            "freshness": freshness, "vacancy": HR.VACANCY, "maint": HR.MAINTENANCE_PCT,
+            "unit_factor": HR.HH.UNIT_PRICE_FACTOR.get(units_n),
         })
     board = await asyncio.to_thread(
         HR.build_board, mode=mode, scope=scope, level=level, target=target_n,
@@ -604,6 +610,7 @@ async def headroom_page(request: Request, mode: str = "brrrr", scope: str = "mod
         "metro_name": next((r["name"] for r in board if r["code"] == metro), metro),
         "calib": calib, "fin": fin,
         "profit_floor": HR.PROFIT_FLOOR, "hold_years": HR.HOLD_YEARS,
+        "freshness": freshness,
     })
 
 

@@ -50,8 +50,12 @@
     <div class="hr-head">
         <h1>📐 Headroom — the remodel deal engine</h1>
         <div class="subtitle">Which market is primed for remodel value-add right now: the <b>max purchase $/sqft</b> that still compounds
-            <b>{{ '%.0f'|format(target) }}% after tax</b> on your cash at today's debt costs, versus what fixers actually trade for.
-            Headroom &gt; 0 → pay list and clear the bar. Headroom &lt; 0 → the number IS your offer discipline: buy that far below the typical fixer ask.</div>
+            <b>{{ '%.0f'|format(target) }}% after tax</b> on your cash at today's debt costs, versus a <b>modelled</b> fixer price — the market
+            median × {{ '%.2f'|format(calib.x) }}, one national discount, not sales observed in that market.
+            Headroom &gt; 0 → the modelled price clears the bar. Headroom &lt; 0 → buy that far below it.</div>
+        {% if freshness %}<div class="hr-note" style="margin-top:0.35rem">Research tables:
+            {% for f in freshness %}{{ f.layer }} {{ f.as_of or '—' }}{% if f.stale %} <b style="color:#dc2626">STALE</b>{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}.
+            {% if freshness|selectattr("stale")|list %}<b style="color:#dc2626">Past their refresh window — re-run the research before trusting the figures built on them.</b>{% endif %}</div>{% endif %}
     </div>
 
     <form class="hr-controls" method="get" action="/headroom">
@@ -96,7 +100,7 @@
                 <option value="0.05" {% if xadj >= 0.0375 %}selected{% endif %}>Bidding wars (+0.05)</option>
             </select></div>
         <div class="field"><label>Universe</label><select name="universe">
-            <option value="all" {% if universe != 'metros' %}selected{% endif %}>All 107 markets</option>
+            <option value="all" {% if universe != 'metros' %}selected{% endif %}>All markets</option>
             <option value="metros" {% if universe == 'metros' %}selected{% endif %}>Metros only</option>
         </select></div>
         <button class="hr-apply" type="submit">Run</button>
@@ -105,13 +109,15 @@
     {% if mode == 'hh' and hh_board is defined %}
     <div class="hr-sentence">
         <b>Owner-occupant house-hack, by ZIP{% if hstate %} — {{ hstate }}{% endif %}:</b> FHA 203(k) at {{ '%.2f'|format(rate) }}%, 3.5% down on (price + {{ scope }} remodel), you live in one unit and rent {{ units - 1 }}.
-        <b>Max offer</b> = the price where the other units' rent covers your ENTIRE PITI (live-free){% if units >= 3 %} — which for {{ units }} units also satisfies FHA's self-sufficiency funding test (75% × all rents ≥ PITI); no DSCR anywhere, that's an investor-loan gate you don't face{% endif %}.
-        Rows at your ${{ '{:,.0f}'.format(maxprice) }} budget cap with a green surplus cash-flow ON TOP of free housing.
+        <b>Max offer</b> = the lowest of: what the building is likely worth (the ZIP's single-family median × {{ unit_factor }} for {{ units }} units — /multifamily's estimate, not a listing);
+        the price where the other units' rent, less {{ '%.0f'|format(vacancy * 100) }}% vacancy and repairs at {{ '%.1f'|format(maint * 100) }}% a year of price + remodel, covers your ENTIRE PITI (live-free){% if units >= 3 %};
+        FHA's self-sufficiency funding test (75% × all rents ≥ PITI){% endif %}; and your ${{ '{:,.0f}'.format(maxprice) }} budget. <i>Set by</i> names which one.
+        Surplus is what's left after vacancy, repairs and PITI.
     </div>
     <div class="hr-card">
         <div class="hr-scroll">
         <table class="hr-table">
-            <thead><tr><th>#</th><th>ZIP</th><th>Place</th><th>Safety (violent /100k)</th><th>Max offer</th><th>Surplus /mo</th><th>PITI @offer</th><th>{{ units - 1 }} rents</th><th>Rehab</th><th>Cash to close</th><th>Median</th><th>Rent/unit</th><th>RTV</th><th>Competition</th></tr></thead>
+            <thead><tr><th>#</th><th>ZIP</th><th>Place</th><th>Safety (violent /100k)</th><th>Max offer</th><th>Set by</th><th>Est. value</th><th>Surplus /mo</th><th>PITI @offer</th><th>{{ units - 1 }} rents</th><th>Rehab</th><th>Cash to close</th><th>Median</th><th>Rent/unit</th><th>RTV</th><th>Competition</th></tr></thead>
             <tbody>
             {% for z in hh_board %}
             <tr>
@@ -126,14 +132,16 @@
                     {% elif sf.tier == 'high' %}<span class="hr-chip out">HIGH</span>
                     {% else %}<span class="hr-chip nopath" title="{{ sf.note }}">UNVERIFIED</span>{% endif %}
                     {% if sf.violent %}<span class="hr-note" title="{{ sf.source }} ({{ sf.year }}){% if sf.confidence == 'low' %} — small-town sample, noisy{% endif %}">{{ sf.violent }}{% if sf.vs_us %} · {{ sf.vs_us }}×US{% endif %}{% if sf.confidence == 'low' %} ?{% endif %}</span>{% endif %}</td>
-                <td class="hr-maxpsf">${{ '{:,.0f}'.format(z.max_offer) }}{% if z.capped_at_budget %}<span class="hr-note" title="still cash-flows at your full budget — the ZIP supports more">+</span>{% endif %}</td>
+                <td class="hr-maxpsf">${{ '{:,.0f}'.format(z.max_offer) }}</td>
+                <td class="hr-note">{{ z.binding_label }}</td>
+                <td title="{{ z.est_basis }}">${{ '{:,.0f}'.format(z.est_value) }}</td>
                 <td style="color:{{ 'var(--mint-ink, #16a34a)' if z.monthly_surplus >= 0 else '#dc2626' }}">{% if z.monthly_surplus >= 0 %}+{% endif %}${{ '{:,.0f}'.format(z.monthly_surplus) }}</td>
                 <td>${{ '{:,.0f}'.format(z.piti) }}</td>
                 <td>${{ '{:,.0f}'.format(z.rent_offset) }}</td>
                 <td>${{ '{:,.0f}'.format(z.rehab) }}</td>
                 <td>${{ '{:,.0f}'.format(z.cash_to_close) }}</td>
                 <td>${{ '{:,.0f}'.format(z.median_value) }}</td>
-                <td>${{ '{:,.0f}'.format(z.rent) }}</td>
+                <td title="{{ z.rent_caveat }}">${{ '{:,.0f}'.format(z.rent) }} <span class="hr-note">{{ z.rent_label }}</span>{% if z.rent_strains_income %} <span class="hr-note" style="color:#b45309" title="This HUD rent is a large share of the ZIP's median household income — local rents may be lower">⚠</span>{% endif %}</td>
                 <td>{{ '%.1f'|format(z.rtv_pct) }}%</td>
                 <td class="hr-note">{{ z.competition }}</td>
             </tr>
@@ -144,7 +152,8 @@
         <div class="hr-note" style="margin-top:0.5rem">
             <b>Safety column = real FBI violent-crime rate per 100,000 residents for the city's police agency</b> (US average ≈ {{ '%.0f'|format(us_violent) }}), with the source year on hover. It is <b>city-wide</b>: a large city contains both very safe and very dangerous ZIPs and one agency rate cannot tell them apart — use it to screen cities out, then walk the specific block. Small-town figures marked "?" are low-confidence (one incident swings a small population). We deliberately do <b>not</b> use the database's <code>crime_index</code> column here: it is a socioeconomic heuristic that correlates −0.76 with income, so filtering on it would filter on income, not safety.
             Verified cities in the table: {{ crime_cov.with_data }} of {{ crime_cov.cities }}. Cities we haven't verified are excluded rather than assumed safe{% if allow_unknown %} — currently overridden by "Show unverified"{% endif %}.<br>
-            Rent/unit = ZIP median rent (same convention as /multifamily); 2–4 unit ask prices aren't in the data — the <b>max offer</b> is your ceiling regardless of ask. "+" = supports more than your budget cap. Rehab at {{ units }}×900 sqft, {{ scope }}/{{ level }}. Property tax at investor rates (homestead on your unit would only improve this). Verify FHA county loan limits for 2–4 units. <a href="/multifamily?state={{ hstate or 'IN' }}&max_price={{ maxprice|int }}&down_pct=3.5&units={{ units }}">Full FHA math on /multifamily →</a></div>
+            Rent/unit = the ZIP's rent per unit (same convention as /multifamily), labelled with its source: <b>Zillow ZORI</b> is an asking rent; <b>HUD</b> figures are voucher standards (40th-percentile rent, utilities included — county-wide for "FMR (county)"), hover for the caveat; ⚠ = a HUD rent that takes a large share of local income. 2–4 unit sale prices aren't in the data, so <i>Est. value</i> is the single-family median × {{ unit_factor }} — an estimate an appraisal must confirm.
+            PITI: 3.5% down on price + remodel, 1.75% upfront MIP financed, 0.55% annual MIP. Rehab at {{ units }}×900 sqft, {{ scope }}/{{ level }}. Property tax at investor rates (homestead on your unit would only improve this). Verify FHA county loan limits for 2–4 units. <a href="/multifamily?state={{ hstate or 'IN' }}&max_price={{ maxprice|int }}&down_pct=3.5&units={{ units }}">Full FHA math on /multifamily →</a></div>
     </div>
     {% endif %}
 
@@ -155,7 +164,7 @@
         <div class="hr-hero">
             <div class="rank">#{{ loop.index }} · {{ r.verdict }}{% if r.vetoed %} (trend-vetoed){% endif %}</div>
             <div class="mkt">{{ r.name }}</div>
-            <div class="nums">max <b>${{ '%.0f'|format(r.max_psf) }}/sqft</b> vs fixer ask ~${{ '%.0f'|format(r.entry_psf) }}/sqft
+            <div class="nums">max <b>${{ '%.0f'|format(r.max_psf) }}/sqft</b> vs modelled fixer price ~${{ '%.0f'|format(r.entry_psf) }}/sqft
                 → <b>{{ '%+.1f'|format(r.headroom * 100) }}%</b> headroom<br>
                 <span class="hr-note">{{ r.competition }} · rehab ${{ '%.0f'|format(r.rehab_psf) }}/sqft · median ${{ '{:,.0f}'.format(r.median_value) }}</span></div>
         </div>
@@ -164,10 +173,9 @@
     {% set best = feas[0] %}
     <div class="hr-sentence">
         At <b>{{ '%.2f'|format(rate) }}%</b> debt and a <b>{{ '%.0f'|format(target) }}% after-tax</b> target on a {{ scope }}/{{ level }} {{ 'flip' if mode == 'flip' else 'BRRRR (5-yr hold)' }}:
-        <b>{{ n_primed }}</b> of {{ feas|length }} markets clear the bar at typical fixer pricing.
+        <b>{{ n_primed }}</b> of {{ feas|length }} markets clear the bar at the modelled fixer price.
         {% if n_primed == 0 %}Best is <b>{{ best.name }}</b> at {{ '%+.1f'|format(best.headroom * 100) }}% — a deal there needs
-        ~{{ '%.0f'|format(-best.headroom * 100) }}% below the typical fixer ask to pencil. That number is the offer, not a verdict on you.{% endif %}
-        {% if mode == 'brrrr' and n_primed == 0 %}<span class="hr-note">Rent-to-price is the villain: at current rates a 5-yr levered hold needs deep-discount entry almost everywhere — check the flip toggle and the ZIP drill-downs for the pockets.</span>{% endif %}
+        ~{{ '%.0f'|format(-best.headroom * 100) }}% below the modelled fixer price to pencil.{% endif %}
     </div>
     {% endif %}
 
@@ -176,7 +184,7 @@
         <div class="hr-scroll">
         <table class="hr-table">
             <thead><tr>
-                <th>#</th><th>Market</th><th>Verdict</th><th>Max buy $/sf</th><th>Fixer ask $/sf</th>
+                <th>#</th><th>Market</th><th>Verdict</th><th>Max buy $/sf</th><th>Modelled fixer $/sf</th>
                 <th>Headroom</th><th>Rehab $/sf</th><th>ARV $/sf</th><th>Median</th><th>Rent</th>
                 <th>3-yr</th><th>Competition</th><th>ZIPs</th>
             </tr></thead>
@@ -207,18 +215,18 @@
             </tbody>
         </table>
         </div>
-        <div class="hr-note" style="margin-top:0.5rem">Fixer ask = market median × {{ '%.2f'|format(calib.x) }} ({{ scope }} entry discount, verified calibration);
-            ARV = median × {{ '%.2f'|format(calib.y) }} renovated premium. Rents: ZORI-observed ZIPs only. "NO PATH" = median rents can't support any refi loan (DSCR &lt; 1).</div>
+        <div class="hr-note" style="margin-top:0.5rem">Modelled fixer price = market median × {{ '%.2f'|format(calib.x) }} ({{ scope }} entry discount — one national figure from the July-2026 calibration, not sales observed in that market);
+            ARV = median × {{ '%.2f'|format(calib.y) }} renovated premium. Rents: Zillow ZORI asking rents only — a market with fewer than 10 Zillow ZIPs has no rent and is left out. "NO PATH" = median rents can't support any refi loan (DSCR &lt; 1).</div>
     </div>
     {% endif %}
 
     {% if metro and drill %}
     <div class="hr-card" id="drill">
         <h2 style="margin:0 0 0.2rem">Best pockets in {{ metro_name }}</h2>
-        <div class="hr-note" style="margin-bottom:0.6rem">Top ZIPs by rent-to-value (the BRRRR fuel) — each solved with its own median value & rent at {{ metro }} construction costs. Metro medians hide these; this is where deals live.</div>
+        <div class="hr-note" style="margin-bottom:0.6rem">Top ZIPs by rent-to-value (the BRRRR fuel), Zillow rents only — each solved with its own median value & rent at {{ metro }} construction costs.</div>
         <div class="hr-scroll">
         <table class="hr-table">
-            <thead><tr><th>ZIP</th><th>Place</th><th>Verdict</th><th>Max buy $/sf</th><th>Fixer ask $/sf</th><th>Headroom</th><th>Median</th><th>Rent</th><th>Rent/Value</th><th>Trend</th></tr></thead>
+            <thead><tr><th>ZIP</th><th>Place</th><th>Verdict</th><th>Max buy $/sf</th><th>Modelled fixer $/sf</th><th>Headroom</th><th>Median</th><th>Rent</th><th>Rent/Value</th><th>Trend</th></tr></thead>
             <tbody>
             {% for z in drill %}
             <tr>
@@ -250,7 +258,7 @@
             <p><b>The solve.</b> For each market: fixer entry = median × {{ '%.2f'|format(calib.x) }}, renovated ARV = median × {{ '%.2f'|format(calib.y) }} (verified July-2026 calibration: Zillow hedonic fixer discounts, distressed-sale research, at/below ATTOM's observed 25.4% national flip ROI). Rehab from the validated 107-market cost model. {% if mode == 'brrrr' %}BRRRR: hard-money acquisition ({{ '%.2f'|format(fin.hm_rate * 100) }}%, LTARV-capped), DSCR cash-out refi at month 6 ({{ '%.2f'|format(fin.refi_rate * 100) }}%, 75% ARV, rent must cover the payment), {{ hold_years }}-yr hold at ZORI median rent, then sale — after-tax IRR on a monthly grid: 27.5-yr depreciation, suspended passive losses, non-taxable refi cash, recapture + LTCG + NIIT + state at exit.{% else %}Flip: dealer taxation — ordinary income + self-employment tax, no capital-gains rates.{% endif %}
             The engine bisects to the highest purchase price where the after-tax return ≥ {{ '%.0f'|format(target) }}% <i>and</i> {% if mode == 'brrrr' %}the deal's total after-tax profit over the {{ hold_years }}-yr hold{% else %}after-tax profit{% endif %} ≥ ${{ '{:,.0f}'.format(profit_floor) }} — in yield pockets that $25k comes from years of cash flow, not a day-one equity pop, and the gate honors that.</p>
             <p><b>"Is 14% even the right bar?"</b> Anchor it to your debt: money costs you {{ '%.2f'|format(fin.hm_rate * 100) }}% (hard money) to {{ '%.2f'|format(fin.refi_rate * 100) }}% (DSCR) here. Levered equity below the debt rate means the leverage is working against you — so 5–10% would be irrational at today's rates: you'd be taking construction risk to earn less than your lender. The rational floor is <i>debt rate + a real spread</i> for the work and risk; {{ '%.0f'|format(target) }}% after-tax ≈ 18–19% pre-tax ≈ debt + ~10%. If rates fall, lower the bar with them — edit the rate and target above and the whole board re-solves.</p>
-            <p><b>Competition.</b> Two places: the <i>Competition</i> column is each market's price-trajectory read (accelerating = you're bidding against people; declining = negotiable but values falling — take the ▼ veto seriously). The <i>Competition ±x</i> knob shifts what fixers actually cost: in a no-bidders market fixers sell further below median (helps you); in bidding wars the discount evaporates. Bounds follow the calibration's months-of-supply rule; a live inventory feed is the roadmap upgrade.</p>
+            <p><b>Competition.</b> Two places: the <i>Competition</i> column is each market's price-trajectory read (accelerating = you're bidding against people; declining = negotiable but values falling — take the ▼ veto seriously). The <i>Competition ±x</i> knob shifts the modelled fixer price: in a no-bidders market fixers sell further below median (helps you); in bidding wars the discount evaporates. Bounds follow the calibration's months-of-supply rule; a live inventory feed is the roadmap upgrade.</p>
             <p class="hr-note">First-pass screen on market medians — never an appraisal, never tax advice. A green market can hold bad deals and a red market great ones; the ZIP drill-down and the address underwriter are the next two clicks.</p>
         </div>
     </details>
