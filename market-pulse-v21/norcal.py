@@ -13,7 +13,8 @@ Real-data calibrations (measured against zips.db, not vibes):
     threshold is scaled to the Bay distribution (≥45 ≈ top ~25% of
     non-SF towns) plus a short, documented override list for downtowns
     the metric is provably blind to.
-  • "Excellent" crime = crime_index ≤ 33 ≈ top quintile of the Bay.
+  • Safety = FBI violent-crime rate for the city's police agency
+    (safety.py), unknown fails — in the screen and in deal_check.
   • A literal AND of the strictest possible thresholds returns the
     empty set — these defaults are the tightest calibration that keeps
     the screen informative. All tunable via query params.
@@ -368,7 +369,7 @@ def _universe(conn, market: str = "CA") -> list[sqlite3.Row]:
     ph = ",".join("?" * len(states))
     rows = conn.execute(f"""
         SELECT zip, name, state, county, lat, lng, population, restaurant_score,
-               crime_index, walk_score, median_home_value, median_rent_monthly,
+               walk_score, median_home_value, median_rent_monthly,
                history_zhvi
         FROM zips
         WHERE state IN ({ph}) AND lat IS NOT NULL AND population > 3000
@@ -548,17 +549,23 @@ def deal_check(zip_code: str, price: float, sqft: float | None = None,
         anchor, minutes = _access(raw["lat"], raw["lng"], raw["county"])
         clim_ok, tier = _climate(zip_code, raw["name"], raw["county"])
         steady = _steadiness(raw["history_zhvi"])
+        # Safety the way screen() judges it: FBI city figures, unknown fails.
+        # This path used to gate on zips.db's crime_index (density + income
+        # + education), so a ZIP outside the top tiers was judged by the
+        # proxy the screen itself had dropped.
+        import safety as SF
+        sf = SF.zip_safety(raw["name"], "CA")
         row = {"zip": zip_code, "name": (raw["name"] or "").replace(", CA", ""),
                "anchor": anchor, "minutes": minutes, "food": raw["restaurant_score"],
                "food_override": FOOD_OVERRIDES.get(zip_code),
-               "crime": raw["crime_index"], "climate_tier": tier,
+               "crime": sf["violent"], "safety": sf, "climate_tier": tier,
                "entry_price": raw["median_home_value"], "entry_kind": "all-homes",
                "median_home_value": raw["median_home_value"],
                "median_rent": raw["median_rent_monthly"], "steady": steady,
                "gates": {"access": minutes <= ACCESS_MIN_MAX,
                          "food": (raw["restaurant_score"] or 0) >= FOOD_MIN
                                  or zip_code in FOOD_OVERRIDES,
-                         "safety": (raw["crime_index"] or 99) <= CRIME_MAX,
+                         "safety": SF.passes(sf, "safe", False),
                          "climate": clim_ok,
                          "steady": bool(steady and steady.get("cagr", -9) >= STEADY_SHORT["cagr_min"])},
                "quality_n": 0}

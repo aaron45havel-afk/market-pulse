@@ -7,7 +7,7 @@ insurance repricing, supply gluts, value deceleration — are exactly
 when mean reversion fails. A 24% gross cap rate in a shrinking metro
 isn't mispricing; it's the market charging a structural-risk premium.
 
-Three tools, shared by /multifamily and /map:
+Three tools, used by /multifamily (trajectories also by /headroom):
 
 1. trajectory_from_history()  — turns a ZIP's 60-month ZHVI series
    into 1yr/3yr trends + a second derivative (deceleration), and a
@@ -25,16 +25,10 @@ bad trajectory gets capped, visibly, rather than silently averaged.
 """
 from __future__ import annotations
 
-import json
 import logging
-import sqlite3
-import statistics
-from functools import lru_cache
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-_ZIPS_DB = Path(__file__).resolve().parent / "data" / "zips.db"
 
 # ── Trajectory from ZHVI history ─────────────────────────────────────
 
@@ -208,62 +202,6 @@ def apply_trajectory_veto(score: float, traj_label: str | None,
     if traj_label == "decelerating":
         return round(max(0, score - 5), 1), True
     return round(score, 1), False
-
-
-# ── State-level trajectory aggregates (for /map) ─────────────────────
-
-@lru_cache(maxsize=1)
-def state_trajectories() -> dict[str, dict]:
-    """Median ZIP-level trajectory per state, computed once per process
-    from zips.db (25k histories ≈ a second or two, then cached). Used
-    by /map, where metros need a trend read but per-ZIP granularity
-    would be overkill. Returns {} if the db is missing so callers can
-    degrade to no-trajectory."""
-    if not _ZIPS_DB.exists():
-        return {}
-    out: dict[str, dict] = {}
-    try:
-        conn = sqlite3.connect(str(_ZIPS_DB))
-        rows = conn.execute(
-            "SELECT state, history_zhvi FROM zips "
-            "WHERE history_zhvi IS NOT NULL AND state IS NOT NULL"
-        ).fetchall()
-        conn.close()
-    except sqlite3.Error as e:
-        logger.warning("state_trajectories: zips.db read failed: %s", e)
-        return {}
-
-    by_state: dict[str, list[dict]] = {}
-    for state, hist_json in rows:
-        try:
-            traj = trajectory_from_history(json.loads(hist_json))
-        except (ValueError, TypeError):
-            continue
-        if traj:
-            by_state.setdefault(state, []).append(traj)
-
-    for state, trajs in by_state.items():
-        if len(trajs) < 3:
-            continue
-        cagr = statistics.median(t["cagr_3yr_pct"] for t in trajs)
-        chg1 = statistics.median(t["chg_1yr_pct"] for t in trajs)
-        decel = statistics.median(t["decel_pct"] for t in trajs)
-        if cagr < 0 and chg1 <= 0:
-            label = "declining"
-        elif decel <= DECEL_THRESHOLD and chg1 < cagr:
-            label = "decelerating"
-        elif decel >= ACCEL_THRESHOLD:
-            label = "accelerating"
-        else:
-            label = "steady"
-        out[state] = {
-            "cagr_3yr_pct": round(cagr, 1),
-            "chg_1yr_pct":  round(chg1, 1),
-            "decel_pct":    round(decel, 1),
-            "label":        label,
-            "n_zips":       len(trajs),
-        }
-    return out
 
 
 def _states() -> dict:

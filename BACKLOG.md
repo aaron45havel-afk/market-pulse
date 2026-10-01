@@ -148,8 +148,8 @@ Format: `- [PHASE-SEEN] item — why it matters`
   empty or halved result currently publishes it.
 - [MF-CENSUS] The 2024 ACS suppresses income for small ZCTAs, and the ZIP build requires
   income, so the first keyless rebuild skipped 486 Zillow ZIPs (median population ~485;
-  20 with 1,500+). Keeping them with a null income would need `crime_proxy` and the
-  composites to tolerate it.
+  20 with 1,500+). Keeping them with a null income would need `crime_proxy` to tolerate it
+  (the composites that also needed it are gone). zip_profile.db keeps every ZCTA.
 - [MF-CRIME] At the defaults Ohio's safety gate still removes 401 ZIPs for no FBI figure.
   Mostly ZIPs whose postal city isn't a police jurisdiction (townships, unincorporated
   areas policed by a sheriff) and the 1,067 matched agencies with no complete year.
@@ -200,8 +200,12 @@ Format: `- [PHASE-SEEN] item — why it matters`
   market cap. Refresh Schloss before the FCF build, or carry market cap in compounders.json.
 - [COMP-DRIFT-MEDIAN] Compounders' valuation median spans 7 years including 2020-21. Storing per-year
   P/FCF in compounders.json would let the median exclude the peak and be re-measured offline.
-- [MAP-REBUILD] Phase 5: retire composites/forecast/proxy columns from zips.db and their readers,
-  including the old map now at /map/classic (national_map.html) and the metro maps it links to.
+- [BOARD-PROXIES] Map rebuild phase 5 retired the composites and forecasts; the owner chose to leave
+  the other boards' inputs alone. Still in use: /norcal's dining gate reads `restaurant_score` (a
+  density curve) and its table shows `walk_score` (also density); /multifamily and /value-add rank on
+  `cap_rate_pct`, rent net of a flat 40% (rent_ladder.cap_rate_pct), not underwrite.py with ZIP tax
+  and insurance; /value-add's table shows `crime_index` (density + income + education) as "crime";
+  /multifamily's weighted score with a trajectory veto is a composite by design.
 - [MAP-POLYGONS] The map draws ZIP centroids. ZCTA boundaries (Census cartographic file, ~60 MB national)
   simplified per state into TopoJSON would allow a filled choropleth at metro zoom.
 - [MAP-ASSUMPTIONS] Underwritten map measures use the stated defaults; letting the reader change
@@ -220,6 +224,6 @@ Format: `- [PHASE-SEEN] item — why it matters`
 - [CRIME-JOIN] FBI crime is joined by Zillow mailing-city name; before it appears on the new pages, weight
   it by the Census ZCTA-to-place file and show it as a police-jurisdiction figure, never a ZIP's.
 - [REDFIN-FROZEN] Redfin's public market trackers stopped updating after 2026-06-02 (data through
-  2026-05-31). The old map's state layers (days on market, sale-to-list, price drops, homes sold, months of
-  supply) read refresh_redfin.py's state file and present May data as current. Switch them to Realtor.com
-  state/metro core metrics, or label the month. If Redfin resumes, the ZIP profile picks it up unchanged.
+  2026-05-31). refresh_redfin.py's state file still feeds CHOROPLETH_STATES and /conditions (days on
+  market, sale-to-list, price drops, homes sold, months of supply), presenting May data as current. Switch
+  them to Realtor.com state/metro core metrics, or label the month. If Redfin resumes, the ZIP profile picks it up unchanged.
