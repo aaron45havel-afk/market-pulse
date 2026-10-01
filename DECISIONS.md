@@ -655,3 +655,29 @@ a payment-to-income page on the ZIP data (phase B); this phase lays down the bas
   keyless CSV.
 - **Failure carries forward:** a failed Census pull carries the previous build's 2019 incomes; failed FRED
   constants carry the previous meta. Neither blocks the profile.
+
+## 2026-10-01 — Affordability, phase B: /fair-value becomes housing affordability
+**Decided:**
+- **The page answers one question:** how much of the median household's income the payment on the typical home
+  takes, today and in 2019 (`/housing-affordability`, `affordability.py`). The payment is the ZIP page's owner
+  card at its defaults — 20% down (no PMI), 30-year fixed, the ZIP's owner tax rate, the state HO-3 premium
+  scaled to price — so a ZIP reads the same on both pages. 30% is the line (HUD's cost burden; the Atlanta
+  Fed's affordability benchmark). "Affordable price" is the price whose payment takes exactly 30%, solved in
+  closed form within each insurance-scaling band.
+- **Today's Census income is brought to today's dollars by CPI** (2020-24 median in 2024 dollars × CPI
+  latest/2024), assuming no real growth since — stated on the page. The ZIP page's payment-to-income and the
+  map's measure use the same income, so all three agree (Lakewood 44107: 35.9% everywhere).
+- **States and the nation are a typical household, not an average of ZIPs:** household-weighted medians of
+  price, income and tax rate over the ZIPs with every input in both years, run through the same arithmetic —
+  the same ZIPs, weighted the same, at both ends. US today 34.1% against 23.1% in 2019 (98.1% of households
+  covered); the ZIP map's median counts each ZIP once and reads lower (29.6%), which the page explains.
+- **Why it changed is a Shapley decomposition** over prices, rate, incomes and insurance — each factor's
+  average effect over every order of change — so the parts sum to the change exactly (US: +11.8 prices,
+  +7.7 rate, −9.0 incomes, +0.5 insurance = +11.1 pts). 2019 insurance is today's premium deflated by CPI
+  (premiums outran CPI, so 2019's payment is if anything overstated).
+- **/fair-value 301s to /housing-affordability** (keeping ?state=); `fair_value.py` and its template are deleted;
+  the nav reads "Affordability". The ZIP map gains the 2019 share, the change and the affordable-price gap;
+  a "$250,000+" Census income marks a ZIP's share as "at most".
+- **No warm-up thread:** computing 32k ZIPs in a background thread at startup starved the first request of the
+  GIL (28 s to first byte, which tripped the ops fail-closed suite's start-up deadline). The arithmetic was made
+  cheap instead (1.4 s, cached per build and rate) and runs on first use.

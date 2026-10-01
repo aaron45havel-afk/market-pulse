@@ -233,6 +233,7 @@
       case 'year': return String(v);
       case 'deg': return v.toFixed(0) + '°F';
       case 'inch': return nf0.format(v) + ' in';
+      case 'pts': return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1) + ' pts';
       default: return nf0.format(v);
     }
   }
@@ -240,6 +241,7 @@
     const v = d.values[i];
     if (v == null) return '—';
     const c = d.coded[i];
+    if (c === 'upper') return '≤ ' + fmt(v, m.fmt);
     if (c === 'top') return fmt(m.fmt === 'year' ? v : v - 1, m.fmt) + '+';
     if (c === 'bottom') return m.fmt === 'year' ? `${v} or earlier` : `under ${fmt(v, m.fmt)}`;
     if (m.key === 'break_even_occ' && v > 100) return `${fmt(v, m.fmt)} (rent can't cover costs)`;
@@ -422,7 +424,7 @@
     if (nofig) s += ` · ${nofig.toLocaleString()} with no figure`;
     const out = (S.st ? B.st.filter(x => x === B.states.indexOf(S.st)).length : B.n) - kept;
     if (S.filters.length) s += ` · ${out.toLocaleString()} filtered out`;
-    if (main.as_of) s += ` · ${esc(m.source === 'underwrite' || m.source === 'owner' ? 'Underwritten from ' + main.as_of : m.source + ', ' + main.as_of)}`;
+    if (main.as_of) s += ` · ${esc(['underwrite', 'owner', 'affordability'].includes(m.source) ? 'Underwritten from ' + main.as_of : m.source + ', ' + main.as_of)}`;
     document.getElementById('zmSummary').innerHTML = s;
   }
 
@@ -549,7 +551,9 @@
     const m = BY[S.metric];
     document.getElementById('zmHelp').textContent = m.help || '';
     const src = m.source === 'underwrite' ? 'Underwritten: ' + BASES[S.basis].label
-      : m.source === 'owner' ? 'Underwritten: Zillow typical home' : 'Source: ' + m.source;
+      : m.source === 'owner' ? 'Underwritten: Zillow typical home'
+      : m.source === 'affordability' ? 'Underwritten: Zillow typical home against Census income — the Affordability page'
+      : 'Source: ' + m.source;
     document.getElementById('zmSrc').textContent = src;
     document.getElementById('zmStale').style.display = m.stale ? 'block' : 'none';
     const anyBasis = m.basis || S.filters.some(f => BY[f.key].basis);
@@ -563,8 +567,8 @@
       why.push("a year's rent over 20% of the price — usually a distressed sale against a rentable home's rent, or a seasonal rent");
     document.getElementById('zmFlagWhy').textContent = why.join('; ');
     document.getElementById('zmThinBox').style.display = why.length ? 'flex' : 'none';
-    document.getElementById('zmAssume').style.display = (m.source === 'underwrite' || m.source === 'owner'
-      || S.filters.some(f => ['underwrite', 'owner'].includes(BY[f.key].source))) ? 'block' : 'none';
+    document.getElementById('zmAssume').style.display = (['underwrite', 'owner', 'affordability'].includes(m.source)
+      || S.filters.some(f => ['underwrite', 'owner', 'affordability'].includes(BY[f.key].source))) ? 'block' : 'none';
   }
   function filterOptions(sel) {
     return selM.innerHTML.replace(`value="${sel}"`, `value="${sel}" selected`);

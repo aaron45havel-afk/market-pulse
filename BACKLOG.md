@@ -227,3 +227,10 @@ Format: `- [PHASE-SEEN] item — why it matters`
   2026-05-31). refresh_redfin.py's state file still feeds CHOROPLETH_STATES and /conditions (days on
   market, sale-to-list, price drops, homes sold, months of supply), presenting May data as current. Switch
   them to Realtor.com state/metro core metrics, or label the month. If Redfin resumes, the ZIP profile picks it up unchanged.
+- [AFF-INCOME] Today's affordability income is the Census 2020-24 median brought forward by CPI (no real growth
+  assumed since 2024). The build picks up the 2021-25 ACS when the Bureau posts it (about December 2026),
+  shrinking the CPI step; a wage index (e.g. Atlanta Fed wage growth) could replace the no-growth assumption.
+- [AFF-INSURANCE] 2019 insurance is today's state premium deflated by CPI. A dated premium history by state
+  (NAIC homeowners reports) would measure what CPI only approximates.
+- [AFF-SERIES] The page compares two points. A monthly national/state series (ZHVI monthly, PMMS weekly,
+  income interpolated between ACS vintages) would show the path, as the Atlanta Fed monitor does.

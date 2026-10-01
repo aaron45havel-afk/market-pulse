@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+{% macro money(v) %}{% if v is none or v is undefined %}—{% else %}${{ "{:,.0f}".format(v) }}{% endif %}{% endmacro %}
+{% macro pct(v, d=1) %}{% if v is none or v is undefined %}—{% else %}{{ "{:.{}f}".format(v, d) }}%{% endif %}{% endmacro %}
+{% macro pts(v) %}{% if v is none or v is undefined %}—{% else %}{{ "+" if v > 0 else ("−" if v < 0 else "") }}{{ "{:.1f}".format(v|abs) }} pts{% endif %}{% endmacro %}
+{% macro gap(v) %}{% if v is none or v is undefined %}—{% else %}{{ "+" if v > 0 else ("−" if v < 0 else "") }}{{ "{:.0f}".format(v|abs) }}%{% endif %}{% endmacro %}
+{% macro parts_bar(p, total) %}
+  {% set labels = {"price": "Home prices", "rate": "Mortgage rate", "income": "Incomes", "insurance": "Insurance"} %}
+  {% set scale = [p.price|abs, p.rate|abs, p.income|abs, p.insurance|abs]|max %}
+  <div class="ha-parts" role="table" aria-label="What changed the payment-to-income since 2019">
+    {% for k in ("price", "rate", "income", "insurance") %}
+    {% set v = p[k] %}
+    <div class="ha-part" role="row" title="{{ labels[k] }}: {{ pts(v) }} of the {{ pts(total) }} change">
+      <span class="lab" role="cell">{{ labels[k] }}</span>
+      <span class="track" role="cell"><span class="axis"></span>
+        <span class="bar {{ 'ha-raise' if v > 0 else 'ha-lower' }}" style="{{ 'left:50%' if v > 0 else 'right:50%' }}; width: {{ (v|abs / scale * 50) if scale else 0 }}%"></span></span>
+      <span class="val" role="cell">{{ pts(v) }}</span>
+    </div>
+    {% endfor %}
+  </div>
+{% endmacro %}
+
+{% block title %}Housing affordability · Market Pulse{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+  .ha { max-width: 1180px; margin: 0 auto; padding: 0 16px 48px; }
+  .ha h1 { font-family: var(--display); font-size: 2.1rem; margin: 6px 0 2px; line-height: 1.1; }
+  .ha .lede { color: var(--ink-2); font-size: 0.95rem; max-width: 760px; line-height: 1.5; margin: 0; }
+  .ha-asof { font-size: 0.75rem; color: var(--ink-3); margin-top: 8px; line-height: 1.6; }
+  .ha-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-top: 14px; }
+  .ha-card h2 { font-size: 1.02rem; margin: 0 0 4px; }
+  .ha-sub { font-size: 0.8rem; color: var(--ink-3); margin: 0 0 10px; line-height: 1.5; }
+  .ha-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-top: 14px; }
+  .ha-kpis > *, .ha-two > * { min-width: 0; }
+  .ha-kpi { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; }
+  .ha-kpi .k { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); }
+  .ha-kpi .v { font-size: 1.5rem; font-weight: 650; margin-top: 2px; color: var(--ink); }
+  .ha-kpi .n { font-size: 0.76rem; color: var(--ink-3); margin-top: 3px; line-height: 1.4; }
+  .ha-two { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; }
+  @media (max-width: 900px) { .ha-two { grid-template-columns: minmax(0, 1fr); } }
+  .ha-parts { display: grid; gap: 6px; margin-top: 6px; }
+  .ha-part { display: grid; grid-template-columns: 112px minmax(0, 1fr) 76px; align-items: center; gap: 8px; font-size: 0.82rem; }
+  .ha-part .lab { color: var(--ink-2); }
+  .ha-part .val { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .ha-part .track { position: relative; height: 14px; }
+  .ha-part .axis { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--line-strong); }
+  .ha-part .bar { position: absolute; top: 2px; height: 10px; border-radius: 4px; }
+  .ha-part .bar.ha-raise { background: #d9534c; border-radius: 0 4px 4px 0; }
+  .ha-part .bar.ha-lower { background: #2a78d6; border-radius: 4px 0 0 4px; }
+  .ha-key { font-size: 0.72rem; color: var(--ink-3); margin-top: 6px; }
+  .ha-key i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; margin: 0 3px 0 8px; }
+  #haMap { height: 460px; border-radius: 10px; border: 1px solid var(--line); background: #e9e9e6; }
+  @media (max-width: 600px) { #haMap { height: 320px; } }
+  .ha-toggle { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; margin-bottom: 8px; }
+  .ha-toggle button { border: 0; background: var(--surface); color: var(--ink-2); padding: 5px 12px; font-size: 0.8rem; cursor: pointer; }
+  .ha-toggle button.on { background: var(--ink); color: var(--surface); }
+  .ha-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 0.74rem; color: var(--ink-2); margin-top: 8px; }
+  .ha-legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .ha-legend i { width: 14px; height: 10px; border-radius: 2px; border: 1px solid rgba(0,0,0,.08); }
+  .ha-scroll { overflow-x: auto; max-width: 100%; }
+  table.ha-t { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  table.ha-t th, table.ha-t td { padding: 6px 6px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  table.ha-t th { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-3); font-weight: 600;
+                  white-space: normal; vertical-align: bottom; cursor: pointer; user-select: none; }
+  table.ha-t th.sorted { color: var(--ink); }
+  table.ha-t td.l, table.ha-t th.l { text-align: left; }
+  table.ha-t td.l { white-space: normal; min-width: 110px; }
+  table.ha-t tr.picked td { background: var(--primary-soft); }
+  table.ha-t a { color: var(--primary); text-decoration: none; font-weight: 600; }
+  .ha-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+  .ha-math { display: grid; grid-template-columns: minmax(0, 1fr) 110px 110px; gap: 0; font-size: 0.86rem; }
+  .ha-math > div { padding: 6px 4px; border-bottom: 1px solid var(--line); }
+  .ha-math .h { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-3); font-weight: 600; }
+  .ha-math .r { text-align: right; font-variant-numeric: tabular-nums; }
+  .ha-math .t { font-weight: 700; }
+  .ha-search { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: 7px;
+               font-size: 0.88rem; background: var(--surface); color: var(--ink); margin-bottom: 8px; }
+  .ha-btn { border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); border-radius: 7px;
+            padding: 5px 10px; font-size: 0.8rem; cursor: pointer; }
+  .ha-note { font-size: 0.72rem; color: var(--ink-3); margin-top: 6px; line-height: 1.5; }
+  .ha-method { font-size: 0.82rem; color: var(--ink-2); line-height: 1.6; }
+  .ha-method li { margin-bottom: 4px; }
+  .ha-tip { position: absolute; z-index: 600; pointer-events: none; background: var(--surface); border: 1px solid var(--line);
+            border-radius: 7px; padding: 6px 9px; font-size: 0.78rem; box-shadow: 0 2px 8px rgba(0,0,0,.12); display: none; line-height: 1.45; }
+  .ha-mapwrap { position: relative; }
+  @media (max-width: 600px) {
+    .ha h1 { font-size: 1.7rem; }
+    .ha-card { padding: 14px 12px; }
+    table.ha-t { font-size: 0.78rem; }
+    .ha-part { grid-template-columns: 92px minmax(0, 1fr) 66px; }
+    .ha-math { grid-template-columns: minmax(0, 1fr) 90px 90px; font-size: 0.8rem; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set c = const %}
+<div class="ha">
+  <h1>Housing affordability</h1>
+  <p class="lede">How much of the median household's income the payment on a typical home takes — today, and in 2019 with
+    2019's prices, rate and incomes. 30% is the line: above it a household is cost-burdened (HUD's threshold, also the
+    Atlanta Fed's affordability benchmark).</p>
+
+  {% if not nation or not c %}
+  <div class="ha-card"><p>The affordability figures could not be computed: the ZIP profile is missing its 2019 baseline
+    or the mortgage rate is not loaded.</p></div>
+  {% else %}
+  {% set n = nation %}
+  <div class="ha-asof">
+    Today: Zillow values for {{ meta.get("zhvi_last_month", "") }}, Freddie Mac 30-yr rate {{ pct(n.rate, 2) }} ({{ rate_date }}),
+    Census {{ meta.get("acs_vintage", "") }} incomes in {{ c.cpi_latest_month }} dollars.
+    2019: Zillow 2019 average values, 2019 average rate {{ pct(c.rate19, 2) }}, Census {{ meta.get("acs19_vintage", "") }} incomes.
+  </div>
+
+  <div class="ha-kpis">
+    <div class="ha-kpi"><div class="k">Payment ÷ income, US</div><div class="v">{{ pct(n.ratio) }}</div>
+      <div class="n">{{ pct(n.ratio19) }} in 2019 · {{ pts(n.change) }}</div></div>
+    <div class="ha-kpi"><div class="k">Typical home vs affordable</div><div class="v">{{ gap(n.gap) }}</div>
+      <div class="n">{{ money(n.price) }} typical home; {{ money(n.affordable) }} is what {{ share|int }}% of {{ money(n.income) }} pays for</div></div>
+    <div class="ha-kpi"><div class="k">Monthly payment</div><div class="v">{{ money(n.payment) }}</div>
+      <div class="n">{{ money(n.payment19) }} in 2019 · {{ down_pct|int }}% down, 30-yr fixed, tax and insurance</div></div>
+    <div class="ha-kpi"><div class="k">Households covered</div><div class="v">{{ pct(nation_cov) }}</div>
+      <div class="n">{{ "{:,.0f}".format(nation_hh / 1e6) }}M households in ZIPs with every figure in both years</div></div>
+  </div>
+
+  <div class="ha-two">
+    <div class="ha-card">
+      <h2>By state</h2>
+      <div class="ha-toggle" role="tablist" aria-label="Map measure">
+        <button type="button" class="on" data-mode="ratio" role="tab" aria-selected="true">Payment ÷ income today</button>
+        <button type="button" data-mode="change" role="tab" aria-selected="false">Change since 2019</button>
+      </div>
+      <div class="ha-mapwrap"><div id="haMap" aria-label="State map; the same figures are in the table below"></div>
+        <div class="ha-tip" id="haTip"></div></div>
+      <div class="ha-legend" id="haLegend"></div>
+      <div class="ha-note">Click a state for its arithmetic and its ZIPs. Alaska and Hawaii are in the table.</div>
+    </div>
+    <div class="ha-card">
+      <h2>Why it changed since 2019, US</h2>
+      <p class="ha-sub">The {{ pts(n.change) }} change split by what moved — each factor's average effect over every order of
+        change, so the four add up to the whole.</p>
+      {{ parts_bar(n.parts, n.change) }}
+      <div class="ha-key"><i style="background:#d9534c"></i>raised the share<i style="background:#2a78d6"></i>lowered it</div>
+      <div class="ha-math" style="margin-top:14px">
+        <div class="h">Typical household, US</div><div class="h r">2019</div><div class="h r">Today</div>
+        <div>Typical home</div><div class="r">{{ money(n.price19) }}</div><div class="r">{{ money(n.price) }}</div>
+        <div>30-yr rate</div><div class="r">{{ pct(c.rate19, 2) }}</div><div class="r">{{ pct(n.rate, 2) }}</div>
+        <div>Median household income</div><div class="r">{{ money(n.income19) }}</div><div class="r">{{ money(n.income) }}</div>
+        <div>Monthly payment</div><div class="r">{{ money(n.payment19) }}</div><div class="r">{{ money(n.payment) }}</div>
+        <div class="t">Payment ÷ income</div><div class="r t">{{ pct(n.ratio19) }}</div><div class="r t">{{ pct(n.ratio) }}</div>
+      </div>
+      <div class="ha-note">Dollars are each year's own (2019 dollars, then {{ c.cpi_latest_month }} dollars) — a ratio needs no
+        inflation adjustment.</div>
+    </div>
+  </div>
+
+  {% if picked %}
+  {% set p = picked %}
+  <div class="ha-card" id="state">
+    <h2>{{ p.name }}</h2>
+    <p class="ha-sub">The state's typical household: household-weighted medians of price, income and tax rate across
+      {{ "{:,}".format(p.n_zips) }} ZIPs with every figure in both years ({{ pct(p.coverage) }} of the state's households).</p>
+    <div class="ha-two">
+      <div>
+        <div class="ha-math">
+          <div class="h">Typical household</div><div class="h r">2019</div><div class="h r">Today</div>
+          <div>Typical home</div><div class="r">{{ money(p.price19) }}</div><div class="r">{{ money(p.price) }}</div>
+          <div>30-yr rate</div><div class="r">{{ pct(c.rate19, 2) }}</div><div class="r">{{ pct(p.rate, 2) }}</div>
+          <div>Median household income</div><div class="r">{{ money(p.income19) }}</div><div class="r">{{ money(p.income) }}</div>
+          <div>Property tax rate</div><div class="r">{{ pct(p.tax_rate, 2) }}</div><div class="r">{{ pct(p.tax_rate, 2) }}</div>
+          <div>Monthly payment</div><div class="r">{{ money(p.payment19) }}</div><div class="r">{{ money(p.payment) }}</div>
+          <div class="t">Payment ÷ income</div><div class="r t">{{ pct(p.ratio19) }}</div><div class="r t">{{ pct(p.ratio) }}</div>
+          <div>Affordable at {{ share|int }}% of income</div><div class="r">—</div><div class="r">{{ money(p.affordable) }}</div>
+          <div class="t">Typical home vs affordable</div><div class="r">—</div><div class="r t">{{ gap(p.gap) }}</div>
+        </div>
+      </div>
+      <div>
+        <div class="ha-sub" style="margin-bottom:2px">Why it changed: {{ pts(p.change) }}</div>
+        {{ parts_bar(p.parts, p.change) }}
+        <div class="ha-key"><i style="background:#d9534c"></i>raised the share<i style="background:#2a78d6"></i>lowered it</div>
+        <div class="ha-note"><a href="/map?m=aff_change&st={{ p.code }}" style="color:var(--primary);font-weight:600">See {{ p.code }}'s ZIPs on the map →</a></div>
+      </div>
+    </div>
+    <h2 style="margin-top:16px">ZIPs in {{ p.name }}</h2>
+    <p class="ha-sub">Each ZIP's own typical home, income and tax rate. "≤" marks a ZIP whose income the Census publishes only
+      as "$250,000+": its share is at most the figure shown.</p>
+    <input class="ha-search" id="zipSearch" type="search" placeholder="Filter by ZIP, place or county" aria-label="Filter ZIPs">
+    <div class="ha-scroll"><table class="ha-t" id="zipTable"></table></div>
+    <div style="text-align:center;margin-top:8px"><button class="ha-btn" id="zipMore" type="button">Show 100 more</button></div>
+  </div>
+  {% endif %}
+
+  <div class="ha-card">
+    <h2>States</h2>
+    <p class="ha-sub">Click a column to sort, a state to open it. Each state is its typical household (medians of the same
+      ZIPs in both years).</p>
+    <div class="ha-scroll"><table class="ha-t" id="stTable">
+      <thead><tr>
+        <th class="l" data-k="name">State</th><th data-k="ratio" class="sorted">Today ↓</th><th data-k="ratio19">2019</th>
+        <th data-k="change">Change</th><th data-k="p_price">From prices</th><th data-k="p_rate">From rate</th>
+        <th data-k="p_income">From incomes</th><th data-k="price">Typical home</th><th data-k="affordable">Affordable at {{ share|int }}%</th>
+        <th data-k="gap">Gap</th><th data-k="coverage">Households covered</th>
+      </tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr data-code="{{ r.code }}" {% if r.code == state %}class="picked"{% endif %}
+            data-name="{{ r.name }}" data-ratio="{{ r.ratio }}" data-ratio19="{{ r.ratio19 }}" data-change="{{ r.change }}"
+            data-p_price="{{ r.parts.price }}" data-p_rate="{{ r.parts.rate }}" data-p_income="{{ r.parts.income }}"
+            data-price="{{ r.price }}" data-affordable="{{ r.affordable }}" data-gap="{{ r.gap }}" data-coverage="{{ r.coverage }}">
+          <td class="l"><a href="?state={{ r.code }}#state">{{ r.name }}</a></td>
+          <td>{{ pct(r.ratio) }}</td><td>{{ pct(r.ratio19) }}</td><td>{{ pts(r.change) }}</td>
+          <td>{{ pts(r.parts.price) }}</td><td>{{ pts(r.parts.rate) }}</td><td>{{ pts(r.parts.income) }}</td>
+          <td>{{ money(r.price) }}</td><td>{{ money(r.affordable) }}</td><td>{{ gap(r.gap) }}</td><td>{{ pct(r.coverage) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="ha-card ha-method">
+    <h2>How this is measured</h2>
+    <ul>
+      <li><b>Payment</b>: principal and interest on a 30-year fixed loan at {{ down_pct|int }}% down (no PMI), the ZIP's
+        property tax rate, and the state's average homeowner (HO-3) premium scaled to the price — the ZIP page's owner card.</li>
+      <li><b>Today</b>: Zillow's typical home value (ZHVI) for {{ meta.get("zhvi_last_month", "") }}; Freddie Mac's 30-year
+        rate {{ pct(n.rate, 2) }} ({{ rate_date }}); Census {{ meta.get("acs_vintage", "") }} median household income
+        (in {{ c.acs_end_year }} dollars) brought to {{ c.cpi_latest_month }} dollars by CPI ×{{ "%.3f"|format(c.income_to_today) }}
+        — this assumes no real income growth since {{ c.acs_end_year }}.</li>
+      <li><b>2019</b>, fixed: Zillow's 2019 average value, Freddie Mac's 2019 average rate {{ pct(c.rate19, 2) }}, and Census
+        {{ meta.get("acs19_vintage", "") }} income in 2019 dollars. The tax rate is today's; insurance is today's premium
+        deflated to 2019 by CPI (premiums rose faster than prices, so 2019's payment is if anything overstated).</li>
+      <li><b>Affordable price</b>: the price whose payment takes exactly {{ share|int }}% of the median income at today's rate.</li>
+      <li><b>States and the US</b> are a typical household: the household-weighted median price, income and tax rate across
+        ZIPs that have every figure in both years — the same ZIPs, weighted the same way, at both ends.</li>
+      <li><b>The ZIP map</b> colours every ZIP by its own figures, and its "median" counts each ZIP once — rural ZIPs
+        included — so it reads lower than this page's typical household, which weights ZIPs by households.</li>
+      <li><b>Why it changed</b>: Shapley decomposition — each factor's average effect over every order in which the four could
+        change, so the parts sum to the total exactly.</li>
+      <li>This replaces the "fair value" page, whose verdict depended on a baseline that rolled forward each month and
+        compared a statewide index today with a median-ZIP figure then.</li>
+    </ul>
+    <div class="ha-note">Sources: Zillow Research (ZHVI); Freddie Mac PMMS and BLS CPI-U via FRED ({{ (macro or {}).get("source", "") }});
+      U.S. Census Bureau ACS 5-year estimates; state insurance averages (re_assumptions.py). Not financial advice.</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if nation and const %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script id="haStates" type="application/json">{{ rows|tojson }}</script>
+<script id="haZips" type="application/json">{{ zip_rows|tojson }}</script>
+<script>
+(function () {
+  const STATES = JSON.parse(document.getElementById('haStates').textContent);
+  const ZIPS = JSON.parse(document.getElementById('haZips').textContent);
+  const PICKED = {{ state|tojson }};
+  const byFips = Object.fromEntries(STATES.filter(s => s.fips).map(s => [s.fips, s]));
+  // Diverging around the 30% line: blue arm below, neutral at the line, red arm above
+  // (each arm validated as an ordinal ramp in light and dark). Change: one red ramp.
+  const SCALES = {
+    ratio: {bins: [20, 25, 28, 32, 40, 50],
+            colors: ['#184f95', '#2a78d6', '#6da7ec', '#d6d4ce', '#ec8a83', '#d9534c', '#a8302c'],
+            labels: ['under 20%', '20–25%', '25–28%', '28–32% (at the line)', '32–40%', '40–50%', '50% and up']},
+    change: {bins: [0, 6, 10, 14],
+             colors: ['#2a78d6', '#ee9a93', '#e5675f', '#c8403a', '#a12c28'],
+             labels: ['fell', '+0–6 pts', '+6–10 pts', '+10–14 pts', '+14 pts and up']},
+  };
+  let mode = 'ratio';
+  const colorOf = v => {
+    if (v == null) return '#e5e7eb';
+    const s = SCALES[mode]; let i = 0;
+    while (i < s.bins.length && v >= s.bins[i]) i++;
+    return s.colors[i];
+  };
+  const fmtPct = v => v == null ? '—' : v.toFixed(1) + '%';
+  const fmtPts = v => v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1) + ' pts';
+  const fmt$ = v => v == null ? '—' : '$' + Math.round(v).toLocaleString('en-US');
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+
+  // ── map ──
+  const map = L.map('haMap', {scrollWheelZoom: false, minZoom: 3, maxBounds: L.latLngBounds([22, -127], [51, -64]),
+                               maxBoundsViscosity: 0.6}).setView([38.5, -96], 4);
+  const ESRI_CANVAS = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas';
+  L.tileLayer(ESRI_CANVAS + '/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 16, maxNativeZoom: 16, attribution: 'Tiles &copy; Esri'}).addTo(map);
+  L.tileLayer(ESRI_CANVAS + '/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 16, maxNativeZoom: 16, attribution: '', pane: 'shadowPane'}).addTo(map);
+  const tip = document.getElementById('haTip');
+  let layer = null;
+  const style = f => {
+    const s = byFips[f.id];
+    const v = s ? (mode === 'ratio' ? s.ratio : s.change) : null;
+    return {fillColor: colorOf(v), fillOpacity: 0.85, weight: s && s.code === PICKED ? 2.5 : 1,
+            color: s && s.code === PICKED ? '#111' : '#fff'};
+  };
+  fetch('/static/data/us-states.json').then(r => r.json()).then(geo => {
+    layer = L.geoJSON(geo, {style, onEachFeature: (f, l) => {
+      l.on('mousemove', e => {
+        const s = byFips[f.id];
+        if (!s) { tip.style.display = 'none'; return; }
+        tip.innerHTML = `<b>${esc(s.name)}</b><br>Payment ÷ income ${fmtPct(s.ratio)} (2019 ${fmtPct(s.ratio19)})<br>` +
+          `Change ${fmtPts(s.change)} · typical home ${fmt$(s.price)}`;
+        const p = e.containerPoint; tip.style.left = (p.x + 12) + 'px'; tip.style.top = (p.y + 12) + 'px';
+        tip.style.display = 'block';
+      });
+      l.on('mouseout', () => { tip.style.display = 'none'; });
+      l.on('click', () => { const s = byFips[f.id]; if (s) location.href = `?state=${s.code}#state`; });
+    }}).addTo(map);
+  });
+  function legend() {
+    const s = SCALES[mode];
+    document.getElementById('haLegend').innerHTML = s.labels.map((t, i) =>
+      `<span><i style="background:${s.colors[i]}"></i>${t}</span>`).join('');
+  }
+  document.querySelectorAll('.ha-toggle button').forEach(b => b.addEventListener('click', () => {
+    mode = b.dataset.mode;
+    document.querySelectorAll('.ha-toggle button').forEach(x => {
+      x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b ? 'true' : 'false'); });
+    if (layer) layer.setStyle(style);
+    legend();
+  }));
+  legend();
+
+  // ── sortable state table ──
+  const stTable = document.getElementById('stTable');
+  let stKey = 'ratio', stDir = -1;
+  stTable.querySelectorAll('th[data-k]').forEach(th => th.addEventListener('click', () => {
+    const k = th.dataset.k;
+    stDir = (k === stKey) ? -stDir : (k === 'name' ? 1 : -1); stKey = k;
+    const body = stTable.tBodies[0];
+    const rows = Array.from(body.rows);
+    rows.sort((a, b) => {
+      const x = a.dataset[k], y = b.dataset[k];
+      if (k === 'name') return stDir * x.localeCompare(y);
+      return stDir * ((parseFloat(x) || -1e9) - (parseFloat(y) || -1e9));
+    });
+    rows.forEach(r => body.appendChild(r));
+    stTable.querySelectorAll('th').forEach(t => { t.classList.toggle('sorted', t === th);
+      t.textContent = t.textContent.replace(/ [↑↓]$/, ''); });
+    th.textContent += stDir < 0 ? ' ↓' : ' ↑';
+  }));
+
+  // ── ZIP table for the picked state ──
+  const zt = document.getElementById('zipTable');
+  if (zt) {
+    let zKey = 'ratio', zDir = -1, shown = 100, q = '';
+    const cols = [['zip', 'ZIP', 'l'], ['place', 'Place', 'l'], ['ratio', 'Today'], ['ratio19', '2019'],
+                  ['change', 'Change'], ['price', 'Typical home'], ['affordable', 'Affordable at {{ share|int }}%'],
+                  ['gap', 'Gap'], ['hh', 'Households']];
+    function draw() {
+      let rows = ZIPS.filter(r => !q || (r.zip + ' ' + r.place + ' ' + r.county).toLowerCase().includes(q));
+      rows.sort((a, b) => {
+        const x = a[zKey], y = b[zKey];
+        if (typeof x === 'string') return zDir * x.localeCompare(y);
+        if (x == null) return 1; if (y == null) return -1;
+        return zDir * (x - y);
+      });
+      let h = '<thead><tr>' + cols.map(([k, t, c]) =>
+        `<th data-k="${k}" class="${c || ''}${k === zKey ? ' sorted' : ''}">${t}${k === zKey ? (zDir < 0 ? ' ↓' : ' ↑') : ''}</th>`).join('') + '</tr></thead><tbody>';
+      for (const r of rows.slice(0, shown)) {
+        const le = r.coded === 'top' ? '≤ ' : '';
+        h += `<tr><td class="l"><a href="/zip/${r.zip}">${r.zip}</a></td><td class="l">${esc(r.place)}</td>` +
+          `<td>${le}${fmtPct(r.ratio)}</td><td>${r.coded19 === 'top' ? '≤ ' : ''}${fmtPct(r.ratio19)}</td><td>${fmtPts(r.change)}</td>` +
+          `<td>${fmt$(r.price)}</td><td>${fmt$(r.affordable)}</td>` +
+          `<td>${r.gap == null ? '—' : (r.gap > 0 ? '+' : r.gap < 0 ? '−' : '') + Math.abs(r.gap) + '%'}</td>` +
+          `<td>${r.hh ? r.hh.toLocaleString('en-US') : '—'}</td></tr>`;
+      }
+      if (!rows.length) h += `<tr><td class="l" colspan="${cols.length}">No ZIPs match.</td></tr>`;
+      zt.innerHTML = h + '</tbody>';
+      document.getElementById('zipMore').style.display = rows.length > shown ? 'inline-block' : 'none';
+      zt.querySelectorAll('th').forEach(th => th.addEventListener('click', () => {
+        const k = th.dataset.k;
+        zDir = (k === zKey) ? -zDir : ((k === 'zip' || k === 'place') ? 1 : -1); zKey = k; draw();
+      }));
+    }
+    document.getElementById('zipMore').addEventListener('click', () => { shown += 100; draw(); });
+    document.getElementById('zipSearch').addEventListener('input', e => { q = e.target.value.trim().toLowerCase(); shown = 100; draw(); });
+    draw();
+  }
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -74,8 +74,17 @@ _M = [
      "Principal, interest, PMI, tax and insurance on Zillow's typical home at 20% down."),
     ("own_income_needed", "Income needed to buy", 1, "money", "own:income_needed", "owner", None, None, False,
      "At 28% of gross income for housing (36% with other debt)."),
-    ("own_payment_to_income", "Payment ÷ median household income", 1, "pct", "own:payment_to_income_pct",
-     "owner", None, None, False, "The payment as a share of the ZIP's median household income (Census)."),
+    ("own_payment_to_income", "Payment ÷ median household income", 1, "pct", "aff:ratio",
+     "affordability", None, None, False, "The payment on the typical home (20% down, tax, insurance) as a share of "
+     "the ZIP's Census median household income in today's dollars. 30% is the cost-burden line."),
+    ("aff_ratio19", "Payment ÷ income, 2019", 1, "pct", "aff:ratio19", "affordability", None, None, False,
+     "The same share with 2019's average price, average rate and Census 2015-19 income."),
+    ("aff_change", "Payment ÷ income, change since 2019", 1, "pts", "aff:change_pts", "affordability",
+     None, None, False, "Percentage points; above zero, buying the typical home takes more of the typical income "
+     "than in 2019."),
+    ("aff_gap", "Typical home vs price affordable at 30%", 1, "pct", "aff:gap_pct", "affordability",
+     None, None, False, "How far Zillow's typical home sits above (or below) the price whose payment takes 30% of "
+     "the median income at today's rate."),
     ("own_minus_rent", "Cost of owning minus rent / month", 1, "money", "own:own_minus_rent_monthly",
      "owner", None, None, False, "Interest, PMI, tax, insurance, upkeep and the down payment's lost return, "
      "less Zillow's typical rent. Above zero, renting the same home costs less."),
@@ -180,7 +189,7 @@ METRICS = {m[0]: {"key": m[0], "label": m[1], "group": _GROUPS[m[2]], "fmt": m[3
 DEFAULT_METRIC = "cap_rate"
 
 # Rounding per format, so a 32k-value array stays small.
-_ROUND = {"money": 0, "money2": 2, "pct": 1, "pct2": 2, "x": 1, "ratio": 2, "days": 0, "num": 0,
+_ROUND = {"money": 0, "money2": 2, "pct": 1, "pct2": 2, "x": 1, "ratio": 2, "days": 0, "num": 0, "pts": 1,
           "num1": 1, "year": 0, "deg": 1, "inch": 0}
 
 
@@ -319,9 +328,10 @@ def _coded(flags: str | None) -> dict:
 
 def _as_of(m: dict, t: dict, meta: dict, rate_date: str) -> str:
     a = m["as_of"]
-    if m["how"].startswith(("inv:", "own:")):
+    if m["how"].startswith(("inv:", "own:", "aff:")):
         basis_month = month_label(meta.get("zhvi_last_month"))
-        return f"{basis_month} values; rate {rate_date}" if rate_date else f"{basis_month} values"
+        out = f"{basis_month} values; rate {rate_date}" if rate_date else f"{basis_month} values"
+        return out + (" (against 2019)" if m["how"] in ("aff:ratio19", "aff:change_pts") else "")
     if a is None or a == "":
         return ""
     if a.startswith("meta:"):
@@ -362,7 +372,24 @@ def metric_values(key: str, basis: str = DEFAULT_BASIS, rate: float | None = Non
                         values[i] = flag["bound"]
                         coded[i] = flag["side"]
     suspect: list = []
-    if kind != "col":
+    if kind == "aff":
+        # The affordability page's own figures (affordability.py), so the map
+        # and the page cannot disagree. A ZIP whose income the Census gives
+        # only as "$250,000+" has a share of at most the figure: coded "upper".
+        import affordability as AF
+        b = AF.build(rate, path)
+        by_zip = {}
+        for z in b["zips"]:
+            mm = z["m"] or {}
+            by_zip[z["zip"]] = (mm.get(field), z["inp"].get("coded"), z["inp"].get("coded19"))
+        values = []
+        for i, zc in enumerate(t.get("zip", [])):
+            v, c_now, c_19 = by_zip.get(zc, (None, None, None))
+            values.append(v)
+            if v is not None and ((field in ("ratio", "gap_pct") and c_now == "top")
+                                  or (field == "ratio19" and c_19 == "top")):
+                coded[i] = "upper"
+    elif kind != "col":
         uw = _underwritten(str(path), _mtime(path), rate, None if kind == "own" else basis)
         values = uw[field]
         flag = uw["implausible"] if kind == "inv" else (uw["rent_implausible"] if field == "own_minus_rent_monthly"

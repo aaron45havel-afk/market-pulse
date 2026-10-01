@@ -166,7 +166,7 @@
       <div class="zp-out" id="ownOut">
         <div class="zp-kpi"><div class="k">Monthly payment</div><div class="v" data-o="monthly_total">{{ money(o.monthly_total) }}</div></div>
         <div class="zp-kpi"><div class="k">Income needed</div><div class="v" data-o="income_needed">{{ money(o.income_needed) }}</div><div class="n" data-o="income_needed_basis">{{ o.income_needed_basis or "" }} DTI</div></div>
-        <div class="zp-kpi"><div class="k">Payment ÷ ZIP income</div><div class="v" data-o="payment_to_income_pct">{{ pct(o.payment_to_income_pct) }}</div></div>
+        <div class="zp-kpi"><div class="k">Payment ÷ ZIP income</div><div class="v" data-o="payment_to_income_pct">{{ pct(o.payment_to_income_pct) }}</div><div class="n">Census median, in today's dollars · <a href="/housing-affordability?state={{ r.state }}" style="color:var(--primary)">vs 2019</a></div></div>
         <div class="zp-kpi"><div class="k">Cash to close</div><div class="v" data-o="cash_to_close">{{ money(o.cash_to_close) }}</div></div>
         <div class="zp-kpi"><div class="k">Owning vs renting</div><div class="v" data-o="own_minus_rent_monthly">{% if o.own_minus_rent_monthly is defined and o.own_minus_rent_monthly is not none %}{{ money(o.own_minus_rent_monthly|abs) }}{% else %}—{% endif %}</div>
           <div class="n" data-o="own_vs_rent_note">{% if o.own_minus_rent_monthly is defined and o.own_minus_rent_monthly is not none %}{{ "more" if o.own_minus_rent_monthly > 0 else "less" }} a month to own than to rent, before appreciation{% endif %}</div></div>
