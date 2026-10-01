@@ -200,3 +200,17 @@ Format: `- [PHASE-SEEN] item — why it matters`
   market cap. Refresh Schloss before the FCF build, or carry market cap in compounders.json.
 - [COMP-DRIFT-MEDIAN] Compounders' valuation median spans 7 years including 2020-21. Storing per-year
   P/FCF in compounders.json would let the median exclude the peak and be re-measured offline.
+- [MAP-REBUILD] Phase 2: Redfin ZIP market activity (DOM, months of supply, sale-to-list, price drops,
+  homes sold; 90-day windows by property type) into zip_profile.db, dated, with a staleness rule — the
+  ZIP file ended 2026-05-31; check whether the metro/county trackers are fresher. Phase 3: the new ZIP
+  page on zip_profile.db (editable underwriting card, owner card, trends from zip_series.json.gz with
+  real dates, FEMA/NOAA risk, Census margins). Phase 4: the new map (one metric at a time, filters,
+  table, no composites). Phase 5: retire composites/forecast/proxy columns from zips.db and their readers.
+- [ZIP-PROFILE-RISK] FEMA hazards and NOAA climate cover the ~25.7k zips.db ZIPs only; extend
+  refresh_zip_hazards/refresh_zip_climate to all 32.8k ZCTAs so Census-only ZIPs get risk figures.
+- [ZIP-PROFILE-SIZE] zip_profile.db is 20.3 MB and zip_series.json.gz 6.8 MB, committed monthly. Store the
+  repeated basis strings as codes, and consider a release asset or data branch for the series.
+- [ZIP-PROFILE-CITY] ZIPs Zillow does not cover have no city name (county only); a USPS/HUD ZIP-city
+  crosswalk would name them.
+- [CRIME-JOIN] FBI crime is joined by Zillow mailing-city name; before it appears on the new pages, weight
+  it by the Census ZCTA-to-place file and show it as a police-jurisdiction figure, never a ZIP's.
