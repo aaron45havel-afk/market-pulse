@@ -2139,7 +2139,11 @@ async def holt_page(request: Request):
         "request": request,
         "rows": res["rows"][:200],
         "counts": res["counts"],
-        "refused": res["refused"][:40],
+        # Every data fault, not the first 40 refusals filtered afterwards —
+        # that kept 1 of 45. Rows with no multiple at all are counted by
+        # reason instead; they are facts about the company, not faults.
+        "refused": res["refused"],
+        "unmeasured": res["unmeasured"],
         "grid": H.GRID,
         "weighted": weighted,
         "census": H.grid_census(res["clean"]),

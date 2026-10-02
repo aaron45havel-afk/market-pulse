@@ -167,6 +167,28 @@ def multiple_fault(now, median=None) -> str | None:
     return None
 
 
+def no_multiple_reason(row) -> str:
+    """Why a row has no multiple at all — not a fault, a fact about the
+    company or its filings. The board used to file all of these under
+    "refused — unusable multiple", burying the 45 real data faults among
+    600 companies that simply have no positive free cash flow to price."""
+    r = row or {}
+    if r.get("currency") not in (None, "USD"):
+        return "files in another currency — multiple withheld"
+    if r.get("price") is None:
+        return "no price"
+    fcf = r.get("fcf_last")
+    if fcf is None:
+        return "no free-cash-flow figure"
+    if fcf <= 0:
+        return "negative free cash flow"
+    return "no per-share figure"
+
+
+NO_MULTIPLE_ORDER = ("negative free cash flow", "files in another currency — multiple withheld",
+                     "no free-cash-flow figure", "no per-share figure", "no price")
+
+
 def multiple_band(now, median=None) -> str | None:
     """Which HOLT row a company sits in. None when the multiple is unusable."""
     if multiple_fault(now, median):
@@ -308,10 +330,52 @@ GATES = (
 )
 ROIC_MIN = 8.0
 FCF_CONV_MIN = 50.0
+PROFIT_YEARS_MIN = 5
+
+# COMMODITY PRODUCERS ARE CYCLICAL BY WHAT THEY SELL, not by how their
+# margins happened to move. The data flag (margin variability, revenue
+# chop) missed 41 of 85 oil and gas producers, and one of them — Northern
+# Oil & Gas, its 31.8% sales CAGR the rebound from the 2020 oil low — sat
+# at #1. Mining and oil & gas extraction (SIC 1000-1499) and refining (2911)
+# sell a price; their five-year sales growth is that price, so they are
+# held off the clean board by industry, whatever the margins did.
+CYCLICAL_SIC = (range(1000, 1500), (2911,))
+
+
+def is_commodity_producer(sic) -> bool:
+    try:
+        code = int(sic)
+    except (TypeError, ValueError):
+        return False
+    return any(code in r for r in CYCLICAL_SIC)
+
+
+def unmeasured_gates(row) -> list[str]:
+    """The gates this row's data cannot answer — not passes, not failures.
+
+    THREE ANSWERS, NOT TWO, as on Compounders: a missing ROIC is not a
+    good ROIC. Range Resources once sat on the clean board with no ROIC,
+    no cash conversion, no free-cash-flow history and no historical
+    multiple — clean only because nothing could object."""
+    r = row or {}
+    out = []
+    if r.get("roic_med") is None:
+        out.append("ROIC")
+    if r.get("fcf_conv") is None:
+        out.append("FCF conversion")
+    # The build's cyclical test runs on operating margins and reads False
+    # when it has none; an industry flag needs no margins.
+    if r.get("op_margin_med") is None and not is_commodity_producer(r.get("sic")):
+        out.append("cyclicality")
+    seen = r.get("ni_years_seen")
+    if not seen or seen < PROFIT_YEARS_MIN or r.get("ni_pos_years") is None:
+        out.append("profit history")
+    return out
 
 
 def quality_flags(row) -> list[str]:
-    """Reasons to distrust a high score. Empty means nothing objected."""
+    """Reasons to distrust a high score. Empty means nothing objected —
+    which is not the same as clean; see unmeasured_gates."""
     r = row or {}
     out = []
     roic = r.get("roic_med")
@@ -322,11 +386,14 @@ def quality_flags(row) -> list[str]:
     if conv is not None and conv < FCF_CONV_MIN:
         out.append(f"FCF conversion {conv:.0f}% — the sales growth is not "
                    f"reaching cash")
-    if r.get("cyclical"):
+    if is_commodity_producer(r.get("sic")):
+        out.append(f"Commodity producer (SIC {int(r['sic'])}) — its five-year "
+                   f"sales CAGR is the commodity price, not compounding")
+    elif r.get("cyclical"):
         out.append("Flagged cyclical — a five-year sales CAGR here is a "
                    "price cycle, not compounding")
     seen, pos = r.get("ni_years_seen"), r.get("ni_pos_years")
-    if seen and pos is not None and seen >= 5 and pos < seen * 2 / 3:
+    if seen and pos is not None and seen >= PROFIT_YEARS_MIN and pos < seen * 2 / 3:
         out.append(f"Profitable in only {pos} of {seen} years")
     return out
 
@@ -344,7 +411,20 @@ def score(row, transitions=None) -> dict:
     g_band = growth_band(r.get("rev_cagr5"))
     ev = expected_excess(m_band, g_band, transitions)
     flags = quality_flags(r)
+    unmeasured = unmeasured_gates(r)
     t = (transitions or DEFAULT_TRANSITIONS).get(g_band) or {}
+    if fault == "no multiple":
+        status = "no multiple"
+    elif fault:
+        status = "refused"
+    elif ev is None:
+        status = "no growth"
+    elif flags:
+        status = "flagged"            # a measured failure decides it
+    elif unmeasured:
+        status = "not measured"
+    else:
+        status = "clean"
 
     return {
         "ticker": r.get("ticker"), "name": r.get("name"),
@@ -360,20 +440,24 @@ def score(row, transitions=None) -> dict:
         "p_decline": round(sum(v for k, v in t.items()
                                if GROWTH_BANDS.index(k) < GROWTH_BANDS.index(g_band)),
                            4) if g_band and t else None,
-        "flags": flags, "clean": not flags and not fault,
+        "flags": flags, "unmeasured": unmeasured, "status": status,
+        "no_multiple_reason": no_multiple_reason(r) if status == "no multiple" else None,
+        "clean": status == "clean",
     }
 
 
 def rank(rows, transitions=None, require_clean: bool = True,
          max_band: str | None = None) -> dict:
-    """Score a universe and sort it. Refusals are RETURNED, not dropped.
+    """Score a universe and sort it. Nothing is dropped without a count.
 
-    `max_band` caps the multiple — the one axis a buyer actually chooses.
-    `refused` carries every name the multiple guard rejected, because a
-    board that silently omits them looks like a board that considered
-    them and found them wanting.
+    Every row lands in exactly one status: clean, flagged (a gate measured
+    and failed), not measured (a gate the data cannot answer), refused (a
+    multiple that cannot be true — a data fault), no multiple (no positive
+    free cash flow to price, or none we may use; counted by reason) or no
+    growth (a usable multiple but no sales growth to place it). `max_band`
+    caps the multiple — the one axis a buyer actually chooses — and applies
+    to the scored statuses.
     """
-    scored, refused, flagged = [], [], []
     allowed = None
     if max_band:
         if max_band not in MULTIPLE_BANDS:
@@ -381,24 +465,29 @@ def rank(rows, transitions=None, require_clean: bool = True,
         allowed = set(MULTIPLE_BANDS[:MULTIPLE_BANDS.index(max_band) + 1])
         allowed.discard("negative")
 
+    out = {"clean": [], "flagged": [], "not measured": [], "refused": [], "no multiple": [], "no growth": []}
     for r in rows or []:
         s = score(r, transitions)
-        if s["multiple_fault"]:
-            refused.append(s)
+        if s["status"] in ("clean", "flagged", "not measured") and allowed \
+                and s["multiple_band"] not in allowed:
             continue
-        if s["expected_excess"] is None:
-            continue
-        if allowed and s["multiple_band"] not in allowed:
-            continue
-        (flagged if s["flags"] else scored).append(s)
+        out[s["status"]].append(s)
 
-    scored.sort(key=lambda s: (-s["expected_excess"], s["multiple"] or 0))
-    flagged.sort(key=lambda s: (-s["expected_excess"], s["multiple"] or 0))
+    for k in ("clean", "flagged", "not measured"):
+        out[k].sort(key=lambda s: (-s["expected_excess"], s["multiple"] or 0))
+    no_mult: dict = {}
+    for s in out["no multiple"]:
+        no_mult[s["no_multiple_reason"]] = no_mult.get(s["no_multiple_reason"], 0) + 1
     return {
-        "rows": scored if require_clean else scored + flagged,
-        "clean": scored, "flagged": flagged, "refused": refused,
-        "counts": {"scored": len(scored) + len(flagged), "clean": len(scored),
-                   "flagged": len(flagged), "refused": len(refused)},
+        "rows": out["clean"] if require_clean else out["clean"] + out["flagged"],
+        "clean": out["clean"], "flagged": out["flagged"], "unmeasured": out["not measured"],
+        "refused": out["refused"], "no_multiple": out["no multiple"], "no_growth": out["no growth"],
+        "counts": {"scored": len(out["clean"]) + len(out["flagged"]) + len(out["not measured"]),
+                   "clean": len(out["clean"]), "flagged": len(out["flagged"]),
+                   "unmeasured": len(out["not measured"]), "refused": len(out["refused"]),
+                   "no_multiple": len(out["no multiple"]),
+                   "no_multiple_by_reason": {k: no_mult[k] for k in NO_MULTIPLE_ORDER if k in no_mult},
+                   "no_growth": len(out["no growth"])},
     }
 
 

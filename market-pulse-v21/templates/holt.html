@@ -213,16 +213,22 @@
       holds. <strong>“if hit”</strong> is what the cell pays should the
       growth actually land; <strong>“expected”</strong> is what it is worth
       given it probably will not. Quality gates keep negative-ROIC shells
-      and commodity cyclicals off the clean board — their five-year sales
-      CAGR is a price cycle, not a business compounding.
+      and commodity producers off the clean board — their five-year sales
+      CAGR is a price cycle, not a business compounding. Mining, oil &amp; gas
+      and refining are held off by industry, whatever their margins did. A
+      gate the data cannot answer is <strong>not measured</strong>, never passed.
     </p>
 
     <div class="hg-counts">
       <span><b>{{ counts.clean }}</b> clean</span>
       <span><b>{{ counts.flagged }}</b> flagged on quality</span>
-      <span><b>{{ counts.refused }}</b> refused — unusable multiple</span>
+      <span><b>{{ counts.unmeasured }}</b> not measured</span>
+      <span><b>{{ counts.refused }}</b> refused — the multiple can't be true</span>
       {% if as_of %}<span>as of {{ as_of }}</span>{% endif %}
     </div>
+    <p class="sub" style="margin-top:0.4rem">Not on the board at all:
+      <b>{{ counts.no_multiple }}</b> with no usable multiple ({% for k, n in counts.no_multiple_by_reason.items() %}{{ n }} {{ k }}{% if not loop.last %}, {% endif %}{% endfor %}){% if counts.no_growth %}
+      and <b>{{ counts.no_growth }}</b> with a multiple but no sales-growth figure to place it{% endif %}.</p>
 
     <div class="hg-filters">
       <a href="/holt{% if show_flagged %}?flagged=1{% endif %}"
@@ -279,6 +285,23 @@
     </div>
   </div>
 
+  {# ── gates the data could not answer ── #}
+  {% if unmeasured %}
+  <div class="hg-card">
+    <h2>Not measured — a gate the data can't answer</h2>
+    <p class="sub">
+      These score on the grid but a quality gate has no figure to judge, so
+      they stay off the clean board rather than passing by default. Missing is
+      not the same as fine.
+    </p>
+    <div class="hg-refused">
+      {% for r in unmeasured %}
+        <div><b>{{ r.ticker }}</b> — {{ (r.name or '')[:34] }} · expected {{ '%+.1f' | format(r.expected_excess) }}% · no {{ r.unmeasured | join(', no ') }}</div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   {# ── refusals, shown rather than hidden ── #}
   {% if refused %}
   <div class="hg-card">
@@ -291,7 +314,7 @@
       and rejected on the merits.
     </p>
     <div class="hg-refused">
-      {% for r in refused if r.multiple_fault != 'no multiple' %}
+      {% for r in refused %}
         <div><b>{{ r.ticker }}</b> — {{ r.multiple_fault }}</div>
       {% endfor %}
     </div>
