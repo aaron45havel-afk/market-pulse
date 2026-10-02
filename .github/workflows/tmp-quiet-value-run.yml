@@ -1,4 +1,4 @@
-# TEMPORARY: run the real quiet-value refresh on this branch with the fixed user agent. Deleted before the PR.
+# TEMPORARY: run the real quiet-value refresh on this branch (run 2: annual flows, every candidate). Deleted before the PR.
 name: TEMP quiet-value refresh (branch)
 on:
   push:
@@ -24,8 +24,9 @@ jobs:
         run: |
           python tests/test_liquidity.py
           python tests/test_pricefeed.py
+          python tests/test_quiet_value_build.py
       - name: Build the quiet-value screen
-        run: python scripts/refresh_quiet_value.py --limit 400
+        run: python scripts/refresh_quiet_value.py --limit 4000
       - name: Commit to the branch
         run: |
           set -euo pipefail

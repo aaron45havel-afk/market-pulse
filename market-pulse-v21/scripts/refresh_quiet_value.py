@@ -63,29 +63,62 @@ MIN_MARKET_CAP = 10_000_000           # below this, listings are mostly shells
 MIN_ROWS_TO_WRITE = 25
 
 
-def _extra_frames() -> dict[str, dict]:
-    """Concepts the net-net screener does not fetch but this screen needs.
+# FLOWS ARE A YEAR, NOT A QUARTER. The first version read earnings, revenue,
+# dividends and cash flows from the net-net screener's single-quarter
+# frames: a P/E on one quarter's earnings is four times too high, a
+# dividend yield on one quarter's dividend four times too low, and the
+# cash-flow frames for a discrete quarter are nearly empty — companies
+# report cash flows year-to-date, so CY2026Q2 carried capex for 198 filers
+# and the capex test could not be measured for anyone. The last complete
+# calendar year's frames carry them all. Revenue is merged across the tags
+# companies actually use (Revenues alone covered 1,655 filers).
+ANNUAL_INPUTS = {
+    "revenue": (("Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax",
+                 "RevenueFromContractWithCustomerIncludingAssessedTax", "SalesRevenueNet"), "USD"),
+    "net_income": (("NetIncomeLoss",), "USD"),
+    "operating_income": (("OperatingIncomeLoss",), "USD"),
+    "ocf": (("NetCashProvidedByUsedInOperatingActivities",), "USD"),
+    "capex": (("PaymentsToAcquirePropertyPlantAndEquipment",), "USD"),
+    "div_per_share": (("CommonStockDividendsPerShareDeclared", "CommonStockDividendsPerShareCashPaid"),
+                      "USD-per-shares"),
+}
 
-    Kept here rather than added to sec_edgar.BS_CONCEPTS so the net-net
-    screener's cached payload and its cache key stay exactly as they are.
-    """
-    cbs, cis, _pbs = SE._periods()
-    wanted = {
-        "operating_income": ("OperatingIncomeLoss", cis, "USD"),
-        "capex": ("PaymentsToAcquirePropertyPlantAndEquipment", cis, "USD"),
-        "ocf": ("NetCashProvidedByUsedInOperatingActivities", cis, "USD"),
-    }
+
+def annual_period(today: date | None = None) -> str:
+    """The last complete calendar year's frame: CY2025 in October 2026."""
+    return f"CY{(today or date.today()).year - 1}"
+
+
+def merge_annual(frames: dict) -> dict:
+    """{name: [{cik: {"val": ...}} per concept, in preference order]} →
+    {cik: {name: value}}. The first concept with a value for a company wins;
+    later ones only fill companies the earlier ones lack."""
     out: dict[str, dict] = {}
-    with ThreadPoolExecutor(max_workers=4) as ex:
-        futs = {ex.submit(SE._frame, c, p, u): name for name, (c, p, u) in wanted.items()}
-        for fut in as_completed(futs):
-            name = futs[fut]
-            try:
-                for cik, entry in (fut.result() or {}).items():
-                    out.setdefault(cik, {})[name] = entry.get("val")
-            except Exception as e:                          # noqa: BLE001
-                log.warning("frame %s failed: %s", name, e)
+    for name, per_concept in frames.items():
+        for frame in per_concept:
+            for cik, entry in (frame or {}).items():
+                val = (entry or {}).get("val")
+                row = out.setdefault(cik, {})
+                if row.get(name) is None and val is not None:
+                    row[name] = val
     return out
+
+
+def _annual_frames(period: str) -> dict[str, dict]:
+    jobs = [(name, i, concept, unit) for name, (concepts, unit) in ANNUAL_INPUTS.items()
+            for i, concept in enumerate(concepts)]
+    got: dict = {}
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        futs = {ex.submit(SE._frame, c, period, u): (name, i) for name, i, c, u in jobs}
+        for fut in as_completed(futs):
+            name, i = futs[fut]
+            try:
+                got[(name, i)] = fut.result() or {}
+            except Exception as e:                          # noqa: BLE001
+                log.warning("frame %s[%d] failed: %s", name, i, e)
+                got[(name, i)] = {}
+    return merge_annual({name: [got.get((name, i), {}) for i in range(len(concepts))]
+                         for name, (concepts, _unit) in ANNUAL_INPUTS.items()})
 
 
 class FeedDown(Exception):
@@ -246,7 +279,12 @@ def choose_source(preferred: str = "") -> dict | None:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--limit", type=int, default=400,
+    # Every candidate: Yahoo answers ~10 names a second on three workers, so
+    # the whole ~2,750 list is about five minutes. The old cap of 400 was
+    # sized for a feed that was refusing us, and the 400 SMALLEST by assets
+    # are mostly pre-revenue shells — the profitable small companies this
+    # screen exists to find were never priced.
+    ap.add_argument("--limit", type=int, default=4000,
                     help="max candidates to pull market data for (one call each)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--source", default="", help="force a price source (yahoo, nasdaq, stooq)")
@@ -272,9 +310,12 @@ def main() -> int:
         return 1
     tickers = SE.get_tickers()
     exchanges = SE.get_exchanges()
-    extra = _extra_frames()
-    log.info("EDGAR: %d companies, %d tickers, %d with extra frames",
-             len(fin), len(tickers), len(extra))
+    period = annual_period()
+    annual = _annual_frames(period)
+    log.info("EDGAR: %d companies, %d tickers; %s annual flows for %d (revenue %d, net income %d, "
+             "capex %d, operating cash flow %d)", len(fin), len(tickers), period, len(annual),
+             *(sum(1 for v in annual.values() if v.get(k) is not None)
+               for k in ("revenue", "net_income", "capex", "ocf")))
 
     # ── cheap narrowing, before we spend a single market-data call ──
     candidates = []
@@ -291,11 +332,12 @@ def main() -> int:
         candidates.append({
             "cik": cik, "ticker": meta["ticker"], "name": name,
             "exchange": (exchanges.get(cik) or {}).get("exchange", ""),
+            # Balance sheet: the latest quarter-end (an instant is an instant).
             **{k: f.get(k) for k in ("cash", "total_assets", "total_liabilities",
                                      "stockholders_equity", "short_term_debt",
-                                     "long_term_debt", "shares", "revenue",
-                                     "net_income", "div_per_share")},
-            **(extra.get(cik) or {}),
+                                     "long_term_debt", "shares")},
+            # Flows: the last complete year (ANNUAL_INPUTS).
+            **{k: (annual.get(cik) or {}).get(k) for k in ANNUAL_INPUTS},
         })
     log.info("Candidates after asset filter: %d", len(candidates))
     if not candidates:

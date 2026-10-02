@@ -21,7 +21,7 @@ on:
       limit:
         description: 'Max candidates to pull market data for (one call each)'
         required: false
-        default: '400'
+        default: '4000'
 
 permissions:
   contents: write
@@ -52,12 +52,13 @@ jobs:
         run: |
           python tests/test_liquidity.py
           python tests/test_pricefeed.py
+          python tests/test_quiet_value_build.py
 
       # The run now probes its price sources first and gives up in seconds
       # if none will answer, so this budget covers real work rather than
       # an hour of backing off from a source that is refusing us.
       - name: Build the quiet-value screen
-        run: python scripts/refresh_quiet_value.py --limit "${{ github.event.inputs.limit || '400' }}"
+        run: python scripts/refresh_quiet_value.py --limit "${{ github.event.inputs.limit || '4000' }}"
 
       - name: Commit + push if changed
         run: |
