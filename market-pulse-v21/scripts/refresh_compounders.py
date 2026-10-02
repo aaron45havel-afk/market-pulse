@@ -173,6 +173,26 @@ TAGS: dict[str, list[tuple[str, str]]] = {
         ("us-gaap", "GrossProfit"),
         ("ifrs-full", "GrossProfit"),
     ],
+    # WHO OWNS THE CASH FLOW. The cash-flow statement is consolidated: it
+    # includes 100% of every subsidiary, and of an Up-C partnership's
+    # operating company. The share count is the parent's own. Where other
+    # holders own part — Hess Midstream's sponsors held 95% of its units
+    # in 2020, Formula Systems owns about 40% of the listed companies it
+    # consolidates — dividing all of the cash flow by the parent's shares
+    # overstates per-share cash flow and understates P/FCF (Hess Midstream
+    # read 2.3x). These three give the parent's share of each year's profit.
+    "ni_parent": [
+        ("us-gaap", "NetIncomeLoss"),
+        ("ifrs-full", "ProfitLossAttributableToOwnersOfParent"),
+    ],
+    "profit_total": [
+        ("us-gaap", "ProfitLoss"),
+        ("ifrs-full", "ProfitLoss"),
+    ],
+    "ni_nci": [
+        ("us-gaap", "NetIncomeLossAttributableToNoncontrollingInterest"),
+        ("ifrs-full", "ProfitLossAttributableToNoncontrollingInterests"),
+    ],
     "op_income": [
         ("us-gaap", "OperatingIncomeLoss"),
         ("ifrs-full", "ProfitLossFromOperatingActivities"),
@@ -1271,6 +1291,59 @@ def fix_share_scale(series: dict[int, float]) -> tuple[dict[int, float], bool]:
     return {y: series[y] * 1000.0 ** (ref - exp[y]) for y in ys}, True
 
 
+# A parent share at or above this is the whole company for our purposes.
+NCI_IMMATERIAL = 0.98
+
+
+def parent_shares(ni_parent: dict, profit_total: dict, ni_nci: dict, carry_years: int = 3) -> dict:
+    """{fiscal_year: the parent's share of that year's profit} for years in
+    which noncontrolling holders take a material part; None for such a
+    year that cannot be attributed. A year that is absent belongs wholly to
+    the parent.
+
+    Parent profit over total profit is the share, read directly where both
+    are filed. Where one is missing it is rebuilt from the minority line.
+    Total over parent is the safer pair to trust: Formula Systems tagged
+    its whole 2021-22 profit as the minority's, while its parent and total
+    lines agree with the filing.
+
+    A LOSS YEAR HAS NO PROFIT SPLIT, BUT OWNERSHIP DOES NOT MOVE WITH IT.
+    When the group or the parent loses money the ratio means nothing —
+    Omnicom's merger-charge year left the parent with a loss while its
+    minority holders earned their usual share — so the year takes the share
+    of the nearest year within `carry_years` that has one (earlier first;
+    "whole" if the minority was immaterial then). Only with no such year
+    is it None."""
+    known: dict = {}            # year -> share; 1.0 = the parent's whole
+    pending = []
+    for y in set(profit_total) | set(ni_nci):
+        tot, par, nci = profit_total.get(y), ni_parent.get(y), ni_nci.get(y)
+        if tot is None and par is not None and nci is not None:
+            tot = par + nci
+        if par is None and tot is not None and nci is not None:
+            par = tot - nci
+        if tot is None or par is None:
+            continue
+        if abs(tot - par) <= (1 - NCI_IMMATERIAL) * max(abs(tot), abs(par)):
+            known[y] = 1.0           # an immaterial minority line, profit or loss (Kraft Heinz 2025)
+        elif tot > 0 and par >= tot:
+            known[y] = 1.0           # a minority LOSS gives the parent no extra cash
+        elif tot > 0 and par >= 0:
+            known[y] = par / tot
+        else:
+            pending.append(y)
+    out = {y: v for y, v in known.items() if v < NCI_IMMATERIAL}
+    for y in pending:
+        near = [k for k in known if abs(k - y) <= carry_years]
+        if not near:
+            out[y] = None
+            continue
+        k = min(near, key=lambda k: (abs(k - y), k > y))
+        if known[k] < NCI_IMMATERIAL:
+            out[y] = known[k]
+    return out
+
+
 def compute_metrics(facts: dict) -> dict | None:
     shares_filed: dict[int, str] = {}
     pulled = {k: _annual_series(facts, slots, WANT_UNIT.get(k, "USD"),
@@ -1345,9 +1418,22 @@ def compute_metrics(facts: dict) -> dict | None:
 
     yrs_win = [y for y in both if y > last - LOOKBACK]
     fcf = {y: ocf[y] - reinvest[y] for y in both}
-    ni_win = [y for y in yrs_win if y in ni]
-    sum_fcf = sum(fcf[y] for y in ni_win)
-    sum_ni = sum(ni[y] for y in ni_win)
+
+    # The parent's own cash flow: each year's FCF × the parent's share of
+    # that year's profit (parent_shares). A year with material minority
+    # holders and no attributable share drops out; if it is the latest
+    # year, no multiple is built at all rather than one from a stale year.
+    p_share = parent_shares(same_ccy("ni_parent"), same_ccy("profit_total"), same_ccy("ni_nci"))
+    fcf_parent = {y: v * p_share.get(y, 1.0) for y, v in fcf.items() if p_share.get(y, 1.0) is not None}
+    nci_unattributed = bool(fcf) and max(fcf) in p_share and p_share[max(fcf)] is None
+
+    # Conversion on ONE basis: the parent's cash flow against the parent's
+    # profit. Consolidated cash flow over the parent's profit read Hess
+    # Midstream at 410%.
+    ni_par = {**ni, **same_ccy("ni_parent")}
+    ni_win = [y for y in yrs_win if y in ni_par and y in fcf_parent]
+    sum_fcf = sum(fcf_parent[y] for y in ni_win)
+    sum_ni = sum(ni_par[y] for y in ni_win)
     fcf_conv = round(sum_fcf / sum_ni * 100, 1) if sum_ni > 0 else None
 
     # Three of the last five years must actually report capex. One gap is
@@ -1440,9 +1526,16 @@ def compute_metrics(facts: dict) -> dict | None:
         "cycle_pos": cycle_pos,
         "cyclical": cyclical,
         "fcf_last": fcf.get(last),
+        # The parent's share of the latest year's profit where minority
+        # holders own part (None: the whole company is the parent's).
+        "parent_share": (round(p_share[max(fcf)], 3) if fcf and p_share.get(max(fcf)) is not None
+                         else None),
+        "nci_years": sum(1 for v in p_share.values() if v is not None),
+        "nci_unattributed": nci_unattributed,
         # Working data for Stage C, popped before output: FCF per share is
-        # built there, once the split history is known.
-        "_fcf": dict(fcf),
+        # built there, once the split history is known. The PARENT's cash
+        # flow — the part its shares own.
+        "_fcf": {} if nci_unattributed else dict(fcf_parent),
         "_shares": dict(shares),
         "_shares_filed": dict(shares_filed),
     }

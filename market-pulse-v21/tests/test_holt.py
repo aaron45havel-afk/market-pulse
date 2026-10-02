@@ -229,7 +229,7 @@ check(H.quality_flags({}) == [],
 # ── the full verdict ──
 _good = {"ticker": "MELI", "name": "MercadoLibre", "pfcf_now": 18.6,
          "pfcf_med": 19.0, "rev_cagr5": 43.8, "roic_med": 50.3,
-         "fcf_conv": 470.0, "cyclical": False}
+         "fcf_conv": 470.0, "cyclical": False, "ni_years_seen": 15, "ni_pos_years": 15, "op_margin_med": 20.0}
 _v = H.score(_good)
 check(_v["multiple_band"] == "15-20x" and _v["growth_band"] == "20+",
       "a clean name lands in its cell")
@@ -257,11 +257,11 @@ check(set(H.score({}).keys()) == set(_v.keys()),
 # ── ranking a universe ──
 UNIVERSE = [
     {"ticker": "CHEAP", "pfcf_now": 8.0, "pfcf_med": 9.0, "rev_cagr5": 22.0,
-     "roic_med": 18.0, "fcf_conv": 110.0},
+     "roic_med": 18.0, "fcf_conv": 110.0, "ni_years_seen": 15, "ni_pos_years": 15, "op_margin_med": 20.0},
     {"ticker": "RICH", "pfcf_now": 62.0, "pfcf_med": 60.0, "rev_cagr5": 25.0,
-     "roic_med": 25.0, "fcf_conv": 120.0},
+     "roic_med": 25.0, "fcf_conv": 120.0, "ni_years_seen": 15, "ni_pos_years": 15, "op_margin_med": 20.0},
     {"ticker": "MID", "pfcf_now": 17.0, "pfcf_med": 18.0, "rev_cagr5": 12.0,
-     "roic_med": 14.0, "fcf_conv": 95.0},
+     "roic_med": 14.0, "fcf_conv": 95.0, "ni_years_seen": 15, "ni_pos_years": 15, "op_margin_med": 20.0},
     {"ticker": "JUNK", "pfcf_now": 5.0, "pfcf_med": 6.0, "rev_cagr5": 190.0,
      "roic_med": -95.0, "fcf_conv": 0.0},
     {"ticker": "BROKEN", "pfcf_now": 0.8, "pfcf_med": 22.5, "rev_cagr5": 12.0},
@@ -303,6 +303,99 @@ check(_cen.get("0-10x|20+") == 1 and _cen.get("50x+|20+") == 1,
       "shape")
 check(H.grid_census([]) == {}, "and an empty board has an empty census")
 
+
+# ── commodity producers are cyclical by what they sell ──
+check(H.is_commodity_producer(1311) and H.is_commodity_producer(1040) and H.is_commodity_producer(2911)
+      and H.is_commodity_producer("1000") and not H.is_commodity_producer(7371)
+      and not H.is_commodity_producer(None) and not H.is_commodity_producer(1500),
+      "mining, oil & gas extraction (SIC 1000-1499) and refining (2911) are commodity producers")
+_nog = {"ticker": "NOG", "sic": 1311, "cyclical": False, "pfcf_now": 9.1, "pfcf_med": 7.8,
+        "rev_cagr5": 31.79, "roic_med": 12.1, "fcf_conv": 134.4, "ni_years_seen": 15, "ni_pos_years": 15, "op_margin_med": 20.0}
+_sn = H.score(_nog)
+check(_sn["status"] == "flagged" and _sn["flags"][0].startswith("Commodity producer (SIC 1311)"),
+      "NORTHERN OIL & GAS — #1 ON THE OLD BOARD, ITS 31.8% GROWTH THE OIL REBOUND — IS HELD OFF BY "
+      "INDUSTRY even though its margins never tripped the data flag")
+check(H.quality_flags({"cyclical": True, "sic": 7371})[0].startswith("Flagged cyclical"),
+      "a non-commodity company is still caught by the data flag")
+
+# ── three answers: missing is not a pass ──
+check(H.unmeasured_gates({"roic_med": 12.0, "fcf_conv": 90.0, "ni_years_seen": 15, "ni_pos_years": 15, "op_margin_med": 20.0}) == [],
+      "a fully measured row has nothing unmeasured")
+check(H.unmeasured_gates({"fcf_conv": 90.0, "ni_years_seen": 15, "ni_pos_years": 15, "op_margin_med": 20.0}) == ["ROIC"],
+      "a missing ROIC is not a good ROIC")
+check("cyclicality" in H.unmeasured_gates({"roic_med": 12.0, "fcf_conv": 90.0, "ni_years_seen": 15,
+                                           "ni_pos_years": 15})
+      and "cyclicality" not in H.unmeasured_gates({"sic": 1311, "roic_med": 12.0, "fcf_conv": 90.0,
+                                                   "ni_years_seen": 15, "ni_pos_years": 15}),
+      "with no margins the cyclical test cannot run — unless the industry already answers it")
+check("profit history" in H.unmeasured_gates({"roic_med": 12.0, "fcf_conv": 90.0, "op_margin_med": 9.0,
+                                              "ni_years_seen": 3, "ni_pos_years": 3}),
+      "three years of profits cannot judge the profitable-in-two-thirds gate")
+_rrc = {"ticker": "RRC", "sic": 1311, "pfcf_now": 9.6, "pfcf_med": None, "rev_cagr5": 1.63,
+        "ni_years_seen": 15, "ni_pos_years": 10, "op_margin_med": 20.0}
+_srr = H.score(_rrc)
+check(_srr["status"] == "flagged" and _srr["unmeasured"] == ["ROIC", "FCF conversion"] and not _srr["clean"],
+      "RANGE RESOURCES — NO ROIC, NO CONVERSION — IS NO LONGER CLEAN; a measured failure (the "
+      "industry) decides it, and what is missing is still listed")
+_gap = {**UNIVERSE[0], "ticker": "GAP", "roic_med": None}
+check(H.score(_gap)["status"] == "not measured" and H.score(_gap)["clean"] is False,
+      "a row that passes every gate it can measure but cannot measure one is 'not measured', not clean")
+
+# ── every row has exactly one status, and nothing vanishes ──
+_nm = [{"ticker": "NEG", "pfcf_now": None, "fcf_last": -5.0, "price": 10.0, "rev_cagr5": 5.0},
+       {"ticker": "FX", "pfcf_now": None, "currency": "JPY", "price": 10.0, "fcf_last": 5.0, "rev_cagr5": 5.0},
+       {"ticker": "NOFCF", "pfcf_now": None, "price": 10.0, "rev_cagr5": 5.0},
+       {"ticker": "NOPX", "pfcf_now": None, "fcf_last": 5.0, "rev_cagr5": 5.0},
+       {"ticker": "NOPS", "pfcf_now": None, "fcf_last": 5.0, "price": 10.0, "rev_cagr5": 5.0},
+       {"ticker": "NCI", "pfcf_now": None, "fcf_last": 5.0, "price": 10.0, "nci_unattributed": True,
+        "rev_cagr5": 5.0},
+       {"ticker": "NOG5", "pfcf_now": 12.0, "pfcf_med": 12.0, "rev_cagr5": None}]
+_rs = {s["ticker"]: s for s in (H.score(r) for r in _nm)}
+check([_rs[t]["no_multiple_reason"] for t in ("NEG", "FX", "NOFCF", "NOPX", "NOPS", "NCI")] == [
+      "negative free cash flow", "files in another currency — multiple withheld", "no free-cash-flow figure",
+      "no price", "no per-share figure",
+      "minority holders own part of the cash flow and this year's share can't be measured"],
+      "A ROW WITH NO MULTIPLE SAYS WHY: negative cash flow, another currency, no figure, no price, "
+      "no per-share figure, or an unattributable minority share")
+check(_rs["NOG5"]["status"] == "no growth", "a usable multiple with no growth figure is its own status")
+_all = H.rank(UNIVERSE + _nm + [_nog, _rrc, _gap])
+_c = _all["counts"]
+check(_c["clean"] + _c["flagged"] + _c["unmeasured"] + _c["refused"] + _c["no_multiple"] + _c["no_growth"]
+      == len(UNIVERSE) + len(_nm) + 3,
+      "EVERY ROW IS COUNTED IN EXACTLY ONE STATUS — none silently dropped")
+check([s["ticker"] for s in _all["refused"]] == ["BROKEN"] and _c["no_multiple"] == 6
+      and sum(_c["no_multiple_by_reason"].values()) == 6 and _c["no_growth"] == 1,
+      "REFUSED IS ONLY A MULTIPLE THAT CANNOT BE TRUE; the six with no multiple are counted by reason")
+check([s["ticker"] for s in _all["unmeasured"]] == ["GAP"] and "GAP" not in [s["ticker"] for s in _all["rows"]],
+      "the not-measured row is listed apart and never reaches the clean board")
+check(list(_c["no_multiple_by_reason"]) == [k for k in H.NO_MULTIPLE_ORDER if k in _c["no_multiple_by_reason"]],
+      "reasons are listed in a fixed order")
+
+# ── the page ──
+from types import SimpleNamespace  # noqa: E402
+from jinja2 import Environment, FileSystemLoader  # noqa: E402
+
+_env = Environment(loader=FileSystemLoader(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "templates")))
+_env.globals.update(is_admin=lambda r: False, current_user=lambda r: None, pipeline_access=lambda r: False)
+_broken = [{"ticker": f"BAD{i}", "pfcf_now": 0.5, "pfcf_med": 20.0, "rev_cagr5": 8.0} for i in range(45)]
+_page = H.rank(UNIVERSE + _nm + [_nog, _rrc, _gap] + _broken)
+_ctx = dict(request=SimpleNamespace(url=SimpleNamespace(path="/holt"), query_params={}),
+            rows=_page["rows"], counts=_page["counts"], refused=_page["refused"], unmeasured=_page["unmeasured"],
+            grid=H.GRID, weighted={}, census=H.grid_census(_page["clean"]), multiple_bands=H.MULTIPLE_BANDS,
+            growth_bands=H.GROWTH_BANDS, growth_labels=H.GROWTH_LABELS, transitions=H.DEFAULT_TRANSITIONS,
+            transitions_live=False, transition_n=0, proxy=H.MULTIPLE_PROXY, cap=None, show_flagged=False,
+            as_of="2026-09-28")
+_html = _env.get_template("holt.html").render(**_ctx)
+check(all(f"<b>BAD{i}</b>" in _html for i in range(45)) and "<b>BROKEN</b>" in _html,
+      "ALL 46 DATA FAULTS ARE LISTED — the page once kept the first 40 refusals and filtered after, showing 1 of 45")
+check("<b>NEG</b>" not in _html and "<b>FX</b>" not in _html,
+      "companies with no multiple are counted, not listed as faults")
+for _needle in ("not measured", "refused — the multiple can&#39;t be true", "with no usable multiple",
+                "1 negative free cash flow", "1 files in another currency", "no sales-growth figure",
+                "Not measured — a gate the data can&#39;t answer", "<b>GAP</b>", "no ROIC",
+                "The cash flow is the shareholders&#39; own", "held off by industry"):
+    check(_needle in _html or _needle.replace("&#39;", "'") in _html, f"the page says '{_needle}'")
+check("unusable multiple" not in _html, "the old mislabelled tile is gone")
 
 # ── report ──
 if _FAILS:

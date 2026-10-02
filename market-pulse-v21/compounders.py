@@ -508,7 +508,7 @@ def score(data: dict | None = None) -> list[dict]:
                 "gross_margin", "op_margin_now", "op_margin_med",
                 "cycle_pos", "cyclical", "div_yield", "div_cagr5",
                 "pfcf_now", "pfcf_med", "price", "rev_cagr15", "rev_trend",
-                "currency", "foreign")},
+                "currency", "foreign", "parent_share")},
             # `country` above is the RAW build value, kept so a regression
             # is still diagnosable. `location` is what the page prints.
             "fcf_conv": conv,

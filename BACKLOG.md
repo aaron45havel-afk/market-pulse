@@ -231,6 +231,14 @@ Format: `- [PHASE-SEEN] item — why it matters`
   deleted (map rebuild phase 5); remove it with the per-state derived scores only it displayed.
 - [CONDITIONS-METRO] Realtor.com publishes the same core metrics by metro (936 CBSAs). A metro view of
   /conditions would answer "which markets", not just "which states". If Redfin resumes, the ZIP profile picks it up unchanged.
+- [QUIET-VALUE] /quiet-value has been empty in production since Aug 29: its weekly refresh needs a year of daily
+  volume per company, and both price sources now block GitHub's runners (Stooq serves a browser check, Yahoo
+  answers 429). Needs a volume source (likely keyed) or the page hidden from the nav until there is one.
+- [NET-INCOME-BASIS] compounders' `net_income` series is the parent's (NetIncomeLoss) or the group's (ProfitLoss)
+  depending on which tag a company files for more years. P/FCF and cash conversion now use the parent's profit
+  explicitly; `ni_pos_years` and the other readers of the series do not.
+- [CATALYST-TIMING] The catalyst queue runs ~01:30 UTC and sometimes checks before SEC posts the prior day's
+  index (6 of 54 September runs failed and kept the day-old queue). Running it an hour or two later would stop it.
 - [HEADROOM-ARV] /headroom's renovated value is the median × one national premium per scope (1.02 / 1.04 / 1.08)
   while the remodel is priced per square foot, so the board's ranking still tracks remodel cost ÷ home value
   (r = −0.85): in a cheap market the same remodel is a bigger share of the house. Zillow publishes ZHVI by tier
