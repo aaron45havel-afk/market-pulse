@@ -1,0 +1,84 @@
+# TEMPORARY: find a daily-volume source that answers GitHub's runners (Quiet Value). Deleted before the PR.
+name: TEMP volume source probe
+on:
+  push:
+    branches: [claude/legal-rep-invoice-tracking-9j1i9r]
+    paths: ['.github/workflows/tmp-volume-probe.yml']
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Probe
+        working-directory: market-pulse-v21
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, time, urllib.request, urllib.error, threading
+          from concurrent.futures import ThreadPoolExecutor
+          from datetime import date, timedelta
+          BROWSER = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+          PLAIN = "Mozilla/5.0 (market-pulse-refresh/1.0)"
+          def get(url, ua, accept="application/json", extra=None):
+              h = {"User-Agent": ua, "Accept": accept}; h.update(extra or {})
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=20) as r:
+                      return r.status, r.read()
+              except urllib.error.HTTPError as e:
+                  return e.code, b""
+              except Exception as e:
+                  return type(e).__name__, b""
+          def yahoo(host, t, ua):
+              s, b = get(f"https://{host}.finance.yahoo.com/v8/finance/chart/{t}?range=1y&interval=1d", ua)
+              if s != 200: return s, 0
+              try:
+                  r = json.loads(b)["chart"]["result"][0]
+                  vols = [v for v in r["indicators"]["quote"][0]["volume"] if v is not None]
+                  return 200, len(vols)
+              except Exception: return "unparseable", 0
+          def nasdaq(t):
+              td = date.today(); fd = td - timedelta(days=370)
+              s, b = get(f"https://api.nasdaq.com/api/quote/{t}/historical?assetclass=stocks&fromdate={fd}&limit=400&todate={td}",
+                         BROWSER, extra={"Accept-Language": "en-US,en;q=0.9", "Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"})
+              if s != 200: return s, 0
+              try:
+                  rows = json.loads(b)["data"]["tradesTable"]["rows"]
+                  return 200, sum(1 for r in rows if r.get("volume"))
+              except Exception: return "unparseable", 0
+          def stooq(t):
+              s, b = get(f"https://stooq.com/q/d/l/?s={t.lower()}.us&i=d", BROWSER, accept="text/csv,*/*")
+              txt = b.decode("utf-8", "replace")
+              return (s, txt.count("\n")) if txt.startswith("Date") else ((s, 0) if s != 200 else ("html/blocked", 0))
+          PROBE = ["AAPL", "KO", "MSFT"]
+          print("== variants on AAPL/KO/MSFT ==")
+          for name, fn in (("yahoo q1 browser UA", lambda t: yahoo("query1", t, BROWSER)),
+                           ("yahoo q1 plain UA", lambda t: yahoo("query1", t, PLAIN)),
+                           ("yahoo q2 plain UA", lambda t: yahoo("query2", t, PLAIN)),
+                           ("yahoo q1 python UA", lambda t: yahoo("query1", t, "Python-urllib/3.12")),
+                           ("nasdaq api", nasdaq), ("stooq csv", stooq)):
+              res = [fn(t) for t in PROBE]; time.sleep(0.5)
+              print(f"  {name:22} {res}")
+          # The real load: small companies, as the screen would ask for them.
+          comp = json.load(open("data/compounders.json"))["tickers"]
+          small = sorted((v.get("revenue_last") or 9e18, t) for t, v in comp.items() if isinstance(v, dict) and v.get("currency") == "USD")
+          tick = [t for _, t in small[:400]]
+          def load(name, fn, tickers, workers, gap):
+              lock = threading.Lock(); out = {}; t0 = time.time()
+              def one(t):
+                  s, n = fn(t)
+                  with lock: out[t] = (s, n)
+                  time.sleep(gap)
+              with ThreadPoolExecutor(max_workers=workers) as ex: list(ex.map(one, tickers))
+              st = {}
+              for s, n in out.values(): st[s] = st.get(s, 0) + 1
+              full = sum(1 for s, n in out.values() if s == 200 and n >= 200)
+              print(f"  {name:38} {len(tickers)} tickers {time.time()-t0:5.0f}s  statuses {st}  >=200 days of volume: {full}")
+          print("== load: 400 small US filers ==")
+          load("yahoo q1 plain UA, 1 worker, 0.3s", lambda t: yahoo("query1", t, PLAIN), tick, 1, 0.3)
+          load("yahoo q1 plain UA, 3 workers, 0.2s", lambda t: yahoo("query1", t, PLAIN), tick, 3, 0.2)
+          load("yahoo q1 browser UA, 1 worker, 0.3s", lambda t: yahoo("query1", t, BROWSER), tick[:60], 1, 0.3)
+          load("nasdaq api, 1 worker, 0.5s", nasdaq, tick[:120], 1, 0.5)
+          PY
