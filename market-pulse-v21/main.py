@@ -539,14 +539,15 @@ async def contractor_plan_pdf(bsqft: str = "", bbeds: str = "3", bbaths: str = "
 @app.get("/headroom")
 async def headroom_page(request: Request, mode: str = "brrrr", scope: str = "moderate",
                         level: str = "low", target: str = "14", rate: str = "",
-                        sqft: str = "1500", xadj: str = "0", metro: str = "",
+                        sqft: str = "1500", appr: str = "0", metro: str = "",
                         universe: str = "all", hstate: str = "", units: str = "4",
                         maxprice: str = "300000", safetier: str = "safe",
                         unknown: str = "0"):
-    """Headroom — the remodel deal engine. Ranks all ~107 markets by the
-    max purchase $/sqft that clears the after-tax compounded-return target
-    (BRRRR or flip) vs what fixers actually cost there. See headroom.py.
-    All numeric params parsed tolerantly."""
+    """Headroom — the remodel deal engine. For every market, the most you
+    can pay for a fixer and still clear the after-tax return target and the
+    $25k floor (BRRRR or flip), as a share of its median home, and which
+    limit sets it; or, by ZIP, an owner-occupant house-hack's max offer.
+    See headroom.py. All numeric params parsed tolerantly."""
     import headroom as HR
     import screen_history as SH
     from data_providers import MORTGAGE_30Y_RATE
@@ -559,10 +560,18 @@ async def headroom_page(request: Request, mode: str = "brrrr", scope: str = "mod
     target_n = max(1.0, min(60.0, _qnum(target, 14)))
     rate_n = _qnum(rate) or MORTGAGE_30Y_RATE or 6.55
     sqft_n = max(600.0, min(6000.0, _qnum(sqft, 1500)))
-    xadj_n = max(-0.02, min(0.05, _qnum(xadj)))
+    # Exit appreciation, %/yr: the user's, 0 unless set. A trailing price
+    # trend is shown as history, never used as the forecast.
+    appr_n = max(-5.0, min(5.0, _qnum(appr, 0)))
     units_n = max(2, min(4, int(_qnum(units, 4))))
     maxprice_n = max(50_000.0, min(2_000_000.0, _qnum(maxprice, 300_000)))
     hstate = hstate.strip().upper()[:2]
+    common = {"request": request, "mode": mode, "scope": scope, "level": level,
+              "target": target_n, "rate": rate_n, "sqft": sqft_n, "appr": appr_n,
+              "universe": universe, "calib": HR.calibration(scope),
+              "fin": HR.financing_terms(rate_n), "profit_floor": HR.PROFIT_FLOOR,
+              "hold_years": HR.HOLD_YEARS, "freshness": freshness,
+              "vacancy": HR.VACANCY, "maint": HR.MAINTENANCE_PCT}
     if mode == "hh":
         # Owner-occupant house-hack: ZIP-level, no DSCR (FHA self-sufficiency
         # is the funding gate), solved for the max offer per ZIP, gated on
@@ -576,41 +585,27 @@ async def headroom_page(request: Request, mode: str = "brrrr", scope: str = "mod
             level=level, rate_pct=rate_n, max_price=maxprice_n,
             max_tier=safetier, allow_unknown=allow_unknown)
         return templates.TemplateResponse("headroom.html", {
-            "request": request, "board": [], "hh_board": hh_board, "n_primed": 0,
-            "mode": mode, "scope": scope, "level": level, "target": target_n,
-            "rate": rate_n, "sqft": sqft_n, "xadj": xadj_n, "universe": universe,
+            **common, "board": [], "hh_board": hh_board, "summary": None,
             "metro": "", "drill": None, "metro_name": "",
             "hstate": hstate, "units": units_n, "maxprice": maxprice_n,
             "safetier": safetier, "allow_unknown": allow_unknown,
             "crime_cov": SF.coverage(), "us_violent": SF.US_VIOLENT,
-            "calib": HR.calibration(scope), "fin": HR.financing_terms(rate_n),
-            "profit_floor": HR.PROFIT_FLOOR, "hold_years": HR.HOLD_YEARS,
-            "freshness": freshness, "vacancy": HR.VACANCY, "maint": HR.MAINTENANCE_PCT,
             "unit_factor": HR.HH.UNIT_PRICE_FACTOR.get(units_n),
         })
     board = await asyncio.to_thread(
         HR.build_board, mode=mode, scope=scope, level=level, target=target_n,
-        rate_pct=rate_n, sqft=sqft_n, x_adjust=xadj_n,
+        rate_pct=rate_n, sqft=sqft_n, appreciation=appr_n / 100.0,
         metros_only=(universe == "metros"))
-    feasible = [r for r in board if r.get("feasible")]
-    n_primed = sum(1 for r in feasible if r["verdict"] == "PRIMED")
     drill = None
     metro = metro.strip().upper()
     if metro:
         drill = await asyncio.to_thread(
             HR.zip_drilldown, metro, mode=mode, scope=scope, level=level,
-            target=target_n, rate_pct=rate_n, sqft=sqft_n)
-    calib = HR.calibration(scope)
-    fin = HR.financing_terms(rate_n)
+            target=target_n, rate_pct=rate_n, sqft=sqft_n, appreciation=appr_n / 100.0)
     return templates.TemplateResponse("headroom.html", {
-        "request": request, "board": board, "n_primed": n_primed,
-        "mode": mode, "scope": scope, "level": level, "target": target_n,
-        "rate": rate_n, "sqft": sqft_n, "xadj": xadj_n, "universe": universe,
+        **common, "board": board, "summary": HR.board_summary(board),
         "metro": metro, "drill": drill,
         "metro_name": next((r["name"] for r in board if r["code"] == metro), metro),
-        "calib": calib, "fin": fin,
-        "profit_floor": HR.PROFIT_FLOOR, "hold_years": HR.HOLD_YEARS,
-        "freshness": freshness,
     })
 
 
