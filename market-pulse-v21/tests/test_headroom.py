@@ -142,23 +142,92 @@ check(H.calibration("gut")["x"] == 0.70, "gut fixer discount = 0.70")
 check((cal_m["y"] - cal_m["x"]) / cal_m["x"] <= 0.2554,
       "moderate implied ROI ≤ observed ATTOM national")
 
-mh = H.market_headroom("MO-KC", 320_000, 2_300, 0.03, scope="moderate",
-                      rehab_total=60_000, trajectory="steady")
-check(mh is not None and mh["feasible"], "market_headroom solves KC")
-if mh and mh["feasible"]:
-    check(mh["verdict"] in ("PRIMED", "DEAL-DEPENDENT", "PRICED OUT"), "verdict tier assigned")
-    check(abs(mh["entry_psf"] - 0.83 * 320_000 / 1500) < 0.01, "entry psf = x × median psf")
-    check(abs(mh["arv_psf"] - 1.04 * 320_000 / 1500) < 0.01, "ARV psf = y × median psf")
-    check(mh["headroom"] == (mh["max_psf"] - mh["entry_psf"]) / mh["entry_psf"],
-          "headroom formula")
-# declining trajectory demotes a PRIMED verdict
-cheap = H.market_headroom("MO-KC", 320_000, 2_600, 0.03, scope="moderate",
-                         rehab_total=45_000, trajectory="steady")
-if cheap and cheap["feasible"] and cheap["verdict"] == "PRIMED":
-    demoted = H.market_headroom("MO-KC", 320_000, 2_600, 0.03, scope="moderate",
-                               rehab_total=45_000, trajectory="declining")
-    check(demoted["verdict"] == "DEAL-DEPENDENT" and demoted["vetoed"],
-          "declining trajectory vetoes PRIMED")
+# ── the market answer: the most you can pay, and what sets it ──
+mh = H.market_headroom("MO-KC", 320_000, 2_300, 0.03, scope="moderate", rehab_total=60_000)
+check(mh["feasible"] and abs(mh["max_pct_median"] - mh["max_price"] / 320_000 * 100) < 1e-9,
+      "the most you can pay is also stated as a share of the median home")
+check(not any(k in mh for k in ("verdict", "entry_psf", "headroom", "vetoed")),
+      "NO VERDICT AGAINST A GUESSED FIXER PRICE: no entry price, headroom or tier")
+check(abs(mh["arv_psf"] - 1.04 * 320_000 / 1500) < 0.01 and mh["binding_label"] == H.LIMIT_LABEL[mh["binding"]],
+      "ARV psf = y × median psf; the limit carries its label")
+_inp = {"rehab": 60_000.0, "sqft": 1500.0, "scope": "moderate", "rate_pct": 6.55, "target": 14.0}
+_mk = {"code": "MO-KC", "arv": 1.04 * 320_000, "rent": 2_300.0, "appreciation": 0.03}
+over = H._brrrr_limits(H.brrrr_after_tax_irr(mh["max_price"] + 500, _mk, _inp), 0.14, H.PROFIT_FLOOR)
+check(mh["binding"] in over and not H._brrrr_limits(H.brrrr_after_tax_irr(mh["max_price"], _mk, _inp), 0.14, H.PROFIT_FLOOR),
+      "THE NAMED LIMIT IS THE ONE $500 MORE BREAKS; at the max price none is broken")
+starved_m = H.market_headroom("MO-KC", 320_000, 300, 0.0, scope="moderate", rehab_total=60_000)
+check(not starved_m["feasible"] and starved_m["max_pct_median"] is None
+      and starved_m["binding_label"] in H.NO_PATH_LABEL.values(), "no price works, and the page is told why")
+check(H.market_headroom("MO-KC", 320_000, 2_300, 0.10, rehab_total=60_000)["max_price"]
+      == H.market_headroom("MO-KC", 320_000, 2_300, 0.05, rehab_total=60_000)["max_price"],
+      "appreciation is held to ±5%/yr")
+check(H.market_headroom("MO-KC", 320_000, 2_300, 0.03, rehab_total=60_000)["max_price"]
+      > H.market_headroom("MO-KC", 320_000, 2_300, 0.0, rehab_total=60_000)["max_price"],
+      "the exit uses the appreciation it is given (0 unless the user sets one)")
+fl = H.market_headroom("TX-DFW", 336_538, 2_000, 0.0, mode="flip", rehab_total=70_000)
+fsol = H.flip_max_price({"code": "TX-DFW", "arv": 350_000.0}, dict(inp, rehab=70_000.0))
+check(fl["feasible"] and fsol["binding"] == "floor"
+      and "floor" in H._flip_limits(fsol["max_price"] + 500, {"code": "TX-DFW", "arv": 350_000.0}, dict(inp, rehab=70_000.0)),
+      "a modest flip is set by the $25k floor")
+big = {"code": "TX-DFW", "arv": 2_500_000.0}
+bsol = H.flip_max_price(big, dict(inp, rehab=60_000.0))
+check(bsol["binding"] == "target" and "target" in H._flip_limits(bsol["max_price"] + 500, big, dict(inp, rehab=60_000.0)),
+      "a big flip is set by the return target — the page names whichever it is")
+
+# ── BRRRR timeline: rented while the refi seasons ──
+m = H.brrrr_after_tax_irr(150_000.0, mkt, inp)
+fin_ = H.financing_terms(6.55)
+first = H.RENO_MONTHS["moderate"] + 1
+check(m["rented_from_month"] == first, "rented from the month after the remodel")
+_sc = H.state_costs("MO-KC")
+noi = (2_300 * 12 * (1 - H.VACANCY) - _sc["proptax"] * 150_000 - _sc["ins_landlord"] - H.MAINTENANCE_PCT * 320_000) / 12
+check(abs(m["noi_month"] - noi) < 1e-6, "rented months earn rent less vacancy, tax, landlord insurance and maintenance")
+_c = min(fin_["hm_max_ltc"] * 210_000, fin_["hm_max_purchase_adv"] * 150_000 + 60_000, fin_["hm_max_ltarv"] * 320_000)
+_adv = min(fin_["hm_max_purchase_adv"] * 150_000, _c)
+_drawn = _adv + max(0.0, min(60_000, _c - _adv))
+check(abs(m["cashflows"][first] - (noi - _drawn * fin_["hm_rate"] / 12)) < 1e-6,
+      "A SEASONING MONTH IS RENTED, NOT CARRIED VACANT: rent less costs, less the hard-money interest")
+_dep_year = (H.BUILDING_SHARE * (150_000 * (1 + H.BUY_CLOSING_PCT)) + 60_000) / H.DEP_YEARS
+check(m["years"][0]["rented_months"] == 12 - H.RENO_MONTHS["moderate"]
+      and abs(m["years"][0]["dep"] - _dep_year * (12 - H.RENO_MONTHS["moderate"]) / 12) < 1e-6,
+      "depreciation starts the month it is rented")
+_refi_m = max(H.REFI_MONTH_MIN, H.RENO_MONTHS["moderate"] + 1)
+check(abs(m["years"][0]["points"] - m["points_total"] * (12 - _refi_m) / 360) < 1e-6
+      and abs(m["years"][1]["points"] - m["points_total"] * 12 / 360) < 1e-6
+      and abs(sum(y["points"] for y in m["years"]) + m["points_at_payoff"] - m["points_total"]) < 1e-6,
+      "refi points amortize by the month over 30 years")
+_r = H.FED_ORDINARY + _sc["state_income"]
+check(abs(m["suspended_released"] - (m["suspended_left_fed"] * H.FED_ORDINARY + m["suspended_left_state"] * _sc["state_income"]
+                                     + m["points_at_payoff"] * _r)) < 1e-6 and m["points_at_payoff"] > 0,
+      "AT THE SALE: the losses still suspended are released, and the unamortized points deducted")
+_losses = -sum(y["taxable"] for y in m["years"] if y["taxable"] < 0)
+check(abs(m["suspended_left_fed"] - (_losses - sum(y["loss_used"] for y in m["years"]))) < 1e-6,
+      "what is released is every loss not already used")
+
+# ── losses carry forward ──
+rich = {"code": "MO-KC", "arv": 150_000.0, "rent": 2_000.0, "appreciation": 0.0}
+inp_c = dict(inp, scope="cosmetic")
+mr = H.brrrr_after_tax_irr(120_000.0, rich, inp_c)
+ys = mr["years"]
+loss_then_gain = [i for i in range(1, len(ys)) if ys[i]["taxable"] > 0 and any(y["taxable"] < 0 for y in ys[:i])]
+check(bool(loss_then_gain), "fixture: an early loss year followed by a taxable year")
+i = loss_then_gain[0]
+prior_loss = -sum(y["taxable"] for y in ys[:i] if y["taxable"] < 0) - sum(y["loss_used"] for y in ys[:i])
+rates = H.FED_ORDINARY + _sc["state_income"]
+check(ys[i]["loss_used"] > 0 and abs(ys[i]["loss_used"] - min(prior_loss, ys[i]["taxable"])) < 1e-6
+      and abs(ys[i]["tax"] - (ys[i]["taxable"] - ys[i]["loss_used"]) * rates) < 1e-6,
+      "A LATER YEAR'S RENTAL INCOME IS TAXED ONLY AFTER EARLIER SUSPENDED LOSSES")
+mp = H.brrrr_after_tax_irr(100_000.0, dict(rich, code="PA", rent=1_800.0), inp_c)
+_pa = H.state_costs("PA")
+yp = next((y for y in mp["years"] if y["loss_used"] > 0), None)
+check(yp is not None and yp["loss_used_state"] == 0
+      and abs(yp["tax"] - ((yp["taxable"] - yp["loss_used"]) * H.FED_ORDINARY + yp["taxable"] * _pa["state_income"])) < 1e-6,
+      "Pennsylvania's state tax gets no carryforward; the federal one does")
+check(m["refi_loan"] == min(m["refi_cap_rent"], m["refi_cap_ltv"])
+      and m["refi_by"] == ("rent" if m["refi_cap_rent"] < m["refi_cap_ltv"] else "ltv"),
+      "the refi is the smaller of what the rent carries and 75% of ARV, and says which")
+thin_rent = H.brrrr_after_tax_irr(150_000.0, dict(mkt, rent=1_400.0), inp)
+check(thin_rent["refi_by"] == "rent" and m["refi_by"] == "ltv", "fixtures: a thin rent sizes the refi; a strong one doesn't")
 
 # ── report ──
 if _FAILS:
@@ -168,7 +237,7 @@ if _FAILS:
     sys.exit(1)
 print(f"OK — all {_COUNT} headroom engine checks passed.")
 if sol:
-    print(f"   KC sample: max ${sol['max_price']:,.0f} (${sol['max_psf']:.0f}/sqft) · "
+    print(f"   KC sample: max ${sol['max_price']:,.0f} (${sol['max_psf']:.0f}/sqft, set by the {H.LIMIT_LABEL[sol['binding']]}) · "
           f"IRR {H.brrrr_after_tax_irr(sol['max_price'], mkt, inp)['irr_annual']:.1%} · "
           f"forced ${H.brrrr_after_tax_irr(sol['max_price'], mkt, inp)['forced_equity']:,.0f}")
 sys.exit(0)

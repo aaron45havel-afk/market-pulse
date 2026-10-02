@@ -143,11 +143,26 @@ def brrrr_after_tax_irr(price: float, market: dict, inputs: dict) -> dict | None
 
     market: {code, arv, rent, appreciation} — arv/rent are deal-level
       dollars (metro median × calibration happens upstream); appreciation
-      is an annual fraction, already trajectory-vetoed/clamped upstream.
+      is the annual fraction the caller chose (the page's input, 0% unless
+      the user sets one — a trailing price trend is not a forecast).
     inputs: {rehab, sqft, scope, rate_pct, target, fed_ordinary}
-    Returns metrics dict, or None when the deal is structurally infeasible
-    (DSCR floor fails — no refi market for the rent level).
-    """
+
+    Timeline: buy with hard money; renovate for RENO_MONTHS (vacant:
+    renovation insurance, utilities on the owner); RENTED FROM THE MONTH
+    AFTER THE REMODEL at market rent less VACANCY, landlord insurance and
+    maintenance, hard-money interest still running, while the DSCR cash-out
+    refi seasons; refi; hold to month 60; sell.
+
+    Taxes: placed in service when first rented, so rental income and
+    depreciation start then. A year's rental loss is suspended (Sec 469)
+    and offsets later years' rental income before that is taxed — except
+    for state tax in PA and NJ, which allow no carryforward — and what is
+    left is released at the sale. Refi points amortize over the loan's 30
+    years, prorated by month, and the unamortized rest is deducted when the
+    sale pays the loan off.
+
+    Returns metrics, or None when the deal is structurally infeasible (rent
+    can't cover the refi's tax and insurance — no DSCR loan at all)."""
     R = inputs["rehab"]
     arv, rent = market["arv"], market["rent"]
     app = market.get("appreciation", 0.0)
@@ -156,9 +171,11 @@ def brrrr_after_tax_irr(price: float, market: dict, inputs: dict) -> dict | None
     fed = inputs.get("fed_ordinary", FED_ORDINARY)
     s_inc = sc["state_income"]
     st = sc["state"]
+    state_carries = st not in _NO_STATE_LOSS_CARRYFORWARD
 
     m_reno = RENO_MONTHS.get(inputs.get("scope", "moderate"), 4)
     refi_m = max(REFI_MONTH_MIN, m_reno + 1)
+    in_service = m_reno + 1                  # the first month rented
     hold_m = HOLD_YEARS * 12
     cf = [0.0] * (hold_m + 1)
 
@@ -172,24 +189,33 @@ def brrrr_after_tax_irr(price: float, market: dict, inputs: dict) -> dict | None
     closing = BUY_CLOSING_PCT * price
     cf[0] = -((price - purchase_adv) + closing + hm_costs)
 
-    # Renovation + seasoning months: draws, interest on drawn balance, carry
-    drawn = purchase_adv
-    carry_paid = 0.0
-    reno_ins_mo = sc["ins_landlord"] * sc["ins_reno_mult"] / 12.0
-    tax_mo = sc["proptax"] * price / 12.0
-    for m in range(1, refi_m + 1):
-        cash_rehab = 0.0
-        if m <= m_reno:
-            drawn += rehab_funded / m_reno
-            cash_rehab = (R - rehab_funded) / m_reno
-        interest = drawn * fin["hm_rate"] / 12.0
-        carry = interest + tax_mo + reno_ins_mo + sc["utilities_mo"]
-        carry_paid += carry
-        cf[m] -= carry + cash_rehab
-
-    # ── Refi: DSCR cash-out at 75% ARV, gated by DSCR at market rent ──
+    # Operating figures once rented, before and after the refi.
     tax_yr = sc["proptax"] * price
     ins_yr = sc["ins_landlord"]
+    maint_yr = MAINTENANCE_PCT * arv
+    noi_mo = (rent * 12 * (1 - VACANCY) - tax_yr - ins_yr - maint_yr) / 12.0
+
+    # Renovation (draws, carry), then rented while the refi seasons.
+    drawn = purchase_adv
+    carry_paid = 0.0                         # cash the owner adds after closing, before the refi
+    reno_ins_mo = sc["ins_landlord"] * sc["ins_reno_mult"] / 12.0
+    tax_mo = tax_yr / 12.0
+    seasoning_taxable = 0.0                  # rental result of the months rented before the refi
+    for m in range(1, refi_m + 1):
+        if m <= m_reno:
+            drawn += rehab_funded / m_reno
+            interest = drawn * fin["hm_rate"] / 12.0
+            carry = interest + tax_mo + reno_ins_mo + sc["utilities_mo"]
+            carry_paid += carry
+            cf[m] -= carry + (R - rehab_funded) / m_reno
+        else:
+            interest = drawn * fin["hm_rate"] / 12.0
+            net = noi_mo - interest
+            seasoning_taxable += net
+            carry_paid += max(0.0, -net)
+            cf[m] += net
+
+    # ── Refi: DSCR cash-out at 75% ARV, gated by DSCR at market rent ──
     max_by_ltv = fin["refi_max_ltv"] * arv
     # DSCR = gross rent / PITIA ≥ floor → loan cap from the payment side
     pitia_cap = rent / fin["refi_min_dscr"] - (tax_yr + ins_yr) / 12.0
@@ -206,31 +232,42 @@ def brrrr_after_tax_irr(price: float, market: dict, inputs: dict) -> dict | None
     sched, exit_balance = _amort(refi_loan, fin["refi_rate"], hold_m - refi_m)
     dep_basis = BUILDING_SHARE * (price + closing) + R
     annual_dep = dep_basis / DEP_YEARS
-    maint_yr = MAINTENANCE_PCT * arv
-    noi_yr = rent * 12 * (1 - VACANCY) - tax_yr - ins_yr - maint_yr
-    points_amort_yr = (fin["refi_points"] * refi_loan) / 30.0
+    points = fin["refi_points"] * refi_loan
 
-    suspended = 0.0
-    accum_dep = 0.0
+    susp_fed = susp_st = 0.0                 # suspended losses, federal and state
+    accum_dep = points_taken = 0.0
+    years = []
     mi = 0                                   # months consumed from the schedule
     for y in range(1, HOLD_YEARS + 1):
-        months = min(12 * y, hold_m) - max(refi_m, 12 * (y - 1))
-        months = max(0, months)              # year 1 is post-refi months only
+        year_end = min(12 * y, hold_m)
+        months = max(0, year_end - max(refi_m, 12 * (y - 1)))          # after the refi
+        rented = max(0, year_end - max(in_service - 1, 12 * (y - 1)))  # in service
         seg = sched[mi:mi + months]
         mi += months
         interest_y = sum(i for i, _ in seg)
         principal_y = sum(p for _, p in seg)
-        share = months / 12.0 if y == 1 else 1.0
-        cfy = noi_yr * share - (interest_y + principal_y)
-        dep_y = annual_dep * share
+        cfy = noi_mo * months - (interest_y + principal_y)
+        dep_y = annual_dep * rented / 12.0
         accum_dep += dep_y
-        taxable = noi_yr * share - interest_y - dep_y - points_amort_yr
+        pts_y = points * months / 360.0
+        points_taken += pts_y
+        taxable = (noi_mo * months - interest_y - dep_y - pts_y
+                   + (seasoning_taxable if y == 1 else 0.0))
+        use_f = use_s = 0.0
         if taxable >= 0:
-            tax_bill = taxable * (fed + s_inc)
+            use_f = min(susp_fed, taxable)
+            use_s = min(susp_st, taxable)
+            susp_fed -= use_f
+            susp_st -= use_s
+            tax_bill = (taxable - use_f) * fed + (taxable - use_s) * s_inc
         else:
             tax_bill = 0.0
-            suspended += -taxable
-        cf[min(12 * y, hold_m)] += cfy - tax_bill
+            susp_fed += -taxable
+            if state_carries:
+                susp_st += -taxable
+        cf[year_end] += cfy - tax_bill
+        years.append({"taxable": taxable, "loss_used": use_f, "loss_used_state": use_s,
+                      "tax": tax_bill, "dep": dep_y, "points": pts_y, "rented_months": rented})
 
     # ── Exit at month 60 ──
     sale = arv * (1 + app) ** HOLD_YEARS
@@ -250,7 +287,8 @@ def brrrr_after_tax_irr(price: float, market: dict, inputs: dict) -> dict | None
     else:
         fed_tax = gain * (fed)               # Sec 1231 ordinary loss benefit (negative tax)
         state_tax = gain * s_inc
-    release = suspended * (fed + (0.0 if st in _NO_STATE_LOSS_CARRYFORWARD else s_inc))
+    unamortized = points - points_taken      # deducted when the sale pays the loan off
+    release = susp_fed * fed + susp_st * s_inc + unamortized * (fed + s_inc)
     exit_cf = amount_realized - exit_balance - fed_tax - state_tax + release
     cf[hold_m] += exit_cf
 
@@ -270,8 +308,20 @@ def brrrr_after_tax_irr(price: float, market: dict, inputs: dict) -> dict | None
         "forced_equity": forced_equity,
         "dscr": rent / (_pmt(refi_loan, fin["refi_rate"]) + (tax_yr + ins_yr) / 12.0),
         "refi_loan": refi_loan,
+        # Which cap sized the refi: the rent (DSCR) or 75% of ARV.
+        "refi_cap_ltv": max_by_ltv,
+        "refi_cap_rent": max_by_dscr,
+        "refi_by": "rent" if max_by_dscr < max_by_ltv else "ltv",
+        "rented_from_month": in_service,
         "suspended_released": release,
+        "points_at_payoff": unamortized,
+        "suspended_left_fed": susp_fed,
+        "suspended_left_state": susp_st,
+        "points_total": points,
         "exit_value": sale,
+        "noi_month": noi_mo,
+        "years": years,
+        "cashflows": cf,
     }
 
 
@@ -299,16 +349,36 @@ def _irr_monthly(cf: list[float]) -> float | None:
     return (lo + hi) / 2
 
 
+# The limits that can stop the price going higher, and what the page calls them.
+LIMIT_LABEL = {"target": "return target", "floor": "$25k profit floor",
+               "refi": "rent can't carry the refi", "search": "search ceiling"}
+NO_PATH_LABEL = {"target": "no price reaches the return target",
+                 "floor": "no price clears the $25k floor",
+                 "refi": "rent can't carry a refi at any price"}
+
+
+def _brrrr_limits(m: dict | None, target: float, floor: float) -> list[str]:
+    """Which limits a simulated BRRRR deal fails (target is a fraction)."""
+    if m is None:
+        return ["refi"]
+    out = []
+    if m["irr_annual"] < target:
+        out.append("target")
+    if m["total_profit"] < floor:
+        out.append("floor")
+    return out
+
+
 def brrrr_max_price(market: dict, inputs: dict) -> dict | None:
     """Highest purchase price where after-tax IRR ≥ target AND the deal's
     total after-tax profit over the hold ≥ the $25k floor. Bisection (IRR
-    is monotone-decreasing in P)."""
+    is monotone-decreasing in P). `binding` names the limit a dollar more
+    would break; None when no price works."""
     target = inputs.get("target", TARGET_DEFAULT) / 100.0
     floor = inputs.get("profit_floor", PROFIT_FLOOR)
 
     def ok(p):
-        m = brrrr_after_tax_irr(p, market, inputs)
-        return m is not None and m["irr_annual"] >= target and m["total_profit"] >= floor
+        return not _brrrr_limits(brrrr_after_tax_irr(p, market, inputs), target, floor)
 
     lo, hi = 1_000.0, market["arv"] * 1.5
     if not ok(lo):
@@ -321,8 +391,10 @@ def brrrr_max_price(market: dict, inputs: dict) -> dict | None:
             lo = mid
         else:
             hi = mid
+    limits = _brrrr_limits(brrrr_after_tax_irr(hi, market, inputs), target, floor)
     metrics = brrrr_after_tax_irr(lo, market, inputs)
-    return {"max_price": lo, "max_psf": lo / inputs["sqft"], **(metrics or {})}
+    return {"max_price": lo, "max_psf": lo / inputs["sqft"],
+            "binding": limits[0] if limits else "search", "limits": limits, **(metrics or {})}
 
 
 # ── FLIP mode (secondary): dealer after-tax, bisection + pre-tax closed form ──
@@ -369,112 +441,118 @@ def calibration(scope: str) -> dict:
 
 
 def market_headroom(code: str, median_value: float, median_rent: float,
-                    appreciation: float, *, scope: str = "moderate",
+                    appreciation: float = 0.0, *, scope: str = "moderate",
                     level: str = "mid", sqft: float = 1500.0,
                     rate_pct: float = 6.55, target: float = TARGET_DEFAULT,
-                    mode: str = "brrrr", trajectory: str | None = None,
-                    rehab_total: float | None = None) -> dict | None:
-    """One market's answer: max buy $/sqft at the after-tax target vs what
-    fixers actually cost there → headroom % → verdict tier.
+                    mode: str = "brrrr", rehab_total: float | None = None) -> dict:
+    """One market's answer: the MOST YOU CAN PAY for a fixer there and still
+    clear the after-tax target and the $25k floor — in dollars, per sqft
+    and as a share of the market's median home — and which limit sets it
+    (the return target, the floor, or rent too thin to carry a refi).
+
+    No verdict against a "typical fixer price". Fixer sales aren't in the
+    data; the old comparator was the median × one national discount while
+    the remodel is priced per square foot, so every market read PRICED OUT
+    and the ranking tracked remodel cost ÷ home value. What is left is what
+    the arithmetic actually knows: the price ceiling and why.
 
     median_value/median_rent: the market's aggregates (1,500-sqft prototype:
-    the median-value home IS the prototype). appreciation: annual fraction,
-    already clamped/vetoed upstream is fine — a 'declining' trajectory also
-    demotes the verdict here. rehab_total overrides the cost model (tests)."""
+    the median-value home IS the prototype); ARV = median × the scope's
+    renovated premium. appreciation: annual fraction for the exit, the
+    caller's (−5%..+5%). rehab_total overrides the cost model (tests)."""
     calib = calibration(scope)
     arv = calib["y"] * median_value
-    entry_psf = calib["x"] * median_value / sqft
     if rehab_total is None:
         from value_add import remodel_budget
         rehab_total = remodel_budget(sqft, 3, 2, 1965, scope, level, state=code)["total"]
     market = {"code": code, "arv": arv, "rent": median_rent,
-              "appreciation": max(0.0, min(0.04, appreciation or 0.0))}
+              "appreciation": max(-0.05, min(0.05, appreciation or 0.0))}
     inputs = {"rehab": rehab_total, "sqft": sqft, "scope": scope,
               "rate_pct": rate_pct, "target": target}
+    base = {"code": code, "arv_psf": arv / sqft, "rehab_psf": rehab_total / sqft,
+            "rehab": rehab_total, "median_psf": median_value / sqft,
+            "rtv_pct": median_rent * 12 / median_value * 100 if median_value else None}
     sol = brrrr_max_price(market, inputs) if mode == "brrrr" else flip_max_price(market, inputs)
     if sol is None:
-        return {"code": code, "feasible": False, "verdict": "NO PATH",
-                "entry_psf": entry_psf, "arv_psf": arv / sqft,
-                "rehab_psf": rehab_total / sqft, "max_psf": 0.0, "headroom": None}
-    headroom = (sol["max_psf"] - entry_psf) / entry_psf
-    if headroom >= 0.05:
-        verdict = "PRIMED"
-    elif headroom >= -0.20:
-        verdict = "DEAL-DEPENDENT"
-    else:
-        verdict = "PRICED OUT"
-    vetoed = False
-    if trajectory == "declining" and verdict == "PRIMED":
-        verdict, vetoed = "DEAL-DEPENDENT", True
-    return {"code": code, "feasible": True, "verdict": verdict, "vetoed": vetoed,
-            "headroom": headroom, "max_psf": sol["max_psf"],
-            "entry_psf": entry_psf, "arv_psf": arv / sqft,
-            "rehab_psf": rehab_total / sqft, "detail": sol}
+        if mode == "brrrr":
+            lim = _brrrr_limits(brrrr_after_tax_irr(1_000.0, market, inputs), target / 100.0, PROFIT_FLOOR)
+        else:
+            lim = _flip_limits(1_000.0, market, inputs)
+        why = lim[0] if lim else "refi"
+        return {**base, "feasible": False, "max_price": 0.0, "max_psf": 0.0, "max_pct_median": None,
+                "binding": why, "binding_label": NO_PATH_LABEL[why], "detail": None}
+    return {**base, "feasible": True, "max_price": sol["max_price"], "max_psf": sol["max_psf"],
+            "max_pct_median": sol["max_price"] / median_value * 100,
+            "binding": sol["binding"], "binding_label": LIMIT_LABEL[sol["binding"]], "detail": sol}
 
 
-def flip_max_price(market: dict, inputs: dict) -> dict | None:
-    """After-tax flip max price by bisection; $25k floor on after-tax profit."""
+def _flip_eval(p: float, market: dict, inputs: dict) -> tuple:
+    """(equity in, pre-tax profit, after-tax profit, hurdle growth, floor)
+    for a flip bought at p."""
     arv, code = market["arv"], market["code"]
     R = inputs["rehab"]
-    months = {"cosmetic": 4, "moderate": 6, "gut": 9}.get(inputs.get("scope", "moderate"), 6)
+    months = FLIP_MONTHS.get(inputs.get("scope", "moderate"), 6)
     target = inputs.get("target", TARGET_DEFAULT) / 100.0
-    floor = inputs.get("profit_floor", PROFIT_FLOOR)
     sc = state_costs(code)
     rate = (inputs["rate_pct"] + 0.75) / 100.0
     down = 0.25
     g = (1 + target) ** (months / 12.0) - 1
+    alpha = BUY_CLOSING_PCT + 0.01 * (1 - down)
+    kappa = (months / 12.0) * (rate * (1 - down) + sc["proptax"])
+    F = months * (sc["utilities_mo"] + sc["ins_landlord"] * sc["ins_reno_mult"] / 12.0)
+    E = (down + alpha + kappa) * p + R + F
+    pretax = (1 - SELL_COST_PCT) * arv - R - F - (1 + alpha + kappa) * p
+    at = _flip_after_tax_profit(pretax, code, inputs.get("fed_ordinary", FED_ORDINARY))
+    return E, pretax, at, g, inputs.get("profit_floor", PROFIT_FLOOR)
 
-    def metrics(p):
-        alpha = BUY_CLOSING_PCT + 0.01 * (1 - down)
-        kappa = (months / 12.0) * (rate * (1 - down) + sc["proptax"])
-        F = months * (sc["utilities_mo"] + sc["ins_landlord"] * sc["ins_reno_mult"] / 12.0)
-        E = (down + alpha + kappa) * p + R + F
-        pretax = (1 - SELL_COST_PCT) * arv - R - F - (1 + alpha + kappa) * p
-        at = _flip_after_tax_profit(pretax, code, inputs.get("fed_ordinary", FED_ORDINARY))
-        return E, pretax, at
 
-    def ok(p):
-        E, _, at = metrics(p)
-        return at >= g * E and at >= floor
+def _flip_limits(p: float, market: dict, inputs: dict) -> list[str]:
+    E, _, at, g, floor = _flip_eval(p, market, inputs)
+    out = []
+    if at < g * E:
+        out.append("target")
+    if at < floor:
+        out.append("floor")
+    return out
 
+
+FLIP_MONTHS = {"cosmetic": 4, "moderate": 6, "gut": 9}
+
+
+def flip_max_price(market: dict, inputs: dict) -> dict | None:
+    """After-tax flip max price by bisection; $25k floor on after-tax profit.
+    `binding` names the limit a dollar more would break."""
+    arv = market["arv"]
     lo, hi = 1_000.0, arv * 1.2
-    if not ok(lo):
+    if _flip_limits(lo, market, inputs):
         return None
     for _ in range(60):
         mid = (lo + hi) / 2
-        if ok(mid):
+        if not _flip_limits(mid, market, inputs):
             lo = mid
         else:
             hi = mid
-    E, pretax, at = metrics(lo)
+    limits = _flip_limits(hi, market, inputs)
+    E, pretax, at, _g, _f = _flip_eval(lo, market, inputs)
+    months = FLIP_MONTHS.get(inputs.get("scope", "moderate"), 6)
     return {"max_price": lo, "max_psf": lo / inputs["sqft"], "months": months,
             "equity": E, "pretax_profit": pretax, "after_tax_profit": at,
-            "annualized": (1 + at / E) ** (12 / months) - 1 if E > 0 else 0.0}
+            "annualized": (1 + at / E) ** (12 / months) - 1 if E > 0 else 0.0,
+            "binding": limits[0] if limits else "search", "limits": limits}
 
 
 # ── National board: metro aggregation + ranked solve ─────────────────
-
-COMPETITION_LABEL = {
-    # Display-only competition read from the price-trajectory signal; the
-    # calibration's months-of-supply x-adjustment is a separate, manual
-    # knob until a real inventory feed lands (see calibration.json
-    # tightness_rule). Shown so a hot market is never mistaken for a
-    # negotiable one.
-    "accelerating": ("HOT — buyers competing", "+"),
-    "steady": ("BALANCED", "="),
-    "decelerating": ("COOLING — ask for discounts", "−"),
-    "declining": ("BUYER'S MARKET — but values falling", "!"),
-}
 
 # The research tables this page reads, for its freshness line (crime too,
 # on the house-hack board).
 LAYERS = ("calibration", "financing", "proptax", "insurance", "utilities", "inctax")
 
 _ZIPS_DB = Path(__file__).resolve().parent / "data" / "zips.db"
+_PROFILE_DB = Path(__file__).resolve().parent / "data" / "zip_profile.db"
 _AGG_PATH = _DATA / "market_aggregates.json"
 # Bump when the aggregation changes, so a cache written by older code is
 # never read as current.
-AGG_VERSION = 2
+AGG_VERSION = 3
 # Zillow ZIPs a market needs before it gets a median rent.
 MIN_MARKET_RENTS = 10
 
@@ -523,6 +601,77 @@ def _write_atomic(path: Path, payload) -> None:
                 pass
 
 
+def _profile_fingerprint(db: Path) -> str:
+    """zip_profile.db's build and Realtor.com month, for cache keys; "none"
+    without the file (the listing columns then show dashes)."""
+    try:
+        st = db.stat()
+    except OSError:
+        return "none"
+    memo = ("profile", str(db), st.st_mtime_ns, st.st_size)
+    if memo not in _FP_MEMO:
+        conn = _connect(db)
+        try:
+            meta = dict(conn.execute("SELECT key, value FROM meta").fetchall())
+        except sqlite3.Error:
+            meta = {}
+        finally:
+            conn.close()
+        _FP_MEMO[memo] = f"{meta.get('built_at', '')}|{meta.get('rdc_last_month', '')}"
+    return _FP_MEMO[memo]
+
+
+_LISTINGS: dict = {}
+
+
+def zip_listings(db: Path | None = None) -> dict:
+    """{zip: {month, active, dom, dom_yoy_pct, cut_pct, cut_yoy_pp, thin}} —
+    Realtor.com's latest month per ZIP from zip_profile.db: median days on
+    market, the share of listings with a price cut, each against a year
+    earlier. What buyers are actually facing, where the page used to guess
+    competition from the price trend. {} without the file."""
+    db = Path(db or _PROFILE_DB)
+    key = (str(db), _profile_fingerprint(db))
+    hit = _LISTINGS.get(key)
+    if hit is not None:
+        return hit
+    out: dict = {}
+    if db.exists():
+        conn = _connect(db)
+        try:
+            rows = conn.execute(
+                "SELECT zip, rdc_month, rdc_active, rdc_dom, rdc_dom_yoy_pct, rdc_price_cut_pct, "
+                "rdc_price_cut_yoy_pp, rdc_thin FROM zip_profile WHERE rdc_month IS NOT NULL").fetchall()
+        except sqlite3.Error:
+            rows = []
+        finally:
+            conn.close()
+        out = {r["zip"]: {"month": r["rdc_month"], "active": r["rdc_active"], "dom": r["rdc_dom"],
+                          "dom_yoy_pct": r["rdc_dom_yoy_pct"], "cut_pct": r["rdc_price_cut_pct"],
+                          "cut_yoy_pp": r["rdc_price_cut_yoy_pp"], "thin": bool(r["rdc_thin"])}
+               for r in rows}
+    _LISTINGS[key] = out
+    return out
+
+
+def market_listings(recs: list[dict]) -> dict | None:
+    """One market's listings from its ZIPs': averages weighted by each ZIP's
+    active listings, over ZIPs with enough listings to read (not thin), so
+    a ZIP with 300 listings counts for more than one with 12. None when no
+    ZIP qualifies."""
+    use = [r for r in recs if r and not r["thin"] and r["active"]]
+    if not use:
+        return None
+
+    def wavg(k):
+        xs = [(r[k], r["active"]) for r in use if r[k] is not None]
+        tw = sum(a for _, a in xs)
+        return round(sum(v * a for v, a in xs) / tw, 1) if tw else None
+    return {"month": max(r["month"] for r in use), "active": int(sum(r["active"] for r in use)),
+            "n_zips": len(use), "dom": wavg("dom"), "dom_yoy_pct": wavg("dom_yoy_pct"),
+            "cut_pct": wavg("cut_pct"), "cut_yoy_pp": wavg("cut_yoy_pp")}
+
+
 _ZIP_MARKET: dict = {}
 
 
@@ -556,12 +705,13 @@ def zip_markets(db: Path | None = None) -> dict:
 
 
 def market_aggregates(force: bool = False, db: Path | None = None,
-                      path: Path | None = None) -> dict:
+                      path: Path | None = None, profile_db: Path | None = None) -> dict:
     """Per-market aggregates from zips.db, cached to disk under the
     database's content fingerprint. Every ZIP goes to its market
     (zip_markets) and rolls up: median home value, median rent, population,
-    value P25/P75, median 3-yr CAGR and the modal trajectory label from
-    each ZIP's 60-month history.
+    value P25/P75, the median 3-year price change from each ZIP's 60-month
+    history (shown as history, not used as a forecast), and the market's
+    Realtor.com listings (market_listings).
 
     RENT IS ZILLOW'S ONLY — the rent ladder's ZORI answer, an asking rent.
     The ladder also answers with HUD voucher figures (gross, utilities in,
@@ -570,7 +720,8 @@ def market_aggregates(force: bool = False, db: Path | None = None,
     with fewer than MIN_MARKET_RENTS Zillow ZIPs has no rent."""
     db = Path(db or _ZIPS_DB)
     path = Path(path or _AGG_PATH)
-    key = _fingerprint(db)
+    profile_db = Path(profile_db or _PROFILE_DB)
+    key = _fingerprint(db) + "#" + _profile_fingerprint(profile_db)
     if path.exists() and not force:
         try:
             cached = json.loads(path.read_text())
@@ -594,8 +745,7 @@ def market_aggregates(force: bool = False, db: Path | None = None,
         code = market_of.get(r["zip"])
         if code is None:
             continue
-        b = buckets.setdefault(code, {"values": [], "rents": [], "pop": 0,
-                                      "cagr3": [], "traj": {}})
+        b = buckets.setdefault(code, {"values": [], "rents": [], "pop": 0, "cagr3": []})
         b["values"].append(r["median_home_value"])
         b["pop"] += r["population"] or 0
         if r["rent_tier"] == "zori" and r["median_rent_monthly"]:
@@ -607,19 +757,24 @@ def market_aggregates(force: bool = False, db: Path | None = None,
                 t = None
             if t:
                 b["cagr3"].append(t["cagr_3yr_pct"])
-                b["traj"][t["label"]] = b["traj"].get(t["label"], 0) + 1
+
+    listings = zip_listings(profile_db)
+    by_market: dict[str, list] = {}
+    for z, rec in listings.items():
+        code = market_of.get(z)
+        if code is not None:
+            by_market.setdefault(code, []).append(rec)
 
     markets = {}
     for code, b in buckets.items():
         vals = sorted(b["values"])
         n = len(vals)
-        traj = max(b["traj"], key=b["traj"].get) if b["traj"] else None
         markets[code] = {
             "value": statistics.median(vals), "p25": vals[n // 4], "p75": vals[(3 * n) // 4],
             "rent": (statistics.median(b["rents"]) if len(b["rents"]) >= MIN_MARKET_RENTS else None),
             "n_zips": n, "n_zori": len(b["rents"]), "population": b["pop"],
             "cagr3_pct": (round(statistics.median(b["cagr3"]), 2) if b["cagr3"] else None),
-            "trajectory": traj,
+            "listings": market_listings(by_market.get(code, [])),
         }
     _write_atomic(path, {"_key": key, "markets": markets})
     return markets
@@ -654,13 +809,13 @@ def _cache_put(key, value) -> None:
 
 def build_board(*, mode: str = "brrrr", scope: str = "moderate", level: str = "low",
                 target: float = TARGET_DEFAULT, rate_pct: float = 6.55,
-                sqft: float = 1500.0, x_adjust: float = 0.0,
+                sqft: float = 1500.0, appreciation: float = 0.0,
                 metros_only: bool = False, min_pop: int = 100_000) -> list[dict]:
-    """Solve every market and rank by headroom. x_adjust is the manual
-    competition knob (added to the fixer entry discount, bounds per the
-    calibration tightness rule). Results cached in-process per input set."""
+    """Solve every market and rank by the most you can pay as a share of its
+    median home. appreciation is the exit's annual price change, the
+    user's (0 by default). Results cached in-process per input set."""
     key = (mode, scope, level, round(target, 1), round(rate_pct, 2),
-           int(sqft), round(x_adjust, 3), metros_only, min_pop)
+           int(sqft), round(appreciation, 4), metros_only, min_pop)
     hit = _cache_get(key)
     if hit is not None:
         return hit
@@ -669,59 +824,58 @@ def build_board(*, mode: str = "brrrr", scope: str = "moderate", level: str = "l
         if hit is not None:
             return hit
         out = _solve_board(mode=mode, scope=scope, level=level, target=target, rate_pct=rate_pct,
-                           sqft=sqft, x_adjust=x_adjust, metros_only=metros_only, min_pop=min_pop)
+                           sqft=sqft, appreciation=appreciation, metros_only=metros_only, min_pop=min_pop)
         _cache_put(key, out)
         return out
 
 
-def _solve_board(*, mode, scope, level, target, rate_pct, sqft, x_adjust, metros_only, min_pop):
+def _solve_board(*, mode, scope, level, target, rate_pct, sqft, appreciation, metros_only, min_pop):
     from value_add import STATE_NAMES
     aggs = market_aggregates()
-    x_adj = max(-0.02, min(0.05, x_adjust))
     out = []
     for code, a in aggs.items():
         if a["population"] < min_pop or not a["rent"]:
             continue
         if metros_only and "-" not in code and code not in ("DC",):
             continue
-        app = (a["cagr3_pct"] or 0.0) / 100.0
-        if a["trajectory"] == "declining":
-            app = 0.0
-        r = market_headroom(code, a["value"], a["rent"], app, scope=scope,
-                            level=level, sqft=sqft, rate_pct=rate_pct,
-                            target=target, mode=mode, trajectory=a["trajectory"])
-        if r is None:
-            continue
-        if r["feasible"] and x_adj:
-            entry = r["entry_psf"] * (1 + x_adj / calibration(scope)["x"])
-            r["entry_psf"] = entry
-            r["headroom"] = (r["max_psf"] - entry) / entry
-            r["verdict"] = ("PRIMED" if r["headroom"] >= 0.05 else
-                            "DEAL-DEPENDENT" if r["headroom"] >= -0.20 else "PRICED OUT")
-            if a["trajectory"] == "declining" and r["verdict"] == "PRIMED":
-                r["verdict"], r["vetoed"] = "DEAL-DEPENDENT", True
-        comp = COMPETITION_LABEL.get(a["trajectory"] or "steady", ("BALANCED", "="))
+        r = market_headroom(code, a["value"], a["rent"], appreciation, scope=scope,
+                            level=level, sqft=sqft, rate_pct=rate_pct, target=target, mode=mode)
         out.append({**r, "name": STATE_NAMES.get(code, code),
                     "median_value": a["value"], "rent": a["rent"],
                     "population": a["population"], "n_zips": a["n_zips"],
                     "n_zori": a["n_zori"], "cagr3_pct": a["cagr3_pct"],
-                    "trajectory": a["trajectory"], "competition": comp[0],
-                    "median_psf": a["value"] / sqft})
-    out.sort(key=lambda r: (r["headroom"] is None, -(r["headroom"] or -9)))
+                    "listings": a.get("listings")})
+    out.sort(key=lambda r: (not r["feasible"], -(r["max_pct_median"] or 0)))
     return out
+
+
+def board_summary(board: list[dict]) -> dict | None:
+    """What the page's headline sentence says: how many markets have any
+    price that works, the range of the most you can pay (as a share of the
+    median), how many each limit sets, and — for BRRRR — how many refis the
+    rent sizes rather than 75% of ARV."""
+    if not board:
+        return None
+    feas = [r for r in board if r["feasible"]]
+    limits: dict = {}
+    for r in feas:
+        limits[r["binding"]] = limits.get(r["binding"], 0) + 1
+    refi_by_rent = sum(1 for r in feas if (r.get("detail") or {}).get("refi_by") == "rent")
+    return {"n": len(board), "n_feasible": len(feas), "n_no_path": len(board) - len(feas),
+            "best": feas[0] if feas else None, "worst": feas[-1] if feas else None,
+            "limits": limits, "refi_by_rent": refi_by_rent}
 
 
 def zip_drilldown(metro_code: str, *, mode: str = "brrrr", scope: str = "moderate",
                   level: str = "low", target: float = TARGET_DEFAULT,
-                  rate_pct: float = 6.55, sqft: float = 1500.0,
-                  top: int = 15, db: Path | None = None) -> list[dict]:
-    """Best ZIPs inside one market: rank by rent-to-value (the BRRRR fuel),
-    solve headroom per ZIP using the ZIP's own median value/rent priced at
-    the metro's construction-cost code. Zillow rents only, as on the board:
+                  rate_pct: float = 6.55, sqft: float = 1500.0, appreciation: float = 0.0,
+                  top: int = 15, db: Path | None = None, profile_db: Path | None = None) -> list[dict]:
+    """The market's top ZIPs by rent-to-value (the BRRRR fuel), each solved
+    with its own median value and rent at the metro's construction costs,
+    with its own Realtor.com listings. Zillow rents only, as on the board:
     a county-wide HUD figure divided by each ZIP's value would rank the
     county's cheapest ZIPs first by construction."""
     from value_add import METRO_GEO, _haversine_mi
-    from structural import trajectory_from_history
     if metro_code not in METRO_GEO:
         return []
     lat0, lng0, rad = METRO_GEO[metro_code]
@@ -729,7 +883,7 @@ def zip_drilldown(metro_code: str, *, mode: str = "brrrr", scope: str = "moderat
     try:
         rows = conn.execute(
             "SELECT zip, name, state, lat, lng, population, median_home_value, "
-            "median_rent_monthly, history_zhvi FROM zips WHERE lat IS NOT NULL "
+            "median_rent_monthly FROM zips WHERE lat IS NOT NULL "
             "AND median_home_value IS NOT NULL AND median_rent_monthly IS NOT NULL "
             "AND rent_tier = 'zori' AND population >= 5000").fetchall()
     finally:
@@ -737,27 +891,17 @@ def zip_drilldown(metro_code: str, *, mode: str = "brrrr", scope: str = "moderat
     members = [r for r in rows if _haversine_mi(r["lat"], r["lng"], lat0, lng0) <= rad]
     members.sort(key=lambda r: r["median_rent_monthly"] / r["median_home_value"],
                  reverse=True)
+    listings = zip_listings(profile_db)
     out = []
     for r in members[:top]:
-        t = None
-        if r["history_zhvi"]:
-            try:
-                t = trajectory_from_history(json.loads(r["history_zhvi"]))
-            except (ValueError, TypeError):
-                t = None
-        app = max(0.0, min(0.04, (t["cagr_3yr_pct"] / 100.0 if t else 0.0)))
-        if t and t["label"] == "declining":
-            app = 0.0
         h = market_headroom(metro_code, r["median_home_value"], r["median_rent_monthly"],
-                            app, scope=scope, level=level, sqft=sqft,
-                            rate_pct=rate_pct, target=target, mode=mode,
-                            trajectory=(t["label"] if t else None))
-        out.append({**(h or {}), "zip": r["zip"], "place": r["name"],
+                            appreciation, scope=scope, level=level, sqft=sqft,
+                            rate_pct=rate_pct, target=target, mode=mode)
+        out.append({**h, "zip": r["zip"], "place": r["name"],
                     "state": r["state"], "population": r["population"],
                     "median_value": r["median_home_value"],
                     "rent": r["median_rent_monthly"],
-                    "rtv_pct": round(r["median_rent_monthly"] * 12 / r["median_home_value"] * 100, 2),
-                    "trajectory": (t["label"] if t else None)})
+                    "listings": listings.get(r["zip"])})
     return out
 
 
@@ -849,7 +993,8 @@ def zip_board_hh(*, state: str | None = None, units: int = 4, scope: str = "cosm
                  level: str = "low", rate_pct: float = 6.55,
                  max_price: float = 300_000.0, min_pop: int = 5_000,
                  top: int = 40, max_tier: str = "safe",
-                 allow_unknown: bool = False, db: Path | None = None) -> list[dict]:
+                 allow_unknown: bool = False, db: Path | None = None,
+                 profile_db: Path | None = None) -> list[dict]:
     """ZIP-level house-hack board: every ZIP with a measured rent (optionally
     one state), solved for the max offer; safest first, then rent-to-value.
 
@@ -864,11 +1009,10 @@ def zip_board_hh(*, state: str | None = None, units: int = 4, scope: str = "cosm
     dropped too unless allow_unknown — the yield leaders are exactly the
     places most likely to be screened out, which is the point."""
     from safety import zip_safety, passes, TIER_ORDER
-    from structural import trajectory_from_history
     db = Path(db or _ZIPS_DB)
     tiers = RL.TIER_ORDER
     q = ("SELECT zip, name, state, population, median_home_value, median_rent_monthly, rent_tier, "
-         "median_household_income, history_zhvi FROM zips WHERE median_home_value IS NOT NULL "
+         "median_household_income FROM zips WHERE median_home_value IS NOT NULL "
          "AND median_rent_monthly IS NOT NULL AND population >= ? "
          f"AND rent_tier IN ({', '.join('?' * len(tiers))})")
     args: list = [min_pop, *tiers]
@@ -903,19 +1047,12 @@ def zip_board_hh(*, state: str | None = None, units: int = 4, scope: str = "cosm
                     "rent_strains_income": RL.hud_rent_strains_income(
                         rent, rr["rent_tier"], rr["median_household_income"]),
                     "rtv_pct": round(rent * 12 / mv * 100, 1),
-                    "safety": sf, "_history": rr["history_zhvi"]})
+                    "safety": sf})
     # Safest first, then yield — a house-hack is where the family lives, so
     # safety outranks rent-to-value in the ordering.
     out.sort(key=lambda x: (TIER_ORDER[x["safety"]["tier"]], -x["rtv_pct"], -x["max_offer"]))
     out = out[:top]
-    for z in out:                                  # trend only for the rows shown
-        label, hist = None, z.pop("_history")
-        if hist:
-            try:
-                t = trajectory_from_history(json.loads(hist))
-                label = t["label"] if t else None
-            except (ValueError, TypeError):
-                label = None
-        z["trajectory"] = label
-        z["competition"] = COMPETITION_LABEL.get(label or "steady", ("BALANCED", "="))[0]
+    listings = zip_listings(profile_db)
+    for z in out:
+        z["listings"] = listings.get(z["zip"])
     return out

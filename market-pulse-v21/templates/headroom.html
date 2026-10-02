@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% macro dom(l) %}{% if not l %}—{% elif l.thin %}<span class="hr-note" title="Fewer than 10 listings in {{ l.month }}">few listings</span>{% elif l.dom is none %}—{% else %}<span title="Realtor.com median days on market, {{ l.month }}{% if l.n_zips is defined %} — weighted by listings over {{ l.n_zips }} ZIPs ({{ '{:,}'.format(l.active) }} active){% endif %}">{{ '%.0f'|format(l.dom) }} d</span>{% if l.dom_yoy_pct is not none %} <span class="hr-note">{{ ('%+.0f'|format(l.dom_yoy_pct))|replace('-', '−') }}%/yr</span>{% endif %}{% endif %}{% endmacro %}
+{% macro cuts(l) %}{% if not l or l.thin or l.cut_pct is none %}—{% else %}<span title="Share of listings with a price cut, Realtor.com {{ l.month }}">{{ '%.0f'|format(l.cut_pct) }}%</span>{% if l.cut_yoy_pp is not none %} <span class="hr-note">{{ ('%+.1f'|format(l.cut_yoy_pp))|replace('-', '−') }} pts/yr</span>{% endif %}{% endif %}{% endmacro %}
 {% block title %}Headroom — remodel deal engine — Market Pulse{% endblock %}
 {% block extra_css %}
 <style>
@@ -33,9 +35,11 @@
     .hr-table td { padding: 0.42rem 0.5rem; border-bottom: 1px solid var(--border); text-align: right;
         font-variant-numeric: tabular-nums; white-space: nowrap; }
     .hr-table tr:hover td { background: var(--surface2); }
-    .hr-bar { display: inline-block; width: 74px; height: 8px; border-radius: 4px; background: var(--surface2);
-        position: relative; overflow: hidden; vertical-align: middle; margin-left: 6px; }
-    .hr-bar span { position: absolute; top: 0; bottom: 0; }
+    .hr-table th[data-k] { cursor: pointer; }
+    .hr-table th[data-k]:hover { color: var(--text); }
+    .hr-table th.sorted::after { content: " ▾"; }
+    .hr-table th.sorted.asc::after { content: " ▴"; }
+    .hr-limit { font-size: 0.72rem; color: var(--ink-2); white-space: nowrap; }
     .hr-maxpsf { font-weight: 800; }
     .hr-note { font-size: 0.74rem; color: var(--ink-3); }
     .hr-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 1rem 1.1rem; margin-bottom: 1rem; }
@@ -49,10 +53,9 @@
 <div class="hr-page">
     <div class="hr-head">
         <h1>📐 Headroom — the remodel deal engine</h1>
-        <div class="subtitle">Which market is primed for remodel value-add right now: the <b>max purchase $/sqft</b> that still compounds
-            <b>{{ '%.0f'|format(target) }}% after tax</b> on your cash at today's debt costs, versus a <b>modelled</b> fixer price — the market
-            median × {{ '%.2f'|format(calib.x) }}, one national discount, not sales observed in that market.
-            Headroom &gt; 0 → the modelled price clears the bar. Headroom &lt; 0 → buy that far below it.</div>
+        <div class="subtitle">{% if mode == 'hh' %}The most an owner-occupant house-hacker can offer, ZIP by ZIP.{% else %}The <b>most you can pay</b> for a fixer in each market and still
+            compound <b>{{ '%.0f'|format(target) }}% after tax</b> on your cash at today's debt costs (and clear ${{ '{:,.0f}'.format(profit_floor) }}),
+            as a share of the market's median home — and which limit sets that price. Compare it with what fixers there actually list for.{% endif %}</div>
         {% if freshness %}<div class="hr-note" style="margin-top:0.35rem">Research tables:
             {% for f in freshness %}{{ f.layer }} {{ f.as_of or '—' }}{% if f.stale %} <b style="color:#dc2626">STALE</b>{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}.
             {% if freshness|selectattr("stale")|list %}<b style="color:#dc2626">Past their refresh window — re-run the research before trusting the figures built on them.</b>{% endif %}</div>{% endif %}
@@ -91,14 +94,8 @@
         <div class="field"><label>After-tax target %</label><input name="target" type="number" step="0.5" min="1" max="60" value="{{ '%.1f'|format(target) }}"></div>
         <div class="field"><label>30-yr rate %</label><input name="rate" type="number" step="0.01" min="1" max="15" value="{{ '%.2f'|format(rate) }}"></div>
         <div class="field"><label>Sqft</label><input name="sqft" type="number" step="50" min="600" max="6000" value="{{ sqft|int }}"></div>
-        <div class="field"><label title="Competition knob: shifts the fixer entry price. Negative = soft market, fixers negotiable (helps you). Bounds −0.02..+0.05 per the calibration's months-of-supply rule.">Competition ±x</label>
-            <select name="xadj">
-                <option value="-0.02" {% if xadj <= -0.015 %}selected{% endif %}>Soft / no bidders (−0.02)</option>
-                <option value="-0.01" {% if -0.015 < xadj <= -0.005 %}selected{% endif %}>Cooling (−0.01)</option>
-                <option value="0" {% if -0.005 < xadj < 0.0125 %}selected{% endif %}>Baseline (0)</option>
-                <option value="0.025" {% if 0.0125 <= xadj < 0.0375 %}selected{% endif %}>Tight (+0.025)</option>
-                <option value="0.05" {% if xadj >= 0.0375 %}selected{% endif %}>Bidding wars (+0.05)</option>
-            </select></div>
+        {% if mode == 'brrrr' %}<div class="field"><label title="Annual price change at the 5-year exit. 0 unless you set it — a past trend is not a forecast.">Appreciation %/yr</label>
+            <input name="appr" type="number" step="0.5" min="-5" max="5" value="{{ '%.1f'|format(appr) }}"></div>{% endif %}
         <div class="field"><label>Universe</label><select name="universe">
             <option value="all" {% if universe != 'metros' %}selected{% endif %}>All markets</option>
             <option value="metros" {% if universe == 'metros' %}selected{% endif %}>Metros only</option>
@@ -117,7 +114,7 @@
     <div class="hr-card">
         <div class="hr-scroll">
         <table class="hr-table">
-            <thead><tr><th>#</th><th>ZIP</th><th>Place</th><th>Safety (violent /100k)</th><th>Max offer</th><th>Set by</th><th>Est. value</th><th>Surplus /mo</th><th>PITI @offer</th><th>{{ units - 1 }} rents</th><th>Rehab</th><th>Cash to close</th><th>Median</th><th>Rent/unit</th><th>RTV</th><th>Competition</th></tr></thead>
+            <thead><tr><th>#</th><th>ZIP</th><th>Place</th><th>Safety (violent /100k)</th><th>Max offer</th><th>Set by</th><th>Est. value</th><th>Surplus /mo</th><th>PITI @offer</th><th>{{ units - 1 }} rents</th><th>Rehab</th><th>Cash to close</th><th>Median</th><th>Rent/unit</th><th>RTV</th><th>Days on market</th><th>Price cuts</th></tr></thead>
             <tbody>
             {% for z in hh_board %}
             <tr>
@@ -143,7 +140,8 @@
                 <td>${{ '{:,.0f}'.format(z.median_value) }}</td>
                 <td title="{{ z.rent_caveat }}">${{ '{:,.0f}'.format(z.rent) }} <span class="hr-note">{{ z.rent_label }}</span>{% if z.rent_strains_income %} <span class="hr-note" style="color:#b45309" title="This HUD rent is a large share of the ZIP's median household income — local rents may be lower">⚠</span>{% endif %}</td>
                 <td>{{ '%.1f'|format(z.rtv_pct) }}%</td>
-                <td class="hr-note">{{ z.competition }}</td>
+                <td>{{ dom(z.listings) }}</td>
+                <td>{{ cuts(z.listings) }}</td>
             </tr>
             {% endfor %}
             </tbody>
@@ -153,96 +151,108 @@
             <b>Safety column = real FBI violent-crime rate per 100,000 residents for the city's police agency</b> (US average ≈ {{ '%.0f'|format(us_violent) }}), with the source year on hover. It is <b>city-wide</b>: a large city contains both very safe and very dangerous ZIPs and one agency rate cannot tell them apart — use it to screen cities out, then walk the specific block. Small-town figures marked "?" are low-confidence (one incident swings a small population). We deliberately do <b>not</b> use the database's <code>crime_index</code> column here: it is a socioeconomic heuristic that correlates −0.76 with income, so filtering on it would filter on income, not safety.
             Verified cities in the table: {{ crime_cov.with_data }} of {{ crime_cov.cities }}. Cities we haven't verified are excluded rather than assumed safe{% if allow_unknown %} — currently overridden by "Show unverified"{% endif %}.<br>
             Rent/unit = the ZIP's rent per unit (same convention as /multifamily), labelled with its source: <b>Zillow ZORI</b> is an asking rent; <b>HUD</b> figures are voucher standards (40th-percentile rent, utilities included — county-wide for "FMR (county)"), hover for the caveat; ⚠ = a HUD rent that takes a large share of local income. 2–4 unit sale prices aren't in the data, so <i>Est. value</i> is the single-family median × {{ unit_factor }} — an estimate an appraisal must confirm.
+            Days on market and price cuts: the ZIP's own Realtor.com figures, with the change from a year earlier.
             PITI: 3.5% down on price + remodel, 1.75% upfront MIP financed, 0.55% annual MIP. Rehab at {{ units }}×900 sqft, {{ scope }}/{{ level }}. Property tax at investor rates (homestead on your unit would only improve this). Verify FHA county loan limits for 2–4 units. <a href="/multifamily?state={{ hstate or 'IN' }}&max_price={{ maxprice|int }}&down_pct=3.5&units={{ units }}">Full FHA math on /multifamily →</a></div>
     </div>
     {% endif %}
 
-    {% set feas = board | selectattr('feasible') | list %}
+    {% if mode != 'hh' and summary %}{% set feas = board | selectattr('feasible') | list %}
     {% if feas %}
     <div class="hr-heroes">
         {% for r in feas[:3] %}
         <div class="hr-hero">
-            <div class="rank">#{{ loop.index }} · {{ r.verdict }}{% if r.vetoed %} (trend-vetoed){% endif %}</div>
+            <div class="rank">#{{ loop.index }} · most room</div>
             <div class="mkt">{{ r.name }}</div>
-            <div class="nums">max <b>${{ '%.0f'|format(r.max_psf) }}/sqft</b> vs modelled fixer price ~${{ '%.0f'|format(r.entry_psf) }}/sqft
-                → <b>{{ '%+.1f'|format(r.headroom * 100) }}%</b> headroom<br>
-                <span class="hr-note">{{ r.competition }} · rehab ${{ '%.0f'|format(r.rehab_psf) }}/sqft · median ${{ '{:,.0f}'.format(r.median_value) }}</span></div>
+            <div class="nums">pay up to <b>{{ '%.0f'|format(r.max_pct_median) }}% of the median</b> — ${{ '{:,.0f}'.format(r.max_price) }}, ${{ '%.0f'|format(r.max_psf) }}/sqft<br>
+                <span class="hr-note">set by the {{ r.binding_label }}{% if r.detail and r.detail.refi_by == 'rent' %} · rent sizes the refi{% endif %} · rehab ${{ '%.0f'|format(r.rehab_psf) }}/sqft · median ${{ '{:,.0f}'.format(r.median_value) }}</span></div>
         </div>
         {% endfor %}
     </div>
-    {% set best = feas[0] %}
-    <div class="hr-sentence">
-        At <b>{{ '%.2f'|format(rate) }}%</b> debt and a <b>{{ '%.0f'|format(target) }}% after-tax</b> target on a {{ scope }}/{{ level }} {{ 'flip' if mode == 'flip' else 'BRRRR (5-yr hold)' }}:
-        <b>{{ n_primed }}</b> of {{ feas|length }} markets clear the bar at the modelled fixer price.
-        {% if n_primed == 0 %}Best is <b>{{ best.name }}</b> at {{ '%+.1f'|format(best.headroom * 100) }}% — a deal there needs
-        ~{{ '%.0f'|format(-best.headroom * 100) }}% below the modelled fixer price to pencil.{% endif %}
-    </div>
     {% endif %}
+    <div class="hr-sentence">
+        At <b>{{ '%.2f'|format(rate) }}%</b> debt and a <b>{{ '%.0f'|format(target) }}% after-tax</b> target{% if mode == 'brrrr' %}, {{ ('%+.1f'|format(appr))|replace('-', '−') }}%/yr appreciation{% endif %}, on a {{ scope }}/{{ level }} {{ 'flip' if mode == 'flip' else 'BRRRR (5-yr hold)' }}:
+        {% if summary.best %}a fixer has to cost no more than <b>{{ '%.0f'|format(summary.worst.max_pct_median) }}%</b> ({{ summary.worst.name }}) to
+        <b>{{ '%.0f'|format(summary.best.max_pct_median) }}%</b> ({{ summary.best.name }}) of the median home{% endif %}{% if summary.n_no_path %}; in {{ summary.n_no_path }} of {{ summary.n }} markets no price works{% endif %}.
+        {% set lim = summary.limits %}The return target sets the price in {{ lim.get('target', 0) }} market{{ '' if lim.get('target', 0) == 1 else 's' }}, the ${{ '{:,.0f}'.format(profit_floor) }} floor in {{ lim.get('floor', 0) }}.
+        {% if mode == 'flip' and lim.get('floor', 0) > summary.n_feasible / 2 %}<span class="hr-note">On a flip the floor, not your return target, decides the price almost everywhere — lowering the target barely moves it.</span>{% endif %}
+        {% if mode == 'brrrr' and summary.refi_by_rent %}<span class="hr-note">In {{ summary.refi_by_rent }} of {{ summary.n_feasible }} markets the rent, not 75% of ARV, sizes the refi: at {{ '%.2f'|format(fin.refi_rate * 100) }}% a DSCR loan is only as big as the rent can carry, so cash stays in the deal.</span>{% endif %}
+    </div>
 
-    {% if mode != 'hh' %}
     <div class="hr-card">
         <div class="hr-scroll">
-        <table class="hr-table">
+        <table class="hr-table" id="hrBoard">
             <thead><tr>
-                <th>#</th><th>Market</th><th>Verdict</th><th>Max buy $/sf</th><th>Modelled fixer $/sf</th>
-                <th>Headroom</th><th>Rehab $/sf</th><th>ARV $/sf</th><th>Median</th><th>Rent</th>
-                <th>3-yr</th><th>Competition</th><th>ZIPs</th>
+                <th>#</th><th>Market</th><th data-k="pct" class="sorted">% of median</th><th data-k="price">Most you can pay</th><th data-k="psf">$/sqft</th><th>Set by</th>
+                {% if mode == 'brrrr' %}<th title="The refi loan the rent carries at the DSCR floor, against 75% of ARV">Refi: rent carries</th>{% endif %}
+                <th data-k="rehab">Rehab $/sf</th><th>ARV $/sf</th><th data-k="median">Median</th><th data-k="rent">Rent</th><th data-k="rtv">Rent/value</th>
+                <th data-k="dom">Days on market</th><th data-k="cut">Price cuts</th><th data-k="cagr" title="Zillow, past three years — history, not the exit assumption">3-yr price</th><th>ZIPs</th>
             </tr></thead>
             <tbody>
-            {% for r in board %}
-            <tr>
-                <td>{{ loop.index }}</td>
+            {% for r in board %}{% set l = r.listings %}
+            <tr data-pct="{{ r.max_pct_median if r.feasible else -1 }}" data-price="{{ r.max_price }}" data-psf="{{ r.max_psf }}"
+                data-rehab="{{ r.rehab_psf }}" data-median="{{ r.median_value }}" data-rent="{{ r.rent }}" data-rtv="{{ r.rtv_pct }}"
+                data-dom="{{ l.dom if l and l.dom is not none else '' }}" data-cut="{{ l.cut_pct if l and l.cut_pct is not none else '' }}"
+                data-cagr="{{ r.cagr3_pct if r.cagr3_pct is not none else '' }}">
+                <td class="hr-rank">{{ loop.index }}</td>
                 <td><b>{{ r.name }}</b></td>
-                <td>{% if not r.feasible %}<span class="hr-chip nopath" title="rents too weak to refinance — no BRRRR path at any price">NO PATH</span>
-                    {% elif r.verdict == 'PRIMED' %}<span class="hr-chip primed">PRIMED</span>
-                    {% elif r.verdict == 'DEAL-DEPENDENT' %}<span class="hr-chip dd">{{ 'needs %.0f%% off'|format(-r.headroom * 100) if r.headroom < 0 else 'DEAL-DEPENDENT' }}</span>
-                    {% else %}<span class="hr-chip out">needs {{ '%.0f'|format(-r.headroom * 100) }}% off</span>{% endif %}
-                    {% if r.vetoed %}<span class="hr-note" title="values declining — PRIMED demoted">▼</span>{% endif %}</td>
-                <td class="hr-maxpsf">{% if r.feasible %}${{ '%.0f'|format(r.max_psf) }}{% else %}—{% endif %}</td>
-                <td>${{ '%.0f'|format(r.entry_psf) }}</td>
-                <td>{% if r.headroom is not none %}{{ '%+.1f'|format(r.headroom * 100) }}%
-                    <span class="hr-bar"><span style="{% if r.headroom >= 0 %}left:50%;width:{{ [r.headroom * 250, 50] | min }}%;background:#16a34a{% else %}right:50%;width:{{ [-r.headroom * 62.5, 50] | min }}%;background:#dc2626{% endif %}"></span></span>
-                    {% else %}—{% endif %}</td>
+                {% if r.feasible %}
+                <td class="hr-maxpsf">{{ '%.0f'|format(r.max_pct_median) }}%</td>
+                <td>${{ '{:,.0f}'.format(r.max_price) }}</td>
+                <td>${{ '%.0f'|format(r.max_psf) }}</td>
+                <td class="hr-limit">{{ r.binding_label }}</td>
+                {% else %}
+                <td colspan="4"><span class="hr-chip nopath">NO PRICE WORKS</span> <span class="hr-note">{{ r.binding_label }}</span></td>
+                {% endif %}
+                {% if mode == 'brrrr' %}<td>{% if r.detail %}<span title="Rent carries ${{ '{:,.0f}'.format(r.detail.refi_cap_rent) }} of DSCR loan; 75% of ARV is ${{ '{:,.0f}'.format(r.detail.refi_cap_ltv) }}">${{ '{:,.0f}'.format(r.detail.refi_cap_rent / 1000) }}k <span class="hr-note">of ${{ '{:,.0f}'.format(r.detail.refi_cap_ltv / 1000) }}k</span></span>{% else %}—{% endif %}</td>{% endif %}
                 <td>${{ '%.0f'|format(r.rehab_psf) }}</td>
                 <td>${{ '%.0f'|format(r.arv_psf) }}</td>
                 <td>${{ '{:,.0f}'.format(r.median_value) }}</td>
                 <td>${{ '{:,.0f}'.format(r.rent) }}</td>
-                <td>{{ '%+.1f'|format(r.cagr3_pct) if r.cagr3_pct is not none else '—' }}%</td>
-                <td class="hr-note">{{ r.competition }}</td>
-                <td>{% if '-' in r.code or r.code == 'DC' %}<a href="/headroom?mode={{ mode }}&scope={{ scope }}&level={{ level }}&target={{ target }}&rate={{ '%.2f'|format(rate) }}&sqft={{ sqft|int }}&xadj={{ xadj }}&universe={{ universe }}&metro={{ r.code }}#drill">{{ r.n_zips }} ↓</a>{% else %}{{ r.n_zips }}{% endif %}</td>
+                <td>{{ '%.1f'|format(r.rtv_pct) }}%</td>
+                <td>{{ dom(l) }}</td>
+                <td>{{ cuts(l) }}</td>
+                <td>{{ (('%+.1f'|format(r.cagr3_pct))|replace('-', '−') ~ '%') if r.cagr3_pct is not none else '—' }}</td>
+                <td>{% if '-' in r.code or r.code == 'DC' %}<a href="/headroom?mode={{ mode }}&scope={{ scope }}&level={{ level }}&target={{ target }}&rate={{ '%.2f'|format(rate) }}&sqft={{ sqft|int }}&appr={{ appr }}&universe={{ universe }}&metro={{ r.code }}#drill">{{ r.n_zips }} ↓</a>{% else %}{{ r.n_zips }}{% endif %}</td>
             </tr>
             {% endfor %}
             </tbody>
         </table>
         </div>
-        <div class="hr-note" style="margin-top:0.5rem">Modelled fixer price = market median × {{ '%.2f'|format(calib.x) }} ({{ scope }} entry discount — one national figure from the July-2026 calibration, not sales observed in that market);
-            ARV = median × {{ '%.2f'|format(calib.y) }} renovated premium. Rents: Zillow ZORI asking rents only — a market with fewer than 10 Zillow ZIPs has no rent and is left out. "NO PATH" = median rents can't support any refi loan (DSCR &lt; 1).</div>
+        <div class="hr-note" style="margin-top:0.5rem"><b>% of median</b> = the most you can pay ÷ the market's median home value. Fixer sales aren't in the data, so the page
+            doesn't call a market cheap or dear against a guessed fixer price — set this number against what fixers there actually list for.
+            A remodel costs about the same in dollars everywhere, so where homes are cheaper it is a bigger share of the house and the price has to fall further;
+            click a column to rank by rent/value, listings or anything else.
+            ARV = median × {{ '%.2f'|format(calib.y) }} (the {{ scope }} renovated premium, modelled). Rents: Zillow ZORI asking rents only — a market with fewer than
+            10 Zillow ZIPs has no rent and is left out. Listings: Realtor.com, weighted by listings over the market's ZIPs with at least 10, with the change from a year earlier.
+            3-yr price is history and does not feed the exit{% if mode == 'brrrr' %}, which uses your {{ ('%+.1f'|format(appr))|replace('-', '−') }}%/yr{% endif %}.</div>
     </div>
     {% endif %}
 
     {% if metro and drill %}
     <div class="hr-card" id="drill">
         <h2 style="margin:0 0 0.2rem">Best pockets in {{ metro_name }}</h2>
-        <div class="hr-note" style="margin-bottom:0.6rem">Top ZIPs by rent-to-value (the BRRRR fuel), Zillow rents only — each solved with its own median value & rent at {{ metro }} construction costs.</div>
+        <div class="hr-note" style="margin-bottom:0.6rem">Top ZIPs by rent-to-value (the BRRRR fuel), Zillow rents only — each solved with its own median value & rent at {{ metro }} construction costs, with its own listings.</div>
         <div class="hr-scroll">
         <table class="hr-table">
-            <thead><tr><th>ZIP</th><th>Place</th><th>Verdict</th><th>Max buy $/sf</th><th>Modelled fixer $/sf</th><th>Headroom</th><th>Median</th><th>Rent</th><th>Rent/Value</th><th>Trend</th></tr></thead>
+            <thead><tr><th>ZIP</th><th>Place</th><th>% of median</th><th>Most you can pay</th><th>$/sqft</th><th>Set by</th><th>Median</th><th>Rent</th><th>Rent/value</th><th>Days on market</th><th>Price cuts</th></tr></thead>
             <tbody>
             {% for z in drill %}
             <tr>
                 <td><b>{{ z.zip }}</b></td>
-                <td style="text-align:left">{{ z.place }}, {{ z.state }}</td>
-                <td>{% if not z.feasible %}<span class="hr-chip nopath">NO PATH</span>
-                    {% elif z.verdict == 'PRIMED' %}<span class="hr-chip primed">PRIMED</span>
-                    {% elif z.verdict == 'DEAL-DEPENDENT' %}<span class="hr-chip dd">{{ 'needs %.0f%% off'|format(-z.headroom * 100) if z.headroom < 0 else 'DEAL-DEPENDENT' }}</span>
-                    {% else %}<span class="hr-chip out">needs {{ '%.0f'|format(-z.headroom * 100) }}% off</span>{% endif %}</td>
-                <td class="hr-maxpsf">{% if z.feasible %}${{ '%.0f'|format(z.max_psf) }}{% else %}—{% endif %}</td>
-                <td>${{ '%.0f'|format(z.entry_psf) }}</td>
-                <td>{% if z.headroom is not none %}{{ '%+.1f'|format(z.headroom * 100) }}%{% else %}—{% endif %}</td>
+                <td style="text-align:left">{{ z.place }}{% if not z.place.endswith(', ' ~ z.state) %}, {{ z.state }}{% endif %}</td>
+                {% if z.feasible %}
+                <td class="hr-maxpsf">{{ '%.0f'|format(z.max_pct_median) }}%</td>
+                <td>${{ '{:,.0f}'.format(z.max_price) }}</td>
+                <td>${{ '%.0f'|format(z.max_psf) }}</td>
+                <td class="hr-limit">{{ z.binding_label }}</td>
+                {% else %}
+                <td colspan="4"><span class="hr-chip nopath">NO PRICE WORKS</span> <span class="hr-note">{{ z.binding_label }}</span></td>
+                {% endif %}
                 <td>${{ '{:,.0f}'.format(z.median_value) }}</td>
                 <td>${{ '{:,.0f}'.format(z.rent) }}</td>
                 <td>{{ '%.1f'|format(z.rtv_pct) }}%</td>
-                <td class="hr-note">{{ z.trajectory or '—' }}</td>
+                <td>{{ dom(z.listings) }}</td>
+                <td>{{ cuts(z.listings) }}</td>
             </tr>
             {% endfor %}
             </tbody>
@@ -255,12 +265,43 @@
     <details class="hr-explain hr-card">
         <summary>How the math works — and the two questions everyone asks</summary>
         <div class="body">
-            <p><b>The solve.</b> For each market: fixer entry = median × {{ '%.2f'|format(calib.x) }}, renovated ARV = median × {{ '%.2f'|format(calib.y) }} (verified July-2026 calibration: Zillow hedonic fixer discounts, distressed-sale research, at/below ATTOM's observed 25.4% national flip ROI). Rehab from the validated 107-market cost model. {% if mode == 'brrrr' %}BRRRR: hard-money acquisition ({{ '%.2f'|format(fin.hm_rate * 100) }}%, LTARV-capped), DSCR cash-out refi at month 6 ({{ '%.2f'|format(fin.refi_rate * 100) }}%, 75% ARV, rent must cover the payment), {{ hold_years }}-yr hold at ZORI median rent, then sale — after-tax IRR on a monthly grid: 27.5-yr depreciation, suspended passive losses, non-taxable refi cash, recapture + LTCG + NIIT + state at exit.{% else %}Flip: dealer taxation — ordinary income + self-employment tax, no capital-gains rates.{% endif %}
-            The engine bisects to the highest purchase price where the after-tax return ≥ {{ '%.0f'|format(target) }}% <i>and</i> {% if mode == 'brrrr' %}the deal's total after-tax profit over the {{ hold_years }}-yr hold{% else %}after-tax profit{% endif %} ≥ ${{ '{:,.0f}'.format(profit_floor) }} — in yield pockets that $25k comes from years of cash flow, not a day-one equity pop, and the gate honors that.</p>
+            <p><b>The solve.</b> For each market: renovated ARV = median × {{ '%.2f'|format(calib.y) }} (the July-2026 calibration's {{ scope }} premium); rehab from the 107-market cost model.
+                {% if mode == 'brrrr' %}BRRRR: hard-money purchase ({{ '%.2f'|format(fin.hm_rate * 100) }}%, LTARV-capped); remodel, then rented from the next month at the market rent less {{ '%.0f'|format(vacancy * 100) }}% vacancy while a DSCR cash-out refi seasons ({{ '%.2f'|format(fin.refi_rate * 100) }}%, the smaller of 75% of ARV and what the rent carries); {{ hold_years }}-year hold at Zillow median rent; sale at ARV grown {{ ('%+.1f'|format(appr))|replace('-', '−') }}%/yr.
+                After-tax IRR on a monthly grid: depreciation from the month it is rented, rental losses carried forward against later rental income and released at the sale, refi points amortized and the rest deducted at payoff, non-taxable refi cash, recapture + LTCG + NIIT + state at exit.{% else %}Flip: dealer taxation — ordinary income + self-employment tax, no capital-gains rates.{% endif %}
+                The engine bisects to the highest purchase price where the after-tax return ≥ {{ '%.0f'|format(target) }}% <i>and</i> {% if mode == 'brrrr' %}the deal's total after-tax profit over the {{ hold_years }}-yr hold{% else %}after-tax profit{% endif %} ≥ ${{ '{:,.0f}'.format(profit_floor) }}; <i>Set by</i> names the one a dollar more would break.</p>
             <p><b>"Is 14% even the right bar?"</b> Anchor it to your debt: money costs you {{ '%.2f'|format(fin.hm_rate * 100) }}% (hard money) to {{ '%.2f'|format(fin.refi_rate * 100) }}% (DSCR) here. Levered equity below the debt rate means the leverage is working against you — so 5–10% would be irrational at today's rates: you'd be taking construction risk to earn less than your lender. The rational floor is <i>debt rate + a real spread</i> for the work and risk; {{ '%.0f'|format(target) }}% after-tax ≈ 18–19% pre-tax ≈ debt + ~10%. If rates fall, lower the bar with them — edit the rate and target above and the whole board re-solves.</p>
-            <p><b>Competition.</b> Two places: the <i>Competition</i> column is each market's price-trajectory read (accelerating = you're bidding against people; declining = negotiable but values falling — take the ▼ veto seriously). The <i>Competition ±x</i> knob shifts the modelled fixer price: in a no-bidders market fixers sell further below median (helps you); in bidding wars the discount evaporates. Bounds follow the calibration's months-of-supply rule; a live inventory feed is the roadmap upgrade.</p>
-            <p class="hr-note">First-pass screen on market medians — never an appraisal, never tax advice. A green market can hold bad deals and a red market great ones; the ZIP drill-down and the address underwriter are the next two clicks.</p>
+            <p><b>Competition.</b> Read it from the listings, not the price trend: long and lengthening days on market and a rising share of price cuts are a buyer's market where fixers negotiate; short and shortening ones mean you're bidding against people.</p>
+            <p class="hr-note">First-pass screen on market medians — never an appraisal, never tax advice. Any market can hold good and bad deals; the ZIP drill-down and the address underwriter are the next two clicks.</p>
         </div>
     </details>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{% if mode != 'hh' and board %}
+<script>
+(function () {
+  // Click a column to rank by it (again to flip); blanks always sort last.
+  const t = document.getElementById('hrBoard');
+  if (!t) return;
+  const body = t.tBodies[0];
+  t.querySelectorAll('th[data-k]').forEach(th => th.addEventListener('click', () => {
+    const k = th.dataset.k;
+    const asc = th.classList.contains('sorted') && !th.classList.contains('asc');
+    t.querySelectorAll('th').forEach(x => x.classList.remove('sorted', 'asc'));
+    th.classList.add('sorted');
+    if (asc) th.classList.add('asc');
+    const val = r => { const v = r.dataset[k]; return v === '' || v === undefined ? null : +v; };
+    const rows = [...body.rows].sort((a, b) => {
+      const x = val(a), y = val(b);
+      if (x === null && y === null) return 0;
+      if (x === null) return 1;
+      if (y === null) return -1;
+      return asc ? x - y : y - x;
+    });
+    rows.forEach((r, i) => { body.appendChild(r); r.querySelector('.hr-rank').textContent = i + 1; });
+  }));
+})();
+</script>
+{% endif %}
 {% endblock %}

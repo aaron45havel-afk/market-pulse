@@ -742,3 +742,31 @@ rents. The owner chose option B (fix the house-hack and the honesty now; rebuild
   64-entry LRU, one national solve at a time; ZIP-to-market assignment is computed once per database (a national
   house-hack request fell from 3.1s to 0.2s warm).
 - Phase 2 (BACKLOG HEADROOM-BOARD) rebuilds the market board itself.
+
+## 2026-10-02 — /headroom phase 2: the most you can pay and why, not a verdict against a guessed fixer price
+**Why:** after phase 1 every one of 105 markets still read PRICED OUT in every BRRRR setting and PRIMED appeared in
+none of 24 settings: the "fixer ask" was the median × one national discount while the remodel is priced per square
+foot, so in Cleveland the modelled fixer plus a moderate remodel was 105% of ARV before financing. Exit
+appreciation was the trailing 3-year price change, the "competition" column was a guess from the price trend, and
+in 106 of 107 flip markets the $25k floor, not the return target, set the price without the page saying so.
+**Decided:**
+- **The board shows the most you can pay** for a fixer in each market and still clear the after-tax target and
+  the $25k floor — in dollars, per sqft and as a % of the market's median home — and **names the limit that sets
+  it** (the return target, the floor, or rent too thin to carry a refi: the one $500 more breaks). It ranks on the
+  % of median, highest first; every column sorts. Where no price works, it says which limit fails.
+- **No fixer price, no verdict.** The modelled fixer price, PRIMED / DEAL-DEPENDENT / PRICED OUT, the
+  competition ±x knob and the declining-trend veto are gone. Fixer sales aren't in the data; the page says to set
+  the number against what fixers there actually list for. It also says why cheap markets need deeper discounts:
+  a remodel costs about the same in dollars everywhere (BACKLOG HEADROOM-ARV).
+- **BRRRR shows what sizes the refi:** the loan the rent carries at the DSCR floor against 75% of ARV. At 8.28% the
+  rent sizes it in 102 of 105 markets — the real reason cash stays in the deal.
+- **Exit appreciation is the user's, 0%/yr by default** (−5% to +5%). The trailing 3-year price change stays as a
+  history column and feeds nothing. With 0% the BRRRR max prices fall by a median 11% from phase 1.
+- **Listings from Realtor.com replace the trend guess:** median days on market and the share with a price cut,
+  each with its change from a year earlier — per market weighted by listings over ZIPs with at least 10, per ZIP
+  on the drill-down and the house-hack board. The aggregates cache now keys on zip_profile.db's build too.
+- **BRRRR timing and tax:** rented from the month after the remodel (rent less 8% vacancy, landlord insurance,
+  maintenance, hard-money interest still running) instead of vacant until the refi; depreciation from that month;
+  rental losses carried forward against later rental income (federal everywhere, state except PA and NJ) before the
+  rest is released at the sale; refi points amortized by the month and the unamortized balance deducted at payoff.
+  At equal appreciation these raise max prices by about 3%.
