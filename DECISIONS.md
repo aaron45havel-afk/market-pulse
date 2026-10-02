@@ -794,7 +794,10 @@ the profit in 2020 and 52% in 2025. Formula Systems, which owns about 40% of the
 - **The multiple uses the shareholders' own cash flow** (owner's call: probe, then fix — at the source):
   refresh_compounders reads each year's parent and total profit (us-gaap NetIncomeLoss / ProfitLoss / the minority
   line; ifrs-full ProfitLossAttributableToOwnersOfParent / ProfitLoss) and cuts that year's free cash flow to the
-  parent's share before dividing by the parent's shares. A year with material minority holders and a loss can't
-  be attributed and drops out; if it is the latest, no multiple is built. Cash conversion is the parent's cash over
+  parent's share before dividing by the parent's shares. A minority line within 2% of the profit (or loss) is
+  ignored. A loss year has no profit split, but ownership doesn't move with it: it takes the share of the nearest
+  year within three that has one (earlier first; "whole" if the minority was immaterial then) — Omnicom's
+  merger-charge year, Hyatt's and General Mills' small minority lines. Only with no such year does it drop out;
+  if that is the latest year, no multiple is built rather than one from a stale year. Cash conversion is the parent's cash over
   the parent's profit (Hess Midstream: 104%, was 410%). This corrects P/FCF on Compounders and FCF Quality too;
   Compounders marks such a multiple with * and says why on hover.

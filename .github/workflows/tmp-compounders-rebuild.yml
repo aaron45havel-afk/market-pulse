@@ -1,4 +1,4 @@
-# TEMPORARY: rebuild compounders.json on this branch with the parent-share attribution (run 2: immaterial minority lines in loss years). Deleted before the PR.
+# TEMPORARY: rebuild compounders.json on this branch with the parent-share attribution (run 3: loss years borrow the nearest ownership share). Deleted before the PR.
 name: TEMP compounders rebuild (parent share)
 on:
   push:

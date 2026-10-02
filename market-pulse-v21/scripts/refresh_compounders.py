@@ -1295,18 +1295,27 @@ def fix_share_scale(series: dict[int, float]) -> tuple[dict[int, float], bool]:
 NCI_IMMATERIAL = 0.98
 
 
-def parent_shares(ni_parent: dict, profit_total: dict, ni_nci: dict) -> dict:
+def parent_shares(ni_parent: dict, profit_total: dict, ni_nci: dict, carry_years: int = 3) -> dict:
     """{fiscal_year: the parent's share of that year's profit} for years in
     which noncontrolling holders take a material part; None for such a
-    year that cannot be attributed (a loss, or a parent loss inside a
-    group profit). A year that is absent belongs wholly to the parent.
+    year that cannot be attributed. A year that is absent belongs wholly to
+    the parent.
 
     Parent profit over total profit is the share, read directly where both
     are filed. Where one is missing it is rebuilt from the minority line.
     Total over parent is the safer pair to trust: Formula Systems tagged
     its whole 2021-22 profit as the minority's, while its parent and total
-    lines agree with the filing."""
-    out = {}
+    lines agree with the filing.
+
+    A LOSS YEAR HAS NO PROFIT SPLIT, BUT OWNERSHIP DOES NOT MOVE WITH IT.
+    When the group or the parent loses money the ratio means nothing —
+    Omnicom's merger-charge year left the parent with a loss while its
+    minority holders earned their usual share — so the year takes the share
+    of the nearest year within `carry_years` that has one (earlier first;
+    "whole" if the minority was immaterial then). Only with no such year
+    is it None."""
+    known: dict = {}            # year -> share; 1.0 = the parent's whole
+    pending = []
     for y in set(profit_total) | set(ni_nci):
         tot, par, nci = profit_total.get(y), ni_parent.get(y), ni_nci.get(y)
         if tot is None and par is not None and nci is not None:
@@ -1315,14 +1324,23 @@ def parent_shares(ni_parent: dict, profit_total: dict, ni_nci: dict) -> dict:
             par = tot - nci
         if tot is None or par is None:
             continue
-        # Immaterial minority lines are ignored in loss years too: Kraft Heinz's
-        # 2025 impairment loss sat beside a minority line under 1% of it, and
-        # treating that year as unattributable withheld a sound multiple.
         if abs(tot - par) <= (1 - NCI_IMMATERIAL) * max(abs(tot), abs(par)):
+            known[y] = 1.0           # an immaterial minority line, profit or loss (Kraft Heinz 2025)
+        elif tot > 0 and par >= tot:
+            known[y] = 1.0           # a minority LOSS gives the parent no extra cash
+        elif tot > 0 and par >= 0:
+            known[y] = par / tot
+        else:
+            pending.append(y)
+    out = {y: v for y, v in known.items() if v < NCI_IMMATERIAL}
+    for y in pending:
+        near = [k for k in known if abs(k - y) <= carry_years]
+        if not near:
+            out[y] = None
             continue
-        if tot > 0 and par >= tot:
-            continue                 # the parent's, whole (a minority LOSS gives it no extra cash)
-        out[y] = par / tot if tot > 0 and par >= 0 else None
+        k = min(near, key=lambda k: (abs(k - y), k > y))
+        if known[k] < NCI_IMMATERIAL:
+            out[y] = known[k]
     return out
 
 

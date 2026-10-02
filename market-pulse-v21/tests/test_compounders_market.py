@@ -343,7 +343,15 @@ check(PS({2025: 100.0}, {2025: 100.0}, {}) == {} and PS({2025: 99.0}, {2025: 100
 check(PS({2025: 109.0}, {2025: 83.0}, {2025: -26.0}) == {},
       "a minority LOSS (parent profit above the group's) gives the parent no extra cash: whole")
 check(PS({2024: -5.0}, {2024: 10.0}, {}) == {2024: None} and PS({2024: -8.0}, {2024: -5.0}, {}) == {2024: None},
-      "A YEAR WITH MINORITY HOLDERS AND A LOSS CANNOT BE ATTRIBUTED (None), never guessed")
+      "A LOSS YEAR WITH A MATERIAL MINORITY AND NO NEIGHBOUR TO TAKE A SHARE FROM IS NONE, never guessed")
+check(PS({2024: 50.0, 2025: -67.0}, {2024: 100.0, 2025: 53.0}, {}) == {2024: 0.5, 2025: 0.5},
+      "A LOSS YEAR TAKES THE OWNERSHIP SHARE OF THE YEAR BEFORE (Omnicom's merger-charge year)")
+check(PS({2024: 100.0, 2025: -5.0}, {2024: 100.0, 2025: -4.0}, {}) == {},
+      "a neighbour that was the parent's whole makes the loss year whole too (Hyatt, General Mills)")
+check(PS({2020: 50.0, 2025: -67.0}, {2020: 100.0, 2025: 53.0}, {}) == {2020: 0.5, 2025: None},
+      "a neighbour more than three years away is too far to borrow ownership from")
+check(PS({2023: 40.0, 2025: -67.0, 2026: 80.0}, {2023: 100.0, 2025: 53.0, 2026: 100.0}, {})[2025] == 0.8,
+      "the nearest year wins")
 check(PS({2025: -5_840.0}, {2025: -5_830.0}, {2025: 10.0}) == {} and PS({2025: -100.0}, {2025: -99.0}, {}) == {},
       "A LOSS YEAR WITH AN IMMATERIAL MINORITY LINE IS THE PARENT'S WHOLE (Kraft Heinz 2025): only a material "
       "minority share in a loss year is unattributable")
@@ -392,8 +400,17 @@ check(abs(_hs["fcf_conv"] - round(_num / _den * 100, 1)) < 0.05,
       f"CONVERSION DIVIDES BY THE PARENT'S PROFIT wherever it is filed, even when the group total is "
       f"the longer series ({_hs['fcf_conv']}%)")
 _loss = R.compute_metrics(hesm(ni={**NI, 2025: -50.0}))
-check(_loss["nci_unattributed"] and _loss["_fcf"] == {} and _loss["parent_share"] is None,
-      "WHEN THE LATEST YEAR CAN'T BE ATTRIBUTED, NO MULTIPLE IS BUILT — not one from a stale year")
+check(not _loss["nci_unattributed"] and _loss["parent_share"] == round(NI[2024] / PL[2024], 3)
+      and abs(_loss["_fcf"][2025] - (OCF[2025] - CAP[2025]) * 1e6 * NI[2024] / PL[2024]) < 1,
+      "a loss year takes the ownership share of the year before")
+# Three years of group profit whose parent side is a loss each year: no year has a split to borrow.
+_ln = R.compute_metrics({"us-gaap": {**hesm()["us-gaap"],
+    "ProfitLoss": {"units": {"USD": [fyv(y, 600e6, f"{y + 1}-02-10") for y in (2023, 2024, 2025)]}},
+    "NetIncomeLoss": {"units": {"USD": [fyv(y, (-30.0 if y >= 2023 else NI[y]) * 1e6, f"{y + 1}-02-10")
+                                        for y in HY]}}}})
+check(_ln["nci_unattributed"] and _ln["_fcf"] == {} and _ln["parent_share"] is None,
+      "WHEN THE LATEST YEAR CAN'T BE ATTRIBUTED AND HAS NO NEIGHBOUR TO BORROW FROM, NO MULTIPLE IS BUILT — "
+      "not one from a stale year")
 check(_m["parent_share"] is None and _m["nci_years"] == 0 and _m["_fcf"][2025] == 2e8,
       "a company with no minority holders is untouched")
 _mm = R.market_metrics(chart(lambda y, m: 38.25), _h["_fcf"], _h["_shares"], _h["_shares_filed"])
