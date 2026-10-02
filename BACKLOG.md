@@ -231,11 +231,20 @@ Format: `- [PHASE-SEEN] item — why it matters`
   deleted (map rebuild phase 5); remove it with the per-state derived scores only it displayed.
 - [CONDITIONS-METRO] Realtor.com publishes the same core metrics by metro (936 CBSAs). A metro view of
   /conditions would answer "which markets", not just "which states". If Redfin resumes, the ZIP profile picks it up unchanged.
-- [QUIET-VALUE-BANKS] /quiet-value scores banks like operating companies: "net cash" and "debt to equity" mean
-  little against deposits, and five of the 13 names on the default view (Oct 2026) are small banks. A bank flag
-  (SIC 6021-6036) with its own tests, or a filter, would keep them from passing on arithmetic.
-- [QUIET-VALUE-DIVIDEND] A company with no dividend tag reads as "unknown" on the dividend test (1,198 of 1,417 rows),
-  not as a non-payer; a filer that pays nothing never files the tag, so absence here is close to a measured zero.
+- [QUIET-VALUE-BANK-TESTS] Banks, insurers and funds can't clear /quiet-value: the tests that don't apply leave them
+  three or four. Tests built for them would let them in on their own terms — for a bank, equity/assets (capital) and
+  return on assets in place of debt and margin; for a BDC, price to NAV and dividend coverage. Both bank figures come
+  from data the build already pulls (total assets, equity, net income).
+- [QUIET-VALUE-DIVIDEND] With dividends paid now counted, 332 of 1,418 rows have a measured dividend; the rest read
+  "unknown" rather than "pays nothing". A filer that pays nothing files no dividend line, so a full cash-flow statement
+  with no dividend line is close to a measured zero — treating it as one would change who reaches five measured
+  tests. Separately, 28 rows yield over 20% (Tandy Leather 62%, Shutterstock 34%): a one-off special dividend reads
+  as a year's yield, and some of these are QUIET-VALUE-SHARES cases. Nothing yet tells the two apart.
+- [QUIET-VALUE-SHARES] About 40 rows carry multiples no market prices — P/E under 2, P/B under 0.15, net cash over
+  150% of the market cap (Wetouch 1,010%, Castor Maritime, Performance Shipping, JAKKS at 0.03x earnings) — mostly
+  the signature of a share count out of step with the price (a reverse split, a foreign filer's units). None is on
+  the default view; seven reach the loosest settings and would lead them. Compounders' split adjustment (fix_share_scale) or a sanity bound
+  like Schloss's impossible-book check would catch them.
 - [NET-INCOME-BASIS] compounders' `net_income` series is the parent's (NetIncomeLoss) or the group's (ProfitLoss)
   depending on which tag a company files for more years. P/FCF and cash conversion now use the parent's profit
   explicitly; `ni_pos_years` and the other readers of the series do not.

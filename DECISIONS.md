@@ -823,3 +823,33 @@ thirds of small names; no OTC). The owner chose to find a source before hiding t
   quarter-end.
 - **Every candidate is priced** (default 4,000; about 2,750 today). The 400-name cap was sized for a feed that was
   refusing us, and the 400 smallest by assets were mostly pre-revenue shells — none passed more than 3 of 7 tests.
+
+## 2026-10-02 — Quiet Value: tests that don't apply are withheld by SEC industry code, not passed
+**Why:** seven of the 13 names on the first default view were small banks (ENB Financial, Muncy Columbia, Provident
+Financial, LCNB, BV Financial, BayCom, C&F Financial). A bank's deposits are not filed as debt, so it passed "low
+debt" and "net cash" on arithmetic; capex/OCF and operating margin describe a business a bank is not. The build
+already meant to leave financials out — its candidate filter drops names containing "Bancorp", "Insurance", "REIT" —
+but a name is all it checked, and these names don't say "bank". The owner agreed to withhold the tests rather than
+drop the companies.
+**Decided:**
+- After the size cut, each name's SIC code comes from SEC's submissions record (about 1,400 requests, paced at 8 a
+  second, about 3 minutes; SEC answered for all 1,418). A run that gets codes for under 90% of the board refuses to
+  write, because without them a bank is scored as an operating company again; if none of the first 50 requests
+  answer, it stops asking.
+- **Not applicable is its own state, distinct from "not reported"**: no verdict and no metric, never a pass, out of
+  the denominator, drawn as a "–" box whose tooltip says why. Banks and thrifts (SIC 6021–6036) and insurance carriers
+  (6311–6399, which includes health plans; agents and brokers, 6411, are ordinary businesses) lose net cash, debt,
+  capex and margin — their liabilities are customers' and policyholders' money. A REIT (6798) loses capex only:
+  property purchases are not filed as capex, while its debt is real debt and is still tested.
+- **A company SEC answers for with no code is a fund.** All 37 such names on 2026-10-02 were business development
+  companies or closed-end funds (PennantPark, Gladstone, Barings BDC…). They lose net cash, capex and margin; their
+  borrowing is real, so the debt test stays. One SEC did not answer for is unclassified, bounded by the 90% floor.
+- Banks, insurers and funds can therefore measure at most three or four tests and the screen needs five, so they
+  never clear it. The funnel says how many reached that step and why (29 of 234 on the default view).
+- **An operating margin above 100% is unknown**, not high: operating income larger than revenue means the two figures
+  disagree (a revenue tag that caught one line of the business, or a gain booked in operating income). Alliance
+  Entertainment read 1,116% and was on the default view; four names were above 100%.
+- **Dividends paid count where no per-share figure was filed**: the year's PaymentsOfDividendsCommonStock (else
+  PaymentsOfDividends, which can include preferred) over today's share count. That measured the dividend for 113 more
+  names (332 in all, from 219). A filed zero is a measured zero; no filing at all is still unknown.
+- Result: the default view went from 13 names (7 of them banks) to 8, none of them financials.
