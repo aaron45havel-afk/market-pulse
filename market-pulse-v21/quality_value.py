@@ -46,6 +46,55 @@ LABELS = {
     "pb": "Low P/B",
 }
 
+# WHERE A TEST STOPS MEANING ANYTHING. A bank's deposits and an insurer's
+# policy reserves are its customers' money, not debt: "net cash" counts
+# that money as the company's, and "low debt" passes a balance sheet
+# levered ten to one because none of it sits in the debt line. Capex/OCF
+# and operating margin describe a business a bank is not — its
+# reinvestment is the loan book, and it files no operating income. A
+# REIT buys property, which is not filed as capex, so a capex ratio
+# passes it for buying nothing. In October 2026 seven of the 13 names on
+# the default view were small banks passing on exactly this arithmetic.
+#
+# These tests are NOT APPLICABLE, which is a different statement from
+# "not reported": the company filed the numbers, they just do not say what
+# the test says they say. Like an unknown, a test that does not apply
+# never counts as a pass and is not in the denominator — so a bank or an
+# insurer can reach at most three measured tests, and the screen needs
+# five.
+INDUSTRY_SIC = (
+    ("bank", 6021, 6036),       # commercial banks and savings institutions
+    ("insurer", 6311, 6399),    # insurance carriers; agents and brokers (6411) are ordinary businesses
+    ("reit", 6798, 6798),
+)
+
+NOT_APPLICABLE = {
+    "bank": ("net_cash", "debt", "capex", "margin"),
+    "insurer": ("net_cash", "debt", "capex", "margin"),
+    "reit": ("capex",),
+}
+
+NA_REASON = {
+    "bank": ("doesn't apply to a bank: deposits fund the loans, so its cash is "
+             "customers' money and its leverage is not in the debt line"),
+    "insurer": ("doesn't apply to an insurer: policy reserves fund the investments, so "
+                "its cash is policyholders' money and its leverage is not in the debt line"),
+    "reit": "doesn't apply to a REIT: property purchases are not filed as capex",
+}
+
+
+def industry(sic) -> str | None:
+    """'bank', 'insurer' or 'reit' from an SEC SIC code; None for everyone
+    else, including a company whose code we could not get."""
+    try:
+        code = int(sic)
+    except (TypeError, ValueError):
+        return None
+    for name, lo, hi in INDUSTRY_SIC:
+        if lo <= code <= hi:
+            return name
+    return None
+
 
 def _num(v) -> float | None:
     try:
@@ -119,7 +168,7 @@ def pb_ratio(price, book_value_per_share) -> float | None:
     return round(p / b, 2)
 
 
-def evaluate(f: dict, limits: dict | None = None) -> dict:
+def evaluate(f: dict, limits: dict | None = None, industry: str | None = None) -> dict:
     """Run all seven tests over one company.
 
     `f` carries whatever EDGAR and the price feed produced; anything
@@ -127,6 +176,10 @@ def evaluate(f: dict, limits: dict | None = None) -> dict:
     metric behind each, and a score that is honest about its own
     denominator — 4/5 with two unknowns is a different statement from
     4/7, and the UI shows both numbers rather than one percentage.
+
+    `industry` (see industry()) withdraws the tests NOT_APPLICABLE names:
+    no verdict and no metric, so neither the score nor the reason line can
+    quote a bank's "net cash".
     """
     lim = {**DEFAULTS, **(limits or {})}
     price = _num(f.get("price"))
@@ -153,10 +206,14 @@ def evaluate(f: dict, limits: dict | None = None) -> dict:
         "pe": None if metrics["pe"] is None else metrics["pe"] <= lim["max_pe"],
         "pb": None if metrics["pb"] is None else metrics["pb"] <= lim["max_pb"],
     }
+    not_applicable = list(NOT_APPLICABLE.get(industry, ()))
+    for k in not_applicable:
+        metrics[k] = None
+        verdicts[k] = None
 
     known = [k for k in TESTS if verdicts[k] is not None]
     passed = [k for k in known if verdicts[k]]
-    unknown = [k for k in TESTS if verdicts[k] is None]
+    unknown = [k for k in TESTS if verdicts[k] is None and k not in not_applicable]
 
     return {
         "metrics": metrics,
@@ -164,6 +221,8 @@ def evaluate(f: dict, limits: dict | None = None) -> dict:
         "passed": len(passed),
         "known": len(known),
         "unknown": unknown,
+        "not_applicable": not_applicable,
+        "industry": industry,
         "passed_keys": passed,
         "failed_keys": [k for k in known if not verdicts[k]],
         # Share of the tests we could actually run. Reported next to the

@@ -50,6 +50,7 @@
     .t-pass { background: rgba(34,197,94,0.2); color: #15803d; }
     .t-fail { background: rgba(239,68,68,0.14); color: #b91c1c; }
     .t-unk  { background: var(--surface2); color: var(--ink-3); border: 1px dashed var(--border); }
+    .t-na   { background: transparent; color: var(--ink-3); border: 1px solid var(--border); opacity: 0.6; }
 
     .why { color: var(--ink-3); font-size: 0.78rem; }
     .warn-slow { color: #b45309; font-weight: 600; }
@@ -134,6 +135,9 @@
     {% if size %}<b>{{ counts.after_size }}</b> in the {{ size }} band → {% endif %}
     {% if tradeable %}<b>{{ counts.after_tradeable }}</b> you could actually build a position in → {% endif %}
     <b>{{ counts.after_quality }}</b> passed {{ minpass }}+ of the seven quality tests.
+    {% if counts.financials %}{{ counts.financials }} of the {{ counts.after_tradeable }} are banks or insurers,
+    which can't qualify: cash, debt, capex and margin don't apply to them, so they can't reach the five
+    measured tests the screen needs.{% endif %}
     {% if shown < 5 %}<b>A short list here is the screen being strict, not the market being empty</b> —
     loosen the tests-passed number or widen the turnover quartile to see more.{% endif %}
   </div>
@@ -170,9 +174,10 @@
             <div class="tests">
               {% for t in tests %}
                 {% set v = r.verdicts.get(t) %}
-                <span class="t {{ 't-pass' if v else ('t-unk' if v is none else 't-fail') }}"
-                      title="{{ labels[t] }}: {% if v is none %}not reported — counted as unknown, never as a pass{% else %}{{ r.metrics.get(t) }}{% endif %}">
-                  {{ labels[t][0] }}</span>
+                {% set na = t in (r.not_applicable or []) %}
+                <span class="t {{ 't-na' if na else ('t-pass' if v else ('t-unk' if v is none else 't-fail')) }}"
+                      title="{{ labels[t] }}: {% if na %}{{ na_reason.get(r.industry, 'does not apply') }} — never counted as a pass{% elif v is none %}not reported — counted as unknown, never as a pass{% else %}{{ r.metrics.get(t) }}{% endif %}">
+                  {{ '–' if na else labels[t][0] }}</span>
               {% endfor %}
             </div>
           </td>
@@ -202,10 +207,17 @@
     <b>An unreported metric is never a pass.</b> Sparse disclosure is not random in this universe — it correlates with
     the companies you would least like a screen to wave through. Unknowns show as a dashed box and are excluded from
     the denominator, which is why the column reads <i>passed / known</i> rather than a percentage.
+    <br><br>
+    <b>Some tests don't apply to some industries.</b> A bank's deposits and an insurer's policy reserves are its
+    customers' money, not debt, so "net cash" and "low debt" pass them on arithmetic; capex and operating margin
+    describe a business they are not. Those four are withheld for banks and insurers, which leaves them three
+    tests and keeps them off the screen. A REIT's property purchases are not filed as capex, so its capex test is
+    withheld too. The industry is the company's SEC code, not a guess from its name.
     {% if meta %}
     <br><br>
     <b>As of {{ meta.as_of }}</b> · {{ meta.universe_candidates }} candidates from EDGAR ·
     {{ meta.in_size_band }} in the size band with a price · volume history on {{ meta.volume_coverage_pct }}%
+    {%- if meta.sic_coverage_pct is defined %} · industry code on {{ meta.sic_coverage_pct }}%{% endif %}
     {%- if meta.price_source %} · market data from <b>{{ meta.price_source }}</b>{% endif %}.
     {% if meta.price_source %}
     <br><br>
