@@ -1,0 +1,442 @@
+{
+ "period": "2026-10",
+ "market": "NE",
+ "params": {
+  "assets": 200000,
+  "down_pct": 20.0,
+  "safety_tier": "safe",
+  "winter": "moderate"
+ },
+ "_inputs": {
+  "zips": "sha256:3fa6e1032dcbe146",
+  "condo": "sha256:fd1f2973214f41db",
+  "crime": "sha256:6371edb93b684754",
+  "logic": "904c49dc047f2043"
+ },
+ "max_purchase": 800000,
+ "universe_n": 747,
+ "buyable": {
+  "06901": {
+   "name": "Stamford",
+   "region": "CT Shoreline",
+   "entry": 379775,
+   "kind": "all-homes",
+   "minutes": 4.0,
+   "anchor": "STM",
+   "safety": "safe",
+   "violent": 154
+  },
+  "06902": {
+   "name": "Stamford",
+   "region": "CT Shoreline",
+   "entry": 599893,
+   "kind": "all-homes",
+   "minutes": 4.6,
+   "anchor": "STM",
+   "safety": "safe",
+   "violent": 154
+  },
+  "06906": {
+   "name": "Stamford",
+   "region": "CT Shoreline",
+   "entry": 647335,
+   "kind": "all-homes",
+   "minutes": 5.8,
+   "anchor": "STM",
+   "safety": "safe",
+   "violent": 154
+  },
+  "06905": {
+   "name": "Stamford",
+   "region": "CT Shoreline",
+   "entry": 757985,
+   "kind": "all-homes",
+   "minutes": 7.0,
+   "anchor": "STM",
+   "safety": "safe",
+   "violent": 154
+  },
+  "02914": {
+   "name": "East Providence",
+   "region": "RI + South Coast",
+   "entry": 428488,
+   "kind": "all-homes",
+   "minutes": 7.1,
+   "anchor": "PVD",
+   "safety": "very_safe",
+   "violent": 74
+  },
+  "02904": {
+   "name": "North Providence",
+   "region": "RI + South Coast",
+   "entry": 403143,
+   "kind": "all-homes",
+   "minutes": 7.3,
+   "anchor": "PVD",
+   "safety": "very_safe",
+   "violent": 97
+  },
+  "02916": {
+   "name": "East Providence",
+   "region": "RI + South Coast",
+   "entry": 498833,
+   "kind": "all-homes",
+   "minutes": 8.2,
+   "anchor": "PVD",
+   "safety": "very_safe",
+   "violent": 74
+  },
+  "02860": {
+   "name": "Pawtucket",
+   "region": "RI + South Coast",
+   "entry": 394777,
+   "kind": "all-homes",
+   "minutes": 8.3,
+   "anchor": "PVD",
+   "safety": "safe",
+   "violent": 224
+  },
+  "06907": {
+   "name": "Stamford",
+   "region": "CT Shoreline",
+   "entry": 716624,
+   "kind": "all-homes",
+   "minutes": 8.3,
+   "anchor": "STM",
+   "safety": "safe",
+   "violent": 154
+  },
+  "02910": {
+   "name": "Cranston",
+   "region": "RI + South Coast",
+   "entry": 409143,
+   "kind": "all-homes",
+   "minutes": 8.5,
+   "anchor": "PVD",
+   "safety": "very_safe",
+   "violent": 88
+  },
+  "02911": {
+   "name": "North Providence",
+   "region": "RI + South Coast",
+   "entry": 425845,
+   "kind": "all-homes",
+   "minutes": 8.7,
+   "anchor": "PVD",
+   "safety": "very_safe",
+   "violent": 97
+  },
+  "02152": {
+   "name": "Winthrop",
+   "region": "Boston metro",
+   "entry": 683442,
+   "kind": "all-homes",
+   "minutes": 9.5,
+   "anchor": "BOS",
+   "safety": "very_safe",
+   "violent": 129
+  },
+  "02915": {
+   "name": "East Providence",
+   "region": "RI + South Coast",
+   "entry": 444297,
+   "kind": "all-homes",
+   "minutes": 9.8,
+   "anchor": "PVD",
+   "safety": "very_safe",
+   "violent": 74
+  },
+  "02920": {
+   "name": "Cranston",
+   "region": "RI + South Coast",
+   "entry": 455717,
+   "kind": "all-homes",
+   "minutes": 10.0,
+   "anchor": "PVD",
+   "safety": "very_safe",
+   "violent": 88
+  },
+  "06614": {
+   "name": "Stratford",
+   "region": "CT Shoreline",
+   "entry": 481829,
+   "kind": "all-homes",
+   "minutes": 10.0,
+   "anchor": "BDG",
+   "safety": "very_safe",
+   "violent": 48
+  },
+  "02861": {
+   "name": "Pawtucket",
+   "region": "RI + South Coast",
+   "entry": 403694,
+   "kind": "all-homes",
+   "minutes": 10.1,
+   "anchor": "PVD",
+   "safety": "safe",
+   "violent": 224
+  },
+  "02888": {
+   "name": "Warwick",
+   "region": "RI + South Coast",
+   "entry": 414417,
+   "kind": "all-homes",
+   "minutes": 10.6,
+   "anchor": "PVD",
+   "safety": "very_safe",
+   "violent": 87
+  },
+  "06460": {
+   "name": "Milford",
+   "region": "CT Shoreline",
+   "entry": 512125,
+   "kind": "all-homes",
+   "minutes": 13.5,
+   "anchor": "BDG",
+   "safety": "very_safe",
+   "violent": 71
+  },
+  "02045": {
+   "name": "Hull",
+   "region": "Boston metro",
+   "entry": 719533,
+   "kind": "all-homes",
+   "minutes": 13.9,
+   "anchor": "BOS",
+   "safety": "safe",
+   "violent": 243
+  },
+  "02889": {
+   "name": "Warwick",
+   "region": "RI + South Coast",
+   "entry": 414425,
+   "kind": "all-homes",
+   "minutes": 14.9,
+   "anchor": "PVD",
+   "safety": "very_safe",
+   "violent": 87
+  },
+  "02191": {
+   "name": "Weymouth",
+   "region": "Boston metro",
+   "entry": 606903,
+   "kind": "all-homes",
+   "minutes": 16.5,
+   "anchor": "BOS",
+   "safety": "safe",
+   "violent": 237
+  },
+  "02188": {
+   "name": "Weymouth",
+   "region": "Boston metro",
+   "entry": 621490,
+   "kind": "all-homes",
+   "minutes": 18.9,
+   "anchor": "BOS",
+   "safety": "safe",
+   "violent": 237
+  },
+  "02189": {
+   "name": "Weymouth",
+   "region": "Boston metro",
+   "entry": 605409,
+   "kind": "all-homes",
+   "minutes": 19.4,
+   "anchor": "BOS",
+   "safety": "safe",
+   "violent": 237
+  },
+  "01970": {
+   "name": "Salem",
+   "region": "Boston metro",
+   "entry": 606749,
+   "kind": "all-homes",
+   "minutes": 22.8,
+   "anchor": "BOS",
+   "safety": "very_safe",
+   "violent": 70
+  }
+ },
+ "aspirational": {
+  "02143": {
+   "name": "Somerville",
+   "region": "Boston metro",
+   "entry": 935636,
+   "kind": "all-homes",
+   "minutes": 7.0,
+   "anchor": "BOS",
+   "safety": "safe",
+   "violent": 194
+  },
+  "06870": {
+   "name": "Greenwich",
+   "region": "CT Shoreline",
+   "entry": 2699117,
+   "kind": "all-homes",
+   "minutes": 7.3,
+   "anchor": "STM",
+   "safety": "very_safe",
+   "violent": 17
+  },
+  "02145": {
+   "name": "Somerville",
+   "region": "Boston metro",
+   "entry": 821721,
+   "kind": "all-homes",
+   "minutes": 7.4,
+   "anchor": "BOS",
+   "safety": "safe",
+   "violent": 194
+  },
+  "06878": {
+   "name": "Greenwich",
+   "region": "CT Shoreline",
+   "entry": 2720945,
+   "kind": "all-homes",
+   "minutes": 7.6,
+   "anchor": "STM",
+   "safety": "very_safe",
+   "violent": 17
+  },
+  "02144": {
+   "name": "Somerville",
+   "region": "Boston metro",
+   "entry": 1032109,
+   "kind": "all-homes",
+   "minutes": 9.3,
+   "anchor": "BOS",
+   "safety": "safe",
+   "violent": 194
+  },
+  "02155": {
+   "name": "Medford",
+   "region": "Boston metro",
+   "entry": 826531,
+   "kind": "all-homes",
+   "minutes": 10.3,
+   "anchor": "BOS",
+   "safety": "safe",
+   "violent": 180
+  },
+  "02467": {
+   "name": "Brookline",
+   "region": "Boston metro",
+   "entry": 1226859,
+   "kind": "all-homes",
+   "minutes": 11.2,
+   "anchor": "BOS",
+   "safety": "very_safe",
+   "violent": 124
+  },
+  "02472": {
+   "name": "Watertown",
+   "region": "Boston metro",
+   "entry": 819656,
+   "kind": "all-homes",
+   "minutes": 11.6,
+   "anchor": "BOS",
+   "safety": "very_safe",
+   "violent": 137
+  },
+  "02458": {
+   "name": "Newton",
+   "region": "Boston metro",
+   "entry": 1256564,
+   "kind": "all-homes",
+   "minutes": 12.3,
+   "anchor": "BOS",
+   "safety": "very_safe",
+   "violent": 56
+  },
+  "02459": {
+   "name": "Newton",
+   "region": "Boston metro",
+   "entry": 1825740,
+   "kind": "all-homes",
+   "minutes": 13.4,
+   "anchor": "BOS",
+   "safety": "very_safe",
+   "violent": 56
+  },
+  "02460": {
+   "name": "Newton",
+   "region": "Boston metro",
+   "entry": 1366678,
+   "kind": "all-homes",
+   "minutes": 13.6,
+   "anchor": "BOS",
+   "safety": "very_safe",
+   "violent": 56
+  },
+  "02461": {
+   "name": "Newton",
+   "region": "Boston metro",
+   "entry": 1492111,
+   "kind": "all-homes",
+   "minutes": 14.1,
+   "anchor": "BOS",
+   "safety": "very_safe",
+   "violent": 56
+  },
+  "02465": {
+   "name": "Newton",
+   "region": "Boston metro",
+   "entry": 1388263,
+   "kind": "all-homes",
+   "minutes": 14.7,
+   "anchor": "BOS",
+   "safety": "very_safe",
+   "violent": 56
+  },
+  "02464": {
+   "name": "Newton",
+   "region": "Boston metro",
+   "entry": 951368,
+   "kind": "all-homes",
+   "minutes": 15.0,
+   "anchor": "BOS",
+   "safety": "very_safe",
+   "violent": 56
+  },
+  "02468": {
+   "name": "Newton",
+   "region": "Boston metro",
+   "entry": 2143003,
+   "kind": "all-homes",
+   "minutes": 15.2,
+   "anchor": "BOS",
+   "safety": "very_safe",
+   "violent": 56
+  },
+  "02466": {
+   "name": "Newton",
+   "region": "Boston metro",
+   "entry": 1387985,
+   "kind": "all-homes",
+   "minutes": 16.2,
+   "anchor": "BOS",
+   "safety": "very_safe",
+   "violent": 56
+  },
+  "01907": {
+   "name": "Swampscott",
+   "region": "Boston metro",
+   "entry": 831407,
+   "kind": "all-homes",
+   "minutes": 17.8,
+   "anchor": "BOS",
+   "safety": "very_safe",
+   "violent": 127
+  },
+  "01945": {
+   "name": "Marblehead",
+   "region": "Boston metro",
+   "entry": 1054943,
+   "kind": "all-homes",
+   "minutes": 21.7,
+   "anchor": "BOS",
+   "safety": "very_safe",
+   "violent": 78
+  }
+ }
+}

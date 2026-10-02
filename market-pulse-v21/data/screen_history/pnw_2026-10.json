@@ -1,0 +1,31 @@
+{
+ "period": "2026-10",
+ "market": "PNW",
+ "params": {
+  "assets": 200000,
+  "down_pct": 20.0,
+  "safety_tier": "safe",
+  "winter": "moderate"
+ },
+ "_inputs": {
+  "zips": "sha256:3fa6e1032dcbe146",
+  "condo": "sha256:fd1f2973214f41db",
+  "crime": "sha256:6371edb93b684754",
+  "logic": "904c49dc047f2043"
+ },
+ "max_purchase": 800000,
+ "universe_n": 355,
+ "buyable": {
+  "98198": {
+   "name": "Des Moines",
+   "region": "Puget Sound",
+   "entry": 586118,
+   "kind": "all-homes",
+   "minutes": 22.6,
+   "anchor": "SEA",
+   "safety": "safe",
+   "violent": 231
+  }
+ },
+ "aspirational": {}
+}

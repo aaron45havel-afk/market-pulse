@@ -1,0 +1,141 @@
+{
+ "period": "2026-10",
+ "market": "SE",
+ "params": {
+  "assets": 200000,
+  "down_pct": 20.0,
+  "safety_tier": "safe",
+  "winter": "moderate"
+ },
+ "_inputs": {
+  "zips": "sha256:3fa6e1032dcbe146",
+  "condo": "sha256:fd1f2973214f41db",
+  "crime": "sha256:6371edb93b684754",
+  "logic": "904c49dc047f2043"
+ },
+ "max_purchase": 800000,
+ "universe_n": 729,
+ "buyable": {
+  "27518": {
+   "name": "Cary",
+   "region": "Carolina Piedmont",
+   "entry": 734578,
+   "kind": "all-homes",
+   "minutes": 14.3,
+   "anchor": "RDU",
+   "safety": "very_safe",
+   "violent": 75
+  },
+  "27511": {
+   "name": "Cary",
+   "region": "Carolina Piedmont",
+   "entry": 496081,
+   "kind": "all-homes",
+   "minutes": 14.6,
+   "anchor": "RDU",
+   "safety": "very_safe",
+   "violent": 75
+  },
+  "27513": {
+   "name": "Cary",
+   "region": "Carolina Piedmont",
+   "entry": 556721,
+   "kind": "all-homes",
+   "minutes": 15.7,
+   "anchor": "RDU",
+   "safety": "very_safe",
+   "violent": 75
+  },
+  "30080": {
+   "name": "Smyrna",
+   "region": "Carolina Piedmont",
+   "entry": 440481,
+   "kind": "all-homes",
+   "minutes": 17.0,
+   "anchor": "ATL",
+   "safety": "safe",
+   "violent": 240
+  },
+  "30082": {
+   "name": "Smyrna",
+   "region": "Carolina Piedmont",
+   "entry": 443621,
+   "kind": "all-homes",
+   "minutes": 18.0,
+   "anchor": "ATL",
+   "safety": "safe",
+   "violent": 240
+  },
+  "27519": {
+   "name": "Cary",
+   "region": "Carolina Piedmont",
+   "entry": 695323,
+   "kind": "all-homes",
+   "minutes": 21.6,
+   "anchor": "RDU",
+   "safety": "very_safe",
+   "violent": 75
+  },
+  "30093": {
+   "name": "Norcross",
+   "region": "Carolina Piedmont",
+   "entry": 317120,
+   "kind": "all-homes",
+   "minutes": 24.5,
+   "anchor": "ATL",
+   "safety": "safe",
+   "violent": 182
+  },
+  "30071": {
+   "name": "Norcross",
+   "region": "Carolina Piedmont",
+   "entry": 357048,
+   "kind": "all-homes",
+   "minutes": 25.0,
+   "anchor": "ATL",
+   "safety": "safe",
+   "violent": 182
+  },
+  "30047": {
+   "name": "Lilburn",
+   "region": "Carolina Piedmont",
+   "entry": 395241,
+   "kind": "all-homes",
+   "minutes": 26.4,
+   "anchor": "ATL",
+   "safety": "very_safe",
+   "violent": 143
+  },
+  "30076": {
+   "name": "Roswell",
+   "region": "Carolina Piedmont",
+   "entry": 582171,
+   "kind": "all-homes",
+   "minutes": 28.8,
+   "anchor": "ATL",
+   "safety": "very_safe",
+   "violent": 111
+  },
+  "30039": {
+   "name": "Snellville",
+   "region": "Carolina Piedmont",
+   "entry": 346674,
+   "kind": "all-homes",
+   "minutes": 29.8,
+   "anchor": "ATL",
+   "safety": "safe",
+   "violent": 171
+  },
+  "30022": {
+   "name": "Johns Creek",
+   "region": "Carolina Piedmont",
+   "entry": 668627,
+   "kind": "all-homes",
+   "minutes": 30.0,
+   "anchor": "ATL",
+   "safety": "very_safe",
+   "violent": 40
+  }
+ },
+ "aspirational": {}
+}

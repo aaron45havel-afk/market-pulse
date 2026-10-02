@@ -1,0 +1,182 @@
+{
+ "period": "2026-10",
+ "market": "CA",
+ "params": {
+  "assets": 200000,
+  "down_pct": 20.0,
+  "safety_tier": "safe",
+  "winter": "moderate"
+ },
+ "_inputs": {
+  "zips": "sha256:3fa6e1032dcbe146",
+  "condo": "sha256:fd1f2973214f41db",
+  "crime": "sha256:6371edb93b684754",
+  "logic": "904c49dc047f2043"
+ },
+ "max_purchase": 800000,
+ "universe_n": 948,
+ "buyable": {
+  "92840": {
+   "name": "Garden Grove",
+   "region": "SoCal",
+   "entry": 570897,
+   "kind": "condo",
+   "minutes": 8.5,
+   "anchor": "ANA",
+   "safety": "safe",
+   "violent": 239
+  },
+  "92843": {
+   "name": "Garden Grove",
+   "region": "SoCal",
+   "entry": 560563,
+   "kind": "condo",
+   "minutes": 8.8,
+   "anchor": "SNA",
+   "safety": "safe",
+   "violent": 239
+  },
+  "92844": {
+   "name": "Garden Grove",
+   "region": "SoCal",
+   "entry": 631316,
+   "kind": "condo",
+   "minutes": 11.3,
+   "anchor": "ANA",
+   "safety": "safe",
+   "violent": 239
+  },
+  "94706": {
+   "name": "Albany",
+   "region": "NorCal",
+   "entry": 514867,
+   "kind": "condo",
+   "minutes": 11.5,
+   "anchor": "OAK",
+   "safety": "safe",
+   "violent": 182
+  },
+  "94401": {
+   "name": "San Mateo",
+   "region": "NorCal",
+   "entry": 670104,
+   "kind": "condo",
+   "minutes": 22.8,
+   "anchor": "SF",
+   "safety": "safe",
+   "violent": 168
+  }
+ },
+ "aspirational": {
+  "92617": {
+   "name": "Irvine",
+   "region": "SoCal",
+   "entry": 825512,
+   "kind": "all-homes",
+   "minutes": 7.8,
+   "anchor": "IRV",
+   "safety": "very_safe",
+   "violent": 79
+  },
+  "92782": {
+   "name": "Tustin",
+   "region": "SoCal",
+   "entry": 940867,
+   "kind": "condo",
+   "minutes": 9.6,
+   "anchor": "IRV",
+   "safety": "safe",
+   "violent": 216
+  },
+  "92620": {
+   "name": "Irvine",
+   "region": "SoCal",
+   "entry": 1281718,
+   "kind": "condo",
+   "minutes": 10.0,
+   "anchor": "IRV",
+   "safety": "very_safe",
+   "violent": 79
+  },
+  "94087": {
+   "name": "Sunnyvale",
+   "region": "NorCal",
+   "entry": 993104,
+   "kind": "condo",
+   "minutes": 14.4,
+   "anchor": "SJ",
+   "safety": "safe",
+   "violent": 188
+  },
+  "95030": {
+   "name": "Los Gatos",
+   "region": "NorCal",
+   "entry": 1373707,
+   "kind": "condo",
+   "minutes": 16.0,
+   "anchor": "SJ",
+   "safety": "very_safe",
+   "violent": 97
+  },
+  "94041": {
+   "name": "Mountain View",
+   "region": "NorCal",
+   "entry": 1103506,
+   "kind": "condo",
+   "minutes": 17.7,
+   "anchor": "SJ",
+   "safety": "safe",
+   "violent": 208
+  },
+  "94040": {
+   "name": "Mountain View",
+   "region": "NorCal",
+   "entry": 882380,
+   "kind": "condo",
+   "minutes": 18.1,
+   "anchor": "SJ",
+   "safety": "safe",
+   "violent": 208
+  },
+  "90277": {
+   "name": "Redondo Beach",
+   "region": "SoCal",
+   "entry": 1153310,
+   "kind": "condo",
+   "minutes": 18.8,
+   "anchor": "LB",
+   "safety": "safe",
+   "violent": 239
+  },
+  "90278": {
+   "name": "Redondo Beach",
+   "region": "SoCal",
+   "entry": 1268963,
+   "kind": "condo",
+   "minutes": 19.5,
+   "anchor": "LB",
+   "safety": "safe",
+   "violent": 239
+  },
+  "90266": {
+   "name": "Manhattan Beach",
+   "region": "SoCal",
+   "entry": 2390086,
+   "kind": "condo",
+   "minutes": 22.1,
+   "anchor": "LA",
+   "safety": "very_safe",
+   "violent": 121
+  },
+  "94025": {
+   "name": "Menlo Park",
+   "region": "NorCal",
+   "entry": 1270953,
+   "kind": "condo",
+   "minutes": 26.2,
+   "anchor": "SJ",
+   "safety": "safe",
+   "violent": 182
+  }
+ }
+}
