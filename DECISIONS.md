@@ -814,3 +814,12 @@ thirds of small names; no OTC). The owner chose to find a source before hiding t
 - Each price source carries its own request headers (pricefeed.SOURCES). Yahoo gets the plain named agent; Nasdaq
   and Stooq keep a browser string. Source order is now Yahoo, Nasdaq (new, keyless fallback, parsed from its
   newest-first string figures), Stooq. The run still probes before spending anything and records which answered.
+- **The first real run showed the inputs were wrong too** — invisible while the feed was dead, and the page had never
+  had data in production (quiet_value.json was never committed). Flows came from the net-net screener's single
+  quarter: a P/E on one quarter's earnings (about 4x too high), a dividend yield on one quarter's dividend (about 4x
+  too low), and capex/operating cash flow from discrete-quarter frames that companies don't file (198 filers had
+  capex, so the capex test was unmeasured for everyone). Flows now come from the last complete calendar year's frames
+  (CY2025 in October 2026), revenue merged across Revenues and the ASC 606 tags; the balance sheet stays the latest
+  quarter-end.
+- **Every candidate is priced** (default 4,000; about 2,750 today). The 400-name cap was sized for a feed that was
+  refusing us, and the 400 smallest by assets were mostly pre-revenue shells — none passed more than 3 of 7 tests.
