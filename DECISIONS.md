@@ -770,3 +770,31 @@ in 106 of 107 flip markets the $25k floor, not the return target, set the price 
   rental losses carried forward against later rental income (federal everywhere, state except PA and NJ) before the
   rest is released at the sale; refi points amortized by the month and the unamortized balance deducted at payoff.
   At equal appreciation these raise max prices by about 3%.
+
+## 2026-10-02 — HOLT: one status per row, commodity producers by industry, the shareholders' own cash flow
+**Why:** the /holt audit found the "refused — unusable multiple" tile counting 649 names of which 45 were data
+faults (the rest had negative or no free cash flow, no price, or filed in another currency) and the list showing
+1 of the 45; Northern Oil & Gas at #1 on a 31.8% sales CAGR that was the oil rebound, because 41 of 85 oil and gas
+producers never tripped the margin-based cyclical flag; Range Resources "clean" with no ROIC, no conversion and no
+cash-flow history; and Hess Midstream at a 2.3x historical multiple. A probe of SEC filings confirmed the last:
+its per-share cash flow divided the whole partnership's cash flow by the public Class A shares, which owned 5% of
+the profit in 2020 and 52% in 2025. Formula Systems, which owns about 40% of the companies it consolidates, read
+5.7x the same way. Across the universe, 125 companies give more than 10% of their profit to minority holders.
+**Decided:**
+- **Every row has exactly one status**, all counted: clean, flagged (a gate measured and failed), not measured (a
+  gate the data can't answer — never a pass, as on Compounders), refused (a multiple that can't be true: the 45
+  faults, all listed), no usable multiple (counted by reason: negative free cash flow, another currency, no
+  free-cash-flow figure, no per-share figure, no price, an unattributable minority share) and no growth figure.
+- **Commodity producers are cyclical by industry** (owner's call: all extraction): SIC 1000-1499 — mining and oil
+  & gas — and 2911 refining are flagged whatever their margins did; their five-year sales growth is a price. This
+  takes 8 off today's clean board, among them Northern Oil, Hess Midstream and five gold and silver miners.
+- **Not measured:** a missing ROIC, cash conversion, profit history (under 5 years), or — for a company with no
+  margin figures and no industry flag — cyclicality. A measured failure still decides first (Range Resources is
+  flagged as a producer, and its missing figures are listed). 10 rows move from clean to not measured.
+- **The multiple uses the shareholders' own cash flow** (owner's call: probe, then fix — at the source):
+  refresh_compounders reads each year's parent and total profit (us-gaap NetIncomeLoss / ProfitLoss / the minority
+  line; ifrs-full ProfitLossAttributableToOwnersOfParent / ProfitLoss) and cuts that year's free cash flow to the
+  parent's share before dividing by the parent's shares. A year with material minority holders and a loss can't
+  be attributed and drops out; if it is the latest, no multiple is built. Cash conversion is the parent's cash over
+  the parent's profit (Hess Midstream: 104%, was 410%). This corrects P/FCF on Compounders and FCF Quality too;
+  Compounders marks such a multiple with * and says why on hover.

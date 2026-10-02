@@ -1315,10 +1315,13 @@ def parent_shares(ni_parent: dict, profit_total: dict, ni_nci: dict) -> dict:
             par = tot - nci
         if tot is None or par is None:
             continue
-        if tot > 0 and par >= tot * NCI_IMMATERIAL:
-            continue                 # the parent's, whole (a minority LOSS gives it no extra cash)
-        if tot == par:
+        # Immaterial minority lines are ignored in loss years too: Kraft Heinz's
+        # 2025 impairment loss sat beside a minority line under 1% of it, and
+        # treating that year as unattributable withheld a sound multiple.
+        if abs(tot - par) <= (1 - NCI_IMMATERIAL) * max(abs(tot), abs(par)):
             continue
+        if tot > 0 and par >= tot:
+            continue                 # the parent's, whole (a minority LOSS gives it no extra cash)
         out[y] = par / tot if tot > 0 and par >= 0 else None
     return out
 

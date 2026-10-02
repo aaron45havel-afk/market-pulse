@@ -334,6 +334,72 @@ R._annual_series({"us-gaap": {"WeightedAverageNumberOfDilutedSharesOutstanding":
 check(_fo2 == {}, "a series too short to use reports no dates either")
 
 
+# ── whose cash flow: the parent's share where minority holders own part ──
+PS = R.parent_shares
+check(PS({2025: 352.9}, {2025: 684.6}, {}) == {2025: 352.9 / 684.6},
+      "the parent's share is its profit over the group's (Hess Midstream 2025: 52%)")
+check(PS({2025: 100.0}, {2025: 100.0}, {}) == {} and PS({2025: 99.0}, {2025: 100.0}, {}) == {},
+      "a company with no material minority holders is the parent's whole")
+check(PS({2025: 109.0}, {2025: 83.0}, {2025: -26.0}) == {},
+      "a minority LOSS (parent profit above the group's) gives the parent no extra cash: whole")
+check(PS({2024: -5.0}, {2024: 10.0}, {}) == {2024: None} and PS({2024: -8.0}, {2024: -5.0}, {}) == {2024: None},
+      "A YEAR WITH MINORITY HOLDERS AND A LOSS CANNOT BE ATTRIBUTED (None), never guessed")
+check(PS({2025: -5_840.0}, {2025: -5_830.0}, {2025: 10.0}) == {} and PS({2025: -100.0}, {2025: -99.0}, {}) == {},
+      "A LOSS YEAR WITH AN IMMATERIAL MINORITY LINE IS THE PARENT'S WHOLE (Kraft Heinz 2025): only a material "
+      "minority share in a loss year is unattributable")
+check(PS({}, {2023: 200.0}, {2023: 120.0}) == {2023: 0.4} and PS({2023: 80.0}, {}, {2023: 120.0}) == {2023: 0.4},
+      "a missing parent or total line is rebuilt from the minority line")
+check(abs(PS({2021: 54.585}, {2021: 141.902}, {2021: 141.902})[2021] - 0.3847) < 1e-3,
+      "Formula Systems tagged its whole 2021 profit as the minority's; parent over total still reads 38%")
+
+HY = range(2019, 2026)
+NI = {2019: 16.1, 2020: 24.0, 2021: 46.4, 2022: 83.9, 2023: 118.6, 2024: 223.1, 2025: 352.9}
+PL = {2019: 75.1, 2020: 484.9, 2021: 617.8, 2022: 620.6, 2023: 607.7, 2024: 659.0, 2025: 684.6}
+OCF = {2019: 470.7, 2020: 641.7, 2021: 795.5, 2022: 861.1, 2023: 866.4, 2024: 940.3, 2025: 983.8}
+CAP = {2019: 306.4, 2020: 301.1, 2021: 163.2, 2022: 238.2, 2023: 223.5, 2024: 306.1, 2025: 255.6}
+
+
+def hesm(ni=NI, pl=PL):
+    return {"us-gaap": {
+        "Revenues": {"units": {"USD": [fyv(y, 1e9 + y, f"{y + 1}-02-10") for y in HY]}},
+        "NetIncomeLoss": {"units": {"USD": [fyv(y, ni[y] * 1e6, f"{y + 1}-02-10") for y in HY]}},
+        "ProfitLoss": {"units": {"USD": [fyv(y, pl[y] * 1e6, f"{y + 1}-02-10") for y in HY]}},
+        "NetCashProvidedByUsedInOperatingActivities": {"units": {"USD": [fyv(y, OCF[y] * 1e6, f"{y + 1}-02-10") for y in HY]}},
+        "PaymentsToAcquirePropertyPlantAndEquipment": {"units": {"USD": [fyv(y, CAP[y] * 1e6, f"{y + 1}-02-10") for y in HY]}},
+        "WeightedAverageNumberOfSharesOutstandingBasic": {"units": {"shares": [fyv(y, 1e8, f"{y + 1}-02-10") for y in HY]}}}}
+
+
+_h = R.compute_metrics(hesm())
+check(all(abs(_h["_fcf"][y] - (OCF[y] - CAP[y]) * 1e6 * NI[y] / PL[y]) < 1 for y in HY),
+      "HESS MIDSTREAM: EACH YEAR'S FREE CASH FLOW IS CUT TO THE PUBLIC SHARES' SHARE OF THAT YEAR "
+      "(5% in 2020, 52% in 2025) before it is divided by their count")
+check(_h["parent_share"] == round(352.9 / 684.6, 3) and _h["nci_years"] == 7 and not _h["nci_unattributed"],
+      "the latest share and the years adjusted are recorded")
+check(abs(_h["fcf_last"] - (OCF[2025] - CAP[2025]) * 1e6) < 1,
+      "the company's own free cash flow stays whole in fcf_last (it is a fact about the business)")
+_conv = sum((OCF[y] - CAP[y]) * NI[y] / PL[y] for y in HY) / sum(NI.values()) * 100
+check(abs(_h["fcf_conv"] - round(_conv, 1)) < 0.05 and _h["fcf_conv"] < 150,
+      f"conversion is the parent's cash over the parent's profit ({_h['fcf_conv']}%, was 410%)")
+# ProfitLoss filed for more years than NetIncomeLoss: the build's net-income series is then the
+# group's total, and conversion must still use the parent's profit wherever it is filed.
+_short = hesm()
+_short["us-gaap"]["NetIncomeLoss"]["units"]["USD"] = [v for v in _short["us-gaap"]["NetIncomeLoss"]["units"]["USD"]
+                                                     if v["fy"] >= 2022]
+_hs = R.compute_metrics(_short)
+_num = sum((OCF[y] - CAP[y]) * (NI[y] / PL[y] if y >= 2022 else 1.0) for y in HY)
+_den = sum(NI[y] if y >= 2022 else PL[y] for y in HY)
+check(abs(_hs["fcf_conv"] - round(_num / _den * 100, 1)) < 0.05,
+      f"CONVERSION DIVIDES BY THE PARENT'S PROFIT wherever it is filed, even when the group total is "
+      f"the longer series ({_hs['fcf_conv']}%)")
+_loss = R.compute_metrics(hesm(ni={**NI, 2025: -50.0}))
+check(_loss["nci_unattributed"] and _loss["_fcf"] == {} and _loss["parent_share"] is None,
+      "WHEN THE LATEST YEAR CAN'T BE ATTRIBUTED, NO MULTIPLE IS BUILT — not one from a stale year")
+check(_m["parent_share"] is None and _m["nci_years"] == 0 and _m["_fcf"][2025] == 2e8,
+      "a company with no minority holders is untouched")
+_mm = R.market_metrics(chart(lambda y, m: 38.25), _h["_fcf"], _h["_shares"], _h["_shares_filed"])
+check(_mm["pfcf_now"] == round(38.25 / (_h["_fcf"][2025] / 1e8), 1),
+      "and P/FCF divides the price by the shareholders' own cash flow per share")
+
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")
     for m in _FAILS:

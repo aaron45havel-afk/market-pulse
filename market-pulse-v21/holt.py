@@ -175,6 +175,8 @@ def no_multiple_reason(row) -> str:
     r = row or {}
     if r.get("currency") not in (None, "USD"):
         return "files in another currency — multiple withheld"
+    if r.get("nci_unattributed"):
+        return "minority holders own part of the cash flow and this year's share can't be measured"
     if r.get("price") is None:
         return "no price"
     fcf = r.get("fcf_last")
@@ -186,7 +188,8 @@ def no_multiple_reason(row) -> str:
 
 
 NO_MULTIPLE_ORDER = ("negative free cash flow", "files in another currency — multiple withheld",
-                     "no free-cash-flow figure", "no per-share figure", "no price")
+                     "no free-cash-flow figure", "no per-share figure", "no price",
+                     "minority holders own part of the cash flow and this year's share can't be measured")
 
 
 def multiple_band(now, median=None) -> str | None:
