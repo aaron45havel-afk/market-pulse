@@ -801,3 +801,25 @@ the profit in 2020 and 52% in 2025. Formula Systems, which owns about 40% of the
   if that is the latest year, no multiple is built rather than one from a stale year. Cash conversion is the parent's cash over
   the parent's profit (Hess Midstream: 104%, was 410%). This corrects P/FCF on Compounders and FCF Quality too;
   Compounders marks such a multiple with * and says why on hover.
+
+## 2026-10-02 — Quiet Value: the feed was blocked by our user agent, not by GitHub
+**Why:** /quiet-value had been empty since Aug 29: every weekly run probed Stooq (now behind a JavaScript browser
+check) and Yahoo (HTTP 429) and refused to write. The build assumed Yahoo blocks GitHub's runners — but the
+Compounders build reads the same Yahoo chart endpoint from the same runners every month. A probe from GitHub
+Actions on 2026-10-02 settled it: Yahoo answered 429 to Quiet Value's Chrome browser string and to Python's default
+agent, and 200 to Compounders' plain named agent ("Mozilla/5.0 (market-pulse-refresh/1.0)") — all 400 small filers,
+395 with a full year of daily volume, in 37 seconds on three workers. Nasdaq's historical API also answered (two
+thirds of small names; no OTC). The owner chose to find a source before hiding the page; none needs a key.
+**Decided:**
+- Each price source carries its own request headers (pricefeed.SOURCES). Yahoo gets the plain named agent; Nasdaq
+  and Stooq keep a browser string. Source order is now Yahoo, Nasdaq (new, keyless fallback, parsed from its
+  newest-first string figures), Stooq. The run still probes before spending anything and records which answered.
+- **The first real run showed the inputs were wrong too** — invisible while the feed was dead, and the page had never
+  had data in production (quiet_value.json was never committed). Flows came from the net-net screener's single
+  quarter: a P/E on one quarter's earnings (about 4x too high), a dividend yield on one quarter's dividend (about 4x
+  too low), and capex/operating cash flow from discrete-quarter frames that companies don't file (198 filers had
+  capex, so the capex test was unmeasured for everyone). Flows now come from the last complete calendar year's frames
+  (CY2025 in October 2026), revenue merged across Revenues and the ASC 606 tags; the balance sheet stays the latest
+  quarter-end.
+- **Every candidate is priced** (default 4,000; about 2,750 today). The 400-name cap was sized for a feed that was
+  refusing us, and the 400 smallest by assets were mostly pre-revenue shells — none passed more than 3 of 7 tests.

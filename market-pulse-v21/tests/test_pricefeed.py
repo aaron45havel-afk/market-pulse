@@ -126,14 +126,36 @@ check(P.stooq_symbol("BRK.B") == "brk-b.us",
 check(P.stooq_symbol("  ko ") == "ko.us", "surrounding whitespace is stripped")
 check(P.yahoo_symbol("aapl") == "AAPL", "Yahoo wants uppercase")
 
+# ── Nasdaq's historical API: newest first, every figure a string ──
+NQ = {"data": {"tradesTable": {"rows": [
+    {"date": "10/02/2026", "close": "$12.50", "volume": "1,200"},
+    {"date": "10/01/2026", "close": "$12.40", "volume": "N/A"},
+    {"date": "09/30/2026", "close": "$12.30", "volume": "900"}]}}}
+nq = P.parse_nasdaq_history(NQ)
+check(nq == {"volumes": [900.0, None, 1200.0], "price": 12.5},
+      "NASDAQ ROWS COME OLDEST FIRST LIKE THE OTHERS, '$' and ',' stripped, 'N/A' volume unknown (None)")
+check(P.parse_nasdaq_history({"data": None}) is None and P.parse_nasdaq_history({"data": {"tradesTable": {"rows": []}}}) is None
+      and P.parse_nasdaq_history(None) is None, "no rows is None, never an empty series")
+check(set(nq) == {"volumes", "price"}, "and it returns the same keys as the other sources")
+
 # ── the source registry ─────────────────────────────────────────────
 check(len(P.SOURCES) >= 2, "there is more than one source, because one of them blocks CI")
 for s in P.SOURCES:
     check(all(k in s for k in ("name", "url", "symbol", "parse", "json", "note")),
           f"source {s.get('name')!r} is fully specified")
     check("{s}" in s["url"], f"source {s['name']} templates its symbol")
+    check(isinstance(s.get("headers"), dict) and s["headers"].get("User-Agent"),
+          f"source {s['name']} carries its own request headers")
     _COUNT += 1
 check(P.source_by_name("stooq") is not None, "sources are addressable by name")
+_yh = P.source_by_name("yahoo")["headers"]["User-Agent"]
+check(P.SOURCES[0]["name"] == "yahoo" and "Chrome" not in _yh and "Safari" not in _yh
+      and not _yh.startswith("Python"),
+      "YAHOO IS TRIED FIRST WITH A PLAIN NAMED AGENT — it answers that from GitHub's runners and 429s "
+      "a browser string or Python's default (probe 2026-10-02)")
+check([s["name"] for s in P.SOURCES] == ["yahoo", "nasdaq", "stooq"], "then Nasdaq, then Stooq")
+check("{fd}" in P.source_by_name("nasdaq")["url"] and "{td}" in P.source_by_name("nasdaq")["url"],
+      "Nasdaq's window is dated")
 check(P.source_by_name("nope") is None, "an unknown source name yields None, not a crash")
 check(len(P.PROBE_TICKERS) >= 3,
       "the probe uses several tickers — one delisting must not condemn a good source")

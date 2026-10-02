@@ -231,9 +231,11 @@ Format: `- [PHASE-SEEN] item — why it matters`
   deleted (map rebuild phase 5); remove it with the per-state derived scores only it displayed.
 - [CONDITIONS-METRO] Realtor.com publishes the same core metrics by metro (936 CBSAs). A metro view of
   /conditions would answer "which markets", not just "which states". If Redfin resumes, the ZIP profile picks it up unchanged.
-- [QUIET-VALUE] /quiet-value has been empty in production since Aug 29: its weekly refresh needs a year of daily
-  volume per company, and both price sources now block GitHub's runners (Stooq serves a browser check, Yahoo
-  answers 429). Needs a volume source (likely keyed) or the page hidden from the nav until there is one.
+- [QUIET-VALUE-BANKS] /quiet-value scores banks like operating companies: "net cash" and "debt to equity" mean
+  little against deposits, and five of the 13 names on the default view (Oct 2026) are small banks. A bank flag
+  (SIC 6021-6036) with its own tests, or a filter, would keep them from passing on arithmetic.
+- [QUIET-VALUE-DIVIDEND] A company with no dividend tag reads as "unknown" on the dividend test (1,198 of 1,417 rows),
+  not as a non-payer; a filer that pays nothing never files the tag, so absence here is close to a measured zero.
 - [NET-INCOME-BASIS] compounders' `net_income` series is the parent's (NetIncomeLoss) or the group's (ProfitLoss)
   depending on which tag a company files for more years. P/FCF and cash conversion now use the parent's profit
   explicitly; `ni_pos_years` and the other readers of the series do not.
