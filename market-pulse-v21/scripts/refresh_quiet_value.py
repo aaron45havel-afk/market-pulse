@@ -33,7 +33,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -48,10 +48,6 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 log = logging.getLogger("quiet-value")
 
 OUT = ROOT / "data" / "quiet_value.json"
-YAHOO_CHART = ("https://query1.finance.yahoo.com/v8/finance/chart/{t}"
-               "?range=1y&interval=1d")
-BROWSER_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-              "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
 # Only names small enough to plausibly be in the cohort the research
 # describes. Assets is a crude stand-in for market cap, used only to
@@ -139,13 +135,15 @@ def fetch_one(source: dict, ticker: str, retry: bool = True) -> dict | None:
     400 tickers x 92s across 3 workers is three and a half hours against a
     sixty-minute budget, which is how an hour got spent writing nothing.
     """
-    url = source["url"].format(s=urllib.parse.quote(source["symbol"](ticker), safe=".-"))
+    today = date.today()
+    url = source["url"].format(s=urllib.parse.quote(source["symbol"](ticker), safe=".-"),
+                               fd=today - timedelta(days=370), td=today)
     raw = None
     for backoff in (3.0, 9.0, None):
         try:
-            req = urllib.request.Request(
-                url, headers={"User-Agent": BROWSER_UA,
-                              "Accept": "application/json, text/csv, */*"})
+            # Each source's own headers: Yahoo answers a plain named agent
+            # and refuses a browser string (pricefeed.SOURCES).
+            req = urllib.request.Request(url, headers=dict(source["headers"]))
             with urllib.request.urlopen(req, timeout=20) as r:
                 body = r.read()
             raw = json.loads(body) if source["json"] else body.decode("utf-8", "replace")
@@ -251,7 +249,7 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=400,
                     help="max candidates to pull market data for (one call each)")
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--source", default="", help="force a price source (stooq, yahoo)")
+    ap.add_argument("--source", default="", help="force a price source (yahoo, nasdaq, stooq)")
     a = ap.parse_args()
 
     # PROVE THE PRICE SOURCE FIRST. Everything after this — the EDGAR

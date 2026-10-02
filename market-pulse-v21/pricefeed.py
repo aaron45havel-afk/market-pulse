@@ -8,7 +8,16 @@ The SEC publishes the fundamentals — cash, debt, capex, shares outstanding
 the exchanges own that and sell it. So the volume half of the screen rests
 on a free source that nobody has promised us, and the failure mode is not
 theoretical: a run on 2026-08-09 fetched 100 tickers from Yahoo's chart
-endpoint and got data for ZERO of them. Yahoo rejects GitHub Actions IPs.
+endpoint and got data for ZERO of them, and every weekly run after that
+failed the same way.
+
+IT WAS THE USER AGENT, NOT THE RUNNER. A probe on 2026-10-02 from GitHub's
+runners: Yahoo answered 429 to a Chrome browser string and to Python's
+default agent, and 200 to a plain named agent — all 400 small filers, 395
+with a full year of volume, in 37 seconds on three workers. The Compounders
+build had been using that agent against the same endpoint all along. So
+each source now carries its own headers, and the one that works is not
+"look more like a browser".
 
 That run took an hour to establish this, because each rejection triggered
 a retry ladder that slept 92 seconds before giving up, and nothing logged
@@ -119,6 +128,29 @@ def parse_stooq_csv(text: str | None) -> dict | None:
     return {"volumes": vols[-TRADING_DAYS:], "price": last_close}
 
 
+def parse_nasdaq_history(payload: dict | None) -> dict | None:
+    """Nasdaq's historical-quote API: data.tradesTable.rows, NEWEST FIRST,
+    every figure a string ("$12.34", "1,234,567", "N/A"). Returned oldest
+    first like the others. An unparseable volume stays None — unknown, not
+    a no-trade day."""
+    rows = ((((payload or {}).get("data") or {}).get("tradesTable") or {}).get("rows")) or []
+    if not isinstance(rows, list) or not rows:
+        return None
+
+    def num(v):
+        return _f(str(v).replace("$", "").replace(",", "").strip()) if v is not None else None
+    rows = list(reversed(rows))
+    vols = [num(r.get("volume")) for r in rows if isinstance(r, dict)]
+    if not vols:
+        return None
+    price = None
+    for r in reversed(rows):
+        price = num((r or {}).get("close"))
+        if price is not None:
+            break
+    return {"volumes": vols[-TRADING_DAYS:], "price": price}
+
+
 def stooq_symbol(ticker: str) -> str:
     """Stooq wants lowercase with a market suffix, and a hyphen where US
     tickers use a class dot: BRK.B is brk-b.us."""
@@ -129,20 +161,41 @@ def yahoo_symbol(ticker: str) -> str:
     return ticker.strip().upper()
 
 
-# Ordered by expectation, not preference. Yahoo carries better micro-cap
-# coverage; Stooq is a plain static CSV host and is far less inclined to
-# block a datacenter IP. Which one actually answers is settled at runtime
-# by the probe, never by this ordering, and the answer is recorded in the
-# payload so the board can say where its numbers came from.
+def nasdaq_symbol(ticker: str) -> str:
+    return ticker.strip().upper()
+
+
+# A plain, named agent. Yahoo answers it from GitHub's runners; it answers
+# a browser string and Python's default agent with 429 (probe, 2026-10-02).
+PLAIN_UA = "Mozilla/5.0 (market-pulse-refresh/1.0)"
+BROWSER_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+
+# Ordered by what answered GitHub's runners on 2026-10-02: Yahoo (400 of 400
+# small filers), Nasdaq (two thirds — no OTC names), Stooq (a JavaScript
+# browser check). Which one actually answers is still settled at runtime by
+# the probe, and the answer is recorded in the payload so the board can say
+# where its numbers came from. {fd}/{td} are the window's dates.
 SOURCES = (
-    {"name": "stooq",
-     "url": "https://stooq.com/q/d/l/?s={s}&i=d",
-     "symbol": stooq_symbol, "parse": parse_stooq_csv, "json": False,
-     "note": "Free daily CSV. No key. Coverage of very small US listings is uneven."},
     {"name": "yahoo",
      "url": "https://query1.finance.yahoo.com/v8/finance/chart/{s}?range=1y&interval=1d",
      "symbol": yahoo_symbol, "parse": parse_yahoo_chart, "json": True,
-     "note": "Undocumented endpoint behind the consumer site. Rejects cloud IPs with 429."},
+     "headers": {"User-Agent": PLAIN_UA, "Accept": "application/json"},
+     "note": "Undocumented endpoint behind the consumer site. Answers a plain named "
+             "agent; 429s browser strings and Python's default from cloud IPs."},
+    {"name": "nasdaq",
+     "url": ("https://api.nasdaq.com/api/quote/{s}/historical?assetclass=stocks"
+             "&fromdate={fd}&limit=400&todate={td}"),
+     "symbol": nasdaq_symbol, "parse": parse_nasdaq_history, "json": True,
+     "headers": {"User-Agent": BROWSER_UA, "Accept": "application/json",
+                 "Accept-Language": "en-US,en;q=0.9", "Origin": "https://www.nasdaq.com",
+                 "Referer": "https://www.nasdaq.com/"},
+     "note": "Nasdaq's quote API. No key. Exchange-listed only — no OTC names."},
+    {"name": "stooq",
+     "url": "https://stooq.com/q/d/l/?s={s}&i=d",
+     "symbol": stooq_symbol, "parse": parse_stooq_csv, "json": False,
+     "headers": {"User-Agent": BROWSER_UA, "Accept": "text/csv, */*"},
+     "note": "Free daily CSV. No key. Behind a JavaScript browser check since September 2026."},
 )
 
 
