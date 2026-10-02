@@ -154,6 +154,16 @@ def sic_coverage_ok(answered: int, asked: int) -> bool:
     return asked == 0 or answered / asked >= MIN_SIC_COVERAGE
 
 
+def industry_of(cik, sics: dict) -> str | None:
+    """A company SEC answered for with NO code is a fund (quality_value.
+    NOT_APPLICABLE); one SEC did not answer for is unclassified, which the
+    coverage floor bounds."""
+    cik = str(cik)
+    if cik not in sics:
+        return None
+    return QV.industry(sics[cik]) if sics[cik] else "fund"
+
+
 def fetch_sic(ciks: list[str], get=None, interval: float = SEC_INTERVAL) -> dict[str, str | None]:
     """{cik: SIC code or None} for every CIK SEC answered for. A CIK SEC did
     not answer for is absent, which is how the caller counts coverage."""
@@ -488,7 +498,7 @@ def main() -> int:
     industries = {}
     for r in done:
         r["sic"] = sics.get(str(r["cik"]))
-        r["industry"] = QV.industry(r["sic"])
+        r["industry"] = industry_of(r["cik"], sics)
         industries[r["industry"] or "other"] = industries.get(r["industry"] or "other", 0) + 1
     log.info("SIC answered for %d of %d; industries %s", len(sics), len(done), industries)
 

@@ -280,6 +280,23 @@ check(reit["not_applicable"] == ["capex"] and reit["known"] == 6 and reit["verdi
       "a REIT loses only capex — its debt is real debt and is still tested")
 check(QV.evaluate(enb, industry=None)["not_applicable"] == [] and QV.evaluate(enb, industry="other")["known"] == 7,
       "every other company is scored on all seven")
+fund = QV.evaluate(enb, industry="fund")
+check(fund["not_applicable"] == ["net_cash", "capex", "margin"] and fund["verdicts"]["debt"] is True,
+      "a fund keeps the debt test — a BDC's borrowing is real borrowing — and loses cash, capex and margin")
+check(fund["known"] == 4 and not QV.meets(fund), "which leaves four measured tests: not enough to clear")
+check(set(QV.CANNOT_QUALIFY) == {k for k, v in QV.NOT_APPLICABLE.items() if len(QV.TESTS) - len(v) < 5},
+      "CANNOT_QUALIFY is exactly the industries left with fewer than five tests")
+check(set(QV.NA_REASON) == set(QV.NOT_APPLICABLE), "every withheld test has a reason the page can show")
+
+# An operating margin above 100% is two figures disagreeing, not a margin.
+check(QV.operating_margin(16_000_000, 70_000_000) == 22.9, "an ordinary margin")
+check(QV.operating_margin(30_000_000, 2_688_000) is None,
+      "OPERATING INCOME ABOVE REVENUE IS UNKNOWN — Alliance Entertainment read 1,116% and passed 'high margin'")
+check(QV.operating_margin(5_000_000, 5_000_000) == 100.0, "exactly 100% is the edge, still a figure")
+check(QV.operating_margin(-90_000_000, 2_000_000) == -4500.0, "a deep loss is still a (failing) margin")
+check(QV.evaluate({**enb, "operating_income": 9e8})["verdicts"]["margin"] is None,
+      "and the impossible margin never passes the test")
+
 partial = QV.evaluate({"price": 10.0, "eps": 1.0}, industry="bank")
 check(set(partial["unknown"]) == {"dividend", "pb"} and set(partial["not_applicable"]) == {"net_cash", "debt", "capex", "margin"},
       "a bank's unreported dividend is UNKNOWN; its net cash is NOT APPLICABLE — two different statements")

@@ -68,9 +68,16 @@ INDUSTRY_SIC = (
     ("reit", 6798, 6798),
 )
 
+# A FUND is a company SEC answers for with no industry code at all. On the
+# first run with codes (2026-10-02) that was 37 of 1,418 names and every
+# one was a business development company or a closed-end fund — a loan or
+# investment book, where cash is a sliver of the assets and there is no
+# capex or operating margin to speak of. Its borrowing is real borrowing,
+# so the debt test still applies.
 NOT_APPLICABLE = {
     "bank": ("net_cash", "debt", "capex", "margin"),
     "insurer": ("net_cash", "debt", "capex", "margin"),
+    "fund": ("net_cash", "capex", "margin"),
     "reit": ("capex",),
 }
 
@@ -79,13 +86,20 @@ NA_REASON = {
              "customers' money and its leverage is not in the debt line"),
     "insurer": ("doesn't apply to an insurer: policy reserves fund the investments, so "
                 "its cash is policyholders' money and its leverage is not in the debt line"),
+    "fund": ("doesn't apply to an investment fund (SEC lists no industry for it): its assets are "
+             "a loan or investment book, so cash, capex and margin don't describe it"),
     "reit": "doesn't apply to a REIT: property purchases are not filed as capex",
 }
+
+# Banks, insurers and funds: what the page counts as unable to qualify.
+CANNOT_QUALIFY = ("bank", "insurer", "fund")
 
 
 def industry(sic) -> str | None:
     """'bank', 'insurer' or 'reit' from an SEC SIC code; None for everyone
-    else, including a company whose code we could not get."""
+    else, including a company whose code we could not get. A company SEC
+    answered for WITHOUT a code is a fund — the caller knows which is which
+    (refresh_quiet_value.industry_of)."""
     try:
         code = int(sic)
     except (TypeError, ValueError):
@@ -138,8 +152,12 @@ def capex_to_ocf(capex, ocf) -> float | None:
 
 
 def operating_margin(operating_income, revenue) -> float | None:
+    """Unknown above 100%: operating income larger than revenue means the two
+    figures disagree — a revenue tag that caught one line of the business,
+    or a gain booked in operating income — and either way it is no evidence
+    of a high margin. Alliance Entertainment read 1,116% (October 2026)."""
     oi, rev = _num(operating_income), _num(revenue)
-    if oi is None or rev is None or rev <= 0:
+    if oi is None or rev is None or rev <= 0 or oi > rev:
         return None
     return round(oi / rev * 100, 1)
 

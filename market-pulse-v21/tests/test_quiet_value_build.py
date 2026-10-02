@@ -102,11 +102,16 @@ got = Q.fetch_sic([str(i) for i in range(120)],
 check(len(slow) == 120 and len(got) == 1,
       "one answer in the first fifty is a flaky source, not a dead one: it keeps asking")
 
+sics = {"1": "6022", "2": "3571", "3": None, "5": "6798"}
+check([Q.industry_of(c, sics) for c in ("1", "2", "3", "4", "5", 1)] == ["bank", None, "fund", None, "reit", "bank"],
+      "SEC ANSWERED WITH NO CODE: A FUND (37 of 37 were BDCs or closed-end funds); not answered: unclassified")
 check(Q.sic_coverage_ok(90, 100) and not Q.sic_coverage_ok(89, 100) and Q.sic_coverage_ok(0, 0),
       "90% of the board must have a code; below that a bank is scored as an operating company again")
 msrc = inspect.getsource(Q.main)
 check("sic_coverage_ok(len(sics), len(done))" in msrc and "industry=r[\"industry\"]" in msrc,
       "the run refuses to write without the codes, and every row is scored with its industry")
+check('r["industry"] = industry_of(r["cik"], sics)' in msrc,
+      "a row's industry comes from industry_of, so a blank code reads as a fund")
 check(msrc.index("fetch_sic(") > msrc.index("sized = ["),
       "codes are asked only for names in the size band — the ones that can reach the board")
 
@@ -132,13 +137,13 @@ def row(t, industry=None, liq="low", impractical=False, **kw):
 GOOD = dict(price=10.0, market_cap=1e8, cash=4e7, total_debt=5e6, equity=6e7, capex=1e6, ocf=1.2e7,
             operating_income=9e6, revenue=4e7, dividends_per_share=0.4, eps=1.2, book_value_per_share=6.0)
 rows = [row("OPCO", **GOOD), row("BANK", "bank", **GOOD), row("INSR", "insurer", **GOOD),
-        row("REIT", "reit", **GOOD), row("LOUD", "bank", liq="high", **GOOD)]
+        row("REIT", "reit", **GOOD), row("LOUD", "bank", liq="high", **GOOD), row("BDC", "fund", **GOOD)]
 out, counts = main.quiet_value_board(rows)
 check([r["ticker"] for r in out] == ["OPCO", "REIT"],
-      f"THE SAME FIGURES CLEAR THE SCREEN FOR AN OPERATING COMPANY AND A REIT, NOT A BANK OR AN INSURER "
+      f"THE SAME FIGURES CLEAR THE SCREEN FOR AN OPERATING COMPANY AND A REIT, NOT A BANK, INSURER OR FUND "
       f"(got {[r['ticker'] for r in out]})")
-check(counts["financials"] == 2 and counts["after_tradeable"] == 4,
-      "the funnel counts the banks and insurers that reached the quality step (not the churned one)")
+check(counts["financials"] == 3 and counts["after_tradeable"] == 5,
+      "the funnel counts the banks, insurers and funds that reached the quality step (not the churned one)")
 check(main.quiet_value_board(rows, minpass_n=0)[0][-1]["ticker"] != "BANK",
       "even at zero tests passed, a bank cannot reach five measured tests")
 
@@ -149,11 +154,13 @@ ctx = dict(request=SimpleNamespace(url=SimpleNamespace(path="/quiet-value"), que
                  "volume_coverage_pct": 99, "price_source": "yahoo", "sic_coverage_pct": 98},
            pending=False, liq="low", size="", minpass=5, require="", tradeable=True, exclude_high=True,
            tests=QV.TESTS, labels=QV.LABELS, na_reason=QV.NA_REASON)
-html = env.get_template("quiet_value.html").render(**ctx, rows=rows[:4], counts=counts, shown=len(out))
-check("2 of the 4 are banks or insurers" in html, "the funnel says how many banks and insurers stopped, and why")
-check(html.count('class="t t-na"') == 4 + 4 + 1,
-      "every withheld test is drawn as not applicable: four for the bank, four for the insurer, one for the REIT")
-check(QV.NA_REASON["bank"] in html and QV.NA_REASON["reit"] in html,
+html = env.get_template("quiet_value.html").render(**ctx, rows=rows[:4] + rows[5:], counts=counts, shown=len(out))
+check("3 of the 5 are banks, insurers or" in html,
+      "the funnel says how many banks, insurers and funds stopped, and why")
+check(html.count('class="t t-na"') == 4 + 4 + 1 + 3,
+      "every withheld test is drawn as not applicable: four for the bank and the insurer, one for the REIT, "
+      "three for the fund")
+check(all(QV.NA_REASON[k] in html for k in ("bank", "insurer", "reit", "fund")),
       "and its tooltip says why it does not apply, not that it was unreported")
 check("industry code on 98%" in html, "the run's industry-code coverage is printed with the other coverage figures")
 html0 = env.get_template("quiet_value.html").render(**ctx, rows=rows[:1],

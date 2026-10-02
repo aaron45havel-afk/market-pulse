@@ -135,9 +135,9 @@
     {% if size %}<b>{{ counts.after_size }}</b> in the {{ size }} band → {% endif %}
     {% if tradeable %}<b>{{ counts.after_tradeable }}</b> you could actually build a position in → {% endif %}
     <b>{{ counts.after_quality }}</b> passed {{ minpass }}+ of the seven quality tests.
-    {% if counts.financials %}{{ counts.financials }} of the {{ counts.after_tradeable }} are banks or insurers,
-    which can't qualify: cash, debt, capex and margin don't apply to them, so they can't reach the five
-    measured tests the screen needs.{% endif %}
+    {% if counts.financials %}{{ counts.financials }} of the {{ counts.after_tradeable }} are banks, insurers or
+    investment funds, which can't qualify: the tests that don't apply to them leave fewer than the five
+    the screen needs.{% endif %}
     {% if shown < 5 %}<b>A short list here is the screen being strict, not the market being empty</b> —
     loosen the tests-passed number or widen the turnover quartile to see more.{% endif %}
   </div>
@@ -211,8 +211,10 @@
     <b>Some tests don't apply to some industries.</b> A bank's deposits and an insurer's policy reserves are its
     customers' money, not debt, so "net cash" and "low debt" pass them on arithmetic; capex and operating margin
     describe a business they are not. Those four are withheld for banks and insurers, which leaves them three
-    tests and keeps them off the screen. A REIT's property purchases are not filed as capex, so its capex test is
-    withheld too. The industry is the company's SEC code, not a guess from its name.
+    tests and keeps them off the screen. Investment funds — business development companies and closed-end funds,
+    which SEC gives no industry code — keep only the debt test of those four. A REIT's property purchases are not
+    filed as capex, so its capex test is withheld too. The industry is the company's SEC code, not a guess from its name.
+    An operating margin above 100% means the revenue and operating-income figures disagree, so it counts as unknown.
     {% if meta %}
     <br><br>
     <b>As of {{ meta.as_of }}</b> · {{ meta.universe_candidates }} candidates from EDGAR ·

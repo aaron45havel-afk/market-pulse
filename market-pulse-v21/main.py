@@ -320,6 +320,7 @@ def quiet_value_board(rows: list[dict], liq: str = "low", size: str = "", minpas
     and how many survived each step — counted before filtering so a short
     board reads as a strict screen rather than an empty market."""
     import liquidity as LQ
+    import quality_value as QV
 
     counts = {"all": len(rows)}
     out = [r for r in rows if LQ.passes(r, max_bucket=liq, exclude_high=excl_high)]
@@ -330,10 +331,10 @@ def quiet_value_board(rows: list[dict], liq: str = "low", size: str = "", minpas
     if want_tradeable:
         out = [r for r in out if not r.get("impractical")]
     counts["after_tradeable"] = len(out)
-    # Banks and insurers stop here: four of the seven tests do not apply
-    # to them (quality_value.NOT_APPLICABLE), so they cannot reach five
-    # measured tests. Counted so the funnel can say so.
-    counts["financials"] = sum(1 for r in out if r.get("industry") in ("bank", "insurer"))
+    # Banks, insurers and funds stop here: the tests that do not apply to
+    # them (quality_value.NOT_APPLICABLE) leave fewer than five to measure.
+    # Counted so the funnel can say so.
+    counts["financials"] = sum(1 for r in out if r.get("industry") in QV.CANNOT_QUALIFY)
     out = [r for r in out
            if r.get("known", 0) >= 5
            and r.get("passed", 0) >= minpass_n

@@ -1,4 +1,4 @@
-# TEMPORARY: run the real quiet-value refresh on this branch (industry codes + dividends paid). Deleted before the PR.
+# TEMPORARY: run the real quiet-value refresh on this branch (run 2: funds, margin cap). Deleted before the PR.
 name: TEMP quiet-value refresh (branch)
 on:
   push:
