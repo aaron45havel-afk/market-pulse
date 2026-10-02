@@ -1,10 +1,10 @@
 {
   "_meta": {
-    "as_of": "2026-09-25",
+    "as_of": "2026-10-02",
     "source": "FRED MORTGAGE30US (Freddie Mac PMMS, weekly avg)"
   },
-  "mortgage_30y": 7.03,
-  "mortgage_30y_obs_date": "2026-09-24",
+  "mortgage_30y": 7.28,
+  "mortgage_30y_obs_date": "2026-10-01",
   "cpi": {
     "series": "CPIAUCSL",
     "base_month": "2026-06",
