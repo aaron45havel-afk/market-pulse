@@ -292,7 +292,8 @@ import main  # noqa: E402
 
 anon = SimpleNamespace(cookies={}, query_params={}, headers={})
 r = asyncio.run(main.capital_page(anon))
-check(r.status_code == 303 and "/admin/login" in r.headers["location"], "PRIVATE: no admin, no page — sign in first")
+check(r.status_code == 303 and r.headers["location"] == "/sign-in?redirect=/capital",
+      "PRIVATE: no admin, no page — the sign-in page first, with every way in on it")
 
 
 class _Req(SimpleNamespace):
