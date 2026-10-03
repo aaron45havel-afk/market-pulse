@@ -974,6 +974,17 @@ all editable).
 - Saved as typed: the holdings and pay-split boxes keep the owner's lines, so a line the engine cannot read stays in
   the box and is named on the page. No migration — the profile is one JSON row.
 
+## 2026-10-03 — /capital Do next: each step's return in percent
+**Why:** the owner asked to see each Do-next step's % return — the immediate return of that decision — not only
+dollars a year.
+**Decided:** every step shows what the money earns a year where it is → where it goes, after tax, and the gap in
+points; a step selling several holdings weights the return now by what is sold of each, and the return after by what
+arrives (it had shown the first holding's alone). Under it, what the rate is: a debt's APR saved until pay would clear
+it (or for as long as it runs), a property's return over the hold with year one beside it, the top picks' average
+after tax and research time, T-bills after federal tax. When moving costs tax or trading, its share of the money and
+the months the gain takes to earn it back. The monthly switch shows the split now → the plan's, in percent of a year's
+contributions. "Why this" lists each holding's own return.
+
 ## 2026-10-03 — /capital: live holding values
 **Why:** the owner asked whether /capital changes as numbers and prices change, and for it to be a real-time tool.
 It recomputed on every load, but holdings were frozen at the last export's dollars. Owner choice: live holding

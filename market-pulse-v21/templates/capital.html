@@ -199,6 +199,13 @@
   .cx-rows { display: grid; gap: 6px; }
   .cx-row { display: grid; gap: 8px; align-items: center; }
   .cx-row.hold { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.6fr) minmax(0, 0.8fr) 28px; }
+  .cx-rate { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin-top: 7px; font-size: 0.82rem; color: var(--ink-3); }
+  .cx-rate .r-from { color: var(--ink-2); font-weight: 600; }
+  .cx-rate .r-to { color: var(--ink); font-weight: 700; font-size: 0.95rem; }
+  .cx-rate .r-arrow { color: var(--ink-4); }
+  .cx-rate .r-gap { font-weight: 700; padding: 1px 7px; border-radius: 999px; font-size: 0.74rem; }
+  .cx-rate .r-gap.up { background: var(--mint-soft); color: var(--mint-ink); } .cx-rate .r-gap.down { background: var(--coral-soft); color: var(--coral-ink); }
+  .cx-rate .r-note { flex-basis: 100%; font-size: 0.76rem; color: var(--ink-3); }
   .cx-live { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.78rem; color: var(--ink-3); margin-top: 4px; }
   .cx-live b { color: var(--ink-2); font-weight: 600; }
   .cx-live .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-4); flex: none; }
@@ -441,6 +448,15 @@
             <div>
               <h3>{{ s.title }}</h3>
               <div class="what"><b>{{ s.what }}</b>. {{ s.note }}</div>
+              {% if s.h is not none and s.a is not none %}
+              <div class="cx-rate" aria-label="Return: {{ pct(s.h) }} now, {{ pct(s.a) }} after the move, a year after tax">
+                <span class="r-from num">{{ pct(s.h) }}</span><span class="r-arrow" aria-hidden="true">→</span><span class="r-to num">{{ pct(s.a) }}</span>
+                <span class="r-unit">a year after tax</span>
+                <span class="r-gap num {{ 'up' if s.gap >= 0 else 'down' }}">{{ '+' if s.gap >= 0 else '−' }}{{ '%.1f'|format(s.gap|abs) }} pts</span>
+                {% if s.rate_note %}<span class="r-note">{{ s.rate_note }}</span>{% endif %}
+                {% if s.cost_pct > 0 %}<span class="r-note">{{ pct(s.cost_pct, 2) }} of the money to move, once{% if s.payback_months %} — earned back in {{ s.payback_months }} month{{ 's' if s.payback_months != 1 else '' }}{% endif %}</span>{% endif %}
+              </div>
+              {% endif %}
               <div class="tags">
                 <span class="cx-chip {{ 'info' if s.type == 'monthly' else 'muted' }}">{{ 'Every month' if s.type == 'monthly' else 'Move once' }}</span>
                 {% if s.kind == 'debt' %}<span class="cx-chip ok">Guaranteed</span>{% endif %}
@@ -463,8 +479,8 @@
               <div class="rule">After-tax return on a year of contributions, from January. Marking it done rewrites your monthly split to the waterfall's; see Monthly plan for each line.</div>
               {% else %}
               <table>
-                {% for m in s.parts %}<tr><td>{{ m.from }} ({{ m.account }}) → {{ m.to }}</td><td>{{ money(m.sold) }}</td></tr>{% endfor %}
-                <tr><td>Return where it is → where it goes</td><td>{{ pct(s.h) }} → {{ pct(s.a) }}</td></tr>
+                {% for m in s.parts %}<tr><td>{{ m.from }} ({{ m.account }}) → {{ m.to }}<div class="s">{{ pct(m.h) }} → {{ pct(m.a) }} a year after tax</div></td><td>{{ money(m.sold) }}</td></tr>{% endfor %}
+                <tr><td>Return where it is → where it goes{% if s.parts|length > 1 %} (weighted by the money){% endif %}</td><td>{{ pct(s.h) }} → {{ pct(s.a) }}</td></tr>
                 {% if s.tax > 0.5 %}<tr><td>Tax to sell, paid once</td><td>{{ money(s.tax) }}</td></tr>{% endif %}
                 {% if s.cost > 0.5 %}<tr><td>Trading costs</td><td>{{ money(s.cost) }}</td></tr>{% endif %}
                 <tr><td>Ahead by year {{ hold.hold_years if hold else 5 }}, after that</td><td class="cx-gain">{{ smoney(s.gain_hold) }}</td></tr>

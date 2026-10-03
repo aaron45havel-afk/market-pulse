@@ -377,6 +377,35 @@ check("Start with your profile" in blank and "List what you hold" in blank and "
 for bad in (">None<", "None%", "Undefined"):
     check(bad not in blank, f"no '{bad}' leaks into the blank page")
 
+# ── each step's return, in percent ─────────────────────────────────
+g = {"parts": [{"sold": 1000.0, "h": 4.0, "proceeds": 1000.0, "a": 12.0},
+               {"sold": 3000.0, "h": 8.0, "proceeds": 2900.0, "a": 10.0}], "tax": 100.0, "cost": 0.0, "impact": 300.0}
+rt = V._step_rate(g, {"to_kind": "picks", "to_id": "picks"}, B)
+want_a = round((1000 * 12 + 2900 * 10) / 3900, 2)
+check(rt["h"] == 7.0 and rt["a"] == want_a and rt["gap"] == round(want_a - 7.0, 2),
+      "SEVERAL HOLDINGS SOLD: the return now is weighted by what is sold of each ($1,000 at 4%, $3,000 at 8% → 7%), "
+      "the return after by what arrives")
+check(rt["cost_pct"] == 2.5 and rt["payback_months"] == 4 and "top picks' average" in rt["note"],
+      "the one-time tax as a share of the money (2.5%), earned back in 4 months at +$300 a year; what the rate is")
+re_board = {"rows": [{"id": "hh:1", "kind": "re", "ret_after": 26.3, "detail": {"year_one": 81.5, "years": 15}}]}
+check("15-year hold — 81.5% in year one" in V._step_rate({**g, "tax": 0}, {"to_kind": "re", "to_id": "hh:1"}, re_board)["note"],
+      "a property: its return over the hold, and year one's beside it")
+db = {"rows": [{"id": "debt:Card", "kind": "debt", "ret_after": 23.0, "detail": {"payoff_label": "Jan 2027"}}]}
+check(V._step_rate(g, {"to_kind": "debt", "to_id": "debt:Card"}, db)["note"]
+      == "its 23% APR, saved until your pay would clear it (Jan 2027)",
+      "a debt: its APR, saved until pay would clear it")
+for st in [x for x in steps if x["type"] == "once"]:
+    sold = sum(p_["sold"] for p_ in st["parts"])
+    want_h = round(sum(p_["sold"] * p_["h"] for p_ in st["parts"]) / sold, 2)
+    check(st["h"] == want_h and near(st["gap"], st["a"] - st["h"], 0.011), f"{st['title']}: % now, % after, the gap")
+mo = next((x for x in steps if x["type"] == "monthly"), None)
+check(mo is None or (near(mo["a"] - mo["h"], mo["gap"], 0.011)
+                     and near(mo["gap"], (mo["opt_yr"] - mo["now_yr"]) / (VW["steady"]["total"] * 12) * 100, 0.011)),
+      "the monthly switch in percent: the split now → the plan's, on a year of contributions")
+check(html.count('class="cx-rate"') == len([x for x in steps if x.get("h") is not None]) and "a year after tax" in html
+      and html.count('class="r-gap num up"') + html.count('class="r-gap num down"') == html.count('class="cx-rate"'),
+      "every step shows its return: now → after the move, and the gap in points")
+
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")
     for x in _FAILS:
