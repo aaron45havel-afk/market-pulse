@@ -364,20 +364,25 @@ env.globals.update(is_admin=lambda r: True, current_user=lambda r: None, pipelin
 req = SimpleNamespace(url=SimpleNamespace(path="/capital"), query_params={})
 
 
+import capital_view as V  # noqa: E402
+
+
 def render(b):
-    return env.get_template("capital.html").render(request=req, board=b, p=b["profile"], saved=True,
-                                                   updated_at="2026-10-03", debts_text=K.debts_text(b["profile"]["debts"]),
-                                                   limits=K.LIMITS_2026, hours_default=K.HOURS_DEFAULT)
+    return env.get_template("capital.html").render(
+        request=req, board=b, p=b["profile"], view=V.build_view(b, OCT), saved=True, updated_at="2026-10-03",
+        last_step=None, debts_text=K.debts_text(b["profile"]["debts"]), limits=K.LIMITS_2026,
+        hours_default=K.HOURS_DEFAULT, accounts=V.EDIT_ACCOUNT_LABELS)
 
 
 html = render(FB)
-check("Now vs optimal" in html and "What you hold" in html and "Your pay this month" in html,
-      "the card is on the page")
-check("Could not read 1 line of your holdings" in html and "oops" in html, "an unreadable line is named on the page")
+check("Do next" in html and "What you hold" in html and "Your monthly pay" in html and "Left on the table" in html,
+      "the comparison is on the page: the gap, the steps, the holdings, the pay")
+check("Could not read 1 line" in html and "oops" in html, "an unreadable line is named on the page")
 check("Duplex" in html and 'data-k="basis" value="500000' in html and 'id="cpPropTpl"' in html,
       "the property form shows the saved property, and a blank one to add")
-check('name="holdings"' in html and "VTI, taxable, 50000, 30000" in html and 'name="current_monthly"' in html,
-      "the holdings and the pay split are in the profile as typed")
+check('data-editor="holdings"' in html and 'value="VTI"' in html and 'data-editor="flows"' in html
+      and 'value="Ally"' in html and 'data-bad="holdings"' in html,
+      "the holdings and the pay split are in the profile's editors, and an unreadable line stays where it can be fixed")
 check('name="cash" value="40000.0" step="100" readonly' in html, "cash on hand is read-only once the cash lines set it")
 for b_ in (">None<", "None%", "Undefined"):
     check(b_ not in html, f"no '{b_}' leaks into the page")
@@ -387,7 +392,7 @@ check("over cap" in render(K.build({**FULL, "owned_re": [RENT, {**RENT, "name": 
                                                                     "monthly_surplus": 100}]})),
       "a property over the cap reads 'over cap' on the board")
 blank = render(K.build({}, today=OCT, sources={k: [] for k in SRC}))
-check("List what you hold" in blank and "What you hold —" in blank, "with nothing listed, the card says how to start")
+check("List what you hold" in blank and 'data-editor="holdings"' in blank, "with nothing listed, the page says how to start")
 
 # ── saving ─────────────────────────────────────────────────────────
 pp = K.parse_profile({"holdings": "VTI, taxable, 1\r\nnot a line", "current_monthly": "x" * 20_000,

@@ -259,6 +259,15 @@ Format: `- [PHASE-SEEN] item — why it matters`
   credit.
 - [CAPITAL-FUNDS] Funds other than the US index list (international, bonds, target-date) get the market return unless
   the owner types their own; a small table of asset-class returns would measure them without a guess per line.
+- [CAPITAL-BRACKETS] /capital's tax rates are typed in the profile. Working them out from salary, filing status and
+  state needs the federal and state bracket tables (with the standard deduction) as cited data, refreshed each year —
+  not numbers written into code from memory.
+- [CAPITAL-HISTORY] No net-worth history yet: a snapshot saved each month (and on each step marked done) would chart net
+  worth over time, split into what was put in and what it earned.
+- [CAPITAL-UNDO] Undo is one level (the profile before the last step marked done). A short history of steps done,
+  each undoable, would let the owner retrace a session of changes.
+- [CAPITAL-BUY-RE] Marking a property purchase done sends the owner to enter the property; it could pre-fill the
+  record from the board row (price, loan, rate, rent) for the owner to correct.
 - [CAPITAL-PHASE3] /capital phase 3: a dated record of the board and an alert when the top use changes.
 - [CAPITAL-RE-PRICES] BRRRR and flips can only be conditional until fixer sale prices exist; with them, the board could
   show the return at a price the owner can actually get instead of the target at the most they can pay.

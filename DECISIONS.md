@@ -974,6 +974,51 @@ all editable).
 - Saved as typed: the holdings and pay-split boxes keep the owner's lines, so a line the engine cannot read stays in
   the box and is named on the page. No migration — the profile is one JSON row.
 
+## 2026-10-03 — /capital as a dashboard: Do next, marking steps done, and the questions an individual asks
+**Why:** the owner asked for the dashboard to be the best UI it can be and for what else an individual would want to
+see and calculate. They chose: an Overview with a ranked Do-next list first; per-property numbers with a refinance
+test, tax helpers, independence and debt payoff, passive income and liquidity; and a clickable mockup before the
+build. They approved the mockup ("build it").
+**Decided:**
+- **One page, seven tabs**: Overview (net worth and its mix, return now → optimal, the gap; four vitals — cash runway,
+  saving rate, real estate's share against the cap, progress to independence; Do next; a rail with independence,
+  debts, passive income, liquidity), Monthly plan, Holdings, Property, Taxes, Board, Profile. Market Pulse's own
+  tokens and type.
+- **Do next is one ranked list** of the held-money moves (grouped: the emergency fund into T-bills is one step, a
+  property sold is one step whatever its money funds) and the monthly split, ranked by after-tax dollars a year —
+  debt above the market return first, because its return is guaranteed. The one-time steps add up to the headline gap.
+- **Mark done edits the profile** as if the move were made: the source line sold down (its basis in proportion) or
+  removed, a debt paid down or removed, the new holdings appended (the picks one line each, split as the waterfall
+  splits them; what a per-name cap leaves to T-bills or the account's index fund), or the monthly split rewritten.
+  The owner's notes and unreadable lines are left exactly as typed. The profile before the step is kept for ONE
+  undo. Steps are found by a stable id; a step no longer on the list is refused (409), never guessed. Buying a
+  property is not marked done for the owner — its price, loan and rent are theirs to enter.
+- **No step is suggested twice**: a property is sold whole or not at all (only when the money left after a smaller
+  destination still beats keeping it in the picks); cash already in T-bills is not "moved" into a down-payment fund;
+  a payment to a debt that is paid off or being cleared counts as freed cash at the T-bill rate. Every step, applied
+  and rebuilt, is gone from the next list (tested for each).
+- **"Top picks"** in a holdings or pay line means the board's top picks as one equal-weighted group at their average
+  estimate, so a rewritten monthly split reads back at exactly the waterfall's returns.
+- **A normal month** (for the monthly step and the plan tab) is the waterfall from January with the one-time steps
+  done and a full year of 401(k), IRA and HSA room, on the same total as the owner's split.
+- **Independence**: a year of expenses × the multiple (25 = a 4% withdrawal), net worth less the home you live in,
+  compounding monthly at each path's after-tax return less inflation plus the monthly saving; Coast FI at the
+  retirement age needs the owner's age (new, optional).
+- **Debts** take an optional monthly payment (a fourth field) for the payoff month and interest left; $100 more a
+  month is weighed against the best use for new money (the top picks as a group when picks win).
+- **Property**: return on the equity that could be taken out, debt coverage, cap rate, loan-to-value, tax if sold;
+  for a rental, a keep / cash-out refinance / second loan / sell calculator over the hold, with the lender's
+  loan-to-value and DSCR limits (defaults: 75%, 1.20×; refinance at today's rate + 0.5 for an investment property, a
+  second loan at + 1.25; closing 2% and 1%). Cash taken out earns the top picks' after-tax return, and the page says
+  plainly that this borrows to buy stocks.
+- **Taxes**: the rates in use (still typed — bracket tables are BACKLOG), taxable holdings below cost with the tax a
+  loss saves ($3,000 a year against pay, the rest carried) and the wash-sale rule, a Roth-vs-traditional slider on the
+  retirement rate, and the Roth IRA income test (salary less traditional 401(k) contributions) against the IRS 2026
+  phase-outs — single $153,000–$168,000, married filing jointly $242,000–$252,000 (Notice 2025-67, as the limits).
+- **Profile in five steps** (Pay and taxes with the monthly split, What you hold, Property you own, Debts, You and your
+  assumptions), each saved on its own, with row editors instead of text boxes. New fields: age, retirement age,
+  filing status, take-home pay, the independence multiple, inflation.
+
 ## 2026-10-03 — Email sign-in links: a way in that Google cannot block
 **Why:** the owner signing in with their personal Gmail was stopped by Google itself — "Error 403: org_internal",
 because the Google OAuth app is a Workspace-internal app — before this server was asked. No code here can change

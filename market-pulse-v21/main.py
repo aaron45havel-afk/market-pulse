@@ -2083,27 +2083,31 @@ async def apple_touch_icon():
 
 @app.get("/capital")
 async def capital_page(request: Request):
-    """The highest and best use of the next dollar: every use of capital the
-    other pages find — debt, T-bills, stock picks, real estate — on one board,
-    after tax and after friction, and this month's pay down a waterfall.
-    Private: it reads the owner's pay, taxes, accounts and debts."""
+    """The highest and best use of the next dollar, as a dashboard: the money
+    picture, a ranked Do-next list (each step can be marked done, which edits
+    the profile), independence, debts, passive income, property, taxes, the
+    board and the profile in five steps. Private: it reads the owner's pay,
+    taxes, accounts and debts."""
     if not _check_admin_token(request):
         return RedirectResponse("/sign-in?redirect=/capital", status_code=303)
     import capital as K
+    import capital_view as V
     from database import get_capital_profile
     saved = get_capital_profile() or {}
     board = await asyncio.to_thread(K.build, saved)
+    view = await asyncio.to_thread(V.build_view, board)
     p = board["profile"]
     return templates.TemplateResponse("capital.html", {
-        "request": request, "board": board, "p": p, "saved": bool(saved),
-        "updated_at": saved.get("_updated_at"), "debts_text": K.debts_text(p.get("debts") or []),
-        "limits": K.LIMITS_2026, "hours_default": K.HOURS_DEFAULT,
+        "request": request, "board": board, "p": p, "view": view, "saved": bool(saved),
+        "updated_at": saved.get("_updated_at"), "last_step": saved.get("last_step"),
+        "debts_text": K.debts_text(p.get("debts") or []), "limits": K.LIMITS_2026,
+        "hours_default": K.HOURS_DEFAULT, "accounts": V.EDIT_ACCOUNT_LABELS,
     })
 
 
 @app.post("/api/capital/profile")
 async def capital_profile_save(request: Request):
-    """Save the owner's profile (JSON body). Admin only."""
+    """Save the owner's profile (JSON body; any subset of fields). Admin only."""
     gate = _admin_gate(request)
     if gate:
         return gate
@@ -2115,7 +2119,60 @@ async def capital_profile_save(request: Request):
         return JSONResponse({"error": "Expected a JSON body."}, status_code=400)
     merged = {**{k: v for k, v in (get_capital_profile() or {}).items() if not k.startswith("_")},
               **K.parse_profile(body if isinstance(body, dict) else {})}
+    merged.pop("last_step", None)          # an edit by hand closes the undo banner
     if not save_capital_profile(merged):
+        return JSONResponse({"error": "Could not save — the database is unavailable."}, status_code=503)
+    return JSONResponse({"ok": True})
+
+
+@app.post("/api/capital/step")
+async def capital_step_done(request: Request):
+    """Mark a Do-next step done: the profile is edited as if the move were
+    made (the source sold down, the debt paid, the new holdings added, or the
+    monthly split rewritten) and the previous profile is kept for one undo.
+    409 when the step is no longer on the list or cannot be done here."""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import allocation as A
+    import capital as K
+    import capital_view as V
+    from datetime import datetime, timezone
+    from database import get_capital_profile, save_capital_profile
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Expected a JSON body."}, status_code=400)
+    step_id = str((body or {}).get("id") or "") if isinstance(body, dict) else ""
+    if not step_id:
+        return JSONResponse({"error": "Which step? Send its id."}, status_code=400)
+    saved = {k: v for k, v in (get_capital_profile() or {}).items() if not k.startswith("_")}
+    board = await asyncio.to_thread(K.build, saved)
+    try:
+        prof, step = await asyncio.to_thread(V.apply_step, saved, board, date.today(), step_id)
+    except A.CannotApply as e:
+        return JSONResponse({"error": str(e)}, status_code=409)
+    if not save_capital_profile({k: v for k, v in saved.items() if k != "last_step"}, owner="owner:undo"):
+        return JSONResponse({"error": "Could not save — the database is unavailable."}, status_code=503)
+    prof["last_step"] = {"title": step["title"], "impact": step["impact"],
+                         "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    if not save_capital_profile(prof):
+        return JSONResponse({"error": "Could not save — the database is unavailable."}, status_code=503)
+    return JSONResponse({"ok": True, "title": step["title"]})
+
+
+@app.post("/api/capital/undo")
+async def capital_step_undo(request: Request):
+    """Put back the profile as it was before the last step marked done."""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    from database import get_capital_profile, save_capital_profile
+    prev = {k: v for k, v in (get_capital_profile("owner:undo") or {}).items() if not k.startswith("_")}
+    if not prev:
+        return JSONResponse({"error": "Nothing to undo."}, status_code=404)
+    prev.pop("last_step", None)
+    if not (save_capital_profile(prev) and save_capital_profile({}, owner="owner:undo")):
         return JSONResponse({"error": "Could not save — the database is unavailable."}, status_code=503)
     return JSONResponse({"ok": True})
 
