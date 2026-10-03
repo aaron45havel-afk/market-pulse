@@ -69,7 +69,8 @@ def simulate(board: dict, today: date | None = None, months: int = MAX_MONTHS) -
     debts = [{"name": str(d.get("name")), "balance": K._f(d.get("balance")), "apr": K._f(d.get("apr")),
               "payment": K._f(d.get("payment"))} for d in p.get("debts") or [] if K._f(d.get("balance")) > 0]
     rooms = {"ira": K._f(p.get("ira_room")), "hsa": K._f(p.get("hsa_room")), "k401": K._f(p.get("k401_room"))}
-    freed = 0.0                 # payments of loans paid off
+    freed = 0.0                 # payments of loans paid off (when they came from expenses)
+    from_expenses = p.get("debt_payments_from", "invest") == "expenses"
     housing = 0.0               # rent stopped + net rent, once moved in
     dp_saved, deal, ready_i, move_in_i = 0.0, None, None, None
     done_once = {"cushion": cash >= starter, "ef": cash >= ef}
@@ -95,7 +96,9 @@ def simulate(board: dict, today: date | None = None, months: int = MAX_MONTHS) -
                 if x["balance"] <= 0:
                     continue
                 x["balance"] *= 1 + x["apr"] / 1200
-                if x["payment"] > 0:
+                # paid from expenses, outside the plan; from what you put
+                # aside, the waterfall's own step pays it
+                if x["payment"] > 0 and from_expenses:
                     x["balance"] = max(0.0, x["balance"] - x["payment"])
                     if x["balance"] <= 0.5:
                         x["balance"] = 0.0
@@ -122,7 +125,8 @@ def simulate(board: dict, today: date | None = None, months: int = MAX_MONTHS) -
                 if not (r["kind"] == "debt" and r["id"].split(":", 1)[-1] not in live)
                 and not (r["kind"] == "re" and ready_i is not None)]
         pm = {**p, "cash": cash, "monthly_invest": base + freed + housing,
-              "debts": [{"name": x["name"], "balance": x["balance"], "apr": x["apr"]} for x in debts if x["balance"] > 0.5],
+              "debts": [{"name": x["name"], "balance": x["balance"], "apr": x["apr"], "payment": x["payment"]}
+                        for x in debts if x["balance"] > 0.5],
               "ira_room": rooms["ira"], "hsa_room": rooms["hsa"], "k401_room": rooms["k401"]}
         # Cash above the emergency fund starts a down payment the plan is
         # saving for — the board's "ready in" already counted it.
@@ -159,10 +163,12 @@ def simulate(board: dict, today: date | None = None, months: int = MAX_MONTHS) -
                         amt = paid
                     if x["balance"] <= 0.5 and paid > 0:
                         x["balance"] = 0.0
-                        if x["payment"] > 0:
+                        if x["payment"] > 0 and from_expenses:
                             freed += x["payment"]
                         event(i, d, "debt", f"{x['name']} paid off",
-                              f"its ${x['payment']:,.0f}/mo payment joins your monthly amount" if x["payment"] > 0
+                              f"its ${x['payment']:,.0f}/mo payment joins your monthly amount"
+                              if x["payment"] > 0 and from_expenses else
+                              f"its ${x['payment']:,.0f}/mo payment goes to the rest of the plan" if x["payment"] > 0
                               else f"a guaranteed {x['apr']:g}% no longer charged", name=x["name"])
             elif k == "re" and deal:
                 take = min(amt, max(0.0, K._f(deal["min_capital"]) - dp_saved))

@@ -101,6 +101,10 @@ PROFILE_DEFAULTS: dict = {
     "age": None,                  # None = not given; independence dates need it
     "retire_age": 65,
     "filing_status": "single",    # single | married (filing jointly)
+    # where a debt's listed monthly payment comes from: "invest" — out of what
+    # you put aside (a paid-off debt frees nothing new: its payment simply
+    # goes to the next use) — or "expenses" (a payoff frees the payment)
+    "debt_payments_from": "invest",
     "take_home": 0.0,             # pay after tax and payroll deductions, a month
     "fi_multiple": 25.0,          # independence = this many years of expenses (25 = a 4% withdrawal)
     "inflation": 2.5,
@@ -157,7 +161,7 @@ _NUMBERS = {
 }
 _BOOLS = ("niit", "hsa_eligible")
 _TEXT = {"home_state": 2, "home_zip": 5}
-_CHOICES = {"filing_status": ("single", "married")}
+_CHOICES = {"filing_status": ("single", "married"), "debt_payments_from": ("invest", "expenses")}
 _OPTIONAL = ("retire_rate", "mortgage_rate", "age")      # blank means "use the default rule"
 # Kept as typed, so a line the engine cannot read stays in the box and is
 # named on the page instead of vanishing on save.
@@ -827,6 +831,15 @@ def fixed_steps(p: dict, today: date | None = None) -> _Purse:
         take(min(match_monthly, _f(p.get("k401_room")) / months_left), "401(k) up to the employer match",
              f"An instant {_f(p.get('match_rate'), 100):g}% return before the money is even invested.", "match")
 
+    # A cheaper loan's listed payment, when it comes out of what you put
+    # aside: taken first, every month, until it is paid off. (A debt above the
+    # hurdle is paid in full just below, its payment with it.)
+    if p.get("debt_payments_from", "invest") == "invest":
+        for d in p.get("debts") or []:
+            if _f(d.get("apr")) < mr and _f(d.get("payment")) > 0 and _f(d.get("balance")) > 0:
+                take(min(_f(d.get("payment")), _f(d.get("balance"))), f"{d.get('name')} payment",
+                     "The loan's monthly payment — it comes out of what you put aside.", "debt", ref=d.get("name"))
+
     for d in sorted(p.get("debts") or [], key=lambda d: -_f(d.get("apr"))):
         if _f(d.get("apr")) >= mr and _f(d.get("balance")) > 0:
             take(_f(d.get("balance")), f"Pay down {d.get('name')}",
@@ -865,7 +878,11 @@ def steady_free(p: dict) -> float:
         match = 0.0
     hsa = _f(p.get("hsa_room")) / 12 if p.get("hsa_eligible") else 0.0
     ira = _f(p.get("ira_room")) / 12
-    return max(0.0, _f(p.get("monthly_invest")) - match - hsa - ira)
+    mr = _f(p.get("market_return"), 7.0)
+    loans = (sum(min(_f(d.get("payment")), _f(d.get("balance"))) for d in p.get("debts") or []
+                 if _f(d.get("apr")) < mr and _f(d.get("payment")) > 0 and _f(d.get("balance")) > 0)
+             if p.get("debt_payments_from", "invest") == "invest" else 0.0)
+    return max(0.0, _f(p.get("monthly_invest")) - match - hsa - ira - loans)
 
 
 def one_time_months(p: dict) -> int | None:

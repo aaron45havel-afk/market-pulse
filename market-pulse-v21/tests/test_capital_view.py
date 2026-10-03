@@ -116,8 +116,13 @@ check(mstep and mstep["note"].startswith("From January: $500 to the 401(k) match
 
 # ── the normal month and the monthly step ──────────────────────────
 st = VW["steady"]
-check(st["total"] == 4000 and not [s for s in st["raw"] if s["kind"] in ("debt", "cash")],
-      "A NORMAL MONTH has no one-time steps: the card is cleared and the emergency fund full")
+check(st["total"] == 4000 and not [s for s in st["raw"] if s["kind"] == "cash"]
+      and [(s["to"], s["amount"]) for s in st["raw"] if s["kind"] == "debt"] == [("Car loan payment", 350.0)],
+      "A NORMAL MONTH has no one-time steps: the card is cleared and the emergency fund full — the car loan's "
+      "$350 payment is the one debt line, and it comes out of what is put aside (the default)")
+ex = V.steady_plan(build({**PROF, "debt_payments_from": "expenses"}), OCT)
+check(not [s for s in ex["raw"] if s["kind"] == "debt"],
+      "with payments from expenses, the loan's payment is not in the month's split")
 check(any(s["kind"] == "ira" and near(s["amount"], 7500 / 12) for s in st["raw"]),
       "and a full year's IRA room, a twelfth a month")
 flows = A.parse_flows(PROF["current_monthly"])[0]

@@ -56,6 +56,8 @@ COLUMNS = {
     "acct_num": ("account number", "account"),
     "pct": ("percent of account", "of acct", "percent of acct"),
     "price": ("price", "last price", "share price"),
+    "div_yield": ("div yld", "dividend yield", "dist rate", "distribution rate"),
+    "income": ("est annual income", "estimated annual income"),
     "lot": ("acct type", "type"),            # Cash / Margin, per position (Chase, Fidelity)
     "as_of": ("as of",),
 }
@@ -203,6 +205,27 @@ def _classify(sym: str, name: str, asset: str) -> str:
     if _MONEY_FUND.search(name or "") or (sym and "money market" in a):
         return "mmf"
     return "security"
+
+
+_FUND_NAME = re.compile(r"\b(ETF|ETN|FUND|INDEX)\b", re.I)
+
+
+def _is_fund(name: str, asset: str) -> bool:
+    """An ETF or fund, by the broker's asset type ("ETFs & Closed End Funds",
+    "Mutual Funds") or its name ("… CHINA INTERNET ETF", "… INDEX FUND")."""
+    a = (asset or "").lower()
+    return bool(re.search(r"\betfs?\b|closed end|mutual fund", a)) or bool(_FUND_NAME.search(name or ""))
+
+
+def _yield(rate: str, income: str, value: float | None) -> float | None:
+    """The dividend yield in %: the broker's estimated annual income over the
+    value when it gives one (Chase's own yield column can read 0 for a payer),
+    else its yield or distribution rate; None when it gives neither."""
+    inc = _money(income)
+    if inc is not None and value and value > 0:
+        return round(min(50.0, inc / value * 100), 2)
+    y = _money(str(rate or "").rstrip("%"))
+    return round(min(50.0, y), 2) if y is not None and y >= 0 else None
 
 
 def _broker_of(headers: dict | None, title: str | None, filename: str, text: str = "") -> str:
@@ -355,7 +378,8 @@ def parse_export(text: str, filename: str = "") -> dict:
             continue
         acct["positions"].append({"symbol": sym, "name": (name or sym)[:60], "value": value, "basis": basis,
                                   "qty": _money(cell("qty")), "kind": kind, "pct": _money(cell("pct").rstrip("%")),
-                                  "price": _money(cell("price"))})
+                                  "price": _money(cell("price")), "fund": _is_fund(name, cell("asset")),
+                                  "div": _yield(cell("div_yield"), cell("income"), value)})
 
     broker = _broker_of(first_header, title, filename, text)
     out = []
@@ -368,6 +392,12 @@ def parse_export(text: str, filename: str = "") -> dict:
                                f"keeps ({MAX_POSITIONS}).")
         a["broker"] = broker
         a["key"] = f"{broker.lower()}-{a['key']}"
+        # A retirement account cannot borrow: negative cash there is a trade
+        # still settling, not a margin loan (a Roth's −$29 had become a debt).
+        if a["margin"] > 0 and a["sure"] and a["account"] != "taxable":
+            a["skipped"].append({"what": "Cash", "value": -a["margin"],
+                                 "why": "negative cash in a retirement account — a trade still settling; it cannot borrow"})
+            a["margin"] = 0.0
         if not a["sure"] and (a["margin"] > 0 or a.pop("margin_lots")):
             a["account"], a["sure"] = "taxable", True        # a margin account: retirement accounts cannot borrow
         a.pop("margin_lots", None)
@@ -426,8 +456,10 @@ def block_lines(a: dict, as_of: str | None, p: dict) -> list[str]:
                 lines.append(A.holding_line(f"{pos['symbol']} money fund", acct, pos["value"], rate=rf))
             continue
         basis = pos["basis"] if acct == "taxable" else None
-        # the share count keeps the line at the live price between exports
-        lines.append(A.holding_line(pos["symbol"], acct, pos["value"], basis=basis, qty=pos.get("qty")))
+        # the share count keeps the line at the live price between exports;
+        # the yield and the fund mark measure it as what it is
+        lines.append(A.holding_line(pos["symbol"], acct, pos["value"], basis=basis, qty=pos.get("qty"),
+                                    div=pos.get("div"), fund=bool(pos.get("fund"))))
     if a["cash"] > 0:
         where = f"{a['broker']} …{a['mask']}" if a.get("mask") else a["broker"]
         if acct == "taxable":
@@ -579,7 +611,7 @@ def apply_import(saved: dict, parsed: dict, choices: dict) -> tuple[dict, str]:
     for a in chosen:
         name = margin_debt_name(a)
         debts = [d for d in debts if d.get("name") != name]
-        if a["margin"] > 0:
+        if a["margin"] > 0 and a["account"] == "taxable":
             apr = K._f(aprs.get(a["_seen_as"]), None)
             if apr is None or not 0 <= apr <= 40:
                 raise CannotImport(f"{a['label']} has a ${a['margin']:,.0f} margin loan — give its rate (APR).")

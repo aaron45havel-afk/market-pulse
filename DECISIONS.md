@@ -974,6 +974,35 @@ all editable).
 - Saved as typed: the holdings and pay-split boxes keep the owner's lines, so a line the engine cannot read stays in
   the box and is named on the page. No migration — the profile is one JSON row.
 
+## 2026-10-03 — /capital review fixes: retirement-account cash, the Debts panel, the $3,000 loss limit, debt payments, ETFs, dividends, small steps
+**Why:** the owner's screenshots after syncing four accounts showed a $29 "margin" debt at 0% from a Roth IRA, the
+Debts panel saying January where the plan said now, every loss sale claiming the same tax saved, the owner's ETFs
+counted as stock picks, almost no dividends, and thirty Do-next steps. Owner choices: card payments
+come out of what is put aside; fix ETFs, dividends and small steps in the same change.
+**Decided:**
+- **A retirement account cannot borrow**: negative cash in an IRA, Roth, HSA or 401(k) is a trade still settling — left
+  out of the sync (named, and counted in the check against the broker's total), never a margin debt; the next sync of
+  that account removes the debt the earlier import made.
+- **The Debts panel shows the monthly plan's payoff month** (from the timeline); the payment-alone date is secondary,
+  and the "$100 extra" advice is dropped when the plan already pays the debt. A margin loan says it has no fixed
+  payment; a balance below the hurdle says the plan leaves it.
+- **$3,000 a year of losses against ordinary income, in all**: Do-next steps share it in rank order (the first loss
+  sale saves up to $3,000 × the ordinary rate; the rest "carries forward"), and the Taxes tab shares it biggest loss
+  first. Netting losses against realized gains is not modelled.
+- **Where a debt's listed payment comes from** is a profile choice, `debt_payments_from`: out of what is put aside
+  (default — the owner's case) or out of expenses. Put aside: a paid-off debt frees nothing new — its payment goes to
+  the next use, and the monthly amount stays the same; a loan below the hurdle has its payment taken first each month,
+  and the board's free money is net of it. Expenses: the previous behaviour (a payoff frees the payment).
+- **ETFs are funds**: a holdings line can say `fund`; the import marks it from the broker's asset type ("ETFs & Closed
+  End Funds") or the name (ETF, ETN, FUND, INDEX), and the live price feed's instrument type (ETF, MUTUALFUND) marks
+  any the export did not name. A ticker marked a fund on one line is a fund on every line. Funds take no research-time
+  charge, count under funds, and are measured at the market return.
+- **Dividends from the exports**: a line can carry `N% div` — Schwab's yield, Fidelity's distribution rate, Chase's
+  and Fidelity's estimated annual income over the value (Chase's own yield column reads 0 for payers). It is the
+  dividend share in the after-tax math (taxed yearly in a taxable account) and in passive income.
+- **Small steps fold**: one-time steps adding under $100 a year (never a debt) collapse into "N small clean-ups" at the
+  end of Do next — still cards with Mark done; a single small step is not folded.
+
 ## 2026-10-03 — /capital Do next: each step's return in percent
 **Why:** the owner asked to see each Do-next step's % return — the immediate return of that decision — not only
 dollars a year.
