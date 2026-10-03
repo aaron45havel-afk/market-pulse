@@ -2,6 +2,7 @@
 {% block title %}Capital — highest and best use — Market Pulse{% endblock %}
 {% macro money(v) %}{% if v is none %}—{% else %}${{ '{:,.0f}'.format(v) }}{% endif %}{% endmacro %}
 {% macro pct(v) %}{% if v is none %}—{% else %}{{ ('%.1f'|format(v))|replace('-', '−') }}%{% endif %}{% endmacro %}
+{% macro smoney(v) %}{% if v is none %}—{% elif v < 0 %}−${{ '{:,.0f}'.format(-v) }}{% else %}+${{ '{:,.0f}'.format(v) }}{% endif %}{% endmacro %}
 {% block extra_css %}
 <style>
     .cp-page { max-width: 1400px; margin: 0 auto; padding: 0 1rem; }
@@ -48,7 +49,42 @@
     .cp-save { margin-top: 0.8rem; display: flex; gap: 0.7rem; align-items: center; flex-wrap: wrap; }
     .cp-save button { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 0.5rem 1.2rem;
         font-weight: 700; cursor: pointer; }
-    @media (max-width: 640px) { .cp-steps td.amt { width: 6rem; } .cp-form input[type=number], .cp-form input[type=text] { width: 6rem; } }
+    .cp-card h3 { font-size: 0.95rem; margin: 1.1rem 0 0.4rem; }
+    .cp-nw { font-size: 0.85rem; line-height: 1.6; color: var(--ink-3); }
+    .cp-nw b { color: var(--text); }
+    .cp-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; margin: 0.4rem 0 0.8rem; }
+    .cp-kpis div { background: var(--surface2); border-radius: 10px; padding: 0.55rem 0.7rem; }
+    .cp-kpis span { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-3); }
+    .cp-kpis b { display: block; font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+    .cp-kpis small { display: block; font-size: 0.72rem; color: var(--ink-3); line-height: 1.35; }
+    .cp-bar-row { display: grid; grid-template-columns: 4.6rem 1fr; gap: 0.5rem; align-items: center; margin: 0.3rem 0; font-size: 0.78rem; }
+    .cp-bar { display: flex; height: 1.1rem; border-radius: 6px; overflow: hidden; background: var(--surface2); }
+    .cp-bar i { display: block; height: 100%; }
+    .cp-legend { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; font-size: 0.74rem; color: var(--ink-3); margin: 0.3rem 0 0.6rem; }
+    .cp-legend i { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 3px; margin-right: 0.3rem; vertical-align: -1px; }
+    .b-cash { background: #64748b; } .b-funds { background: #3b82f6; } .b-picks { background: #8b5cf6; }
+    .b-re { background: #f59e0b; } .b-debt { background: #10b981; } .b-cost { background: #ef4444; }
+    table.cp-tbl { width: 100%; border-collapse: collapse; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+    .cp-tbl th, .cp-tbl td { padding: 0.4rem 0.4rem; border-bottom: 1px solid var(--border); vertical-align: top; text-align: right;
+        white-space: normal; overflow-wrap: break-word; }
+    .cp-tbl th:first-child, .cp-tbl td:first-child { text-align: left; }
+    .cp-tbl thead th { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-3); font-weight: 700; }
+    .cp-tbl .sub { color: var(--ink-3); font-size: 0.74rem; text-align: inherit; }
+    .cp-tbl td.n, .cp-tbl .n { white-space: nowrap; }
+    .cp-tbl .move { color: #059669; font-weight: 700; }
+    .cp-pay { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 0.9rem; }
+    .cp-form fieldset.wide { grid-column: 1 / -1; }
+    .cp-form input[readonly] { opacity: 0.6; }
+    .cp-prop { border: 1px dashed var(--border); border-radius: 8px; padding: 0.4rem 0.6rem; margin: 0.4rem 0;
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0 1rem; }
+    .cp-prop select { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+        padding: 0.25rem; font-size: 0.82rem; }
+    .cp-linkbtn { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 0.25rem 0.7rem; cursor: pointer;
+        color: var(--text); font-size: 0.8rem; }
+    .cp-bad { color: #b45309; font-size: 0.78rem; margin-top: 0.3rem; }
+    @media (max-width: 640px) { .cp-steps td.amt { width: 6rem; } .cp-form input[type=number], .cp-form input[type=text] { width: 6rem; }
+        .cp-kpis { grid-template-columns: 1fr; } .cp-tbl { font-size: 0.76rem; }
+        .cp-tbl th, .cp-tbl td { padding: 0.35rem 0.25rem; } }
 </style>
 {% endblock %}
 
@@ -101,6 +137,124 @@
     {% endif %}
   </div>
 
+  {% set cur = board.current %}
+  <div class="cp-card" id="now-vs-optimal">
+    <h2>Now vs optimal</h2>
+    {% if not cur or not cur.has_any %}
+    <p class="cp-note">List what you hold, any property you own and how you split your pay now — in your profile below —
+      and this compares it with the optimal path: the return gap in dollars a year, and the moves that close it.</p>
+    {% else %}
+    <div class="cp-nw">
+      Net worth <b>{{ money(cur.net_worth) }}</b> · real-estate equity <b>{{ money(cur.re_equity) }}</b>{% if cur.re_share is not none %} ({{ pct(cur.re_share) }}){% endif %} ·
+      {% if cur.re_cap is none %}no real-estate cap below a {{ money(p.re_nocap_below) }} net worth
+      {% else %}your cap at this net worth is <b>{{ pct(cur.re_cap) }}</b>,
+        {% if cur.re_room > 0 %}room for {{ money(cur.re_room) }} more{% else %}over it by {{ money(-cur.re_room) }}, so new money goes elsewhere{% endif %}{% endif %}
+      {% if cur.owns_shelter %} · you own where you live, so house hacks get no rent credit{% endif %}
+    </div>
+
+    {% set h = cur.holdings %}
+    {% if h %}
+    <h3>What you hold</h3>
+    {% if h.base > 0 %}
+    <div class="cp-kpis">
+      <div><span>Now</span><b>{{ pct(h.now_pct) }}</b><small>{{ money(h.now_dollars) }} a year after tax</small></div>
+      <div><span>Optimal</span><b>{{ pct(h.opt_pct) }}</b><small>{{ money(h.opt_dollars) }} a year after tax</small></div>
+      <div><span>Gap</span><b>{{ smoney(h.gap_dollars) }}/yr</b><small>{% if h.one_time > 0.5 %}after {{ money(h.one_time) }} of tax and costs, paid once{% else %}no tax to pay to get there{% endif %}{% if h.gain_hold > 0.5 %} · {{ smoney(h.gain_hold) }} by year {{ h.hold_years }}{% endif %}</small></div>
+    </div>
+    {% endif %}
+    {% for label, bars in [("Now", h.bars_now), ("Optimal", h.bars_opt)] %}
+    <div class="cp-bar-row"><span>{{ label }}</span><div class="cp-bar">{% for b in bars %}<i class="b-{{ b.bucket }}" style="width:{{ b.pct }}%" title="{{ b.label }} {{ money(b.amount) }} ({{ b.pct }}%)"></i>{% endfor %}</div></div>
+    {% endfor %}
+    <div class="cp-legend">{% for b in h.bars_opt %}<span><i class="b-{{ b.bucket }}"></i>{{ b.label }} {{ pct(b.pct) }}</span>{% endfor %}</div>
+
+    {% if h.moves %}
+    <table class="cp-tbl">
+      <thead><tr><th>Move</th><th>Amount</th><th>Tax &amp; costs</th><th>Gain by year {{ h.hold_years }}</th></tr></thead>
+      <tbody>
+      {% for m in h.moves %}
+      <tr>
+        <td>{{ m.from }} <span class="sub">({{ m.account }})</span> → <b>{{ m.to }}</b>
+          <div class="sub">{{ pct(m.h) }} → {{ pct(m.a) }} after tax and friction{% if m.conditional %} · {{ m.conditional }}{% endif %}</div></td>
+        <td class="n">{{ money(m.sold) }}</td>
+        <td class="n">{% if m.tax + m.cost > 0.5 %}{{ money(m.tax + m.cost) }}{% else %}—{% endif %}</td>
+        <td class="move n">{{ smoney(m.gain) }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="cp-note">Taxable money moves only where what is left after the tax on its gain, at the new return, beats
+      keeping it over your {{ h.hold_years }}-year hold — and keeping is credited with never paying that tax, so the bar is
+      high on purpose. Inside a 401(k), IRA, Roth or HSA a switch costs no tax; a 401(k) can only hold the plan's funds.
+      Once you move money, update the lines below and everything reruns.</p>
+    {% elif h.base > 0 %}
+    <p class="cp-note">Nothing moves: every holding is already where it earns the most, or moving it would cost more in tax
+      than it would gain over your {{ h.hold_years }}-year hold.</p>
+    {% endif %}
+
+    <div class="cp-scroll">
+    <table class="cp-tbl">
+      <thead><tr><th>Holding</th><th>Value</th><th>Return now</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for i in h["items"] %}
+      <tr>
+        <td>{{ i.label }} <span class="sub">({{ i.account_label }})</span>{% if i.src %}<div class="sub">{{ i.src }}</div>{% endif %}
+          {% if i.why_not %}<div class="sub">{{ i.why_not }}</div>{% elif i.status == 'keep' and i.keep_reason %}<div class="sub">keep: {{ i.keep_reason }}</div>{% endif %}</td>
+        <td><span class="n">{{ money(i.value) }}</span>{% if i.weq < 1 %}<div class="sub" title="Counted at its after-tax value in the totals">×{{ '%.2f'|format(i.weq) }} after tax</div>{% endif %}</td>
+        <td class="n">{{ pct(i.h) }}</td>
+        <td>{% if i.status == 'not measured' %}<span class="sub">not measured</span>
+            {% elif i.status == 'move' %}<span class="move">move</span> <span class="move n">{{ money(i.moved) }}</span>
+            {% else %}keep{% endif %}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% if h.bad_lines %}<div class="cp-bad">Could not read {{ h.bad_lines|length }} line{{ '' if h.bad_lines|length == 1 else 's' }} of your holdings:
+      {% for b in h.bad_lines %}“{{ b }}”{% if not loop.last %}, {% endif %}{% endfor %} — the format is name, account, value, basis, return%.</div>{% endif %}
+    {% endif %}
+
+    {% set pay = cur.pay %}
+    {% if pay %}
+    <h3>Your pay this month — {{ money(pay.total) }}</h3>
+    <p class="cp-note" style="margin-top:0">
+      {% if pay.now_pct is not none %}Your split earns <b>{{ pct(pay.now_pct) }}</b> after tax ({{ money(pay.now_dollars) }} a year on this
+      month's money){% else %}Your split could not be measured{% endif %}; the waterfall's split of the same {{ money(pay.total) }} earns
+      <b>{{ pct(pay.opt_pct) }}</b> ({{ money(pay.opt_dollars) }}){% if pay.gap_dollars is not none %} — <b>{{ smoney(pay.gap_dollars) }} a year</b>
+      from this month's money alone{% endif %}.
+      {% if pay.unmeasured %}{{ pay.unmeasured|length }} of your lines could not be measured, so no gap is claimed.{% endif %}
+      {% if pay.total and (pay.total - pay.profile_total)|abs > 1 %}Your split adds to {{ money(pay.total) }}; the profile's monthly
+      amount is {{ money(pay.profile_total) }}.{% endif %}
+    </p>
+    <table class="cp-tbl">
+      <thead><tr><th>Where it goes</th><th>You now</th><th>Waterfall</th></tr></thead>
+      <tbody>
+      {% for c in pay.cats %}
+      <tr><td>{{ c.category }}</td><td class="n">{{ money(c.now) }}</td><td class="n">{{ money(c.opt) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <div class="cp-pay">
+      <table class="cp-tbl">
+        <thead><tr><th>Your split</th><th>Amount</th><th>After tax</th></tr></thead>
+        <tbody>{% for l in pay.lines %}
+        <tr><td>{{ l.label }} <span class="sub">({{ l.account_label }})</span><div class="sub">{{ l.src or l.why_not }}</div></td>
+            <td class="n">{{ money(l.amount) }}</td><td class="n">{{ pct(l.ret) }}</td></tr>{% endfor %}</tbody>
+      </table>
+      <table class="cp-tbl">
+        <thead><tr><th>The waterfall</th><th>Amount</th><th>After tax</th></tr></thead>
+        <tbody>{% for o in pay.opt %}
+        <tr><td>{{ o.label }}</td><td class="n">{{ money(o.amount) }}</td><td class="n">{{ pct(o.ret) }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+    <p class="cp-note">Each line is the after-tax return of a new dollar in that account: a 401(k) dollar is deducted now and
+      taxed later, with the employer match on the matched dollars; a Roth dollar grows untaxed; a down-payment fund earns
+      the property's return, waiting months included. This month's waterfall can include one-time steps (a card paid off,
+      the emergency fund topped up) that a normal month will not repeat, so the dollars are this month's, not a year's.</p>
+    {% if pay.bad_lines %}<div class="cp-bad">Could not read: {% for b in pay.bad_lines %}“{{ b }}”{% if not loop.last %}, {% endif %}{% endfor %} — the format is what, account, amount a month, return%.</div>{% endif %}
+    {% endif %}
+    {% endif %}
+  </div>
+
   <div class="cp-card">
     <h2>The board</h2>
     <div class="cp-tabs" role="tablist">
@@ -125,19 +279,20 @@
       {% for r in board.rows %}
         {% set grp = 'stock' if r.kind == 'stock' else ('re' if r.kind == 're' else 'safe') %}
         {% if r.kind == 'stock' %}{% set ns.stocks = ns.stocks + 1 %}{% endif %}
-        <tr data-g="{{ grp }}" class="{{ 'cant' if r.ret_net is none else '' }} {{ 'more-stock' if r.kind == 'stock' and ns.stocks > 10 else '' }}">
+        <tr data-g="{{ grp }}" class="{{ 'cant' if r.ret_net is none or r.blocked else '' }} {{ 'more-stock' if r.kind == 'stock' and ns.stocks > 10 else '' }}">
           <td>{{ loop.index }}</td>
           <td>
             <span class="cp-kind">{{ 'pick' if r.kind == 'stock' else r.kind }}</span><a href="{{ r.link }}">{{ r.label }}</a>
             {% if r.sources and r.sources|length > 1 %}<span class="cp-note"> · {{ r.sources|join(', ') }}</span>{% elif r.kind == 'stock' %}<span class="cp-note"> · {{ r.source }}</span>{% endif %}
             {% if r.conditional %}<div class="cond">{{ r.conditional }}</div>{% endif %}
+            {% if r.blocked %}<div class="cond">{{ r.blocked }}</div>{% endif %}
             <div class="basis">{{ r.basis }}{% if r.risk %} · <i>{{ r.risk }}</i>{% endif %}</div>
           </td>
           <td>{{ pct(r.ret_after) }}</td>
           <td>{% if r.kind == 're' %}<span class="cp-note" title="Buying, financing and selling costs are inside this engine's return">in return</span>{% else %}{{ pct(r.cost_drag) }}{% endif %}</td>
           <td>{{ pct(r.time_drag) }}</td>
           <td>{% if r.min_capital > 1 %}{{ money(r.min_capital) }}{% else %}—{% endif %}</td>
-          <td>{% if r.months_to_fund is none %}<span title="This month's free pay never reaches it">never</span>{% elif r.months_to_fund == 0 %}now{% else %}{{ r.months_to_fund }} mo{% endif %}</td>
+          <td>{% if r.blocked %}<span title="{{ r.blocked }}">over cap</span>{% elif r.months_to_fund is none %}<span title="This month's free pay never reaches it">never</span>{% elif r.months_to_fund == 0 %}now{% else %}{{ r.months_to_fund }} mo{% endif %}</td>
           <td class="net">{{ pct(r.ret_net) }}</td>
         </tr>
       {% endfor %}
@@ -154,7 +309,7 @@
     <form id="cpForm" class="cp-form" onsubmit="return false">
       <fieldset><legend>Cash flow</legend>
         <label>Monthly to put to work <input type="number" name="monthly_invest" value="{{ p.monthly_invest }}" step="50"></label>
-        <label>Cash on hand <input type="number" name="cash" value="{{ p.cash }}" step="100"></label>
+        <label>Cash on hand{% if p._cash_from_holdings %} (your cash lines){% endif %} <input type="number" name="cash" value="{{ p.cash }}" step="100"{% if p._cash_from_holdings %} readonly title="The total of the cash lines in What you hold"{% endif %}></label>
         <label>Monthly expenses <input type="number" name="monthly_expenses" value="{{ p.monthly_expenses }}" step="50"></label>
         <label>Starter cushion (months) <input type="number" name="starter_months" value="{{ p.starter_months }}" step="0.5"></label>
         <label>Emergency fund (months) <input type="number" name="emergency_months" value="{{ p.emergency_months }}" step="0.5"></label>
@@ -179,7 +334,7 @@
         <textarea name="debts" placeholder="Car loan, 12000, 6.5">{{ debts_text }}</textarea>
       </fieldset>
       <fieldset><legend>Real estate</legend>
-        <label>Rent you pay now (/mo) <input type="number" name="housing_cost" value="{{ p.housing_cost }}" step="50"></label>
+        <label>Rent you pay now (/mo){% if p._owns_shelter %} — you own where you live{% endif %} <input type="number" name="housing_cost" value="{{ p.housing_cost }}" step="50"{% if p._owns_shelter %} readonly{% endif %}></label>
         <label>Home state <input type="text" name="home_state" value="{{ p.home_state }}" maxlength="2"></label>
         <label>Home ZIP <input type="text" name="home_zip" value="{{ p.home_zip }}" maxlength="5"></label>
         <label>House hack within (miles) <input type="number" name="max_miles" value="{{ p.max_miles }}" step="5"></label>
@@ -193,9 +348,34 @@
         <label>Most in one name (% of picks) <input type="number" name="pick_max_pct" value="{{ p.pick_max_pct }}" step="1"></label>
         <label>Market return (the hurdle, %) <input type="number" name="market_return" value="{{ p.market_return }}" step="0.5"></label>
         <label>Weight on the screens' estimates (%) <input type="number" name="estimate_weight" value="{{ p.estimate_weight }}" step="5"></label>
-        <label>Picks held today ($) <input type="number" name="stock_holdings" value="{{ p.stock_holdings }}" step="1000"></label>
+        <label>Picks held today ($){% if p._picks_from_holdings %} (from your holdings){% endif %} <input type="number" name="stock_holdings" value="{{ p.stock_holdings }}" step="1000"{% if p._picks_from_holdings %} readonly title="The individual stocks in What you hold"{% endif %}></label>
         <label>T-bill / savings rate (%) <input type="number" name="rf_rate" value="{{ p.rf_rate }}" step="0.1"></label>
         <label>Hold (years) <input type="number" name="hold_years" value="{{ p.hold_years }}" step="1"></label>
+      </fieldset>
+      <fieldset class="wide"><legend>What you hold — one per line: name or ticker, account, value, cost basis, return %</legend>
+        <textarea name="holdings" rows="6" placeholder="Chase checking, checking, 8000, 0.01%&#10;Ally savings, savings, 30000, 3.8%&#10;VTI, taxable, 50000, 30000&#10;AAPL, roth, 12000&#10;Plan S&amp;P fund, 401k, 80000">{{ p.holdings }}</textarea>
+        <div class="cp-note">Accounts: taxable, 401k, roth 401k, ira, roth, hsa, checking / savings / cash, tbills. No commas
+          inside numbers. The cost basis matters only for taxable holdings (without it, selling is not tested). A % is your
+          own return — for cash, its interest rate; cash without one is not measured. Your cash lines become Cash on hand.</div>
+      </fieldset>
+      <fieldset class="wide"><legend>How you split your pay now — what, account, amount a month, return %</legend>
+        <textarea name="current_monthly" rows="4" placeholder="401k, 401k, 500&#10;Savings, savings, 1000, 3.8%&#10;VTI, taxable, 500&#10;Card, debt, 300">{{ p.current_monthly }}</textarea>
+        <div class="cp-note">The same accounts, plus <b>debt</b> (use the name from your debts, or give the APR as a %).</div>
+      </fieldset>
+      <fieldset class="wide"><legend>Real estate you own</legend>
+        <div id="cpProps">
+          {% for r in p.owned_re %}{% include "_capital_property.html" %}{% endfor %}
+        </div>
+        <button type="button" class="cp-linkbtn" id="cpAddProp">Add a property</button>
+        <div class="cp-note">Mortgages on these go here, not in Debts. The purchase price (with improvements) and year bought
+          let a rental's sale be tested — depreciation recapture and the gain taxed. The place you live is measured, never
+          sold.</div>
+      </fieldset>
+      <fieldset><legend>Real estate's share of net worth</legend>
+        <label>No cap below a net worth of ($) <input type="number" name="re_nocap_below" value="{{ p.re_nocap_below }}" step="10000"></label>
+        <label>Then at most (% of net worth) <input type="number" name="re_cap_mid" value="{{ p.re_cap_mid }}" step="5"></label>
+        <label>…up to a net worth of ($) <input type="number" name="re_cap_mid_upto" value="{{ p.re_cap_mid_upto }}" step="50000"></label>
+        <label>Above that, at most (%) <input type="number" name="re_cap_high" value="{{ p.re_cap_high }}" step="5"></label>
       </fieldset>
       <fieldset><legend>Your time</legend>
         <label>Your hour is worth ($) <input type="number" name="hourly_value" value="{{ p.hourly_value }}" step="5"></label>
@@ -206,6 +386,7 @@
         <label>Own home hours/mo <input type="number" name="hours_home" value="{{ p.get('hours_home', hours_default.home) }}" step="1"></label>
       </fieldset>
     </form>
+    <template id="cpPropTpl">{% with r = {} %}{% include "_capital_property.html" %}{% endwith %}</template>
     <div class="cp-save"><button id="cpSave" type="button">Save and rerun</button><span id="cpMsg" class="cp-note"></span></div>
   </div>
 
@@ -220,7 +401,10 @@
     <b>BRRRR and flips are conditional.</b> There are no fixer sale prices in the data, so the board shows the after-tax
     target you set, reached only if you buy at or below the price /headroom solves — and the share of the median that
     price needs is how hard the deal is to find. <b>House hacks</b> are owner-occupied, so only ZIPs within your radius
-    of home count, and their return includes the rent you stop paying.
+    of home count; their return is on the cash to close and includes the rent you stop paying (once — not if you
+    already own where you live), the loan paid down in year one, and your appreciation setting.
+    <b>Real estate's share of your net worth</b> is capped by the glide path you set; a property that would take it over
+    the cap at the net worth you will have when it is funded reads "over cap" and takes no money.
     <br><br>
     <b>Friction</b> is subtracted from the after-tax return: buying and selling spread over the hold, your hours at your
     rate as a share of the money in the asset, and — for anything that needs more cash than you have free beyond the
@@ -255,11 +439,24 @@
   }
   apply('all');
 
+  const props = document.getElementById('cpProps');
+  document.getElementById('cpAddProp').addEventListener('click', () => {
+    props.appendChild(document.getElementById('cpPropTpl').content.cloneNode(true));
+  });
+  props.addEventListener('click', e => {
+    if (e.target.classList.contains('cp-prop-del')) e.target.closest('.cp-prop').remove();
+  });
+
   document.getElementById('cpSave').addEventListener('click', async () => {
     const msg = document.getElementById('cpMsg');
     const body = {};
-    document.querySelectorAll('#cpForm input, #cpForm textarea').forEach(el => {
+    document.querySelectorAll('#cpForm input[name], #cpForm textarea[name]').forEach(el => {
       body[el.name] = el.type === 'checkbox' ? el.checked : el.value;
+    });
+    body.owned_re = Array.from(props.querySelectorAll('.cp-prop')).map(div => {
+      const o = {};
+      div.querySelectorAll('[data-k]').forEach(el => { o[el.dataset.k] = el.value; });
+      return o;
     });
     msg.textContent = 'Saving…';
     try {

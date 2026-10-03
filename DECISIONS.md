@@ -922,6 +922,58 @@ plus the ranked board.
 - **Private**: the page and the save endpoint are admin only; the profile is one JSON row in `capital_profile`.
   Contribution limits default to the IRS 2026 figures and the profile holds the room actually left.
 
+## 2026-10-03 — /capital: now vs optimal, net worth steering real estate, house-hack leverage
+**Why:** the owner asked for a current-allocation model on /capital, to compare where their money is now with the
+optimal path. Owner choices: compare both what they hold and how they split each month's pay; move a holding only
+if it pays after tax; one line per holding; owned real estate measured from its own numbers. They then asked how debt
+and leverage are counted and said net worth should steer the path — real estate first for leverage and shelter,
+more to stocks as net worth grows — and chose "math + a glide path": shelter counted once, lazy equity measured, and a
+cap on real estate's share of net worth that tightens as net worth grows (no cap under $250k, 60% to $1M, 40% above,
+all editable).
+**Decided:**
+- **One unit for holdings and pay lines, the board's**: an after-tax annual return net of friction. A ticker on a
+  screen takes that screen's blended estimate; an index fund (a fixed list of US total-market and S&P 500 funds), a
+  mutual-fund ticker, a fund named without a ticker, anything in a 401(k), and a stock no screen covers take the market
+  return, labelled as assumed; cash takes the rate the owner gives and **cash without a rate is not measured** (no
+  gap is claimed on it). Index funds are taxed with a 1.2% dividend (the S&P 500's yield, 2025-26).
+- **A traditional balance counts at its after-tax value** (× (1 − the retirement rate)): the tax on the way out is
+  proportional, so it earns its pre-tax rate on that value.
+- **Owned property is measured on the equity that could be taken out** — value less 7% to sell, less the loan — so a
+  paid-down or risen property shows its real ("lazy") return. Rentals: cash flow after the full payment, income tax on
+  what depreciation (/headroom's 80% building share over 27.5 years) does not shelter, the year's principal, and
+  appreciation after the gains tax. A home or a house hack you live in adds the rent you would otherwise pay, untaxed,
+  and is never put up for sale. A loan without its payment is not measured.
+- **The switch test**: a holding moves only if (1 − tax − costs)(1 + new return)^hold beats (1 + its return)^hold by
+  at least 1% of the money moved. Taxable tax is the gain over the basis at the long-term rate (lots are assumed held
+  over a year); a rental's is depreciation recapture at up to 25% federal plus state (plus NIIT if set) and the rest of
+  the gain at the capital-gains rate. **Keeping is credited with never paying the deferred tax** (a step-up, or held
+  for good) — the cautious reading, which tilts toward keeping. No basis (or no purchase price and year) → not tested.
+- **Money moves only where its account allows**: a 401(k) to the plan's index fund; an IRA, Roth or HSA to the top
+  picks or an index fund (no tax to switch; California's tax on HSA growth comes off); taxable money, free cash and
+  rentals to anything on the board. **The emergency fund stays cash** — six months held in the best-paying cash first,
+  movable only to T-bills. Destinations are filled best first; debt takes its balance; a property takes exactly one
+  deal's cash or nothing; when the month's plan is saving for a property, free cash may join that down payment at the
+  property's return. A holding already among the top picks stays.
+- **Pay vs the waterfall**: the owner's split, line by line, against the waterfall's split of the SAME amount. A new
+  401(k) dollar is deducted now and taxed later, with the employer match on the first matched dollars; a Roth dollar
+  grows untaxed; an HSA dollar is deducted (federally only in CA/NJ). Dollars are the year's return on ONE month's
+  money, because this month's waterfall can hold one-time steps; a gap is claimed only when every line is measured.
+- **One source of truth**: once holdings are listed, their cash lines ARE cash on hand and their individual stocks the
+  picks held (both read-only on the form). Net worth = cash + everything invested + property equity − debts.
+- **Shelter is counted once**: owning where you live (a home or a house hack) zeroes the rent you pay, takes the rent
+  credit off every house hack, and drops "buy your home" from the board. BRRRR and flips were already on investor
+  terms; a further house hack would mean moving, so it keeps owner financing but loses the rent credit.
+- **The glide path**: real estate's share of net worth may not exceed the cap at the net worth the owner will have
+  when a property is funded (today's plus the free pay saved by then; returns not counted, so it errs low). A
+  property that would take it over is blocked — ranked below everything buyable, never the month's winner, never a
+  destination for held money. Property already over the cap is not force-sold; new money goes elsewhere and selling
+  is only suggested where it pays after tax.
+- **House hacks now count leverage fully**: the year's principal on /headroom's FHA loan (3.5% down on price + remodel,
+  the upfront MIP financed) and the owner's appreciation setting on the all-in price, as "buy your home" already did.
+  At 7.28% a $700k house hack pays about $6,600 of principal in year one — about 14.5 points on $45,500 to close.
+- Saved as typed: the holdings and pay-split boxes keep the owner's lines, so a line the engine cannot read stays in
+  the box and is named on the page. No migration — the profile is one JSON row.
+
 ## 2026-10-03 — Email sign-in links: a way in that Google cannot block
 **Why:** the owner signing in with their personal Gmail was stopped by Google itself — "Error 403: org_internal",
 because the Google OAuth app is a Workspace-internal app — before this server was asked. No code here can change

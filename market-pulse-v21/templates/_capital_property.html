@@ -1,0 +1,22 @@
+{# One property you own, on /capital. `r` is a parsed owned_re record, or {} for a new one. #}
+<div class="cp-prop">
+  <label>Name <input type="text" data-k="name" value="{{ r.name or '' }}" maxlength="40"></label>
+  <label>Use
+    <select data-k="use">
+      <option value="rental" {% if (r.use or 'rental') == 'rental' %}selected{% endif %}>rental</option>
+      <option value="home" {% if r.use == 'home' %}selected{% endif %}>home (you live there)</option>
+      <option value="house_hack" {% if r.use == 'house_hack' %}selected{% endif %}>house hack (you live in a unit)</option>
+    </select>
+  </label>
+  <label>Value today ($) <input type="number" data-k="value" value="{{ r.value if r.value is not none else '' }}" step="10000"></label>
+  <label>Loan balance ($) <input type="number" data-k="loan" value="{{ r.loan if r.loan is not none else '' }}" step="1000"></label>
+  <label>Loan rate (%) <input type="number" data-k="rate" value="{{ r.rate if r.rate is not none else '' }}" step="0.125"></label>
+  <label>Loan payment, P&amp;I (/mo) <input type="number" data-k="payment" value="{{ r.payment if r.payment is not none else '' }}" step="50"></label>
+  <label>Rent collected (/mo) <input type="number" data-k="rent" value="{{ r.rent if r.rent is not none else '' }}" step="50"></label>
+  <label>Rent you'd pay to live there (/mo) <input type="number" data-k="shelter_rent" value="{{ r.shelter_rent if r.shelter_rent is not none else '' }}" step="50" title="Home or house hack: what the part you live in would rent for"></label>
+  <label>Costs: tax, insurance, repairs, mgmt, vacancy (/mo) <input type="number" data-k="costs" value="{{ r.costs if r.costs is not none else '' }}" step="50"></label>
+  <label>Purchase price + improvements ($) <input type="number" data-k="basis" value="{{ r.basis if r.basis is not none else '' }}" step="10000"></label>
+  <label>Year bought <input type="number" data-k="year" value="{{ r.year if r.year is not none else '' }}" step="1"></label>
+  <label>Your hours (/mo) <input type="number" data-k="hours" value="{{ r.hours if r.hours is not none else '' }}" step="1"></label>
+  <div><button type="button" class="cp-linkbtn cp-prop-del">Remove</button></div>
+</div>
