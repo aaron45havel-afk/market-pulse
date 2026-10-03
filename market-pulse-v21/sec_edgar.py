@@ -168,8 +168,20 @@ def _excluded_keyword(name, sectors: bool = True):
     banks on their own terms wants the bank; nothing wants the ETF.
     """
     nl = name.lower()
-    words = EXCLUDED_KEYWORDS if sectors else NOT_AN_OPERATING_COMPANY
-    return any(kw in nl for kw in words)
+    if any(_NOT_A_COMPANY_RE[kw].search(nl) for kw in NOT_AN_OPERATING_COMPANY):
+        return True
+    return sectors and any(kw in nl for kw in SECTOR_KEYWORDS)
+
+
+# A WORD, NOT A SUBSTRING. Matched anywhere in a name, "etf" removed Netflix
+# and "spac" removed Park Aerospace, Howmet Aerospace, Extra Space Storage,
+# Centerspace and Geospace from every universe built on this filter. Each
+# keyword must start a word; the short ones must also end one (a plural
+# "s" allowed), while the phrases may run on ("acquisition corporation").
+_NOT_A_COMPANY_RE = {
+    kw: re.compile(r"\b" + re.escape(kw) + (r"s?\b" if len(kw) <= 4 else ""))
+    for kw in NOT_AN_OPERATING_COMPANY
+}
 
 # Foreign incorporation states that indicate Chinese/offshore shell companies
 FOREIGN_SHELL_STATES = {

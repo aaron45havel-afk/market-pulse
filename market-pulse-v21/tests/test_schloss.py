@@ -870,6 +870,80 @@ check(any("hand-entered" in c for c in _snap["_meta"]["caveats"]),
       "scheduled job that cannot reach it")
 
 
+# ── an impossible balance sheet withholds EVERYTHING built on it ────
+# Elme Communities (September 2026): assets after its property sale, equity
+# before it. The guard blanked the book value and then let the asset gate,
+# the debt gate, price/tangible book and Riklis — all computed from that
+# same book — stand: four gates cleared at 0.165x.
+ELME = {"stockholders_equity": 900e6, "total_assets": 460e6, "total_liabilities": 40e6,
+        "current_assets": 300e6, "cash": 250e6, "receivables": 20e6,
+        "short_term_debt": 0.0, "long_term_debt": 10e6, "shares": 88e6,
+        "market_cap": 150e6, "first_filing_year": 1996,
+        "div_per_share_by_year": {2024: 0.72, 2025: 0.72}}
+el = S.evaluate(ELME, 2026)
+check(el["implausible"] is True, "book above total assets is flagged")
+check(el["gates"]["assets"] is None and el["gates"]["debt"] is None,
+      "THE ASSET AND DEBT GATES ARE UNKNOWN — both read the equity the guard says is impossible")
+check(el["gates_pass"] is False, "so the company cannot clear every gate")
+check(el["p_tangible_book"] is None and el["below_book"] is None
+      and el["p_ncav"] is None and el["is_net_net"] is None,
+      "and no discount is computed against a book value that was withheld")
+check(el["riklis"]["ratio"] is None and "impossible" in el["riklis"]["reason"],
+      "Riklis reads the same broken balance sheet and says so")
+check(el["gates"]["survival"] is True and el["gates"]["pays_dividend"] is True,
+      "what does not come from the balance sheet still scores")
+check(S.missing_gates({**el, "implausible": True})[:2]
+      == ["a possible balance sheet (book value above total assets)"] * 2,
+      "the could-not-read list says the sheet was impossible, not that equity was unfiled")
+check(S.missing_gates({"gates": {"assets": None, "debt": True}}) == [S.GATE_LABELS["assets"]],
+      "an ordinary unknown keeps its ordinary label")
+check(S.evaluate({**ELME, "stockholders_equity": 400e6}, 2026)["gates_pass"] is True,
+      "the same company with a possible balance sheet clears as before")
+
+# ── the non-debt bound is wired in ─────────────────────────────────
+# lululemon's case, through evaluate this time: no short-term borrowings
+# filed, a liability stack over half of equity, most of it leases.
+LULU = {"stockholders_equity": 4.83e9, "total_liabilities": 3.71e9, "total_assets": 8.54e9,
+        "short_term_debt": 0.0, "first_filing_year": 1996,
+        "div_per_share_by_year": {2024: 1.0, 2025: 1.0}}
+check(S.evaluate(LULU, 2026)["gates"]["debt"] is None,
+      "with nothing known to be non-debt, the liability bound cannot prove no-debt")
+lu = S.evaluate({**LULU, "operating_lease_current": 0.28e9, "operating_lease_noncurrent": 1.12e9,
+                 "accounts_payable": 0.35e9, "deferred_revenue": 0.15e9}, 2026)
+check(lu["gates"]["debt"] is True and lu["debt_ratio"] is None,
+      "LEASES, PAYABLES AND DEFERRED REVENUE SUBTRACTED, NO-DEBT IS PROVED — and the ratio stays unmeasured")
+check(S.evaluate({**LULU, "operating_lease_noncurrent": 0.2e9}, 2026)["gates"]["debt"] is None,
+      "too little identified as non-debt still proves nothing")
+
+# ── a payer that files no per-share dividend still pays ─────────────
+PAYER = {"stockholders_equity": 100e6, "total_assets": 120e6, "total_liabilities": 20e6,
+         "short_term_debt": 0.0, "long_term_debt": 0.0, "first_filing_year": 1996,
+         "div_per_share_by_year": {}}
+check(S.evaluate(PAYER, 2026)["gates"]["pays_dividend"] is False,
+      "no per-share figure and nothing else: a measured non-payer, as before")
+up = S.evaluate({**PAYER, "div_paid_by_year": {2024: 4.1e6, 2025: 4.3e6}}, 2026)
+check(up["gates"]["pays_dividend"] is True and up["dividend"]["pays_from"] == "paid",
+      "DOLLARS PAID THIS YEAR OR LAST MAKE IT A PAYER — Utah Medical files no per-share figure")
+check(up["gates_pass"] is True, "and it clears every gate")
+check(up["dividend"]["cut"] is None, "the dollars settle 'pays', never a cut")
+check(S.evaluate({**PAYER, "div_paid_by_year": {2019: 4e6, 2020: 4e6}}, 2026)["gates"]["pays_dividend"] is False,
+      "dollars paid years ago are a company that stopped")
+check(S.evaluate({**PAYER, "div_paid_by_year": {2025: 0.0}}, 2026)["gates"]["pays_dividend"] is False,
+      "a filed zero is a measured zero")
+stale_dps = S.evaluate({**PAYER, "div_per_share_by_year": {2018: 0.5, 2019: 0.5},
+                        "div_paid_by_year": {2025: 3e6}}, 2026)
+check(stale_dps["gates"]["pays_dividend"] is True and stale_dps["dividend"]["pays_from"] == "paid",
+      "a per-share record that stopped being filed is overruled by dollars still being paid")
+dps = S.evaluate({**PAYER, "div_per_share_by_year": {2024: 1.0, 2025: 1.0},
+                  "div_paid_by_year": {2025: 3e6}}, 2026)
+check(dps["dividend"]["pays_from"] == "per_share", "a per-share record says it first")
+check(S.evaluate({**PAYER, "div_paid_by_year": {2025: -3e6}}, 2026)["gates"]["pays_dividend"] is True,
+      "a payment filed with a sign is still a payment")
+check(S.paid_recently(None, 2026) is False and S.paid_recently({"x": 5}, 2026) is False
+      and S.paid_recently({2024: 1.0}, 2026) is True and S.paid_recently({2023: 1.0}, 2026) is False,
+      "recent means within DIVIDEND_STALE_YEARS, the rule a per-share record gets")
+
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

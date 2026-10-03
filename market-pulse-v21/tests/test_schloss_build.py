@@ -380,6 +380,92 @@ check(_written[0].name in _kept,
       "which sorts last by name")
 
 
+# ── one date per balance sheet ──────────────────────────────────────
+# Four quarters, newest first. Company 1 is Elme: assets filed in the
+# newest quarter (after a sale), equity last filed a quarter earlier.
+PP = {
+    "stockholders_equity": [{2: 50.0}, {1: 900.0, 2: 49.0}, {1: 890.0}, {}],
+    "total_assets": [{1: 460.0, 2: 80.0}, {1: 1500.0, 2: 79.0}, {1: 1490.0}, {}],
+    "cash": [{1: 250.0, 2: 9.0}, {1: 40.0}, {}, {}],
+    "goodwill": [{}, {}, {1: 30.0, 2: 5.0}, {}],
+    "inventory": [{}, {2: 7.0}, {}, {}],
+}
+od, anchor = R.one_date(PP)
+check(anchor == {1: 1, 2: 0},
+      "the anchor is the newest quarter with BOTH equity and assets — Elme's is the second")
+check(od["stockholders_equity"][1] == 900.0 and od["total_assets"][1] == 1500.0,
+      "EVERY LINE COMES FROM THAT QUARTER: equity and assets agree on the date (was 900 against 460)")
+check(od["cash"][1] == 40.0, "including the lines that also had a newer figure")
+check(od["goodwill"][1] == 30.0 and od["goodwill"][2] == 5.0,
+      "goodwill missing from the anchor quarter carries from an older one — subtracting it is the safe side")
+check(2 not in od["inventory"],
+      "an ordinary line missing from the anchor quarter is absent, not borrowed from another date")
+check(od["total_assets"][2] == 80.0 and od["stockholders_equity"][2] == 50.0,
+      "a company filing everything every quarter is read from the newest")
+odd, anc2 = R.one_date({"stockholders_equity": [{}, {7: 10.0}], "total_assets": [{7: 30.0}, {}]})
+check(anc2 == {7: 0} and odd["total_assets"] == {7: 30.0} and odd["stockholders_equity"] == {},
+      "never both in one quarter: the newest quarter with either, and the other stays unknown")
+check(R.one_date({}) == ({}, {}), "no frames, nothing")
+old = {f: R.merge_newest_first(fr) for f, fr in PP.items()}
+check(R.mixed_dates(old, od) == 2,
+      "the run counts the companies the old line-by-line rule read differently — Elme's assets and "
+      "cash, and company 2's inventory from an older quarter, no longer read at all")
+check(R.mixed_dates({"cash": {2: 9.0}}, {"cash": {2: 9.0}}) == 0, "an unchanged read is not counted")
+check(R.ANCHOR_FIELDS == ("stockholders_equity", "total_assets")
+      and set(R.CARRY_FIELDS) == {"goodwill", "intangibles", "preferred_stock"},
+      "carried lines are only the ones subtracted from book, where a gap flatters")
+for _f in ("operating_lease_current", "operating_lease_noncurrent", "accounts_payable", "deferred_revenue"):
+    check(_f in R.INSTANT, f"{_f} is fetched for the non-debt bound")
+check(R.INSTANT["accounts_payable"] == ["AccountsPayableAndAccruedLiabilitiesCurrent", "AccountsPayableCurrent"]
+      and R.INSTANT["deferred_revenue"] == ["ContractWithCustomerLiabilityCurrent", "DeferredRevenueCurrent"],
+      "each non-debt list is one concept under its names: the first tag never adds a part to its own total")
+
+# ── dividends paid ─────────────────────────────────────────────────
+check(R.ANNUAL["div_paid_common"] == ["PaymentsOfDividendsCommonStock"]
+      and R.ANNUAL["div_paid_all"] == ["PaymentsOfDividends"], "the two dollars-paid lines, kept apart")
+check(R.common_dividends_paid({2025: 3.0}, {2025: 9.0}, 100.0) == {2025: 3.0},
+      "the common-stock line wins whenever it is filed")
+check(R.common_dividends_paid(None, {2025: 9.0}, None) == {2025: 9.0}
+      and R.common_dividends_paid({}, {2025: 9.0}, 0.0) == {2025: 9.0},
+      "the all-classes line stands in where no preferred stock is outstanding")
+check(R.common_dividends_paid(None, {2025: 9.0}, 50e6) == {},
+      "WITH PREFERRED OUTSTANDING IT CANNOT: a preferred-only payer would read as paying common")
+check(R.common_dividends_paid(None, None, None) == {}, "nothing filed, nothing paid")
+
+# ── a split is not dilution ────────────────────────────────────────
+check(R.split_in_window({0: 500e6, 1: 495e6, 2: 9.8e9, 3: 9.7e9}),
+      "Amazon's 20-for-1 with a buyback beside it reads as a split")
+check(R.split_in_window({0: 100e6, 1: 10.2e6}), "a 1-for-10 reverse split does too")
+check(R.split_in_window({0: 100e6, 1: 199e6}), "and a 2-for-1")
+check(not R.split_in_window({0: 100e6, 1: 150e6}), "a 50% issuance is not a split factor")
+check(not R.split_in_window({0: 100e6, 1: 102e6, 2: 104e6, 3: 101e6, 4: 99e6, 5: 98e6}),
+      "ordinary buybacks and issuance are not splits")
+check(not R.split_in_window({0: 100e6}) and not R.split_in_window({}), "one count or none: nothing to compare")
+check(R.split_in_window({0: 100e6, 3: 300e6}), "across a gap year the jump is still seen")
+check(not R.split_in_window({0: 100e6, 1: 0.0, 2: 101e6}), "a zero count is skipped, not divided by")
+
+# ── not a company ──────────────────────────────────────────────────
+check(R.not_a_company("VanEck Bitcoin ETF", False, None), "an ETF by name, with or without a code")
+check(R.not_a_company("Calisa Acquisition Corp", False, None), "a blank cheque by name")
+check(R.not_a_company("SPDR GOLD TRUST", True, "6221") and R.not_a_company("VS Trust", True, "6221"),
+      "COMMODITY POOLS BY CODE — their names give nothing away")
+check(R.not_a_company("Some Holdings", True, "6770"), "a blank cheque by code")
+check(R.not_a_company("MSC INCOME FUND, INC.", True, None),
+      "SEC answered with no industry code: a fund")
+check(not R.not_a_company("NETFLIX INC", False, None) and not R.not_a_company("PARK AEROSPACE CORP", True, "3728"),
+      "Netflix and Park Aerospace are companies")
+check(not R.not_a_company("Unknown Co", False, None), "no code because SEC did not answer: not dropped on a guess")
+check(not R.not_a_company("Sabine Royalty Trust", True, "6792"), "a royalty trust has an industry and stays")
+
+import inspect  # noqa: E402
+_b = inspect.getsource(R.build)
+check("no_revenue = [c for c in ciks if not revenue_of(c)]" in _b and "fetch_sic(no_revenue)" in _b,
+      "industry codes are asked only of companies filing no revenue — every fund on the board was one")
+check('"shares_cagr": None if split else' in _b, "a split in the window withholds the dilution figure")
+check('"div_paid_by_year": common_dividends_paid(' in _b, "the dollars-paid series reaches evaluate")
+check("fetch_shares(qs)" in _b and "shares[DILUTION_YEARS]" in _b, "share counts for every year in the window")
+
+
 # ── report ──
 if _FAILS:
     print(f"FAIL — {len(_FAILS)}/{_COUNT} checks failed:")

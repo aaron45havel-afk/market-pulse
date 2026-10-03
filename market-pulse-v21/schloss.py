@@ -588,6 +588,19 @@ def dividend_history(per_share_by_year: dict, this_year: int | None = None) -> d
             "to_year": years[-1]}
 
 
+def paid_recently(paid_by_year: dict | None, this_year: int | None) -> bool:
+    """Dividends paid, in dollars, in a year recent enough to say the company
+    pays now — the same DIVIDEND_STALE_YEARS a per-share record gets."""
+    for y, v in (paid_by_year or {}).items():
+        try:
+            yr, val = int(y), _num(v)
+        except (TypeError, ValueError):
+            continue
+        if val and abs(val) > 0 and (not this_year or yr >= this_year - DIVIDEND_STALE_YEARS):
+            return True
+    return False
+
+
 def self_dealing(sbc=None, revenue=None, shares_cagr=None,
                  insider_pct=None, total_assets=None) -> dict:
     """"Honest management that does not overpay itself."
@@ -670,17 +683,48 @@ def evaluate(f: dict, this_year: int) -> dict:
     """
     tb = tangible_book(f.get("stockholders_equity"), f.get("goodwill"),
                        f.get("intangibles"))
+
+    # A COMPANY CANNOT BE WORTH MORE THAN IT OWNS. Tangible book above
+    # total assets is arithmetically impossible and means one of the two
+    # figures is not what we think it is — Universe Pharmaceuticals came
+    # through with $55.8bn of equity and $17.9bn of revenue on 563,338
+    # shares, which is a nano-cap reporting in something other than the
+    # dollars the frame claimed. Both figures are withheld rather than
+    # published as a $99,110-per-share book value.
+    #
+    # DECIDED BEFORE ANYTHING IS BUILT ON THEM. This check used to run at
+    # the end, after the asset gate, the debt gate, price/tangible book and
+    # Riklis had all been computed from the figure it then withheld: Elme
+    # Communities (September 2026) cleared all four gates at 0.165x a
+    # tangible book the row itself said was impossible. Every reading of
+    # this balance sheet is now unknown, not just the two it printed.
+    ta = _num(f.get("total_assets"))
+    impossible = ta is not None and ta > 0 and tb is not None and tb > ta * 1.02
+    if impossible:
+        tb = None
+
     shares = _num(f.get("shares"))
     tb_ps = round(tb / shares, 4) if (tb is not None and shares and shares > 0) else None
 
-    n = ncav(f.get("current_assets"), f.get("total_liabilities"),
-             f.get("preferred_stock"))
+    n = None if impossible else ncav(f.get("current_assets"), f.get("total_liabilities"),
+                                     f.get("preferred_stock"))
     ncav_ps = round(n / shares, 4) if (n is not None and shares and shares > 0) else None
 
-    debt_pass, debt_ratio = debt_ok(f.get("short_term_debt"),
-                                    f.get("long_term_debt"),
-                                    f.get("stockholders_equity"),
-                                    f.get("total_liabilities"))
+    # The non-debt lines tighten the "debt cannot exceed total liabilities"
+    # bound (non_debt_liabilities). They were written for lululemon and
+    # never passed in: the build fetched none of them, so the bound ran
+    # with nothing subtracted and 428 companies passing every other gate
+    # sat in "could not read" on debt (September 2026).
+    non_debt = non_debt_liabilities(f.get("operating_lease_current"),
+                                    f.get("operating_lease_noncurrent"),
+                                    f.get("accounts_payable"),
+                                    f.get("deferred_revenue"))
+    debt_pass, debt_ratio = ((None, None) if impossible else
+                             debt_ok(f.get("short_term_debt"),
+                                     f.get("long_term_debt"),
+                                     f.get("stockholders_equity"),
+                                     f.get("total_liabilities"),
+                                     non_debt))
     # Presence of the key is the fetcher saying "I looked". An absent
     # dividend series is ambiguous — a non-payer files no dividend facts,
     # and so does a company we failed to fetch — but only the caller knows
@@ -690,6 +734,16 @@ def evaluate(f: dict, this_year: int) -> dict:
     divs = dividend_history(raw_divs, this_year)
     if raw_divs is not None and divs["pays"] is None:
         divs = {**divs, "pays": False}
+    divs = {**divs, "pays_from": "per_share" if divs["pays"] else None}
+    # A PAYER THAT FILES NO PER-SHARE FIGURE STILL PAYS. Many small
+    # companies tag only the cash-flow line — the dollars paid — and the
+    # "definite no" above recorded them as non-payers: 67 of the 1,409
+    # companies Quiet Value also prices, 16 of them clearing every other
+    # gate (Utah Medical, Westwood, Escalade; September 2026). Recent
+    # dollars paid settle "pays"; the cut signal stays on per-share
+    # figures, which the dollars cannot give without a share count.
+    if not divs["pays"] and paid_recently(f.get("div_paid_by_year"), this_year):
+        divs = {**divs, "pays": True, "pays_from": "paid"}
     mgmt = self_dealing(f.get("sbc"), f.get("revenue"), f.get("shares_cagr"),
                         f.get("insider_pct"), f.get("total_assets"))
     surv_pass, surv_yrs = survival(f.get("first_filing_year"), this_year)
@@ -764,19 +818,6 @@ def evaluate(f: dict, this_year: int) -> dict:
     # behind a rejection was.
     known_gates = [v for v in gates.values() if v is not None]
 
-    # A COMPANY CANNOT BE WORTH MORE THAN IT OWNS. Tangible book above
-    # total assets is arithmetically impossible and means one of the two
-    # figures is not what we think it is — Universe Pharmaceuticals came
-    # through with $55.8bn of equity and $17.9bn of revenue on 563,338
-    # shares, which is a nano-cap reporting in something other than the
-    # dollars the frame claimed. Both figures are withheld rather than
-    # published as a $99,110-per-share book value.
-    ta = _num(f.get("total_assets"))
-    impossible = ta is not None and ta > 0 and tb is not None and tb > ta * 1.02
-    if impossible:
-        tb = tb_ps = None
-        n = ncav_ps = None
-
     return {
         "total_assets": ta,
         "implausible": impossible,
@@ -814,6 +855,8 @@ def evaluate(f: dict, this_year: int) -> dict:
         # A new column that ignores an existing guard is the same bug as
         # not having the guard.
         "riklis": ({"ratio": None, "hard": None, "net": None,
+                    "reason": "balance sheet is arithmetically impossible"} if impossible else
+                   {"ratio": None, "hard": None, "net": None,
                     "reason": "market cap and balance sheet are not in the "
                               "same currency"} if fx_suspect else
                    riklis_coverage(f.get("cash"), f.get("receivables"),
@@ -1009,4 +1052,10 @@ def missing_gates(row: dict) -> list[str]:
     """The unmeasured gates, named. A '?' on a page is only honest if the
     reader can find out what was not filed."""
     gates = row.get("gates") or {}
+    if row.get("implausible"):
+        # Filed, but impossible: book value above total assets withholds
+        # every reading of that balance sheet, which is not "not filed".
+        return [("a possible balance sheet (book value above total assets)"
+                 if k in ("assets", "debt") else GATE_LABELS.get(k, k))
+                for k, v in gates.items() if v is None]
     return [GATE_LABELS.get(k, k) for k, v in gates.items() if v is None]

@@ -889,6 +889,15 @@ for _t in ("LOW", "NOW", "SHW", "EW", "TROW", "SNOW", "CDW"):
           f"Edwards, T. Rowe, Snowflake and CDW from every screen, uncounted")
 for _t in ("ACMEW", "ACME-WT", "ACME.WS", "ACME-W"):
     check(SE._is_warrant(_t), f"{_t} is a warrant")
+for _n in ("NETFLIX INC", "PARK AEROSPACE CORP", "Howmet Aerospace Inc.", "Extra Space Storage Inc.",
+           "CENTERSPACE", "GEOSPACE TECHNOLOGIES CORP", "Interspac Logistics", "Getf Holdings"):
+    check(not SE._excluded_keyword(_n, sectors=False),
+          f"{_n} IS A COMPANY — 'etf' and 'spac' matched inside words and dropped it from every universe")
+for _n in ("VanEck Bitcoin ETF", "abrdn Gold ETF Trust", "Calisa Acquisition Corp",
+           "XYZ Acquisition Corporation", "Blank Check Holdings", "Acme SPAC Inc", "Nuveen Closed-End Fund"):
+    check(SE._excluded_keyword(_n, sectors=False), f"{_n} is not an operating company")
+check(SE._excluded_keyword("First Bancorp") and not SE._excluded_keyword("First Bancorp", sectors=False),
+      "the sector words still match as before, and only when asked for")
 _w = build_universe({"1": {"ticker": "LOW", "name": "Lowe's Companies"},
                      "2": {"ticker": "ACMEW", "name": "Acme Holdings"}},
                     {"1": {"exchange": "NYSE"}, "2": {"exchange": "Nasdaq"}},
