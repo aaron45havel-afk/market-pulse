@@ -921,3 +921,23 @@ plus the ranked board.
   above its cap, and what the cap leaves is shown unassigned. The winner is never a debt the fixed steps already pay.
 - **Private**: the page and the save endpoint are admin only; the profile is one JSON row in `capital_profile`.
   Contribution limits default to the IRS 2026 figures and the profile holds the room actually left.
+
+## 2026-10-03 — Email sign-in links: a way in that Google cannot block
+**Why:** the owner signing in with their personal Gmail was stopped by Google itself — "Error 403: org_internal",
+because the Google OAuth app is a Workspace-internal app — before this server was asked. No code here can change
+that check; it is a setting in the Google Cloud project. The owner asked to be let in and never be blocked.
+**Decided:**
+- **A one-time link, mailed to an address on ADMIN_EMAILS / SALES_EMAILS, signs it in** with the same 30-day
+  session Google sign-in sets. Sent through Resend, which the CRM already uses. The link is signed under its own
+  context (it can never pass as a session cookie, nor a session cookie as a link), expires in 15 minutes and works
+  once — recorded under a lock so two racing clicks cannot both sign in.
+- **The link opens a confirm button, not the sign-in**, because mail scanners open links on their own and would
+  use it up.
+- **The answer never reveals who is on the list**: every address is told to check its email; only listed ones get
+  a link. At most 3 links per address and 10 per IP per 15 minutes.
+- **The link points only at this site**: PUBLIC_BASE_URL when set, otherwise the Host the request arrived on —
+  never X-Forwarded-Host, which a caller could set to have a genuine link mailed out pointing at their own server.
+- The Google callback's post-login redirect now uses `_safe_redirect` ("//elsewhere" starts with a slash too), and
+  /capital sends a signed-out visitor to /sign-in, which offers Google, the email link and the admin token.
+- Still the owner's to do: their Gmail must be on ADMIN_EMAILS (Railway). Making the Google app External in Google
+  Cloud would let Google sign-in work for it as well; the app still refuses any address not on the lists.

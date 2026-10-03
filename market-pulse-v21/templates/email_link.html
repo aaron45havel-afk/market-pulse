@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Sign in — Market Pulse{% endblock %}
+{% block content %}
+<style>
+  .el-card { max-width: 420px; margin: 4rem auto 0; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 2rem 1.8rem 1.6rem; box-shadow: 0 8px 28px rgba(0,0,0,0.05); }
+  .el-card h1 { margin: 0 0 0.6rem; font-size: 1.35rem; }
+  .el-card p { color: var(--ink-3); font-size: 0.9rem; line-height: 1.55; margin: 0 0 1rem; }
+  .el-card button { width: 100%; padding: 0.75rem 1rem; border: none; border-radius: 8px; background: var(--accent);
+    color: #fff; font-weight: 700; font-size: 0.95rem; cursor: pointer; }
+  .el-card a { color: var(--accent); }
+</style>
+<div class="el-card">
+  {% if state == "sent" %}
+    <h1>Check your email</h1>
+    <p>If <b>{{ email }}</b> is on the access list, a sign-in link is on its way. It works once and expires in
+      {{ ttl_min }} minutes.</p>
+    <p>Nothing after a few minutes? Check spam, or use the <a href="/admin/login?redirect={{ redirect|urlencode }}">admin token sign-in</a>.</p>
+  {% elif state == "confirm" %}
+    <h1>Sign in</h1>
+    <p>Sign in to Market Pulse as <b>{{ email }}</b>.</p>
+    <form method="post" action="/auth/email/verify">
+      <input type="hidden" name="t" value="{{ token }}">
+      <input type="hidden" name="redirect" value="{{ redirect }}">
+      <button type="submit">Sign in</button>
+    </form>
+  {% else %}
+    <h1>That link has expired</h1>
+    <p>Sign-in links work once and only for a few minutes. <a href="/sign-in?redirect={{ redirect|urlencode }}">Get a new one</a>.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -2088,7 +2088,7 @@ async def capital_page(request: Request):
     after tax and after friction, and this month's pay down a waterfall.
     Private: it reads the owner's pay, taxes, accounts and debts."""
     if not _check_admin_token(request):
-        return RedirectResponse("/admin/login?redirect=/capital", status_code=303)
+        return RedirectResponse("/sign-in?redirect=/capital", status_code=303)
     import capital as K
     from database import get_capital_profile
     saved = get_capital_profile() or {}
@@ -4703,15 +4703,114 @@ async def auth_google_callback(request: Request, code: str = "", state: str = ""
     if not token:
         return JSONResponse({"error": "SESSION_SECRET not set on server."},
                             status_code=500)
-    redirect_to = request.cookies.get(OAUTH_REDIRECT_COOKIE, "/pipeline")
-    if not redirect_to.startswith("/"):
-        redirect_to = "/pipeline"
+    # _safe_redirect, not startswith("/"): "//elsewhere.com" starts with a
+    # slash too, and a browser follows it off-site.
+    redirect_to = _safe_redirect(request.cookies.get(OAUTH_REDIRECT_COOKIE, "/pipeline"))
     secure = request.url.scheme == "https"
     resp = RedirectResponse(redirect_to, status_code=303)
     resp.set_cookie(SESSION_COOKIE, token, max_age=60 * 60 * 24 * 30,
                     httponly=True, secure=secure, samesite="lax")
     resp.delete_cookie(OAUTH_STATE_COOKIE)
     resp.delete_cookie(OAUTH_REDIRECT_COOKIE)
+    return resp
+
+
+# ── Email sign-in links: a way in that Google cannot block ───────────
+# The Google OAuth app is Workspace-internal, so Google turns away any
+# account outside the organisation (Error 403: org_internal) — the owner's
+# own Gmail among them — before this server is involved. These routes sign
+# in an address on ADMIN_EMAILS / SALES_EMAILS by mailing it a one-time link.
+EMAIL_LINK_MAX_PER_ADDRESS = 3       # per 15 minutes
+EMAIL_LINK_MAX_PER_IP = 10
+_EMAIL_LINK_SENT: dict[str, list[float]] = {}
+
+
+def _email_link_rate_ok(key: str, limit: int, window: float = 900.0, now: float | None = None) -> bool:
+    import time as _time
+    t = now if now is not None else _time.time()
+    hits = [x for x in _EMAIL_LINK_SENT.get(key, []) if t - x < window]
+    if len(hits) >= limit:
+        _EMAIL_LINK_SENT[key] = hits
+        return False
+    _EMAIL_LINK_SENT[key] = hits + [t]
+    return True
+
+
+def _site_base(request: Request) -> str:
+    """Where the emailed link points. PUBLIC_BASE_URL when set; otherwise the
+    Host this request arrived on — never X-Forwarded-Host, which a caller can
+    set to have a genuine link mailed out pointing at their own server."""
+    base = os.environ.get("PUBLIC_BASE_URL", "").strip().rstrip("/")
+    if base:
+        return base
+    host = request.headers.get("host") or request.url.netloc
+    proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+    if proto not in ("http", "https"):
+        proto = "https"
+    return f"{proto}://{host}"
+
+
+@app.post("/auth/email/start")
+async def auth_email_start(request: Request):
+    """Mail a one-time sign-in link to an address on the access list. The
+    answer is the same whether or not the address is on it."""
+    from urllib.parse import quote
+    from auth import role_for_email, make_email_link, EMAIL_LINK_TTL
+    form = await request.form()
+    email = str(form.get("email") or "").strip().lower()[:254]
+    redirect = _safe_redirect(str(form.get("redirect") or "/"))
+    ip = request.client.host if request.client else "?"
+    allowed = (bool(email) and "@" in email
+               and _email_link_rate_ok(f"ip:{ip}", EMAIL_LINK_MAX_PER_IP)
+               and _email_link_rate_ok(f"to:{email}", EMAIL_LINK_MAX_PER_ADDRESS)
+               and bool(role_for_email(email)))
+    if allowed:
+        token = make_email_link(email)
+        if not token:
+            logger.error("email sign-in: SESSION_SECRET not set — no link sent")
+        else:
+            from crm import send_via_resend
+            link = f"{_site_base(request)}/auth/email/verify?t={quote(token)}&redirect={quote(redirect)}"
+            res = send_via_resend(
+                to_email=email, subject="Your Market Pulse sign-in link",
+                body=(f"Sign in to Market Pulse:\n\n{link}\n\n"
+                      f"The link works once and expires in {EMAIL_LINK_TTL // 60} minutes. "
+                      "If you didn't ask for it, ignore this email."))
+            if not res.get("ok"):
+                logger.error("email sign-in: send failed: %s", res.get("error"))
+    return templates.TemplateResponse("email_link.html", {
+        "request": request, "state": "sent", "email": email, "redirect": redirect,
+        "ttl_min": EMAIL_LINK_TTL // 60})
+
+
+@app.get("/auth/email/verify")
+async def auth_email_verify_page(request: Request, t: str = "", redirect: str = "/"):
+    """The link lands here: a confirm button, not the sign-in itself, because
+    mail scanners open links on their own and would use it up."""
+    from auth import read_email_link
+    data = read_email_link(t)
+    return templates.TemplateResponse("email_link.html", {
+        "request": request, "state": "confirm" if data else "invalid",
+        "email": (data or {}).get("email", ""), "token": t,
+        "redirect": _safe_redirect(redirect)})
+
+
+@app.post("/auth/email/verify")
+async def auth_email_verify(request: Request):
+    """Use the link once: set the same 30-day session Google sign-in sets."""
+    from auth import SESSION_COOKIE, consume_email_link, role_for_email, make_session
+    form = await request.form()
+    email = consume_email_link(str(form.get("t") or ""))
+    role = role_for_email(email) if email else None
+    token = make_session(email, role) if role else ""
+    if not token:
+        return templates.TemplateResponse("email_link.html", {
+            "request": request, "state": "invalid", "email": "", "redirect": "/"}, status_code=400)
+    resp = RedirectResponse(_safe_redirect(str(form.get("redirect") or "/")), status_code=303)
+    resp.set_cookie(SESSION_COOKIE, token, max_age=60 * 60 * 24 * 30,
+                    httponly=True, secure=(request.url.scheme == "https"
+                                           or request.headers.get("x-forwarded-proto") == "https"),
+                    samesite="lax")
     return resp
 
 

@@ -15,6 +15,12 @@ Env vars:
 
 The legacy ADMIN_TOKEN env var continues to work — anyone hitting
 /admin/login?token=<...> still gets full admin access.
+
+EMAIL SIGN-IN LINKS do not depend on Google at all. The Google OAuth app
+is a Workspace "Internal" app, so Google refuses every account outside
+that organisation (Error 403: org_internal) before this server is asked —
+the owner's personal Gmail included. A one-time link mailed to an address
+on ADMIN_EMAILS / SALES_EMAILS signs that address in the same way.
 """
 from __future__ import annotations
 
@@ -24,6 +30,7 @@ import hmac
 import json
 import os
 import secrets
+import threading
 import time
 import urllib.parse
 import urllib.request
@@ -160,3 +167,77 @@ def google_fetch_userinfo(access_token: str) -> dict | None:
 def new_state() -> str:
     """CSRF state token for the OAuth round-trip."""
     return secrets.token_urlsafe(24)
+
+
+# ── one-time email sign-in links ─────────────────────────────────────
+EMAIL_LINK_TTL = 15 * 60
+# Signed under its own context, so a link token can never pass as a session
+# cookie and a session cookie can never pass as a link.
+_EMAIL_LINK_CONTEXT = b"market-pulse email-link v1\x00"
+_USED_EMAIL_LINKS: dict[str, int] = {}
+_EMAIL_LINK_LOCK = threading.Lock()
+
+
+def _b64(b: bytes) -> str:
+    return base64.urlsafe_b64encode(b).decode("ascii").rstrip("=")
+
+
+def _unb64(s: str) -> bytes:
+    return base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
+
+
+def make_email_link(email: str, ttl: int = EMAIL_LINK_TTL, now: float | None = None) -> str:
+    """A signed, expiring, single-use sign-in token for one address. "" when
+    SESSION_SECRET is not configured."""
+    secret = _session_secret()
+    if not secret or not email:
+        return ""
+    t = int(now if now is not None else time.time())
+    payload = json.dumps({"k": "email-link", "email": email.strip().lower(),
+                          "exp": t + int(ttl), "n": secrets.token_urlsafe(12)},
+                         separators=(",", ":")).encode("utf-8")
+    sig = hmac.new(secret, _EMAIL_LINK_CONTEXT + payload, hashlib.sha256).digest()
+    return _b64(payload) + "." + _b64(sig)
+
+
+def read_email_link(token: str, now: float | None = None) -> dict | None:
+    """{email, exp, n} when the token is genuine, unexpired and unused. Does
+    not use it up — the confirm page reads it, only the button consumes it,
+    because mail scanners open links on their own."""
+    secret = _session_secret()
+    if not secret or not token or "." not in token:
+        return None
+    try:
+        p64, s64 = token.split(".", 1)
+        payload, sig = _unb64(p64), _unb64(s64)
+        expected = hmac.new(secret, _EMAIL_LINK_CONTEXT + payload, hashlib.sha256).digest()
+        if not hmac.compare_digest(sig, expected):
+            return None
+        data = json.loads(payload)
+    except (ValueError, json.JSONDecodeError):
+        return None
+    t = int(now if now is not None else time.time())
+    if (not isinstance(data, dict) or data.get("k") != "email-link"
+            or int(data.get("exp", 0)) < t or not data.get("email")):
+        return None
+    with _EMAIL_LINK_LOCK:
+        if data.get("n") in _USED_EMAIL_LINKS:
+            return None
+    return data
+
+
+def consume_email_link(token: str, now: float | None = None) -> str | None:
+    """The address the link signs in, once. A second use, or a use after it
+    expires, returns None."""
+    data = read_email_link(token, now)
+    if not data:
+        return None
+    t = int(now if now is not None else time.time())
+    with _EMAIL_LINK_LOCK:
+        for n, exp in list(_USED_EMAIL_LINKS.items()):
+            if exp < t:
+                del _USED_EMAIL_LINKS[n]
+        if data["n"] in _USED_EMAIL_LINKS:
+            return None
+        _USED_EMAIL_LINKS[data["n"]] = int(data["exp"])
+    return data["email"]
