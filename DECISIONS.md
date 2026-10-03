@@ -974,6 +974,24 @@ all editable).
 - Saved as typed: the holdings and pay-split boxes keep the owner's lines, so a line the engine cannot read stays in
   the box and is named on the page. No migration — the profile is one JSON row.
 
+## 2026-10-03 — /capital positions import: Chase, a line-by-line check, and naming an account the file does not
+**Why:** the owner sent Chase's (J.P. Morgan Self-Directed Investing) positions export. It names no account at all,
+calls its columns Ticker / Value / Cost, and has no total and no "% of account" to check against.
+**Decided:**
+- **Read by its columns** like the others (Ticker, Value, Cost, Quantity, Price, Asset Class, As of); Chase is known
+  by its "J.P. Morgan Securities" footnotes, after the Schwab title, the file name and Fidelity's/Vanguard's columns
+  (a holding named JPMorgan Chase does not make a file Chase's). Checked against the owner's real export, read locally.
+- **A third check when there is no total**: every line's value must be its quantity × price (to 0.2%) — it catches a
+  misread column, which is what the total checks catch elsewhere. A line that fails is named.
+- **A margin account is taxable**: negative cash, or positions held in the Margin lot type, settle an account the
+  file does not name — retirement accounts cannot borrow. A cash-only account with no name is still asked about.
+- **Naming**: an account the file does not name gets a name field in the preview (default "Account"); the group's
+  key and its margin debt follow the name, so the same name next time replaces the same group. The preview suggests
+  the name the broker's unnamed group was last synced under, and says whether the sync replaces a group or starts
+  one. Two accounts given one name are refused.
+- The profile form's grid now holds its column to the page width — a synced group's five-column table had pushed
+  the whole page 133px wider than a phone.
+
 ## 2026-10-03 — /capital: import a broker's positions export and keep it in sync
 **Why:** the owner exported Schwab's Positions page and asked for it to sync to /capital and fill in the gap — the
 holdings should come from the broker, not be retyped, and whatever the export does not cover stays as typed.

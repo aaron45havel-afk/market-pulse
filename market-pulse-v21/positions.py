@@ -46,16 +46,20 @@ SYNC_END = re.compile(r"^#\s*end sync\s+([a-z0-9][a-z0-9\-]{0,40})\s*$", re.I)
 
 # Header names, normalised (lower case, "(...)" dropped), in the order tried.
 COLUMNS = {
-    "symbol": ("symbol",),
+    "symbol": ("symbol", "ticker"),
     "name": ("description", "investment name", "security description", "name"),
-    "value": ("mkt val", "market value", "current value", "total value"),
-    "basis": ("cost basis total", "cost basis", "total cost basis", "total cost"),
+    "value": ("mkt val", "market value", "current value", "total value", "value"),
+    "basis": ("cost basis total", "cost basis", "total cost basis", "total cost", "cost"),
     "qty": ("qty", "quantity", "shares"),
     "asset": ("asset type", "security type", "asset class"),
     "acct_name": ("account name", "account type"),
     "acct_num": ("account number", "account"),
     "pct": ("percent of account", "of acct", "percent of acct"),
+    "price": ("price", "last price", "share price"),
+    "lot": ("acct type", "type"),            # Cash / Margin, per position (Chase, Fidelity)
+    "as_of": ("as of",),
 }
+UNNAMED = "Account"                          # the label when the file does not name the account
 _CASH_ROWS = {"cash & cash investments", "cash & money market", "cash and money market", "cash", "core position",
               "cash & sweep vehicle"}
 _TOTAL_ROW = re.compile(r"^(positions|account|grand)?\s*totals?\b", re.I)
@@ -109,7 +113,7 @@ def _header_map(row: list[str]) -> dict | None:
 
 def _looks_like_header(row: list[str]) -> bool:
     names = {_norm(c) for c in row}
-    return bool(names & {"symbol", "account number", "trade date", "settlement date"})
+    return bool(names & {"symbol", "ticker", "account number", "trade date", "settlement date"})
 
 
 def _cells(row: list[str]) -> list[str]:
@@ -201,9 +205,10 @@ def _classify(sym: str, name: str, asset: str) -> str:
     return "security"
 
 
-def _broker_of(headers: dict | None, title: str | None, filename: str) -> str:
+def _broker_of(headers: dict | None, title: str | None, filename: str, text: str = "") -> str:
     """Schwab's title line names it; otherwise the file name, otherwise the
-    columns (Fidelity names the account, Vanguard only numbers it)."""
+    columns (Fidelity names the account, Vanguard only numbers it), otherwise
+    Chase's footnotes, which name J.P. Morgan Securities."""
     f = (filename or "").lower()
     if title is not None:
         return "Schwab"
@@ -214,6 +219,8 @@ def _broker_of(headers: dict | None, title: str | None, filename: str) -> str:
         return "Fidelity"
     if headers and "acct_num" in headers:
         return "Vanguard"
+    if re.search(r"J\.\s?P\.\s?Morgan Securities", text or "") or "chase" in f:
+        return "Chase"
     return "Broker"
 
 
@@ -240,7 +247,7 @@ def parse_export(text: str, filename: str = "") -> dict:
 
     def account(label: str, num: str | None = None) -> dict:
         mask = mask_of(num) if num else mask_of(label)
-        clean_label = re.sub(r"\s+", " ", (label or "").strip()) or "Account"
+        clean_label = re.sub(r"\s+", " ", (label or "").strip()) or UNNAMED
         if num and mask and mask not in clean_label:
             clean_label = f"{clean_label} …{mask}"
         clean_label = re.sub(r"\.\.\.\s*", "…", clean_label)
@@ -249,7 +256,7 @@ def parse_export(text: str, filename: str = "") -> dict:
         if k not in accounts:
             typ, sure = account_type(label)
             accounts[k] = {"key": k, "mask": mask, "label": clean_label[:60], "account": typ, "sure": sure,
-                           "positions": [],
+                           "positions": [], "margin_lots": False, "unnamed": clean_label == UNNAMED and not mask,
                            "cash": 0.0, "margin": 0.0, "reported": None, "skipped": []}
             order.append(k)
         return accounts[k]
@@ -304,9 +311,13 @@ def parse_export(text: str, filename: str = "") -> dict:
             nm = cell("acct_name")
             if not num and not nm:
                 continue
-            acct = account(nm or "Account", num or None)
+            acct = account(nm or UNNAMED, num or None)
         else:
-            acct = current or account("Account")
+            acct = current or account(UNNAMED)
+        if as_of is None and cell("as_of"):
+            as_of = _as_of(cell("as_of"))
+        if cell("lot").lower() == "margin":
+            acct["margin_lots"] = True
         name = cell("name")
         sym = _symbol(sym_raw)
         kind = _classify(sym, name, cell("asset"))
@@ -343,9 +354,10 @@ def parse_export(text: str, filename: str = "") -> dict:
             prev["qty"] = None if prev["qty"] is None or _money(cell("qty")) is None else prev["qty"] + _money(cell("qty"))
             continue
         acct["positions"].append({"symbol": sym, "name": (name or sym)[:60], "value": value, "basis": basis,
-                                  "qty": _money(cell("qty")), "kind": kind, "pct": _money(cell("pct").rstrip("%"))})
+                                  "qty": _money(cell("qty")), "kind": kind, "pct": _money(cell("pct").rstrip("%")),
+                                  "price": _money(cell("price"))})
 
-    broker = _broker_of(first_header, title, filename)
+    broker = _broker_of(first_header, title, filename, text)
     out = []
     for k in order:
         a = accounts[k]
@@ -356,6 +368,9 @@ def parse_export(text: str, filename: str = "") -> dict:
                                f"keeps ({MAX_POSITIONS}).")
         a["broker"] = broker
         a["key"] = f"{broker.lower()}-{a['key']}"
+        if not a["sure"] and (a["margin"] > 0 or a.pop("margin_lots")):
+            a["account"], a["sure"] = "taxable", True        # a margin account: retirement accounts cannot borrow
+        a.pop("margin_lots", None)
         held = sum(p["value"] for p in a["positions"])
         a["value"] = round(held + a["cash"] - a["margin"], 2)
         skipped = sum(s["value"] or 0 for s in a["skipped"])
@@ -368,7 +383,13 @@ def parse_export(text: str, filename: str = "") -> dict:
                 a["reported"] = round(big["value"] / (big["pct"] / 100), 2)
                 a["check_from"] = "percent"
                 tol = max(MATCH_TOLERANCE, 2 * a["reported"] * 0.005 / big["pct"])
-        if a["reported"] is None:
+        priced = [p for p in a["positions"] if p.get("qty") is not None and p.get("price") is not None]
+        if a["reported"] is None and a["positions"] and len(priced) == len(a["positions"]):
+            # no total at all (Chase): each line's value must be its quantity × price
+            bad = [p["symbol"] for p in priced
+                   if abs(p["value"] - p["qty"] * p["price"]) > max(MATCH_TOLERANCE, 0.002 * abs(p["value"]))]
+            a["check"], a["check_from"], a["check_bad"] = ("off" if bad else "ok"), "lines", bad
+        elif a["reported"] is None:
             a["check"] = None
         else:
             a["check"] = "ok" if abs(a["value"] + skipped - a["reported"]) <= tol else "off"
@@ -515,10 +536,24 @@ def margin_debt_name(a: dict) -> str:
     return (f"{a['broker']} margin …{a['mask']}" if a.get("mask") else f"{a['broker']} margin {a['label']}")[:40]
 
 
+def slug(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", str(name or "").lower()).strip("-")[:20]
+
+
+def named(a: dict, name) -> dict:
+    """An account the file does not name, under the name the owner gives it —
+    the same name next time puts the next export in the same group."""
+    nm = re.sub(r"[^A-Za-z0-9 &'\-]", "", str(name or "")).strip()[:30]
+    if not a.get("unnamed") or not nm or not slug(nm):
+        return a
+    return {**a, "label": nm, "key": f"{a['broker'].lower()}-{slug(nm)}"}
+
+
 def apply_import(saved: dict, parsed: dict, choices: dict) -> tuple[dict, str]:
     """The profile with the chosen accounts synced → (profile, a one-line
-    summary). choices: {"accounts": {key: {"include": bool, "account": str}},
-    "margin_apr": {key: number}, "remove": [line text, ...]}."""
+    summary). choices: {"accounts": {key: {"include": bool, "account": str,
+    "name": str}}, "margin_apr": {key: number}, "remove": [line text, ...]} —
+    keyed by the key the preview showed."""
     picks = choices.get("accounts") if isinstance(choices.get("accounts"), dict) else {}
     aprs = choices.get("margin_apr") if isinstance(choices.get("margin_apr"), dict) else {}
     chosen = []
@@ -529,7 +564,9 @@ def apply_import(saved: dict, parsed: dict, choices: dict) -> tuple[dict, str]:
         typ = A.account_of(c.get("account")) if c.get("account") else (a["account"], False)
         if typ is None or typ[0] in ("cash", "debt"):
             raise CannotImport(f"{a['label']}: choose the kind of account it is.")
-        chosen.append({**a, "account": typ[0]})
+        chosen.append({**named(a, c.get("name")), "account": typ[0], "_seen_as": a["key"]})
+    if len({a["key"] for a in chosen}) < len(chosen):
+        raise CannotImport("Two accounts were given the same name — give each its own.")
     if not chosen:
         raise CannotImport("No account chosen to sync.")
     p = K.profile_with_defaults(saved)
@@ -542,7 +579,7 @@ def apply_import(saved: dict, parsed: dict, choices: dict) -> tuple[dict, str]:
         name = margin_debt_name(a)
         debts = [d for d in debts if d.get("name") != name]
         if a["margin"] > 0:
-            apr = K._f(aprs.get(a["key"]), None)
+            apr = K._f(aprs.get(a["_seen_as"]), None)
             if apr is None or not 0 <= apr <= 40:
                 raise CannotImport(f"{a['label']} has a ${a['margin']:,.0f} margin loan — give its rate (APR).")
             debts.append({"name": name, "balance": a["margin"], "apr": apr})

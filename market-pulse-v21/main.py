@@ -2232,10 +2232,18 @@ async def capital_import_preview(request: Request):
     before = {b["key"]: P.describe_block(b) for b in P.blocks_in(text)}
     debts = {d.get("name"): d for d in saved.get("debts") or [] if isinstance(d, dict)}
     for a in parsed["accounts"]:
-        a["synced_before"] = before.get(a["key"])
-        old = debts.get(P.margin_debt_name(a))
+        as_named = a
+        if a.get("unnamed"):
+            # the file does not name it: suggest the name its last export was synced under
+            mine = [d for k, d in before.items() if k.startswith(a["broker"].lower() + "-") and not k[-1].isdigit()]
+            a["name"] = mine[0]["label"].split(" · ", 1)[-1] if len(mine) == 1 else P.UNNAMED
+            as_named = P.named(a, a["name"])
+        a["synced_before"] = before.get(as_named["key"])
+        old = debts.get(P.margin_debt_name(as_named))
         a["margin_apr"] = old.get("apr") if old else None
-    return JSONResponse({**parsed, "overlaps": P.overlaps(text, parsed["accounts"])})
+    return JSONResponse({**parsed, "overlaps": P.overlaps(text, parsed["accounts"]),
+                         "synced": {k: d["as_of"] for k, d in before.items()},
+                         "debt_aprs": {d["name"]: d.get("apr") for d in debts.values() if " margin " in str(d.get("name"))}})
 
 
 @app.post("/api/capital/import/apply")

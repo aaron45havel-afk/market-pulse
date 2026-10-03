@@ -274,7 +274,7 @@ Format: `- [PHASE-SEEN] item — why it matters`
 - [CAPITAL-WHATIF-SPLIT] A what-if move draws from one holding; a move funded from several (e.g. $30k from savings
   and $20k from VTI into one deal) would need a list of sources.
 - [CAPITAL-SYNC-FORMATS] The Vanguard reader follows its published columns but has not seen a real export; confirm
-  it with one and adjust. Schwab's and Fidelity's were checked against real files.
+  it with one and adjust. Schwab's, Fidelity's and Chase's were checked against real files.
 - [CAPITAL-WINDOW] Stocks in a 401(k) brokerage window (BrokerageLink, PCRA) are measured as plan funds at the market
   return, with no research time, and are not offered moves into the picks. A per-line "window" flag would let the
   board rate them as picks and use the picks as a destination inside that 401(k).
