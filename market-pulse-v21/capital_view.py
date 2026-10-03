@@ -139,7 +139,9 @@ def once_steps(board: dict) -> list[dict]:
             return max(0.0, h["basis"] - h["value"]) * x["sold"] / h["value"]
         loss = sum(realized(x) for x in g["parts"])
         out.append({
-            "id": _sid(*sorted((x["from_id"], x["to_id"], round(x["sold"])) for x in g["parts"])),
+            # what moves where — not how many dollars: with live prices the
+            # amount drifts between loading the page and pressing Mark done
+            "id": _sid(*sorted((x["from_id"], x["to_id"]) for x in g["parts"])),
             "type": "once", "kind": m["to_kind"], "title": title, "note": note,
             "what": f"{_money(g['sold'])} from {' + '.join(names)} → {_short_to(m)}",
             "impact": round(g["impact"], 2), "tax": round(g["tax"], 2), "cost": round(g["cost"], 2),
@@ -505,7 +507,8 @@ def synced(p: dict, today: date) -> list[dict]:
                     "value": round(sum(r["value"] for r in mine), 2),
                     "rows": [{"name": r["name"], "account": "tbills" if r["state_exempt"] else EDIT_ACCOUNT[r["account"]],
                               "account_label": "T-bills" if r["state_exempt"] else _cap(A.ACCOUNT_LABEL[r["account"]]),
-                              "value": r["value"], "basis": r["basis"], "rate": r["rate"]} for r in mine]})
+                              "value": r["value"], "basis": r["basis"], "rate": r["rate"], "qty": r.get("qty")}
+                             for r in mine]})
     return out
 
 
@@ -573,12 +576,35 @@ def _ago(days: int | None) -> str:
     return "today" if days <= 0 else ("yesterday" if days == 1 else f"{days} days ago")
 
 
+def live_summary(board: dict, now=None) -> dict | None:
+    """What the live prices did: how many holdings are priced, as of when
+    (New York time), today's move in dollars, which tickers kept their last
+    synced value. None when no holding has a share count."""
+    lv = board.get("live")
+    if not lv or not lv.get("of"):
+        return None
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+    import stock_lookup as SL
+    ny = ZoneInfo("America/New_York")
+    label = None
+    if lv.get("as_of"):
+        t = datetime.fromisoformat(lv["as_of"]).astimezone(ny)
+        today_ny = (now or datetime.now(timezone.utc)).astimezone(ny).date()
+        label = t.strftime("%-I:%M %p ET") + ("" if t.date() == today_ny else t.strftime(", %b %-d"))
+    held = sum(x["value"] for x in lv["lines"].values())
+    day = lv.get("day_change") or 0.0
+    return {"priced": lv["priced"], "of": lv["of"], "as_of": label, "day_change": round(day, 2),
+            "day_pct": round(day / (held - day) * 100, 2) if held - day > 0 else None,
+            "missing": lv.get("missing") or [], "open": SL.market_open(now)}
+
+
 def headline(board: dict) -> dict:
     p = board["profile"]
     cur = board.get("current") or {}
     hold = cur.get("holdings")
     mix = hold["bars_now"] if hold else []
-    return {"net_worth": K._f(p.get("_net_worth")), "mix": mix, "has_holdings": bool(hold and hold.get("base")),
+    return {"net_worth": K._f(p.get("_net_worth")), "mix": mix, "live": live_summary(board), "has_holdings": bool(hold and hold.get("base")),
             "now_pct": hold.get("now_pct") if hold else None, "opt_pct": hold.get("opt_pct") if hold else None,
             "now_dollars": hold.get("now_dollars") if hold else None, "opt_dollars": hold.get("opt_dollars") if hold else None,
             "gap": hold.get("gap_dollars") if hold else None, "one_time": hold.get("one_time") if hold else None,
@@ -635,7 +661,8 @@ def build_view(board: dict, today: date | None = None) -> dict:
     hold_rows, hold_bad = _typed_holdings(p)
     flow_rows, flow_bad = A.parse_flows(p.get("current_monthly"))
     editor = {"holdings": [{"name": h["name"], "account": "tbills" if h["state_exempt"] else EDIT_ACCOUNT[h["account"]],
-                            "value": h["value"], "basis": h["basis"], "rate": h["rate"]} for h in hold_rows],
+                            "value": h["value"], "basis": h["basis"], "rate": h["rate"], "qty": h.get("qty")}
+                           for h in hold_rows],
               "holdings_bad": hold_bad, "synced": synced(p, today),
               "flows": [{"name": f["name"], "account": "tbills" if f["state_exempt"] else EDIT_ACCOUNT[f["account"]],
                          "amount": f["amount"], "rate": f["rate"]} for f in flow_rows],

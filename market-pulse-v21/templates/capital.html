@@ -198,7 +198,14 @@
   .cx-form h4 { margin: 4px 0 0; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-3); font-family: var(--sans); }
   .cx-rows { display: grid; gap: 6px; }
   .cx-row { display: grid; gap: 8px; align-items: center; }
-  .cx-row.hold { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.7fr) 28px; }
+  .cx-row.hold { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.6fr) minmax(0, 0.8fr) 28px; }
+  .cx-live { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.78rem; color: var(--ink-3); margin-top: 4px; }
+  .cx-live b { color: var(--ink-2); font-weight: 600; }
+  .cx-live .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-4); flex: none; }
+  .cx-live .dot.on { background: var(--mint); box-shadow: 0 0 0 3px var(--mint-soft); }
+  .cx-live .up { color: var(--mint-ink); } .cx-live .down { color: var(--coral-ink); }
+  .cx-live-r { color: var(--primary); text-decoration: none; margin-left: 2px; } .cx-live-r:hover { text-decoration: underline; }
+  .cx-t .up { color: var(--mint-ink); } .cx-t .down { color: var(--coral-ink); }
   .cx-row.flow { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 0.7fr) 28px; }
   .cx-row.debt { grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.9fr) minmax(0, 0.7fr) minmax(0, 0.9fr) 28px; }
   .cx-row input, .cx-row select { width: 100%; }
@@ -381,6 +388,11 @@
       <div>
         <div class="cx-eyebrow">Net worth</div>
         <div class="cx-big num">{{ money(h.net_worth) }}</div>
+        {% if h.live %}{% set lv = h.live %}
+        <div class="cx-live" title="{{ lv.priced }} of {{ lv.of }} holdings with a share count are at live prices{% if lv.missing %}; {{ lv.missing|join(', ') }} kept {{ 'its' if lv.missing|length == 1 else 'their' }} last value{% endif %}">
+          <span class="dot{{ ' on' if lv.open else '' }}" aria-hidden="true"></span>{% if lv.priced %}<b>Live</b>{% if lv.as_of %} · prices {{ lv.as_of }}{% endif %}{% if lv.day_change %} · today <span class="{{ 'up' if lv.day_change >= 0 else 'down' }}">{{ smoney(lv.day_change) }}{% if lv.day_pct is not none %} ({{ pct(lv.day_pct, 2) }}){% endif %}</span>{% endif %}{% else %}<b>Prices unavailable</b> · values as last synced{% endif %}{% if lv.missing and lv.priced %} · {{ lv.missing|length }} stale{% endif %}
+          <a href="/capital?fresh=1" class="cx-live-r">Refresh</a></div>
+        {% endif %}
         {% if h.mix %}
         <div class="cx-stack" aria-hidden="true">{% for b in h.mix %}<i class="b-{{ b.bucket }}" style="width:{{ b.pct }}%"></i>{% endfor %}</div>
         <div class="cx-legend">{% for b in h.mix %}<span><i class="cx-dot b-{{ b.bucket }}"></i>{{ b.label|replace(' equity', '') }} <b>{{ pct(b.pct, 0) }}</b></span>{% endfor %}</div>
@@ -685,7 +697,8 @@
       <tr><th>Holding</th><th class="r">Value</th><th class="r">Return now</th><th>Plan</th></tr>
       {% for i in hold["items"] %}
       <tr><td>{% if i.ticker %}<span class="cx-sym">{{ i.label }}</span>{% else %}{{ i.label }}{% endif %} <span class="s">{{ i.account_label }}</span><div class="s">{{ i.src or i.why_not or '' }}</div></td>
-        <td class="r num">{{ money(i.value) }}{% if i.weq < 1 %}<div class="s" title="Counted at its after-tax value in the totals">×{{ '%.2f'|format(i.weq) }} after tax</div>{% endif %}</td>
+        {% set lp = (board.live.lines.get(i.line) if board.live and i.line is not none else none) %}
+        <td class="r num">{{ money(i.value) }}{% if lp %}<div class="s">{{ '{:,.4f}'.format(lp.qty).rstrip('0').rstrip('.') }} sh × ${{ '{:,.2f}'.format(lp.price) }}{% if lp.day_pct is not none %} · <span class="{{ 'up' if lp.day_pct >= 0 else 'down' }}">{{ pct(lp.day_pct, 2) }}</span>{% endif %}</div>{% endif %}{% if i.weq < 1 %}<div class="s" title="Counted at its after-tax value in the totals">×{{ '%.2f'|format(i.weq) }} after tax</div>{% endif %}</td>
         <td class="r num">{{ pct(i.h) }}</td>
         <td>{% if i.status == 'move' %}<span class="cx-chip ok">Move {{ money(i.moved) }}</span>{% elif i.status == 'keep' %}<span class="cx-chip muted">Keep</span>{% else %}<span class="cx-chip warn">Not measured</span>{% endif %}
           {% if i.status == 'keep' and i.keep_reason %}<div class="s">{{ i.keep_reason }}</div>{% endif %}</td></tr>
@@ -871,14 +884,14 @@
               <button class="cp-linkbtn" type="button" data-sync-unlink title="Turn these into lines you edit by hand">Edit by hand</button>
               <button class="cp-linkbtn" type="button" data-sync-drop>Remove</button></div>
             <div class="cx-scroll"><table class="cx-t"><tr><th>Holding</th><th>Account</th><th class="r">Value</th><th class="r">Cost basis</th><th class="r">Return</th></tr>
-              {% for r in b.rows %}<tr><td>{{ r.name }}</td><td>{{ r.account_label }}</td><td class="r">{{ money(r.value) }}</td><td class="r">{{ money(r.basis) if r.basis is not none else '—' }}</td><td class="r">{{ '%g'|format(r.rate) ~ '%' if r.rate is not none else 'auto' }}</td></tr>{% endfor %}
+              {% for r in b.rows %}<tr><td>{{ r.name }}{% if r.qty %}<div class="s">{{ '{:,.4f}'.format(r.qty).rstrip('0').rstrip('.') }} sh</div>{% endif %}</td><td>{{ r.account_label }}</td><td class="r">{{ money(r.value) }}</td><td class="r">{{ money(r.basis) if r.basis is not none else '—' }}</td><td class="r">{{ '%g'|format(r.rate) ~ '%' if r.rate is not none else 'auto' }}</td></tr>{% endfor %}
             </table></div>
           </div>
           {% endfor %}
           <div class="cx-rows" data-editor="holdings">
-            <div class="cx-row hold"><span class="eh">Name or ticker</span><span class="eh">Account</span><span class="eh">Value</span><span class="eh">Cost basis</span><span class="eh">Return</span><span></span></div>
+            <div class="cx-row hold"><span class="eh">Name or ticker</span><span class="eh">Account</span><span class="eh">Value</span><span class="eh">Cost basis</span><span class="eh">Return</span><span class="eh">Shares</span><span></span></div>
             {% for r in ed.holdings %}
-            <div class="cx-row hold"><input aria-label="Name or ticker" data-c="name" value="{{ r.name }}"><select aria-label="Account" data-c="account">{% for v, l in accounts %}<option value="{{ v }}" {{ 'selected' if v == r.account else '' }}>{{ l }}</option>{% endfor %}</select><input aria-label="Value" data-c="value" type="number" value="{{ num(r.value) }}"><input aria-label="Cost basis" data-c="basis" type="number" value="{{ num(r.basis) }}" placeholder="taxable only"><input aria-label="Return" data-c="rate" value="{{ num(r.rate) ~ '%' if r.rate is not none else '' }}" placeholder="auto"><button class="cx-x" type="button" aria-label="Remove">×</button></div>
+            <div class="cx-row hold"><input aria-label="Name or ticker" data-c="name" value="{{ r.name }}"><select aria-label="Account" data-c="account">{% for v, l in accounts %}<option value="{{ v }}" {{ 'selected' if v == r.account else '' }}>{{ l }}</option>{% endfor %}</select><input aria-label="Value" data-c="value" type="number" value="{{ num(r.value) }}"><input aria-label="Cost basis" data-c="basis" type="number" value="{{ num(r.basis) }}" placeholder="taxable only"><input aria-label="Return" data-c="rate" value="{{ num(r.rate) ~ '%' if r.rate is not none else '' }}" placeholder="auto"><input aria-label="Shares" data-c="qty" type="number" step="any" value="{{ ('%.6f'|format(r.qty)).rstrip('0').rstrip('.') if r.qty else '' }}" placeholder="for live value"><button class="cx-x" type="button" aria-label="Remove">×</button></div>
             {% endfor %}
           </div>
           {% if ed.holdings_bad %}<label class="cx-bad">Lines that could not be read — fix or delete: <textarea data-bad="holdings" rows="2" style="width:100%">{{ ed.holdings_bad|join('\n') }}</textarea></label>{% endif %}
@@ -1395,7 +1408,7 @@
   const ACCOUNTS = {{ accounts|tojson }};
   const opts = (list, sel) => list.map(([v, l]) => `<option value="${v}"${v === sel ? ' selected' : ''}>${l}</option>`).join('');
   const ROW = {
-    holdings: () => `<div class="cx-row hold"><input aria-label="Name or ticker" data-c="name"><select aria-label="Account" data-c="account">${opts(ACCOUNTS, 'taxable')}</select><input aria-label="Value" data-c="value" type="number"><input aria-label="Cost basis" data-c="basis" type="number" placeholder="taxable only"><input aria-label="Return" data-c="rate" placeholder="auto"><button class="cx-x" type="button" aria-label="Remove">×</button></div>`,
+    holdings: () => `<div class="cx-row hold"><input aria-label="Name or ticker" data-c="name"><select aria-label="Account" data-c="account">${opts(ACCOUNTS, 'taxable')}</select><input aria-label="Value" data-c="value" type="number"><input aria-label="Cost basis" data-c="basis" type="number" placeholder="taxable only"><input aria-label="Return" data-c="rate" placeholder="auto"><input aria-label="Shares" data-c="qty" type="number" step="any" placeholder="for live value"><button class="cx-x" type="button" aria-label="Remove">×</button></div>`,
     flows: () => `<div class="cx-row flow"><input aria-label="What" data-c="name"><select aria-label="Account" data-c="account">${opts(ACCOUNTS.concat([['debt', 'Debt payment']]), 'taxable')}</select><input aria-label="Amount a month" data-c="amount" type="number"><input aria-label="Return" data-c="rate" placeholder="auto"><button class="cx-x" type="button" aria-label="Remove">×</button></div>`,
     debts: () => `<div class="cx-row debt"><input aria-label="Name" data-c="name"><input aria-label="Balance" data-c="balance" type="number"><input aria-label="APR" data-c="apr" type="number" step="0.01"><input aria-label="Payment a month" data-c="payment" type="number"><button class="cx-x" type="button" aria-label="Remove">×</button></div>`,
   };
@@ -1415,7 +1428,7 @@
       const g = c => (r.querySelector(`[data-c="${c}"]`) || {}).value || '';
       const name = clean(g('name'));
       if (!name) return null;
-      if (kind === 'holdings') return [name, g('account'), clean(g('value')), clean(g('basis')), pctv(g('rate'))].filter((x, i) => i < 3 || x).join(', ');
+      if (kind === 'holdings') { const q = clean(g('qty')); return [name, g('account'), clean(g('value')), clean(g('basis')), pctv(g('rate')), q ? q + ' sh' : ''].filter((x, i) => i < 3 || x).join(', '); }
       if (kind === 'flows') return [name, g('account'), clean(g('amount')), pctv(g('rate'))].filter((x, i) => i < 3 || x).join(', ');
       return [name, clean(g('balance')), clean(g('apr')), clean(g('payment'))].filter((x, i) => i < 3 || x).join(', ');
     }).filter(Boolean);
@@ -1438,6 +1451,7 @@
         set('name', r.name); set('account', r.account); set('value', r.value);
         if (r.basis != null) set('basis', r.basis);
         if (r.rate != null) set('rate', r.rate + '%');
+        if (r.qty) set('qty', r.qty);
       });
       box.remove(); toast('Now lines you edit — save to keep the change.');
     }

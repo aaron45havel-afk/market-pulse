@@ -422,3 +422,68 @@ def get_price(ticker: str, fetch=None, quote=None) -> dict:
         if got:
             return {"symbol": t, **got, "source": "nasdaq"}
     return {"error": f"No price for {t} right now."}
+
+
+# ── live prices for a whole portfolio (/capital) ─────────────────────
+# One lookup per ticker through get_price, in parallel, held in memory: 15
+# minutes while the US market is open, an hour otherwise (the last close does
+# not move). The page waits at most LIVE_BUDGET_SEC; a ticker not back by then
+# keeps its last known value and is named as stale.
+LIVE_TTL_OPEN = 15 * 60
+LIVE_TTL_CLOSED = 60 * 60
+LIVE_BUDGET_SEC = 6.0
+_LIVE: dict[str, tuple[float, dict]] = {}
+
+
+def market_open(now=None) -> bool:
+    """Regular US hours, 9:30–16:00 New York time, Monday to Friday
+    (exchange holidays are not known here — a holiday reads as open and is
+    merely refreshed more often than it needs to be)."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    t = (now or datetime.now(ZoneInfo("UTC"))).astimezone(ZoneInfo("America/New_York"))
+    return t.weekday() < 5 and (9, 30) <= (t.hour, t.minute) < (16, 0)
+
+
+def live_prices(tickers, *, get=None, now=None, clock=None, budget=LIVE_BUDGET_SEC, fresh=False) -> dict:
+    """{ticker: {"price", "day_change", "day_change_pct", "as_of", "source"}}
+    for every ticker priced within the budget; tickers that fail are absent."""
+    import time
+    from concurrent.futures import ThreadPoolExecutor, wait
+    from datetime import datetime, timezone
+    clock = clock or time.time
+    get = get or get_price
+    ttl = LIVE_TTL_OPEN if market_open(now) else LIVE_TTL_CLOSED
+    out, todo = {}, []
+    for t in dict.fromkeys(str(x).upper() for x in tickers or [] if x):
+        hit = _LIVE.get(t)
+        if hit and not fresh and clock() - hit[0] < ttl:
+            out[t] = hit[1]
+        else:
+            todo.append(t)
+    if not todo:
+        return out
+
+    def one(t):
+        q = get(t)
+        if q.get("price") is None:
+            return t, None
+        return t, {"price": float(q["price"]), "day_change": q.get("day_change"),
+                   "day_change_pct": q.get("day_change_pct"), "source": q.get("source"),
+                   "as_of": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    pool = ThreadPoolExecutor(max_workers=min(8, len(todo)))
+    try:
+        futs = [pool.submit(one, t) for t in todo]
+        done, _ = wait(futs, timeout=budget)
+        for f in done:
+            try:
+                t, q = f.result()
+            except Exception as e:  # noqa: BLE001 — one bad ticker must not blank the rest
+                logger.info(f"live price: {e}")
+                continue
+            if q:
+                _LIVE[t] = (clock(), q)
+                out[t] = q
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
+    return out

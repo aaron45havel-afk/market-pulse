@@ -922,13 +922,39 @@ def waterfall(p: dict, ranked: list[dict], today: date | None = None) -> dict:
 # THE BOARD — read every page
 # ═══════════════════════════════════════════════════════════════════
 
-def build(p: dict, *, today: date | None = None, sources: dict | None = None) -> dict:
+def build(p: dict, *, today: date | None = None, sources: dict | None = None, fresh_prices: bool = False) -> dict:
     """Every use of capital, scored, ranked, and this month's waterfall.
     `sources` lets tests pass each page's rows; otherwise each page's own
-    module is read, and a page that fails is named, not hidden."""
-    p = profile_with_defaults(p)
+    module is read, and a page that fails is named, not hidden.
+
+    LIVE: a holdings line with a share count is valued at the live price
+    before anything else reads it (allocation.reprice) — net worth, the
+    board, Do next, What if and the plan all see today's values, and the
+    steps that edit holdings edit the repriced lines. Tests pass "prices"
+    (or none: no network)."""
+    import allocation as A
     errors: dict[str, str] = {}
     src = dict(sources or {})
+    live = None
+    rows0 = A.parse_holdings((p or {}).get("holdings"))[0]
+    want = A.priceable(rows0)
+    if want:
+        if "prices" in src:
+            prices = src["prices"]
+        elif sources is not None:
+            prices = {}
+        else:
+            try:
+                import stock_lookup as SL
+                prices = SL.live_prices(want, fresh=fresh_prices)
+            except Exception as e:  # noqa: BLE001 — no prices: the values as last synced
+                errors["live prices"] = f"{type(e).__name__}: {e}"
+                prices = {}
+        text, live = A.reprice(p.get("holdings"), prices)
+        live.update(prices={t: prices[t] for t in want if t in prices},
+                    as_of=max((q.get("as_of") or "" for q in prices.values()), default="") or None)
+        p = {**p, "holdings": text}
+    p = profile_with_defaults(p)
 
     def load(name, fn):
         if name in src:
@@ -965,7 +991,7 @@ def build(p: dict, *, today: date | None = None, sources: dict | None = None) ->
     free = monthly_free if delay is not None else 0.0
     scored = rank(apply_re_cap([friction(r, p, monthly_free=free, cash_free=cash_free, delay_months=delay or 0)
                                 for r in rows], p, monthly_free=free))
-    out = {"profile": p, "rows": scored, "plan": waterfall(p, scored, today),
+    out = {"profile": p, "rows": scored, "plan": waterfall(p, scored, today), "live": live,
            "errors": errors, "mortgage_rate": rate, "monthly_free": free,
            "counts": {k: sum(1 for r in scored if r["kind"] == k) for k in ("stock", "re", "debt", "tbill", "wrapper")}}
     # The month-by-month plan says when pay alone clears each debt — and so
@@ -983,7 +1009,20 @@ def build(p: dict, *, today: date | None = None, sources: dict | None = None) ->
             months = payoff.get(name, {}).get("months")
             r["detail"] = {**r["detail"], "payoff_months": months, "payoff_label": payoff.get(name, {}).get("label"),
                            "hold_rate": debt_hold_rate(_f(r["ret_after"]), months, p)}
-    import allocation as A
+    # The top picks a step would buy, priced too (live pages only): a pick
+    # bought through Mark done is written with its share count, so it stays live.
+    if sources is None:
+        picks = [r["detail"]["ticker"] for r in A.sleeve_of(out)]
+        if picks:
+            try:
+                import stock_lookup as SL
+                got = SL.live_prices(picks, fresh=fresh_prices)
+            except Exception as e:  # noqa: BLE001
+                errors["live prices"] = f"{type(e).__name__}: {e}"
+                got = {}
+            out["live"] = out["live"] or {"lines": {}, "priced": 0, "of": 0, "missing": [], "change": 0.0,
+                                          "day_change": 0.0, "prices": {}, "as_of": None}
+            out["live"]["prices"] = {**got, **out["live"]["prices"]}
     try:
         out["current"] = A.compare(out, today)
     except Exception as e:  # noqa: BLE001 — the comparison must not blank the board

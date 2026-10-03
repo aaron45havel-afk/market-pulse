@@ -291,8 +291,9 @@ Format: `- [PHASE-SEEN] item — why it matters`
   the switch test tax short-term lots at ordinary rates and pick the lots to sell (pairs with CAPITAL-LOTS).
 - [CAPITAL-SYNC-401K] 401(k) record-keepers (Fidelity NetBenefits, Empower, Vanguard plans) export differently; the
   plan's funds are typed by hand for now.
-- [CAPITAL-SYNC-LIVE] Synced lines hold the export's values until the next export; quantities × live prices could
-  keep them current between exports (the ticker price lookup exists), with the export as the check.
+- [CAPITAL-LIVE-NEXT] Live values cover lines with a share count. Next: a net-worth snapshot each day (history and
+  alerts — the owner's option 2), a what-if ticker buy written with its share count (only the board's picks are
+  priced on a live build), and holidays in market_open (a holiday reads as open, so it is merely refreshed more).
 - [CAPITAL-SYNC-API] A direct broker connection (Schwab's trader API, or an aggregator) instead of a file needs an
   OAuth app, stored refresh tokens and a security review — not started.
 - [CAPITAL-PHASE3] /capital phase 3: a dated record of the board and an alert when the top use changes.
