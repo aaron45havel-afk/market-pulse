@@ -106,7 +106,7 @@ def _step_text(g: dict, p: dict, debts: dict, holdings: dict) -> tuple[str, str]
     loss = (h.get("basis") or 0) - (h.get("value") or 0)
     if loss > 0.5:
         return (f"Sell {name} at a loss, buy the picks",
-                f"Selling realizes a {_money(loss)} loss, which lowers this year's tax — see Taxes.")
+                f"Selling realizes a {_money(loss)} loss — against $3,000 of pay a year in all, the rest carried forward; see Taxes.")
     if g["tax"] > 0.5:
         return (f"Switch {name} to the top picks", "Worth it even after the capital-gains tax on the gain.")
     return (f"Switch {name} to the top picks", "No gain to tax, and the picks earn more after tax.")
