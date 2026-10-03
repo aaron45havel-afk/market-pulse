@@ -317,18 +317,25 @@ from jinja2 import Environment, FileSystemLoader  # noqa: E402
 env = Environment(loader=FileSystemLoader(os.path.join(ROOT, "templates")))
 env.globals.update(is_admin=lambda r: True, current_user=lambda r: None, pipeline_access=lambda r: False)
 req = SimpleNamespace(url=SimpleNamespace(path="/capital"), query_params={})
-html = env.get_template("capital.html").render(request=req, board=B, p=B["profile"], saved=True,
-                                                updated_at="2026-10-03T17:00", debts_text=K.debts_text(M["debts"]),
-                                                limits=K.LIMITS_2026, hours_default=K.HOURS_DEFAULT)
+import capital_view as V  # noqa: E402
+
+
+def render(b, saved=True):
+    return env.get_template("capital.html").render(
+        request=req, board=b, p=b["profile"], view=V.build_view(b, OCT), saved=saved, updated_at="2026-10-03T17:00",
+        last_step=None, debts_text=K.debts_text(b["profile"]["debts"]), limits=K.LIMITS_2026,
+        hours_default=K.HOURS_DEFAULT, accounts=V.EDIT_ACCOUNT_LABELS)
+
+
+html = render(B)
 check("This month — $4,000" in html and "401(k) up to the employer match" in html, "the plan is on the page")
 check("only if you buy at" in html and "in return" in html,
       "conditional real estate says so; its costs read 'in return', not 0%")
-check('name="debts"' in html and "Card, 3000, 24.9" in html, "the profile form shows the saved debts")
+check('data-editor="debts"' in html and 'value="Card"' in html and 'value="24.9"' in html,
+      "the profile's debt editor shows the saved debts")
 for bad in (">None<", "None%", "nan%", "NaN"):
     check(bad not in html, f"no '{bad}' leaks into the page")
-blank = env.get_template("capital.html").render(
-    request=req, board=K.build({}, today=OCT, sources={k: [] for k in SRC}), p=K.profile_with_defaults({}),
-    saved=False, updated_at=None, debts_text="", limits=K.LIMITS_2026, hours_default=K.HOURS_DEFAULT)
+blank = render(K.build({}, today=OCT, sources={k: [] for k in SRC}), saved=False)
 check("Start with your profile" in blank and "Nothing to split yet" in blank,
       "with no profile the page says so instead of showing an empty plan as advice")
 

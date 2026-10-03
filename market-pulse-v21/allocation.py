@@ -108,16 +108,30 @@ def _pct(tok: str) -> float | None:
     return None if v is None else max(-50.0, min(100.0, v))
 
 
+TOP_PICKS = "TOP PICKS"
+_TOP_PICKS_NAMES = {"top picks", "the top picks"}
+
+
 def _ticker(name: str, account: str) -> str | None:
+    """The ticker a line names, if it names one. "Top picks" stands for the
+    board's current top picks, as a group — a monthly split can say where new
+    money goes without listing eight tickers that change."""
+    if account in ("cash", "debt"):
+        return None
+    if name.strip().lower() in _TOP_PICKS_NAMES:
+        return TOP_PICKS
     up = name.strip().upper()
-    return up if account not in ("cash", "debt") and _TICKER_RE.match(up) else None
+    return up if _TICKER_RE.match(up) else None
 
 
 def _lines(text):
-    for raw in str(text or "").splitlines()[:MAX_LINES]:
+    """(line number in the text, the line, its comma-separated parts) for each
+    line that is not blank or a # note — the number lets a step edit the
+    owner's own line in place."""
+    for n, raw in enumerate(str(text or "").splitlines()[:MAX_LINES]):
         line = raw.strip()
         if line and not line.startswith("#"):
-            yield line, [x.strip() for x in line.split(",")]
+            yield n, line, [x.strip() for x in line.split(",")]
 
 
 def parse_holdings(text) -> tuple[list[dict], list[str]]:
@@ -126,7 +140,7 @@ def parse_holdings(text) -> tuple[list[dict], list[str]]:
     'basis 18000', is the cost basis; a number with % is the owner's own
     return (for cash, its interest rate)."""
     rows, bad = [], []
-    for line, parts in _lines(text):
+    for n, line, parts in _lines(text):
         acct = account_of(parts[1]) if len(parts) >= 3 else None
         value = _money(parts[2]) if len(parts) >= 3 else None
         basis = rate = None
@@ -148,7 +162,7 @@ def parse_holdings(text) -> tuple[list[dict], list[str]]:
             continue
         name = parts[0][:40]
         rows.append({"name": name, "ticker": _ticker(name, acct[0]), "account": acct[0],
-                     "state_exempt": acct[1], "value": float(value), "basis": basis, "rate": rate})
+                     "state_exempt": acct[1], "value": float(value), "basis": basis, "rate": rate, "line": n})
     return rows, bad
 
 
@@ -156,7 +170,7 @@ def parse_flows(text) -> tuple[list[dict], list[str]]:
     """'what, account, amount a month[, return%]' per line. The account can be
     'debt' (what = the debt's name, or give its APR)."""
     rows, bad = [], []
-    for line, parts in _lines(text):
+    for n, line, parts in _lines(text):
         acct = account_of(parts[1]) if len(parts) >= 3 else None
         amt = _money(parts[2]) if len(parts) >= 3 else None
         rate = None
@@ -310,7 +324,8 @@ def _weq(account: str, p: dict) -> float:
 def measure_holding(h: dict, p: dict, stock_rows: dict, td: float, sleeve: set) -> dict:
     t = K.tax_rates(p)
     acct = h["account"]
-    item = {"id": f"h:{h['name']}:{acct}", "label": h["name"], "account": acct,
+    item = {"id": f"h:{h['name']}:{acct}", "label": h["name"], "account": acct, "line": h.get("line"),
+            "state_exempt": bool(h.get("state_exempt")), "ticker": h.get("ticker"),
             "account_label": "T-bills" if h.get("state_exempt") else ACCOUNT_LABEL[acct],
             "value": h["value"], "weq": _weq(acct, p),
             "bucket": "cash" if acct == "cash" else ("picks" if is_pick(h) else "funds"),
@@ -365,7 +380,7 @@ def rental_sale_tax(r: dict, p: dict, years: float) -> float:
     return recap * rate + (gain - recap) * t["qualified"]
 
 
-def measure_property(r: dict, p: dict, today: date) -> dict:
+def measure_property(r: dict, p: dict, today: date, index: int | None = None) -> dict:
     """A property's return on the equity that could be taken out today — its
     value less 7% to sell, less the loan. Rentals: cash flow after the full
     payment and the income tax depreciation does not shelter, plus the year's
@@ -377,7 +392,7 @@ def measure_property(r: dict, p: dict, today: date) -> dict:
     E = r["value"] * (1 - HR.SELL_COST_PCT) - r["loan"]
     item = {"id": f"re:{r['name']}", "label": r["name"], "account": "rental" if use == "rental" else use,
             "account_label": ACCOUNT_LABEL[use], "value": round(max(E, 0.0), 2), "weq": 1.0, "bucket": "re",
-            "h": None, "keep_reason": None, "tau": None, "c": 0.0, "property": True,
+            "h": None, "keep_reason": None, "tau": None, "c": 0.0, "property": True, "prop": index,
             "gross_equity": r["value"] - r["loan"]}
     if E <= 0:
         item["why_not"] = "no equity left to take out after 7% selling costs"
@@ -420,6 +435,20 @@ def sleeve_of(board: dict) -> list[dict]:
     p = board["profile"]
     picks = [r for r in board["rows"] if r["kind"] == "stock" and r.get("ret_net") is not None]
     return picks[:max(1, int(K._f(p.get("picks_n"), 8)))]
+
+
+def stock_rows_of(board: dict) -> dict:
+    """Each pick on the board by ticker, plus TOP PICKS: the top picks as one
+    equal-weighted group, at their average estimate."""
+    out = {r["detail"]["ticker"]: r for r in board["rows"] if r["kind"] == "stock"}
+    sl = sleeve_of(board)
+    if sl:
+        n = len(sl)
+        avg = lambda k: sum(K._f(r.get(k)) for r in sl) / n  # noqa: E731
+        out[TOP_PICKS] = {"ret_pre": avg("ret_pre"), "div_pct": avg("div_pct"), "ret_net": avg("ret_net"),
+                          "round_trip_pct": avg("round_trip_pct"), "source": "the top picks",
+                          "sources": ["the top picks"], "detail": {"ticker": TOP_PICKS}}
+    return out
 
 
 def destinations(board: dict, sleeve: list[dict]) -> list[dict]:
@@ -504,11 +533,28 @@ def optimize(items: list[dict], board: dict, sleeve: list[dict]) -> list[dict]:
 
     moves = []
     funded: set[str] = set()
-    for d in destinations(board, sleeve):
+    dests = destinations(board, sleeve)
+    picks = next((d for d in dests if d["id"] == "picks"), None)
+
+    def eligible(s, d):
+        if s["left"] <= 0.005 or s["key"] not in d["from"] or 1 - s["c"] - s["tau"] <= 0:
+            return False
+        # A property is sold whole or not at all: only when what is left after
+        # a smaller destination fills still has a home that beats keeping it
+        # (the picks, which take any amount). Selling a duplex to clear a
+        # $4,000 card is not a move.
+        if s.get("property") and (picks is None or _per_dollar_gain(s, picks["net"], H) < MIN_GAIN):
+            return False
+        # Cash already in T-bills IS a down-payment fund; "moving" it there
+        # would be the same money, suggested again every time.
+        if d["kind"] == "dpfund" and s.get("state_exempt"):
+            return False
+        return _per_dollar_gain(s, net_for(d, s), H) >= MIN_GAIN
+
+    for d in dests:
         if d.get("for_id") in funded:      # the deal itself was bought outright
             continue
-        elig = [s for s in sources if s["left"] > 0.005 and s["key"] in d["from"]
-                and 1 - s["c"] - s["tau"] > 0 and _per_dollar_gain(s, net_for(d, s), H) >= MIN_GAIN]
+        elig = [s for s in sources if eligible(s, d)]
         if not elig:
             continue
         elig.sort(key=lambda s: -_per_dollar_gain(s, net_for(d, s), H))
@@ -524,7 +570,10 @@ def optimize(items: list[dict], board: dict, sleeve: list[dict]) -> list[dict]:
             sold = min(s["left"], cap / keep)
             a = net_for(d, s)
             moves.append({"from": s["label"], "from_id": s["id"], "account": s["account_label"], "to": d["label"],
-                          "to_kind": d["kind"], "bucket": d["bucket"], "conditional": d.get("conditional"),
+                          "to_kind": d["kind"], "to_id": d["id"], "bucket": d["bucket"],
+                          "conditional": d.get("conditional"), "key": s["key"], "acct": s["account"],
+                          "name": s["item"]["label"], "line": s.get("line"), "prop": s.get("prop"),
+                          "state_exempt": bool(s.get("state_exempt")),
                           "sold": round(sold, 2), "tax": round(sold * s["tau"], 2), "cost": round(sold * s["c"], 2),
                           "proceeds": round(sold * keep, 2), "h": s["h"], "a": round(a, 2), "weq": s["weq"],
                           "gain": round(s["weq"] * sold * _per_dollar_gain(s, a, H), 2)})
@@ -537,13 +586,13 @@ def optimize(items: list[dict], board: dict, sleeve: list[dict]) -> list[dict]:
 def compare_holdings(board: dict, today: date) -> dict:
     p = board["profile"]
     rows = board["rows"]
-    stock_rows = {r["detail"]["ticker"]: r for r in rows if r["kind"] == "stock"}
+    stock_rows = stock_rows_of(board)
     sleeve = sleeve_of(board)
     td = stock_time_drag(p, board.get("monthly_free", 0.0))
     hold, bad = parse_holdings(p.get("holdings"))
-    in_sleeve = {r["detail"]["ticker"] for r in sleeve}
+    in_sleeve = {r["detail"]["ticker"] for r in sleeve} | {TOP_PICKS}
     items = ([measure_holding(h, p, stock_rows, td, in_sleeve) for h in hold]
-             + [measure_property(r, p, today) for r in parse_owned_re(p.get("owned_re"))])
+             + [measure_property(r, p, today, n) for n, r in enumerate(parse_owned_re(p.get("owned_re")))])
     for n, i in enumerate(items):
         i["id"] = f"{i['id']}:{n}"           # two lines may name the same fund
     moves = optimize(items, board, sleeve)
@@ -703,7 +752,7 @@ def compare_pay(board: dict, today: date) -> dict | None:
     flows, bad = parse_flows(p.get("current_monthly"))
     if not flows and not bad:
         return None
-    stock_rows = {r["detail"]["ticker"]: r for r in board["rows"] if r["kind"] == "stock"}
+    stock_rows = stock_rows_of(board)
     sleeve = sleeve_of(board)
     lines = measure_flows(flows, p, stock_rows, stock_time_drag(p, board.get("monthly_free", 0.0)))
     total = round(sum(l["amount"] for l in lines), 2)
@@ -754,3 +803,137 @@ def compare(board: dict, today: date | None = None) -> dict:
             "re_share": round(eq / nw * 100, 1) if nw > 0 else None,
             "re_cap": cap, "re_room": round(cap / 100 * nw - eq, 2) if cap is not None else None,
             "owns_shelter": bool(p.get("_owns_shelter"))}
+
+
+# ═══════════════════════════════════════════════════════════════════
+# DOING IT — a step marked done edits the saved profile
+# ═══════════════════════════════════════════════════════════════════
+# The owner's own lines are edited in place (a holding sold down is
+# rewritten, one sold out is removed), new holdings are appended, and
+# notes and unreadable lines are left exactly as typed.
+
+ACCOUNT_TEXT = {"taxable": "taxable", "k401": "401k", "roth401k": "roth 401k", "ira": "ira", "roth": "roth",
+                "hsa": "hsa"}
+
+
+def _n(x: float) -> str:
+    return f"{x:.2f}".rstrip("0").rstrip(".")
+
+
+def holding_line(name: str, account: str, value: float, basis: float | None = None, rate: float | None = None,
+                 state_exempt: bool = False) -> str:
+    """One holdings line in the form parse_holdings reads back."""
+    acct = ("tbills" if state_exempt else "cash") if account == "cash" else ACCOUNT_TEXT[account]
+    parts = [str(name).replace(",", " ").strip(), acct, _n(value)]
+    if basis is not None:
+        parts.append(_n(basis))
+    if rate is not None:
+        parts.append(f"{_n(rate)}%")
+    return ", ".join(parts)
+
+
+class CannotApply(ValueError):
+    """A step the dashboard cannot carry out for the owner (buying a
+    property: its price, loan and rent are theirs to enter)."""
+
+
+def apply_moves(saved: dict, moves: list[dict], board: dict) -> dict:
+    """The saved profile after these moves are made. Sources: a holding is
+    sold down by what moved (its basis in proportion) or removed; a property
+    is removed (it is sold whole). Destinations: a debt's balance falls by
+    what arrived (a debt paid off is removed); T-bills and a down-payment fund
+    become T-bill lines; the picks become one line per top pick, split as the
+    waterfall splits them (what a per-name cap leaves goes to T-bills, or to
+    the account's index fund inside an IRA, Roth or HSA); the index fund
+    becomes an index-fund line in the same account."""
+    p = board["profile"]
+    rf = K._f(p.get("rf_rate"), 4.0)
+    prof = {k: v for k, v in saved.items() if not str(k).startswith("_")}
+    lines: list[str | None] = str(prof.get("holdings") or "").splitlines()
+    rows = {r["line"]: r for r in parse_holdings(prof.get("holdings"))[0]}
+    owned = parse_owned_re(prof.get("owned_re"))
+    debts = [dict(d) for d in K.parse_debts(prof.get("debts") or [])]
+    sleeve = sleeve_of(board)
+    sold_lines: dict[int, float] = {}
+    sold_props: set[int] = set()
+    adds: list[str] = []
+    for m in moves:
+        kind, got = m["to_kind"], float(m["proceeds"])
+        if kind == "re":
+            raise CannotApply("Buying a property is recorded under Real estate you own, with its own numbers.")
+        if m.get("prop") is not None:
+            sold_props.add(m["prop"])
+        elif m.get("line") is not None and m["line"] in rows:
+            sold_lines[m["line"]] = sold_lines.get(m["line"], 0.0) + float(m["sold"])
+        else:
+            raise CannotApply("That holding is no longer in your profile.")
+        if kind == "debt":
+            name = str(m["to_id"]).split(":", 1)[1]
+            hit = [d for d in debts if d["name"] == name]
+            if not hit:
+                raise CannotApply(f"{name} is no longer in your debts.")
+            hit[0]["balance"] = max(0.0, hit[0]["balance"] - got)
+        elif kind in ("tbill", "dpfund"):
+            adds.append(holding_line("Down payment fund" if kind == "dpfund" else "T-bills", "cash", got,
+                                     rate=rf, state_exempt=True))
+        elif kind == "index":
+            adds.append(holding_line("Index fund", m["acct"], got))
+        elif kind == "picks":
+            acct = "taxable" if m["to_id"] == "picks" else m["acct"]
+            n = len(sleeve)
+            if not n:
+                raise CannotApply("There are no top picks on the board right now.")
+            cap = K._f(p.get("pick_max_pct"), 20.0) / 100
+            w = min(1.0 / n, cap) if cap > 0 else 1.0 / n
+            for r in sleeve:
+                amt = round(got * w, 2)
+                adds.append(holding_line(r["detail"]["ticker"], acct, amt, basis=amt if acct == "taxable" else None))
+            rest = round(got - got * w * n, 2)
+            if rest > 0.5:
+                adds.append(holding_line("T-bills", "cash", rest, rate=rf, state_exempt=True) if acct == "taxable"
+                            else holding_line("Index fund", acct, rest))
+        else:
+            raise CannotApply(f"Unknown destination: {kind}")
+    for ln, sold in sold_lines.items():
+        r = rows[ln]
+        left = r["value"] - sold
+        if left < 1:
+            lines[ln] = None
+        else:
+            basis = r["basis"] * left / r["value"] if r["basis"] is not None and r["value"] > 0 else r["basis"]
+            lines[ln] = holding_line(r["name"], r["account"], left, basis, r["rate"], r["state_exempt"])
+    prof["holdings"] = "\n".join([x for x in lines if x is not None] + adds)
+    prof["debts"] = [d for d in debts if d["balance"] > 0.5]
+    prof["owned_re"] = [r for i, r in enumerate(owned) if i not in sold_props]
+    return prof
+
+
+def split_text(steps: list[dict], left: float, p: dict) -> str:
+    """A waterfall's steps as monthly-split lines that measure_flows reads
+    back at the same returns: the match and any 401(k) money into the plan's
+    fund, the Roth IRA and the taxable buys as "Top picks", cash steps and a
+    down-payment fund as T-bills, debt by its name."""
+    rf = K._f(p.get("rf_rate"), 4.0)
+    tot: dict[tuple, float] = {}
+    for s in steps:
+        k, amt = s["kind"], float(s["amount"])
+        if k == "match" or k == "wrapper":
+            key = ("Plan fund", "401k", None)
+        elif k == "debt":
+            key = (str(s.get("ref") or s["to"]).split(":", 1)[-1].replace("Pay down ", ""), "debt", None)
+        elif k == "hsa":
+            key = ("HSA fund", "hsa", None)
+        elif k == "ira":
+            key = ("Top picks", "roth", None)
+        elif k == "stock":
+            key = ("Top picks", "taxable", None)
+        elif k == "re":
+            key = ("Down payment fund", "tbills", rf)
+        else:                                   # cash, tbill
+            key = ("T-bills", "tbills", rf)
+        tot[key] = tot.get(key, 0.0) + amt
+    if left > 0.5:
+        key = ("T-bills", "tbills", rf)
+        tot[key] = tot.get(key, 0.0) + left
+    return "\n".join(f"{name}, {acct}, {_n(v)}" + (f", {_n(rate)}%" if rate is not None else "")
+                     for (name, acct, rate), v in tot.items() if v > 0.005)

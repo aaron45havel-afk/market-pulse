@@ -39,7 +39,10 @@ from datetime import date
 # IRS figures for tax year 2026 (Notice 2025-67 for 401(k) and IRA; Rev.
 # Proc. 2025-19 for HSA). Defaults only — the profile holds the room the
 # owner actually has left this year.
-LIMITS_2026 = {"k401": 24_500, "ira": 7_500, "hsa_self": 4_400, "hsa_family": 8_750}
+LIMITS_2026 = {"k401": 24_500, "ira": 7_500, "hsa_self": 4_400, "hsa_family": 8_750,
+               # Roth IRA contributions phase out across these modified AGIs
+               # (same notice): single and married filing jointly.
+               "roth_phaseout": {"single": (153_000, 168_000), "married": (242_000, 252_000)}}
 
 PROFILE_DEFAULTS: dict = {
     # cash flow
@@ -94,6 +97,13 @@ PROFILE_DEFAULTS: dict = {
     "re_cap_mid": 60.0,
     "re_cap_mid_upto": 1_000_000.0,
     "re_cap_high": 40.0,
+    # you, for independence and the tax helpers
+    "age": None,                  # None = not given; independence dates need it
+    "retire_age": 65,
+    "filing_status": "single",    # single | married (filing jointly)
+    "take_home": 0.0,             # pay after tax and payroll deductions, a month
+    "fi_multiple": 25.0,          # independence = this many years of expenses (25 = a 4% withdrawal)
+    "inflation": 2.5,
 }
 
 # Hours a month each real-estate path takes, at a steady state. Editable
@@ -141,10 +151,12 @@ _NUMBERS = {
     "stock_holdings": (0, 1e10), "rf_rate": (0, 20), "hold_years": (1, 30),
     "hours_house_hack": (0, 200), "hours_brrrr": (0, 200), "hours_flip": (0, 200), "hours_home": (0, 200),
     "re_nocap_below": (0, 1e10), "re_cap_mid": (0, 100), "re_cap_mid_upto": (0, 1e10), "re_cap_high": (0, 100),
+    "age": (16, 100), "retire_age": (40, 90), "take_home": (0, 1e7), "fi_multiple": (10, 50), "inflation": (0, 10),
 }
 _BOOLS = ("niit", "hsa_eligible")
 _TEXT = {"home_state": 2, "home_zip": 5}
-_OPTIONAL = ("retire_rate", "mortgage_rate")      # blank means "use the default rule"
+_CHOICES = {"filing_status": ("single", "married")}
+_OPTIONAL = ("retire_rate", "mortgage_rate", "age")      # blank means "use the default rule"
 # Kept as typed, so a line the engine cannot read stays in the box and is
 # named on the page instead of vanishing on save.
 _LINES = {"holdings": 20_000, "current_monthly": 10_000}
@@ -177,14 +189,18 @@ def parse_profile(form: dict) -> dict:
     for k, n in _TEXT.items():
         if k in form:
             out[k] = "".join(ch for ch in str(form[k] or "") if ch.isalnum())[:n].upper()
+    for k, allowed in _CHOICES.items():
+        if k in form and str(form[k]).strip().lower() in allowed:
+            out[k] = str(form[k]).strip().lower()
     if "debts" in form:
         out["debts"] = parse_debts(form["debts"])
     return out
 
 
 def parse_debts(text) -> list[dict]:
-    """'Car loan, 12000, 6.5' per line → [{"name", "balance", "apr"}]. A line
-    that does not parse is skipped, not guessed at."""
+    """'Car loan, 12000, 6.5[, 350]' per line → [{"name", "balance", "apr"[,
+    "payment"]}] — the monthly payment is optional (it dates the payoff). A
+    line that does not parse is skipped, not guessed at."""
     if isinstance(text, list):
         return [d for d in text if isinstance(d, dict) and d.get("name")]
     out = []
@@ -196,12 +212,17 @@ def parse_debts(text) -> list[dict]:
         apr = _f(parts[2].replace("%", ""), None)
         if bal is None or apr is None or bal < 0 or apr < 0:
             continue
-        out.append({"name": parts[0][:40], "balance": bal, "apr": min(apr, 100.0)})
+        d = {"name": parts[0][:40], "balance": bal, "apr": min(apr, 100.0)}
+        pay = _f(parts[3].replace("$", "").replace(" ", ""), None) if len(parts) > 3 and parts[3] else None
+        if pay is not None and pay > 0:
+            d["payment"] = pay
+        out.append(d)
     return out
 
 
 def debts_text(debts: list[dict]) -> str:
-    return "\n".join(f"{d['name']}, {d['balance']:g}, {d['apr']:g}" for d in debts or [])
+    return "\n".join(f"{d['name']}, {d['balance']:g}, {d['apr']:g}"
+                     + (f", {d['payment']:g}" if d.get("payment") else "") for d in debts or [])
 
 
 def _f(v, default=0.0) -> float:
