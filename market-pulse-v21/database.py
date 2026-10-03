@@ -221,6 +221,66 @@ def _ensure_household_tables():
         conn.close()
 
 
+def _ensure_capital_table():
+    """The owner's capital profile for /capital — one private row of JSON
+    (pay, tax rates, accounts, debts, where they live). Own connection and
+    transaction, like the tables above, so a failure here cannot roll back
+    anything else."""
+    conn = _get_conn()
+    if not conn: return
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS capital_profile (
+                owner      VARCHAR(120) PRIMARY KEY,
+                profile    TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        conn.commit(); cur.close()
+    except Exception as e:
+        logger.error(f"capital_profile table init error: {e}")
+    finally:
+        conn.close()
+
+
+def get_capital_profile(owner: str = "owner") -> dict | None:
+    conn = _get_conn()
+    if not conn: return None
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT profile, updated_at FROM capital_profile WHERE owner = %s", (owner,))
+        row = cur.fetchone(); cur.close()
+        if not row:
+            return None
+        out = json.loads(row[0])
+        out["_updated_at"] = row[1].isoformat() if row[1] else None
+        return out
+    except Exception as e:
+        logger.error(f"get_capital_profile: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+def save_capital_profile(profile: dict, owner: str = "owner") -> bool:
+    conn = _get_conn()
+    if not conn: return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO capital_profile (owner, profile, updated_at) VALUES (%s, %s, NOW())
+            ON CONFLICT (owner) DO UPDATE SET profile = EXCLUDED.profile, updated_at = NOW()
+        """, (owner, json.dumps({k: v for k, v in profile.items() if not k.startswith("_")})))
+        conn.commit(); cur.close()
+        return True
+    except Exception as e:
+        logger.error(f"save_capital_profile: {e}")
+        return False
+    finally:
+        conn.close()
+
+
 def _ensure_hundred_hand_table():
     """Hand-read 100-bagger criteria — own connection/transaction, same
     rationale as the two above.
@@ -729,6 +789,7 @@ def init_db():
     _ensure_landscaper_tables()
     _ensure_household_tables()
     _ensure_hundred_hand_table()
+    _ensure_capital_table()
     _ensure_moat_tables()
     moat_seed_if_empty()
     _ops_migrate()

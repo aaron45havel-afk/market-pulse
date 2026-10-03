@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+{% block title %}Capital — highest and best use — Market Pulse{% endblock %}
+{% macro money(v) %}{% if v is none %}—{% else %}${{ '{:,.0f}'.format(v) }}{% endif %}{% endmacro %}
+{% macro pct(v) %}{% if v is none %}—{% else %}{{ ('%.1f'|format(v))|replace('-', '−') }}%{% endif %}{% endmacro %}
+{% block extra_css %}
+<style>
+    .cp-page { max-width: 1400px; margin: 0 auto; padding: 0 1rem; }
+    .cp-head h1 { font-size: clamp(1.5rem, 3vw, 2rem); margin: 1rem 0 0.15rem; }
+    .cp-head .subtitle { color: var(--ink-3); font-size: 0.92rem; max-width: 75ch; line-height: 1.55; }
+    .cp-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+        padding: 1rem 1.1rem; margin: 1rem 0; }
+    .cp-card h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+    .cp-note { font-size: 0.8rem; color: var(--ink-3); line-height: 1.6; }
+    .cp-banner { border: 1px dashed var(--accent); border-radius: 10px; padding: 0.7rem 0.9rem; margin: 0.8rem 0;
+        font-size: 0.88rem; line-height: 1.55; }
+    .cp-steps { width: 100%; border-collapse: collapse; font-size: 0.9rem; table-layout: fixed; }
+    .cp-steps td { padding: 0.5rem 0.4rem; border-bottom: 1px solid var(--border); vertical-align: top;
+        white-space: normal; overflow-wrap: anywhere; }
+    .cp-steps td.amt { text-align: right; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; width: 8rem; }
+    .cp-steps .why { color: var(--ink-3); font-size: 0.8rem; margin-top: 0.15rem; }
+    .cp-kind { display: inline-block; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+        padding: 1px 7px; border-radius: 999px; background: var(--surface2); color: var(--ink-3); margin-right: 0.4rem; }
+    .cp-tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0.2rem 0 0.7rem; }
+    .cp-tabs button { background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; padding: 0.25rem 0.8rem;
+        font-size: 0.8rem; cursor: pointer; color: var(--text); }
+    .cp-tabs button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .cp-scroll { overflow-x: auto; }
+    table.cp-board { width: 100%; border-collapse: collapse; font-size: 0.84rem; font-variant-numeric: tabular-nums; }
+    .cp-board th, .cp-board td { padding: 0.45rem 0.55rem; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); }
+    .cp-board th:nth-child(2), .cp-board td:nth-child(2) { text-align: left; white-space: normal; min-width: 16rem; }
+    .cp-board thead th { background: var(--surface2); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em;
+        color: var(--ink-3); position: sticky; top: 0; }
+    .cp-board .net { font-weight: 800; }
+    .cp-board .basis { color: var(--ink-3); font-size: 0.75rem; white-space: normal; margin-top: 0.15rem; }
+    .cp-board .cond { color: #b45309; font-size: 0.75rem; font-weight: 600; }
+    .cp-board tr.cant td { opacity: 0.55; }
+    .cp-more { margin-top: 0.5rem; }
+    .cp-more button { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 0.3rem 0.8rem; cursor: pointer; color: var(--text); }
+    .cp-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.9rem; }
+    .cp-form fieldset { border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.8rem; margin: 0; }
+    .cp-form legend { font-weight: 700; font-size: 0.85rem; padding: 0 0.3rem; }
+    .cp-form label { display: flex; justify-content: space-between; gap: 0.6rem; align-items: center; font-size: 0.8rem;
+        margin: 0.3rem 0; color: var(--ink-3); }
+    .cp-form input[type=number], .cp-form input[type=text] { width: 7.5rem; background: var(--surface2); border: 1px solid var(--border);
+        border-radius: 6px; padding: 0.3rem 0.45rem; color: var(--text); font-size: 0.85rem; text-align: right; }
+    .cp-form textarea { width: 100%; min-height: 4.5rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+        color: var(--text); font-size: 0.82rem; padding: 0.4rem; box-sizing: border-box; }
+    .cp-save { margin-top: 0.8rem; display: flex; gap: 0.7rem; align-items: center; flex-wrap: wrap; }
+    .cp-save button { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 0.5rem 1.2rem;
+        font-weight: 700; cursor: pointer; }
+    @media (max-width: 640px) { .cp-steps td.amt { width: 6rem; } .cp-form input[type=number], .cp-form input[type=text] { width: 6rem; } }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set plan = board.plan %}
+<div class="cp-page">
+  <div class="cp-head">
+    <h1>Capital</h1>
+    <div class="subtitle">
+      The highest and best use of the next dollar. Every use the other pages find — paying down debt, T-bills,
+      stock picks, real estate — on one board, compared <b>after tax</b> and <b>after friction</b>: how much it takes to
+      get in, how long the money waits, what buying and selling cost, and your hours at your own rate. Then this
+      month's pay, step by step.
+    </div>
+  </div>
+
+  {% if not saved %}
+  <div class="cp-banner"><b>Start with your profile</b> (below). Until it is saved the board runs on defaults —
+    no pay, no accounts, California taxes — so the plan is empty and the ranking is generic.</div>
+  {% endif %}
+  {% if board.errors %}
+  <div class="cp-banner">Could not read {{ board.errors|length }} source{{ '' if board.errors|length == 1 else 's' }}:
+    {% for k, v in board.errors.items() %}<b>{{ k }}</b> ({{ v }}){% if not loop.last %}; {% endif %}{% endfor %}.
+    The rest of the board is unaffected.</div>
+  {% endif %}
+
+  <div class="cp-card">
+    <h2>This month — {{ money(p.monthly_invest) }}</h2>
+    {% if plan.steps %}
+    <table class="cp-steps">
+      {% for s in plan.steps %}
+      <tr>
+        <td><span class="cp-kind">{{ s.kind }}</span>{{ s.to }}<div class="why">{{ s.why }}</div></td>
+        <td class="amt">{{ money(s.amount) }}</td>
+      </tr>
+      {% endfor %}
+      {% if plan.left > 0 %}
+      <tr><td>Unassigned<div class="why">Nothing on the board beats leaving it where it is — or a cap left it over.</div></td>
+          <td class="amt">{{ money(plan.left) }}</td></tr>
+      {% endif %}
+    </table>
+    {% else %}
+    <p class="cp-note">Nothing to split yet: set what you can put aside each month in the profile.</p>
+    {% endif %}
+    {% if plan.winner %}
+    <p class="cp-note" style="margin-top:0.6rem">After the fixed steps, the best use is <b>{{ plan.winner.label }}</b> at
+      <b>{{ pct(plan.winner.ret_net) }}</b> after tax and friction{% if plan.winner.conditional %} — {{ plan.winner.conditional }}{% endif %}.
+      The fixed steps come first because each wins by construction: a cushion keeps a surprise off a credit card,
+      the match is an instant return, and debt above the {{ pct(p.market_return) }} market return is a guaranteed one.</p>
+    {% endif %}
+  </div>
+
+  <div class="cp-card">
+    <h2>The board</h2>
+    <div class="cp-tabs" role="tablist">
+      <button class="on" data-f="all">All</button>
+      <button data-f="re">Real estate ({{ board.counts.re }})</button>
+      <button data-f="stock">Stocks ({{ board.counts.stock }})</button>
+      <button data-f="safe">Debt, cash, accounts</button>
+    </div>
+    <div class="cp-scroll">
+    <table class="cp-board">
+      <thead><tr>
+        <th>#</th><th>Use</th>
+        <th title="Expected after-tax return per year, before friction">After tax</th>
+        <th title="Buying and selling, spread over the hold">Costs/yr</th>
+        <th title="Your hours at your hourly rate, as a share of the money in it">Time/yr</th>
+        <th title="Cash it takes to start">Needs</th>
+        <th title="Months to reach what it needs beyond the cash you have free: a normal month's share after the recurring steps, once the one-time steps (cushion, emergency fund, dear debt) are done">Ready in</th>
+        <th title="After tax, after costs and your time, blended with T-bills for the months the money waits">Net</th>
+      </tr></thead>
+      <tbody>
+      {% set ns = namespace(stocks=0) %}
+      {% for r in board.rows %}
+        {% set grp = 'stock' if r.kind == 'stock' else ('re' if r.kind == 're' else 'safe') %}
+        {% if r.kind == 'stock' %}{% set ns.stocks = ns.stocks + 1 %}{% endif %}
+        <tr data-g="{{ grp }}" class="{{ 'cant' if r.ret_net is none else '' }} {{ 'more-stock' if r.kind == 'stock' and ns.stocks > 10 else '' }}">
+          <td>{{ loop.index }}</td>
+          <td>
+            <span class="cp-kind">{{ 'pick' if r.kind == 'stock' else r.kind }}</span><a href="{{ r.link }}">{{ r.label }}</a>
+            {% if r.sources and r.sources|length > 1 %}<span class="cp-note"> · {{ r.sources|join(', ') }}</span>{% elif r.kind == 'stock' %}<span class="cp-note"> · {{ r.source }}</span>{% endif %}
+            {% if r.conditional %}<div class="cond">{{ r.conditional }}</div>{% endif %}
+            <div class="basis">{{ r.basis }}{% if r.risk %} · <i>{{ r.risk }}</i>{% endif %}</div>
+          </td>
+          <td>{{ pct(r.ret_after) }}</td>
+          <td>{% if r.kind == 're' %}<span class="cp-note" title="Buying, financing and selling costs are inside this engine's return">in return</span>{% else %}{{ pct(r.cost_drag) }}{% endif %}</td>
+          <td>{{ pct(r.time_drag) }}</td>
+          <td>{% if r.min_capital > 1 %}{{ money(r.min_capital) }}{% else %}—{% endif %}</td>
+          <td>{% if r.months_to_fund is none %}<span title="This month's free pay never reaches it">never</span>{% elif r.months_to_fund == 0 %}now{% else %}{{ r.months_to_fund }} mo{% endif %}</td>
+          <td class="net">{{ pct(r.ret_net) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% if board.counts.stock > 10 %}
+    <div class="cp-more"><button id="cpMore">Show all {{ board.counts.stock }} picks</button></div>
+    {% endif %}
+  </div>
+
+  <div class="cp-card">
+    <h2>Your profile{% if updated_at %} <span class="cp-note">· saved {{ updated_at[:10] }}</span>{% endif %}</h2>
+    <form id="cpForm" class="cp-form" onsubmit="return false">
+      <fieldset><legend>Cash flow</legend>
+        <label>Monthly to put to work <input type="number" name="monthly_invest" value="{{ p.monthly_invest }}" step="50"></label>
+        <label>Cash on hand <input type="number" name="cash" value="{{ p.cash }}" step="100"></label>
+        <label>Monthly expenses <input type="number" name="monthly_expenses" value="{{ p.monthly_expenses }}" step="50"></label>
+        <label>Starter cushion (months) <input type="number" name="starter_months" value="{{ p.starter_months }}" step="0.5"></label>
+        <label>Emergency fund (months) <input type="number" name="emergency_months" value="{{ p.emergency_months }}" step="0.5"></label>
+      </fieldset>
+      <fieldset><legend>Taxes (marginal %)</legend>
+        <label>Federal <input type="number" name="fed_rate" value="{{ p.fed_rate }}" step="1"></label>
+        <label>State <input type="number" name="state_rate" value="{{ p.state_rate }}" step="0.1"></label>
+        <label>Long-term gains (federal) <input type="number" name="ltcg_rate" value="{{ p.ltcg_rate }}" step="1"></label>
+        <label>Rate in retirement (blank = today's) <input type="text" name="retire_rate" value="{{ p.retire_rate if p.retire_rate is not none else '' }}"></label>
+        <label>3.8% NIIT applies <input type="checkbox" name="niit" {% if p.niit %}checked{% endif %}></label>
+      </fieldset>
+      <fieldset><legend>Accounts (room left this year)</legend>
+        <label>Salary <input type="number" name="salary" value="{{ p.salary }}" step="1000"></label>
+        <label>Employer matches up to (% of pay) <input type="number" name="match_pct" value="{{ p.match_pct }}" step="0.5"></label>
+        <label>…at (% of what you put in) <input type="number" name="match_rate" value="{{ p.match_rate }}" step="5"></label>
+        <label>401(k) room (2026 limit {{ money(limits.k401) }}) <input type="number" name="k401_room" value="{{ p.k401_room }}" step="100"></label>
+        <label>IRA room ({{ money(limits.ira) }}) <input type="number" name="ira_room" value="{{ p.ira_room }}" step="100"></label>
+        <label>HSA eligible <input type="checkbox" name="hsa_eligible" {% if p.hsa_eligible %}checked{% endif %}></label>
+        <label>HSA room ({{ money(limits.hsa_self) }} / {{ money(limits.hsa_family) }} family) <input type="number" name="hsa_room" value="{{ p.hsa_room }}" step="100"></label>
+      </fieldset>
+      <fieldset><legend>Debts — one per line: name, balance, APR</legend>
+        <textarea name="debts" placeholder="Car loan, 12000, 6.5">{{ debts_text }}</textarea>
+      </fieldset>
+      <fieldset><legend>Real estate</legend>
+        <label>Rent you pay now (/mo) <input type="number" name="housing_cost" value="{{ p.housing_cost }}" step="50"></label>
+        <label>Home state <input type="text" name="home_state" value="{{ p.home_state }}" maxlength="2"></label>
+        <label>Home ZIP <input type="text" name="home_zip" value="{{ p.home_zip }}" maxlength="5"></label>
+        <label>House hack within (miles) <input type="number" name="max_miles" value="{{ p.max_miles }}" step="5"></label>
+        <label>House-hack budget <input type="number" name="house_hack_budget" value="{{ p.house_hack_budget }}" step="10000"></label>
+        <label>BRRRR / flip after-tax target (%) <input type="number" name="re_target" value="{{ p.re_target }}" step="0.5"></label>
+        <label>Appreciation at exit (%/yr) <input type="number" name="appreciation" value="{{ p.appreciation }}" step="0.5"></label>
+        <label>Mortgage rate (blank = {{ board.mortgage_rate }}%) <input type="text" name="mortgage_rate" value="{{ p.mortgage_rate if p.mortgage_rate is not none else '' }}"></label>
+      </fieldset>
+      <fieldset><legend>Stocks</legend>
+        <label>Picks to hold <input type="number" name="picks_n" value="{{ p.picks_n }}" step="1"></label>
+        <label>Most in one name (% of picks) <input type="number" name="pick_max_pct" value="{{ p.pick_max_pct }}" step="1"></label>
+        <label>Market return (the hurdle, %) <input type="number" name="market_return" value="{{ p.market_return }}" step="0.5"></label>
+        <label>Weight on the screens' estimates (%) <input type="number" name="estimate_weight" value="{{ p.estimate_weight }}" step="5"></label>
+        <label>Picks held today ($) <input type="number" name="stock_holdings" value="{{ p.stock_holdings }}" step="1000"></label>
+        <label>T-bill / savings rate (%) <input type="number" name="rf_rate" value="{{ p.rf_rate }}" step="0.1"></label>
+        <label>Hold (years) <input type="number" name="hold_years" value="{{ p.hold_years }}" step="1"></label>
+      </fieldset>
+      <fieldset><legend>Your time</legend>
+        <label>Your hour is worth ($) <input type="number" name="hourly_value" value="{{ p.hourly_value }}" step="5"></label>
+        <label>Research hours/mo, all picks <input type="number" name="picks_hours" value="{{ p.picks_hours }}" step="0.5"></label>
+        <label>House hack hours/mo <input type="number" name="hours_house_hack" value="{{ p.get('hours_house_hack', hours_default.house_hack) }}" step="1"></label>
+        <label>BRRRR hours/mo <input type="number" name="hours_brrrr" value="{{ p.get('hours_brrrr', hours_default.brrrr) }}" step="1"></label>
+        <label>Flip hours/mo <input type="number" name="hours_flip" value="{{ p.get('hours_flip', hours_default.flip) }}" step="1"></label>
+        <label>Own home hours/mo <input type="number" name="hours_home" value="{{ p.get('hours_home', hours_default.home) }}" step="1"></label>
+      </fieldset>
+    </form>
+    <div class="cp-save"><button id="cpSave" type="button">Save and rerun</button><span id="cpMsg" class="cp-note"></span></div>
+  </div>
+
+  <div class="cp-card cp-note">
+    <h2>How to read this</h2>
+    <b>Stock returns are each screen's own estimate</b> — Compounders' growth, buybacks, dividend and multiple drift; the
+    Aristocrats' yield plus dividend growth; Lynch's earnings yield plus growth; Quiet Value's earnings yield; Schloss's
+    discount to tangible book closing halfway — blended toward the market return by the weight you set, because one
+    company's estimate is noisier than the market's. They are taxed as if held in a taxable account (dividends yearly,
+    gains at the end of the hold); the Roth step puts the top pick where neither is taxed.
+    <br><br>
+    <b>BRRRR and flips are conditional.</b> There are no fixer sale prices in the data, so the board shows the after-tax
+    target you set, reached only if you buy at or below the price /headroom solves — and the share of the median that
+    price needs is how hard the deal is to find. <b>House hacks</b> are owner-occupied, so only ZIPs within your radius
+    of home count, and their return includes the rent you stop paying.
+    <br><br>
+    <b>Friction</b> is subtracted from the after-tax return: buying and selling spread over the hold, your hours at your
+    rate as a share of the money in the asset, and — for anything that needs more cash than you have free beyond the
+    emergency fund — the average month the money sits in T-bills while it is saved, at the T-bill rate after tax.
+    Mortgage rate {{ board.mortgage_rate }}% (Freddie Mac, weekly). Every figure here is an estimate, not a promise.
+  </div>
+</div>
+
+<script>
+(function () {
+  const tabs = document.querySelectorAll('.cp-tabs button');
+  const rows = document.querySelectorAll('.cp-board tbody tr');
+  let showAll = false;
+  function apply(f) {
+    rows.forEach(tr => {
+      const g = tr.dataset.g;
+      const inTab = f === 'all' || g === f;
+      const capped = tr.classList.contains('more-stock') && !showAll && f !== 'stock';
+      tr.style.display = inTab && !capped ? '' : 'none';
+    });
+  }
+  let current = 'all';
+  tabs.forEach(b => b.addEventListener('click', () => {
+    tabs.forEach(x => x.classList.toggle('on', x === b));
+    current = b.dataset.f; apply(current);
+  }));
+  const more = document.getElementById('cpMore');
+  if (more) {
+    const label = more.textContent;
+    more.addEventListener('click', () => { showAll = !showAll;
+      more.textContent = showAll ? 'Show the top 10 picks' : label; apply(current); });
+  }
+  apply('all');
+
+  document.getElementById('cpSave').addEventListener('click', async () => {
+    const msg = document.getElementById('cpMsg');
+    const body = {};
+    document.querySelectorAll('#cpForm input, #cpForm textarea').forEach(el => {
+      body[el.name] = el.type === 'checkbox' ? el.checked : el.value;
+    });
+    msg.textContent = 'Saving…';
+    try {
+      const r = await fetch('/api/capital/profile', {method: 'POST', credentials: 'same-origin',
+        headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+      const j = await r.json();
+      if (!r.ok) { msg.textContent = j.error || 'Could not save.'; return; }
+      msg.textContent = 'Saved — rerunning…'; location.reload();
+    } catch (e) { msg.textContent = 'Could not save: ' + e; }
+  });
+})();
+</script>
+{% endblock %}

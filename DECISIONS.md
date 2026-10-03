@@ -890,3 +890,34 @@ companies. The owner chose this as phase 1; the page itself (lists that use the 
   Extra Space Storage, Centerspace and Geospace from the Lynch, Quiet Value and net-net universes too.
 - Result on 2026-10-03: 5,185 screened (5,725 in September, 470 of the difference funds and blank cheques); 244 clear
   every gate (192); 510 could not read (433).
+
+## 2026-10-03 — /capital: the highest and best use of the next dollar
+**Why:** the owner asked for one dashboard that finds the best place for their capital across the stock and real-estate
+pages, weighs how easy each asset is to obtain, and says what to do with each month's pay for the best after-tax
+result. The owner chose: all four real-estate paths compete (house hack, BRRRR/rentals, flips, a NorCal home); stocks
+are picks only, no index core; the owner's time is charged at their hourly rate; phase 1 is the monthly waterfall
+plus the ranked board.
+**Decided:**
+- **One unit for every use of capital: an after-tax annual return, net of friction.** Friction is the round trip
+  spread over the hold, the owner's hours at their rate as a share of the money in the asset (for picks, the money the
+  sleeve manages on average over the hold), and the average month the money waits in T-bills while a minimum is saved,
+  blended in at the T-bill rate after tax. "Ready in" counts a normal month's free pay (after the match and a twelfth
+  of the HSA and IRA room) once the one-time steps — the emergency fund and debt above the hurdle — are done.
+- **Each page's own estimate, never a second model:** Compounders' expected return (growth + buybacks + dividend ±
+  multiple drift) for names passing its gates; the Aristocrats' yield + capped dividend growth for BUY/VALUE; Lynch's
+  earnings yield + capped growth; Quiet Value's earnings yield; Schloss's discount to tangible book closing HALFWAY
+  over the hold plus a yield capped at 8% (not below a third of book, where the market is saying the assets are not
+  there). Each is blended toward the market return by a weight the owner sets (50% by default) and taxed as held in
+  a taxable account.
+- **BRRRR and flips are conditional.** /headroom removed the "typical fixer price" guess on purpose, so the board shows
+  the owner's after-tax target, reached only at or below the solved price, with the share of the median it needs.
+- **House hacks are owner-occupied**, so only ZIPs within the owner's radius of a home ZIP count; their return adds
+  the rent the owner stops paying. **Buying a home** (NorCal screen) is the rent avoided less the full cost of owning,
+  plus principal and the owner's appreciation assumption, on the cash to close — property tax and insurance from the
+  same state tables /norcal uses (the owner engine invents neither, and returned nothing without them).
+- **The month's waterfall**: starter cushion → the employer match → debt above the market hurdle (highest APR first)
+  → the full emergency fund → HSA → Roth IRA (room spread over the months left in the year) → the top of the board. A
+  lumpy winner is saved for in T-bills with the months it takes; a stock winner is split across the top picks, no name
+  above its cap, and what the cap leaves is shown unassigned. The winner is never a debt the fixed steps already pay.
+- **Private**: the page and the save endpoint are admin only; the profile is one JSON row in `capital_profile`.
+  Contribution limits default to the IRS 2026 figures and the profile holds the room actually left.

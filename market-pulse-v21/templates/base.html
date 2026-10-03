@@ -474,6 +474,10 @@
                     <span class="label">CA Real Estate</span>
                 </a>
                 {% if is_admin(request) %}
+                <a href="/capital" class="{% if request.url.path == '/capital' %}active{% endif %}">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    <span class="label">Capital</span>
+                </a>
                 <a href="/household" class="{% if request.url.path == '/household' %}active{% endif %}">
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4"/></svg>
                     <span class="label">Household</span>

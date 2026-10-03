@@ -2081,6 +2081,45 @@ async def apple_touch_icon():
     return FileResponse(_STATIC_DIR / "apple-touch-icon.png", media_type="image/png")
 
 
+@app.get("/capital")
+async def capital_page(request: Request):
+    """The highest and best use of the next dollar: every use of capital the
+    other pages find — debt, T-bills, stock picks, real estate — on one board,
+    after tax and after friction, and this month's pay down a waterfall.
+    Private: it reads the owner's pay, taxes, accounts and debts."""
+    if not _check_admin_token(request):
+        return RedirectResponse("/admin/login?redirect=/capital", status_code=303)
+    import capital as K
+    from database import get_capital_profile
+    saved = get_capital_profile() or {}
+    board = await asyncio.to_thread(K.build, saved)
+    p = board["profile"]
+    return templates.TemplateResponse("capital.html", {
+        "request": request, "board": board, "p": p, "saved": bool(saved),
+        "updated_at": saved.get("_updated_at"), "debts_text": K.debts_text(p.get("debts") or []),
+        "limits": K.LIMITS_2026, "hours_default": K.HOURS_DEFAULT,
+    })
+
+
+@app.post("/api/capital/profile")
+async def capital_profile_save(request: Request):
+    """Save the owner's profile (JSON body). Admin only."""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import capital as K
+    from database import get_capital_profile, save_capital_profile
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Expected a JSON body."}, status_code=400)
+    merged = {**{k: v for k, v in (get_capital_profile() or {}).items() if not k.startswith("_")},
+              **K.parse_profile(body if isinstance(body, dict) else {})}
+    if not save_capital_profile(merged):
+        return JSONResponse({"error": "Could not save — the database is unavailable."}, status_code=503)
+    return JSONResponse({"ok": True})
+
+
 @app.get("/compounders")
 async def compounders_page(request: Request):
     """The 14%/yr long-term screen: quality gates (ROIC, consistency,
