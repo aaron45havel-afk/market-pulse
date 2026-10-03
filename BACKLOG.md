@@ -273,6 +273,19 @@ Format: `- [PHASE-SEEN] item — why it matters`
   a chosen destination) and selling one (recapture + gains, 7% to sell, redeployed) are the owner's other move types.
 - [CAPITAL-WHATIF-SPLIT] A what-if move draws from one holding; a move funded from several (e.g. $30k from savings
   and $20k from VTI into one deal) would need a list of sources.
+- [CAPITAL-SYNC-FORMATS] The Vanguard reader follows its published columns but has not seen a real export; confirm
+  it with one and adjust. Schwab's and Fidelity's were checked against real files.
+- [CAPITAL-WINDOW] Stocks in a 401(k) brokerage window (BrokerageLink, PCRA) are measured as plan funds at the market
+  return, with no research time, and are not offered moves into the picks. A per-line "window" flag would let the
+  board rate them as picks and use the picks as a destination inside that 401(k).
+- [CAPITAL-SYNC-LOTS] An export gives one cost basis per position. Schwab's lot details (purchase dates) would let
+  the switch test tax short-term lots at ordinary rates and pick the lots to sell (pairs with CAPITAL-LOTS).
+- [CAPITAL-SYNC-401K] 401(k) record-keepers (Fidelity NetBenefits, Empower, Vanguard plans) export differently; the
+  plan's funds are typed by hand for now.
+- [CAPITAL-SYNC-LIVE] Synced lines hold the export's values until the next export; quantities × live prices could
+  keep them current between exports (the ticker price lookup exists), with the export as the check.
+- [CAPITAL-SYNC-API] A direct broker connection (Schwab's trader API, or an aggregator) instead of a file needs an
+  OAuth app, stored refresh tokens and a security review — not started.
 - [CAPITAL-PHASE3] /capital phase 3: a dated record of the board and an alert when the top use changes.
 - [CAPITAL-RE-PRICES] BRRRR and flips can only be conditional until fixer sale prices exist; with them, the board could
   show the return at a price the owner can actually get instead of the target at the most they can pay.

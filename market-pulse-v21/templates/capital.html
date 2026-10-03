@@ -246,6 +246,38 @@
   .cx-wi-cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
   .cx-wi-cmp > div { border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; }
   .cx-wi-cmp .yr { font-size: 1.15rem; font-weight: 700; color: var(--ink); }
+  .cx-ts-list { position: absolute; z-index: 60; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 10px;
+    box-shadow: var(--shadow-2); margin: 0; padding: 4px; list-style: none; max-height: 320px; overflow-y: auto; }
+  .cx-ts-list[hidden] { display: none; }
+  .cx-ts-list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 7px 9px;
+    border-radius: 7px; cursor: pointer; font-size: 0.84rem; color: var(--ink); }
+  .cx-ts-list li b { font-family: var(--font-mono); }
+  .cx-ts-list li .nm { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cx-ts-list li .ty { font-size: 0.7rem; color: var(--ink-3); }
+  .cx-ts-list li[aria-selected="true"], .cx-ts-list li:hover { background: var(--primary-soft); }
+  .cx-ts-list li.none { display: block; color: var(--ink-3); cursor: default; }
+  .cx-ts-list li.none:hover { background: none; }
+  .cx-ts-info { font-size: 0.76rem; color: var(--ink-3); padding: 0 2px 4px; line-height: 1.5; }
+  .cx-ts-info b { color: var(--ink); }
+  .cx-ts-info .up { color: var(--mint-ink); } .cx-ts-info .down { color: var(--coral-ink); }
+  .cx-import { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 12px; border: 1px dashed var(--line-strong);
+    border-radius: 10px; margin-bottom: 12px; }
+  .cx-import .cx-sub { flex: 1; min-width: 200px; margin: 0; }
+  .cx-sync { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 12px; background: var(--surface); }
+  .cx-sync-h { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+  .cx-sync-h .grow { flex: 1; min-width: 180px; font-size: 0.86rem; }
+  .cx-sync .cx-t td, .cx-sync .cx-t th { padding: 6px 12px; font-size: 0.8rem; }
+  .cx-imp { border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--line)); border-radius: 12px; padding: 12px; margin-bottom: 14px;
+    background: color-mix(in srgb, var(--primary-soft) 40%, var(--surface)); display: grid; gap: 12px; }
+  .cx-imp[hidden] { display: none; }
+  .cx-imp-acct { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+  .cx-imp-acct .cx-sync-h select, .cx-imp-acct .cx-sync-h input[type=number] { width: auto; max-width: 100%; }
+  .cx-imp-acct .cx-t td, .cx-imp-acct .cx-t th { padding: 6px 12px; font-size: 0.8rem; }
+  .cx-imp-notes { padding: 8px 12px; font-size: 0.78rem; color: var(--ink-3); display: grid; gap: 4px; }
+  .cx-imp-notes .bad { color: var(--coral-ink); } .cx-imp-notes .ok { color: var(--mint-ink); }
+  .cx-imp-over label { display: flex; gap: 8px; align-items: baseline; font-size: 0.82rem; padding: 3px 0; }
+  .cx-imp-over code { font-size: 0.78rem; overflow-wrap: anywhere; }
+  .cx-imp-foot { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   @media (max-width: 1000px) {
     .cx-wi { grid-template-columns: minmax(0, 1fr); }
     .cx-grid { grid-template-columns: minmax(0, 1fr); }
@@ -484,7 +516,8 @@
           <label class="cx-wl" for="wiKind">Into
             <select id="wiKind"><option value="picks">The top picks</option><option value="ticker">A ticker…</option><option value="index">An index fund</option><option value="tbill">T-bills</option>{% if wk.debts %}<option value="debt">Pay down a debt…</option>{% endif %}<option value="custom">Something else…</option></select></label>
           <label class="cx-wl" for="wiTicker" id="wiTickerRow" hidden>Ticker
-            <input id="wiTicker" list="wiTickers" autocomplete="off" placeholder="e.g. LEN" style="text-transform:uppercase"><datalist id="wiTickers">{% for t, r in wk.tickers.items() %}<option value="{{ t }}">{{ r.label }}</option>{% endfor %}</datalist></label>
+            <input id="wiTicker" autocomplete="off" placeholder="Search a ticker or a name, e.g. vxus" style="text-transform:uppercase" data-ticker-search>
+            <span class="cx-ts-info" id="wiTickerInfo"></span></label>
           <label class="cx-wl" for="wiDebt" id="wiDebtRow" hidden>Debt
             <select id="wiDebt">{% for d in wk.debts %}<option value="{{ d.name }}">{{ d.name }} · {{ money(d.balance) }} at {{ num(d.apr) }}%</option>{% endfor %}</select></label>
           <div id="wiCustomRow" hidden style="display:grid;gap:10px;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)">
@@ -734,6 +767,26 @@
           {% if ed.flows_bad %}<label class="cx-bad">Lines that could not be read — fix or delete: <textarea data-bad="flows" rows="2" style="width:100%">{{ ed.flows_bad|join('\n') }}</textarea></label>{% endif %}
           <div><button class="cp-linkbtn" type="button" data-add="flows">Add a line</button> <span class="cx-sub" style="display:inline">"Top picks" means the board's current top picks; a debt line takes the name from your debts.</span></div>
         {% elif st.key == 'hold' %}
+          <div class="cx-import">
+            <button class="cx-btn" type="button" id="impBtn">Import positions (CSV)</button>
+            <input type="file" id="impFile" accept=".csv,text/csv" hidden>
+            <span class="cx-sub">From Schwab, Fidelity or Vanguard: download the Positions page as CSV. Each account becomes a synced group below; the next export replaces it. Anything not at the broker stays as you typed it.</span>
+          </div>
+          <div class="cx-imp" id="impPreview" hidden aria-live="polite"></div>
+          {% for b in ed.synced %}
+          <div class="cx-sync" data-sync="{{ b.key }}">
+            <textarea hidden data-sync-text>{{ b.text }}</textarea>
+            <script type="application/json" data-sync-rows>{{ b.rows|tojson }}</script>
+            <div class="cx-sync-h"><span class="grow"><b>{{ b.label }}</b> · {{ b.rows|length }} line{{ 's' if b.rows|length != 1 else '' }} · {{ money(b.value) }}
+              <span class="cx-sub" style="display:block">Synced from an export{% if b.as_of %} as of {{ b.as_of }}{% endif %}{% if b.age is not none and b.age > 30 %} — {{ b.age }} days old, export it again{% endif %}. To change it, import a newer export.</span></span>
+              {% if b.age is not none and b.age > 30 %}<span class="cx-chip warn">Stale</span>{% else %}<span class="cx-chip ok">Synced</span>{% endif %}
+              <button class="cp-linkbtn" type="button" data-sync-unlink title="Turn these into lines you edit by hand">Edit by hand</button>
+              <button class="cp-linkbtn" type="button" data-sync-drop>Remove</button></div>
+            <div class="cx-scroll"><table class="cx-t"><tr><th>Holding</th><th>Account</th><th class="r">Value</th><th class="r">Cost basis</th><th class="r">Return</th></tr>
+              {% for r in b.rows %}<tr><td>{{ r.name }}</td><td>{{ r.account_label }}</td><td class="r">{{ money(r.value) }}</td><td class="r">{{ money(r.basis) if r.basis is not none else '—' }}</td><td class="r">{{ '%g'|format(r.rate) ~ '%' if r.rate is not none else 'auto' }}</td></tr>{% endfor %}
+            </table></div>
+          </div>
+          {% endfor %}
           <div class="cx-rows" data-editor="holdings">
             <div class="cx-row hold"><span class="eh">Name or ticker</span><span class="eh">Account</span><span class="eh">Value</span><span class="eh">Cost basis</span><span class="eh">Return</span><span></span></div>
             {% for r in ed.holdings %}
@@ -1123,6 +1176,114 @@
     });
   }
 
+  // ── ticker search: one type-ahead for every box that takes a ticker ──
+  const TICKER_RE = /^[A-Z]{1,5}([.\-][A-Z]{1,2})?$/;
+  const NON_TICKER_ACCOUNTS = ['cash', 'tbills', 'debt'];
+  const priceCache = {};
+  async function priceOf(sym) {
+    if (!priceCache[sym]) priceCache[sym] = fetch('/api/stock/' + encodeURIComponent(sym) + '/price', { credentials: 'same-origin' })
+      .then(r => r.json()).catch(() => ({ error: 'No price right now.' }));
+    return priceCache[sym];
+  }
+  function screenNote(sym) {
+    const t = KIT && KIT.tickers && KIT.tickers[sym];
+    if (KIT && KIT.sleeve && KIT.sleeve.includes(sym)) return `one of the top picks (${esc(t ? t.source : '')})`;
+    if (t) return `rated by ${esc(t.source)}`;
+    return 'on no screen — the market return is assumed';
+  }
+  async function showInfo(el, sym, typed) {
+    if (!el) return;
+    el.dataset.sym = sym;
+    el.innerHTML = `<b>${esc(sym)}</b> · looking up the price…`;
+    const q = await priceOf(sym);
+    if (el.dataset.sym !== sym) return;
+    if (q.error) { el.innerHTML = `<b>${esc(sym)}</b> · ${esc(q.error)}${typed ? ' · kept as typed' : ''}`; return; }
+    const ch = q.day_change_pct;
+    el.innerHTML = `<b>${esc(q.symbol || sym)}</b> · <b>${money2(q.price)}</b>` +
+      (ch == null ? '' : ` <span class="${ch >= 0 ? 'up' : 'down'}">${ch >= 0 ? '+' : '−'}${Math.abs(ch).toFixed(2)}% today</span>`) +
+      ` · ${esc(q.name || '')} · ${screenNote(sym)}`;
+  }
+  const money2 = v => '$' + (+v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  function infoFor(input) {
+    if (input.id === 'wiTicker') return $('#wiTickerInfo');
+    const row = input.closest('.cx-row');
+    let el = row.nextElementSibling;
+    if (!el || !el.classList.contains('cx-ts-info')) { el = document.createElement('div'); el.className = 'cx-ts-info'; row.after(el); }
+    return el;
+  }
+  function eligible(input) {
+    if (!input || input.tagName !== 'INPUT') return false;
+    if (input.matches('[data-ticker-search]')) return true;
+    if (!input.matches('[data-editor="holdings"] [data-c="name"], [data-editor="flows"] [data-c="name"]')) return false;
+    const acct = (input.closest('.cx-row').querySelector('[data-c="account"]') || {}).value;
+    return !NON_TICKER_ACCOUNTS.includes(acct);
+  }
+  const TS = (() => {
+    const list = document.createElement('ul');
+    list.className = 'cx-ts-list'; list.id = 'cxTsList'; list.setAttribute('role', 'listbox'); list.hidden = true;
+    document.body.appendChild(list);
+    let input = null, items = [], active = -1, seq = 0, timer = null;
+    const cache = {};
+    function place() {
+      const r = input.getBoundingClientRect(), w = Math.min(Math.max(r.width, 300), window.innerWidth - 24);
+      list.style.width = w + 'px';
+      list.style.left = (Math.max(12, Math.min(r.left, window.innerWidth - w - 12)) + window.scrollX) + 'px';
+      list.style.top = (r.bottom + window.scrollY + 4) + 'px';
+    }
+    function close() { list.hidden = true; active = -1; if (input) input.setAttribute('aria-expanded', 'false'); }
+    function mark() {
+      $$('li[role=option]', list).forEach((li, i) => li.setAttribute('aria-selected', i === active));
+      if (input) input.setAttribute('aria-activedescendant', active >= 0 ? 'cxTs' + active : '');
+    }
+    function show(j) {
+      if (!input || document.activeElement !== input) return;
+      items = j.results || [];
+      list.innerHTML = items.length ? items.map((it, i) => `<li role="option" id="cxTs${i}" data-i="${i}" aria-selected="false"><b>${esc(it.symbol)}</b><span class="nm">${esc(it.name)}</span><span class="ty">${esc(it.type)}</span></li>`).join('')
+        : '<li class="none">No match. What you typed is kept as it is.</li>';
+      active = items.length ? 0 : -1; mark(); place(); list.hidden = false; input.setAttribute('aria-expanded', 'true');
+    }
+    async function search(q) {
+      const my = ++seq;
+      if (cache[q]) { show(cache[q]); return; }
+      try {
+        const r = await fetch('/api/stock/search?q=' + encodeURIComponent(q), { credentials: 'same-origin' });
+        const j = await r.json(); cache[q] = j;
+        if (my === seq) show(j);
+      } catch (e) { close(); }
+    }
+    function pick(i) {
+      const it = items[i]; if (!it || !input) return;
+      input.value = it.symbol; close();
+      showInfo(infoFor(input), it.symbol);
+      if (input.id === 'wiTicker') input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    document.addEventListener('focusin', e => { if (eligible(e.target)) { input = e.target; input.setAttribute('aria-autocomplete', 'list'); input.setAttribute('aria-controls', 'cxTsList'); } });
+    document.addEventListener('input', e => {
+      if (e.target !== input || !eligible(input)) return;
+      clearTimeout(timer);
+      const q = input.value.trim();
+      if (!q) { close(); return; }
+      timer = setTimeout(() => search(q), 200);
+    });
+    document.addEventListener('keydown', e => {
+      if (e.target !== input || list.hidden) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); active = Math.min(items.length - 1, active + 1); mark(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); active = Math.max(0, active - 1); mark(); }
+      else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); pick(active); }
+      else if (e.key === 'Escape') { close(); }
+    });
+    document.addEventListener('focusout', e => { if (e.target === input) setTimeout(close, 150); });
+    // A ticker typed in full without picking from the list still gets its price.
+    document.addEventListener('change', e => {
+      if (!eligible(e.target)) return;
+      const v = e.target.value.trim().toUpperCase();
+      if (TICKER_RE.test(v)) showInfo(infoFor(e.target), v, true);
+    });
+    list.addEventListener('mousedown', e => { const li = e.target.closest('li[role=option]'); if (li) { e.preventDefault(); pick(+li.dataset.i); } });
+    window.addEventListener('resize', () => { if (!list.hidden) place(); });
+    return { close };
+  })();
+
   // ── profile: row editors and per-step saves ──
   const ACCOUNTS = {{ accounts|tojson }};
   const opts = (list, sel) => list.map(([v, l]) => `<option value="${v}"${v === sel ? ' selected' : ''}>${l}</option>`).join('');
@@ -1134,7 +1295,8 @@
   document.addEventListener('click', e => {
     const add = e.target.closest('[data-add]');
     if (add) { const box = $(`[data-editor="${add.dataset.add}"]`); box.insertAdjacentHTML('beforeend', ROW[add.dataset.add]()); box.lastElementChild.querySelector('input').focus(); return; }
-    const x = e.target.closest('.cx-x'); if (x) x.closest('.cx-row').remove();
+    const x = e.target.closest('.cx-x');
+    if (x) { const row = x.closest('.cx-row'), info = row.nextElementSibling; if (info && info.classList.contains('cx-ts-info')) info.remove(); row.remove(); }
     const del = e.target.closest('.cp-prop-del'); if (del) del.closest('.cp-prop').remove();
   });
   const addProp = $('#cpAddProp');
@@ -1152,7 +1314,105 @@
     }).filter(Boolean);
     const bad = form.querySelector(`[data-bad="${kind}"]`);
     if (bad && bad.value.trim()) lines.push(...bad.value.split('\n').map(s => s.trim()).filter(Boolean));
-    return lines.join('\n');
+    // synced groups go back exactly as they came, ahead of the typed lines
+    const synced = kind === 'holdings' ? $$('.cx-sync [data-sync-text]', form).map(t => t.value.trim()) : [];
+    return synced.concat(lines.length ? [lines.join('\n')] : []).join('\n\n');
+  }
+
+  // ── synced groups: edit by hand (they become typed lines) or remove ──
+  document.addEventListener('click', e => {
+    const box = e.target.closest('.cx-sync'); if (!box) return;
+    if (e.target.closest('[data-sync-drop]')) { box.remove(); toast('Removed — save to keep the change.'); }
+    if (e.target.closest('[data-sync-unlink]')) {
+      const ed = $('[data-editor="holdings"]');
+      JSON.parse($('[data-sync-rows]', box).textContent).forEach(r => {
+        ed.insertAdjacentHTML('beforeend', ROW.holdings());
+        const row = ed.lastElementChild, set = (c, v) => { row.querySelector(`[data-c="${c}"]`).value = v; };
+        set('name', r.name); set('account', r.account); set('value', r.value);
+        if (r.basis != null) set('basis', r.basis);
+        if (r.rate != null) set('rate', r.rate + '%');
+      });
+      box.remove(); toast('Now lines you edit — save to keep the change.');
+    }
+  });
+
+  // ── import a broker's positions export ──
+  const IMP_ACCOUNTS = ACCOUNTS.filter(([v]) => v !== 'cash' && v !== 'tbills');
+  const IMP_VALUE = { taxable: 'taxable', k401: '401k', roth401k: 'roth 401k', ira: 'ira', roth: 'roth', hsa: 'hsa' };
+  let IMP = null;
+  const impBtn = $('#impBtn'), impFile = $('#impFile'), impBox = $('#impPreview');
+  if (impBtn) {
+    impBtn.addEventListener('click', () => impFile.click());
+    impFile.addEventListener('change', async () => {
+      const f = impFile.files[0]; impFile.value = '';
+      if (!f) return;
+      if (f.size > 1e6) { toast('That file is over 1 MB — is it the positions export?'); return; }
+      impBtn.disabled = true; impBtn.textContent = 'Reading…';
+      try {
+        const text = await f.text();
+        const j = await post('/api/capital/import/preview', { csv: text, filename: f.name });
+        IMP = { csv: text, filename: f.name, data: j };
+        renderImport();
+      } catch (err) { toast(err.message); }
+      impBtn.disabled = false; impBtn.textContent = 'Import positions (CSV)';
+    });
+    impBox.addEventListener('click', async e => {
+      if (e.target.closest('[data-imp-cancel]')) { impBox.hidden = true; impBox.innerHTML = ''; IMP = null; return; }
+      if (!e.target.closest('[data-imp-apply]') || !IMP) return;
+      const body = { csv: IMP.csv, filename: IMP.filename, accounts: {}, margin_apr: {}, remove: [] };
+      $$('[data-imp-acct]', impBox).forEach(el => {
+        const k = el.dataset.impAcct;
+        body.accounts[k] = { include: $('[data-imp-include]', el).checked, account: $('[data-imp-type]', el).value };
+        const apr = $('[data-imp-apr]', el); if (apr) body.margin_apr[k] = apr.value === '' ? null : +apr.value;
+      });
+      $$('[data-imp-remove]', impBox).forEach(c => { if (c.checked) body.remove.push(c.value); });
+      const btn = e.target.closest('[data-imp-apply]'), msg = $('[data-imp-msg]', impBox);
+      btn.disabled = true; msg.textContent = 'Syncing…';
+      try { await post('/api/capital/import/apply', body); reloadTo('profile'); }
+      catch (err) { msg.textContent = err.message; btn.disabled = false; }
+    });
+    impBox.addEventListener('change', e => { if (e.target.matches('[data-imp-include], [data-imp-type]')) renderFoot(); });
+  }
+  const TYPE_NAME = { taxable: 'Taxable brokerage', k401: '401(k)', roth401k: 'Roth 401(k)', ira: 'Traditional IRA', roth: 'Roth IRA', hsa: 'HSA' };
+  function renderImport() {
+    const d = IMP.data;
+    const accts = d.accounts.map(a => {
+      const held = a.positions.reduce((t, p) => t + p.value, 0);
+      const notes = [];
+      const theirs = a.check_from === 'percent' ? `the account total ${d.broker}'s “% of account” column implies` : `${d.broker}'s own total`;
+      if (a.check === 'ok') notes.push(`<span class="ok">✓ Adds up to ${theirs}, ${money(a.reported)}.</span>`);
+      else if (a.check === 'off') notes.push(`<span class="bad">✗ ${money(Math.abs(a.check_diff))} ${a.check_diff > 0 ? 'short of' : 'over'} ${theirs} (${money(a.reported)}) — a row the page could not read? Check the lines below before syncing.</span>`);
+      else notes.push(`The file gives no account total to check against — check the lines below.`);
+      if (!a.sure) notes.push(`<span class="bad">"${esc(a.label)}" does not say what kind of account it is${a.window ? ' (pre-tax 401(k) or Roth 401(k))' : ''} — choose it above.</span>`);
+      if (a.window) notes.push('A brokerage window inside a 401(k): the board counts these at the market return, as it does every 401(k) holding — it does not yet rate stocks held inside a plan.');
+      if (a.cash > 0) notes.push(`Uninvested cash ${money(a.cash)} is written at 0% — type what the sweep pays if it pays more.`);
+      if (a.positions.some(p => p.kind === 'mmf')) notes.push('A money-market fund is written at your T-bill rate, which money funds track.');
+      a.skipped.forEach(s => notes.push(`Left out: ${esc(s.what)}${s.value != null ? ' ' + money(s.value) : ''} — ${esc(s.why)}.`));
+      if (a.synced_before) notes.push(`Replaces the group synced ${a.synced_before.as_of ? 'as of ' + esc(a.synced_before.as_of) : 'before'}.`);
+      const margin = a.margin > 0 ? `<label style="font-size:0.8rem">Margin loan ${money(a.margin)} at <input data-imp-apr type="number" step="0.01" min="0" max="40" style="width:5.5em" value="${a.margin_apr ?? ''}" placeholder="APR"> % <span class="cx-sub" style="display:inline">— it becomes a debt</span></label>` : '';
+      const rows = a.positions.map(p => `<tr><td><b>${esc(p.symbol)}</b><div class="s">${esc(p.name)}</div></td><td class="r">${money(p.value)}</td><td class="r">${p.basis != null ? money(p.basis) : '—'}</td></tr>`).join('');
+      return `<div class="cx-imp-acct" data-imp-acct="${esc(a.key)}">
+        <div class="cx-sync-h"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-imp-include checked> <b>${esc(a.broker)} · ${esc(a.label)}</b></label>
+          <span class="grow cx-sub" style="margin:0">${a.positions.length} position${a.positions.length === 1 ? '' : 's'} · ${money(held)}${a.cash > 0 ? ' · cash ' + money(a.cash) : ''}${a.margin > 0 ? ' · margin −' + money(a.margin) : ''}</span>
+          <select data-imp-type aria-label="Kind of account">${IMP_ACCOUNTS.map(([v, l]) => `<option value="${v}"${v === IMP_VALUE[a.account] ? ' selected' : ''}>${l}</option>`).join('')}</select>
+          ${margin}</div>
+        <div class="cx-imp-notes">${notes.map(n => `<div>${n}</div>`).join('')}</div>
+        <div class="cx-scroll"><table class="cx-t"><tr><th>Position</th><th class="r">Value</th><th class="r">Cost basis</th></tr>${rows}</table></div>
+      </div>`;
+    }).join('');
+    const over = d.overlaps.length ? `<div class="cx-imp-over"><b style="font-size:0.86rem">Lines you typed for these accounts</b>
+      <div class="cx-sub">Checked lines are removed — they hold what the export now lists, and would count twice. Leave the others if they are at another broker.</div>
+      ${d.overlaps.map(o => `<label><input type="checkbox" data-imp-remove value="${esc(o.text)}"${o.duplicate ? ' checked' : ''}><code>${esc(o.text)}</code>${o.duplicate ? ' <span class="cx-chip warn">same holding</span>' : ''}</label>`).join('')}</div>` : '';
+    impBox.innerHTML = `<div><b>${esc(d.broker)} export${d.as_of ? ' · as of ' + esc(d.as_of) : ''}</b>
+      <div class="cx-sub">Nothing is saved until you sync. Values are ${esc(d.broker)}'s market values; cost basis is kept for taxable accounts.</div></div>
+      ${accts}${over}
+      <div class="cx-imp-foot"><button class="cx-btn primary" type="button" data-imp-apply>Sync</button><button class="cp-linkbtn" type="button" data-imp-cancel>Cancel</button><span class="cx-sub" data-imp-msg style="margin:0"></span></div>`;
+    impBox.hidden = false; renderFoot();
+    impBox.scrollIntoView({ block: 'nearest' });
+  }
+  function renderFoot() {
+    const n = $$('[data-imp-include]', impBox).filter(c => c.checked).length, b = $('[data-imp-apply]', impBox);
+    if (b) { b.textContent = n ? `Sync ${n} account${n === 1 ? '' : 's'} to holdings` : 'Choose an account'; b.disabled = !n; }
   }
   document.addEventListener('click', async e => {
     const b = e.target.closest('[data-save]'); if (!b) return;
