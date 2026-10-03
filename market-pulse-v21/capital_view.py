@@ -77,8 +77,10 @@ def _step_text(g: dict, p: dict, debts: dict, holdings: dict) -> tuple[str, str]
         dn = m["to_id"].split(":", 1)[1]
         d = debts.get(dn) or {}
         off = g["proceeds"] >= K._f(d.get("balance")) - 0.5
+        when = (m.get("payoff_label") if m.get("payoff_label") else None)
         return (f"{'Pay off' if off else 'Pay down'} {dn}",
-                f"A guaranteed {K._f(d.get('apr')):g}%" + (" — and its monthly payment stops." if off else "."))
+                f"A guaranteed {K._f(d.get('apr')):g}%" + (" — and its monthly payment stops" if off and d.get("payment") else "")
+                + (f", for the months until your pay would clear it ({when})." if when else "."))
     if kind == "tbill":
         reserve = all(x["key"] == "reserve" for x in g["parts"])
         return ("Keep the emergency fund in T-bills" if reserve else "Move idle cash to T-bills",
@@ -638,10 +640,11 @@ def build_view(board: dict, today: date | None = None) -> dict:
               "flows": [{"name": f["name"], "account": "tbills" if f["state_exempt"] else EDIT_ACCOUNT[f["account"]],
                          "amount": f["amount"], "rate": f["rate"]} for f in flow_rows],
               "flows_bad": flow_bad}
+    import timeline as T
     import whatif as W
     wk = W.kit(board)
     return {"headline": headline(board), "vitals": vitals(board, fi), "todo": todo, "editor": editor,
-            "whatif": wk, "scenarios": W.scenarios(board, wk),
+            "whatif": wk, "scenarios": W.scenarios(board, wk), "timeline": board.get("timeline") if "timeline" in board else T.simulate(board, today),
             "todo_once": sum(1 for s in todo if s["type"] == "once"),
             "todo_monthly": sum(1 for s in todo if s["type"] == "monthly"),
             "fi": fi, "debts": debt_plan(board, todo, today), "passive": passive_income(board),

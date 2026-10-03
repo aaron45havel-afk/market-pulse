@@ -246,6 +246,16 @@ check(len(dp) == 1 and near(dp[0]["sold"], 30_000 - 6000 - 4000) and "Down-payme
 r9 = run("Chk, checking, 56000, 0%", winner={**HHROW, "ret_net": 20.0})
 check(not [m_ for m_ in r9["moves"] if m_["to_kind"] == "dpfund"],
       "and once the deal is bought outright, there is no down payment left to save for")
+HH2 = {**HHROW, "id": "hh:2", "label": "House hack — Vallejo", "ret_net": 24.0}
+HOME = {**HHROW, "id": "home:1", "label": "Buy your home — Napa", "ret_net": 23.0}
+many = run("Chk, checking, 200000, 0%", rows=[DEBT, stock("AAA", 12.0, 9.0), TBILL, HHROW, HH2, HOME])
+check([m_["to_id"] for m_ in many["moves"] if m_["to_kind"] == "re"] == ["hh:1"],
+      "ONE DEAL AT A TIME: with money for three, the best house hack is bought and the next two are not "
+      "(owner-occupied financing is one home; three funded deals made a 55% 'optimal' return)")
+mw = run("Chk, checking, 200000, 0%", rows=[DEBT, stock("AAA", 12.0, 9.0), TBILL, HHROW, HH2],
+         winner={**HH2, "ret_net": 20.0})
+check([m_["to_id"] for m_ in mw["moves"] if m_["to_kind"] in ("re", "dpfund")] == ["hh:2"],
+      "the deal is the month's plan's own when it is saving for one — not a second deal beside it")
 blocked = run("Chk, checking, 56000, 0%", rows=[DEBT, stock("AAA", 12.0, 9.0), TBILL, {**HHROW, "blocked": "over cap"}])
 check(not [m_ for m_ in blocked["moves"] if m_["to_kind"] == "re"], "THE CAP HOLDS FOR HELD MONEY: a blocked property takes none")
 
@@ -375,7 +385,7 @@ def render(b):
 
 
 html = render(FB)
-check("Do next" in html and "What you hold" in html and "Your monthly pay" in html and "Left on the table" in html,
+check("Do next" in html and "What you hold" in html and "Your monthly plan" in html and "Left on the table" in html,
       "the comparison is on the page: the gap, the steps, the holdings, the pay")
 check("Could not read 1 line" in html and "oops" in html, "an unreadable line is named on the page")
 check("Duplex" in html and 'data-k="basis" value="500000' in html and 'id="cpPropTpl"' in html,

@@ -275,6 +275,15 @@ Format: `- [PHASE-SEEN] item — why it matters`
   and $20k from VTI into one deal) would need a list of sources.
 - [CAPITAL-SYNC-FORMATS] The Vanguard reader follows its published columns but has not seen a real export; confirm
   it with one and adjust. Schwab's, Fidelity's and Chase's were checked against real files.
+- [CAPITAL-OWNED-RE-HOLD] Owned property (measure_property) is still measured on year one's return on its equity;
+  annualizing it over the hold the way the board's buy rows now are would make keep-vs-sell consistent.
+- [CAPITAL-RE-SALE-TAX] hold_return charges no tax on the sale; a house hack's rental units owe gains tax and
+  depreciation recapture on their share. And it holds the yearly benefit flat — rent growth is not assumed.
+- [CAPITAL-TL-WORTH] The monthly timeline says where money goes and when, not what it is worth; a net-worth line
+  (each bucket at its after-tax return, the property at appreciation and principal) would join it to the
+  independence path.
+- [CAPITAL-TL-LIMITS] The timeline resets contribution room at the 2026 limits every January; later years' limits
+  should come from the IRS notices as they are published.
 - [CAPITAL-WINDOW] Stocks in a 401(k) brokerage window (BrokerageLink, PCRA) are measured as plan funds at the market
   return, with no research time, and are not offered moves into the picks. A per-line "window" flag would let the
   board rate them as picks and use the picks as a destination inside that 401(k).

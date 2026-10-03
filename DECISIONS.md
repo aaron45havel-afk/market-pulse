@@ -974,6 +974,41 @@ all editable).
 - Saved as typed: the holdings and pay-split boxes keep the owner's lines, so a line the engine cannot read stays in
   the box and is named on the page. No migration — the profile is one JSON row.
 
+## 2026-10-03 — /capital Monthly plan, month by month; property and debt returns over the hold
+**Why:** the owner asked for a world-class Monthly plan. Their screenshots showed "a normal month from January" putting
+most of the pay into a down payment forever, an optimal path at 55% a year and a year-15 gain near a billion dollars.
+Owner choices:
+annualize property returns over the hold; a month-by-month timeline; build directly, reviewed on the PR.
+**Decided:**
+- **Property returns are annualized over the hold** (`capital.hold_return`), for the board's house-hack and
+  buy-a-home rows: the cash to close becomes equity at a sale in `hold_years` (the price grown at the owner's
+  appreciation, the loan paid down, 7% to sell), plus each year's benefit (rent saved and net rent after the full
+  payment) reinvested at the after-tax market return. Leverage counts in full; year one's return on the cash (over
+  80% for a typical FHA house hack) is no longer compounded — it is shown in the row's basis. The sale's tax is not
+  charged (the home-sale exclusion) and the yearly benefit is held flat. BRRRR/flip rows are already a target
+  return; owned property keeps its return on equity (BACKLOG).
+- **One deal at a time**: the optimizer funds at most one property — the month's plan's own when it is saving for
+  one, else the best — and the down-payment fund is that same deal. Three house hacks funded at once had produced the
+  55% path.
+- **A debt paid early saves only the months until pay would clear it** (`capital.debt_hold_rate`): the APR for those
+  months, then the after-tax market return, annualized over the hold. The timeline says when pay alone clears each
+  debt; a debt it never clears keeps its full APR. So Do next no longer sells holdings to pay a card next month's pay
+  clears, What if says "your pay clears it by Nov anyway", and the overview's year-15 figure is no longer a card
+  compounding at 23% for fifteen years. Debt above the market return still comes first in the monthly waterfall.
+- **The timeline** (`timeline.py`) runs the monthly amount through the board's own waterfall month by month,
+  carrying the state: cushion and emergency fund; each card's monthly interest at its APR, then the plan's payment; a
+  loan's listed payment comes from expenses and joins the monthly amount once it is paid off; Roth/HSA/401(k) room
+  drawn down and reset each January at the 2026 limits; a down payment started by cash above the emergency fund,
+  filled exactly, then — after the months to close — rent stops and the place's own cash flow starts. Steady is the
+  first run of identical months that each began with every one-time goal met; it is shown as a January (a normal
+  year's room). Pay alone: selling holdings is Do next, and the plan tab says when Do next would buy the deal today.
+- **The tab**: the monthly amount now, when the one-time goals are done, the steady month (with what it frees); dated
+  milestones; a chart of where each month's money goes (pick a month — keyboard too — for its split and events);
+  the steady split; the owner's split now, or a way to add it. Nothing in the timeline grows at a return.
+- The overview's year-15 figure on an owner-shaped test profile went from absurd to the house hack's modelled
+  value: equity at the sale plus fifteen years of rent savings reinvested. The monthly plan shows the same rent
+  savings as cash freed after move-in — two views of one deal, never added together.
+
 ## 2026-10-03 — /capital positions import: Chase, a line-by-line check, and naming an account the file does not
 **Why:** the owner sent Chase's (J.P. Morgan Self-Directed Investing) positions export. It names no account at all,
 calls its columns Ticker / Value / Cost, and has no total and no "% of account" to check against.

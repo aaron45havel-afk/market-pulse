@@ -260,6 +260,41 @@
   .cx-ts-info { font-size: 0.76rem; color: var(--ink-3); padding: 0 2px 4px; line-height: 1.5; }
   .cx-ts-info b { color: var(--ink); }
   .cx-ts-info .up { color: var(--mint-ink); } .cx-ts-info .down { color: var(--coral-ink); }
+  .cx-tl-hero { padding: 18px; }
+  .cx-tl-sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .cx-tl-sum .v { font-family: var(--serif, Georgia, serif); font-size: 1.9rem; line-height: 1.15; color: var(--ink); margin-top: 4px; }
+  .cx-ms { list-style: none; margin: 18px 0 0; padding: 14px 0 0; border-top: 1px solid var(--line); display: grid; gap: 0; }
+  .cx-ms li { display: grid; grid-template-columns: 82px 18px minmax(0, 1fr); gap: 0 10px; align-items: start; position: relative; padding-bottom: 12px; }
+  .cx-ms li:last-child { padding-bottom: 0; }
+  .cx-ms .when { font-size: 0.78rem; color: var(--ink-3); text-align: right; padding-top: 1px; font-variant-numeric: tabular-nums; }
+  .cx-ms .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 2px solid var(--primary); margin: 3px auto 0; position: relative; z-index: 1; }
+  .cx-ms li:not(:last-child)::after { content: ""; position: absolute; left: calc(82px + 10px + 8px); top: 16px; bottom: -2px; width: 2px; background: var(--line); }
+  .cx-ms .what b { display: block; font-size: 0.88rem; color: var(--ink); }
+  .cx-ms .what .cx-sub { margin-top: 1px; }
+  .cx-ms .k-debt .dot { border-color: var(--c-debt); } .cx-ms .k-ef .dot, .cx-ms .k-cushion .dot { border-color: var(--c-cash); }
+  .cx-ms .k-dp_start .dot, .cx-ms .k-dp_ready .dot { border-color: var(--c-re); } .cx-ms .k-move_in .dot { background: var(--c-re); border-color: var(--c-re); }
+  .cx-ms .k-steady .dot { background: var(--primary); }
+  .cx-tlc { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(20px, 1fr); gap: 4px; overflow-x: auto; padding-bottom: 4px; }
+  .cx-tlb { display: grid; grid-template-rows: 10px 150px auto; gap: 4px; background: none; border: 0; padding: 4px 1px; border-radius: 6px; cursor: pointer; color: var(--ink-3); font: inherit; min-width: 0; }
+  .cx-tlb:hover, .cx-tlb[aria-selected="true"] { background: var(--surface-3); }
+  .cx-tlb[aria-selected="true"] .x { color: var(--ink); font-weight: 600; }
+  .cx-tlb:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+  .cx-tlb .pin { display: flex; justify-content: center; align-items: center; }
+  .cx-tlb .pin i, .cx-pin { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); display: inline-block; }
+  .cx-tlb .col { display: flex; align-items: flex-end; justify-content: center; }
+  .cx-tlb .bar { display: flex; flex-direction: column; width: 100%; max-width: 26px; border-radius: 4px 4px 2px 2px; overflow: hidden; min-height: 2px; }
+  .cx-tlb .bar i { display: block; min-height: 1px; }
+  .cx-tlb .x { font-size: 0.66rem; text-align: center; line-height: 1.2; white-space: nowrap; }
+  .cx-tlb .x em { display: block; font-style: normal; color: var(--ink-4); font-size: 0.6rem; }
+  .tl-sav { background: var(--c-cash); } .tl-debt { background: var(--c-debt); } .tl-k401 { background: #2a9d8f; }
+  .tl-hsa { background: #57b6c9; } .tl-roth { background: var(--c-funds); } .tl-dp { background: var(--c-re); }
+  .tl-picks { background: var(--c-picks); } .tl-tb { background: #c3c7d1; }
+  [data-theme="dark"] .tl-tb { background: #5b6170; }
+  .cx-tlm { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .cx-tlm-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .cx-tlm-h h3 { margin: 0; font-size: 0.98rem; font-family: var(--sans); color: var(--ink); }
+  .cx-tlm .cx-callout { margin: 6px 0; }
+  .cx-tlm .cx-t td .cx-dot, .cx-cards2 .cx-t td .cx-dot { margin-right: 4px; vertical-align: 1px; }
   .cx-import { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 12px; border: 1px dashed var(--line-strong);
     border-radius: 10px; margin-bottom: 12px; }
   .cx-import .cx-sub { flex: 1; min-width: 200px; margin: 0; }
@@ -286,6 +321,12 @@
     .cx-cards3 { grid-template-columns: minmax(0, 1fr); }
   }
   @media (max-width: 720px) {
+    .cx-tl-sum { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .cx-tl-sum > div:first-child { grid-column: 1 / -1; }
+    .cx-tl-sum .v { font-size: 1.5rem; }
+    .cx-ms li { grid-template-columns: 64px 18px minmax(0, 1fr); }
+    .cx-ms li:not(:last-child)::after { left: calc(64px + 10px + 8px); }
+    .cx-tlb { grid-template-rows: 10px 120px auto; }
     .cx-hero { grid-template-columns: minmax(0, 1fr); }
     .cx-vitals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .cx-rail, .cx-cards2 { grid-template-columns: minmax(0, 1fr); }
@@ -557,31 +598,78 @@
 
   {# ═══════════════════ MONTHLY PLAN ═══════════════════ #}
   <section class="cx-view" id="v-plan" role="tabpanel" aria-labelledby="t-plan" hidden>
-    <div class="cx-title"><h2>Your monthly pay</h2><p>This month's split, then a normal month from January next to the split you use now, on the same amount.</p></div>
-    {% set plan = board.plan %}
-    <div class="cx-panel">
-      <div class="cx-panel-h"><h2>This month — {{ money(p.monthly_invest) }}</h2><span class="note">One-time steps (a cushion, the emergency fund, debt above the hurdle) come first.</span></div>
+    {% set tl = view.timeline %}
+    <div class="cx-title"><h2>Your monthly plan</h2><p>What you put aside each month, run through the waterfall one month at a time: when each goal is met, and where every dollar goes until then.</p></div>
+    {% if not tl %}
+    <div class="cx-panel"><div class="cx-panel-b cx-sub">Nothing to plan yet: set what you can put aside each month (Profile → Pay and taxes).</div></div>
+    {% else %}
+    {% set sd = tl.steady %}
+    <div class="cx-panel cx-tl-hero">
+      <div class="cx-tl-sum">
+        <div><div class="cx-eyebrow">Each month now</div><div class="v num">{{ money(tl.base) }}</div><div class="cx-sub">what you can put aside</div></div>
+        <div><div class="cx-eyebrow">One-time goals done</div>
+          <div class="v">{% if sd %}{{ sd.from_label }}{% else %}Not within {{ (tl.horizon / 12)|round|int }} years{% endif %}</div>
+          <div class="cx-sub">{% if sd %}{% if tl.steady_i == 0 %}nothing one-time left{% else %}{{ tl.steady_i }} month{{ 's' if tl.steady_i != 1 else '' }} from now{% endif %}{% else %}at this amount — see the last month below{% endif %}</div></div>
+        <div><div class="cx-eyebrow">Then, each month</div>
+          <div class="v num">{{ money(sd.total) if sd else '—' }}</div>
+          <div class="cx-sub">{% if sd %}{{ money(sd.per_year) }} a year after tax{% if sd.total > tl.base + 0.5 %} · {{ smoney(sd.total - tl.base) }} freed{% endif %}{% endif %}</div></div>
+      </div>
+      {% set buy = view.todo|selectattr('kind', 'equalto', 're')|list %}
+      {% if buy and tl.deal %}<div class="cx-callout" style="margin-top:14px"><b>Do next can buy it today:</b> {{ buy[0].what }}. This plan saves for it from pay alone; once you buy it and enter it under Property, the saving months drop out and the plan reruns. <button class="cp-linkbtn" type="button" data-go="overview">See Do next</button></div>{% endif %}
+      {% if tl.milestones %}
+      <ol class="cx-ms" aria-label="Milestones">
+        {% for m in tl.milestones %}<li class="k-{{ m.kind }}"><span class="when">{{ m.label }}</span><span class="dot" aria-hidden="true"></span><span class="what"><b>{{ m.text }}</b>{% if m.detail %}<span class="cx-sub">{{ m.detail }}</span>{% endif %}</span></li>{% endfor %}
+      </ol>
+      {% endif %}
+    </div>
+
+    <div class="cx-panel" style="margin-top:14px">
+      <div class="cx-panel-h"><h2>Where each month goes</h2><span class="note">The next {{ tl.months|length }} months · pick one to see its split</span></div>
       <div class="cx-panel-b">
-        {% if plan.steps %}
-        <table class="cx-t">{% for s in plan.steps %}<tr><td>{{ s.to }}<div class="s">{{ s.why }}</div></td><td class="r num">{{ money(s.amount) }}</td></tr>{% endfor %}
-          {% if plan.left > 0 %}<tr><td>Unassigned<div class="s">A per-name cap left it over.</div></td><td class="r num">{{ money(plan.left) }}</td></tr>{% endif %}</table>
-        {% else %}<div class="cx-sub">Nothing to split yet: set what you can put aside each month (Profile).</div>{% endif %}
+        <div class="cx-tlc" role="tablist" aria-label="Months">
+          {% for m in tl.months %}
+          <button type="button" class="cx-tlb" role="tab" id="tlb{{ m.i }}" aria-controls="tlm{{ m.i }}" aria-selected="{{ 'true' if loop.first else 'false' }}" tabindex="{{ '0' if loop.first else '-1' }}" data-month="{{ m.i }}"
+                  title="{{ m.label }} · {{ money(m.total) }}{% for c in tl.categories %}{% if m.by_category[c.name] %} · {{ c.name }} {{ money(m.by_category[c.name]) }}{% endif %}{% endfor %}">
+            <span class="pin">{% if m.events %}<i aria-hidden="true"></i>{% endif %}</span>
+            <span class="col"><span class="bar" style="height:{{ (m.total / tl.peak * 100)|round(1) }}%">{% for c in tl.categories|reverse %}{% if m.by_category[c.name] %}<i class="tl-{{ c.cls }}" style="flex-grow:{{ m.by_category[c.name] }}"></i>{% endif %}{% endfor %}</span></span>
+            <span class="x">{{ m.short }}{% if m.short == 'Jan' or loop.first %}<em>{{ m.year }}</em>{% endif %}</span>
+          </button>
+          {% endfor %}
+        </div>
+        <div class="cx-legend">{% for c in tl.categories %}<span><i class="cx-dot tl-{{ c.cls }}"></i>{{ c.name }}</span>{% endfor %}<span><i class="cx-pin" aria-hidden="true"></i>a milestone that month</span></div>
+        {% for m in tl.months %}
+        <div class="cx-tlm" id="tlm{{ m.i }}" role="tabpanel" aria-labelledby="tlb{{ m.i }}" {% if not loop.first %}hidden{% endif %}>
+          <div class="cx-tlm-h"><h3>{{ m.label }}{% if loop.first %} · this month{% endif %}</h3><span class="num">{{ money(m.total) }}{% if m.total > tl.base + 0.5 %} <span class="cx-chip ok">{{ smoney(m.total - tl.base) }} freed</span>{% endif %}</span></div>
+          {% for e in m.events %}<div class="cx-callout"><b>{{ e.text }}.</b> {{ e.detail }}</div>{% endfor %}
+          <table class="cx-t">
+            <tr><th>Where</th><th class="r">This month</th><th class="r">After tax</th></tr>
+            {% for st in m.steps %}<tr><td><i class="cx-dot tl-{{ st.cls }}"></i> {{ st.to }}</td><td class="r num">{{ money(st.amount) }}</td><td class="r num">{{ pct(st.ret) if st.ret is not none else '—' }}</td></tr>{% endfor %}
+            {% if m.left > 0.5 %}<tr><td><i class="cx-dot tl-tb"></i> Left over → T-bills<div class="s">The down payment is already full, or the per-name cap on picks left it over.</div></td><td class="r num">{{ money(m.left) }}</td><td class="r num">—</td></tr>{% endif %}
+          </table>
+        </div>
+        {% endfor %}
       </div>
     </div>
-    {% set st = view.steady %}
+
     {% set pay = cur.pay if cur else none %}
     <div class="cx-cards2" style="margin-top:14px">
+      <div class="cx-panel"><div class="cx-panel-h"><h2>Once everything's done</h2>{% if sd %}<span class="note">from {{ sd.from_label }} · {{ money(sd.per_year) }} a year after tax</span>{% endif %}</div>
+        <div class="cx-panel-b">{% if sd %}
+          <table class="cx-t"><tr><th>Where</th><th class="r">Monthly</th><th class="r">After tax</th></tr>
+            {% for st in sd.steps %}<tr><td><i class="cx-dot tl-{{ st.cls }}"></i> {{ st.to }}</td><td class="r num">{{ money(st.amount) }}</td><td class="r num">{{ pct(st.ret) if st.ret is not none else '—' }}</td></tr>{% endfor %}
+            {% if sd.left > 0.5 %}<tr><td><i class="cx-dot tl-tb"></i> Left over → T-bills<div class="s">The per-name cap on picks left it over.</div></td><td class="r num">{{ money(sd.left) }}</td><td class="r num">—</td></tr>{% endif %}
+          </table>
+          {% else %}<div class="cx-sub">At {{ money(tl.base) }} a month the one-time goals run past {{ (tl.horizon / 12)|round|int }} years. Clearing a debt from what you hold (Do next) or putting more aside brings them in.</div>{% endif %}</div></div>
       <div class="cx-panel"><div class="cx-panel-h"><h2>Your split now</h2>{% if pay and pay.now_pct is not none %}<span class="note">{{ pct(pay.now_pct) }} after tax</span>{% endif %}</div>
         <div class="cx-panel-b">{% if pay %}
           <table class="cx-t"><tr><th>Where</th><th class="r">Monthly</th><th class="r">After tax</th></tr>
             {% for l in pay.lines %}<tr><td>{{ l.label }} <span class="s">{{ l.account_label }}</span><div class="s">{{ l.src or l.why_not }}</div></td><td class="r num">{{ money(l.amount) }}</td><td class="r num">{{ pct(l.ret) }}</td></tr>{% endfor %}</table>
           {% if pay.bad_lines %}<div class="cx-bad">Could not read: {% for b in pay.bad_lines %}“{{ b }}”{% if not loop.last %}, {% endif %}{% endfor %}.</div>{% endif %}
-        {% else %}<div class="cx-sub">Add how you split your pay now (Profile → Pay and taxes) to compare.</div>{% endif %}</div></div>
-      <div class="cx-panel"><div class="cx-panel-h"><h2>A normal month, from January</h2><span class="note">{{ money(st.per_year) }} a year after tax</span></div>
-        <div class="cx-panel-b"><table class="cx-t"><tr><th>Where</th><th class="r">Monthly</th><th class="r">After tax</th></tr>
-          {% for s in st.steps %}<tr><td>{{ s.label }}</td><td class="r num">{{ money(s.amount) }}</td><td class="r num">{{ pct(s.ret) }}</td></tr>{% endfor %}</table></div></div>
+        {% else %}<div class="cx-sub">Add how you split your pay today and the plan is set beside it — what you'd gain a year by switching.</div>
+          <div style="margin-top:10px"><button class="cx-btn" type="button" data-go="profile" data-open="pay">Add your split</button></div>{% endif %}</div></div>
     </div>
-    <p class="cx-foot">The waterfall's order: a starter cushion, the employer match (an instant return), debt above the {{ pct(p.market_return) }} market return, the emergency fund, the HSA and Roth IRA room, then the best use on the board. A property that needs a down payment is saved for in T-bills.</p>
+    <p class="cx-foot">From your pay alone — selling what you hold is Do next; mark a step done and this reruns. Each card takes a month's interest at its APR before the month's payment; a loan's listed monthly payment comes from your expenses, and once it is paid off that payment joins your monthly amount. Roth IRA, HSA and 401(k) room resets each January at the 2026 limits. A down payment is saved in T-bills; once it holds the cash to close, saving for property stops (one deal at a time), and after the months to close the rent you pay stops and the place's own cash flow after the full payment starts. Nothing here grows at a return — the Overview's independence path does that.</p>
+    {% endif %}
   </section>
 
   {# ═══════════════════ HOLDINGS ═══════════════════ #}
@@ -1025,7 +1113,8 @@
         const d = K.debts.find(x => x.name === dest.name);
         if (c !== 'taxable') return { net: null, label: 'Pay down a debt', allowed: false, note: 'Paying a debt from a retirement account means a withdrawal — taxes and penalties.' };
         if (!d) return { net: null, label: 'Pay down a debt', allowed: false, note: 'Pick one of your debts.' };
-        return { net: d.apr, label: `Pay down ${d.name}`, allowed: true, note: null, cap: d.balance, debt: d.name };
+        return { net: d.net, label: `Pay down ${d.name}`, allowed: true, cap: d.balance, debt: d.name,
+          note: d.payoff ? `Your pay clears it by ${d.payoff} anyway: paying it now saves ${d.apr}% only until then.` : null };
       }
       if (kind === 'custom') {
         if (dest.rate == null || dest.rate === '' || isNaN(+dest.rate)) return { net: null, label: dest.name || 'Something else', allowed: false, note: 'Give its expected return a year, before tax.' };
@@ -1036,7 +1125,7 @@
     }
     function bestUse(c, proceeds) {
       const opts = [];
-      if (c === 'taxable') { K.debts.forEach(d => opts.push({ label: `Pay down ${d.name}`, net: d.apr, cap: d.balance })); opts.push({ label: 'T-bills', net: K.nets.tbill, cap: Infinity }); }
+      if (c === 'taxable') { K.debts.forEach(d => opts.push({ label: `Pay down ${d.name}`, net: d.net, cap: d.balance })); opts.push({ label: 'T-bills', net: K.nets.tbill, cap: Infinity }); }
       if (K.nets.picks && c !== 'plan') opts.push({ label: 'The top picks', net: net(K.nets.picks, c), cap: Infinity });
       opts.push({ label: 'An index fund', net: net(K.nets.index, c), cap: Infinity });
       opts.sort((a, b) => b.net - a.net);
@@ -1173,6 +1262,24 @@
         const list = savedRows().filter(x => x.id !== sc.id);
         try { await post('/api/capital/profile', { scenarios: list }); reloadTo('whatif'); } catch (err) { toast(err.message); }
       }
+    });
+  }
+
+  // ── monthly plan: pick a month to see its split ──
+  const tlc = $('.cx-tlc');
+  if (tlc) {
+    const bars = $$('.cx-tlb', tlc);
+    const pickMonth = (btn, focus) => {
+      bars.forEach(b => { const on = b === btn; b.setAttribute('aria-selected', on); b.tabIndex = on ? 0 : -1;
+        const panel = $('#tlm' + b.dataset.month); if (panel) panel.hidden = !on; });
+      if (focus) { btn.focus(); btn.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+    };
+    tlc.addEventListener('click', e => { const b = e.target.closest('.cx-tlb'); if (b) pickMonth(b); });
+    tlc.addEventListener('keydown', e => {
+      const i = bars.indexOf(document.activeElement); if (i < 0) return;
+      const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: bars.length - 1 }[e.key];
+      if (to === undefined) return;
+      e.preventDefault(); pickMonth(bars[Math.max(0, Math.min(bars.length - 1, to))], true);
     });
   }
 

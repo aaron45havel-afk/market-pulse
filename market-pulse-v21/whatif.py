@@ -57,6 +57,9 @@ def kit(board: dict) -> dict:
     rf = K._f(p.get("rf_rate"), 4.0)
     q = t["qualified"]
     hold = (board.get("current") or {}).get("holdings") or {}
+    debt_rows = {r["id"].split(":", 1)[-1]: r["detail"] for r in board["rows"] if r["kind"] == "debt"}
+    debt_net = {n: d["hold_rate"] for n, d in debt_rows.items() if d.get("hold_rate") is not None}
+    payoff_label = {n: d.get("payoff_label") for n, d in debt_rows.items()}
     sleeve = A.sleeve_of(board)
     td = A.stock_time_drag(p, board.get("monthly_free", 0.0))
     rt_large = K.ROUND_TRIP_PCT["stock_large"] / H
@@ -100,7 +103,8 @@ def kit(board: dict) -> dict:
         "hold": H, "q": q, "ordinary": t["ordinary"], "market": mr, "index_div": A.INDEX_DIV, "hsa_state": hsa_st,
         "sources": sources, "tickers": tickers, "nets": nets,
         "sleeve": [r["detail"]["ticker"] for r in sleeve],
-        "debts": [{"name": d["name"], "apr": K._f(d.get("apr")), "balance": K._f(d.get("balance"))}
+        "debts": [{"name": d["name"], "apr": K._f(d.get("apr")), "balance": K._f(d.get("balance")),
+                   "net": debt_net.get(d["name"], K._f(d.get("apr"))), "payoff": payoff_label.get(d["name"])}
                   for d in p.get("debts") or [] if K._f(d.get("balance")) > 0],
         "cash_total": cash_total, "ef": ef, "monthly_expenses": K._f(p.get("monthly_expenses")),
         "emergency_months": K._f(p.get("emergency_months"), 6.0),
@@ -159,8 +163,9 @@ def destination(k: dict, cls: str, dest: dict) -> dict:
                     "note": "Paying a debt from a retirement account means a withdrawal — taxes and penalties."}
         if not d:
             return {"net": None, "label": "Pay down a debt", "allowed": False, "note": "Pick one of your debts."}
-        return {"net": d["apr"], "label": f"Pay down {d['name']}", "allowed": True, "note": None, "cap": d["balance"],
-                "debt": d["name"]}
+        return {"net": d["net"], "label": f"Pay down {d['name']}", "allowed": True,
+                "note": (f"Your pay clears it by {d['payoff']} anyway: paying it now saves {d['apr']:g}% only until "
+                         f"then." if d.get("payoff") else None), "cap": d["balance"], "debt": d["name"]}
     if kind == "custom":
         rate = dest.get("rate")
         if rate is None:
@@ -178,7 +183,7 @@ def best_use(k: dict, cls: str, proceeds: float) -> list[dict]:
     are not on this list: the board's answer for stocks is the top picks."""
     opts = []
     if cls == "taxable":
-        opts += [{"label": f"Pay down {d['name']}", "net": d["apr"], "cap": d["balance"]} for d in k["debts"]]
+        opts += [{"label": f"Pay down {d['name']}", "net": d["net"], "cap": d["balance"]} for d in k["debts"]]
         opts.append({"label": "T-bills", "net": k["nets"]["tbill"], "cap": math.inf})
     if k["nets"]["picks"] and cls != "plan":
         opts.append({"label": "The top picks", "net": _net(k["nets"]["picks"], cls, k["hsa_state"]), "cap": math.inf})
