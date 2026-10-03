@@ -187,7 +187,7 @@
   .cx-step h3 { margin: 0; font-size: 0.92rem; font-family: var(--sans); color: var(--ink); }
   .cx-step p { margin: 2px 0 0; color: var(--ink-3); font-size: 0.78rem; }
   .cx-step[open] .cx-edit-btn { display: none; }
-  .cx-form { padding: 0 16px 16px; display: grid; gap: 14px; }
+  .cx-form { padding: 0 16px 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .cx-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 6px 18px; }
   .cx-fields label { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 0.8rem; color: var(--ink-3); }
   .cx-fields input, .cx-fields select { width: 8rem; }
@@ -1363,6 +1363,7 @@
       $$('[data-imp-acct]', impBox).forEach(el => {
         const k = el.dataset.impAcct;
         body.accounts[k] = { include: $('[data-imp-include]', el).checked, account: $('[data-imp-type]', el).value };
+        const nm = $('[data-imp-name]', el); if (nm) body.accounts[k].name = nm.value;
         const apr = $('[data-imp-apr]', el); if (apr) body.margin_apr[k] = apr.value === '' ? null : +apr.value;
       });
       $$('[data-imp-remove]', impBox).forEach(c => { if (c.checked) body.remove.push(c.value); });
@@ -1372,15 +1373,30 @@
       catch (err) { msg.textContent = err.message; btn.disabled = false; }
     });
     impBox.addEventListener('change', e => { if (e.target.matches('[data-imp-include], [data-imp-type]')) renderFoot(); });
+    impBox.addEventListener('input', e => { if (e.target.matches('[data-imp-name]')) nameNote(e.target.closest('[data-imp-acct]')); });
   }
-  const TYPE_NAME = { taxable: 'Taxable brokerage', k401: '401(k)', roth401k: 'Roth 401(k)', ira: 'Traditional IRA', roth: 'Roth IRA', hsa: 'HSA' };
+  // the server's positions.named(): an account the file does not name is grouped by the name given
+  const cleanName = v => String(v || '').replace(/[^A-Za-z0-9 &'\-]/g, '').trim().slice(0, 30);
+  const slugOf = v => v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 20);
+  function nameNote(el) {
+    const a = IMP.data.accounts.find(x => x.key === el.dataset.impAcct), nm = cleanName($('[data-imp-name]', el).value);
+    const key = nm && slugOf(nm) ? a.broker.toLowerCase() + '-' + slugOf(nm) : a.key, when = IMP.data.synced[key];
+    $('[data-imp-replace]', el).textContent = key in IMP.data.synced
+      ? `Replaces the group synced as "${nm || a.label}"${when ? ' as of ' + when : ''}.`
+      : `A new group, "${a.broker} · ${nm || a.label}". Use the same name next time and the next export replaces it.`;
+    const apr = $('[data-imp-apr]', el), was = IMP.data.debt_aprs[`${a.broker} margin ${nm || a.label}`.slice(0, 40)];
+    if (apr && apr.value === '' && was != null) apr.value = was;
+  }
   function renderImport() {
     const d = IMP.data;
     const accts = d.accounts.map(a => {
       const held = a.positions.reduce((t, p) => t + p.value, 0);
       const notes = [];
       const theirs = a.check_from === 'percent' ? `the account total ${d.broker}'s “% of account” column implies` : `${d.broker}'s own total`;
-      if (a.check === 'ok') notes.push(`<span class="ok">✓ Adds up to ${theirs}, ${money(a.reported)}.</span>`);
+      if (a.check_from === 'lines') notes.push(a.check === 'ok'
+        ? `<span class="ok">✓ Every line's value is its quantity × price (${d.broker} gives no account total to check against).</span>`
+        : `<span class="bad">✗ ${a.check_bad.map(esc).join(', ')}: the value is not quantity × price — a column the page misread? Check before syncing.</span>`);
+      else if (a.check === 'ok') notes.push(`<span class="ok">✓ Adds up to ${theirs}, ${money(a.reported)}.</span>`);
       else if (a.check === 'off') notes.push(`<span class="bad">✗ ${money(Math.abs(a.check_diff))} ${a.check_diff > 0 ? 'short of' : 'over'} ${theirs} (${money(a.reported)}) — a row the page could not read? Check the lines below before syncing.</span>`);
       else notes.push(`The file gives no account total to check against — check the lines below.`);
       if (!a.sure) notes.push(`<span class="bad">"${esc(a.label)}" does not say what kind of account it is${a.window ? ' (pre-tax 401(k) or Roth 401(k))' : ''} — choose it above.</span>`);
@@ -1388,11 +1404,12 @@
       if (a.cash > 0) notes.push(`Uninvested cash ${money(a.cash)} is written at 0% — type what the sweep pays if it pays more.`);
       if (a.positions.some(p => p.kind === 'mmf')) notes.push('A money-market fund is written at your T-bill rate, which money funds track.');
       a.skipped.forEach(s => notes.push(`Left out: ${esc(s.what)}${s.value != null ? ' ' + money(s.value) : ''} — ${esc(s.why)}.`));
-      if (a.synced_before) notes.push(`Replaces the group synced ${a.synced_before.as_of ? 'as of ' + esc(a.synced_before.as_of) : 'before'}.`);
+      if (a.unnamed) notes.push(`The file does not name the account — the name above keeps each export of it in one group. <span data-imp-replace></span>`);
+      else if (a.synced_before) notes.push(`Replaces the group synced ${a.synced_before.as_of ? 'as of ' + esc(a.synced_before.as_of) : 'before'}.`);
       const margin = a.margin > 0 ? `<label style="font-size:0.8rem">Margin loan ${money(a.margin)} at <input data-imp-apr type="number" step="0.01" min="0" max="40" style="width:5.5em" value="${a.margin_apr ?? ''}" placeholder="APR"> % <span class="cx-sub" style="display:inline">— it becomes a debt</span></label>` : '';
       const rows = a.positions.map(p => `<tr><td><b>${esc(p.symbol)}</b><div class="s">${esc(p.name)}</div></td><td class="r">${money(p.value)}</td><td class="r">${p.basis != null ? money(p.basis) : '—'}</td></tr>`).join('');
       return `<div class="cx-imp-acct" data-imp-acct="${esc(a.key)}">
-        <div class="cx-sync-h"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-imp-include checked> <b>${esc(a.broker)} · ${esc(a.label)}</b></label>
+        <div class="cx-sync-h"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-imp-include checked> <b>${esc(a.broker)} · ${a.unnamed ? '' : esc(a.label)}</b></label>${a.unnamed ? `<input data-imp-name aria-label="Name this account" maxlength="30" style="width:11em" value="${esc(a.name || a.label)}">` : ''}
           <span class="grow cx-sub" style="margin:0">${a.positions.length} position${a.positions.length === 1 ? '' : 's'} · ${money(held)}${a.cash > 0 ? ' · cash ' + money(a.cash) : ''}${a.margin > 0 ? ' · margin −' + money(a.margin) : ''}</span>
           <select data-imp-type aria-label="Kind of account">${IMP_ACCOUNTS.map(([v, l]) => `<option value="${v}"${v === IMP_VALUE[a.account] ? ' selected' : ''}>${l}</option>`).join('')}</select>
           ${margin}</div>
@@ -1408,6 +1425,7 @@
       ${accts}${over}
       <div class="cx-imp-foot"><button class="cx-btn primary" type="button" data-imp-apply>Sync</button><button class="cp-linkbtn" type="button" data-imp-cancel>Cancel</button><span class="cx-sub" data-imp-msg style="margin:0"></span></div>`;
     impBox.hidden = false; renderFoot();
+    $$('[data-imp-acct]', impBox).forEach(el => { if ($('[data-imp-name]', el)) nameNote(el); });
     impBox.scrollIntoView({ block: 'nearest' });
   }
   function renderFoot() {

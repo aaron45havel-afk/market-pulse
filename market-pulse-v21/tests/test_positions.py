@@ -202,6 +202,61 @@ check(not v["accounts"][0]["skipped"] and not v["accounts"][1]["skipped"], "nor 
 check(not v["accounts"][0]["sure"] and v["accounts"][0]["positions"][0]["basis"] is None,
       "Vanguard does not name the kind of account (the owner chooses it) or give a cost basis")
 
+# ── Chase (J.P. Morgan Self-Directed), by its columns ──────────────
+CHASE_COLS = ("Asset Class,Asset Strategy,Asset Strategy Detail,Description,Ticker,CUSIP,Quantity,Base CCY,Local CCY,"
+              "Price,PriceInd,Local Price,Today's Price Change,Price Change %,Pricing Date,Value,Today's Value Change,"
+              "Value Change %,Local Value,Cost,Unit Cost,Local Unit Cost,Orig Cost (Base),As of,Acct Type,"
+              "Accounting Method,Dividend Yield,Amount invested,7-day average yield,ISIN").split(",")
+
+
+def crow(**kw):
+    vals = {"Base CCY": "USD", "PriceInd": "false", "As of": "09/30/2026", "Acct Type": "Margin",
+            "Accounting Method": "Original Cost", **{k.replace("_", " "): v for k, v in kw.items()}}
+    return ",".join('"' + vals.get(c, "") + '"' for c in CHASE_COLS)
+
+
+CHASE = "\n".join([",".join(CHASE_COLS),
+    crow(Asset_Class="Equity", Description="AAA CORP", Ticker="AAA", CUSIP="000000001", Quantity="1,000.5",
+         Price="20", Value="20,010", Cost="25,000.5"),
+    crow(Asset_Class="Equity", Description="BBB INC", Ticker="BBB", CUSIP="000000002", Quantity="3", Price="10.5",
+         Value="31.5", Cost="30"),
+    crow(Asset_Class="Cash & Money Market Funds", Description="US DOLLAR", CUSIP="0USD00000", Quantity="-5,000",
+         Price="1", Value="-5,000", Cost="-5,000"),
+    "", "FOOTNOTES",
+    'P,"This order is pending settlement."',
+    'C,"This is a covered security. Neither J.P. Morgan Securities LLC nor its affiliates provide tax advice."',
+])
+c = P.parse_export(CHASE, "positions.csv")
+ca = c["accounts"][0]
+check(c["broker"] == "Chase" and c["as_of"] == "2026-09-30" and ca["key"] == "chase-account" and ca["unnamed"],
+      "Chase: known by its footnotes (the file name is just positions.csv); the date from the As of column; "
+      "the file does not name the account")
+check([p["symbol"] for p in ca["positions"]] == ["AAA", "BBB"] and near(ca["positions"][0]["basis"], 25000.5)
+      and near(ca["positions"][0]["value"], 20010), "'Ticker', 'Value' and 'Cost' read as symbol, market value and basis")
+check(near(ca["margin"], 5000) and ca["account"] == "taxable" and ca["sure"],
+      "the negative US DOLLAR line is a margin loan — and a margin account is taxable (retirement accounts cannot borrow)")
+check(ca["check"] == "ok" and ca["check_from"] == "lines",
+      "no total anywhere: each line's value is checked against quantity × price")
+c_off = P.parse_export(CHASE.replace('"20,010"', '"21,010"'))["accounts"][0]
+check(c_off["check"] == "off" and c_off["check_bad"] == ["AAA"], "a value that is not quantity × price is named")
+check(not P.parse_export(CHASE.replace('"Margin"', '"Cash"').replace('"-5,000"', '"0"'))["accounts"][0]["sure"],
+      "a cash account the file does not name or type: the owner is asked")
+check(P.parse_export(CHASE.replace('"-5,000"', '"0"'))["accounts"][0]["sure"],
+      "positions held on margin say it is a margin account, even with no loan today")
+check(P._broker_of(None, None, "x.csv", "JPMORGAN CHASE & CO") == "Broker" and
+      P._broker_of({"symbol": 0, "value": 1, "acct_name": 2}, None, "x.csv", "J.P. Morgan Securities LLC") == "Fidelity",
+      "a holding named JPMorgan Chase does not make a file Chase's; Fidelity's columns win over a footnote")
+cj, _ = P.apply_import({}, c, {"accounts": {"chase-account": {"name": "Joint <b>"}}, "margin_apr": {"chase-account": 9}})
+check("# sync chase-joint-b | Chase · Joint b |" in cj["holdings"] and cj["debts"][0]["name"] == "Chase margin Joint b",
+      "NAMED by the owner: the group and its margin loan carry the name (cleaned), the rate found under the preview's key")
+c2 = {**c, "accounts": [ca, {**ca, "key": "chase-account-2"}]}
+check("same name" in raises(P.apply_import, {}, c2, {"accounts": {"chase-account": {"name": "Main"},
+                                                                  "chase-account-2": {"name": "main"}},
+                                                     "margin_apr": {"chase-account": 9, "chase-account-2": 9}}),
+      "two accounts given one name are refused (one would overwrite the other)")
+check(P.named({**ca, "unnamed": False}, "X")["key"] == "chase-account" and P.named(ca, "!!!")["key"] == "chase-account",
+      "only an unnamed account takes a name, and a name with nothing usable in it changes nothing")
+
 # ── refused before anything is written ─────────────────────────────
 check("empty" in raises(P.parse_export, "  \n "), "an empty file")
 check("No positions" in raises(P.parse_export, "just,some\nrandom,csv\n"), "a CSV that is not a positions export")
@@ -337,6 +392,14 @@ try:
           "APPLY: synced, the profile before it kept for undo, named on the banner, the margin debt updated")
     pv2 = __import__("json").loads(asyncio.run(main.capital_import_preview(_Req(body={"csv": SCHWAB_ONE}))).body)
     check(pv2["accounts"][0]["synced_before"]["as_of"] == "2026-09-30 16:05 ET", "a second preview says what it replaces")
+    STORE["owner"]["holdings"] += "\n\n# sync chase-joint | Chase · Joint | as of 2026-09-01\nZZZ, taxable, 5\n# end sync chase-joint"
+    STORE["owner"]["debts"].append({"name": "Chase margin Joint", "balance": 100, "apr": 8.25})
+    pc = __import__("json").loads(asyncio.run(main.capital_import_preview(_Req(body={"csv": CHASE}))).body)
+    check(pc["accounts"][0]["name"] == "Joint" and pc["accounts"][0]["key"] == "chase-account"
+          and pc["accounts"][0]["synced_before"]["as_of"] == "2026-09-01" and pc["accounts"][0]["margin_apr"] == 8.25
+          and pc["synced"]["chase-joint"] == "2026-09-01" and pc["debt_aprs"]["Chase margin Joint"] == 8.25,
+          "PREVIEW, UNNAMED: the name it was synced under last time is suggested, with that group and margin rate; "
+          "the key stays the file's so the sync matches")
     nomar = asyncio.run(main.capital_import_apply(_Req(body={"csv": SCHWAB_ONE})))
     check(nomar.status_code == 400 and "rate" in __import__("json").loads(nomar.body)["error"],
           "no margin rate sent: refused, nothing saved")
