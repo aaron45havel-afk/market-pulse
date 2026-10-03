@@ -81,7 +81,22 @@ ANNUAL_INPUTS = {
     "capex": (("PaymentsToAcquirePropertyPlantAndEquipment",), "USD"),
     "div_per_share": (("CommonStockDividendsPerShareDeclared", "CommonStockDividendsPerShareCashPaid"),
                       "USD-per-shares"),
+    # Many small payers file only the cash-flow line, the dollars paid, and
+    # no per-share figure — and the per-share tags alone left the dividend
+    # test unknown on 1,198 of 1,417 rows. Used only where no per-share
+    # figure was filed: the year's payout over today's share count.
+    "div_paid": (("PaymentsOfDividendsCommonStock", "PaymentsOfDividends"), "USD"),
 }
+
+
+def dividend_per_share(per_share, paid, shares) -> float | None:
+    """The filed per-share dividend; failing that, the year's dividends paid
+    over the share count. A filed zero is a measured zero, not a gap."""
+    if per_share is not None:
+        return per_share
+    if paid is None or not shares or shares <= 0:
+        return None
+    return abs(paid) / shares
 
 
 def annual_period(today: date | None = None) -> str:
@@ -119,6 +134,69 @@ def _annual_frames(period: str) -> dict[str, dict]:
                 got[(name, i)] = {}
     return merge_annual({name: [got.get((name, i), {}) for i in range(len(concepts))]
                          for name, (concepts, _unit) in ANNUAL_INPUTS.items()})
+
+
+# INDUSTRY, BY SEC SIC CODE. The candidate filter drops names containing
+# "Bancorp", "Insurance", "REIT" and the like, and that is all it can do:
+# ENB Financial, LCNB Corp, BayCom Corp and four more banks walked past it
+# and made up seven of the 13 names on the default view (October 2026),
+# passing "net cash" and "low debt" because deposits are not filed as debt.
+# The code is asked for only after the size cut, of names that can reach
+# the board. Without it a bank is scored as an operating company again, so
+# a run that cannot classify most of the board refuses to write.
+SUBMISSIONS = "https://data.sec.gov/submissions/CIK{cik}.json"
+MIN_SIC_COVERAGE = 0.90
+SEC_INTERVAL = 0.125                  # 8 requests a second; SEC's ceiling is 10
+SIC_CHECK_AFTER = 50                  # all of the first 50 unanswered: SEC is refusing us
+
+
+def sic_coverage_ok(answered: int, asked: int) -> bool:
+    return asked == 0 or answered / asked >= MIN_SIC_COVERAGE
+
+
+def industry_of(cik, sics: dict) -> str | None:
+    """A company SEC answered for with NO code is a fund (quality_value.
+    NOT_APPLICABLE); one SEC did not answer for is unclassified, which the
+    coverage floor bounds."""
+    cik = str(cik)
+    if cik not in sics:
+        return None
+    return QV.industry(sics[cik]) if sics[cik] else "fund"
+
+
+def fetch_sic(ciks: list[str], get=None, interval: float = SEC_INTERVAL) -> dict[str, str | None]:
+    """{cik: SIC code or None} for every CIK SEC answered for. A CIK SEC did
+    not answer for is absent, which is how the caller counts coverage."""
+    get = get or SE._get
+    lock = threading.Lock()
+    state = {"next": 0.0, "asked": 0, "answered": 0}
+
+    def one(cik):
+        with lock:
+            # The stop is decided by the workers, before each request: a
+            # queue of futures cancelled from the outside has already run.
+            if state["asked"] >= SIC_CHECK_AFTER and not state["answered"]:
+                return cik, None
+            state["asked"] += 1
+            # Pace the whole pool, not each worker.
+            wait = state["next"] - time.monotonic()
+            state["next"] = max(state["next"], time.monotonic()) + interval
+        if wait > 0:
+            time.sleep(wait)
+        data = get(SUBMISSIONS.format(cik=str(cik).zfill(10)))
+        if data is not None:
+            with lock:
+                state["answered"] += 1
+        return cik, data
+
+    out: dict[str, str | None] = {}
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        for cik, data in ex.map(one, ciks):
+            if data is not None:
+                out[str(cik)] = str(data["sic"]) if data.get("sic") else None
+    if state["asked"] < len(ciks):
+        log.error("SIC: none of the first %d requests answered — stopped asking.", state["asked"])
+    return out
 
 
 class FeedDown(Exception):
@@ -410,26 +488,45 @@ def main() -> int:
     log.info("In the size band: %d of %d fetched", len(sized), len(done))
     done = sized
 
+    # ── industry, for the names that can reach the board ──
+    sics = fetch_sic([r["cik"] for r in done])
+    if not sic_coverage_ok(len(sics), len(done)):
+        log.error("REFUSING TO WRITE: SEC gave an industry code for %d of %d names (min %.0f%%). "
+                  "Without it a bank is scored as an operating company again.",
+                  len(sics), len(done), MIN_SIC_COVERAGE * 100)
+        return 1
+    industries = {}
+    for r in done:
+        r["sic"] = sics.get(str(r["cik"]))
+        r["industry"] = industry_of(r["cik"], sics)
+        industries[r["industry"] or "other"] = industries.get(r["industry"] or "other", 0) + 1
+    log.info("SIC answered for %d of %d; industries %s", len(sics), len(done), industries)
+
     # ── classify + score ──
     classified = LQ.classify(done, within_size=True)
     rows = []
+    dps_from_paid = 0
     for r in classified:
         debt = (r.get("short_term_debt") or 0) + (r.get("long_term_debt") or 0)
         shares = r.get("shares") or 0
         eps = (r["net_income"] / shares) if r.get("net_income") and shares else None
         bvps = (r["stockholders_equity"] / shares) if r.get("stockholders_equity") and shares else None
+        dps = dividend_per_share(r.get("div_per_share"), r.get("div_paid"), shares)
+        dps_from_paid += r.get("div_per_share") is None and dps is not None
         qv = QV.evaluate({
             "price": r.get("price"), "market_cap": r.get("market_cap"),
             "cash": r.get("cash"), "total_debt": debt,
             "equity": r.get("stockholders_equity"),
             "capex": r.get("capex"), "ocf": r.get("ocf"),
             "operating_income": r.get("operating_income"), "revenue": r.get("revenue"),
-            "dividends_per_share": r.get("div_per_share"),
+            "dividends_per_share": dps,
             "eps": eps, "book_value_per_share": bvps,
-        })
+        }, industry=r["industry"])
         rows.append({
             "ticker": r["ticker"], "name": r["name"], "cik": r["cik"],
             "exchange": r["exchange"],
+            "sic": r["sic"], "industry": r["industry"],
+            "not_applicable": qv["not_applicable"],
             "price": round(r["price"], 2), "market_cap": int(r["market_cap"]),
             "size_bucket": r.get("size_bucket"),
             "turnover": r.get("turnover"),
@@ -448,8 +545,9 @@ def main() -> int:
 
     rows.sort(key=lambda r: (-(r["passed"]), r.get("turnover") if r.get("turnover") is not None else 9e9))
     cov = LQ.coverage(classified)
-    log.info("Rows: %d · liquidity measured on %d (%d%%)",
-             len(rows), cov["measured"], cov["pct"])
+    log.info("Rows: %d · liquidity measured on %d (%d%%) · dividend measured on %d (%d from dollars paid)",
+             len(rows), cov["measured"], cov["pct"],
+             sum(1 for r in rows if r["verdicts"]["dividend"] is not None), dps_from_paid)
 
     if len(rows) < MIN_ROWS_TO_WRITE:
         log.error("REFUSING TO WRITE: only %d rows (min %d). A short board would "
@@ -463,6 +561,8 @@ def main() -> int:
             "universe_candidates": len(candidates),
             "in_size_band": len(done),
             "volume_coverage_pct": cov["pct"],
+            "sic_coverage_pct": round(len(sics) / len(done) * 100) if done else 0,
+            "industries": industries,
             "price_source": source["name"],
             "fetch_status": dict(sorted(STATUS.items())),
             "limits": QV.DEFAULTS,

@@ -313,6 +313,38 @@ async def catalysts_page(request: Request, price: str = "", offer: str = "",
     })
 
 
+def quiet_value_board(rows: list[dict], liq: str = "low", size: str = "", minpass_n: int = 5,
+                      want_tradeable: bool = True, excl_high: bool = True,
+                      require_t: tuple = ()) -> tuple[list[dict], dict]:
+    """The /quiet-value funnel: the rows that clear every filter, best first,
+    and how many survived each step — counted before filtering so a short
+    board reads as a strict screen rather than an empty market."""
+    import liquidity as LQ
+    import quality_value as QV
+
+    counts = {"all": len(rows)}
+    out = [r for r in rows if LQ.passes(r, max_bucket=liq, exclude_high=excl_high)]
+    counts["after_liquidity"] = len(out)
+    if size:
+        out = [r for r in out if r.get("size_bucket") == size]
+    counts["after_size"] = len(out)
+    if want_tradeable:
+        out = [r for r in out if not r.get("impractical")]
+    counts["after_tradeable"] = len(out)
+    # Banks, insurers and funds stop here: the tests that do not apply to
+    # them (quality_value.NOT_APPLICABLE) leave fewer than five to measure.
+    # Counted so the funnel can say so.
+    counts["financials"] = sum(1 for r in out if r.get("industry") in QV.CANNOT_QUALIFY)
+    out = [r for r in out
+           if r.get("known", 0) >= 5
+           and r.get("passed", 0) >= minpass_n
+           and all(r.get("verdicts", {}).get(t) for t in require_t)]
+    counts["after_quality"] = len(out)
+    out.sort(key=lambda r: (-(r.get("passed") or 0),
+                            r.get("turnover") if r.get("turnover") is not None else 9e9))
+    return out, counts
+
+
 @app.get("/quiet-value")
 async def quiet_value_page(request: Request, liq: str = "low", size: str = "",
                            minpass: str = "5", require: str = "",
@@ -338,7 +370,7 @@ async def quiet_value_page(request: Request, liq: str = "low", size: str = "",
             "request": request, "rows": [], "meta": None, "pending": True,
             "liq": liq, "size": size, "minpass": 5, "require": require,
             "tradeable": True, "exclude_high": True, "tests": QV.TESTS,
-            "labels": QV.LABELS, "counts": {}, "shown": 0,
+            "labels": QV.LABELS, "na_reason": QV.NA_REASON, "counts": {}, "shown": 0,
         })
     blob = _json.loads(path.read_text())
     rows = blob.get("rows", [])
@@ -350,30 +382,13 @@ async def quiet_value_page(request: Request, liq: str = "low", size: str = "",
     excl_high = _qnum(exclude_high, 1) > 0
     require_t = tuple(t for t in require.split(",") if t in QV.TESTS)
 
-    # Count before filtering so a short board reads as a strict screen
-    # rather than an empty market.
-    counts = {"all": len(rows)}
-    out = [r for r in rows if LQ.passes(r, max_bucket=liq, exclude_high=excl_high)]
-    counts["after_liquidity"] = len(out)
-    if size:
-        out = [r for r in out if r.get("size_bucket") == size]
-    counts["after_size"] = len(out)
-    if want_tradeable:
-        out = [r for r in out if not r.get("impractical")]
-    counts["after_tradeable"] = len(out)
-    out = [r for r in out
-           if r.get("known", 0) >= 5
-           and r.get("passed", 0) >= minpass_n
-           and all(r.get("verdicts", {}).get(t) for t in require_t)]
-    counts["after_quality"] = len(out)
-
-    out.sort(key=lambda r: (-(r.get("passed") or 0),
-                            r.get("turnover") if r.get("turnover") is not None else 9e9))
+    out, counts = quiet_value_board(rows, liq, size, minpass_n, want_tradeable, excl_high, require_t)
     return templates.TemplateResponse("quiet_value.html", {
         "request": request, "rows": out[:200], "meta": blob.get("_meta"),
         "pending": False, "liq": liq, "size": size, "minpass": minpass_n,
         "require": require, "tradeable": want_tradeable, "exclude_high": excl_high,
-        "tests": QV.TESTS, "labels": QV.LABELS, "counts": counts, "shown": len(out),
+        "tests": QV.TESTS, "labels": QV.LABELS, "na_reason": QV.NA_REASON,
+        "counts": counts, "shown": len(out),
     })
 
 

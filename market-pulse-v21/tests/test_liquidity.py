@@ -238,6 +238,69 @@ for frag in ("8.33x earnings", "1.67x book", "35% of cap", "22.5% op margin", "4
 check("not enough reported data" in QV.summarize(QV.evaluate({})),
       "an unmeasurable name says so rather than printing an empty verdict")
 
+# ── tests that do not apply: banks, insurers, REITs ─────────────────
+for sic, want in (("6021", "bank"), ("6022", "bank"), ("6035", "bank"), ("6036", "bank"),
+                  ("6311", "insurer"), ("6331", "insurer"), ("6399", "insurer"), ("6798", "reit"),
+                  ("6411", None), ("6282", None), ("6020", None), ("6037", None), ("6310", None),
+                  ("6400", None), ("6797", None), ("6799", None), ("3571", None),
+                  (6022, "bank"), (None, None), ("", None), ("n/a", None)):
+    check(QV.industry(sic) == want, f"SIC {sic!r} reads as {want!r} (got {QV.industry(sic)!r})")
+
+# A small bank, illustrative figures. Deposits are not in the debt line,
+# so scored as an operating company it passes "low debt" and "net cash" —
+# which is how seven banks made the 13-name default view in October 2026.
+# Same inputs, scored as what it is.
+enb = {
+    "price": 20.0, "market_cap": 110_000_000,
+    "cash": 140_000_000, "total_debt": 40_000_000, "equity": 115_000_000,
+    "capex": 2_000_000, "ocf": 18_000_000,
+    "operating_income": 16_000_000, "revenue": 70_000_000,
+    "dividends_per_share": 0.68, "eps": 2.60, "book_value_per_share": 21.0,
+}
+as_op = QV.evaluate(enb)
+as_bank = QV.evaluate(enb, industry="bank")
+check(as_op["passed"] == 7 and QV.meets(as_op),
+      "scored as an operating company, the bank passes all seven on arithmetic")
+check(as_bank["not_applicable"] == ["net_cash", "debt", "capex", "margin"],
+      "for a bank, cash, debt, capex and margin do not apply")
+check(all(as_bank["verdicts"][k] is None and as_bank["metrics"][k] is None
+          for k in ("net_cash", "debt", "capex", "margin")),
+      "a test that does not apply has no verdict AND no metric — the reason line cannot quote it")
+check(as_bank["known"] == 3 and as_bank["passed"] == 3,
+      "what is left is the dividend and the two price multiples")
+check(not QV.meets(as_bank), "THREE MEASURED TESTS CANNOT CLEAR A SCREEN THAT NEEDS FIVE")
+check(as_bank["unknown"] == [], "not applicable is not 'not reported' — the unknown list stays empty")
+check(as_bank["industry"] == "bank", "the industry travels with the result")
+check("net cash" not in QV.summarize(as_bank) and "op margin" not in QV.summarize(as_bank),
+      "the reason line never quotes a bank's net cash or operating margin")
+check(QV.evaluate(enb, industry="insurer")["not_applicable"] == ["net_cash", "debt", "capex", "margin"],
+      "an insurer's reserves are policyholders' money: the same four do not apply")
+reit = QV.evaluate(enb, industry="reit")
+check(reit["not_applicable"] == ["capex"] and reit["known"] == 6 and reit["verdicts"]["debt"] is True,
+      "a REIT loses only capex — its debt is real debt and is still tested")
+check(QV.evaluate(enb, industry=None)["not_applicable"] == [] and QV.evaluate(enb, industry="other")["known"] == 7,
+      "every other company is scored on all seven")
+fund = QV.evaluate(enb, industry="fund")
+check(fund["not_applicable"] == ["net_cash", "capex", "margin"] and fund["verdicts"]["debt"] is True,
+      "a fund keeps the debt test — a BDC's borrowing is real borrowing — and loses cash, capex and margin")
+check(fund["known"] == 4 and not QV.meets(fund), "which leaves four measured tests: not enough to clear")
+check(set(QV.CANNOT_QUALIFY) == {k for k, v in QV.NOT_APPLICABLE.items() if len(QV.TESTS) - len(v) < 5},
+      "CANNOT_QUALIFY is exactly the industries left with fewer than five tests")
+check(set(QV.NA_REASON) == set(QV.NOT_APPLICABLE), "every withheld test has a reason the page can show")
+
+# An operating margin above 100% is two figures disagreeing, not a margin.
+check(QV.operating_margin(16_000_000, 70_000_000) == 22.9, "an ordinary margin")
+check(QV.operating_margin(30_000_000, 2_688_000) is None,
+      "OPERATING INCOME ABOVE REVENUE IS UNKNOWN — Alliance Entertainment read 1,116% and passed 'high margin'")
+check(QV.operating_margin(5_000_000, 5_000_000) == 100.0, "exactly 100% is the edge, still a figure")
+check(QV.operating_margin(-90_000_000, 2_000_000) == -4500.0, "a deep loss is still a (failing) margin")
+check(QV.evaluate({**enb, "operating_income": 9e8})["verdicts"]["margin"] is None,
+      "and the impossible margin never passes the test")
+
+partial = QV.evaluate({"price": 10.0, "eps": 1.0}, industry="bank")
+check(set(partial["unknown"]) == {"dividend", "pb"} and set(partial["not_applicable"]) == {"net_cash", "debt", "capex", "margin"},
+      "a bank's unreported dividend is UNKNOWN; its net cash is NOT APPLICABLE — two different statements")
+
 # ── dials move, and moving them changes outcomes ────────────────────
 strict = QV.evaluate(good, {"max_pe": 5.0})
 check(not strict["verdicts"]["pe"] and strict["passed"] == 6,
