@@ -2161,6 +2161,111 @@ async def capital_step_done(request: Request):
     return JSONResponse({"ok": True, "title": step["title"]})
 
 
+@app.post("/api/capital/move")
+async def capital_move(request: Request):
+    """Carry out a what-if move ({"move": {"line", "amount", "dest"}}): the
+    move is re-checked against the profile as saved, then applied the way a
+    Do-next step is, with the same one-level undo."""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import allocation as A
+    import capital as K
+    import whatif as W
+    from datetime import datetime, timezone
+    from database import get_capital_profile, save_capital_profile
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Expected a JSON body."}, status_code=400)
+    move = (body or {}).get("move") if isinstance(body, dict) else None
+    if not isinstance(move, dict):
+        return JSONResponse({"error": "Which move? Send it as {\"move\": {...}}."}, status_code=400)
+    saved = {k: v for k, v in (get_capital_profile() or {}).items() if not k.startswith("_")}
+    board = await asyncio.to_thread(K.build, saved)
+    r = W.evaluate(W.kit(board), move)
+    if not r.get("ok"):
+        return JSONResponse({"error": r.get("error")}, status_code=409)
+    try:
+        prof = A.apply_moves(saved, [W.as_move(r)], board)
+    except A.CannotApply as e:
+        return JSONResponse({"error": str(e)}, status_code=409)
+    if not save_capital_profile({k: v for k, v in saved.items() if k != "last_step"}, owner="owner:undo"):
+        return JSONResponse({"error": "Could not save — the database is unavailable."}, status_code=503)
+    prof["last_step"] = {"title": "What if: " + W.summary(r), "impact": round(r["per_year"], 2),
+                         "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    if not save_capital_profile(prof):
+        return JSONResponse({"error": "Could not save — the database is unavailable."}, status_code=503)
+    return JSONResponse({"ok": True, "title": W.summary(r)})
+
+
+async def _import_body(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        return None, JSONResponse({"error": "Expected a JSON body."}, status_code=400)
+    if not isinstance(body, dict) or not isinstance(body.get("csv"), str):
+        return None, JSONResponse({"error": "Send the export as {\"csv\": \"...\"}."}, status_code=400)
+    return body, None
+
+
+@app.post("/api/capital/import/preview")
+async def capital_import_preview(request: Request):
+    """Read a broker's positions export ({"csv", "filename"}) and say what a
+    sync would write — each account, its positions, the check against the
+    broker's total, a margin loan, and the lines already typed for those
+    accounts. Nothing is saved."""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import positions as P
+    from database import get_capital_profile
+    body, err = await _import_body(request)
+    if err:
+        return err
+    try:
+        parsed = P.parse_export(body["csv"], str(body.get("filename") or "")[:200])
+    except P.CannotImport as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    saved = get_capital_profile() or {}
+    text = saved.get("holdings") or ""
+    before = {b["key"]: P.describe_block(b) for b in P.blocks_in(text)}
+    debts = {d.get("name"): d for d in saved.get("debts") or [] if isinstance(d, dict)}
+    for a in parsed["accounts"]:
+        a["synced_before"] = before.get(a["key"])
+        old = debts.get(P.margin_debt_name(a))
+        a["margin_apr"] = old.get("apr") if old else None
+    return JSONResponse({**parsed, "overlaps": P.overlaps(text, parsed["accounts"])})
+
+
+@app.post("/api/capital/import/apply")
+async def capital_import_apply(request: Request):
+    """Sync the chosen accounts of an export into the holdings (the export is
+    read again here, not taken from the page), with the same one-level undo
+    as a step marked done."""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import positions as P
+    from datetime import datetime, timezone
+    from database import get_capital_profile, save_capital_profile
+    body, err = await _import_body(request)
+    if err:
+        return err
+    saved = {k: v for k, v in (get_capital_profile() or {}).items() if not k.startswith("_")}
+    try:
+        parsed = P.parse_export(body["csv"], str(body.get("filename") or "")[:200])
+        prof, title = P.apply_import(saved, parsed, body)
+    except P.CannotImport as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    if not save_capital_profile({k: v for k, v in saved.items() if k != "last_step"}, owner="owner:undo"):
+        return JSONResponse({"error": "Could not save — the database is unavailable."}, status_code=503)
+    prof["last_step"] = {"title": title, "impact": None, "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    if not save_capital_profile(prof):
+        return JSONResponse({"error": "Could not save — the database is unavailable."}, status_code=503)
+    return JSONResponse({"ok": True, "title": title})
+
+
 @app.post("/api/capital/undo")
 async def capital_step_undo(request: Request):
     """Put back the profile as it was before the last step marked done."""
@@ -3836,6 +3941,22 @@ async def api_stock_quote(ticker: str):
     # get_quote() makes a blocking Yahoo request — run it off the event
     # loop so one slow fetch doesn't stall every concurrent request.
     return JSONResponse(await asyncio.to_thread(get_quote, ticker))
+
+
+@app.get("/api/stock/search")
+async def api_stock_search(q: str = ""):
+    """Ticker search for the type-ahead boxes: US stocks, ETFs and mutual
+    funds by ticker or name (Yahoo, then Nasdaq, then the SEC's list)."""
+    from stock_lookup import search_tickers
+    return JSONResponse(await asyncio.to_thread(search_tickers, q))
+
+
+@app.get("/api/stock/{ticker}/price")
+async def api_stock_price(ticker: str):
+    """The latest price for one ticker — the light version of /quote, for a
+    price beside a holding."""
+    from stock_lookup import get_price
+    return JSONResponse(await asyncio.to_thread(get_price, ticker))
 
 
 @app.get("/api/stock/{ticker}/fundamentals")

@@ -104,6 +104,8 @@ PROFILE_DEFAULTS: dict = {
     "take_home": 0.0,             # pay after tax and payroll deductions, a month
     "fi_multiple": 25.0,          # independence = this many years of expenses (25 = a 4% withdrawal)
     "inflation": 2.5,
+    # moves the owner is weighing (whatif.py)
+    "scenarios": [],
 }
 
 # Hours a month each real-estate path takes, at a steady state. Editable
@@ -173,6 +175,9 @@ def parse_profile(form: dict) -> dict:
             out[k] = str(form[k] or "").replace("\r\n", "\n")[:n]
     if "owned_re" in form:
         out["owned_re"] = A.parse_owned_re(form["owned_re"])
+    if "scenarios" in form:
+        import whatif as W
+        out["scenarios"] = W.parse_scenarios(form["scenarios"])
     for k, (lo, hi) in _NUMBERS.items():
         if k not in form:
             continue

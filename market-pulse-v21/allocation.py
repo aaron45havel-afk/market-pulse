@@ -877,7 +877,12 @@ def apply_moves(saved: dict, moves: list[dict], board: dict) -> dict:
             adds.append(holding_line("Down payment fund" if kind == "dpfund" else "T-bills", "cash", got,
                                      rate=rf, state_exempt=True))
         elif kind == "index":
-            adds.append(holding_line("Index fund", m["acct"], got))
+            acct = m.get("dest_acct") or m["acct"]
+            adds.append(holding_line("Index fund", acct, got, basis=got if acct == "taxable" else None))
+        elif kind in ("ticker", "custom"):           # a what-if move (whatif.py)
+            acct = m.get("dest_acct") or m["acct"]
+            adds.append(holding_line(m["name"], acct, got, basis=got if acct == "taxable" else None,
+                                     rate=m.get("rate") if kind == "custom" else None))
         elif kind == "picks":
             acct = "taxable" if m["to_id"] == "picks" else m["acct"]
             n = len(sleeve)

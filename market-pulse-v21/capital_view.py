@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import re
 from datetime import date
 
 import allocation as A
@@ -479,16 +480,62 @@ def board_groups(board: dict) -> list[dict]:
     return out
 
 
-def setup(p: dict) -> list[dict]:
+SYNC_STALE_DAYS = 30          # an export older than this is flagged for a fresh one
+
+
+def synced(p: dict, today: date) -> list[dict]:
+    """The accounts synced from a broker export: label, as of, age in days,
+    and the block's lines and rows for the editor."""
+    import positions as P
+    text = str(p.get("holdings") or "")
+    lines = text.splitlines()
+    rows, _ = A.parse_holdings(text)
+    out = []
+    for b in P.blocks_in(text):
+        d = P.describe_block(b)
+        try:
+            seen = date.fromisoformat((d["as_of"] or "")[:10])
+        except ValueError:
+            seen = None
+        mine = [r for r in rows if b["start"] < r["line"] < b["end"]]
+        out.append({**d, "text": "\n".join(lines[b["start"]:b["end"] + 1]),
+                    "age": (today - seen).days if seen else None, "date": seen.isoformat() if seen else None,
+                    "value": round(sum(r["value"] for r in mine), 2),
+                    "rows": [{"name": r["name"], "account": "tbills" if r["state_exempt"] else EDIT_ACCOUNT[r["account"]],
+                              "account_label": "T-bills" if r["state_exempt"] else _cap(A.ACCOUNT_LABEL[r["account"]]),
+                              "value": r["value"], "basis": r["basis"], "rate": r["rate"]} for r in mine]})
+    return out
+
+
+def _cap(s: str) -> str:
+    return s[:1].upper() + s[1:]
+
+
+def _typed_holdings(p: dict) -> tuple[list[dict], list[str]]:
+    """The holdings lines the owner typed — outside any synced block (line
+    numbers kept), with the lines that could not be read."""
+    import positions as P
+    lines = str(p.get("holdings") or "").splitlines()
+    for b in P.blocks_in("\n".join(lines)):
+        for n in range(b["start"], b["end"] + 1):
+            lines[n] = ""
+    return A.parse_holdings("\n".join(lines))
+
+
+def setup(p: dict, today: date | None = None) -> list[dict]:
     """The profile as five steps, each with whether it is complete enough
     for the page to be right."""
+    today = today or date.today()
     hold, bad = A.parse_holdings(p.get("holdings"))
+    sync = synced(p, today)
+    stale = [s for s in sync if s["age"] is None or s["age"] > SYNC_STALE_DAYS]
     owned = A.parse_owned_re(p.get("owned_re"))
     debts = p.get("debts") or []
     cash_unrated = [h["name"] for h in hold if h["account"] == "cash" and h["rate"] is None]
     no_basis = [h["name"] for h in hold if h["account"] == "taxable" and h["basis"] is None]
     untested = [r["name"] for r in owned if r["use"] == "rental" and (r["basis"] is None or r["year"] is None)]
-    no_pay = [d["name"] for d in debts if not d.get("payment")]
+    # a margin loan has no schedule — there is no payment to ask for
+    no_pay = [d["name"] for d in debts if not d.get("payment") and not re.search(r"\bmargin\b", d["name"], re.I)]
     return [
         {"key": "pay", "title": "Pay and taxes",
          "done": K._f(p.get("monthly_invest")) > 0 and K._f(p.get("monthly_expenses")) > 0,
@@ -499,8 +546,10 @@ def setup(p: dict) -> list[dict]:
                                   ("take-home pay", K._f(p.get("take_home")) > 0)) if not ok]},
         {"key": "hold", "title": "What you hold", "done": bool(hold) and not cash_unrated and not bad,
          "summary": (f"{len(hold)} holding{'s' if len(hold) != 1 else ''} · "
-                     f"{_money(sum(h['value'] for h in hold))}" if hold else "Nothing listed yet"),
-         "todo": ([f"a rate for {', '.join(cash_unrated)}"] if cash_unrated else [])
+                     f"{_money(sum(h['value'] for h in hold))}" if hold else "Nothing listed yet")
+                    + "".join(f" · {s['label']} synced {_ago(s['age'])}" for s in sync),
+         "todo": [f"a fresh export of {s['label']}" for s in stale]
+                 + ([f"a rate for {', '.join(cash_unrated)}"] if cash_unrated else [])
                  + ([f"the cost basis of {', '.join(no_basis)}"] if no_basis else [])
                  + ([f"{len(bad)} line{'s' if len(bad) != 1 else ''} that could not be read"] if bad else [])},
         {"key": "re", "title": "Property you own", "done": not untested,
@@ -514,6 +563,12 @@ def setup(p: dict) -> list[dict]:
                     f"market {K._f(p.get('market_return'), 7):g}% · hold {K._f(p.get('hold_years'), 5):g} years",
          "todo": ["your age"] if p.get("age") is None else []},
     ]
+
+
+def _ago(days: int | None) -> str:
+    if days is None:
+        return "(date unknown)"
+    return "today" if days <= 0 else ("yesterday" if days == 1 else f"{days} days ago")
 
 
 def headline(board: dict) -> dict:
@@ -575,18 +630,21 @@ def build_view(board: dict, today: date | None = None) -> dict:
     steady = steady_plan(board, today)
     todo = do_next(board, steady)
     fi = independence(board, hold, today)
-    hold_rows, hold_bad = A.parse_holdings(p.get("holdings"))
+    hold_rows, hold_bad = _typed_holdings(p)
     flow_rows, flow_bad = A.parse_flows(p.get("current_monthly"))
     editor = {"holdings": [{"name": h["name"], "account": "tbills" if h["state_exempt"] else EDIT_ACCOUNT[h["account"]],
                             "value": h["value"], "basis": h["basis"], "rate": h["rate"]} for h in hold_rows],
-              "holdings_bad": hold_bad,
+              "holdings_bad": hold_bad, "synced": synced(p, today),
               "flows": [{"name": f["name"], "account": "tbills" if f["state_exempt"] else EDIT_ACCOUNT[f["account"]],
                          "amount": f["amount"], "rate": f["rate"]} for f in flow_rows],
               "flows_bad": flow_bad}
+    import whatif as W
+    wk = W.kit(board)
     return {"headline": headline(board), "vitals": vitals(board, fi), "todo": todo, "editor": editor,
+            "whatif": wk, "scenarios": W.scenarios(board, wk),
             "todo_once": sum(1 for s in todo if s["type"] == "once"),
             "todo_monthly": sum(1 for s in todo if s["type"] == "monthly"),
             "fi": fi, "debts": debt_plan(board, todo, today), "passive": passive_income(board),
             "liquidity": liquidity(board), "properties": properties(board, today), "taxes": taxes(board, todo),
-            "steady": steady, "groups": board_groups(board), "setup": setup(p),
-            "setup_done": sum(1 for s in setup(p) if s["done"])}
+            "steady": steady, "groups": board_groups(board), "setup": setup(p, today),
+            "setup_done": sum(1 for s in setup(p, today) if s["done"])}

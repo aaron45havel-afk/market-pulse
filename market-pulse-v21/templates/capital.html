@@ -222,7 +222,64 @@
   .cp-prop input, .cp-prop select { width: 8rem; }
   .cp-linkbtn { background: none; border: 1px solid var(--line-strong); border-radius: 8px; padding: 0.25rem 0.7rem; cursor: pointer; color: var(--ink); font-size: 0.8rem; }
 
+  .cx-wi { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 18px; align-items: start; }
+  .cx-wl { display: grid; gap: 5px; font-size: 0.78rem; color: var(--ink-3); font-weight: 600; }
+  .cx-wl input, .cx-wl select { width: 100%; font-size: 0.9rem; padding: 8px 10px; }
+  .cx-wl .row { display: flex; gap: 10px; align-items: center; }
+  .cx-wl .row input[type=number] { flex: 1; }
+  .cx-wl .row label { display: inline-flex; gap: 5px; align-items: center; font-weight: 500; white-space: nowrap; color: var(--ink-2); }
+  .cx-wl .row label input { width: auto; }
+  .cx-wi-form { display: grid; gap: 14px; padding: 4px 18px 18px; }
+  .cx-wi-form [hidden] { display: none !important; }
+  .cx-verdict { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .cx-verdict .head { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; }
+  .cx-verdict .head.better { color: var(--mint); } .cx-verdict .head.worse { color: var(--coral); } .cx-verdict .head.same { color: var(--ink-2); }
+  .cx-wi-rows { margin-top: 12px; }
+  .cx-wi-best { margin-top: 12px; border-radius: 10px; padding: 10px 12px; font-size: 0.84rem; background: var(--surface-2); }
+  .cx-wi-best.is-best { background: var(--mint-soft); color: var(--mint-ink); }
+  .cx-wi-warn { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .cx-wi-warn li { font-size: 0.8rem; color: var(--gold-ink); background: var(--gold-soft); border-radius: 8px; padding: 7px 10px; }
+  .cx-wi-warn li.note { color: var(--mint-ink); background: var(--mint-soft); }
+  .cx-wi-act { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+  .cx-wi-act input { border: 1px solid var(--line-strong); background: var(--surface); border-radius: 999px; padding: 6px 12px; font: inherit;
+    font-size: 0.82rem; color: var(--ink); min-width: 0; flex: 1 1 10rem; }
+  .cx-wi-cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .cx-wi-cmp > div { border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; }
+  .cx-wi-cmp .yr { font-size: 1.15rem; font-weight: 700; color: var(--ink); }
+  .cx-ts-list { position: absolute; z-index: 60; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 10px;
+    box-shadow: var(--shadow-2); margin: 0; padding: 4px; list-style: none; max-height: 320px; overflow-y: auto; }
+  .cx-ts-list[hidden] { display: none; }
+  .cx-ts-list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 7px 9px;
+    border-radius: 7px; cursor: pointer; font-size: 0.84rem; color: var(--ink); }
+  .cx-ts-list li b { font-family: var(--font-mono); }
+  .cx-ts-list li .nm { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cx-ts-list li .ty { font-size: 0.7rem; color: var(--ink-3); }
+  .cx-ts-list li[aria-selected="true"], .cx-ts-list li:hover { background: var(--primary-soft); }
+  .cx-ts-list li.none { display: block; color: var(--ink-3); cursor: default; }
+  .cx-ts-list li.none:hover { background: none; }
+  .cx-ts-info { font-size: 0.76rem; color: var(--ink-3); padding: 0 2px 4px; line-height: 1.5; }
+  .cx-ts-info b { color: var(--ink); }
+  .cx-ts-info .up { color: var(--mint-ink); } .cx-ts-info .down { color: var(--coral-ink); }
+  .cx-import { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 12px; border: 1px dashed var(--line-strong);
+    border-radius: 10px; margin-bottom: 12px; }
+  .cx-import .cx-sub { flex: 1; min-width: 200px; margin: 0; }
+  .cx-sync { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 12px; background: var(--surface); }
+  .cx-sync-h { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+  .cx-sync-h .grow { flex: 1; min-width: 180px; font-size: 0.86rem; }
+  .cx-sync .cx-t td, .cx-sync .cx-t th { padding: 6px 12px; font-size: 0.8rem; }
+  .cx-imp { border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--line)); border-radius: 12px; padding: 12px; margin-bottom: 14px;
+    background: color-mix(in srgb, var(--primary-soft) 40%, var(--surface)); display: grid; gap: 12px; }
+  .cx-imp[hidden] { display: none; }
+  .cx-imp-acct { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+  .cx-imp-acct .cx-sync-h select, .cx-imp-acct .cx-sync-h input[type=number] { width: auto; max-width: 100%; }
+  .cx-imp-acct .cx-t td, .cx-imp-acct .cx-t th { padding: 6px 12px; font-size: 0.8rem; }
+  .cx-imp-notes { padding: 8px 12px; font-size: 0.78rem; color: var(--ink-3); display: grid; gap: 4px; }
+  .cx-imp-notes .bad { color: var(--coral-ink); } .cx-imp-notes .ok { color: var(--mint-ink); }
+  .cx-imp-over label { display: flex; gap: 8px; align-items: baseline; font-size: 0.82rem; padding: 3px 0; }
+  .cx-imp-over code { font-size: 0.78rem; overflow-wrap: anywhere; }
+  .cx-imp-foot { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   @media (max-width: 1000px) {
+    .cx-wi { grid-template-columns: minmax(0, 1fr); }
     .cx-grid { grid-template-columns: minmax(0, 1fr); }
     .cx-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .cx-metrics, .cx-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -272,7 +329,7 @@
   {% endif %}
 
   <nav class="cx-tabs" role="tablist" aria-label="Capital sections">
-    {% for k, l in [('overview', 'Overview'), ('plan', 'Monthly plan'), ('holdings', 'Holdings'), ('property', 'Property'), ('taxes', 'Taxes'), ('board', 'Board'), ('profile', 'Profile')] %}
+    {% for k, l in [('overview', 'Overview'), ('whatif', 'What if'), ('plan', 'Monthly plan'), ('holdings', 'Holdings'), ('property', 'Property'), ('taxes', 'Taxes'), ('board', 'Board'), ('profile', 'Profile')] %}
     <button class="cx-tab" role="tab" id="t-{{ k }}" aria-controls="v-{{ k }}" aria-selected="{{ 'true' if k == 'overview' else 'false' }}" data-k="{{ k }}" type="button">{{ l }}{% if k == 'overview' and view.todo %}<span class="count">{{ view.todo|length }}</span>{% elif k == 'profile' %}<span class="count">{{ view.setup_done }}/5</span>{% endif %}</button>
     {% endfor %}
   </nav>
@@ -316,7 +373,8 @@
 
     <div class="cx-grid">
       <div class="cx-panel" id="todoPanel">
-        <div class="cx-panel-h"><h2>Do next</h2><span class="note">Ranked by what each step adds a year after tax. Debt above the market return goes first: its return is guaranteed.</span></div>
+        <div class="cx-panel-h"><h2>Do next</h2><span class="note">Ranked by what each step adds a year after tax. Debt above the market return goes first: its return is guaranteed.</span>
+          <button class="cx-btn" type="button" data-go="whatif" style="margin-left:auto">Try a move</button></div>
         {% if view.todo %}
         <div class="cx-filters" role="group" aria-label="Filter steps">
           <button class="cx-f" data-f="all" aria-pressed="true" type="button">All {{ view.todo|length }}</button>
@@ -441,6 +499,61 @@
       </aside>
     </div>
   </section>
+
+  {# ═══════════════════ WHAT IF ═══════════════════ #}
+  {% set wk = view.whatif %}
+  <section class="cx-view" id="v-whatif" role="tabpanel" aria-labelledby="t-whatif" hidden>
+    <div class="cx-title"><h2>What if</h2><p>Try a move before you make it. It is weighed the way the board weighs everything — after tax, after the cost of getting out and in, over your {{ wk.hold }}-year hold — against leaving the money where it is and against the best use of the same money.</p></div>
+    {% if wk.sources %}
+    <div class="cx-wi">
+      <div class="cx-panel">
+        <div class="cx-panel-h"><h2>The move</h2></div>
+        <form class="cx-wi-form" id="wiForm" onsubmit="return false">
+          <label class="cx-wl" for="wiSrc">From
+            <select id="wiSrc">{% for s in wk.sources %}<option value="{{ s.line }}" {{ 'disabled' if s.h is none else '' }}>{{ s.label }} · {{ s.account_label }} · {{ money(s.value) }}{% if s.h is not none %} · {{ pct(s.h) }}{% else %} · not measured{% endif %}</option>{% endfor %}</select></label>
+          <div class="cx-wl">Amount
+            <span class="row"><input id="wiAmt" type="number" min="0" step="100" inputmode="decimal" aria-label="Amount to move"><label><input type="checkbox" id="wiAll"> all of it</label></span></div>
+          <label class="cx-wl" for="wiKind">Into
+            <select id="wiKind"><option value="picks">The top picks</option><option value="ticker">A ticker…</option><option value="index">An index fund</option><option value="tbill">T-bills</option>{% if wk.debts %}<option value="debt">Pay down a debt…</option>{% endif %}<option value="custom">Something else…</option></select></label>
+          <label class="cx-wl" for="wiTicker" id="wiTickerRow" hidden>Ticker
+            <input id="wiTicker" autocomplete="off" placeholder="Search a ticker or a name, e.g. vxus" style="text-transform:uppercase" data-ticker-search>
+            <span class="cx-ts-info" id="wiTickerInfo"></span></label>
+          <label class="cx-wl" for="wiDebt" id="wiDebtRow" hidden>Debt
+            <select id="wiDebt">{% for d in wk.debts %}<option value="{{ d.name }}">{{ d.name }} · {{ money(d.balance) }} at {{ num(d.apr) }}%</option>{% endfor %}</select></label>
+          <div id="wiCustomRow" hidden style="display:grid;gap:10px;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)">
+            <label class="cx-wl" for="wiCName">What it is <input id="wiCName" placeholder="e.g. Bond fund"></label>
+            <label class="cx-wl" for="wiCRate">Return a year, before tax (%) <input id="wiCRate" type="number" step="0.1" inputmode="decimal"></label>
+          </div>
+        </form>
+      </div>
+      <div class="cx-panel" id="wiResult" aria-live="polite"><div class="cx-panel-b" style="padding-top:16px"></div></div>
+    </div>
+    {% else %}
+    <div class="cx-panel"><div class="cx-empty">List what you hold (Profile → What you hold) and you can try moving any of it.</div></div>
+    {% endif %}
+
+    <div class="cx-panel" style="margin-top:14px">
+      <div class="cx-panel-h"><h2>Saved moves</h2><span class="note">Weighed again every time your profile or the board changes.</span></div>
+      {% if view.scenarios %}
+      <div class="cx-scroll"><table class="cx-t">
+        <tr><th>Move</th><th>Verdict</th><th class="r">A year</th><th class="r">By year {{ wk.hold }}</th><th class="r">vs the best use</th><th></th></tr>
+        {% for sc in view.scenarios %}{% set r = sc.result %}
+        <tr data-scn='{{ {"id": sc.id, "name": sc.name, "src_name": sc.src_name, "src_account": sc.src_account, "amount": sc.amount, "dest": sc.dest}|tojson }}'
+            {% if r.ok %}data-py-year="{{ '%.2f'|format(r.per_year) }}" data-py-diff="{{ '%.2f'|format(r.diff) }}"{% endif %}>
+          <td><b>{{ sc.name }}</b>{% if r.ok %}<div class="s">{{ money(r.amount) }} from {{ r.source }} → {{ r.dest }}</div>{% else %}<div class="s">{{ r.error }}</div>{% endif %}</td>
+          <td>{% if r.ok %}<span class="cx-chip {{ {'better': 'ok', 'worse': 'bad', 'same': 'muted'}[r.verdict] }}">{{ {'better': 'Better', 'worse': 'Worse', 'same': 'About the same'}[r.verdict] }}</span>{% else %}<span class="cx-chip warn">Can't weigh</span>{% endif %}</td>
+          <td class="r num">{% if r.ok %}{{ smoney(r.per_year) }}{% else %}—{% endif %}</td>
+          <td class="r num">{% if r.ok %}{{ smoney(r.diff) }}{% else %}—{% endif %}</td>
+          <td class="r num">{% if r.ok %}{% if r.is_best %}<span class="cx-chip ok">best use</span>{% else %}{{ smoney(-r.shortfall) }}{% endif %}{% else %}—{% endif %}</td>
+          <td class="r"><button class="cp-linkbtn" type="button" data-scn-load>Load</button> {% if r.ok %}<button class="cp-linkbtn" type="button" data-scn-apply>Apply</button>{% endif %} <button class="cx-x" type="button" data-scn-del aria-label="Delete {{ sc.name }}">×</button></td>
+        </tr>
+        {% endfor %}
+      </table></div>
+      {% else %}<div class="cx-empty">Nothing saved yet. Weigh a move above and save it to compare it with others.</div>{% endif %}
+    </div>
+    <p class="cx-foot">A move keeps to its account's rules: from an IRA, Roth or HSA it stays inside that account; a 401(k) holds the plan's funds; a debt is paid from cash or taxable money. "Better" or "worse" needs a gap of at least 1% of the money over the hold — the bar a Do-next move clears. Selling a taxable holding counts the tax on its gain; keeping it is credited with never paying that tax. Applying a move edits your profile the way Mark done does, with the same undo.</p>
+  </section>
+  <script type="application/json" id="wiKit">{{ wk|tojson }}</script>
 
   {# ═══════════════════ MONTHLY PLAN ═══════════════════ #}
   <section class="cx-view" id="v-plan" role="tabpanel" aria-labelledby="t-plan" hidden>
@@ -654,6 +767,26 @@
           {% if ed.flows_bad %}<label class="cx-bad">Lines that could not be read — fix or delete: <textarea data-bad="flows" rows="2" style="width:100%">{{ ed.flows_bad|join('\n') }}</textarea></label>{% endif %}
           <div><button class="cp-linkbtn" type="button" data-add="flows">Add a line</button> <span class="cx-sub" style="display:inline">"Top picks" means the board's current top picks; a debt line takes the name from your debts.</span></div>
         {% elif st.key == 'hold' %}
+          <div class="cx-import">
+            <button class="cx-btn" type="button" id="impBtn">Import positions (CSV)</button>
+            <input type="file" id="impFile" accept=".csv,text/csv" hidden>
+            <span class="cx-sub">From Schwab, Fidelity or Vanguard: download the Positions page as CSV. Each account becomes a synced group below; the next export replaces it. Anything not at the broker stays as you typed it.</span>
+          </div>
+          <div class="cx-imp" id="impPreview" hidden aria-live="polite"></div>
+          {% for b in ed.synced %}
+          <div class="cx-sync" data-sync="{{ b.key }}">
+            <textarea hidden data-sync-text>{{ b.text }}</textarea>
+            <script type="application/json" data-sync-rows>{{ b.rows|tojson }}</script>
+            <div class="cx-sync-h"><span class="grow"><b>{{ b.label }}</b> · {{ b.rows|length }} line{{ 's' if b.rows|length != 1 else '' }} · {{ money(b.value) }}
+              <span class="cx-sub" style="display:block">Synced from an export{% if b.as_of %} as of {{ b.as_of }}{% endif %}{% if b.age is not none and b.age > 30 %} — {{ b.age }} days old, export it again{% endif %}. To change it, import a newer export.</span></span>
+              {% if b.age is not none and b.age > 30 %}<span class="cx-chip warn">Stale</span>{% else %}<span class="cx-chip ok">Synced</span>{% endif %}
+              <button class="cp-linkbtn" type="button" data-sync-unlink title="Turn these into lines you edit by hand">Edit by hand</button>
+              <button class="cp-linkbtn" type="button" data-sync-drop>Remove</button></div>
+            <div class="cx-scroll"><table class="cx-t"><tr><th>Holding</th><th>Account</th><th class="r">Value</th><th class="r">Cost basis</th><th class="r">Return</th></tr>
+              {% for r in b.rows %}<tr><td>{{ r.name }}</td><td>{{ r.account_label }}</td><td class="r">{{ money(r.value) }}</td><td class="r">{{ money(r.basis) if r.basis is not none else '—' }}</td><td class="r">{{ '%g'|format(r.rate) ~ '%' if r.rate is not none else 'auto' }}</td></tr>{% endfor %}
+            </table></div>
+          </div>
+          {% endfor %}
           <div class="cx-rows" data-editor="holdings">
             <div class="cx-row hold"><span class="eh">Name or ticker</span><span class="eh">Account</span><span class="eh">Value</span><span class="eh">Cost basis</span><span class="eh">Return</span><span></span></div>
             {% for r in ed.holdings %}
@@ -851,6 +984,306 @@
     $('#c-ret').addEventListener('input', draw); draw();
   }
 
+  // ── what if: the same arithmetic as whatif.py, line for line ──
+  const KIT = JSON.parse(($('#wiKit') || {}).textContent || 'null');
+  const WI = (() => {
+    if (!KIT) return null;
+    const K = KIT;
+    const cls = a => (a === 'cash' || a === 'taxable') ? 'taxable' : (a === 'k401' || a === 'roth401k') ? 'plan' : a === 'hsa' ? 'hsa' : 'sheltered';
+    const net = (kt, c) => { if (!kt) return null; const b = kt[c === 'taxable' ? 'taxable' : 'sheltered']; if (b == null) return null; return c === 'hsa' ? b * (1 - K.hsa_state) : b; };
+    function att(total, div, years, tDiv, tCg) {
+      years = Math.max(1, Math.trunc(years));
+      const r = total / 100, d = Math.max(0, Math.min(div, Math.max(total, 0))) / 100, price = r - d;
+      let value = 1, basis = 1;
+      for (let i = 0; i < years; i++) { const dv = value * d; value = value * (1 + price) + dv * (1 - tDiv); basis += dv * (1 - tDiv); }
+      if (value <= 0) return -100;
+      const after = value - Math.max(0, value - basis) * tCg;
+      return (Math.pow(after, 1 / years) - 1) * 100;
+    }
+    const custom = (c, rate) => c === 'taxable' ? att(rate, 0, K.hold, K.q, K.q) : c === 'hsa' ? rate * (1 - K.hsa_state) : rate;
+    function destination(c, dest) {
+      const kind = dest.kind;
+      if (kind === 'picks') {
+        if (!K.nets.picks) return { net: null, label: 'The top picks', allowed: false, note: 'There are no top picks on the board right now.' };
+        return { net: net(K.nets.picks, c), label: `The top picks (${K.sleeve.join(', ')})`, allowed: true,
+                 note: c === 'plan' ? "a 401(k) holds the plan's funds — only if your plan has a brokerage window" : null };
+      }
+      if (kind === 'ticker') {
+        const tk = String(dest.name || '').trim().toUpperCase();
+        if (!tk) return { net: null, label: 'A ticker', allowed: false, note: 'Name the ticker.' };
+        const row = K.tickers[tk];
+        let note = row ? null : `${tk} is on no screen, so the market return (${K.market}%) is assumed.`;
+        if (c === 'plan') note = "A 401(k) holds the plan's funds — this works only through a brokerage window.";
+        return { net: row ? net(row, c) : net(K.nets.offboard, c), label: row ? row.label : tk, allowed: true, note, single: true, ticker: tk };
+      }
+      if (kind === 'index') return { net: net(K.nets.index, c), label: 'An index fund', allowed: true, note: null };
+      if (kind === 'tbill') {
+        if (c !== 'taxable') return { net: null, label: 'T-bills', allowed: false, note: 'Money in a retirement account stays there; T-bills are for cash and taxable money.' };
+        return { net: K.nets.tbill, label: 'T-bills', allowed: true, note: null };
+      }
+      if (kind === 'debt') {
+        const d = K.debts.find(x => x.name === dest.name);
+        if (c !== 'taxable') return { net: null, label: 'Pay down a debt', allowed: false, note: 'Paying a debt from a retirement account means a withdrawal — taxes and penalties.' };
+        if (!d) return { net: null, label: 'Pay down a debt', allowed: false, note: 'Pick one of your debts.' };
+        return { net: d.apr, label: `Pay down ${d.name}`, allowed: true, note: null, cap: d.balance, debt: d.name };
+      }
+      if (kind === 'custom') {
+        if (dest.rate == null || dest.rate === '' || isNaN(+dest.rate)) return { net: null, label: dest.name || 'Something else', allowed: false, note: 'Give its expected return a year, before tax.' };
+        return { net: custom(c, +dest.rate), label: dest.name || 'Something else', allowed: true,
+                 note: c === 'taxable' ? 'Your own return estimate, taxed as growth taken at the end of the hold.' : 'Your own return estimate.' };
+      }
+      return { net: null, label: '?', allowed: false, note: 'Choose where the money goes.' };
+    }
+    function bestUse(c, proceeds) {
+      const opts = [];
+      if (c === 'taxable') { K.debts.forEach(d => opts.push({ label: `Pay down ${d.name}`, net: d.apr, cap: d.balance })); opts.push({ label: 'T-bills', net: K.nets.tbill, cap: Infinity }); }
+      if (K.nets.picks && c !== 'plan') opts.push({ label: 'The top picks', net: net(K.nets.picks, c), cap: Infinity });
+      opts.push({ label: 'An index fund', net: net(K.nets.index, c), cap: Infinity });
+      opts.sort((a, b) => b.net - a.net);
+      let left = proceeds; const out = [];
+      for (const o of opts) { if (left <= 0.005) break; const take = Math.min(left, o.cap); if (take > 0.005) { out.push({ label: o.label, net: o.net, amount: take }); left -= take; } }
+      return out;
+    }
+    const payback = (keep, a, h) => a <= h ? null : keep >= 1 ? 0 : Math.log(1 / keep) / Math.log((1 + a / 100) / (1 + h / 100));
+    function evaluate(move) {
+      let src = null;
+      if (move.line != null) src = K.sources.find(s => s.line === move.line);
+      if (!src && move.src_name) src = K.sources.find(s => s.label === move.src_name && s.account === move.src_account);
+      if (!src) return { ok: false, error: 'That holding is no longer in your profile.' };
+      if (src.h == null) return { ok: false, error: src.why_not || `${src.label} has no return to compare.` };
+      const c = cls(src.account), dest = move.dest || {}, d = destination(c, dest);
+      if (!d.allowed || d.net == null) return { ok: false, error: d.note || 'That destination is not open to this money.' };
+      const warnings = [], value = +src.value;
+      let amt = (move.amount == null || move.amount === '' || move.amount === 'all') ? value : Math.max(0, +move.amount);
+      if (amt > value + 0.005) { warnings.push(`Only ${money(value)} is in ${src.label}; the move uses all of it.`); amt = value; }
+      if (amt <= 0) return { ok: false, error: 'Enter an amount to move.' };
+      let tau = src.tau;
+      if (tau == null) { tau = 0; warnings.push(`No cost basis for ${src.label}: the tax to sell is not counted, so this may look better than it is. Add the basis in Profile → What you hold.`); }
+      const cst = +(src.c || 0), keep = 1 - cst - tau;
+      let proceeds = amt * keep;
+      if (d.cap != null && proceeds > d.cap + 0.005) { warnings.push(`${d.debt} is only ${money(d.cap)}; the move pays it off and moves no more.`); proceeds = d.cap; amt = proceeds / keep; }
+      const H = K.hold, w = +src.weq, h = +src.h, a = +d.net;
+      const keepW = amt * w * Math.pow(1 + h / 100, H), moveW = proceeds * w * Math.pow(1 + a / 100, H);
+      const diff = moveW - keepW, perYear = w * (proceeds * a - amt * h) / 100, band = K.min_gain * amt * w;
+      const verdict = diff >= band ? 'better' : diff <= -band ? 'worse' : 'same';
+      const fill = bestUse(c, proceeds);
+      const bestW = fill.reduce((t, f) => t + f.amount * w * Math.pow(1 + f.net / 100, H), 0);
+      const bestYear = w * (fill.reduce((t, f) => t + f.amount * f.net, 0) - amt * h) / 100;
+      const keepingBest = keepW >= bestW;
+      const best = { label: keepingBest ? 'Keeping it where it is' : fill.map(f => f.label).join(', then '), w: keepingBest ? keepW : bestW, per_year: keepingBest ? 0 : bestYear };
+      const shortfall = best.w - moveW;
+      if (src.account === 'cash') {
+        const left = K.cash_total - amt;
+        if (left < K.ef - 0.5 && K.monthly_expenses > 0) warnings.push(`Leaves ${money(left)} in cash — ${(left / K.monthly_expenses).toFixed(1)} months of expenses, below your ${K.emergency_months}-month emergency fund.`);
+      }
+      if (d.single && src.ticker === d.ticker) warnings.push('That is where the money already is.');
+      else if (d.single) {
+        const pos = (K.positions[d.ticker] || 0) + proceeds, tot = K.picks_held + proceeds;
+        if (tot > 0 && pos / tot * 100 > K.pick_max + 0.01) warnings.push(`${d.ticker} would be ${Math.round(pos / tot * 100)}% of your stock picks; your cap per name is ${K.pick_max}%.`);
+      }
+      let lossNote = null;
+      if (src.account === 'taxable' && src.basis != null && src.basis > value + 0.5 && value > 0) {
+        const loss = (src.basis - value) * amt / value, saves = Math.min(loss, K.tlh_cap) * K.ordinary;
+        lossNote = `Selling realizes a ${money(loss)} loss — about ${money(saves)} less tax this year (not counted above).`;
+        if (d.single && src.ticker === d.ticker) warnings.push('Buying the same shares back within 30 days cancels the loss (the wash-sale rule).');
+      }
+      if (d.note) warnings.push(d.note);
+      return { ok: true, source: src.label, source_account: src.account_label, dest: d.label, amount: amt, proceeds, tax: amt * tau, cost: amt * cst,
+               h, a, weq: w, keep_w: keepW, move_w: moveW, diff, per_year: perYear, verdict, payback: payback(keep, a, h), best, shortfall,
+               is_best: shortfall <= band, warnings, loss_note: lossNote, hold: H };
+    }
+    return { evaluate };
+  })();
+  if (WI && $('#wiForm')) {
+    const f = { src: $('#wiSrc'), amt: $('#wiAmt'), all: $('#wiAll'), kind: $('#wiKind'), ticker: $('#wiTicker'), debt: $('#wiDebt'),
+                cname: $('#wiCName'), crate: $('#wiCRate') };
+    const box = $('#wiResult .cx-panel-b');
+    const firstOpen = Array.from(f.src.options).find(o => !o.disabled);
+    if (firstOpen) f.src.value = firstOpen.value;
+    f.all.checked = true;
+    function move() {
+      return { line: +f.src.value, amount: f.all.checked ? null : (f.amt.value === '' ? 0 : +f.amt.value),
+               dest: { kind: f.kind.value, name: f.kind.value === 'ticker' ? f.ticker.value.trim().toUpperCase() : f.kind.value === 'debt' ? (f.debt || {}).value : f.kind.value === 'custom' ? f.cname.value.trim() : null,
+                       rate: f.kind.value === 'custom' && f.crate.value !== '' ? +f.crate.value : null } };
+    }
+    function render() {
+      $('#wiTickerRow').hidden = f.kind.value !== 'ticker';
+      if ($('#wiDebtRow')) $('#wiDebtRow').hidden = f.kind.value !== 'debt';
+      $('#wiCustomRow').hidden = f.kind.value !== 'custom';
+      f.amt.disabled = f.all.checked;
+      const r = WI.evaluate(move());
+      if (!r.ok) { box.innerHTML = `<div class="cx-sub">${esc(r.error)}</div>`; return; }
+      const head = { better: ['better', `Better: ${smoney(r.per_year)} a year`], worse: ['worse', `Worse: ${smoney(r.per_year)} a year`], same: ['same', 'About the same'] }[r.verdict];
+      box.innerHTML = `
+        <div class="cx-verdict"><span class="head ${head[0]} num">${head[1]}</span><span class="cx-sub">after tax</span></div>
+        <div class="cx-sub">${money(r.amount)} from ${esc(r.source)} (${esc(r.source_account)}) → ${esc(r.dest)}</div>
+        <div class="cx-wi-cmp">
+          <div><div class="cx-eyebrow">Leave it</div><div class="yr num">${pct(r.h)}</div><div class="cx-sub">${money(r.amount * r.weq * r.h / 100)} a year · ${kfmt(r.keep_w)} by year ${r.hold}</div></div>
+          <div><div class="cx-eyebrow">Make the move</div><div class="yr num" style="color:var(--${r.verdict === 'worse' ? 'coral' : r.verdict === 'better' ? 'mint' : 'ink'})">${pct(r.a)}</div><div class="cx-sub">${money(r.proceeds * r.weq * r.a / 100)} a year · ${kfmt(r.move_w)} by year ${r.hold}</div></div>
+        </div>
+        <table class="cx-t cx-wi-rows">
+          ${r.tax + r.cost > 0.5 ? `<tr><td>Tax and costs to move, paid once</td><td class="r num">${money(r.tax + r.cost)}</td></tr>` : ''}
+          <tr><td>Ahead or behind by year ${r.hold}</td><td class="r num" style="color:var(--${r.diff >= 0 ? 'mint' : 'coral'})">${smoney(r.diff)}</td></tr>
+          ${r.tax + r.cost > 0.5 ? `<tr><td>Earns back the tax and costs in</td><td class="r num">${r.payback == null ? 'never' : r.payback.toFixed(1) + ' years'}</td></tr>` : ''}
+          ${r.weq < 1 ? `<tr><td class="s" colspan="2">A traditional account counts at its after-tax value (×${r.weq.toFixed(2)}).</td></tr>` : ''}
+        </table>
+        <div class="cx-wi-best${r.is_best ? ' is-best' : ''}">${r.is_best ? '<b>This is the best use of this money.</b>' :
+          `<b>The best use of this money:</b> ${esc(r.best.label)} — ${smoney(r.best.per_year)} a year. Your move gives up ${money(r.shortfall)} by year ${r.hold}.`}</div>
+        ${r.warnings.length || r.loss_note ? `<ul class="cx-wi-warn">${r.warnings.map(w => `<li>${esc(w)}</li>`).join('')}${r.loss_note ? `<li class="note">${esc(r.loss_note)}</li>` : ''}</ul>` : ''}
+        <div class="cx-wi-act"><input id="wiName" placeholder="Name this move to save it" aria-label="Name this move"><button class="cx-btn" type="button" id="wiSave">Save</button>
+          <button class="cx-btn primary" type="button" id="wiApply">Apply this move</button></div>`;
+    }
+    [f.src, f.amt, f.all, f.kind, f.ticker, f.debt, f.cname, f.crate].forEach(el => el && el.addEventListener('input', render));
+    [f.src, f.kind, f.debt, f.all].forEach(el => el && el.addEventListener('change', render));
+    render();
+    const savedRows = () => $$('[data-scn]').map(tr => JSON.parse(tr.dataset.scn));
+    const srcOf = line => KIT.sources.find(s => s.line === line) || {};
+    box.addEventListener('click', async e => {
+      if (e.target.id === 'wiSave') {
+        const m = move(), s = srcOf(m.line), name = ($('#wiName').value || '').trim() || 'A move';
+        const list = savedRows().concat([{ name, src_name: s.label, src_account: s.account, amount: m.amount, dest: m.dest }]);
+        e.target.disabled = true;
+        try { await post('/api/capital/profile', { scenarios: list }); reloadTo('whatif'); } catch (err) { toast(err.message); e.target.disabled = false; }
+      }
+      if (e.target.id === 'wiApply') {
+        e.target.disabled = true; e.target.textContent = 'Applying…';
+        try { await post('/api/capital/move', { move: move() }); reloadTo('overview'); }
+        catch (err) { toast(err.message); e.target.disabled = false; e.target.textContent = 'Apply this move'; }
+      }
+    });
+    document.addEventListener('click', async e => {
+      const tr = e.target.closest('[data-scn]'); if (!tr) return;
+      const sc = JSON.parse(tr.dataset.scn);
+      if (e.target.closest('[data-scn-load]')) {
+        const s = KIT.sources.find(x => x.label === sc.src_name && x.account === sc.src_account);
+        if (!s) { toast('That holding is no longer in your profile.'); return; }
+        f.src.value = s.line; f.all.checked = sc.amount == null; f.amt.value = sc.amount == null ? '' : sc.amount;
+        f.kind.value = sc.dest.kind;
+        if (sc.dest.kind === 'ticker') f.ticker.value = sc.dest.name || '';
+        if (sc.dest.kind === 'debt' && f.debt) f.debt.value = sc.dest.name;
+        if (sc.dest.kind === 'custom') { f.cname.value = sc.dest.name || ''; f.crate.value = sc.dest.rate == null ? '' : sc.dest.rate; }
+        render(); $('#wiForm').scrollIntoView({ block: 'start' });
+      }
+      if (e.target.closest('[data-scn-apply]')) {
+        e.target.disabled = true;
+        try { await post('/api/capital/move', { move: { src_name: sc.src_name, src_account: sc.src_account, amount: sc.amount, dest: sc.dest } }); reloadTo('overview'); }
+        catch (err) { toast(err.message); e.target.disabled = false; }
+      }
+      if (e.target.closest('[data-scn-del]')) {
+        const list = savedRows().filter(x => x.id !== sc.id);
+        try { await post('/api/capital/profile', { scenarios: list }); reloadTo('whatif'); } catch (err) { toast(err.message); }
+      }
+    });
+  }
+
+  // ── ticker search: one type-ahead for every box that takes a ticker ──
+  const TICKER_RE = /^[A-Z]{1,5}([.\-][A-Z]{1,2})?$/;
+  const NON_TICKER_ACCOUNTS = ['cash', 'tbills', 'debt'];
+  const priceCache = {};
+  async function priceOf(sym) {
+    if (!priceCache[sym]) priceCache[sym] = fetch('/api/stock/' + encodeURIComponent(sym) + '/price', { credentials: 'same-origin' })
+      .then(r => r.json()).catch(() => ({ error: 'No price right now.' }));
+    return priceCache[sym];
+  }
+  function screenNote(sym) {
+    const t = KIT && KIT.tickers && KIT.tickers[sym];
+    if (KIT && KIT.sleeve && KIT.sleeve.includes(sym)) return `one of the top picks (${esc(t ? t.source : '')})`;
+    if (t) return `rated by ${esc(t.source)}`;
+    return 'on no screen — the market return is assumed';
+  }
+  async function showInfo(el, sym, typed) {
+    if (!el) return;
+    el.dataset.sym = sym;
+    el.innerHTML = `<b>${esc(sym)}</b> · looking up the price…`;
+    const q = await priceOf(sym);
+    if (el.dataset.sym !== sym) return;
+    if (q.error) { el.innerHTML = `<b>${esc(sym)}</b> · ${esc(q.error)}${typed ? ' · kept as typed' : ''}`; return; }
+    const ch = q.day_change_pct;
+    el.innerHTML = `<b>${esc(q.symbol || sym)}</b> · <b>${money2(q.price)}</b>` +
+      (ch == null ? '' : ` <span class="${ch >= 0 ? 'up' : 'down'}">${ch >= 0 ? '+' : '−'}${Math.abs(ch).toFixed(2)}% today</span>`) +
+      ` · ${esc(q.name || '')} · ${screenNote(sym)}`;
+  }
+  const money2 = v => '$' + (+v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  function infoFor(input) {
+    if (input.id === 'wiTicker') return $('#wiTickerInfo');
+    const row = input.closest('.cx-row');
+    let el = row.nextElementSibling;
+    if (!el || !el.classList.contains('cx-ts-info')) { el = document.createElement('div'); el.className = 'cx-ts-info'; row.after(el); }
+    return el;
+  }
+  function eligible(input) {
+    if (!input || input.tagName !== 'INPUT') return false;
+    if (input.matches('[data-ticker-search]')) return true;
+    if (!input.matches('[data-editor="holdings"] [data-c="name"], [data-editor="flows"] [data-c="name"]')) return false;
+    const acct = (input.closest('.cx-row').querySelector('[data-c="account"]') || {}).value;
+    return !NON_TICKER_ACCOUNTS.includes(acct);
+  }
+  const TS = (() => {
+    const list = document.createElement('ul');
+    list.className = 'cx-ts-list'; list.id = 'cxTsList'; list.setAttribute('role', 'listbox'); list.hidden = true;
+    document.body.appendChild(list);
+    let input = null, items = [], active = -1, seq = 0, timer = null;
+    const cache = {};
+    function place() {
+      const r = input.getBoundingClientRect(), w = Math.min(Math.max(r.width, 300), window.innerWidth - 24);
+      list.style.width = w + 'px';
+      list.style.left = (Math.max(12, Math.min(r.left, window.innerWidth - w - 12)) + window.scrollX) + 'px';
+      list.style.top = (r.bottom + window.scrollY + 4) + 'px';
+    }
+    function close() { list.hidden = true; active = -1; if (input) input.setAttribute('aria-expanded', 'false'); }
+    function mark() {
+      $$('li[role=option]', list).forEach((li, i) => li.setAttribute('aria-selected', i === active));
+      if (input) input.setAttribute('aria-activedescendant', active >= 0 ? 'cxTs' + active : '');
+    }
+    function show(j) {
+      if (!input || document.activeElement !== input) return;
+      items = j.results || [];
+      list.innerHTML = items.length ? items.map((it, i) => `<li role="option" id="cxTs${i}" data-i="${i}" aria-selected="false"><b>${esc(it.symbol)}</b><span class="nm">${esc(it.name)}</span><span class="ty">${esc(it.type)}</span></li>`).join('')
+        : '<li class="none">No match. What you typed is kept as it is.</li>';
+      active = items.length ? 0 : -1; mark(); place(); list.hidden = false; input.setAttribute('aria-expanded', 'true');
+    }
+    async function search(q) {
+      const my = ++seq;
+      if (cache[q]) { show(cache[q]); return; }
+      try {
+        const r = await fetch('/api/stock/search?q=' + encodeURIComponent(q), { credentials: 'same-origin' });
+        const j = await r.json(); cache[q] = j;
+        if (my === seq) show(j);
+      } catch (e) { close(); }
+    }
+    function pick(i) {
+      const it = items[i]; if (!it || !input) return;
+      input.value = it.symbol; close();
+      showInfo(infoFor(input), it.symbol);
+      if (input.id === 'wiTicker') input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    document.addEventListener('focusin', e => { if (eligible(e.target)) { input = e.target; input.setAttribute('aria-autocomplete', 'list'); input.setAttribute('aria-controls', 'cxTsList'); } });
+    document.addEventListener('input', e => {
+      if (e.target !== input || !eligible(input)) return;
+      clearTimeout(timer);
+      const q = input.value.trim();
+      if (!q) { close(); return; }
+      timer = setTimeout(() => search(q), 200);
+    });
+    document.addEventListener('keydown', e => {
+      if (e.target !== input || list.hidden) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); active = Math.min(items.length - 1, active + 1); mark(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); active = Math.max(0, active - 1); mark(); }
+      else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); pick(active); }
+      else if (e.key === 'Escape') { close(); }
+    });
+    document.addEventListener('focusout', e => { if (e.target === input) setTimeout(close, 150); });
+    // A ticker typed in full without picking from the list still gets its price.
+    document.addEventListener('change', e => {
+      if (!eligible(e.target)) return;
+      const v = e.target.value.trim().toUpperCase();
+      if (TICKER_RE.test(v)) showInfo(infoFor(e.target), v, true);
+    });
+    list.addEventListener('mousedown', e => { const li = e.target.closest('li[role=option]'); if (li) { e.preventDefault(); pick(+li.dataset.i); } });
+    window.addEventListener('resize', () => { if (!list.hidden) place(); });
+    return { close };
+  })();
+
   // ── profile: row editors and per-step saves ──
   const ACCOUNTS = {{ accounts|tojson }};
   const opts = (list, sel) => list.map(([v, l]) => `<option value="${v}"${v === sel ? ' selected' : ''}>${l}</option>`).join('');
@@ -862,7 +1295,8 @@
   document.addEventListener('click', e => {
     const add = e.target.closest('[data-add]');
     if (add) { const box = $(`[data-editor="${add.dataset.add}"]`); box.insertAdjacentHTML('beforeend', ROW[add.dataset.add]()); box.lastElementChild.querySelector('input').focus(); return; }
-    const x = e.target.closest('.cx-x'); if (x) x.closest('.cx-row').remove();
+    const x = e.target.closest('.cx-x');
+    if (x) { const row = x.closest('.cx-row'), info = row.nextElementSibling; if (info && info.classList.contains('cx-ts-info')) info.remove(); row.remove(); }
     const del = e.target.closest('.cp-prop-del'); if (del) del.closest('.cp-prop').remove();
   });
   const addProp = $('#cpAddProp');
@@ -880,7 +1314,105 @@
     }).filter(Boolean);
     const bad = form.querySelector(`[data-bad="${kind}"]`);
     if (bad && bad.value.trim()) lines.push(...bad.value.split('\n').map(s => s.trim()).filter(Boolean));
-    return lines.join('\n');
+    // synced groups go back exactly as they came, ahead of the typed lines
+    const synced = kind === 'holdings' ? $$('.cx-sync [data-sync-text]', form).map(t => t.value.trim()) : [];
+    return synced.concat(lines.length ? [lines.join('\n')] : []).join('\n\n');
+  }
+
+  // ── synced groups: edit by hand (they become typed lines) or remove ──
+  document.addEventListener('click', e => {
+    const box = e.target.closest('.cx-sync'); if (!box) return;
+    if (e.target.closest('[data-sync-drop]')) { box.remove(); toast('Removed — save to keep the change.'); }
+    if (e.target.closest('[data-sync-unlink]')) {
+      const ed = $('[data-editor="holdings"]');
+      JSON.parse($('[data-sync-rows]', box).textContent).forEach(r => {
+        ed.insertAdjacentHTML('beforeend', ROW.holdings());
+        const row = ed.lastElementChild, set = (c, v) => { row.querySelector(`[data-c="${c}"]`).value = v; };
+        set('name', r.name); set('account', r.account); set('value', r.value);
+        if (r.basis != null) set('basis', r.basis);
+        if (r.rate != null) set('rate', r.rate + '%');
+      });
+      box.remove(); toast('Now lines you edit — save to keep the change.');
+    }
+  });
+
+  // ── import a broker's positions export ──
+  const IMP_ACCOUNTS = ACCOUNTS.filter(([v]) => v !== 'cash' && v !== 'tbills');
+  const IMP_VALUE = { taxable: 'taxable', k401: '401k', roth401k: 'roth 401k', ira: 'ira', roth: 'roth', hsa: 'hsa' };
+  let IMP = null;
+  const impBtn = $('#impBtn'), impFile = $('#impFile'), impBox = $('#impPreview');
+  if (impBtn) {
+    impBtn.addEventListener('click', () => impFile.click());
+    impFile.addEventListener('change', async () => {
+      const f = impFile.files[0]; impFile.value = '';
+      if (!f) return;
+      if (f.size > 1e6) { toast('That file is over 1 MB — is it the positions export?'); return; }
+      impBtn.disabled = true; impBtn.textContent = 'Reading…';
+      try {
+        const text = await f.text();
+        const j = await post('/api/capital/import/preview', { csv: text, filename: f.name });
+        IMP = { csv: text, filename: f.name, data: j };
+        renderImport();
+      } catch (err) { toast(err.message); }
+      impBtn.disabled = false; impBtn.textContent = 'Import positions (CSV)';
+    });
+    impBox.addEventListener('click', async e => {
+      if (e.target.closest('[data-imp-cancel]')) { impBox.hidden = true; impBox.innerHTML = ''; IMP = null; return; }
+      if (!e.target.closest('[data-imp-apply]') || !IMP) return;
+      const body = { csv: IMP.csv, filename: IMP.filename, accounts: {}, margin_apr: {}, remove: [] };
+      $$('[data-imp-acct]', impBox).forEach(el => {
+        const k = el.dataset.impAcct;
+        body.accounts[k] = { include: $('[data-imp-include]', el).checked, account: $('[data-imp-type]', el).value };
+        const apr = $('[data-imp-apr]', el); if (apr) body.margin_apr[k] = apr.value === '' ? null : +apr.value;
+      });
+      $$('[data-imp-remove]', impBox).forEach(c => { if (c.checked) body.remove.push(c.value); });
+      const btn = e.target.closest('[data-imp-apply]'), msg = $('[data-imp-msg]', impBox);
+      btn.disabled = true; msg.textContent = 'Syncing…';
+      try { await post('/api/capital/import/apply', body); reloadTo('profile'); }
+      catch (err) { msg.textContent = err.message; btn.disabled = false; }
+    });
+    impBox.addEventListener('change', e => { if (e.target.matches('[data-imp-include], [data-imp-type]')) renderFoot(); });
+  }
+  const TYPE_NAME = { taxable: 'Taxable brokerage', k401: '401(k)', roth401k: 'Roth 401(k)', ira: 'Traditional IRA', roth: 'Roth IRA', hsa: 'HSA' };
+  function renderImport() {
+    const d = IMP.data;
+    const accts = d.accounts.map(a => {
+      const held = a.positions.reduce((t, p) => t + p.value, 0);
+      const notes = [];
+      const theirs = a.check_from === 'percent' ? `the account total ${d.broker}'s “% of account” column implies` : `${d.broker}'s own total`;
+      if (a.check === 'ok') notes.push(`<span class="ok">✓ Adds up to ${theirs}, ${money(a.reported)}.</span>`);
+      else if (a.check === 'off') notes.push(`<span class="bad">✗ ${money(Math.abs(a.check_diff))} ${a.check_diff > 0 ? 'short of' : 'over'} ${theirs} (${money(a.reported)}) — a row the page could not read? Check the lines below before syncing.</span>`);
+      else notes.push(`The file gives no account total to check against — check the lines below.`);
+      if (!a.sure) notes.push(`<span class="bad">"${esc(a.label)}" does not say what kind of account it is${a.window ? ' (pre-tax 401(k) or Roth 401(k))' : ''} — choose it above.</span>`);
+      if (a.window) notes.push('A brokerage window inside a 401(k): the board counts these at the market return, as it does every 401(k) holding — it does not yet rate stocks held inside a plan.');
+      if (a.cash > 0) notes.push(`Uninvested cash ${money(a.cash)} is written at 0% — type what the sweep pays if it pays more.`);
+      if (a.positions.some(p => p.kind === 'mmf')) notes.push('A money-market fund is written at your T-bill rate, which money funds track.');
+      a.skipped.forEach(s => notes.push(`Left out: ${esc(s.what)}${s.value != null ? ' ' + money(s.value) : ''} — ${esc(s.why)}.`));
+      if (a.synced_before) notes.push(`Replaces the group synced ${a.synced_before.as_of ? 'as of ' + esc(a.synced_before.as_of) : 'before'}.`);
+      const margin = a.margin > 0 ? `<label style="font-size:0.8rem">Margin loan ${money(a.margin)} at <input data-imp-apr type="number" step="0.01" min="0" max="40" style="width:5.5em" value="${a.margin_apr ?? ''}" placeholder="APR"> % <span class="cx-sub" style="display:inline">— it becomes a debt</span></label>` : '';
+      const rows = a.positions.map(p => `<tr><td><b>${esc(p.symbol)}</b><div class="s">${esc(p.name)}</div></td><td class="r">${money(p.value)}</td><td class="r">${p.basis != null ? money(p.basis) : '—'}</td></tr>`).join('');
+      return `<div class="cx-imp-acct" data-imp-acct="${esc(a.key)}">
+        <div class="cx-sync-h"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-imp-include checked> <b>${esc(a.broker)} · ${esc(a.label)}</b></label>
+          <span class="grow cx-sub" style="margin:0">${a.positions.length} position${a.positions.length === 1 ? '' : 's'} · ${money(held)}${a.cash > 0 ? ' · cash ' + money(a.cash) : ''}${a.margin > 0 ? ' · margin −' + money(a.margin) : ''}</span>
+          <select data-imp-type aria-label="Kind of account">${IMP_ACCOUNTS.map(([v, l]) => `<option value="${v}"${v === IMP_VALUE[a.account] ? ' selected' : ''}>${l}</option>`).join('')}</select>
+          ${margin}</div>
+        <div class="cx-imp-notes">${notes.map(n => `<div>${n}</div>`).join('')}</div>
+        <div class="cx-scroll"><table class="cx-t"><tr><th>Position</th><th class="r">Value</th><th class="r">Cost basis</th></tr>${rows}</table></div>
+      </div>`;
+    }).join('');
+    const over = d.overlaps.length ? `<div class="cx-imp-over"><b style="font-size:0.86rem">Lines you typed for these accounts</b>
+      <div class="cx-sub">Checked lines are removed — they hold what the export now lists, and would count twice. Leave the others if they are at another broker.</div>
+      ${d.overlaps.map(o => `<label><input type="checkbox" data-imp-remove value="${esc(o.text)}"${o.duplicate ? ' checked' : ''}><code>${esc(o.text)}</code>${o.duplicate ? ' <span class="cx-chip warn">same holding</span>' : ''}</label>`).join('')}</div>` : '';
+    impBox.innerHTML = `<div><b>${esc(d.broker)} export${d.as_of ? ' · as of ' + esc(d.as_of) : ''}</b>
+      <div class="cx-sub">Nothing is saved until you sync. Values are ${esc(d.broker)}'s market values; cost basis is kept for taxable accounts.</div></div>
+      ${accts}${over}
+      <div class="cx-imp-foot"><button class="cx-btn primary" type="button" data-imp-apply>Sync</button><button class="cp-linkbtn" type="button" data-imp-cancel>Cancel</button><span class="cx-sub" data-imp-msg style="margin:0"></span></div>`;
+    impBox.hidden = false; renderFoot();
+    impBox.scrollIntoView({ block: 'nearest' });
+  }
+  function renderFoot() {
+    const n = $$('[data-imp-include]', impBox).filter(c => c.checked).length, b = $('[data-imp-apply]', impBox);
+    if (b) { b.textContent = n ? `Sync ${n} account${n === 1 ? '' : 's'} to holdings` : 'Choose an account'; b.disabled = !n; }
   }
   document.addEventListener('click', async e => {
     const b = e.target.closest('[data-save]'); if (!b) return;

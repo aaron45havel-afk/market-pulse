@@ -974,6 +974,91 @@ all editable).
 - Saved as typed: the holdings and pay-split boxes keep the owner's lines, so a line the engine cannot read stays in
   the box and is named on the page. No migration — the profile is one JSON row.
 
+## 2026-10-03 — /capital: import a broker's positions export and keep it in sync
+**Why:** the owner exported Schwab's Positions page and asked for it to sync to /capital and fill in the gap — the
+holdings should come from the broker, not be retyped, and whatever the export does not cover stays as typed.
+**Decided:**
+- **A file, not a login.** The owner downloads the Positions CSV and picks it on the holdings step; no broker
+  credentials are asked for or stored. Schwab's one-account and all-accounts exports are read by their layout (title
+  line, a label line per account, "Positions Total" / "Account Total"); Fidelity's and Vanguard's by their column
+  names, whatever view they were downloaded from (Account Number / Name, Symbol, Current Value / Total Value, Cost
+  Basis Total when the view has it). Schwab's and Fidelity's layouts were checked against the owner's real exports
+  (read locally, never committed); Vanguard's follows its published columns and is tested on a made-up file.
+- **Preview, then sync.** Nothing is saved until the owner presses Sync. The preview shows each account, the kind of
+  account it was read as (changeable; an account whose name does not say is flagged), every position, and a **check
+  against the broker's own total** — positions + cash − margin + what was left out must match it to the dollar, or
+  the gap is shown. Fidelity has no total row; its "% of account" column implies one (the largest line's value ÷ its
+  percentage, good to that percentage's rounding), and pending activity counts toward it as Fidelity counts it.
+- **A brokerage window** (Fidelity BrokerageLink, Schwab PCRA) is inside a 401(k) but does not say pre-tax or Roth:
+  it is read as a 401(k) and flagged for the owner to choose. The board still measures every 401(k) line as a plan
+  fund at the market return, and the preview says so (CAPITAL-WINDOW). The server reads the file again on Sync rather than trusting the page.
+- **Each account is one block** in the holdings, between `# sync <broker>-<last digits>` and `# end sync` markers.
+  A later export of the same account replaces its block where it sits; typed lines (checking, the 401(k), a fund at
+  another broker) are never touched. Typed lines for the same ticker in the same kind of account are offered for
+  removal, ticked, so nothing counts twice; other typed lines in that kind of account are listed, unticked.
+- **What is written**: the market value; the cost basis in a taxable account only (where the switch test taxes a
+  sale); a money-market fund at the board's T-bill rate (money funds track it) — as cash in a taxable account, inside
+  the account otherwise; uninvested sweep cash at 0% (the owner can type what it pays); **negative cash is a margin
+  loan** — a debt named "<broker> margin …<digits>" at the APR the owner gives (required), updated or removed by the
+  next sync; it has no schedule, so no monthly payment is asked for. Options, bonds, CDs and pending activity are
+  named with their value and left out.
+- **Synced lines are shown, not edited**: the row editor holds only the typed lines; a synced group can be turned
+  into typed lines ("Edit by hand") or removed, and a save writes each group back exactly as it was. The holdings
+  step says what is synced and when, and asks for a fresh export after 30 days.
+- **Privacy**: only the last digits of an account number are kept, as the broker shows them. The owner's export is
+  not in the repository; the suite's files are made up in each broker's layout. Sync keeps the one-level undo.
+
+## 2026-10-03 — /capital: ticker search and a live price where a ticker is typed
+**Why:** the owner typed a fund's ticker into the holdings editor and asked to search tickers and pull in real-time data. Owner
+choice: search plus the live price (not live values for every holding).
+**Decided:**
+- **One type-ahead** for every box that takes a ticker: holding and monthly-pay names (not cash, T-bill or debt rows)
+  and the What-if ticker. It lists up to 8 US stocks, ETFs and mutual funds (exact ticker first), works with the
+  keyboard (arrows, Enter, Escape) as an ARIA listbox, and keeps whatever was typed when nothing is picked — a name
+  like "Stable value fund" is still a valid line.
+- **Sources in order**: Yahoo's search (with the plain named agent Yahoo answers from cloud IPs), then Nasdaq's
+  autocomplete, then the SEC's ticker list as a floor (operating companies only). Foreign lines (Yahoo writes them
+  with a dot suffix — SAP.DE, VOD.L — and a US share class with a dash, BRK-B), indices and crypto are dropped. A
+  found answer is cached for the day; an empty one is not (the next try may reach a source). Text beyond letters,
+  digits, spaces and . & ' - is refused before any request.
+- **The price** under the box: last price and today's change from Yahoo's chart (five days, not a year), else
+  Nasdaq's quote tried as a stock, ETF, then mutual fund — and which screen rates the ticker (one of the top picks,
+  rated by a screen, or on no screen so the market return is assumed). It is shown, not written into the line: a
+  holding's value is still the dollars the owner enters.
+- **Not covered**: no request leaves the sandbox, so the suites test each source from a recorded response shape and
+  the browser check uses stubbed answers; the live endpoints are first exercised on Railway.
+
+## 2026-10-03 — /capital What if: weigh a move before making it
+**Why:** the owner asked for a calculator that thinks through a potential move against the current allocation and
+says whether it pays or is suboptimal. Owner choices: shifting money first (property moves later); the verdict
+against doing nothing AND against the best use of the same money; save and compare scenarios and apply one; its own
+"What if" tab with a way in from Do next.
+**Decided:**
+- **A move** takes an amount (or all) from one holding into the top picks, a ticker, an index fund, T-bills, paying
+  down a debt, or something else at a pre-tax return the owner gives. Account rules hold: an IRA, Roth or HSA move
+  stays inside the account (no T-bills, no debt payoff — that would be a withdrawal); a ticker or the picks inside a
+  401(k) is allowed but flagged (only through a brokerage window).
+- **The verdict is the board's arithmetic**: keep = amount × (1 + h)^hold against move = amount × (1 − costs − tax) ×
+  (1 + a)^hold, in after-tax dollars (traditional at after-tax value), where a is the board's after-tax return net of
+  friction for new money in that account: a ticker on a screen at its own row's net, one on no screen at the market
+  return less its round trip and research time, the picks at their average, an index fund at the market with a 1.2%
+  dividend, something else as growth taxed at the end. Better / worse needs a 1%-of-the-money gap over the hold — the
+  Do-next bar; anything closer is "about the same". It also gives the years to earn back the tax and costs.
+- **Against the best use**: the board's destinations for that account filled best first (a debt takes at most its
+  balance; individual tickers are not on the list — the board's answer for stocks is the top picks); if keeping beats
+  them all, keeping is the best use. The page says what the move gives up against it by the end of the hold.
+- **Warnings, not silence**: an amount above what is there (capped), above the debt (capped at the balance), cash
+  below the emergency fund, one name above the per-name cap, a missing cost basis (tax not counted — may look better
+  than it is), a move into the same shares, and a sale at a loss (what it saves this year, shown apart from the
+  verdict, with the wash-sale rule).
+- **Live in the browser, checked against the server**: the page gets the engine's numbers (a "kit") and runs the same
+  arithmetic in JavaScript as it is typed; saved scenarios are weighed by the Python engine, and a browser check loads
+  each saved one into the live calculator and requires the same dollars.
+- **Saved scenarios** live in the profile (name, source by holding name and account — lines move — amount or all,
+  destination), are weighed again on every load, say so when their holding is gone, and can be applied: the move is
+  re-checked against the saved profile on the server and carried out the way Mark done carries out a step, with the
+  same one-level undo.
+
 ## 2026-10-03 — /capital as a dashboard: Do next, marking steps done, and the questions an individual asks
 **Why:** the owner asked for the dashboard to be the best UI it can be and for what else an individual would want to
 see and calculate. They chose: an Overview with a ranked Do-next list first; per-property numbers with a refinance
