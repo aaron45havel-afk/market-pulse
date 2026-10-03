@@ -245,6 +245,22 @@ Format: `- [PHASE-SEEN] item — why it matters`
   the signature of a share count out of step with the price (a reverse split, a foreign filer's units). None is on
   the default view; seven reach the loosest settings and would lead them. Compounders' split adjustment (fix_share_scale) or a sanity bound
   like Schloss's impossible-book check would catch them.
+- [SCHLOSS-BANKS] /schloss keeps banks and insurers (Schloss bought them), but its debt gate reads only borrowings,
+  so about 26 of the qualifiers — Regions, Principal, Unum, LCNB — pass "little or no debt" levered 12 to 38 times by
+  deposits and policy reserves. Owner call: judge them by equity/total assets instead, mark debt not applicable, or
+  leave as is. Needs the SEC industry code for the whole board (about 5,200 requests, ~11 minutes a month).
+- [SCHLOSS-SURVIVAL] Twenty years of history is measured by SEC company ID, so a company that re-registered starts
+  from zero: Disney (2019), Exxon (2026), Linde, Dow, Alphabet, Medtronic, Kraft Heinz, Eaton, Accenture and GM fail
+  "20+ years". The quarterly indexes the probe reads carry company names, so a predecessor could be matched by name —
+  bank names like "First Financial Corp" would collide, so measure before relying on it.
+- [SCHLOSS-PAGE] Phase 2 of the audit: the lists ignore the price (86% of rows are priced). "Clears every gate and
+  trades 20% below tangible book" — Schloss's actual buy list — is not a list; the working-capital list is ranked by
+  the NCAV share of assets and led by shells, with most of its priced names above 3x NCAV.
+- [SCHLOSS-DEBT-DATES] On one date, 26 former qualifiers have one debt part unfiled (often no short-term borrowings that
+  quarter). Where LongTermDebt — a total that includes the current portion — is filed, short-term borrowings missing
+  might be provable from the liability lines rather than left unknown.
+- [SCHLOSS-QUOTE-FILL] The quote gap-fill failed on 2026-10-03: stockanalysis.com answered 404 and Yahoo 429 to the
+  build's browser user agent (the same agent Quiet Value found Yahoo refuses). OTC names stay unpriced (14% of rows).
 - [NET-INCOME-BASIS] compounders' `net_income` series is the parent's (NetIncomeLoss) or the group's (ProfitLoss)
   depending on which tag a company files for more years. P/FCF and cash conversion now use the parent's profit
   explicitly; `ni_pos_years` and the other readers of the series do not.

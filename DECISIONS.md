@@ -853,3 +853,40 @@ drop the companies.
   PaymentsOfDividends, which can include preferred) over today's share count. That measured the dividend for 113 more
   names (332 in all, from 219). A filed zero is a measured zero; no filing at all is still unknown.
 - Result: the default view went from 13 names (7 of them banks) to 8, none of them financials.
+
+## 2026-10-03 — Schloss: one date per balance sheet, payers by dollars paid, the non-debt bound wired in, funds out
+**Why:** the /schloss audit found the impossible-book guard withheld a book value but left everything computed from
+it — Elme Communities cleared all four gates at 0.165x a tangible book the row called impossible. The cause was a
+balance sheet assembled from different dates: each line took its own newest quarter, so Elme's assets came from after
+its property sale and its equity from before. Payers that file only dollars paid were scored as definite non-payers
+(Utah Medical, Westwood, Escalade). The lease-and-payables subtraction written for lululemon was never passed in, so
+428 companies passing every other gate sat in "could not read" on debt. Splits printed as dilution (Amazon +84% a
+year). Exchange-traded funds, commodity pools, crypto trusts, BDCs and blank-cheque companies were scored as
+companies. The owner chose this as phase 1; the page itself (lists that use the price) is phase 2.
+**Decided:**
+- **Every balance-sheet line comes from one quarter**: the newest in which the company filed both equity and total
+  assets (else the newest with either). A line not filed that quarter is absent, not borrowed from another date —
+  except goodwill, intangibles and preferred stock, which are subtracted from book and carry from an older quarter
+  rather than read as zero. 1,403 companies read differently on 2026-10-03. Impossible balance sheets fell from 9 to 2.
+- **An impossible balance sheet withholds everything built on it**: the asset and debt gates go unknown, and P/TB,
+  P/NCAV and Riklis are not computed. The check now runs before anything reads the book value.
+- **Dividends paid settle "pays"** where no per-share figure is filed (or the per-share record stopped): dollars paid
+  this year or within DIVIDEND_STALE_YEARS. PaymentsOfDividendsCommonStock, else PaymentsOfDividends only where no
+  preferred stock is outstanding. The cut signal stays on per-share figures. 363 companies pay on this basis.
+- **The non-debt bound is fetched and passed in**: operating leases, payables (with accrued liabilities where filed
+  together) and deferred revenue, from the same quarter. 290 companies' debt gates are now proved rather than unknown.
+  The other direction: 26 September qualifiers (Best Buy, Kohl's, Ralph Lauren, Levi's, Newmont, Unum…) passed debt
+  on short- and long-term figures from different quarters; read on one date, one part is not filed, so their debt is
+  unknown and they move to "could not read". That is the rule the module already states — a known number added to
+  an unknown one is not a known total — applied to dates.
+- **A split between the two compared share counts withholds the dilution figure** (shown as "split"): a year-on-year
+  jump within 8% of a split factor, and the two ends at least 1.8x apart. A jump the filings already restated (both
+  ends on the same basis) does not. 718 figures withheld; 59 rows remain beyond ±60% a year, real heavy issuers.
+- **Not a company, not scored**: names that say ETF or Acquisition Corp (the shared keyword filter, now whole-word —
+  see below), and, among the 1,081 companies filing no revenue, SEC industry code 6221 (commodity pools, crypto and
+  metal trusts), 6770 (blank cheques) or no code at all (all 49 were BDCs or closed-end funds). 470 dropped, each
+  listed with its reason in params.build. Edge: Uranium Royalty is coded 6221 by SEC and goes with them.
+- **The shared keyword filter matches words**: "etf" had removed Netflix and "spac" Park Aerospace, Howmet Aerospace,
+  Extra Space Storage, Centerspace and Geospace from the Lynch, Quiet Value and net-net universes too.
+- Result on 2026-10-03: 5,185 screened (5,725 in September, 470 of the difference funds and blank cheques); 244 clear
+  every gate (192); 510 could not read (433).
