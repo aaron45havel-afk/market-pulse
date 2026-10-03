@@ -222,7 +222,32 @@
   .cp-prop input, .cp-prop select { width: 8rem; }
   .cp-linkbtn { background: none; border: 1px solid var(--line-strong); border-radius: 8px; padding: 0.25rem 0.7rem; cursor: pointer; color: var(--ink); font-size: 0.8rem; }
 
+  .cx-wi { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 18px; align-items: start; }
+  .cx-wl { display: grid; gap: 5px; font-size: 0.78rem; color: var(--ink-3); font-weight: 600; }
+  .cx-wl input, .cx-wl select { width: 100%; font-size: 0.9rem; padding: 8px 10px; }
+  .cx-wl .row { display: flex; gap: 10px; align-items: center; }
+  .cx-wl .row input[type=number] { flex: 1; }
+  .cx-wl .row label { display: inline-flex; gap: 5px; align-items: center; font-weight: 500; white-space: nowrap; color: var(--ink-2); }
+  .cx-wl .row label input { width: auto; }
+  .cx-wi-form { display: grid; gap: 14px; padding: 4px 18px 18px; }
+  .cx-wi-form [hidden] { display: none !important; }
+  .cx-verdict { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .cx-verdict .head { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; }
+  .cx-verdict .head.better { color: var(--mint); } .cx-verdict .head.worse { color: var(--coral); } .cx-verdict .head.same { color: var(--ink-2); }
+  .cx-wi-rows { margin-top: 12px; }
+  .cx-wi-best { margin-top: 12px; border-radius: 10px; padding: 10px 12px; font-size: 0.84rem; background: var(--surface-2); }
+  .cx-wi-best.is-best { background: var(--mint-soft); color: var(--mint-ink); }
+  .cx-wi-warn { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .cx-wi-warn li { font-size: 0.8rem; color: var(--gold-ink); background: var(--gold-soft); border-radius: 8px; padding: 7px 10px; }
+  .cx-wi-warn li.note { color: var(--mint-ink); background: var(--mint-soft); }
+  .cx-wi-act { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+  .cx-wi-act input { border: 1px solid var(--line-strong); background: var(--surface); border-radius: 999px; padding: 6px 12px; font: inherit;
+    font-size: 0.82rem; color: var(--ink); min-width: 0; flex: 1 1 10rem; }
+  .cx-wi-cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .cx-wi-cmp > div { border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; }
+  .cx-wi-cmp .yr { font-size: 1.15rem; font-weight: 700; color: var(--ink); }
   @media (max-width: 1000px) {
+    .cx-wi { grid-template-columns: minmax(0, 1fr); }
     .cx-grid { grid-template-columns: minmax(0, 1fr); }
     .cx-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .cx-metrics, .cx-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -272,7 +297,7 @@
   {% endif %}
 
   <nav class="cx-tabs" role="tablist" aria-label="Capital sections">
-    {% for k, l in [('overview', 'Overview'), ('plan', 'Monthly plan'), ('holdings', 'Holdings'), ('property', 'Property'), ('taxes', 'Taxes'), ('board', 'Board'), ('profile', 'Profile')] %}
+    {% for k, l in [('overview', 'Overview'), ('whatif', 'What if'), ('plan', 'Monthly plan'), ('holdings', 'Holdings'), ('property', 'Property'), ('taxes', 'Taxes'), ('board', 'Board'), ('profile', 'Profile')] %}
     <button class="cx-tab" role="tab" id="t-{{ k }}" aria-controls="v-{{ k }}" aria-selected="{{ 'true' if k == 'overview' else 'false' }}" data-k="{{ k }}" type="button">{{ l }}{% if k == 'overview' and view.todo %}<span class="count">{{ view.todo|length }}</span>{% elif k == 'profile' %}<span class="count">{{ view.setup_done }}/5</span>{% endif %}</button>
     {% endfor %}
   </nav>
@@ -316,7 +341,8 @@
 
     <div class="cx-grid">
       <div class="cx-panel" id="todoPanel">
-        <div class="cx-panel-h"><h2>Do next</h2><span class="note">Ranked by what each step adds a year after tax. Debt above the market return goes first: its return is guaranteed.</span></div>
+        <div class="cx-panel-h"><h2>Do next</h2><span class="note">Ranked by what each step adds a year after tax. Debt above the market return goes first: its return is guaranteed.</span>
+          <button class="cx-btn" type="button" data-go="whatif" style="margin-left:auto">Try a move</button></div>
         {% if view.todo %}
         <div class="cx-filters" role="group" aria-label="Filter steps">
           <button class="cx-f" data-f="all" aria-pressed="true" type="button">All {{ view.todo|length }}</button>
@@ -441,6 +467,60 @@
       </aside>
     </div>
   </section>
+
+  {# ═══════════════════ WHAT IF ═══════════════════ #}
+  {% set wk = view.whatif %}
+  <section class="cx-view" id="v-whatif" role="tabpanel" aria-labelledby="t-whatif" hidden>
+    <div class="cx-title"><h2>What if</h2><p>Try a move before you make it. It is weighed the way the board weighs everything — after tax, after the cost of getting out and in, over your {{ wk.hold }}-year hold — against leaving the money where it is and against the best use of the same money.</p></div>
+    {% if wk.sources %}
+    <div class="cx-wi">
+      <div class="cx-panel">
+        <div class="cx-panel-h"><h2>The move</h2></div>
+        <form class="cx-wi-form" id="wiForm" onsubmit="return false">
+          <label class="cx-wl" for="wiSrc">From
+            <select id="wiSrc">{% for s in wk.sources %}<option value="{{ s.line }}" {{ 'disabled' if s.h is none else '' }}>{{ s.label }} · {{ s.account_label }} · {{ money(s.value) }}{% if s.h is not none %} · {{ pct(s.h) }}{% else %} · not measured{% endif %}</option>{% endfor %}</select></label>
+          <div class="cx-wl">Amount
+            <span class="row"><input id="wiAmt" type="number" min="0" step="100" inputmode="decimal" aria-label="Amount to move"><label><input type="checkbox" id="wiAll"> all of it</label></span></div>
+          <label class="cx-wl" for="wiKind">Into
+            <select id="wiKind"><option value="picks">The top picks</option><option value="ticker">A ticker…</option><option value="index">An index fund</option><option value="tbill">T-bills</option>{% if wk.debts %}<option value="debt">Pay down a debt…</option>{% endif %}<option value="custom">Something else…</option></select></label>
+          <label class="cx-wl" for="wiTicker" id="wiTickerRow" hidden>Ticker
+            <input id="wiTicker" list="wiTickers" autocomplete="off" placeholder="e.g. LEN" style="text-transform:uppercase"><datalist id="wiTickers">{% for t, r in wk.tickers.items() %}<option value="{{ t }}">{{ r.label }}</option>{% endfor %}</datalist></label>
+          <label class="cx-wl" for="wiDebt" id="wiDebtRow" hidden>Debt
+            <select id="wiDebt">{% for d in wk.debts %}<option value="{{ d.name }}">{{ d.name }} · {{ money(d.balance) }} at {{ num(d.apr) }}%</option>{% endfor %}</select></label>
+          <div id="wiCustomRow" hidden style="display:grid;gap:10px;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)">
+            <label class="cx-wl" for="wiCName">What it is <input id="wiCName" placeholder="e.g. Bond fund"></label>
+            <label class="cx-wl" for="wiCRate">Return a year, before tax (%) <input id="wiCRate" type="number" step="0.1" inputmode="decimal"></label>
+          </div>
+        </form>
+      </div>
+      <div class="cx-panel" id="wiResult" aria-live="polite"><div class="cx-panel-b" style="padding-top:16px"></div></div>
+    </div>
+    {% else %}
+    <div class="cx-panel"><div class="cx-empty">List what you hold (Profile → What you hold) and you can try moving any of it.</div></div>
+    {% endif %}
+
+    <div class="cx-panel" style="margin-top:14px">
+      <div class="cx-panel-h"><h2>Saved moves</h2><span class="note">Weighed again every time your profile or the board changes.</span></div>
+      {% if view.scenarios %}
+      <div class="cx-scroll"><table class="cx-t">
+        <tr><th>Move</th><th>Verdict</th><th class="r">A year</th><th class="r">By year {{ wk.hold }}</th><th class="r">vs the best use</th><th></th></tr>
+        {% for sc in view.scenarios %}{% set r = sc.result %}
+        <tr data-scn='{{ {"id": sc.id, "name": sc.name, "src_name": sc.src_name, "src_account": sc.src_account, "amount": sc.amount, "dest": sc.dest}|tojson }}'
+            {% if r.ok %}data-py-year="{{ '%.2f'|format(r.per_year) }}" data-py-diff="{{ '%.2f'|format(r.diff) }}"{% endif %}>
+          <td><b>{{ sc.name }}</b>{% if r.ok %}<div class="s">{{ money(r.amount) }} from {{ r.source }} → {{ r.dest }}</div>{% else %}<div class="s">{{ r.error }}</div>{% endif %}</td>
+          <td>{% if r.ok %}<span class="cx-chip {{ {'better': 'ok', 'worse': 'bad', 'same': 'muted'}[r.verdict] }}">{{ {'better': 'Better', 'worse': 'Worse', 'same': 'About the same'}[r.verdict] }}</span>{% else %}<span class="cx-chip warn">Can't weigh</span>{% endif %}</td>
+          <td class="r num">{% if r.ok %}{{ smoney(r.per_year) }}{% else %}—{% endif %}</td>
+          <td class="r num">{% if r.ok %}{{ smoney(r.diff) }}{% else %}—{% endif %}</td>
+          <td class="r num">{% if r.ok %}{% if r.is_best %}<span class="cx-chip ok">best use</span>{% else %}{{ smoney(-r.shortfall) }}{% endif %}{% else %}—{% endif %}</td>
+          <td class="r"><button class="cp-linkbtn" type="button" data-scn-load>Load</button> {% if r.ok %}<button class="cp-linkbtn" type="button" data-scn-apply>Apply</button>{% endif %} <button class="cx-x" type="button" data-scn-del aria-label="Delete {{ sc.name }}">×</button></td>
+        </tr>
+        {% endfor %}
+      </table></div>
+      {% else %}<div class="cx-empty">Nothing saved yet. Weigh a move above and save it to compare it with others.</div>{% endif %}
+    </div>
+    <p class="cx-foot">A move keeps to its account's rules: from an IRA, Roth or HSA it stays inside that account; a 401(k) holds the plan's funds; a debt is paid from cash or taxable money. "Better" or "worse" needs a gap of at least 1% of the money over the hold — the bar a Do-next move clears. Selling a taxable holding counts the tax on its gain; keeping it is credited with never paying that tax. Applying a move edits your profile the way Mark done does, with the same undo.</p>
+  </section>
+  <script type="application/json" id="wiKit">{{ wk|tojson }}</script>
 
   {# ═══════════════════ MONTHLY PLAN ═══════════════════ #}
   <section class="cx-view" id="v-plan" role="tabpanel" aria-labelledby="t-plan" hidden>
@@ -849,6 +929,198 @@
         : 'A higher rate in retirement favours the Roth: pay the tax now, while it is lower.';
     };
     $('#c-ret').addEventListener('input', draw); draw();
+  }
+
+  // ── what if: the same arithmetic as whatif.py, line for line ──
+  const KIT = JSON.parse(($('#wiKit') || {}).textContent || 'null');
+  const WI = (() => {
+    if (!KIT) return null;
+    const K = KIT;
+    const cls = a => (a === 'cash' || a === 'taxable') ? 'taxable' : (a === 'k401' || a === 'roth401k') ? 'plan' : a === 'hsa' ? 'hsa' : 'sheltered';
+    const net = (kt, c) => { if (!kt) return null; const b = kt[c === 'taxable' ? 'taxable' : 'sheltered']; if (b == null) return null; return c === 'hsa' ? b * (1 - K.hsa_state) : b; };
+    function att(total, div, years, tDiv, tCg) {
+      years = Math.max(1, Math.trunc(years));
+      const r = total / 100, d = Math.max(0, Math.min(div, Math.max(total, 0))) / 100, price = r - d;
+      let value = 1, basis = 1;
+      for (let i = 0; i < years; i++) { const dv = value * d; value = value * (1 + price) + dv * (1 - tDiv); basis += dv * (1 - tDiv); }
+      if (value <= 0) return -100;
+      const after = value - Math.max(0, value - basis) * tCg;
+      return (Math.pow(after, 1 / years) - 1) * 100;
+    }
+    const custom = (c, rate) => c === 'taxable' ? att(rate, 0, K.hold, K.q, K.q) : c === 'hsa' ? rate * (1 - K.hsa_state) : rate;
+    function destination(c, dest) {
+      const kind = dest.kind;
+      if (kind === 'picks') {
+        if (!K.nets.picks) return { net: null, label: 'The top picks', allowed: false, note: 'There are no top picks on the board right now.' };
+        return { net: net(K.nets.picks, c), label: `The top picks (${K.sleeve.join(', ')})`, allowed: true,
+                 note: c === 'plan' ? "a 401(k) holds the plan's funds — only if your plan has a brokerage window" : null };
+      }
+      if (kind === 'ticker') {
+        const tk = String(dest.name || '').trim().toUpperCase();
+        if (!tk) return { net: null, label: 'A ticker', allowed: false, note: 'Name the ticker.' };
+        const row = K.tickers[tk];
+        let note = row ? null : `${tk} is on no screen, so the market return (${K.market}%) is assumed.`;
+        if (c === 'plan') note = "A 401(k) holds the plan's funds — this works only through a brokerage window.";
+        return { net: row ? net(row, c) : net(K.nets.offboard, c), label: row ? row.label : tk, allowed: true, note, single: true, ticker: tk };
+      }
+      if (kind === 'index') return { net: net(K.nets.index, c), label: 'An index fund', allowed: true, note: null };
+      if (kind === 'tbill') {
+        if (c !== 'taxable') return { net: null, label: 'T-bills', allowed: false, note: 'Money in a retirement account stays there; T-bills are for cash and taxable money.' };
+        return { net: K.nets.tbill, label: 'T-bills', allowed: true, note: null };
+      }
+      if (kind === 'debt') {
+        const d = K.debts.find(x => x.name === dest.name);
+        if (c !== 'taxable') return { net: null, label: 'Pay down a debt', allowed: false, note: 'Paying a debt from a retirement account means a withdrawal — taxes and penalties.' };
+        if (!d) return { net: null, label: 'Pay down a debt', allowed: false, note: 'Pick one of your debts.' };
+        return { net: d.apr, label: `Pay down ${d.name}`, allowed: true, note: null, cap: d.balance, debt: d.name };
+      }
+      if (kind === 'custom') {
+        if (dest.rate == null || dest.rate === '' || isNaN(+dest.rate)) return { net: null, label: dest.name || 'Something else', allowed: false, note: 'Give its expected return a year, before tax.' };
+        return { net: custom(c, +dest.rate), label: dest.name || 'Something else', allowed: true,
+                 note: c === 'taxable' ? 'Your own return estimate, taxed as growth taken at the end of the hold.' : 'Your own return estimate.' };
+      }
+      return { net: null, label: '?', allowed: false, note: 'Choose where the money goes.' };
+    }
+    function bestUse(c, proceeds) {
+      const opts = [];
+      if (c === 'taxable') { K.debts.forEach(d => opts.push({ label: `Pay down ${d.name}`, net: d.apr, cap: d.balance })); opts.push({ label: 'T-bills', net: K.nets.tbill, cap: Infinity }); }
+      if (K.nets.picks && c !== 'plan') opts.push({ label: 'The top picks', net: net(K.nets.picks, c), cap: Infinity });
+      opts.push({ label: 'An index fund', net: net(K.nets.index, c), cap: Infinity });
+      opts.sort((a, b) => b.net - a.net);
+      let left = proceeds; const out = [];
+      for (const o of opts) { if (left <= 0.005) break; const take = Math.min(left, o.cap); if (take > 0.005) { out.push({ label: o.label, net: o.net, amount: take }); left -= take; } }
+      return out;
+    }
+    const payback = (keep, a, h) => a <= h ? null : keep >= 1 ? 0 : Math.log(1 / keep) / Math.log((1 + a / 100) / (1 + h / 100));
+    function evaluate(move) {
+      let src = null;
+      if (move.line != null) src = K.sources.find(s => s.line === move.line);
+      if (!src && move.src_name) src = K.sources.find(s => s.label === move.src_name && s.account === move.src_account);
+      if (!src) return { ok: false, error: 'That holding is no longer in your profile.' };
+      if (src.h == null) return { ok: false, error: src.why_not || `${src.label} has no return to compare.` };
+      const c = cls(src.account), dest = move.dest || {}, d = destination(c, dest);
+      if (!d.allowed || d.net == null) return { ok: false, error: d.note || 'That destination is not open to this money.' };
+      const warnings = [], value = +src.value;
+      let amt = (move.amount == null || move.amount === '' || move.amount === 'all') ? value : Math.max(0, +move.amount);
+      if (amt > value + 0.005) { warnings.push(`Only ${money(value)} is in ${src.label}; the move uses all of it.`); amt = value; }
+      if (amt <= 0) return { ok: false, error: 'Enter an amount to move.' };
+      let tau = src.tau;
+      if (tau == null) { tau = 0; warnings.push(`No cost basis for ${src.label}: the tax to sell is not counted, so this may look better than it is. Add the basis in Profile → What you hold.`); }
+      const cst = +(src.c || 0), keep = 1 - cst - tau;
+      let proceeds = amt * keep;
+      if (d.cap != null && proceeds > d.cap + 0.005) { warnings.push(`${d.debt} is only ${money(d.cap)}; the move pays it off and moves no more.`); proceeds = d.cap; amt = proceeds / keep; }
+      const H = K.hold, w = +src.weq, h = +src.h, a = +d.net;
+      const keepW = amt * w * Math.pow(1 + h / 100, H), moveW = proceeds * w * Math.pow(1 + a / 100, H);
+      const diff = moveW - keepW, perYear = w * (proceeds * a - amt * h) / 100, band = K.min_gain * amt * w;
+      const verdict = diff >= band ? 'better' : diff <= -band ? 'worse' : 'same';
+      const fill = bestUse(c, proceeds);
+      const bestW = fill.reduce((t, f) => t + f.amount * w * Math.pow(1 + f.net / 100, H), 0);
+      const bestYear = w * (fill.reduce((t, f) => t + f.amount * f.net, 0) - amt * h) / 100;
+      const keepingBest = keepW >= bestW;
+      const best = { label: keepingBest ? 'Keeping it where it is' : fill.map(f => f.label).join(', then '), w: keepingBest ? keepW : bestW, per_year: keepingBest ? 0 : bestYear };
+      const shortfall = best.w - moveW;
+      if (src.account === 'cash') {
+        const left = K.cash_total - amt;
+        if (left < K.ef - 0.5 && K.monthly_expenses > 0) warnings.push(`Leaves ${money(left)} in cash — ${(left / K.monthly_expenses).toFixed(1)} months of expenses, below your ${K.emergency_months}-month emergency fund.`);
+      }
+      if (d.single && src.ticker === d.ticker) warnings.push('That is where the money already is.');
+      else if (d.single) {
+        const pos = (K.positions[d.ticker] || 0) + proceeds, tot = K.picks_held + proceeds;
+        if (tot > 0 && pos / tot * 100 > K.pick_max + 0.01) warnings.push(`${d.ticker} would be ${Math.round(pos / tot * 100)}% of your stock picks; your cap per name is ${K.pick_max}%.`);
+      }
+      let lossNote = null;
+      if (src.account === 'taxable' && src.basis != null && src.basis > value + 0.5 && value > 0) {
+        const loss = (src.basis - value) * amt / value, saves = Math.min(loss, K.tlh_cap) * K.ordinary;
+        lossNote = `Selling realizes a ${money(loss)} loss — about ${money(saves)} less tax this year (not counted above).`;
+        if (d.single && src.ticker === d.ticker) warnings.push('Buying the same shares back within 30 days cancels the loss (the wash-sale rule).');
+      }
+      if (d.note) warnings.push(d.note);
+      return { ok: true, source: src.label, source_account: src.account_label, dest: d.label, amount: amt, proceeds, tax: amt * tau, cost: amt * cst,
+               h, a, weq: w, keep_w: keepW, move_w: moveW, diff, per_year: perYear, verdict, payback: payback(keep, a, h), best, shortfall,
+               is_best: shortfall <= band, warnings, loss_note: lossNote, hold: H };
+    }
+    return { evaluate };
+  })();
+  if (WI && $('#wiForm')) {
+    const f = { src: $('#wiSrc'), amt: $('#wiAmt'), all: $('#wiAll'), kind: $('#wiKind'), ticker: $('#wiTicker'), debt: $('#wiDebt'),
+                cname: $('#wiCName'), crate: $('#wiCRate') };
+    const box = $('#wiResult .cx-panel-b');
+    const firstOpen = Array.from(f.src.options).find(o => !o.disabled);
+    if (firstOpen) f.src.value = firstOpen.value;
+    f.all.checked = true;
+    function move() {
+      return { line: +f.src.value, amount: f.all.checked ? null : (f.amt.value === '' ? 0 : +f.amt.value),
+               dest: { kind: f.kind.value, name: f.kind.value === 'ticker' ? f.ticker.value.trim().toUpperCase() : f.kind.value === 'debt' ? (f.debt || {}).value : f.kind.value === 'custom' ? f.cname.value.trim() : null,
+                       rate: f.kind.value === 'custom' && f.crate.value !== '' ? +f.crate.value : null } };
+    }
+    function render() {
+      $('#wiTickerRow').hidden = f.kind.value !== 'ticker';
+      if ($('#wiDebtRow')) $('#wiDebtRow').hidden = f.kind.value !== 'debt';
+      $('#wiCustomRow').hidden = f.kind.value !== 'custom';
+      f.amt.disabled = f.all.checked;
+      const r = WI.evaluate(move());
+      if (!r.ok) { box.innerHTML = `<div class="cx-sub">${esc(r.error)}</div>`; return; }
+      const head = { better: ['better', `Better: ${smoney(r.per_year)} a year`], worse: ['worse', `Worse: ${smoney(r.per_year)} a year`], same: ['same', 'About the same'] }[r.verdict];
+      box.innerHTML = `
+        <div class="cx-verdict"><span class="head ${head[0]} num">${head[1]}</span><span class="cx-sub">after tax</span></div>
+        <div class="cx-sub">${money(r.amount)} from ${esc(r.source)} (${esc(r.source_account)}) → ${esc(r.dest)}</div>
+        <div class="cx-wi-cmp">
+          <div><div class="cx-eyebrow">Leave it</div><div class="yr num">${pct(r.h)}</div><div class="cx-sub">${money(r.amount * r.weq * r.h / 100)} a year · ${kfmt(r.keep_w)} by year ${r.hold}</div></div>
+          <div><div class="cx-eyebrow">Make the move</div><div class="yr num" style="color:var(--${r.verdict === 'worse' ? 'coral' : r.verdict === 'better' ? 'mint' : 'ink'})">${pct(r.a)}</div><div class="cx-sub">${money(r.proceeds * r.weq * r.a / 100)} a year · ${kfmt(r.move_w)} by year ${r.hold}</div></div>
+        </div>
+        <table class="cx-t cx-wi-rows">
+          ${r.tax + r.cost > 0.5 ? `<tr><td>Tax and costs to move, paid once</td><td class="r num">${money(r.tax + r.cost)}</td></tr>` : ''}
+          <tr><td>Ahead or behind by year ${r.hold}</td><td class="r num" style="color:var(--${r.diff >= 0 ? 'mint' : 'coral'})">${smoney(r.diff)}</td></tr>
+          ${r.tax + r.cost > 0.5 ? `<tr><td>Earns back the tax and costs in</td><td class="r num">${r.payback == null ? 'never' : r.payback.toFixed(1) + ' years'}</td></tr>` : ''}
+          ${r.weq < 1 ? `<tr><td class="s" colspan="2">A traditional account counts at its after-tax value (×${r.weq.toFixed(2)}).</td></tr>` : ''}
+        </table>
+        <div class="cx-wi-best${r.is_best ? ' is-best' : ''}">${r.is_best ? '<b>This is the best use of this money.</b>' :
+          `<b>The best use of this money:</b> ${esc(r.best.label)} — ${smoney(r.best.per_year)} a year. Your move gives up ${money(r.shortfall)} by year ${r.hold}.`}</div>
+        ${r.warnings.length || r.loss_note ? `<ul class="cx-wi-warn">${r.warnings.map(w => `<li>${esc(w)}</li>`).join('')}${r.loss_note ? `<li class="note">${esc(r.loss_note)}</li>` : ''}</ul>` : ''}
+        <div class="cx-wi-act"><input id="wiName" placeholder="Name this move to save it" aria-label="Name this move"><button class="cx-btn" type="button" id="wiSave">Save</button>
+          <button class="cx-btn primary" type="button" id="wiApply">Apply this move</button></div>`;
+    }
+    [f.src, f.amt, f.all, f.kind, f.ticker, f.debt, f.cname, f.crate].forEach(el => el && el.addEventListener('input', render));
+    [f.src, f.kind, f.debt, f.all].forEach(el => el && el.addEventListener('change', render));
+    render();
+    const savedRows = () => $$('[data-scn]').map(tr => JSON.parse(tr.dataset.scn));
+    const srcOf = line => KIT.sources.find(s => s.line === line) || {};
+    box.addEventListener('click', async e => {
+      if (e.target.id === 'wiSave') {
+        const m = move(), s = srcOf(m.line), name = ($('#wiName').value || '').trim() || 'A move';
+        const list = savedRows().concat([{ name, src_name: s.label, src_account: s.account, amount: m.amount, dest: m.dest }]);
+        e.target.disabled = true;
+        try { await post('/api/capital/profile', { scenarios: list }); reloadTo('whatif'); } catch (err) { toast(err.message); e.target.disabled = false; }
+      }
+      if (e.target.id === 'wiApply') {
+        e.target.disabled = true; e.target.textContent = 'Applying…';
+        try { await post('/api/capital/move', { move: move() }); reloadTo('overview'); }
+        catch (err) { toast(err.message); e.target.disabled = false; e.target.textContent = 'Apply this move'; }
+      }
+    });
+    document.addEventListener('click', async e => {
+      const tr = e.target.closest('[data-scn]'); if (!tr) return;
+      const sc = JSON.parse(tr.dataset.scn);
+      if (e.target.closest('[data-scn-load]')) {
+        const s = KIT.sources.find(x => x.label === sc.src_name && x.account === sc.src_account);
+        if (!s) { toast('That holding is no longer in your profile.'); return; }
+        f.src.value = s.line; f.all.checked = sc.amount == null; f.amt.value = sc.amount == null ? '' : sc.amount;
+        f.kind.value = sc.dest.kind;
+        if (sc.dest.kind === 'ticker') f.ticker.value = sc.dest.name || '';
+        if (sc.dest.kind === 'debt' && f.debt) f.debt.value = sc.dest.name;
+        if (sc.dest.kind === 'custom') { f.cname.value = sc.dest.name || ''; f.crate.value = sc.dest.rate == null ? '' : sc.dest.rate; }
+        render(); $('#wiForm').scrollIntoView({ block: 'start' });
+      }
+      if (e.target.closest('[data-scn-apply]')) {
+        e.target.disabled = true;
+        try { await post('/api/capital/move', { move: { src_name: sc.src_name, src_account: sc.src_account, amount: sc.amount, dest: sc.dest } }); reloadTo('overview'); }
+        catch (err) { toast(err.message); e.target.disabled = false; }
+      }
+      if (e.target.closest('[data-scn-del]')) {
+        const list = savedRows().filter(x => x.id !== sc.id);
+        try { await post('/api/capital/profile', { scenarios: list }); reloadTo('whatif'); } catch (err) { toast(err.message); }
+      }
+    });
   }
 
   // ── profile: row editors and per-step saves ──

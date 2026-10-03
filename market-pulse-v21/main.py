@@ -2161,6 +2161,44 @@ async def capital_step_done(request: Request):
     return JSONResponse({"ok": True, "title": step["title"]})
 
 
+@app.post("/api/capital/move")
+async def capital_move(request: Request):
+    """Carry out a what-if move ({"move": {"line", "amount", "dest"}}): the
+    move is re-checked against the profile as saved, then applied the way a
+    Do-next step is, with the same one-level undo."""
+    gate = _admin_gate(request)
+    if gate:
+        return gate
+    import allocation as A
+    import capital as K
+    import whatif as W
+    from datetime import datetime, timezone
+    from database import get_capital_profile, save_capital_profile
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Expected a JSON body."}, status_code=400)
+    move = (body or {}).get("move") if isinstance(body, dict) else None
+    if not isinstance(move, dict):
+        return JSONResponse({"error": "Which move? Send it as {\"move\": {...}}."}, status_code=400)
+    saved = {k: v for k, v in (get_capital_profile() or {}).items() if not k.startswith("_")}
+    board = await asyncio.to_thread(K.build, saved)
+    r = W.evaluate(W.kit(board), move)
+    if not r.get("ok"):
+        return JSONResponse({"error": r.get("error")}, status_code=409)
+    try:
+        prof = A.apply_moves(saved, [W.as_move(r)], board)
+    except A.CannotApply as e:
+        return JSONResponse({"error": str(e)}, status_code=409)
+    if not save_capital_profile({k: v for k, v in saved.items() if k != "last_step"}, owner="owner:undo"):
+        return JSONResponse({"error": "Could not save — the database is unavailable."}, status_code=503)
+    prof["last_step"] = {"title": "What if: " + W.summary(r), "impact": round(r["per_year"], 2),
+                         "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    if not save_capital_profile(prof):
+        return JSONResponse({"error": "Could not save — the database is unavailable."}, status_code=503)
+    return JSONResponse({"ok": True, "title": W.summary(r)})
+
+
 @app.post("/api/capital/undo")
 async def capital_step_undo(request: Request):
     """Put back the profile as it was before the last step marked done."""

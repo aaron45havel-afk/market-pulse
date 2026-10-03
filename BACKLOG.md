@@ -268,6 +268,11 @@ Format: `- [PHASE-SEEN] item — why it matters`
   each undoable, would let the owner retrace a session of changes.
 - [CAPITAL-BUY-RE] Marking a property purchase done sends the owner to enter the property; it could pre-fill the
   record from the board row (price, loan, rate, rent) for the owner to correct.
+- [CAPITAL-WHATIF-RE] What if handles shifting money only. Buying a property (price, down payment, rate, rent, costs,
+  funded from chosen holdings, against the real-estate cap), borrowing against one (cash-out refi or second loan into
+  a chosen destination) and selling one (recapture + gains, 7% to sell, redeployed) are the owner's other move types.
+- [CAPITAL-WHATIF-SPLIT] A what-if move draws from one holding; a move funded from several (e.g. $30k from savings
+  and $20k from VTI into one deal) would need a list of sources.
 - [CAPITAL-PHASE3] /capital phase 3: a dated record of the board and an alert when the top use changes.
 - [CAPITAL-RE-PRICES] BRRRR and flips can only be conditional until fixer sale prices exist; with them, the board could
   show the return at a price the owner can actually get instead of the target at the most they can pay.

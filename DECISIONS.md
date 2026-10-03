@@ -974,6 +974,37 @@ all editable).
 - Saved as typed: the holdings and pay-split boxes keep the owner's lines, so a line the engine cannot read stays in
   the box and is named on the page. No migration — the profile is one JSON row.
 
+## 2026-10-03 — /capital What if: weigh a move before making it
+**Why:** the owner asked for a calculator that thinks through a potential move against the current allocation and
+says whether it pays or is suboptimal. Owner choices: shifting money first (property moves later); the verdict
+against doing nothing AND against the best use of the same money; save and compare scenarios and apply one; its own
+"What if" tab with a way in from Do next.
+**Decided:**
+- **A move** takes an amount (or all) from one holding into the top picks, a ticker, an index fund, T-bills, paying
+  down a debt, or something else at a pre-tax return the owner gives. Account rules hold: an IRA, Roth or HSA move
+  stays inside the account (no T-bills, no debt payoff — that would be a withdrawal); a ticker or the picks inside a
+  401(k) is allowed but flagged (only through a brokerage window).
+- **The verdict is the board's arithmetic**: keep = amount × (1 + h)^hold against move = amount × (1 − costs − tax) ×
+  (1 + a)^hold, in after-tax dollars (traditional at after-tax value), where a is the board's after-tax return net of
+  friction for new money in that account: a ticker on a screen at its own row's net, one on no screen at the market
+  return less its round trip and research time, the picks at their average, an index fund at the market with a 1.2%
+  dividend, something else as growth taxed at the end. Better / worse needs a 1%-of-the-money gap over the hold — the
+  Do-next bar; anything closer is "about the same". It also gives the years to earn back the tax and costs.
+- **Against the best use**: the board's destinations for that account filled best first (a debt takes at most its
+  balance; individual tickers are not on the list — the board's answer for stocks is the top picks); if keeping beats
+  them all, keeping is the best use. The page says what the move gives up against it by the end of the hold.
+- **Warnings, not silence**: an amount above what is there (capped), above the debt (capped at the balance), cash
+  below the emergency fund, one name above the per-name cap, a missing cost basis (tax not counted — may look better
+  than it is), a move into the same shares, and a sale at a loss (what it saves this year, shown apart from the
+  verdict, with the wash-sale rule).
+- **Live in the browser, checked against the server**: the page gets the engine's numbers (a "kit") and runs the same
+  arithmetic in JavaScript as it is typed; saved scenarios are weighed by the Python engine, and a browser check loads
+  each saved one into the live calculator and requires the same dollars.
+- **Saved scenarios** live in the profile (name, source by holding name and account — lines move — amount or all,
+  destination), are weighed again on every load, say so when their holding is gone, and can be applied: the move is
+  re-checked against the saved profile on the server and carried out the way Mark done carries out a step, with the
+  same one-level undo.
+
 ## 2026-10-03 — /capital as a dashboard: Do next, marking steps done, and the questions an individual asks
 **Why:** the owner asked for the dashboard to be the best UI it can be and for what else an individual would want to
 see and calculate. They chose: an Overview with a ranked Do-next list first; per-property numbers with a refinance

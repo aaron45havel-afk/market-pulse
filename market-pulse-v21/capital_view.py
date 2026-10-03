@@ -583,7 +583,10 @@ def build_view(board: dict, today: date | None = None) -> dict:
               "flows": [{"name": f["name"], "account": "tbills" if f["state_exempt"] else EDIT_ACCOUNT[f["account"]],
                          "amount": f["amount"], "rate": f["rate"]} for f in flow_rows],
               "flows_bad": flow_bad}
+    import whatif as W
+    wk = W.kit(board)
     return {"headline": headline(board), "vitals": vitals(board, fi), "todo": todo, "editor": editor,
+            "whatif": wk, "scenarios": W.scenarios(board, wk),
             "todo_once": sum(1 for s in todo if s["type"] == "once"),
             "todo_monthly": sum(1 for s in todo if s["type"] == "monthly"),
             "fi": fi, "debts": debt_plan(board, todo, today), "passive": passive_income(board),

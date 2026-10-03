@@ -333,8 +333,10 @@ check("only if you buy at" in html and "in return" in html,
       "conditional real estate says so; its costs read 'in return', not 0%")
 check('data-editor="debts"' in html and 'value="Card"' in html and 'value="24.9"' in html,
       "the profile's debt editor shows the saved debts")
+import re  # noqa: E402
+_visible = re.sub(r"<script.*?</script>", "", html, flags=re.S)
 for bad in (">None<", "None%", "nan%", "NaN"):
-    check(bad not in html, f"no '{bad}' leaks into the page")
+    check(bad not in _visible, f"no '{bad}' leaks into the page")
 blank = render(K.build({}, today=OCT, sources={k: [] for k in SRC}), saved=False)
 check("Start with your profile" in blank and "Nothing to split yet" in blank,
       "with no profile the page says so instead of showing an empty plan as advice")
