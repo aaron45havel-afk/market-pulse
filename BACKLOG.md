@@ -245,6 +245,17 @@ Format: `- [PHASE-SEEN] item — why it matters`
   the signature of a share count out of step with the price (a reverse split, a foreign filer's units). None is on
   the default view; seven reach the loosest settings and would lead them. Compounders' split adjustment (fix_share_scale) or a sanity bound
   like Schloss's impossible-book check would catch them.
+- [CAPITAL-PHASE2] /capital phase 2: what the owner HOLDS (positions, so concentration and rebalancing are real),
+  account placement by tax drag (high-dividend picks in the IRA, low-yield growth in taxable), and a house-hack tax
+  model (the rental share taxed after depreciation, the Sec. 121 exclusion on the owner's unit at exit) — phase 1
+  treats the house hack's cash benefit as after-tax.
+- [CAPITAL-PHASE3] /capital phase 3: a dated record of the board and an alert when the top use changes.
+- [CAPITAL-RE-PRICES] BRRRR and flips can only be conditional until fixer sale prices exist; with them, the board could
+  show the return at a price the owner can actually get instead of the target at the most they can pay.
+- [CAPITAL-BRACKET] The /headroom engines solve at their 24% persona bracket; /capital should pass the owner's own
+  federal and state rates through. The T-bill rate is a profile input; FRED's DGS3MO would keep it current.
+- [CAPITAL-401K] Picks-only meets a 401(k) that usually holds only the plan's funds: the board shows "401(k) beyond the
+  match (plan funds)" with its tax value, and a brokerage window, where offered, would let picks in.
 - [SCHLOSS-BANKS] /schloss keeps banks and insurers (Schloss bought them), but its debt gate reads only borrowings,
   so about 26 of the qualifiers — Regions, Principal, Unum, LCNB — pass "little or no debt" levered 12 to 38 times by
   deposits and policy reserves. Owner call: judge them by equity/total assets instead, mark debt not applicable, or
