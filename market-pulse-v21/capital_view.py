@@ -138,6 +138,7 @@ def once_steps(board: dict) -> list[dict]:
                 return 0.0
             return max(0.0, h["basis"] - h["value"]) * x["sold"] / h["value"]
         loss = sum(realized(x) for x in g["parts"])
+        rate = _step_rate(g, m, board)
         out.append({
             # what moves where — not how many dollars: with live prices the
             # amount drifts between loading the page and pressing Mark done
@@ -149,9 +150,49 @@ def once_steps(board: dict) -> list[dict]:
             "account": m["account"] if m["acct"] in A.SHELTERED else None,
             "harvest": round(min(loss, TLH_ORDINARY_CAP) * K.tax_rates(p)["ordinary"], 2) if loss > 0.5 else 0.0,
             "parts": g["parts"], "can_apply": m["to_kind"] != "re",
-            "h": m["h"], "a": m["a"], "conditional": m.get("conditional"),
+            "h": rate["h"], "a": rate["a"], "gap": rate["gap"], "rate_note": rate["note"],
+            "cost_pct": rate["cost_pct"], "payback_months": rate["payback_months"],
+            "conditional": m.get("conditional"),
         })
     return out
+
+
+def _step_rate(g: dict, m: dict, board: dict) -> dict:
+    """A step's return in percent, the way the owner reads a decision: what
+    the money earns a year where it is (each holding weighted by what is sold
+    of it) → what it earns where it goes (weighted by what arrives), after
+    tax; the gap in points; what the destination's rate is; and the one-time
+    tax and costs as a share of the money, with the months they take to earn
+    back at the gain."""
+    sold = sum(x["sold"] for x in g["parts"]) or 1.0
+    got = sum(x["proceeds"] for x in g["parts"]) or 1.0
+    h = sum(x["sold"] * x["h"] for x in g["parts"]) / sold
+    a = sum(x["proceeds"] * x["a"] for x in g["parts"]) / got
+    row = next((r for r in board["rows"] if r["id"] == m["to_id"]), None) or {}
+    det = row.get("detail") or {}
+    kind = m["to_kind"]
+    if kind == "debt":
+        note = (f"its {K._f(row.get('ret_after')):g}% APR, saved until your pay would clear it ({det['payoff_label']})"
+                if det.get("payoff_label") else f"its {K._f(row.get('ret_after')):g}% APR, guaranteed, for as long as "
+                                                "it would run")
+    elif kind == "re":
+        note = (f"a year over your {det.get('years', '')}-year hold — {det['year_one']:g}% in year one alone"
+                if det.get("year_one") is not None else "a year over your hold")
+    elif kind == "dpfund":
+        note = "the property's return, the months of saving included"
+    elif kind == "picks":
+        note = "the top picks' average, after tax and research time"
+    elif kind == "tbill":
+        note = "the T-bill rate after federal tax (no state tax)"
+    elif kind == "index":
+        note = "the market return, in the same account"
+    else:
+        note = ""
+    once = g["tax"] + g["cost"]
+    gain_yr = g["impact"]
+    return {"h": round(h, 2), "a": round(a, 2), "gap": round(a - h, 2), "note": note,
+            "cost_pct": round(once / sold * 100, 2) if once > 0.5 else 0.0,
+            "payback_months": (max(1, round(once / gain_yr * 12)) if once > 0.5 and gain_yr > 0 else None)}
 
 
 def steady_plan(board: dict, today: date) -> dict:
@@ -222,7 +263,12 @@ def monthly_step(board: dict, steady: dict) -> dict | None:
     gain = steady["per_year"] - now
     if gain < MIN_MONTHLY_GAIN:
         return None
+    per_yr = steady["total"] * 12
     return {"id": _sid("monthly", A.split_text(steady["raw"], steady["left"], p)), "type": "monthly", "kind": "monthly",
+            "h": round(now / per_yr * 100, 2) if per_yr > 0 else None,
+            "a": round(steady["per_year"] / per_yr * 100, 2) if per_yr > 0 else None,
+            "gap": round((steady["per_year"] - now) / per_yr * 100, 2) if per_yr > 0 else None,
+            "rate_note": "on each month's contributions, from January", "cost_pct": 0.0, "payback_months": None,
             "title": "Switch to the new monthly split",
             "note": "From January: " + _split_sentence(steady["raw"], steady["left"]) + ".",
             "what": f"Your {_money(steady['total'])} a month, split the waterfall's way",
