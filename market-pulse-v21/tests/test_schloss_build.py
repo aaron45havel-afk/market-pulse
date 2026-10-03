@@ -443,6 +443,16 @@ check(not R.split_in_window({0: 100e6, 1: 102e6, 2: 104e6, 3: 101e6, 4: 99e6, 5:
 check(not R.split_in_window({0: 100e6}) and not R.split_in_window({}), "one count or none: nothing to compare")
 check(R.split_in_window({0: 100e6, 3: 300e6}), "across a gap year the jump is still seen")
 check(not R.split_in_window({0: 100e6, 1: 0.0, 2: 101e6}), "a zero count is skipped, not divided by")
+check(R.split_distorts({0: 500e6, 1: 495e6, 2: 9.8e9, 3: 9.7e9, 5: 9.6e9}),
+      "AMAZON: A SPLIT BETWEEN THE TWO COUNTS COMPARED — the dilution figure is withheld")
+check(not R.split_distorts({0: 36.7e6, 1: 18.4e6, 2: 36.6e6, 3: 36.2e6, 5: 35.8e6}),
+      "NAPCO: the jump sits inside the window but both ends are on the split-restated basis — "
+      "-0.5% a year stands")
+check(R.split_distorts({0: 100e6, 2: 9.9e6, 5: 10.4e6}), "a reverse split between the ends is withheld too")
+check(not R.split_distorts({0: 100e6, 1: 104e6, 5: 112e6}), "no jump, nothing withheld")
+check(not R.split_distorts({0: 100e6, 1: 150e6, 5: 190e6}),
+      "heavy issuance without a split-sized step is real dilution and is shown")
+check(R.SPLIT_END_RATIO == 1.8, "ends 1.8x apart: a 2-for-1 less a decade of buybacks still counts")
 
 # ── not a company ──────────────────────────────────────────────────
 check(R.not_a_company("VanEck Bitcoin ETF", False, None), "an ETF by name, with or without a code")
@@ -461,7 +471,10 @@ import inspect  # noqa: E402
 _b = inspect.getsource(R.build)
 check("no_revenue = [c for c in ciks if not revenue_of(c)]" in _b and "fetch_sic(no_revenue)" in _b,
       "industry codes are asked only of companies filing no revenue — every fund on the board was one")
-check('"shares_cagr": None if split else' in _b, "a split in the window withholds the dilution figure")
+check('"shares_cagr": None if split else' in _b and "split = split_distorts(by_year)" in _b,
+      "a split between the compared counts withholds the dilution figure")
+check('"not_companies_list"' in _b and '"why"' in _b,
+      "every dropped name is written down with its reason, so the exclusion can be audited")
 check('"div_paid_by_year": common_dividends_paid(' in _b, "the dollars-paid series reaches evaluate")
 check("fetch_shares(qs)" in _b and "shares[DILUTION_YEARS]" in _b, "share counts for every year in the window")
 

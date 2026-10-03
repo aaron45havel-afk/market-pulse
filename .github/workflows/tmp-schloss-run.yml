@@ -1,4 +1,4 @@
-# TEMPORARY: run the real Schloss refresh on this branch (phase 1 fixes). Deleted before the PR.
+# TEMPORARY: run the real Schloss refresh on this branch (phase 1, run 2: split rule, dropped list). Deleted before the PR.
 name: TEMP Schloss refresh (branch)
 on:
   push:

@@ -421,6 +421,26 @@ def split_in_window(by_year: dict[int, float]) -> bool:
     return False
 
 
+# A SPLIT THE FILINGS ALREADY RESTATED DOES NOT DISTORT ANYTHING. The
+# five-years-back count often comes from a later filing's comparative
+# column, restated for the split, while a year in between was read before
+# it — so the jump shows inside the window and the two ends still agree.
+# NAPCO's 2022 2-for-1 is one: the jump is there, the ends read -0.5% a
+# year, which is right. The figure is withheld only when the two ends are
+# themselves at least SPLIT_END_RATIO apart — a split in the comparison.
+SPLIT_END_RATIO = 1.8
+
+
+def split_distorts(by_year: dict[int, float]) -> bool:
+    """True when a split sits between the two counts the dilution figure
+    compares (the oldest and newest in the window)."""
+    if not split_in_window(by_year):
+        return False
+    ys = sorted(y for y, v in by_year.items() if v and v > 0)
+    r = by_year[ys[-1]] / by_year[ys[0]]
+    return r >= SPLIT_END_RATIO or r <= 1 / SPLIT_END_RATIO
+
+
 # NOT A COMPANY. Name keywords catch what says "ETF" or "Acquisition Corp";
 # they cannot catch "SPDR Gold Trust", "ProShares Trust II" or "VS Trust".
 # The SEC industry code can, and it is asked only of companies that file
@@ -919,11 +939,17 @@ def build(limit: int = 0) -> dict:
     keep, dropped = [], []
     for c in ciks:
         (dropped if not_a_company(tick[c]["name"], c in sics, sics.get(c)) else keep).append(c)
+    # Every name dropped, with the reason, so the exclusion can be audited
+    # from the file rather than trusted.
     STATS.update({"sic_asked": len(no_revenue), "sic_answered": len(sics),
                   "not_companies": len(dropped),
-                  "not_companies_sample": sorted(tick[c]["ticker"] for c in dropped)[:40]})
+                  "not_companies_list": sorted(
+                      ({"ticker": tick[c]["ticker"], "name": tick[c]["name"], "sic": sics.get(c),
+                        "why": ("name" if SE._excluded_keyword(tick[c]["name"] or "", sectors=False)
+                                else f"sic {sics[c]}" if sics.get(c) else "no sic")}
+                       for c in dropped), key=lambda d: d["ticker"])})
     print(f"  dropped {len(dropped):,} funds, trusts and blank cheques "
-          f"(e.g. {', '.join(STATS['not_companies_sample'][:12])})")
+          f"(e.g. {', '.join(d['ticker'] for d in STATS['not_companies_list'][:12])})")
     ciks = keep
     print(f"\nScoring {len(ciks):,} companies with a ticker and a balance sheet")
 
@@ -935,7 +961,7 @@ def build(limit: int = 0) -> dict:
 
         filings = {k: v.get(cik) for k, v in inst.items()}
         by_year = {DILUTION_YEARS - k: s[cik] for k, s in shares.items() if s.get(cik)}
-        split = split_in_window(by_year)
+        split = split_distorts(by_year)
         filings.update({
             "shares": sh_now.get(cik),
             "shares_cagr": None if split else shares_growth(sh_then.get(cik), sh_now.get(cik),
