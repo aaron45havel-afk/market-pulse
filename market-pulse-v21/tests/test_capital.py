@@ -115,17 +115,34 @@ hh = K.house_hack_rows(HH, hp, rate_pct=7.0)
 check([r["detail"]["zip"] for r in hh] == ["92233", "94510"], "owner-occupied: only the state you live in")
 loan = 700_000 * 0.965 * 1.0175
 prin = loan - K._balance_after(loan, 7.0, 12)
-want = ((100 + 2000) * 12 + prin - 0.07 * 700_000 / 5) / 40_000 * 100
-check(near(hh[1]["ret_after"], round(want, 1), 0.06) and near(hh[1]["detail"]["loan"], loan, 1),
-      "THE RENT YOU STOP PAYING COUNTS, AND SO DOES THE LOAN PAID DOWN: (surplus + your rent) × 12 + the year's "
-      "principal on the FHA loan (3.5% down, MIP financed), less selling costs over the hold, on the cash to close")
+want1 = ((100 + 2000) * 12 + prin - 0.07 * 700_000 / 5) / 40_000 * 100
+check(near(hh[1]["detail"]["year_one"], round(want1, 1), 0.06) and near(hh[1]["detail"]["loan"], loan, 1)
+      and f"year one alone: {hh[1]['detail']['year_one']:.1f}%" in hh[1]["basis"],
+      "YEAR ONE is still shown: (surplus + your rent) × 12 + the year's principal on the FHA loan (3.5% down, MIP "
+      "financed), less selling costs, on the cash to close")
+# THE BOARD'S RETURN IS THE HOLD'S: the deal at the sale plus each year's
+# benefit reinvested at the after-tax market return, annualized.
+H, m = 5, K.market_after_tax(hp) / 100
+owed = K._balance_after(loan, 7.0, 12 * H)
+end = 700_000 * (1 - 0.07) - owed + sum((100 + 2000) * 12 * (1 + m) ** (H - y) for y in range(1, H + 1))
+check(near(hh[1]["ret_after"], round(((end / 40_000) ** (1 / H) - 1) * 100, 1), 0.06)
+      and hh[1]["ret_after"] < hh[1]["detail"]["year_one"],
+      "ANNUALIZED OVER THE HOLD: equity at the sale (loan paid down, 7% to sell) + the yearly benefit reinvested at "
+      "the after-tax market return — year one's return is not compounded")
 appr = K.house_hack_rows(HH, {**hp, "appreciation": 3.0}, rate_pct=7.0)
-check(near(appr[1]["ret_after"] - hh[1]["ret_after"], 0.03 * 700_000 / 40_000 * 100, 0.1),
-      "LEVERAGE ON APPRECIATION: 3% on a $700k price is 52.5 points on $40k of cash")
+end3 = end + 700_000 * ((1.03 ** H) - 1) * (1 - 0.07)
+check(near(appr[1]["ret_after"], round(((end3 / 40_000) ** (1 / H) - 1) * 100, 1), 0.06)
+      and appr[1]["ret_after"] > hh[1]["ret_after"],
+      "LEVERAGE ON APPRECIATION: 3% a year on the whole $700k price lands in the equity at the sale, on $40k of cash")
 owner = K.house_hack_rows(HH, {**hp, "_owns_shelter": True}, rate_pct=7.0)
-check(near(hh[1]["ret_after"] - owner[1]["ret_after"], 2000 * 12 / 40_000 * 100, 0.1)
+end_o = 700_000 * (1 - 0.07) - owed + sum(100 * 12 * (1 + m) ** (H - y) for y in range(1, H + 1))
+check(near(owner[1]["ret_after"], round(((end_o / 40_000) ** (1 / H) - 1) * 100, 1), 0.06)
       and "you already own where you live" in owner[1]["basis"],
       "SHELTER IS COUNTED ONCE: an owner who owns where they live gets no rent credit")
+long = K.house_hack_rows(HH, {**hp, "hold_years": 15, "appreciation": 3.0}, rate_pct=7.0)[0]
+check(long["ret_after"] < 40 and long["detail"]["year_one"] > 60,
+      "A 15-YEAR HOLD does not compound year one: a deal returning 60%+ on its cash in year one is well under 40% a "
+      "year over the hold")
 _saved_coords = K._zip_coords
 K._zip_coords = lambda zips: {"94110": (37.75, -122.415), "92233": (33.17, -115.55), "94510": (38.05, -122.16)}
 try:
@@ -328,7 +345,8 @@ def render(b, saved=True):
 
 
 html = render(B)
-check("This month — $4,000" in html and "401(k) up to the employer match" in html, "the plan is on the page")
+check("Your monthly plan" in html and "· this month" in html and "401(k) up to the employer match" in html,
+      "the plan is on the page, this month first")
 check("only if you buy at" in html and "in return" in html,
       "conditional real estate says so; its costs read 'in return', not 0%")
 check('data-editor="debts"' in html and 'value="Card"' in html and 'value="24.9"' in html,
@@ -338,7 +356,7 @@ _visible = re.sub(r"<script.*?</script>", "", html, flags=re.S)
 for bad in (">None<", "None%", "nan%", "NaN"):
     check(bad not in _visible, f"no '{bad}' leaks into the page")
 blank = render(K.build({}, today=OCT, sources={k: [] for k in SRC}), saved=False)
-check("Start with your profile" in blank and "Nothing to split yet" in blank,
+check("Start with your profile" in blank and "Nothing to plan yet" in blank,
       "with no profile the page says so instead of showing an empty plan as advice")
 
 import main  # noqa: E402

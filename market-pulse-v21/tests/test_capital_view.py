@@ -22,6 +22,14 @@ sys.path.insert(0, ROOT)
 import allocation as A  # noqa: E402
 import capital as K  # noqa: E402
 import capital_view as V  # noqa: E402
+import timeline as TL  # noqa: E402
+
+# These checks are about how a step or a move works, on a card the plan's pay
+# does not clear within the hold (its full APR). When pay DOES clear a debt
+# soon, paying it early saves only those months — checked at the end, with
+# the real payoff dates.
+_real_payoffs = TL.debt_payoffs
+TL.debt_payoffs = lambda tl: {}
 
 _FAILS: list[str] = []
 _COUNT = 0

@@ -77,7 +77,7 @@ INDEX_TICKERS = frozenset({
     "VTI", "VTSAX", "ITOT", "SCHB", "SWTSX", "FSKAX", "FZROX",
     "VOO", "VFIAX", "SPY", "IVV", "SPLG", "SCHX", "FXAIX", "FNILX", "SWPPX", "IWB", "VV",
 })
-INDEX_DIV = 1.2            # the S&P 500's dividend yield, about 1.2% in 2025-26 — the taxed-yearly share
+INDEX_DIV = K.INDEX_DIV_PCT    # the S&P 500's dividend yield — the taxed-yearly share
 # A move must gain at least this share of the money moved over the whole
 # hold: a 0.1%-a-year edge is not worth a trade and a tax bill.
 MIN_GAIN = 0.01
@@ -458,11 +458,23 @@ def destinations(board: dict, sleeve: list[dict]) -> list[dict]:
     p = board["profile"]
     inf = math.inf
     out = []
+    # ONE DEAL AT A TIME: owner-occupied financing buys one home, and a
+    # property takes all of its cash at once. The board lists the best few
+    # markets; funding every one of them is not a plan anyone can carry out.
+    # The deal is the month's plan's own, when it is saving for one.
+    win = (board.get("plan") or {}).get("winner")
+    deal = (win if win and win.get("kind") == "re" and not win.get("blocked") else
+            next((r for r in board["rows"] if r["kind"] == "re" and r.get("ret_net") is not None
+                  and not r.get("blocked")), None))
     for r in board["rows"]:
         if r.get("ret_net") is None or r.get("blocked"):
             continue
+        if r["kind"] == "re" and (deal is None or r["id"] != deal["id"]):
+            continue
         if r["kind"] == "debt":
-            out.append({"id": r["id"], "label": r["label"], "kind": "debt", "bucket": "debt", "net": r["ret_after"],
+            # paid early, a debt saves its APR only until pay would clear it
+            out.append({"id": r["id"], "label": r["label"], "kind": "debt", "bucket": "debt",
+                        "net": r["detail"].get("hold_rate", r["ret_after"]), "payoff_label": r["detail"].get("payoff_label"),
                         "cap": K._f(r["detail"].get("balance")), "lumpy": False, "from": LIQUID})
         elif r["kind"] == "tbill":
             out.append({"id": r["id"], "label": r["label"], "kind": "tbill", "bucket": "cash", "net": r["ret_after"],
@@ -489,8 +501,8 @@ def destinations(board: dict, sleeve: list[dict]) -> list[dict]:
     # When the month's plan is saving for a property, the board already
     # counted free cash toward that down payment (it is why "ready in" is
     # what it is), so free cash may go there at that row's return — waiting
-    # months included — rather than being spent elsewhere.
-    win = (board.get("plan") or {}).get("winner")
+    # months included — rather than being spent elsewhere. It is the same
+    # deal as above: bought outright, the fund is skipped (optimize).
     if win and win.get("kind") == "re" and win.get("ret_net") is not None:
         out.append({"id": f"dp:{win['id']}", "for_id": win["id"], "kind": "dpfund", "bucket": "cash",
                     "label": f"Down-payment fund for {win['label']} (T-bills until it closes)",
@@ -572,6 +584,7 @@ def optimize(items: list[dict], board: dict, sleeve: list[dict]) -> list[dict]:
             moves.append({"from": s["label"], "from_id": s["id"], "account": s["account_label"], "to": d["label"],
                           "to_kind": d["kind"], "to_id": d["id"], "bucket": d["bucket"],
                           "conditional": d.get("conditional"), "key": s["key"], "acct": s["account"],
+                          "payoff_label": d.get("payoff_label"),
                           "name": s["item"]["label"], "line": s.get("line"), "prop": s.get("prop"),
                           "state_exempt": bool(s.get("state_exempt")),
                           "sold": round(sold, 2), "tax": round(sold * s["tau"], 2), "cost": round(sold * s["c"], 2),

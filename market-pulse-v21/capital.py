@@ -273,6 +273,58 @@ def after_tax_taxable(total_pct: float, div_pct: float, years: int,
     return (after ** (1 / years) - 1) * 100
 
 
+INDEX_DIV_PCT = 1.2        # the S&P 500's dividend yield, about 1.2% in 2025-26
+SELL_COST = 0.07           # agent, transfer tax and closing on a sale
+
+
+def market_after_tax(p: dict) -> float:
+    """The after-tax return of an index fund in a taxable account over the
+    hold — what money taken out of a deal can be reinvested at."""
+    t = tax_rates(p)
+    H = max(1, int(_f(p.get("hold_years"), 5)))
+    return after_tax_taxable(_f(p.get("market_return"), 7.0), INDEX_DIV_PCT, H, t["qualified"], t["qualified"])
+
+
+def hold_return(cash: float, value: float, loan: float, rate_pct: float, yearly: float, p: dict) -> dict:
+    """A property bought with `cash`, annualized over the owner's hold — the
+    board's unit, so it compounds like every other row. At the sale: the
+    value grown at the owner's appreciation, less 7% to sell, less the loan
+    still owed. Along the way: each year's benefit (rent saved and net rent,
+    after the full payment) reinvested at the after-tax market return.
+
+    LEVERAGE COUNTS IN FULL — the whole price appreciates on a small down
+    payment, and the tenants pay the loan down. What does not count is
+    compounding year one's return: 81% on $35,000 to close is not 81% on the
+    next dollar, because one deal takes only its own cash; the benefit it
+    throws off is reinvested at what money earns elsewhere. The sale's tax is
+    not charged (the home-sale exclusion covers most of an owner-occupied
+    sale) and the yearly benefit is held flat (rent growth is not assumed)."""
+    H = max(1, int(_f(p.get("hold_years"), 5)))
+    g = _f(p.get("appreciation")) / 100
+    m = market_after_tax(p) / 100
+    owed = max(0.0, _balance_after(loan, rate_pct, 12 * H)) if loan > 0 else 0.0
+    equity = value * (1 + g) ** H * (1 - SELL_COST) - owed
+    reinvested = sum(yearly * (1 + m) ** (H - y) for y in range(1, H + 1))
+    end = equity + reinvested
+    ret = -100.0 if cash <= 0 or end <= 0 else ((end / cash) ** (1 / H) - 1) * 100
+    return {"ret": round(ret, 1), "equity_end": round(equity), "reinvested": round(reinvested),
+            "end": round(end), "years": H, "reinvest_pct": round(m * 100, 2)}
+
+
+def debt_hold_rate(apr: float, months: int | None, p: dict) -> float:
+    """What a dollar paid on a debt NOW earns, annualized over the hold, when
+    the monthly plan would clear that debt in `months` anyway: the APR for
+    those months, then what the freed pay goes to — the after-tax market
+    return. A card the next paycheck clears saves a month of interest, not
+    23% a year for fifteen years. None (the plan never clears it): the APR
+    for the whole hold."""
+    H = max(1, int(_f(p.get("hold_years"), 5)))
+    t = H if months is None else min(H, max(0, months) / 12)
+    m = market_after_tax(p) / 100
+    grown = (1 + apr / 100) ** t * (1 + m) ** (H - t)
+    return round((grown ** (1 / H) - 1) * 100, 2)
+
+
 def after_tax_traditional(total_pct: float, years: int, t_now: float, t_later: float) -> float:
     """The return on an after-tax dollar put into a traditional account: the
     deduction now buys 1/(1-t_now) dollars, which grow untaxed and are taxed at
@@ -478,23 +530,28 @@ def house_hack_rows(hh: list[dict], p: dict, *, top: int = 3, rate_pct: float | 
         loan = all_in * (1 - FHA_DOWN) * (1 + FHA_UFMIP)
         principal = loan - _balance_after(loan, rate, 12)
         appr = appr_pct / 100 * all_in
-        benefit = (_f(r.get("monthly_surplus")) + avoided) * 12
-        sale_drag = 0.07 * price / H
-        ret = (benefit + principal + appr - sale_drag) / cash * 100
+        surplus = _f(r.get("monthly_surplus"))
+        benefit = (surplus + avoided) * 12
+        sale_drag = SELL_COST * price / H
+        year_one = (benefit + principal + appr - sale_drag) / cash * 100
+        hold = hold_return(cash, all_in, loan, rate, benefit, p)
         rent_part = (f"${avoided:,.0f}/mo rent you stop paying" if avoided > 0 else
                      "no rent credit — you already own where you live" if p.get("_owns_shelter") else
                      "$0/mo rent you stop paying")
         out.append(row(id=f"hh:{r.get('zip')}", kind="re", label=f"House hack — {r.get('place')} ({r.get('zip')})",
                        source="Headroom", link=f"/headroom?mode=hh&state={st}",
-                       ret_pre=round(ret, 1), ret_after=round(ret, 1),
-                       basis=(f"(${_f(r.get('monthly_surplus')):,.0f}/mo after the full payment + {rent_part}) × 12, "
-                              f"+ ${principal:,.0f} principal in year one on a ${loan:,.0f} loan at {rate:g}%, "
-                              f"appreciation {appr_pct:g}%, less 7% selling costs over {H} years, "
-                              f"on ${cash:,.0f} to close at ${price:,.0f}"),
+                       ret_pre=hold["ret"], ret_after=hold["ret"],
+                       basis=(f"${cash:,.0f} to close at ${price:,.0f} becomes ${hold['equity_end']:,.0f} of equity "
+                              f"at a sale in {H} years (appreciation {appr_pct:g}%, the ${loan:,.0f} loan at {rate:g}% "
+                              f"paid down, 7% to sell), plus (${surplus:,.0f}/mo after the full payment + {rent_part}) "
+                              f"× 12 a year reinvested at {hold['reinvest_pct']:g}% — {hold['ret']:g}% a year over the "
+                              f"hold (year one alone: {year_one:.1f}% on the cash)"),
                        min_capital=cash, deploy_months=DEPLOY_MONTHS["house_hack"], hours_month=hrs,
                        risk="leveraged, owner-occupied, one at a time",
                        detail={"price": price, "zip": r.get("zip"), "rent_label": r.get("rent_label"),
-                               "principal": round(principal), "loan": round(loan)}))
+                               "principal": round(principal), "loan": round(loan), "year_one": round(year_one, 1),
+                               "monthly_surplus": round(surplus, 2), "rent_saved": round(avoided, 2),
+                               "owner_occupied": True, **hold}))
     return out
 
 
@@ -551,16 +608,21 @@ def home_rows(buyable: list[dict], p: dict, *, rate_pct: float, top: int = 2) ->
             continue
         principal = loan - _balance_after(loan, rate_pct, 12)
         appr = _f(p.get("appreciation")) / 100 * price
-        sale_drag = 0.07 * price / H
-        ret = ((rent - own) * 12 + principal + appr - sale_drag) / cash * 100
+        sale_drag = SELL_COST * price / H
+        year_one = ((rent - own) * 12 + principal + appr - sale_drag) / cash * 100
+        hold = hold_return(cash, price, loan, rate_pct, (rent - own) * 12, p)
         out.append(row(id=f"home:{r.get('zip')}", kind="re", label=f"Buy your home — {r.get('name')} ({r.get('zip')})",
-                       source="NorCal", link="/norcal", ret_pre=round(ret, 1), ret_after=round(ret, 1),
-                       basis=(f"rent ${rent:,.0f}/mo against ${own:,.0f}/mo to own, + ${principal:,.0f} "
-                              f"principal in year one, appreciation {p.get('appreciation', 0):g}%, "
-                              f"7% selling costs over {H} years, on ${cash:,.0f} to close at ${price:,.0f}"),
+                       source="NorCal", link="/norcal", ret_pre=hold["ret"], ret_after=hold["ret"],
+                       basis=(f"${cash:,.0f} to close at ${price:,.0f} becomes ${hold['equity_end']:,.0f} of equity at "
+                              f"a sale in {H} years (appreciation {_f(p.get('appreciation')):g}%, the loan paid down, "
+                              f"7% to sell), plus rent ${rent:,.0f}/mo against ${own:,.0f}/mo to own, a year's "
+                              f"difference reinvested at {hold['reinvest_pct']:g}% — {hold['ret']:g}% a year over the "
+                              f"hold (year one alone: {year_one:.1f}%)"),
                        min_capital=cash, deploy_months=DEPLOY_MONTHS["home"], hours_month=hrs,
                        risk="leveraged, one home",
-                       detail={"price": price, "zip": r.get("zip")}))
+                       detail={"price": price, "zip": r.get("zip"), "year_one": round(year_one, 1),
+                               "monthly_surplus": round(rent - own, 2), "rent_saved": 0.0, "owner_occupied": True,
+                               "loan": round(loan), **hold}))
     return out
 
 
@@ -906,6 +968,21 @@ def build(p: dict, *, today: date | None = None, sources: dict | None = None) ->
     out = {"profile": p, "rows": scored, "plan": waterfall(p, scored, today),
            "errors": errors, "mortgage_rate": rate, "monthly_free": free,
            "counts": {k: sum(1 for r in scored if r["kind"] == k) for k in ("stock", "re", "debt", "tbill", "wrapper")}}
+    # The month-by-month plan says when pay alone clears each debt — and so
+    # what paying one early from what is held actually saves.
+    import timeline as T
+    try:
+        out["timeline"] = T.simulate(out, today)
+    except Exception as e:  # noqa: BLE001 — the plan must not blank the board
+        errors["monthly plan"] = f"{type(e).__name__}: {e}"
+        out["timeline"] = None
+    payoff = T.debt_payoffs(out["timeline"])
+    for r in scored:
+        if r["kind"] == "debt":
+            name = r["id"].split(":", 1)[-1]
+            months = payoff.get(name, {}).get("months")
+            r["detail"] = {**r["detail"], "payoff_months": months, "payoff_label": payoff.get(name, {}).get("label"),
+                           "hold_rate": debt_hold_rate(_f(r["ret_after"]), months, p)}
     import allocation as A
     try:
         out["current"] = A.compare(out, today)
