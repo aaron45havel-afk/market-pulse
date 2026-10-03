@@ -199,6 +199,12 @@
   .cx-rows { display: grid; gap: 6px; }
   .cx-row { display: grid; gap: 8px; align-items: center; }
   .cx-row.hold { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.6fr) minmax(0, 0.8fr) 28px; }
+  .cx-small { border-top: 1px solid var(--line); }
+  .cx-small > summary { cursor: pointer; padding: 12px 18px; font-size: 0.86rem; color: var(--ink-2); list-style: none; }
+  .cx-small > summary::-webkit-details-marker { display: none; }
+  .cx-small > summary::before { content: "▸"; display: inline-block; width: 1em; color: var(--ink-4); transition: transform .15s; }
+  .cx-small[open] > summary::before { transform: rotate(90deg); }
+  .cx-small .cx-todo { border-top: 1px solid var(--line); }
   .cx-rate { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin-top: 7px; font-size: 0.82rem; color: var(--ink-3); }
   .cx-rate .r-from { color: var(--ink-2); font-weight: 600; }
   .cx-rate .r-to { color: var(--ink); font-weight: 700; font-size: 0.95rem; }
@@ -441,9 +447,12 @@
           {% if view.todo_once %}<button class="cx-f" data-f="once" aria-pressed="false" type="button">Move once {{ view.todo_once }}</button>{% endif %}
           {% if view.todo_monthly %}<button class="cx-f" data-f="monthly" aria-pressed="false" type="button">Every month {{ view.todo_monthly }}</button>{% endif %}
         </div>
-        <ol class="cx-todo" id="todo">
-          {% for s in view.todo %}
-          <li class="cx-task{{ ' first' if loop.first else '' }}" data-type="{{ s.type }}">
+        <div id="todo">
+        {% for group in [view.todo_main, view.todo_small] %}{% if group %}
+        {% if loop.index == 2 %}<details class="cx-small"><summary><b>{{ group|length }} small clean-ups</b> · {{ smoney(view.todo_small_gain) }} a year together <span class="cx-sub" style="display:inline">— each adds under $100 a year</span></summary>{% endif %}
+        <ol class="cx-todo">
+          {% for s in group %}
+          <li class="cx-task{{ ' first' if s.rank == 1 else '' }}" data-type="{{ s.type }}">
             <span class="cx-rank" aria-hidden="true">{{ s.rank }}</span>
             <div>
               <h3>{{ s.title }}</h3>
@@ -461,7 +470,8 @@
                 <span class="cx-chip {{ 'info' if s.type == 'monthly' else 'muted' }}">{{ 'Every month' if s.type == 'monthly' else 'Move once' }}</span>
                 {% if s.kind == 'debt' %}<span class="cx-chip ok">Guaranteed</span>{% endif %}
                 {% if s.tax > 0.5 %}<span class="cx-chip warn">{{ money(s.tax) }} tax</span>{% endif %}
-                {% if s.harvest > 0.5 %}<span class="cx-chip ok">Saves ≈{{ money(s.harvest) }} tax</span>{% endif %}
+                {% if s.harvest > 0.5 %}<span class="cx-chip ok">Saves ≈{{ money(s.harvest) }} tax this year</span>{% endif %}
+                {% if s.carry > 0.5 %}<span class="cx-chip muted" title="A net capital loss offsets at most $3,000 of ordinary income a year, in all; the rest offsets gains, or carries to next year">{{ money(s.carry) }} of loss carries forward</span>{% endif %}
                 {% if s.account %}<span class="cx-chip muted">inside the {{ s.account }}</span>{% endif %}
                 {% if s.conditional %}<span class="cx-chip warn">{{ s.conditional }}</span>{% endif %}
               </div>
@@ -491,6 +501,9 @@
           </li>
           {% endfor %}
         </ol>
+        {% if loop.index == 2 %}</details>{% endif %}
+        {% endif %}{% endfor %}
+        </div>
         {% elif hold %}
         <div class="cx-empty">Nothing to do: everything you hold is already where it earns the most after tax, and your monthly split matches the waterfall.</div>
         {% else %}
@@ -534,9 +547,11 @@
             {% for d in view.debts %}
             <div class="cx-debt"><span class="n">{{ d.name }} · {{ money(d.balance) }}</span><span class="cx-chip {{ 'bad' if d.apr >= p.market_return else 'muted' }}">{{ num(d.apr) }}%</span>
               <span class="d">{% if d.step %}Paid off by step {{ d.step }} of Do next.
+                {% elif d.plan_payoff %}Your monthly plan clears it <b>{{ 'this month' if d.plan_months == 0 else d.plan_payoff }}</b>{% if d.payment and d.payoff and d.payoff != d.plan_payoff %} — at the {{ money(d.payment) }} payment alone it would take until {{ d.payoff }}{% elif not d.payment %} — it has no fixed payment{% endif %}.
                 {% elif d.payment and d.payoff %}At {{ money(d.payment) }} a month: paid off <b>{{ d.payoff }}</b>, {{ money(d.interest) }} of interest left.{% if d.extra_payoff %} $100 more a month would finish it {{ d.extra_payoff }} and save {{ money(d.extra_saves) }}; that $100 earns {{ num(d.apr) }}% there against {{ pct(d.best) }} in the best use for new money, so <b>{{ d.extra_verdict }}</b>.{% endif %}
                 {% elif d.payment %}At {{ money(d.payment) }} a month the payment does not cover the interest.
-                {% else %}Add the monthly payment (Profile) to see when it is paid off.{% endif %}</span></div>
+                {% elif d.below_hurdle %}No fixed payment, and at {{ num(d.apr) }}% it costs less than the market returns, so the plan leaves it.
+                {% else %}No fixed payment, and the plan does not clear it within ten years at this amount — add a payment (Profile) to date it.{% endif %}</span></div>
             {% else %}<div class="cx-sub">No debts listed.</div>{% endfor %}
           </div>
         </div>
@@ -782,7 +797,7 @@
         <div class="cx-panel-b">
           {% for x in tx.harvest %}
           <div class="cx-kv"><span><span class="cx-sym">{{ x.name }}</span> bought for {{ money(x.basis) }}, worth {{ money(x.value) }}</span><span class="num" style="color:var(--coral)">{{ money(-x.loss) }}</span></div>
-          <div class="cx-kv"><span>Against your pay this year (up to $3,000){% if x.carry > 0.5 %}; {{ money(x.carry) }} carries to later years{% endif %}</span><span class="num cx-gain">{{ money(x.saves) }} less tax</span></div>
+          <div class="cx-kv"><span>{% if x.saves > 0.5 %}Against your pay this year ($3,000 a year in all){% else %}This year's $3,000 is used by the losses above{% endif %}{% if x.carry > 0.5 %}; {{ money(x.carry) }} carries to later years (or offsets gains){% endif %}</span><span class="num cx-gain">{{ money(x.saves) }} less tax</span></div>
           {% if x.in_plan %}<div class="cx-sub">Do next already sells it, so the loss is realized there.</div>{% endif %}
           {% endfor %}
           {% if tx.harvest %}<div class="cx-callout warn">Don't buy the same shares back within 30 days before or after the sale, or the IRS disallows the loss (the wash-sale rule).</div>
@@ -859,6 +874,7 @@
             <label>Monthly expenses <input type="number" name="monthly_expenses" value="{{ p.monthly_expenses }}" step="50"></label>
             <label>Take-home pay (/mo) <input type="number" name="take_home" value="{{ p.take_home }}" step="50"></label>
             <label>Salary <input type="number" name="salary" value="{{ p.salary }}" step="1000"></label>
+            <label>Debt payments come out of <select name="debt_payments_from"><option value="invest" {{ 'selected' if p.debt_payments_from != 'expenses' else '' }}>What I put aside</option><option value="expenses" {{ 'selected' if p.debt_payments_from == 'expenses' else '' }}>My monthly expenses</option></select></label>
             <label>Filing status <select name="filing_status"><option value="single" {{ 'selected' if p.filing_status != 'married' else '' }}>Single</option><option value="married" {{ 'selected' if p.filing_status == 'married' else '' }}>Married, jointly</option></select></label>
             <label>Employer matches up to (% of pay) <input type="number" name="match_pct" value="{{ p.match_pct }}" step="0.5"></label>
             <label>…at (% of what you put in) <input type="number" name="match_rate" value="{{ p.match_rate }}" step="5"></label>
@@ -907,7 +923,7 @@
           <div class="cx-rows" data-editor="holdings">
             <div class="cx-row hold"><span class="eh">Name or ticker</span><span class="eh">Account</span><span class="eh">Value</span><span class="eh">Cost basis</span><span class="eh">Return</span><span class="eh">Shares</span><span></span></div>
             {% for r in ed.holdings %}
-            <div class="cx-row hold"><input aria-label="Name or ticker" data-c="name" value="{{ r.name }}"><select aria-label="Account" data-c="account">{% for v, l in accounts %}<option value="{{ v }}" {{ 'selected' if v == r.account else '' }}>{{ l }}</option>{% endfor %}</select><input aria-label="Value" data-c="value" type="number" value="{{ num(r.value) }}"><input aria-label="Cost basis" data-c="basis" type="number" value="{{ num(r.basis) }}" placeholder="taxable only"><input aria-label="Return" data-c="rate" value="{{ num(r.rate) ~ '%' if r.rate is not none else '' }}" placeholder="auto"><input aria-label="Shares" data-c="qty" type="number" step="any" value="{{ ('%.6f'|format(r.qty)).rstrip('0').rstrip('.') if r.qty else '' }}" placeholder="for live value"><button class="cx-x" type="button" aria-label="Remove">×</button></div>
+            <div class="cx-row hold"><input aria-label="Name or ticker" data-c="name" value="{{ r.name }}"><select aria-label="Account" data-c="account">{% for v, l in accounts %}<option value="{{ v }}" {{ 'selected' if v == r.account else '' }}>{{ l }}</option>{% endfor %}</select><input aria-label="Value" data-c="value" type="number" value="{{ num(r.value) }}"><input aria-label="Cost basis" data-c="basis" type="number" value="{{ num(r.basis) }}" placeholder="taxable only"><input aria-label="Return" data-c="rate" value="{{ num(r.rate) ~ '%' if r.rate is not none else '' }}" placeholder="auto"><input aria-label="Shares" data-c="qty" type="number" step="any" value="{{ ('%.6f'|format(r.qty)).rstrip('0').rstrip('.') if r.qty else '' }}" placeholder="for live value"><input type="hidden" data-c="extra" value="{{ r.extra }}"><button class="cx-x" type="button" aria-label="Remove">×</button></div>
             {% endfor %}
           </div>
           {% if ed.holdings_bad %}<label class="cx-bad">Lines that could not be read — fix or delete: <textarea data-bad="holdings" rows="2" style="width:100%">{{ ed.holdings_bad|join('\n') }}</textarea></label>{% endif %}
@@ -1444,7 +1460,7 @@
       const g = c => (r.querySelector(`[data-c="${c}"]`) || {}).value || '';
       const name = clean(g('name'));
       if (!name) return null;
-      if (kind === 'holdings') { const q = clean(g('qty')); return [name, g('account'), clean(g('value')), clean(g('basis')), pctv(g('rate')), q ? q + ' sh' : ''].filter((x, i) => i < 3 || x).join(', '); }
+      if (kind === 'holdings') { const q = clean(g('qty')); return [name, g('account'), clean(g('value')), clean(g('basis')), pctv(g('rate')), q ? q + ' sh' : '', g('extra')].filter((x, i) => i < 3 || x).join(', '); }
       if (kind === 'flows') return [name, g('account'), clean(g('amount')), pctv(g('rate'))].filter((x, i) => i < 3 || x).join(', ');
       return [name, clean(g('balance')), clean(g('apr')), clean(g('payment'))].filter((x, i) => i < 3 || x).join(', ');
     }).filter(Boolean);
@@ -1468,6 +1484,7 @@
         if (r.basis != null) set('basis', r.basis);
         if (r.rate != null) set('rate', r.rate + '%');
         if (r.qty) set('qty', r.qty);
+        if (r.extra) { row.insertAdjacentHTML('beforeend', '<input type="hidden" data-c="extra">'); set('extra', r.extra); }
       });
       box.remove(); toast('Now lines you edit — save to keep the change.');
     }

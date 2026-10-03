@@ -107,6 +107,7 @@ def get_quote(ticker: str, period: str = "1y") -> dict:
     out = {
         "symbol": meta.get("symbol") or t,
         "name": meta.get("longName") or meta.get("shortName") or t,
+        "instrument": meta.get("instrumentType"),          # EQUITY | ETF | MUTUALFUND …
         "currency": meta.get("currency"),
         "exchange": meta.get("exchangeName") or meta.get("fullExchangeName"),
         "price": price,
@@ -410,7 +411,8 @@ def get_price(ticker: str, fetch=None, quote=None) -> dict:
     q = (quote or get_quote)(t, "5d")
     if q.get("price") is not None:
         return {"symbol": q.get("symbol") or t, "name": q.get("name") or t, "price": q["price"],
-                "day_change": q.get("day_change"), "day_change_pct": q.get("day_change_pct"), "source": "yahoo"}
+                "day_change": q.get("day_change"), "day_change_pct": q.get("day_change_pct"), "source": "yahoo",
+                **({"instrument": q["instrument"]} if q.get("instrument") else {})}
     fetch = fetch or _http_json
     for cls in ("stocks", "etf", "mutualfunds"):
         try:
@@ -470,6 +472,7 @@ def live_prices(tickers, *, get=None, now=None, clock=None, budget=LIVE_BUDGET_S
             return t, None
         return t, {"price": float(q["price"]), "day_change": q.get("day_change"),
                    "day_change_pct": q.get("day_change_pct"), "source": q.get("source"),
+                   "instrument": q.get("instrument"),
                    "as_of": datetime.now(timezone.utc).isoformat(timespec="seconds")}
     pool = ThreadPoolExecutor(max_workers=min(8, len(todo)))
     try:

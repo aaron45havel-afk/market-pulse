@@ -135,22 +135,35 @@ def _lines(text):
 
 
 _QTY = re.compile(r"(\d+(?:\.\d+)?)\s*(?:sh|shares?)", re.I)
+_DIV = re.compile(r"(\d+(?:\.\d+)?)\s*%\s*div(?:idend)?s?", re.I)
+FUND_TYPES = {"ETF", "MUTUALFUND", "CLOSEDENDFUND"}
 
 
 def parse_holdings(text) -> tuple[list[dict], list[str]]:
-    """'name or ticker, account, value[, basis][, return%][, N sh]' per line →
-    (rows, lines that could not be read). A bare number after the value, or
-    'basis 18000', is the cost basis; a number with % is the owner's own
-    return (for cash, its interest rate); 'N sh' is the share count, which
-    lets the line be valued at the live price (reprice)."""
+    """'name or ticker, account, value[, basis][, return%][, N sh][, N% div]
+    [, fund]' per line → (rows, lines that could not be read). A bare number
+    after the value, or 'basis 18000', is the cost basis; a number with % is
+    the owner's own return (for cash, its interest rate); 'N sh' is the share
+    count, which lets the line be valued at the live price (reprice); 'N% div'
+    is its dividend yield; 'fund' marks an ETF or fund — not a stock pick. A
+    ticker marked a fund on any line is a fund on every line."""
     rows, bad = [], []
     for n, line, parts in _lines(text):
         acct = account_of(parts[1]) if len(parts) >= 3 else None
         value = _money(parts[2]) if len(parts) >= 3 else None
-        basis = rate = qty = None
+        basis = rate = qty = div = None
+        fund = False
         ok = bool(parts[0]) and acct is not None and acct[0] != "debt" and value is not None and value >= 0
         for tok in parts[3:] if ok else []:
             if not tok:
+                continue
+            if tok.lower() == "fund":
+                fund = True
+                continue
+            dv = _DIV.fullmatch(tok)
+            if dv:
+                ok = ok and div is None
+                div = min(50.0, float(dv.group(1)))
                 continue
             if tok.endswith("%"):
                 rate = _pct(tok)
@@ -172,7 +185,11 @@ def parse_holdings(text) -> tuple[list[dict], list[str]]:
         name = parts[0][:40]
         rows.append({"name": name, "ticker": _ticker(name, acct[0]), "account": acct[0],
                      "state_exempt": acct[1], "value": float(value), "basis": basis, "rate": rate, "qty": qty,
-                     "line": n})
+                     "div": div, "fund": fund, "line": n})
+    funds = {r["ticker"] for r in rows if r["fund"] and r["ticker"]}
+    for r in rows:
+        if r["ticker"] in funds:
+            r["fund"] = True
     return rows, bad
 
 
@@ -201,6 +218,8 @@ def reprice(text, prices: dict) -> tuple[str, dict]:
         new = round(r["qty"] * price, 2)
         parts = [x.strip() for x in raw[r["line"]].split(",")]
         parts[2] = _n(new)
+        if str(q.get("instrument") or "").upper() in FUND_TYPES and not r["fund"]:
+            parts.append("fund")              # the price feed knows an ETF the export did not name
         raw[r["line"]] = ", ".join(parts)
         day = r["qty"] * K._f(q.get("day_change")) if q.get("day_change") is not None else 0.0
         out["lines"][r["line"]] = {"ticker": r["ticker"], "qty": r["qty"], "price": price, "was": r["value"],
@@ -271,7 +290,7 @@ def _fund_ticker(t: str | None) -> bool:
 def is_pick(h: dict) -> bool:
     """An individual stock — research time applies — rather than a fund. A
     401(k) holds the plan's funds, whatever the line is called."""
-    return (h["account"] not in ("cash", "debt") and h["account"] not in PLAN
+    return (h["account"] not in ("cash", "debt") and h["account"] not in PLAN and not h.get("fund")
             and bool(h.get("ticker")) and not _fund_ticker(h["ticker"]))
 
 
@@ -333,20 +352,23 @@ def estimate(item: dict, p: dict, stock_rows: dict) -> tuple[float, float, str, 
     mr = K._f(p.get("market_return"), 7.0)
     t = item.get("ticker")
     pick = is_pick(item)
+    div = item.get("div")                    # the holding's own yield, from the export
     if item.get("rate") is not None:
-        return item["rate"], (0.0 if pick else INDEX_DIV), "your rate", pick
+        return item["rate"], (div if div is not None else (0.0 if pick else INDEX_DIV)), "your rate", pick
     if item["account"] == "cash":
         return None
-    if t and t in stock_rows and item["account"] not in PLAN:
+    if t and t in stock_rows and item["account"] not in PLAN and not item.get("fund"):
         r = stock_rows[t]
         srcs = ", ".join(dict.fromkeys(r.get("sources") or [r["source"]]))
-        return r["ret_pre"], r["div_pct"], f"{srcs} estimate, blended toward the market", True
+        return r["ret_pre"], (div if div is not None else r["div_pct"]), \
+            f"{srcs} estimate, blended toward the market", True
     if _fund_ticker(t):
-        return mr, INDEX_DIV, "the market return (an index fund)" if t in INDEX_TICKERS else \
-            "a mutual fund — the market return assumed", False
+        return mr, (div if div is not None else INDEX_DIV), "the market return (an index fund)" \
+            if t in INDEX_TICKERS else "a mutual fund — the market return assumed", False
     if pick:
-        return mr, 0.0, "on no screen — the market return assumed", True
-    return mr, INDEX_DIV, "a fund — the market return assumed", False
+        return mr, (div if div is not None else 0.0), "on no screen — the market return assumed", True
+    return mr, (div if div is not None else INDEX_DIV), (
+        "an ETF — the market return assumed" if item.get("fund") else "a fund — the market return assumed"), False
 
 
 def held_after(pre: float, div: float, account: str, p: dict, state_exempt: bool = False) -> float:
@@ -880,7 +902,8 @@ def _n(x: float) -> str:
 
 
 def holding_line(name: str, account: str, value: float, basis: float | None = None, rate: float | None = None,
-                 state_exempt: bool = False, qty: float | None = None) -> str:
+                 state_exempt: bool = False, qty: float | None = None, div: float | None = None,
+                 fund: bool = False) -> str:
     """One holdings line in the form parse_holdings reads back."""
     acct = ("tbills" if state_exempt else "cash") if account == "cash" else ACCOUNT_TEXT[account]
     parts = [str(name).replace(",", " ").strip(), acct, _n(value)]
@@ -890,6 +913,10 @@ def holding_line(name: str, account: str, value: float, basis: float | None = No
         parts.append(f"{_n(rate)}%")
     if qty:
         parts.append(f"{qty:.6f}".rstrip("0").rstrip(".") + " sh")
+    if div is not None:
+        parts.append(f"{_n(div)}% div")
+    if fund:
+        parts.append("fund")
     return ", ".join(parts)
 
 
@@ -976,7 +1003,8 @@ def apply_moves(saved: dict, moves: list[dict], board: dict) -> dict:
         else:
             basis = r["basis"] * left / r["value"] if r["basis"] is not None and r["value"] > 0 else r["basis"]
             qty = r["qty"] * left / r["value"] if r.get("qty") and r["value"] > 0 else None
-            lines[ln] = holding_line(r["name"], r["account"], left, basis, r["rate"], r["state_exempt"], qty)
+            lines[ln] = holding_line(r["name"], r["account"], left, basis, r["rate"], r["state_exempt"], qty,
+                                     r.get("div"), r.get("fund"))
     prof["holdings"] = "\n".join([x for x in lines if x is not None] + adds)
     prof["debts"] = [d for d in debts if d["balance"] > 0.5]
     prof["owned_re"] = [r for i, r in enumerate(owned) if i not in sold_props]

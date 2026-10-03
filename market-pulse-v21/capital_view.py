@@ -30,6 +30,7 @@ EDIT_ACCOUNT_LABELS = [("cash", "Cash (checking, savings)"), ("tbills", "T-bills
                        ("401k", "401(k)"), ("roth 401k", "Roth 401(k)"), ("ira", "Traditional IRA"),
                        ("roth", "Roth IRA"), ("hsa", "HSA")]
 TLH_ORDINARY_CAP = 3_000      # a net capital loss offsets at most $3,000 of ordinary income a year
+SMALL_STEP = 100.0            # a one-time move adding less a year is a clean-up, folded at the end
 
 
 def _sid(*parts) -> str:
@@ -148,7 +149,7 @@ def once_steps(board: dict) -> list[dict]:
             "impact": round(g["impact"], 2), "tax": round(g["tax"], 2), "cost": round(g["cost"], 2),
             "gain_hold": round(g["gain_hold"], 2), "sold": round(g["sold"], 2),
             "account": m["account"] if m["acct"] in A.SHELTERED else None,
-            "harvest": round(min(loss, TLH_ORDINARY_CAP) * K.tax_rates(p)["ordinary"], 2) if loss > 0.5 else 0.0,
+            "loss": round(loss, 2), "harvest": 0.0, "carry": 0.0,        # shared out in do_next
             "parts": g["parts"], "can_apply": m["to_kind"] != "re",
             "h": rate["h"], "a": rate["a"], "gap": rate["gap"], "rate_note": rate["note"],
             "cost_pct": rate["cost_pct"], "payback_months": rate["payback_months"],
@@ -273,7 +274,7 @@ def monthly_step(board: dict, steady: dict) -> dict | None:
             "note": "From January: " + _split_sentence(steady["raw"], steady["left"]) + ".",
             "what": f"Your {_money(steady['total'])} a month, split the waterfall's way",
             "impact": round(gain, 2), "now_yr": round(now, 2), "opt_yr": steady["per_year"], "tax": 0.0, "cost": 0.0,
-            "harvest": 0.0, "can_apply": True, "account": None}
+            "harvest": 0.0, "carry": 0.0, "can_apply": True, "account": None}
 
 
 def do_next(board: dict, steady: dict) -> list[dict]:
@@ -286,7 +287,22 @@ def do_next(board: dict, steady: dict) -> list[dict]:
     steps.sort(key=lambda s: (s["kind"] != "debt", -s["impact"]))
     for i, s in enumerate(steps, 1):
         s["rank"] = i
+    share_losses(steps, K.tax_rates(board["profile"])["ordinary"])
     return steps
+
+
+def share_losses(steps: list[dict], rate: float) -> None:
+    """A net capital loss offsets at most $3,000 of ordinary income a year —
+    in all, not per sale. The steps use it in their order; what is left of a
+    loss carries forward (to gains, or to next year's $3,000)."""
+    left = TLH_ORDINARY_CAP
+    for s in steps:
+        loss = s.get("loss") or 0.0
+        if loss > 0.5:
+            used = min(loss, left)
+            left -= used
+            s["harvest"] = round(used * rate, 2)
+            s["carry"] = round(loss - used, 2)
 
 
 def find_step(board: dict, today: date, step_id: str) -> tuple[dict | None, dict]:
@@ -379,13 +395,22 @@ def debt_plan(board: dict, todo: list[dict], today: date) -> list[dict]:
         for m in s.get("parts") or []:
             if m["to_kind"] == "debt":
                 by_step[m["to_id"].split(":", 1)[1]] = s
+    import timeline as T
+    plan = T.debt_payoffs(board.get("timeline"))
+    mr = K._f(p.get("market_return"), 7.0)
     out = []
     for d in p.get("debts") or []:
         bal, apr, pay = K._f(d.get("balance")), K._f(d.get("apr")), K._f(d.get("payment"))
-        row = {"name": d["name"], "balance": bal, "apr": apr, "payment": pay or None}
+        row = {"name": d["name"], "balance": bal, "apr": apr, "payment": pay or None,
+               "below_hurdle": apr < mr}
         step = by_step.get(d["name"])
         if step:
             row["step"] = step["rank"]
+        # THE PLAN'S DATE FIRST: the monthly plan pays a debt above the hurdle
+        # from what you put aside, so its payoff is the plan's, not the
+        # payment's alone (the panel had said January where the plan said now)
+        if d["name"] in plan:
+            row.update(plan_payoff=plan[d["name"]]["label"], plan_months=plan[d["name"]]["months"])
         if pay > 0:
             m, interest = _payoff(bal, apr, pay)
             row.update(months=m, interest=interest)
@@ -393,7 +418,7 @@ def debt_plan(board: dict, todo: list[dict], today: date) -> list[dict]:
                 yy, mm = divmod(today.month - 1 + m, 12)
                 row["payoff"] = date(today.year + yy, mm + 1, 1).strftime("%b %Y")
                 m2, i2 = _payoff(bal, apr, pay + 100)
-                if m2 is not None:
+                if m2 is not None and "plan_payoff" not in row:
                     yy, mm = divmod(today.month - 1 + m2, 12)
                     row.update(extra_payoff=date(today.year + yy, mm + 1, 1).strftime("%b %Y"),
                                extra_saves=interest - i2, extra_months=m - m2,
@@ -499,8 +524,14 @@ def taxes(board: dict, todo: list[dict]) -> dict:
         if h["account"] == "taxable" and h["basis"] is not None and h["basis"] - h["value"] > 0.5:
             loss = h["basis"] - h["value"]
             harvest.append({"name": h["name"], "value": h["value"], "basis": h["basis"], "loss": loss,
-                            "saves": min(loss, TLH_ORDINARY_CAP) * t["ordinary"],
-                            "carry": max(0.0, loss - TLH_ORDINARY_CAP), "in_plan": h["line"] in selling})
+                            "in_plan": h["line"] in selling})
+    # $3,000 a year against pay IN ALL, not per holding: biggest loss first
+    harvest.sort(key=lambda x: -x["loss"])
+    room = TLH_ORDINARY_CAP
+    for x in harvest:
+        used = min(x["loss"], room)
+        room -= used
+        x.update(saves=used * t["ordinary"], carry=x["loss"] - used)
     flows = A.parse_flows(p.get("current_monthly"))[0]
     trad_401k = sum(f["amount"] for f in flows if f["account"] == "k401") * 12
     status = p.get("filing_status") or "single"
@@ -553,9 +584,20 @@ def synced(p: dict, today: date) -> list[dict]:
                     "value": round(sum(r["value"] for r in mine), 2),
                     "rows": [{"name": r["name"], "account": "tbills" if r["state_exempt"] else EDIT_ACCOUNT[r["account"]],
                               "account_label": "T-bills" if r["state_exempt"] else _cap(A.ACCOUNT_LABEL[r["account"]]),
-                              "value": r["value"], "basis": r["basis"], "rate": r["rate"], "qty": r.get("qty")}
-                             for r in mine]})
+                              "value": r["value"], "basis": r["basis"], "rate": r["rate"], "qty": r.get("qty"),
+                              "extra": _extra(r)} for r in mine]})
     return out
+
+
+def _extra(r: dict) -> str:
+    """The line's tokens the row editor has no column for — its dividend
+    yield and its fund mark — so a save writes them back."""
+    out = []
+    if r.get("div") is not None:
+        out.append(f"{A._n(r['div'])}% div")
+    if r.get("fund"):
+        out.append("fund")
+    return ", ".join(out)
 
 
 def _cap(s: str) -> str:
@@ -707,8 +749,8 @@ def build_view(board: dict, today: date | None = None) -> dict:
     hold_rows, hold_bad = _typed_holdings(p)
     flow_rows, flow_bad = A.parse_flows(p.get("current_monthly"))
     editor = {"holdings": [{"name": h["name"], "account": "tbills" if h["state_exempt"] else EDIT_ACCOUNT[h["account"]],
-                            "value": h["value"], "basis": h["basis"], "rate": h["rate"], "qty": h.get("qty")}
-                           for h in hold_rows],
+                            "value": h["value"], "basis": h["basis"], "rate": h["rate"], "qty": h.get("qty"),
+                            "extra": _extra(h)} for h in hold_rows],
               "holdings_bad": hold_bad, "synced": synced(p, today),
               "flows": [{"name": f["name"], "account": "tbills" if f["state_exempt"] else EDIT_ACCOUNT[f["account"]],
                          "amount": f["amount"], "rate": f["rate"]} for f in flow_rows],
@@ -716,7 +758,13 @@ def build_view(board: dict, today: date | None = None) -> dict:
     import timeline as T
     import whatif as W
     wk = W.kit(board)
+    small = [s for s in todo if s["type"] == "once" and s["kind"] != "debt" and s["impact"] < SMALL_STEP]
+    if len(small) < 2 or len(small) == len(todo):
+        small = []                # one small step, or nothing but small ones: no point folding
+    ids = {s["id"] for s in small}
     return {"headline": headline(board), "vitals": vitals(board, fi), "todo": todo, "editor": editor,
+            "todo_main": [s for s in todo if s["id"] not in ids], "todo_small": small,
+            "todo_small_gain": round(sum(s["impact"] for s in small), 2),
             "whatif": wk, "scenarios": W.scenarios(board, wk), "timeline": board.get("timeline") if "timeline" in board else T.simulate(board, today),
             "todo_once": sum(1 for s in todo if s["type"] == "once"),
             "todo_monthly": sum(1 for s in todo if s["type"] == "monthly"),

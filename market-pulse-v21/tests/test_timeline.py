@@ -44,7 +44,10 @@ COMP = [{"ticker": t, "name": t, "status": "COMPOUNDER", "expected": e, "er_div"
         for t, e in (("AAA", 30.0), ("BBB", 26.0), ("CCC", 24.0))]
 SRC = {"compounders": COMP, "aristocrats": [], "lynch": [], "quiet_value": [], "schloss": [], "house_hack": [],
        "brrrr": [], "flip": [], "home": []}
+# These hand-worked months pay a listed loan payment from EXPENSES (a payoff
+# frees it); the default — out of what is put aside — is checked after them.
 PROF = {"monthly_invest": 6000, "monthly_expenses": 3000, "home_state": "CA", "housing_cost": 2800, "hold_years": 15,
+        "debt_payments_from": "expenses",
         "mortgage_rate": 6.3, "age": 34, "ira_room": 7500, "market_return": 8, "picks_n": 3,
         "debts": [{"name": "Visa", "balance": 3500, "apr": 23}, {"name": "Store", "balance": 1000, "apr": 23},
                   {"name": "Personal", "balance": 1800, "apr": 20, "payment": 90},
@@ -140,6 +143,29 @@ ct = cheap["timeline"]
 check(cheap["plan"]["winner"]["id"] == "debt:Cheap" and near(ct["months"][0]["by_category"]["Debt"], 1000)
       and near(ct["months"][0]["left"], 6000 - 3000 * 0 - 1000 - 7500 / 3, 0.02),
       "a 7.5% debt the board ranks first takes its $1,000 balance, not the whole month — the rest is left over")
+
+# ── the default: debt payments come out of what is put aside ──────
+inv = build({**PROF, "debt_payments_from": "invest"})["timeline"]
+im = inv["months"]
+check(all(m["total"] == 6000 for m in im),
+      "PAYMENTS FROM WHAT YOU PUT ASIDE: a paid-off card frees nothing new — every month is $6,000, never $6,090")
+citi_inv = next(m for m in inv["milestones"] if m.get("name") == "Personal")
+check(citi_inv["label"] == "Nov 2026" and "goes to the rest of the plan" in citi_inv["detail"],
+      "the card paid off in November: its $90 payment simply goes to the next use")
+car_steps = [st for st in im[1]["steps"] if st["to"] == "Car payment"]
+check(car_steps and near(car_steps[0]["amount"], 300),
+      "the 5% car loan's $300 payment is taken from the $6,000 first, every month")
+oct_debt = {st["to"]: st["amount"] for st in im[0]["steps"] if st["kind"] == "debt"}
+check(near(im[0]["by_category"]["Savings"], 3000) and oct_debt == {"Car payment": 300.0, "Pay down Visa": 2700.0},
+      "October: the $3,000 cushion first, then the car loan's $300, then the dearest card gets the $2,700 left")
+check(inv["steady"]["total"] == 6000, "and the steady month is the same $6,000")
+bal, months = 9000 - 300, 0                  # October: the plan's $300, no interest yet
+while bal > 0.5:
+    months += 1
+    bal = bal * (1 + 5 / 1200) - 300
+check(months > len(im) and ("debt", "Car") not in {(m["kind"], m.get("name")) for m in inv["milestones"]},
+      f"the car loan is paid ONCE a month — by the plan, not also from expenses: {months + 1} months to clear "
+      "$9,000 at 5%, past the window shown (paid twice, it would clear inside it)")
 
 # ── never steady inside ten years ──────────────────────────────────
 slow = build({**PROF, "monthly_invest": 150, "debts": [{"name": "Big", "balance": 60_000, "apr": 24}],
