@@ -426,7 +426,8 @@ def block_lines(a: dict, as_of: str | None, p: dict) -> list[str]:
                 lines.append(A.holding_line(f"{pos['symbol']} money fund", acct, pos["value"], rate=rf))
             continue
         basis = pos["basis"] if acct == "taxable" else None
-        lines.append(A.holding_line(pos["symbol"], acct, pos["value"], basis=basis))
+        # the share count keeps the line at the live price between exports
+        lines.append(A.holding_line(pos["symbol"], acct, pos["value"], basis=basis, qty=pos.get("qty")))
     if a["cash"] > 0:
         where = f"{a['broker']} …{a['mask']}" if a.get("mask") else a["broker"]
         if acct == "taxable":

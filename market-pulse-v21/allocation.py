@@ -134,16 +134,20 @@ def _lines(text):
             yield n, line, [x.strip() for x in line.split(",")]
 
 
+_QTY = re.compile(r"(\d+(?:\.\d+)?)\s*(?:sh|shares?)", re.I)
+
+
 def parse_holdings(text) -> tuple[list[dict], list[str]]:
-    """'name or ticker, account, value[, basis][, return%]' per line → (rows,
-    lines that could not be read). A bare number after the value, or
+    """'name or ticker, account, value[, basis][, return%][, N sh]' per line →
+    (rows, lines that could not be read). A bare number after the value, or
     'basis 18000', is the cost basis; a number with % is the owner's own
-    return (for cash, its interest rate)."""
+    return (for cash, its interest rate); 'N sh' is the share count, which
+    lets the line be valued at the live price (reprice)."""
     rows, bad = [], []
     for n, line, parts in _lines(text):
         acct = account_of(parts[1]) if len(parts) >= 3 else None
         value = _money(parts[2]) if len(parts) >= 3 else None
-        basis = rate = None
+        basis = rate = qty = None
         ok = bool(parts[0]) and acct is not None and acct[0] != "debt" and value is not None and value >= 0
         for tok in parts[3:] if ok else []:
             if not tok:
@@ -151,6 +155,11 @@ def parse_holdings(text) -> tuple[list[dict], list[str]]:
             if tok.endswith("%"):
                 rate = _pct(tok)
                 ok = ok and rate is not None
+                continue
+            q = _QTY.fullmatch(tok)
+            if q:
+                ok = ok and qty is None
+                qty = float(q.group(1))
                 continue
             m = re.fullmatch(r"(?:basis|cost)?\s*[:=]?\s*\$?\s*(\d+(?:\.\d+)?)", tok, re.I)
             if not m or basis is not None:
@@ -162,8 +171,45 @@ def parse_holdings(text) -> tuple[list[dict], list[str]]:
             continue
         name = parts[0][:40]
         rows.append({"name": name, "ticker": _ticker(name, acct[0]), "account": acct[0],
-                     "state_exempt": acct[1], "value": float(value), "basis": basis, "rate": rate, "line": n})
+                     "state_exempt": acct[1], "value": float(value), "basis": basis, "rate": rate, "qty": qty,
+                     "line": n})
     return rows, bad
+
+
+def priceable(rows: list[dict]) -> list[str]:
+    """The tickers a live price would revalue: lines with a share count."""
+    return sorted({r["ticker"] for r in rows if r.get("qty") and r.get("ticker") and r["ticker"] != TOP_PICKS})
+
+
+def reprice(text, prices: dict) -> tuple[str, dict]:
+    """The holdings with every line that has a share count and a live price
+    valued at shares × price (the rest exactly as typed), and what changed:
+    {"lines": {line: {...}}, "priced", "of", "missing", "change", "day_change"}.
+    A line without a price keeps its last value — and is named as stale."""
+    raw = str(text or "").splitlines()
+    rows, _ = parse_holdings(text)
+    out = {"lines": {}, "priced": 0, "of": 0, "missing": [], "change": 0.0, "day_change": 0.0}
+    for r in rows:
+        if not r.get("qty") or not r.get("ticker") or r["ticker"] == TOP_PICKS:
+            continue
+        out["of"] += 1
+        q = prices.get(r["ticker"]) or {}
+        price = q.get("price")
+        if price is None or price <= 0:
+            out["missing"].append(r["ticker"])
+            continue
+        new = round(r["qty"] * price, 2)
+        parts = [x.strip() for x in raw[r["line"]].split(",")]
+        parts[2] = _n(new)
+        raw[r["line"]] = ", ".join(parts)
+        day = r["qty"] * K._f(q.get("day_change")) if q.get("day_change") is not None else 0.0
+        out["lines"][r["line"]] = {"ticker": r["ticker"], "qty": r["qty"], "price": price, "was": r["value"],
+                                   "value": new, "day_change": round(day, 2), "day_pct": q.get("day_change_pct")}
+        out["priced"] += 1
+        out["change"] += new - r["value"]
+        out["day_change"] += day
+    out["change"], out["day_change"] = round(out["change"], 2), round(out["day_change"], 2)
+    return "\n".join(raw), out
 
 
 def parse_flows(text) -> tuple[list[dict], list[str]]:
@@ -834,7 +880,7 @@ def _n(x: float) -> str:
 
 
 def holding_line(name: str, account: str, value: float, basis: float | None = None, rate: float | None = None,
-                 state_exempt: bool = False) -> str:
+                 state_exempt: bool = False, qty: float | None = None) -> str:
     """One holdings line in the form parse_holdings reads back."""
     acct = ("tbills" if state_exempt else "cash") if account == "cash" else ACCOUNT_TEXT[account]
     parts = [str(name).replace(",", " ").strip(), acct, _n(value)]
@@ -842,6 +888,8 @@ def holding_line(name: str, account: str, value: float, basis: float | None = No
         parts.append(_n(basis))
     if rate is not None:
         parts.append(f"{_n(rate)}%")
+    if qty:
+        parts.append(f"{qty:.6f}".rstrip("0").rstrip(".") + " sh")
     return ", ".join(parts)
 
 
@@ -861,6 +909,12 @@ def apply_moves(saved: dict, moves: list[dict], board: dict) -> dict:
     becomes an index-fund line in the same account."""
     p = board["profile"]
     rf = K._f(p.get("rf_rate"), 4.0)
+    live = (board.get("live") or {}).get("prices") or {}
+
+    def shares(ticker, amount):
+        """A bought line's share count at the live price — so it stays live."""
+        price = (live.get(ticker) or {}).get("price")
+        return amount / price if price else None
     prof = {k: v for k, v in saved.items() if not str(k).startswith("_")}
     lines: list[str | None] = str(prof.get("holdings") or "").splitlines()
     rows = {r["line"]: r for r in parse_holdings(prof.get("holdings"))[0]}
@@ -895,7 +949,8 @@ def apply_moves(saved: dict, moves: list[dict], board: dict) -> dict:
         elif kind in ("ticker", "custom"):           # a what-if move (whatif.py)
             acct = m.get("dest_acct") or m["acct"]
             adds.append(holding_line(m["name"], acct, got, basis=got if acct == "taxable" else None,
-                                     rate=m.get("rate") if kind == "custom" else None))
+                                     rate=m.get("rate") if kind == "custom" else None,
+                                     qty=shares(m["name"], got) if kind == "ticker" else None))
         elif kind == "picks":
             acct = "taxable" if m["to_id"] == "picks" else m["acct"]
             n = len(sleeve)
@@ -905,7 +960,8 @@ def apply_moves(saved: dict, moves: list[dict], board: dict) -> dict:
             w = min(1.0 / n, cap) if cap > 0 else 1.0 / n
             for r in sleeve:
                 amt = round(got * w, 2)
-                adds.append(holding_line(r["detail"]["ticker"], acct, amt, basis=amt if acct == "taxable" else None))
+                adds.append(holding_line(r["detail"]["ticker"], acct, amt, basis=amt if acct == "taxable" else None,
+                                         qty=shares(r["detail"]["ticker"], amt)))
             rest = round(got - got * w * n, 2)
             if rest > 0.5:
                 adds.append(holding_line("T-bills", "cash", rest, rate=rf, state_exempt=True) if acct == "taxable"
@@ -919,7 +975,8 @@ def apply_moves(saved: dict, moves: list[dict], board: dict) -> dict:
             lines[ln] = None
         else:
             basis = r["basis"] * left / r["value"] if r["basis"] is not None and r["value"] > 0 else r["basis"]
-            lines[ln] = holding_line(r["name"], r["account"], left, basis, r["rate"], r["state_exempt"])
+            qty = r["qty"] * left / r["value"] if r.get("qty") and r["value"] > 0 else None
+            lines[ln] = holding_line(r["name"], r["account"], left, basis, r["rate"], r["state_exempt"], qty)
     prof["holdings"] = "\n".join([x for x in lines if x is not None] + adds)
     prof["debts"] = [d for d in debts if d["balance"] > 0.5]
     prof["owned_re"] = [r for i, r in enumerate(owned) if i not in sold_props]

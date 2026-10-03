@@ -2094,7 +2094,8 @@ async def capital_page(request: Request):
     import capital_view as V
     from database import get_capital_profile
     saved = get_capital_profile() or {}
-    board = await asyncio.to_thread(K.build, saved)
+    fresh = request.query_params.get("fresh") == "1"         # "Refresh prices": past the 15-minute cache
+    board = await asyncio.to_thread(lambda: K.build(saved, fresh_prices=fresh))
     view = await asyncio.to_thread(V.build_view, board)
     p = board["profile"]
     return templates.TemplateResponse("capital.html", {
@@ -2148,8 +2149,10 @@ async def capital_step_done(request: Request):
         return JSONResponse({"error": "Which step? Send its id."}, status_code=400)
     saved = {k: v for k, v in (get_capital_profile() or {}).items() if not k.startswith("_")}
     board = await asyncio.to_thread(K.build, saved)
+    # the step edits the lines the board measured: at today's prices
+    live = {**saved, "holdings": board["profile"].get("holdings", saved.get("holdings"))}
     try:
-        prof, step = await asyncio.to_thread(V.apply_step, saved, board, date.today(), step_id)
+        prof, step = await asyncio.to_thread(V.apply_step, live, board, date.today(), step_id)
     except A.CannotApply as e:
         return JSONResponse({"error": str(e)}, status_code=409)
     if not save_capital_profile({k: v for k, v in saved.items() if k != "last_step"}, owner="owner:undo"):
@@ -2186,8 +2189,9 @@ async def capital_move(request: Request):
     r = W.evaluate(W.kit(board), move)
     if not r.get("ok"):
         return JSONResponse({"error": r.get("error")}, status_code=409)
+    live = {**saved, "holdings": board["profile"].get("holdings", saved.get("holdings"))}
     try:
-        prof = A.apply_moves(saved, [W.as_move(r)], board)
+        prof = A.apply_moves(live, [W.as_move(r)], board)
     except A.CannotApply as e:
         return JSONResponse({"error": str(e)}, status_code=409)
     if not save_capital_profile({k: v for k, v in saved.items() if k != "last_step"}, owner="owner:undo"):

@@ -974,6 +974,27 @@ all editable).
 - Saved as typed: the holdings and pay-split boxes keep the owner's lines, so a line the engine cannot read stays in
   the box and is named on the page. No migration — the profile is one JSON row.
 
+## 2026-10-03 — /capital: live holding values
+**Why:** the owner asked whether /capital changes as numbers and prices change, and for it to be a real-time tool.
+It recomputed on every load, but holdings were frozen at the last export's dollars. Owner choice: live holding
+values first (daily snapshots and alerts, transfers to set up, and broker connections were offered and not chosen).
+**Decided:**
+- **A share count on a holdings line** (`…, 40 sh`) lets it be valued at shares × the live price. Synced lines carry
+  the export's share count; a typed line can have one (the editor's Shares column). Lines without one keep their
+  dollars. Cash, debts and property are unchanged — they move when re-imported, edited or marked done.
+- **Repriced before anything reads them** (`capital.build` → `allocation.reprice`): net worth, the board, Do next,
+  What if and the monthly plan all use today's values. Mark done and Apply edit the repriced lines, so the values
+  they write are the ones the page showed. A pick bought that way gets its share count from the live price (the
+  board's top picks are priced on every live build), so it stays live.
+- **One batch, cached, time-boxed** (`stock_lookup.live_prices`): every priced ticker in parallel through the
+  existing Yahoo-then-Nasdaq lookup; 15 minutes in memory while the US market is open, an hour otherwise; the page
+  waits at most 6 seconds. A ticker not back keeps its last value and is counted as stale. "Refresh" on the
+  overview (`/capital?fresh=1`) goes past the cache. Test builds pass prices and never fetch.
+- **On the page**: under net worth, "Live · prices 3:42 PM ET · today +$X" (or "Prices unavailable · values as last
+  synced"), with Refresh; on Holdings, each priced line's shares × price and today's move.
+- **A Do-next step's id is what moves where, not the dollar amount** — with live prices the amount drifts between
+  loading the page and pressing Mark done, which had turned a step into "no longer on the list".
+
 ## 2026-10-03 — /capital Monthly plan, month by month; property and debt returns over the hold
 **Why:** the owner asked for a world-class Monthly plan. Their screenshots showed "a normal month from January" putting
 most of the pay into a down payment forever, an optimal path at 55% a year and a year-15 gain near a billion dollars.
