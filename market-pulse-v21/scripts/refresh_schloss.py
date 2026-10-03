@@ -51,6 +51,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import schloss as S  # noqa: E402
 import pricefeed as PF  # noqa: E402
+import sec_edgar as SE  # noqa: E402
 
 SEC_UA = "market-pulse-research admin@focusedops.io"
 HEADERS = {"User-Agent": SEC_UA, "Accept-Encoding": "gzip, deflate"}
@@ -101,6 +102,10 @@ class _Throttle:
 
 THROTTLE = _Throttle(SEC_RATE)
 
+# What this run changed or could not do, carried into params so a reader
+# of the file — and the PR that ships it — can see it.
+STATS: dict = {}
+
 
 # ═══════════════════════════════════════════════════════════════════
 # CONCEPTS
@@ -146,7 +151,31 @@ INSTANT: dict[str, list[str]] = {
         "LongTermDebtCurrent",
     ],
     "long_term_debt": ["LongTermDebt", "LongTermDebtNoncurrent"],
+    # Liabilities that are certainly not borrowings (schloss.
+    # non_debt_liabilities). Each list is ONE concept under the names it is
+    # filed as, so the first-tag rule never adds a part to its own total —
+    # subtracting more than is there would prove "no debt" falsely.
+    "operating_lease_current": ["OperatingLeaseLiabilityCurrent"],
+    "operating_lease_noncurrent": ["OperatingLeaseLiabilityNoncurrent"],
+    "accounts_payable": ["AccountsPayableAndAccruedLiabilitiesCurrent",
+                         "AccountsPayableCurrent"],
+    "deferred_revenue": ["ContractWithCustomerLiabilityCurrent",
+                         "DeferredRevenueCurrent"],
 }
+
+# ONE DATE PER BALANCE SHEET. Each line used to take its own newest quarter,
+# so a company's equity could come from one quarter and its assets from
+# the next. Elme Communities sold its apartments between the two: assets
+# after the sale, equity before it, a tangible book above total assets,
+# and all four gates cleared at 0.165x (September 2026). Every line is now
+# read from the newest quarter in which the company filed both of these.
+ANCHOR_FIELDS = ("stockholders_equity", "total_assets")
+
+# The exceptions: lines SUBTRACTED from book, where a missing value reads
+# as zero and flatters the company. Absent from the anchor quarter but
+# filed in an older one, the older figure is used — subtracting stale
+# goodwill is safer than subtracting none.
+CARRY_FIELDS = ("goodwill", "intangibles", "preferred_stock")
 
 ANNUAL: dict[str, list[str]] = {
     "revenue": [
@@ -162,6 +191,11 @@ ANNUAL: dict[str, list[str]] = {
     # a bank has both.
     "interest_net": ["InterestIncomeExpenseNet",
                      "InterestIncomeExpenseAfterProvisionForLoanLoss"],
+    # Dividends paid in dollars, for the payers that file no per-share
+    # figure. Kept as two fields: the all-classes line can include
+    # preferred dividends (common_dividends_paid).
+    "div_paid_common": ["PaymentsOfDividendsCommonStock"],
+    "div_paid_all": ["PaymentsOfDividends"],
 }
 
 # Dividends per share, in USD-per-share. Kept separate because the unit is
@@ -292,6 +326,139 @@ def pick_series(by_tag: dict[str, dict[int, float]]) -> dict[int, float]:
         for year, val in series.items():
             out.setdefault(year, val)
     return out
+
+
+def one_date(per_period: dict[str, list[dict[int, float]]],
+             anchors: tuple = ANCHOR_FIELDS,
+             carry: tuple = CARRY_FIELDS) -> tuple[dict[str, dict[int, float]], dict[int, int]]:
+    """({field: {cik: value}}, {cik: anchor period index}) — every line of a
+    company's balance sheet from the same quarter.
+
+    `per_period[field]` lists one {cik: value} per period, newest first,
+    with the tag preference already applied inside each period. A
+    company's anchor is the newest period in which it filed every anchor
+    field; failing that, the newest in which it filed any. A field the
+    company did not file in its anchor quarter is absent — except the
+    CARRY_FIELDS, which fall back to the newest older quarter that has them.
+    """
+    n = max((len(v) for v in per_period.values()), default=0)
+    empty: list[dict] = [{}] * n
+
+    def frames(field):
+        return per_period.get(field) or empty
+
+    ciks = {c for a in anchors for frame in frames(a) for c in frame}
+    anchor: dict[int, int] = {}
+    for cik in ciks:
+        idx = next((i for i in range(n) if all(cik in frames(a)[i] for a in anchors)), None)
+        if idx is None:
+            idx = next((i for i in range(n) if any(cik in frames(a)[i] for a in anchors)), None)
+        if idx is not None:
+            anchor[cik] = idx
+
+    out: dict[str, dict[int, float]] = {field: {} for field in per_period}
+    for field, fr in per_period.items():
+        for cik, i in anchor.items():
+            if i < len(fr) and cik in fr[i]:
+                out[field][cik] = fr[i][cik]
+            elif field in carry:
+                older = next((fr[j][cik] for j in range(i + 1, len(fr)) if cik in fr[j]), None)
+                if older is not None:
+                    out[field][cik] = older
+    return out, anchor
+
+
+def mixed_dates(old: dict[str, dict[int, float]], new: dict[str, dict[int, float]]) -> int:
+    """How many companies the one-date rule changed: any line read
+    differently, or no longer read at all."""
+    changed = set()
+    for field, before in old.items():
+        after = new.get(field, {})
+        for cik, val in before.items():
+            if after.get(cik) != val:
+                changed.add(cik)
+    return len(changed)
+
+
+def common_dividends_paid(common: dict | None, all_classes: dict | None,
+                          preferred) -> dict:
+    """{year: dollars paid to common holders}, as far as the filings say.
+
+    PaymentsOfDividendsCommonStock is exactly that. PaymentsOfDividends
+    covers every class, so it stands in only for a company with no
+    preferred stock outstanding — otherwise a company paying its preferred
+    holders and nothing to common would read as a payer.
+    """
+    if common:
+        return dict(common)
+    try:
+        pref = float(preferred) if preferred is not None else 0.0
+    except (TypeError, ValueError):
+        pref = 0.0
+    if all_classes and pref <= 0:
+        return dict(all_classes)
+    return {}
+
+
+# A STOCK SPLIT IS NOT DILUTION. The dilution column compared share counts
+# five years apart with no split adjustment, so Amazon's and Alphabet's
+# 20-for-1 splits printed as +84% and +79% a year of dilution, and 160
+# rows ran beyond ±60% a year (September 2026). A year-on-year jump within
+# SPLIT_TOL of a split factor, either way, is read as a split; the figure
+# is then withheld rather than adjusted on a guess — a stock-for-stock
+# merger can double a share count too.
+SPLIT_FACTORS = (2, 3, 4, 5, 8, 10, 15, 20, 25, 30, 40, 50, 100)
+SPLIT_TOL = 0.08
+
+
+def split_in_window(by_year: dict[int, float]) -> bool:
+    ys = sorted(y for y, v in by_year.items() if v and v > 0)
+    for a, b in zip(ys, ys[1:]):
+        r = by_year[b] / by_year[a]
+        for f in SPLIT_FACTORS:
+            if abs(r / f - 1) <= SPLIT_TOL or abs(r * f - 1) <= SPLIT_TOL:
+                return True
+    return False
+
+
+# A SPLIT THE FILINGS ALREADY RESTATED DOES NOT DISTORT ANYTHING. The
+# five-years-back count often comes from a later filing's comparative
+# column, restated for the split, while a year in between was read before
+# it — so the jump shows inside the window and the two ends still agree.
+# NAPCO's 2022 2-for-1 is one: the jump is there, the ends read -0.5% a
+# year, which is right. The figure is withheld only when the two ends are
+# themselves at least SPLIT_END_RATIO apart — a split in the comparison.
+SPLIT_END_RATIO = 1.8
+
+
+def split_distorts(by_year: dict[int, float]) -> bool:
+    """True when a split sits between the two counts the dilution figure
+    compares (the oldest and newest in the window)."""
+    if not split_in_window(by_year):
+        return False
+    ys = sorted(y for y, v in by_year.items() if v and v > 0)
+    r = by_year[ys[-1]] / by_year[ys[0]]
+    return r >= SPLIT_END_RATIO or r <= 1 / SPLIT_END_RATIO
+
+
+# NOT A COMPANY. Name keywords catch what says "ETF" or "Acquisition Corp";
+# they cannot catch "SPDR Gold Trust", "ProShares Trust II" or "VS Trust".
+# The SEC industry code can, and it is asked only of companies that file
+# no revenue — every exchange-traded fund, commodity pool and crypto trust
+# on the September board was one of them (1,074 of 5,725 rows).
+FUND_SIC = {"6221",      # commodity contracts: commodity pools, crypto and metal trusts
+            "6770"}      # blank checks
+
+
+def not_a_company(name: str, sic_answered: bool, sic: str | None) -> bool:
+    """True for a fund, trust or blank cheque. `sic_answered` is whether SEC
+    gave this company's record at all; one it answered with no code is a
+    fund (the BDCs and closed-end funds Quiet Value met)."""
+    if SE._excluded_keyword(name or "", sectors=False):
+        return True
+    if not sic_answered:
+        return False
+    return (not sic) or str(sic) in FUND_SIC
 
 
 def parse_master_idx(text: str | None) -> set[int]:
@@ -562,15 +729,23 @@ def fetch_instant(periods: list[str]) -> dict[str, dict[int, float]]:
         for fut, key in futs.items():
             results[key] = parse_frame(fut.result())
 
-    out: dict[str, dict[int, float]] = {}
-    for field, tags in INSTANT.items():
-        # Newest period first, then preferred tag first: a specific tag in
-        # an older quarter still beats a general one the company does not
-        # actually use.
-        ordered = [results.get((field, tag, period), {})
-                   for period in periods for tag in tags]
-        out[field] = merge_newest_first(ordered)
-        print(f"  {field:22s} {len(out[field]):>6,} companies")
+    # Within each period the preferred tag wins; across periods, one_date
+    # picks the quarter.
+    per_period: dict[str, list[dict[int, float]]] = {
+        field: [merge_newest_first([results.get((field, tag, period), {}) for tag in tags])
+                for period in periods]
+        for field, tags in INSTANT.items()}
+    out, anchor = one_date(per_period)
+    # The old rule — each line its own newest quarter — kept for the count
+    # of balance sheets it would have mixed.
+    old = {field: merge_newest_first(frames) for field, frames in per_period.items()}
+    STATS["mixed_dates"] = mixed_dates(old, out)
+    STATS["anchor_periods"] = {periods[i]: sum(1 for v in anchor.values() if v == i)
+                               for i in range(len(periods))}
+    for field in INSTANT:
+        print(f"  {field:26s} {len(out[field]):>6,} companies")
+    print(f"  one date per balance sheet: {STATS['mixed_dates']:,} companies read differently "
+          f"from the line-by-line newest; anchors {STATS['anchor_periods']}")
     return out
 
 
@@ -618,20 +793,38 @@ def fetch_dividends(years: list[int]) -> dict[int, dict[int, float]]:
     return out
 
 
-def fetch_shares(periods: list[str], back_periods: list[str]) -> tuple[dict, dict]:
-    """(now, five years ago) share counts, merged newest-first."""
+def fetch_shares(qs: list[tuple[int, int]], years_back: int = DILUTION_YEARS) -> dict[int, dict]:
+    """{years back: {cik: share count}} for 0..years_back, each merged
+    newest-first over the same four quarters shifted that many years.
+
+    Every year in between is read, not just the two ends, so a split shows
+    up as the year-on-year jump it is (split_in_window)."""
     def sweep(ps):
-        frames = []
         with ThreadPoolExecutor(max_workers=SEC_WORKERS) as ex:
             futs = [ex.submit(_json, frames_url(t, u, p))
                     for t, u in SHARES_TAGS for p in ps]
             frames = [parse_frame(f.result()) for f in futs]
         return merge_newest_first(frames)
 
-    now, then = sweep(periods), sweep(back_periods)
-    print(f"  {'shares now':22s} {len(now):>6,} companies")
-    print(f"  {'shares -5y':22s} {len(then):>6,} companies")
-    return now, then
+    out = {k: sweep([instant_period((y - k, q)) for y, q in qs]) for k in range(years_back + 1)}
+    print(f"  {'shares now':22s} {len(out[0]):>6,} companies")
+    print(f"  {'shares -%dy' % years_back:22s} {len(out[years_back]):>6,} companies")
+    return out
+
+
+def fetch_sic(ciks: list[int]) -> dict[int, str | None]:
+    """{cik: SIC code or None} for every CIK SEC answered for; one it did not
+    answer for is absent. Shares the build's SEC throttle."""
+    def one(cik):
+        return cik, _json(f"https://data.sec.gov/submissions/CIK{int(cik):010d}.json")
+
+    out: dict[int, str | None] = {}
+    with ThreadPoolExecutor(max_workers=SEC_WORKERS) as ex:
+        for cik, data in ex.map(one, ciks):
+            if data is not None:
+                out[cik] = str(data["sic"]) if data.get("sic") else None
+    print(f"  {'industry codes':22s} {len(out):>6,} of {len(ciks):,} asked")
+    return out
 
 
 def fetch_survival() -> dict[int, int]:
@@ -696,19 +889,20 @@ def build(limit: int = 0) -> dict:
     this_year = now.year
     qs = quarters_back(now.year, now.month, BS_QUARTERS)
     periods = [instant_period(q) for q in qs]
-    # Same quarters, five years earlier. Shifting the QUARTER pair rather
-    # than the date avoids the Feb-29 trap in datetime.replace(year=...)
-    # and keeps the two share counts on matching fiscal calendars, which
-    # is the whole point of comparing them.
-    back = [instant_period((y - DILUTION_YEARS, q)) for y, q in qs]
     years = list(range(this_year - DIV_YEARS, this_year + 1))
+    STATS.clear()
 
     print(f"Balance sheet from {periods[0]} back to {periods[-1]}")
     inst = fetch_instant(periods)
     print("Annual concepts:")
     ann = fetch_annual(years)
     divs = fetch_dividends(years)
-    sh_now, sh_then = fetch_shares(periods, back)
+    # The same quarters, shifted a year at a time. Shifting the QUARTER
+    # pair rather than the date avoids the Feb-29 trap in
+    # datetime.replace(year=...) and keeps every count on the company's own
+    # fiscal calendar, which is the whole point of comparing them.
+    shares = fetch_shares(qs)
+    sh_now, sh_then = shares[0], shares[DILUTION_YEARS]
     print("Filing history probes:")
     first_year = fetch_survival()
     tick = fetch_tickers()
@@ -726,29 +920,57 @@ def build(limit: int = 0) -> dict:
                               | set(inst.get("total_assets", {}))))
     if limit:
         ciks = ciks[:limit]
+
+    def latest(field, cik):
+        s = ann.get(field, {}).get(cik, {})
+        return s.get(max(s)) if s else None
+
+    def revenue_of(cik):
+        rev = latest("revenue", cik)
+        # Fee income plus net interest income is what a bank earns. For a
+        # company with no interest business this adds nothing.
+        nii = latest("interest_net", cik)
+        return (rev or 0.0) + nii if nii is not None else rev
+
+    # ── not a company: funds, trusts, blank cheques ──
+    no_revenue = [c for c in ciks if not revenue_of(c)]
+    print(f"Industry codes for the {len(no_revenue):,} companies filing no revenue:")
+    sics = fetch_sic(no_revenue)
+    keep, dropped = [], []
+    for c in ciks:
+        (dropped if not_a_company(tick[c]["name"], c in sics, sics.get(c)) else keep).append(c)
+    # Every name dropped, with the reason, so the exclusion can be audited
+    # from the file rather than trusted.
+    STATS.update({"sic_asked": len(no_revenue), "sic_answered": len(sics),
+                  "not_companies": len(dropped),
+                  "not_companies_list": sorted(
+                      ({"ticker": tick[c]["ticker"], "name": tick[c]["name"], "sic": sics.get(c),
+                        "why": ("name" if SE._excluded_keyword(tick[c]["name"] or "", sectors=False)
+                                else f"sic {sics[c]}" if sics.get(c) else "no sic")}
+                       for c in dropped), key=lambda d: d["ticker"])})
+    print(f"  dropped {len(dropped):,} funds, trusts and blank cheques "
+          f"(e.g. {', '.join(d['ticker'] for d in STATS['not_companies_list'][:12])})")
+    ciks = keep
     print(f"\nScoring {len(ciks):,} companies with a ticker and a balance sheet")
 
     rows = []
     for cik in ciks:
         meta = tick[cik]
-        rev = ann.get("revenue", {}).get(cik, {})
-        sbc = ann.get("sbc", {}).get(cik, {})
-        nii = ann.get("interest_net", {}).get(cik, {})
-        latest_rev = rev.get(max(rev)) if rev else None
-        latest_sbc = sbc.get(max(sbc)) if sbc else None
-        # Fee income plus net interest income is what a bank earns. For a
-        # company with no interest business this adds nothing.
-        latest_nii = nii.get(max(nii)) if nii else None
-        if latest_nii is not None:
-            latest_rev = (latest_rev or 0.0) + latest_nii
+        latest_rev = revenue_of(cik)
+        latest_sbc = latest("sbc", cik)
 
         filings = {k: v.get(cik) for k, v in inst.items()}
+        by_year = {DILUTION_YEARS - k: s[cik] for k, s in shares.items() if s.get(cik)}
+        split = split_distorts(by_year)
         filings.update({
             "shares": sh_now.get(cik),
-            "shares_cagr": shares_growth(sh_then.get(cik), sh_now.get(cik),
-                                         DILUTION_YEARS),
+            "shares_cagr": None if split else shares_growth(sh_then.get(cik), sh_now.get(cik),
+                                                            DILUTION_YEARS),
             "revenue": latest_rev,
             "sbc": latest_sbc,
+            "div_paid_by_year": common_dividends_paid(ann.get("div_paid_common", {}).get(cik),
+                                                      ann.get("div_paid_all", {}).get(cik),
+                                                      filings.get("preferred_stock")),
             # ALWAYS present, possibly empty: the key is this build telling
             # schloss.evaluate it searched. An absent key would be read as
             # "not looked at" and leave every non-payer unknown.
@@ -775,10 +997,16 @@ def build(limit: int = 0) -> dict:
             "exchange": meta["exchange"],
             "revenue": latest_rev,
             "shares": sh_now.get(cik),
+            "shares_split": split,
             "history": history(first_year.get(cik), this_year, PROBE_YEARS[-1]),
             "price": q.get("price"),
         })
         rows.append(row)
+    STATS["pays_from_paid"] = sum(1 for r in rows if (r.get("dividend") or {}).get("pays_from") == "paid")
+    STATS["shares_split"] = sum(1 for r in rows if r.get("shares_split"))
+    STATS["implausible"] = sum(1 for r in rows if r.get("implausible"))
+    print(f"  pays from dollars paid {STATS['pays_from_paid']:,} · split in the dilution window "
+          f"{STATS['shares_split']:,} · impossible balance sheets {STATS['implausible']:,}")
 
     # Balance-sheet qualifiers first, then by how much of the price we are
     # missing — there is no cheapness ranking to sort on until a feed
@@ -796,6 +1024,7 @@ def build(limit: int = 0) -> dict:
             "dividend_years": [years[0], years[-1]],
             "probe_years": PROBE_YEARS,
             "dilution_years": DILUTION_YEARS,
+            "build": dict(STATS),
             "thresholds": {
                 "book_discount_min": S.BOOK_DISCOUNT_MIN,
                 "ncav_max_price": round(S.NCAV_MAX_PRICE, 4),

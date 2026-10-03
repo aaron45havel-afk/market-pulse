@@ -128,8 +128,8 @@
     <td class="nm-cell" title="{{ r.name }}">{{ r.name }}</td>
     <td class="sc-dim">{{ r.exchange or '—' }}</td>
     <td>
-      {{ gate(r.gates.assets, 'Positive tangible book', 'No tangible assets left', 'Equity not reported') }}
-      {{ gate(r.gates.debt, 'Debt within half of equity', 'Carries more debt than he would touch', 'Debt not filed and total liabilities could not prove it') }}
+      {{ gate(r.gates.assets, 'Positive tangible book', 'No tangible assets left', 'Book value above total assets — impossible, so withheld' if r.implausible else 'Equity not reported') }}
+      {{ gate(r.gates.debt, 'Debt within half of equity', 'Carries more debt than he would touch', 'Book value above total assets — impossible, so withheld' if r.implausible else 'Debt not filed and total liabilities could not prove it') }}
       {{ gate(r.gates.survival, '20+ years of filings', 'Too young for a 20-year record', 'Filing history not established') }}
       {{ gate(r.gates.pays_dividend, 'Pays a dividend', 'Pays nothing', 'Dividend not established') }}
     </td>
@@ -146,13 +146,14 @@
     <td>
       {%- if r.dividend.cut -%}
         <span class="sc-pill cut" title="Cut {{ r.dividend.cut_pct }}% from {{ r.dividend.from_year }} to {{ r.dividend.to_year }}">−{{ r.dividend.cut_pct }}%</span>
+      {%- elif r.dividend.pays_from == 'paid' -%}<span class="sc-dim" title="No per-share dividend on file, but the cash-flow statement shows dividends paid recently — enough to say it pays, not to measure a cut.">paid</span>
       {%- elif r.dividend.stale -%}<span class="sc-dim" title="Last dividend on file was {{ r.dividend.to_year }}. Paying is a present-tense governance check, so a record that stopped does not make this a payer.">stopped {{ r.dividend.to_year }}</span>
       {%- elif r.dividend.special_prior -%}<span class="sc-dim" title="The prior year carried a special dividend several times the ordinary payout. Its absence the year after is arithmetic, not a cut.">special {{ r.dividend.from_year }}</span>
       {%- elif r.dividend.cut is none -%}<span class="sc-dim">?</span>
       {%- else -%}<span class="sc-dim">—</span>{%- endif -%}
     </td>
     <td title="{% if r.management.revenue_unrepresentative %}Revenue is under 2% of total assets, so it is not what this company earns — the ratio would be arithmetic, not description.{% elif r.management.sbc_pct_assets is not none %}{{ r.management.sbc_pct_assets }}% of total assets.{% endif %}">{% if r.management.sbc_pct_revenue is none %}<span class="sc-dim">—</span>{% elif r.management.sbc_pct_revenue > 999 %}&gt;999%{% else %}{{ r.management.sbc_pct_revenue }}%{% endif %}</td>
-    <td>{% if r.management.shares_cagr is not none %}{{ '%+.1f'|format(r.management.shares_cagr) }}%{% else %}<span class="sc-dim">—</span>{% endif %}</td>
+    <td>{% if r.management.shares_cagr is not none %}{{ '%+.1f'|format(r.management.shares_cagr) }}%{% elif r.shares_split %}<span class="sc-dim" title="The share count jumped by a split factor inside the five years, so the two counts are not comparable and no dilution figure is given.">split</span>{% else %}<span class="sc-dim">—</span>{% endif %}</td>
     <td class="{% if r.below_book %}sc-cheap{% endif %}"
         title="{% if r.fx_suspect %}Market cap is under 1% of tangible book — the balance sheet and the quote are not in the same currency, so no discount can be computed.{% elif r.market_cap %}Market cap {{ '%.0f'|format(r.market_cap / 1000000) }}M.{% endif %}">{% if r.p_tangible_book is not none %}{{ r.p_tangible_book }}{% elif r.fx_suspect %}<span class="sc-dim">currency?</span>{% elif not r.price_ready %}{% if can_edit %}<button class="sc-quote-btn" data-tkr="{{ r.ticker }}" title="No feed carries this one. Type the price you see and every column here fills in.">+ price</button>{% else %}<span class="sc-dim">no quote</span>{% endif %}{% else %}<span class="sc-dim">&mdash;</span>{% endif %}</td>
     <td class="{% if r.is_net_net %}sc-cheap{% endif %}">{% if r.p_ncav is not none %}{{ r.p_ncav }}{% elif not r.price_ready %}<span class="sc-dim">no quote</span>{% else %}<span class="sc-dim">&mdash;</span>{% endif %}</td>
