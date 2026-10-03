@@ -111,11 +111,21 @@ HH = [{"zip": "92233", "place": "Calipatria, CA", "state": "CA", "max_offer": 30
       {"zip": "17851", "place": "Mount Carmel, PA", "state": "PA", "max_offer": 116_000, "cash_to_close": 9_118,
        "monthly_surplus": 1123}]
 hp = {**P, "home_state": "CA", "housing_cost": 2000}
-hh = K.house_hack_rows(HH, hp)
+hh = K.house_hack_rows(HH, hp, rate_pct=7.0)
 check([r["detail"]["zip"] for r in hh] == ["92233", "94510"], "owner-occupied: only the state you live in")
-want = ((100 + 2000) * 12 - 0.07 * 700_000 / 5) / 40_000 * 100
-check(near(hh[1]["ret_after"], round(want, 1), 0.06),
-      "THE RENT YOU STOP PAYING COUNTS: (surplus + your rent) × 12, less selling costs over the hold, on the cash to close")
+loan = 700_000 * 0.965 * 1.0175
+prin = loan - K._balance_after(loan, 7.0, 12)
+want = ((100 + 2000) * 12 + prin - 0.07 * 700_000 / 5) / 40_000 * 100
+check(near(hh[1]["ret_after"], round(want, 1), 0.06) and near(hh[1]["detail"]["loan"], loan, 1),
+      "THE RENT YOU STOP PAYING COUNTS, AND SO DOES THE LOAN PAID DOWN: (surplus + your rent) × 12 + the year's "
+      "principal on the FHA loan (3.5% down, MIP financed), less selling costs over the hold, on the cash to close")
+appr = K.house_hack_rows(HH, {**hp, "appreciation": 3.0}, rate_pct=7.0)
+check(near(appr[1]["ret_after"] - hh[1]["ret_after"], 0.03 * 700_000 / 40_000 * 100, 0.1),
+      "LEVERAGE ON APPRECIATION: 3% on a $700k price is 52.5 points on $40k of cash")
+owner = K.house_hack_rows(HH, {**hp, "_owns_shelter": True}, rate_pct=7.0)
+check(near(hh[1]["ret_after"] - owner[1]["ret_after"], 2000 * 12 / 40_000 * 100, 0.1)
+      and "you already own where you live" in owner[1]["basis"],
+      "SHELTER IS COUNTED ONCE: an owner who owns where they live gets no rent credit")
 _saved_coords = K._zip_coords
 K._zip_coords = lambda zips: {"94110": (37.75, -122.415), "92233": (33.17, -115.55), "94510": (38.05, -122.16)}
 try:
@@ -179,6 +189,27 @@ check([r.get("id") or r["kind"] for r in ranked][:3] == ["s", "d", re_row["id"]]
 check(K.rank([{**never, "id": "n"}, {"kind": "stock", "ret_net": -3.0, "id": "loser"}])[0]["id"] == "loser",
       "a use that cannot be funded ranks below even a losing one — 'never' is not 0%")
 
+# ── net worth: real estate's share, a glide path ────────────────────
+GP = K.profile_with_defaults({})
+check(K.re_cap_pct(GP, 249_999) is None and K.re_cap_pct(GP, 250_000) == 60.0
+      and K.re_cap_pct(GP, 1_000_000) == 60.0 and K.re_cap_pct(GP, 1_000_001) == 40.0,
+      "no cap under $250k, 60% up to $1M, 40% above — the defaults the owner chose")
+check(K.re_cap_pct({**GP, "re_nocap_below": 0, "re_cap_mid": 80}, 10) == 80.0, "and every number is the owner's")
+cap_p = {**GP, "_net_worth": 500_000, "_re_equity": 250_000}
+def _re(cash, months=0, net=20.0):
+    return {"id": f"re:{cash}:{months}", "kind": "re", "min_capital": cash, "months_to_fund": months, "ret_net": net}
+capped = K.apply_re_cap([_re(50_000), _re(50_001), _re(55_000, months=10), _re(55_000, months=0)], cap_p,
+                        monthly_free=1_000)
+check([bool(r.get("blocked")) for r in capped] == [False, True, False, True],
+      "60% of $500k is $300k; $250k is in real estate, so a $50k deal fits and $50,001 does not — and the net worth "
+      "is taken when the deal is funded, ten months of $1,000 later")
+check("over your real-estate cap" in capped[1]["blocked"] and "$50,000" in capped[1]["blocked"],
+      "a blocked row says why, with the room left")
+check(not K.apply_re_cap([_re(10**7)], {**GP, "_net_worth": 100_000, "_re_equity": 0}, monthly_free=0)[0].get("blocked"),
+      "under the no-cap line, nothing is blocked")
+blk = K.rank([{**capped[1], "ret_net": 99.0}, {"kind": "stock", "ret_net": 5.0, "id": "s"}])
+check(blk[0]["id"] == "s", "A BLOCKED ROW RANKS BELOW EVERY ROW THAT CAN BE BOUGHT, however high its return")
+
 # ── the month ──────────────────────────────────────────────────────
 OCT = date(2026, 10, 3)
 M = K.profile_with_defaults({"monthly_invest": 4000, "cash": 2000, "monthly_expenses": 5000,
@@ -228,6 +259,14 @@ wf3 = K.waterfall({**M, "monthly_invest": 40_000, "cash": 30_000},
                    {"kind": "tbill", "ret_net": 3.0, "label": "T-bills"}], OCT)
 check(wf3["winner"]["label"] == "T-bills",
       "the winner is never a debt the fixed steps already pay")
+wf4 = K.waterfall({**M, "monthly_invest": 40_000, "cash": 30_000},
+                  [{"kind": "re", "ret_net": 30.0, "label": "House hack", "min_capital": 40_000, "blocked": "over cap",
+                    "id": "hh"},
+                   {"kind": "tbill", "ret_net": 3.0, "label": "T-bills", "id": "tbill"}], OCT)
+check(wf4["winner"]["label"] == "T-bills" and wf4["steps"][-1]["ref"] == "tbill",
+      "THE CAP HOLDS IN THE MONTH TOO: a blocked property is never the winner; each step names what it buys")
+check(any(s["kind"] == "debt" and s["ref"] == "Card" for s in K.fixed_steps(M, OCT).steps),
+      "a debt step names its debt")
 
 # ── the profile ────────────────────────────────────────────────────
 pp = K.parse_profile({"monthly_invest": "$4,000", "fed_rate": "900", "retire_rate": "", "mortgage_rate": " ",
@@ -255,6 +294,11 @@ B = K.build({**M, "mortgage_rate": 7.0, "home_zip": ""}, today=OCT, sources=SRC)
 check(not B["errors"] and B["counts"]["stock"] == 1 and B["counts"]["re"] == 2 + 2 + 2 + 1,
       f"every page lands on one board (got {B['counts']})")
 check(B["rows"] == K.rank(B["rows"]) and B["plan"]["steps"], "ranked, with a plan")
+OWN = [{"name": "Home", "use": "home", "value": 900_000, "loan": 600_000, "rate": 3, "payment": 2500,
+        "shelter_rent": 3500, "costs": 900}]
+Bh = K.build({**M, "mortgage_rate": 7.0, "home_zip": "", "owned_re": OWN, "housing_cost": 2800}, today=OCT, sources=SRC)
+check(Bh["counts"]["re"] == 2 + 2 + 2 and Bh["profile"]["housing_cost"] == 0 and Bh["profile"]["_owns_shelter"],
+      "SHELTER ONCE: owning where you live drops 'buy your home' from the board and zeroes the rent you pay")
 
 def boom():
     raise RuntimeError("feed down")

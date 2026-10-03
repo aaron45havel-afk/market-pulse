@@ -84,6 +84,16 @@ PROFILE_DEFAULTS: dict = {
     "stock_holdings": 0.0,        # what the picks are worth today
     "rf_rate": 4.0,               # T-bills / high-yield savings
     "hold_years": 5,
+    # what the owner has now (allocation.py reads these): holdings and the
+    # current monthly split as the lines typed, property as parsed records
+    "holdings": "",
+    "current_monthly": "",
+    "owned_re": [],
+    # how much of net worth real estate may hold, by net worth (a glide path)
+    "re_nocap_below": 250_000.0,
+    "re_cap_mid": 60.0,
+    "re_cap_mid_upto": 1_000_000.0,
+    "re_cap_high": 40.0,
 }
 
 # Hours a month each real-estate path takes, at a steady state. Editable
@@ -102,10 +112,17 @@ GROWTH_CAP = 10.0
 
 
 def profile_with_defaults(p: dict | None) -> dict:
+    """The saved profile over the defaults, plus what follows from what the
+    owner holds (allocation.derive): cash on hand from the cash lines, picks
+    held from the individual stocks, net worth, real-estate equity, and
+    whether they already own where they live. Derived keys start with "_"
+    and are never saved."""
+    import allocation as A
     out = dict(PROFILE_DEFAULTS)
     for k, v in (p or {}).items():
         if k in PROFILE_DEFAULTS or k.startswith("hours_"):
             out[k] = v
+    out.update(A.derive(out))
     return out
 
 
@@ -123,16 +140,27 @@ _NUMBERS = {
     "market_return": (-10, 30), "estimate_weight": (0, 100), "picks_hours": (0, 200),
     "stock_holdings": (0, 1e10), "rf_rate": (0, 20), "hold_years": (1, 30),
     "hours_house_hack": (0, 200), "hours_brrrr": (0, 200), "hours_flip": (0, 200), "hours_home": (0, 200),
+    "re_nocap_below": (0, 1e10), "re_cap_mid": (0, 100), "re_cap_mid_upto": (0, 1e10), "re_cap_high": (0, 100),
 }
 _BOOLS = ("niit", "hsa_eligible")
 _TEXT = {"home_state": 2, "home_zip": 5}
 _OPTIONAL = ("retire_rate", "mortgage_rate")      # blank means "use the default rule"
+# Kept as typed, so a line the engine cannot read stays in the box and is
+# named on the page instead of vanishing on save.
+_LINES = {"holdings": 20_000, "current_monthly": 10_000}
 
 
 def parse_profile(form: dict) -> dict:
     """The profile from what the form sent: numbers clamped, booleans read,
-    debts parsed from "name, balance, apr" lines. Unknown keys are dropped."""
+    debts parsed from "name, balance, apr" lines, holdings and the current
+    split kept as typed, property parsed. Unknown keys are dropped."""
+    import allocation as A
     out: dict = {}
+    for k, n in _LINES.items():
+        if k in form:
+            out[k] = str(form[k] or "").replace("\r\n", "\n")[:n]
+    if "owned_re" in form:
+        out["owned_re"] = A.parse_owned_re(form["owned_re"])
     for k, (lo, hi) in _NUMBERS.items():
         if k not in form:
             continue
@@ -382,16 +410,25 @@ def merge_stocks(rows: list[dict]) -> list[dict]:
 
 # ── real estate ──────────────────────────────────────────────────────
 
-def house_hack_rows(hh: list[dict], p: dict, *, top: int = 3) -> list[dict]:
+def house_hack_rows(hh: list[dict], p: dict, *, top: int = 3, rate_pct: float | None = None) -> list[dict]:
     """Owner-occupied 2-4 units in the state you would live in. The return is
-    the year's cash benefit — the other units' rent less the full payment,
-    vacancy and repairs, PLUS the rent you stop paying — over the cash to
-    close. Rental income is mostly sheltered by depreciation; the sale costs
-    are charged over the hold."""
+    the year's benefit — the other units' rent less the full payment, vacancy
+    and repairs, PLUS the rent you stop paying, PLUS the first year's
+    principal and the owner's appreciation assumption — over the cash to
+    close. Leverage is the point of a house hack: 3.5% down puts the whole
+    price to work, so the loan paid down and the price's change belong in
+    the return exactly as they do for buying a home. Rental income is mostly
+    sheltered by depreciation; the sale costs are charged over the hold.
+
+    SHELTER IS COUNTED ONCE: an owner who already owns where they live pays
+    no rent to stop paying, so the rent credit is zero for them."""
+    from headroom import FHA_DOWN, FHA_UFMIP
     st = (p.get("home_state") or "").upper()
     H = max(1, int(_f(p.get("hold_years"), 5)))
     hrs = _f(p.get("hours_house_hack"), HOURS_DEFAULT["house_hack"])
-    avoided = _f(p.get("housing_cost"))
+    avoided = 0.0 if p.get("_owns_shelter") else _f(p.get("housing_cost"))
+    rate = rate_pct if rate_pct is not None else (_f(p.get("mortgage_rate")) or _latest_mortgage_rate())
+    appr_pct = _f(p.get("appreciation"))
     near = [x for x in hh if (x.get("state") or "").upper() == st]
     # A STATE IS NOT WHERE YOU LIVE. The first board put Calipatria — Imperial
     # County, 500 miles from the Bay — at the top of a NorCal owner's list.
@@ -409,18 +446,29 @@ def house_hack_rows(hh: list[dict], p: dict, *, top: int = 3) -> list[dict]:
         price = _f(r.get("max_offer"))
         if cash <= 0 or price <= 0:
             continue
+        # /headroom's financing: 3.5% down on price + remodel, the upfront MIP
+        # financed into the loan.
+        all_in = price + _f(r.get("rehab"))
+        loan = all_in * (1 - FHA_DOWN) * (1 + FHA_UFMIP)
+        principal = loan - _balance_after(loan, rate, 12)
+        appr = appr_pct / 100 * all_in
         benefit = (_f(r.get("monthly_surplus")) + avoided) * 12
         sale_drag = 0.07 * price / H
-        ret = (benefit - sale_drag) / cash * 100
+        ret = (benefit + principal + appr - sale_drag) / cash * 100
+        rent_part = (f"${avoided:,.0f}/mo rent you stop paying" if avoided > 0 else
+                     "no rent credit — you already own where you live" if p.get("_owns_shelter") else
+                     "$0/mo rent you stop paying")
         out.append(row(id=f"hh:{r.get('zip')}", kind="re", label=f"House hack — {r.get('place')} ({r.get('zip')})",
                        source="Headroom", link=f"/headroom?mode=hh&state={st}",
                        ret_pre=round(ret, 1), ret_after=round(ret, 1),
-                       basis=(f"(${_f(r.get('monthly_surplus')):,.0f}/mo after the full payment + ${avoided:,.0f}/mo "
-                              f"rent you stop paying) × 12, less 7% selling costs over {H} years, "
+                       basis=(f"(${_f(r.get('monthly_surplus')):,.0f}/mo after the full payment + {rent_part}) × 12, "
+                              f"+ ${principal:,.0f} principal in year one on a ${loan:,.0f} loan at {rate:g}%, "
+                              f"appreciation {appr_pct:g}%, less 7% selling costs over {H} years, "
                               f"on ${cash:,.0f} to close at ${price:,.0f}"),
                        min_capital=cash, deploy_months=DEPLOY_MONTHS["house_hack"], hours_month=hrs,
                        risk="leveraged, owner-occupied, one at a time",
-                       detail={"price": price, "zip": r.get("zip"), "rent_label": r.get("rent_label")}))
+                       detail={"price": price, "zip": r.get("zip"), "rent_label": r.get("rent_label"),
+                               "principal": round(principal), "loan": round(loan)}))
     return out
 
 
@@ -600,11 +648,53 @@ def friction(r: dict, p: dict, *, monthly_free: float, cash_free: float,
 
 
 def rank(rows: list[dict]) -> list[dict]:
-    """Best friction-adjusted return first; rows that cannot be funded last.
-    A guaranteed use wins a tie."""
+    """Best friction-adjusted return first; rows that cannot be funded, or
+    that the real-estate cap rules out, last. A guaranteed use wins a tie."""
     order = {"debt": 0, "tbill": 1, "wrapper": 2, "re": 3, "stock": 4}
-    return sorted(rows, key=lambda r: (r.get("ret_net") is None, -(r.get("ret_net") or 0),
-                                       order.get(r["kind"], 9)))
+    return sorted(rows, key=lambda r: (r.get("ret_net") is None or bool(r.get("blocked")),
+                                       -(r.get("ret_net") or 0), order.get(r["kind"], 9)))
+
+
+# ═══════════════════════════════════════════════════════════════════
+# NET WORTH — real estate's share, by a glide path
+# ═══════════════════════════════════════════════════════════════════
+# Real estate is where a small net worth gets its leverage and its shelter.
+# As net worth grows the case weakens on its own terms — the rent credit is
+# earned once, owner-occupied financing is one home at a time, hours grow
+# with every door, one property is a concentrated bet — so the owner sets a
+# ceiling on real estate's share that tightens as net worth grows.
+
+def re_cap_pct(p: dict, net_worth: float) -> float | None:
+    """The most of net worth real estate may hold, in percent, at this net
+    worth. None below the no-cap line."""
+    if net_worth < _f(p.get("re_nocap_below"), 250_000.0):
+        return None
+    if net_worth <= _f(p.get("re_cap_mid_upto"), 1_000_000.0):
+        return _f(p.get("re_cap_mid"), 60.0)
+    return _f(p.get("re_cap_high"), 40.0)
+
+
+def apply_re_cap(rows: list[dict], p: dict, *, monthly_free: float) -> list[dict]:
+    """Marks the real-estate rows the glide path rules out. Net worth is taken
+    at the month the row would be funded (today's, plus the free pay saved by
+    then — returns not counted, so it errs low). Buying turns cash into equity
+    without changing net worth, so a row fits when the real-estate equity held
+    today plus the cash it needs fits under the cap at that net worth."""
+    nw0, eq = _f(p.get("_net_worth")), _f(p.get("_re_equity"))
+    out = []
+    for r in rows:
+        if r["kind"] != "re" or r.get("ret_net") is None:
+            out.append(r)
+            continue
+        nw = nw0 + (r.get("months_to_fund") or 0) * monthly_free
+        cap = re_cap_pct(p, nw)
+        room = cap / 100 * nw - eq if cap is not None else None
+        if room is not None and r["min_capital"] > room:
+            r = {**r, "blocked": (f"over your real-estate cap: {cap:g}% of a ${nw:,.0f} net worth is "
+                                  f"${cap / 100 * nw:,.0f}; real estate holds ${eq:,.0f}, leaving "
+                                  f"${max(0.0, room):,.0f}, and this needs ${r['min_capital']:,.0f}")}
+        out.append(r)
+    return out
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -618,10 +708,12 @@ class _Purse:
         self.left = round(max(0.0, amount), 2)
         self.steps: list[dict] = []
 
-    def take(self, amount, to, why, kind) -> float:
+    def take(self, amount, to, why, kind, ref=None) -> float:
+        """`ref` names what the step buys — a board row's id, or a debt's
+        name — so its return can be looked up (allocation.py does)."""
         amt = round(max(0.0, min(self.left, amount)), 2)
         if amt > 0:
-            self.steps.append({"to": to, "amount": amt, "why": why, "kind": kind})
+            self.steps.append({"to": to, "amount": amt, "why": why, "kind": kind, "ref": ref})
             self.left = round(self.left - amt, 2)
         return amt
 
@@ -650,7 +742,8 @@ def fixed_steps(p: dict, today: date | None = None) -> _Purse:
     for d in sorted(p.get("debts") or [], key=lambda d: -_f(d.get("apr"))):
         if _f(d.get("apr")) >= mr and _f(d.get("balance")) > 0:
             take(_f(d.get("balance")), f"Pay down {d.get('name')}",
-                 f"A guaranteed {_f(d.get('apr')):g}% beats the {mr:g}% the market is expected to pay.", "debt")
+                 f"A guaranteed {_f(d.get('apr')):g}% beats the {mr:g}% the market is expected to pay.", "debt",
+                 ref=d.get("name"))
 
     ef = exp * _f(p.get("emergency_months"), 6.0)
     if cash < ef:
@@ -710,7 +803,8 @@ def waterfall(p: dict, ranked: list[dict], today: date | None = None) -> dict:
     the top of the board. Returns {"steps", "left" (unassigned), "winner"}."""
     purse = fixed_steps(p, today)
     take = purse.take
-    winner = next((r for r in ranked if r.get("ret_net") is not None and not _fixed_debt(r, p)), None)
+    winner = next((r for r in ranked if r.get("ret_net") is not None and not r.get("blocked")
+                   and not _fixed_debt(r, p)), None)
     if purse.left > 0 and winner:
         if winner["kind"] == "re":
             m = winner.get("months_to_fund")
@@ -718,7 +812,7 @@ def waterfall(p: dict, ranked: list[dict], today: date | None = None) -> dict:
                  (f"The best use after friction. About {m} month{'s' if m != 1 else ''} to the "
                   f"${winner['min_capital']:,.0f} it takes.") if m else
                  f"The best use after friction, and the ${winner['min_capital']:,.0f} it takes is already there.",
-                 "re")
+                 "re", ref=winner.get("id"))
         elif winner["kind"] == "stock":
             picks = [r for r in ranked if r["kind"] == "stock" and r.get("ret_net") is not None]
             n = max(1, min(int(_f(p.get("picks_n"), 8)), len(picks)))
@@ -727,10 +821,11 @@ def waterfall(p: dict, ranked: list[dict], today: date | None = None) -> dict:
             each = round(purse.left * weight, 2)
             for r in picks[:n]:
                 take(each, f"Buy {r['detail']['ticker']} (taxable)",
-                     f"{r['ret_net']:g}% after tax and friction — {r['source']}.", "stock")
+                     f"{r['ret_net']:g}% after tax and friction — {r['source']}.", "stock", ref=r.get("id"))
         else:
             take(purse.left, winner["label"],
-                 f"{winner['ret_net']:g}% after tax and friction — the best use left.", winner["kind"])
+                 f"{winner['ret_net']:g}% after tax and friction — the best use left.", winner["kind"],
+                 ref=winner.get("id"))
     return {"steps": purse.steps, "left": purse.left, "winner": winner,
             "months_left_in_year": purse.months_left}
 
@@ -764,10 +859,13 @@ def build(p: dict, *, today: date | None = None, sources: dict | None = None) ->
               + stocks_from_quiet_value(load("quiet_value", _quiet_value_rows), p)
               + stocks_from_schloss(load("schloss", _schloss_rows), p))
     rows += merge_stocks(stocks)
-    rows += house_hack_rows(load("house_hack", lambda: _hh_rows(p, rate)), p)
+    rows += house_hack_rows(load("house_hack", lambda: _hh_rows(p, rate)), p, rate_pct=rate)
     rows += conditional_re_rows(load("brrrr", lambda: _re_board("brrrr", p, rate)), p, mode="brrrr")
     rows += conditional_re_rows(load("flip", lambda: _re_board("flip", p, rate)), p, mode="flip")
-    rows += home_rows(load("home", lambda: _home_rows(p)), p, rate_pct=rate)
+    # Shelter is counted once: an owner who owns where they live is not
+    # shopping for a home to live in.
+    if not p.get("_owns_shelter"):
+        rows += home_rows(load("home", lambda: _home_rows(p)), p, rate_pct=rate)
 
     ef = _f(p.get("monthly_expenses")) * _f(p.get("emergency_months"), 6.0)
     cash_free = max(0.0, _f(p.get("cash")) - ef)
@@ -776,11 +874,19 @@ def build(p: dict, *, today: date | None = None, sources: dict | None = None) ->
     # the one-time steps (cushion, emergency fund, dear debt) are done.
     monthly_free = steady_free(p)
     delay = one_time_months(p)
-    scored = rank([friction(r, p, monthly_free=monthly_free if delay is not None else 0.0,
-                            cash_free=cash_free, delay_months=delay or 0) for r in rows])
-    return {"profile": p, "rows": scored, "plan": waterfall(p, scored, today),
-            "errors": errors, "mortgage_rate": rate,
-            "counts": {k: sum(1 for r in scored if r["kind"] == k) for k in ("stock", "re", "debt", "tbill", "wrapper")}}
+    free = monthly_free if delay is not None else 0.0
+    scored = rank(apply_re_cap([friction(r, p, monthly_free=free, cash_free=cash_free, delay_months=delay or 0)
+                                for r in rows], p, monthly_free=free))
+    out = {"profile": p, "rows": scored, "plan": waterfall(p, scored, today),
+           "errors": errors, "mortgage_rate": rate, "monthly_free": free,
+           "counts": {k: sum(1 for r in scored if r["kind"] == k) for k in ("stock", "re", "debt", "tbill", "wrapper")}}
+    import allocation as A
+    try:
+        out["current"] = A.compare(out, today)
+    except Exception as e:  # noqa: BLE001 — the comparison must not blank the board
+        errors["now vs optimal"] = f"{type(e).__name__}: {e}"
+        out["current"] = None
+    return out
 
 
 # ── page readers (each page's own module, never a copy of its logic) ──

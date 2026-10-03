@@ -245,10 +245,20 @@ Format: `- [PHASE-SEEN] item — why it matters`
   the signature of a share count out of step with the price (a reverse split, a foreign filer's units). None is on
   the default view; seven reach the loosest settings and would lead them. Compounders' split adjustment (fix_share_scale) or a sanity bound
   like Schloss's impossible-book check would catch them.
-- [CAPITAL-PHASE2] /capital phase 2: what the owner HOLDS (positions, so concentration and rebalancing are real),
-  account placement by tax drag (high-dividend picks in the IRA, low-yield growth in taxable), and a house-hack tax
-  model (the rental share taxed after depreciation, the Sec. 121 exclusion on the owner's unit at exit) — phase 1
-  treats the house hack's cash benefit as after-tax.
+- [CAPITAL-PHASE2] /capital: holdings are now measured (now vs optimal). Still open: account placement by tax drag
+  (high-dividend picks in the IRA, low-yield growth in taxable), and a house-hack tax model (the rental share taxed
+  after depreciation, the Sec. 121 exclusion on the owner's unit at exit) — the board and an owned house hack still
+  treat its cash benefit as after-tax.
+- [CAPITAL-REFI] Lazy equity has one exit on /capital today: selling. A cash-out refinance (the equity redeployed,
+  the property kept, the new payment against the rent) is often the cheaper move and is not modeled; neither is a 1031
+  exchange deferring a rental's sale tax into the next property.
+- [CAPITAL-LOTS] The switch test assumes every taxable lot is long-term. A lot held under a year pays ordinary rates;
+  per-lot purchase dates (or a "short-term" flag on the line) would let it wait out the year instead.
+- [CAPITAL-SERIAL-HH] A further house hack for an owner who already owns where they live means moving: the current
+  home would become a rental (its return changes, its sale exclusion clock starts). The board only drops the rent
+  credit.
+- [CAPITAL-FUNDS] Funds other than the US index list (international, bonds, target-date) get the market return unless
+  the owner types their own; a small table of asset-class returns would measure them without a guess per line.
 - [CAPITAL-PHASE3] /capital phase 3: a dated record of the board and an alert when the top use changes.
 - [CAPITAL-RE-PRICES] BRRRR and flips can only be conditional until fixer sale prices exist; with them, the board could
   show the return at a price the owner can actually get instead of the target at the most they can pay.
